@@ -6,17 +6,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
 import { AcceptanceModel } from '@/database/models/acceptance';
+import { IssueDeliveryModel } from '@/database/models/issueDelivery';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { projects, taskDispatches, tasks, taskTopics } from '@/database/schemas';
+import { verifyCheckResults, verifyRuns } from '@/database/schemas/verify';
 import { TaskService } from '@/server/services/task';
+import { IssueChecklistService } from '@/server/services/task/checklist';
 import { TaskDispatchService } from '@/server/services/taskDispatch';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
 import { createTaskRuntime } from '@/server/services/toolExecution/serverRuntimes/task';
 
+import {
+  seedConfirmedIssuePlan,
+  seedReviewedIssueDelivery,
+} from '../../../../../../../packages/database/tests/fixtures/issueDelivery';
 import { taskRouter } from '../../task';
 import { workAttentionRouter } from '../../workAttention';
 import {
@@ -145,6 +152,9 @@ describe('Task Router Integration', () => {
   });
 
   afterEach(async () => {
+    // Remove Issues before reviewer Agents: the in-review constraint forbids a null Reviewer.
+    await serverDB.delete(tasks).where(eq(tasks.createdByUserId, userId));
+    if (otherUserId) await serverDB.delete(tasks).where(eq(tasks.createdByUserId, otherUserId));
     await cleanupTestUser(serverDB, userId);
     if (otherUserId) await cleanupTestUser(serverDB, otherUserId);
     otherUserId = undefined;
@@ -895,6 +905,7 @@ describe('Task Router Integration', () => {
         });
       try {
         const generationBefore = created.data.executionGeneration;
+        await seedConfirmedIssuePlan(serverDB, created.data.id);
         const result = await memberCaller.run({ id: created.data.id }).then(
           () => 'started',
           (error) => error,
@@ -1804,6 +1815,7 @@ describe('Task Router Integration', () => {
             : { context: { execution: { parked: { reason: 'outcome_unknown' } } } }),
         })
         .where(eq(tasks.id, created.data.id));
+      await seedConfirmedIssuePlan(serverDB, created.data.id);
       // Execution truth is a live dispatch row, not the status column.
       await serverDB.insert(taskDispatches).values({
         agentId: incumbent,
@@ -2933,6 +2945,7 @@ describe('Task Router Integration', () => {
         instruction: 'Test',
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.identifier });
 
       const updated = await caller.detail({ id: task.data.id });
@@ -2946,6 +2959,7 @@ describe('Task Router Integration', () => {
       });
 
       // First run succeeds
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       // Second run should fail with CONFLICT
@@ -2958,6 +2972,7 @@ describe('Task Router Integration', () => {
         instruction: 'Test',
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       await expect(caller.run({ continueTopicId: 'tpc_test', id: task.data.id })).rejects.toThrow(
@@ -2975,6 +2990,7 @@ describe('Task Router Integration', () => {
         instruction: 'Test',
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await expect(caller.run({ id: task.data.id })).rejects.toThrow();
 
       // Task should be rolled back to paused with error
@@ -3003,6 +3019,7 @@ describe('Task Router Integration', () => {
         instruction: 'Test',
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await expect(caller.run({ id: task.data.id })).rejects.toThrow();
 
       const found = await caller.find({ id: task.data.id });
@@ -3114,6 +3131,7 @@ describe('Task Router Integration', () => {
         instruction: 'Test',
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       // Cancel the topic
@@ -3130,6 +3148,7 @@ describe('Task Router Integration', () => {
         instruction: 'Test',
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
       await caller.cancelTopic({ topicId: 'tpc_test' });
 
@@ -3194,6 +3213,7 @@ describe('Task Router Integration', () => {
       });
 
       // Start running — creates a running topic
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       // Transition task from running → paused via updateStatus
@@ -3234,6 +3254,7 @@ describe('Task Router Integration', () => {
         instruction: 'Test interrupt failure',
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       // Make interruptTask fail
@@ -3247,6 +3268,46 @@ describe('Task Router Integration', () => {
       expect(runningTopics.some((topic) => topic.status === 'running')).toBe(true);
     });
   });
+
+  const seedMergedIssueDelivery = async (taskId: string, seq = 1) => {
+    const delivery = await seedReviewedIssueDelivery(serverDB, taskId, { seq });
+    await seedConfirmedIssuePlan(serverDB, taskId);
+    const ledger = new IssueDeliveryModel(serverDB, userId);
+    expect((await ledger.readCurrentDeliveryProof([taskId]))[taskId]).toMatchObject({
+      availableForDependents: true,
+      deliveryAccepted: false,
+      merged: false,
+    });
+    await serverDB
+      .update(verifyCheckResults)
+      .set({ userDecision: 'accepted' })
+      .where(eq(verifyCheckResults.id, delivery.result.id));
+    await serverDB
+      .update(verifyRuns)
+      .set({ userDecision: 'accept' })
+      .where(eq(verifyRuns.id, delivery.run.id));
+    await serverDB
+      .update(taskTopics)
+      .set({
+        integration: {
+          ...delivery.topic.integration!,
+          state: 'integrated',
+          prNumber: 9,
+          prUrl: 'https://github.com/org/repo/pull/9',
+          pushedToRemote: true,
+          mergedTargetBranch: 'canary',
+          integratedSha: 'c'.repeat(40),
+        },
+      })
+      .where(eq(taskTopics.id, delivery.topic.id));
+    expect((await ledger.readCurrentDeliveryProof([taskId]))[taskId]).toMatchObject({
+      reviewerPassed: true,
+      necessaryChecksPassed: true,
+      itemsAccepted: true,
+      deliveryAccepted: true,
+      merged: true,
+    });
+  };
 
   describe('updateStatusCascade', () => {
     it('updates the task family atomically without rewriting failed subtasks', async () => {
@@ -3309,6 +3370,9 @@ describe('Task Router Integration', () => {
       await caller.addDependency({ dependsOnId: sub.data.id, taskId: external.data.id });
       mockExecAgent.mockClear();
 
+      await seedMergedIssueDelivery(sub.data.id);
+      await seedConfirmedIssuePlan(serverDB, external.data.id);
+
       const result = await caller.updateStatusCascade({ id: parent.data.id, status: 'completed' });
 
       expect(result.data.unlocked).toEqual([external.data.identifier]);
@@ -3341,6 +3405,8 @@ describe('Task Router Integration', () => {
         success: true,
         topicId: topicB,
       });
+      await seedConfirmedIssuePlan(serverDB, subA.data.id);
+      await seedConfirmedIssuePlan(serverDB, subB.data.id);
       await caller.run({ id: subA.data.id });
       await caller.run({ id: subB.data.id });
 
@@ -3415,6 +3481,7 @@ describe('Task Router Integration', () => {
         id: task.data.id,
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       // Wait for timeout
@@ -3499,6 +3566,8 @@ describe('Task Router Integration', () => {
       await caller.addDependency({ dependsOnId: ch1.data.id, taskId: ch3.data.id });
       await caller.addDependency({ dependsOnId: ch2.data.id, taskId: ch3.data.id });
 
+      for (const child of [ch1, ch2, ch3]) await seedConfirmedIssuePlan(serverDB, child.data.id);
+
       const result = await caller.runReadySubtasks({ id: parent.data.id });
       expect(result.success).toBe(true);
       expect(result.data.kickedOff?.sort()).toEqual([ch1.data.identifier, ch2.data.identifier]);
@@ -3533,6 +3602,7 @@ describe('Task Router Integration', () => {
       await caller.addDependency({ dependsOnId: ch1.data.id, taskId: ch2.data.id });
 
       // Kick ch1 off — now in `running` state
+      await seedConfirmedIssuePlan(serverDB, ch1.data.id);
       await caller.run({ id: ch1.data.id });
 
       const result = await caller.previewSubtaskLayers({ id: parent.data.id });
@@ -3557,6 +3627,7 @@ describe('Task Router Integration', () => {
       });
       await caller.addDependency({ dependsOnId: ch1.data.id, taskId: ch2.data.id });
 
+      await seedConfirmedIssuePlan(serverDB, ch1.data.id);
       await caller.run({ id: ch1.data.id });
       mockExecAgent.mockClear();
 
@@ -3591,6 +3662,8 @@ describe('Task Router Integration', () => {
       // Mark external completed → cascade fires → ch1 is auto-kicked off.
       // This proves the blocker classification *and* the existing cascade hook
       // co-operate end-to-end across the scope boundary.
+      await seedMergedIssueDelivery(externalBlocker.data.id);
+      await seedConfirmedIssuePlan(serverDB, ch1.data.id);
       await caller.updateStatus({ id: externalBlocker.data.id, status: 'completed' });
       const ch1After = await caller.find({ id: ch1.data.id });
       expect(ch1After.data.status).toBe('running');
@@ -3610,10 +3683,22 @@ describe('Task Router Integration', () => {
       });
       await caller.addDependency({ dependsOnId: ch1.data.id, taskId: ch2.data.id });
 
+      // Freeze the code delivery contract before execution starts.
+      await new IssueChecklistService(serverDB, userId).confirmChecklist({
+        taskId: ch1.data.id,
+        expectedRevision: 0,
+        deliveryKind: 'code',
+        repo: 'org/repo',
+        targetBranch: 'canary',
+        items: [{ id: 'outcome', title: 'Outcome', required: true }],
+      });
       // Kick off layer 1 (just ch1)
+      await seedConfirmedIssuePlan(serverDB, ch1.data.id);
       await caller.run({ id: ch1.data.id });
 
       // Mark ch1 completed → ch2 should auto-run (status 'running' + topic created)
+      await seedMergedIssueDelivery(ch1.data.id, 2);
+      await seedConfirmedIssuePlan(serverDB, ch2.data.id);
       const completed = await caller.updateStatus({ id: ch1.data.id, status: 'completed' });
       expect(completed.unlocked).toEqual([ch2.data.identifier]);
 
@@ -3674,6 +3759,7 @@ describe('Task Router Integration', () => {
       // The saved Agent model changes after the task was created.
       await setAgentModel('gpt-5.4-pro', 'openai');
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       const [execution] = mockExecAgent.mock.calls.at(-1)!;
@@ -3694,6 +3780,7 @@ describe('Task Router Integration', () => {
       // User later configures the agent model.
       await setAgentModel('claude-sonnet-4-6', 'anthropic');
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       const after = await caller.find({ id: task.data.id });
@@ -4173,6 +4260,7 @@ describe('Task Router Integration', () => {
         assigneeUserId: userId,
         instruction: 'Human-assigned task',
       });
+      await seedConfirmedIssuePlan(serverDB, humanTask.data.id);
       await caller.run({ id: humanTask.data.id });
 
       const afterHumanRun = await caller.find({ id: humanTask.data.id });
@@ -4191,6 +4279,7 @@ describe('Task Router Integration', () => {
         expectedDomainRevision: await revisionOf(dualAssignedTask.data.id),
         id: dualAssignedTask.data.id,
       });
+      await seedConfirmedIssuePlan(serverDB, dualAssignedTask.data.id);
       await caller.run({ id: dualAssignedTask.data.id });
 
       const afterDualAssignedRun = await caller.find({ id: dualAssignedTask.data.id });
@@ -4199,6 +4288,7 @@ describe('Task Router Integration', () => {
 
       // Control: a fully unassigned task still gets the fallback persisted.
       const unassignedTask = await caller.create({ instruction: 'Unassigned task' });
+      await seedConfirmedIssuePlan(serverDB, unassignedTask.data.id);
       await caller.run({ id: unassignedTask.data.id });
 
       const afterUnassignedRun = await caller.find({ id: unassignedTask.data.id });

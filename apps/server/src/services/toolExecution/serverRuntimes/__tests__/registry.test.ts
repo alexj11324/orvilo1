@@ -8,7 +8,6 @@ import { agentManagementRuntime } from '../agentManagement';
 import { agentSignalFeedbackIntentRuntime } from '../agentSignalFeedbackIntent';
 import { agentSignalReflectionRuntime } from '../agentSignalReflection';
 import { agentSignalReviewRuntime } from '../agentSignalReview';
-import { agentSignalSkillManagementRuntime } from '../agentSignalSkillManagement';
 import { auvRuntime } from '../auv';
 import { briefRuntime } from '../brief';
 import { calculatorRuntime } from '../calculator';
@@ -27,7 +26,6 @@ import { orviloAgentRuntime } from '../orviloAgent';
 import { pageAgentRuntime } from '../pageAgent';
 import { remoteDeviceRuntime } from '../remoteDevice';
 import { selfFeedbackIntentRuntime } from '../selfFeedbackIntent';
-import { skillManagementRuntime } from '../skillManagement';
 import { skillsRuntime } from '../skills';
 import { taskRuntime } from '../task';
 import { topicReferenceRuntime } from '../topicReference';
@@ -48,7 +46,6 @@ const ALL_REGISTRATIONS = [
   agentSignalFeedbackIntentRuntime,
   agentSignalReflectionRuntime,
   agentSignalReviewRuntime,
-  agentSignalSkillManagementRuntime,
   auvRuntime,
   briefRuntime,
   calculatorRuntime,
@@ -66,7 +63,6 @@ const ALL_REGISTRATIONS = [
   pageAgentRuntime,
   remoteDeviceRuntime,
   selfFeedbackIntentRuntime,
-  skillManagementRuntime,
   skillsRuntime,
   taskRuntime,
   topicReferenceRuntime,
@@ -84,5 +80,7 @@ describe('serverRuntimes registry', () => {
       expect(hasServerRuntime(identifier)).toBe(true);
     }
     expect(hasServerRuntime('not-a-real-tool')).toBe(false);
+    expect(hasServerRuntime('agent-signal-skill-management')).toBe(false);
+    expect(hasServerRuntime('orvilo-skill-management')).toBe(false);
   });
 });

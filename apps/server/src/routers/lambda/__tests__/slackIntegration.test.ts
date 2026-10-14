@@ -14,6 +14,16 @@ vi.mock('@/libs/trpc/lambda/middleware', () => ({
   serverDatabase: (opts: { ctx: unknown; next: (args: unknown) => unknown }) =>
     opts.next({ ctx: opts.ctx }),
 }));
+vi.mock('@/database/models/project', () => ({
+  ProjectModel: class {
+    list = vi.fn().mockResolvedValue([]);
+  },
+}));
+vi.mock('@/database/models/repository', () => ({
+  RepositoryModel: class {
+    listByWorkspace = vi.fn().mockResolvedValue([]);
+  },
+}));
 vi.mock('@/database/models/workspace', () => ({ hasWorkspaceAdminAccess: async () => false }));
 vi.mock('@/database/models/slackIntegration', () => ({
   SlackIntegrationModel: class {

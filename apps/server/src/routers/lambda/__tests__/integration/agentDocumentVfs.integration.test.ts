@@ -4,6 +4,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentDocumentModel } from '@/database/models/agentDocuments';
+import { AGENT_SKILL_TEMPLATE_ID } from '@/server/services/skillManagement';
 
 import { agentDocumentRouter } from '../../agentDocument';
 import { cleanupTestUser, createTestAgent, createTestContext, createTestUser } from './setup';
@@ -185,14 +186,25 @@ describe('AgentDocument VFS Router Integration Tests', () => {
     expect(read).toEqual(expect.objectContaining({ content: 'second\n', path: './draft' }));
   });
 
-  it('stats mounted agent skills through unified ./orvilo paths', async () => {
+  it('reads archived mounted skills and rejects retired platform skill production', async () => {
     const caller = agentDocumentRouter.createCaller(createTestContext(userId));
 
-    await caller.writeDocumentByPath({
-      agentId,
-      content: '# Router Skill',
-      path: './orvilo/skills/agent/skills/router-skill/SKILL.md',
+    const bundle = await agentDocumentModel.create(agentId, 'router-skill', '', {
+      fileType: 'skills/bundle',
+      templateId: AGENT_SKILL_TEMPLATE_ID,
     });
+    await agentDocumentModel.create(agentId, 'SKILL.md', '# Router Skill', {
+      fileType: 'skills/index',
+      templateId: AGENT_SKILL_TEMPLATE_ID,
+      parentId: bundle.documentId,
+    });
+    await expect(
+      caller.writeDocumentByPath({
+        agentId,
+        content: '# Replaced Skill',
+        path: './orvilo/skills/agent/skills/router-skill/SKILL.md',
+      }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
 
     const stat = await caller.statDocumentByPath({
       agentId,

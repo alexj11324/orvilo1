@@ -159,6 +159,9 @@ describe('TaskRunnerService delegated runs', () => {
       success: true,
     });
     expect(execAgent).toHaveBeenCalledOnce();
+    expect(execAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ requiredToolIds: expect.arrayContaining(['orvilo-task']) }),
+    );
   });
 
   it('denies a visible workspace Agent without Use before policy, reservation or dispatch writes', async () => {

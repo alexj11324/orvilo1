@@ -1,54 +1,23 @@
 \<task_skill_guides>
-You are executing a task within the Orvilo task system. Use the `orvilo task` CLI via `runCommand` to manage your task and related resources.
+You are executing a task within the Orvilo task system. Use the mounted task tools from the `orvilo_cc` MCP server. Generic platform CLI endpoints reject operation tokens; use the tools exposed for this run.
 
-# Task Lifecycle
+# Task Context and Progress
 
-| Command                             | Description                                           |
-| ----------------------------------- | ----------------------------------------------------- |
-| `orvilo task view <id>`             | View task details, instruction, workspace, activities |
-| `orvilo task edit <id>`             | Update task name, instruction, status, priority       |
-| `orvilo task complete <id>`         | Mark task as completed                                |
-| `orvilo task comment <id> -m "..."` | Add a progress comment                                |
-| `orvilo task tree <id>`             | View subtask tree with dependencies                   |
+- **Check your task first**: Call `orvilo-task__viewTask` with its `identifier` (or omit it for the current task). Read the instruction, confirmed Issue Checklist, dependencies, subtasks, workspace document IDs, and activities before working.
+- **List subtasks**: Call `orvilo-task__listTasks` with `parentIdentifier`. Use `viewTask` to read dependency targets and their details; there is no separate dependency-list tool.
+- **Report progress**: Call `orvilo-task__addTaskComment` with `identifier` and `content` for key milestones, delivered revisions, evidence, or blockers.
+- **Edit task fields**: Use `orvilo-task__editTask` only within the confirmed scope. Follow its schema and revision requirements. Descriptions hold background and scope; acceptance criteria belong in the confirmed Issue Checklist.
 
-# Working with Subtasks
+# Task Documents and Files
 
-| Command                                       | Description       |
-| --------------------------------------------- | ----------------- |
-| `orvilo task create -i "..." --parent <id>`   | Create a subtask  |
-| `orvilo task list --parent <id>`              | List subtasks     |
-| `orvilo task sort <parentId> <id1> <id2> ...` | Reorder subtasks  |
-| `orvilo task dep add <id> <dependsOnId>`      | Add dependency    |
-| `orvilo task dep rm <id> <dependsOnId>`       | Remove dependency |
+Only when Agent Documents tools are mounted, use `orvilo-agent-documents__listDocuments` to discover agent documents and `orvilo-agent-documents__readDocument` to read them. For reads and edits, use the returned binding `id`, not its `documentId`; `documentId` identifies the underlying document row. Task workspace document IDs alone are not agent-document binding IDs.
 
-# Task Workspace (Documents)
+Use `orvilo-agent-documents__createDocument` with `title` and `content` for document deliverables when available. Documents created by this run are automatically attached to the current task. Agent Documents does not list uploaded files. Use other file tools only when they are actually exposed and support the current execution environment. Do not invent a file upload API or claim an artifact was uploaded without a successful tool result.
 
-| Command                                               | Description               |
-| ----------------------------------------------------- | ------------------------- |
-| `orvilo task doc create <id> -t "title" -b "content"` | Create and pin a document |
-| `orvilo task doc pin <id> <docId>`                    | Pin existing document     |
-| `orvilo task doc unpin <id> <docId>`                  | Unpin document            |
+# Delivery and Completion
 
-# Task Topics (Conversations)
-
-| Command                                 | Description              |
-| --------------------------------------- | ------------------------ |
-| `orvilo task topic list <id>`           | List conversation topics |
-| `orvilo task topic view <id> <topicId>` | View topic messages      |
-
-# Usage Pattern
-
-1. Read the reference file for detailed command options: `readReference('references/commands')`
-2. Run commands via `runCommand` — the `orvilo` prefix is automatically handled
-3. Use `--json` flag on any command for structured output
-4. Use `orvilo task <subcommand> --help` for full command-line help
-
-# Task Execution Guidelines
-
-- **Check your task first**: Use `orvilo task view` to understand the full instruction and context
-- **Use workspace documents**: Store outputs and deliverables as task documents
-- **Report progress**: Use `orvilo task comment` to log key milestones
-- **Respect dependencies**: Check `orvilo task tree` to understand task ordering
-- **Complete when done**: Use `orvilo task complete` when all deliverables are ready
-- **Automation tasks are the exception — NEVER complete them**: a task with automation (heartbeat, schedule or event — shown as an `Automation:` line in the task context) is a recurring loop, and this run is one tick of it. NEVER run `orvilo task complete` (or set a terminal status via `orvilo task edit --status`) on that task: a terminal status cancels the in-flight run and permanently disarms the loop — no future tick will fire and nothing recovers it. A tick with nothing to do is still a successful run; just finish your turn and the next tick is armed automatically. Only the user retires a recurring task.
+- Execute only the confirmed plan and Issue Checklist. Respect real Issue blocking dependencies and report the exact delivered revision and evidence.
+- A saved reviewer Agent reviews the confirmed Checklist and delivered version. A prose reply or task comment does not record a review verdict. Use the review tool only when this run is authorized as the reviewer.
+- Finishing this run does not mark the Issue Done. Do not mark code delivery completed or merge its PR. Final human acceptance and the real merge controller determine Done.
+- **Automation tasks — NEVER complete them**: heartbeat, schedule, and event tasks are recurring loops; this run is one tick. NEVER set a terminal status on an automation task: doing so cancels the in-flight run and permanently disarms the loop. A tick with nothing to do is still successful; finish your turn normally. Only the user retires a recurring task.
   \</task_skill_guides>

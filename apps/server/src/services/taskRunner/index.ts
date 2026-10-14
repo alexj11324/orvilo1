@@ -1015,12 +1015,7 @@ export class TaskRunnerService {
           ? 'agent'
           : 'auto'
       ) as 'agent' | 'auto';
-      const pluginIds = [TaskSkillIdentifier];
-      if (
-        preparedDispatch!.dispatch.automationOccurrence?.input ||
-        priorContract?.occurrence?.input
-      )
-        pluginIds.push(TaskToolIdentifier);
+      const pluginIds = [TaskSkillIdentifier, TaskToolIdentifier];
       // Mount BriefIdentifier (createBrief + requestCheckpoint) only in the
       // legacy 'agent' path; in 'auto' the agent must not also call
       // createBrief or we'd double up.

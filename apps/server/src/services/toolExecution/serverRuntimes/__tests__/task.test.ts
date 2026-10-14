@@ -6,7 +6,12 @@ import type * as taskReview from '@/server/services/task/review';
 
 import { createTaskRuntime, taskRuntime } from '../task';
 
-const intakeMocks = vi.hoisted(() => ({ intake: vi.fn() }));
+const intakeMocks = vi.hoisted(() => ({ intake: vi.fn(), source: vi.fn() }));
+vi.mock('@/database/models/topic', () => ({
+  TopicModel: class {
+    findOwnTopicById = intakeMocks.source;
+  },
+}));
 vi.mock('@/server/services/task/plan', () => ({
   TaskPlanService: vi.fn(function () {
     return intakeMocks;
@@ -131,8 +136,9 @@ describe('taskRuntime.factory', () => {
 
 describe('createTaskRuntime', () => {
   describe('intakeIssue', () => {
-    const runtime = () =>
+    const runtime = (slack = false) =>
       createTaskRuntime({
+        ...(slack ? { db: {} as never, userId: 'caller', workspaceId: 'workspace' } : {}),
         agentId: 'agent-source',
         topicId: 'topic-source',
         assistantMessageId: 'message-source',
@@ -174,6 +180,54 @@ describe('createTaskRuntime', () => {
             operationId: 'root-operation',
             toolCallId: 'intake-call',
           },
+        }),
+      );
+    });
+
+    it('clarifies an unspecified Slack delivery target instead of guessing from activity', async () => {
+      intakeMocks.intake.mockClear();
+      intakeMocks.source.mockResolvedValue({ trigger: 'slack' });
+      const result = await runtime(true).intakeIssue({
+        name: 'Feature',
+        instruction: 'Add feature',
+      });
+      expect(result.success).toBe(false);
+      expect(result.content).toContain('specify the target');
+      expect(intakeMocks.intake).not.toHaveBeenCalled();
+    });
+
+    it('uses configured channel defaults only after explicit Issue/project targets', async () => {
+      intakeMocks.source.mockResolvedValue({
+        trigger: 'slack',
+        metadata: { slackContext: { projectId: 'default-project', repositoryId: 'default-repo' } },
+      });
+      intakeMocks.intake.mockResolvedValue({
+        id: 'draft',
+        name: 'Feature',
+        workflowCategory: 'triage',
+      });
+      await runtime(true).intakeIssue({ name: 'Feature', instruction: 'Add feature' });
+      expect(intakeMocks.intake).toHaveBeenLastCalledWith(
+        expect.objectContaining({ projectId: 'default-project', repositoryId: 'default-repo' }),
+      );
+      await runtime(true).intakeIssue({
+        name: 'Feature',
+        instruction: 'Add feature',
+        projectId: 'explicit-project',
+      });
+      expect(intakeMocks.intake).toHaveBeenLastCalledWith(
+        expect.objectContaining({ projectId: 'explicit-project', repositoryId: undefined }),
+      );
+      await runtime(true).intakeIssue({
+        name: 'Feature',
+        instruction: 'Add feature',
+        issueId: 'explicit-issue',
+      });
+      expect(intakeMocks.intake).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          issueId: 'explicit-issue',
+          projectId: undefined,
+          repositoryId: undefined,
         }),
       );
     });

@@ -849,6 +849,7 @@ export const taskRouter = router({
         name: z.string().trim().min(1).max(2000),
         instruction: z.string().trim().min(1).max(100000),
         projectId: z.string().optional(),
+        repositoryId: z.string().optional(),
         teamId: z.string().optional(),
         issueId: z.string().optional(),
         sourceTopicId: z.string().min(1).optional(),

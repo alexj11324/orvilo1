@@ -1,6 +1,10 @@
 import type { AgentState } from '@orvilo/agent-execution';
+import type { OrviloDatabase } from '@orvilo/database';
+import { eq } from 'drizzle-orm';
 
 import { MessageModel } from '@/database/models/message';
+import { TopicModel } from '@/database/models/topic';
+import { topics } from '@/database/schemas';
 import { InMemoryStreamEventManager } from '@/server/modules/AgentExecution/InMemoryStreamEventManager';
 import type {
   StreamChunkData,
@@ -13,6 +17,7 @@ import {
   normalizeCompletionMessages,
 } from '@/server/services/agentExecution/CompletionLifecycle';
 import { AiAgentService } from '@/server/services/aiAgent';
+import type { InternalExecAgentParams } from '@/server/services/aiAgent/types';
 
 import { BaseService } from '../common/base.service';
 import type {
@@ -57,6 +62,19 @@ const isTerminalRunStatus = (status: AgentState['status']): boolean =>
  * run settles.
  */
 export class ResponsesService extends BaseService {
+  /** Transport-owned options; never accepted from OpenResponses request metadata. */
+  constructor(
+    db: OrviloDatabase,
+    userId: string,
+    workspaceId?: string,
+    private readonly slackInput?: {
+      files?: InternalExecAgentParams['files'];
+      projectId?: string | null;
+      repositoryId?: string | null;
+    },
+  ) {
+    super(db, userId, workspaceId);
+  }
   /**
    * Extract hosted builtin tool identifiers from tools array
    */
@@ -445,7 +463,19 @@ export class ResponsesService extends BaseService {
         instructions,
         prompt,
         stream: false,
-        trigger: 'openapi',
+        trigger: this.slackInput ? 'slack' : 'openapi',
+        files: this.slackInput?.files,
+        beforeOperationStart: this.slackInput
+          ? async ({ topicId }) => {
+              await this.db.update(topics).set({ trigger: 'slack' }).where(eq(topics.id, topicId));
+              await new TopicModel(this.db, this.userId, this.workspaceId).updateMetadata(topicId, {
+                slackContext: {
+                  projectId: this.slackInput?.projectId,
+                  repositoryId: this.slackInput?.repositoryId,
+                },
+              });
+            }
+          : undefined,
       });
 
       if (!execResult.success) {
@@ -546,7 +576,19 @@ export class ResponsesService extends BaseService {
         instructions,
         prompt,
         stream: true,
-        trigger: 'openapi',
+        trigger: this.slackInput ? 'slack' : 'openapi',
+        files: this.slackInput?.files,
+        beforeOperationStart: this.slackInput
+          ? async ({ topicId }) => {
+              await this.db.update(topics).set({ trigger: 'slack' }).where(eq(topics.id, topicId));
+              await new TopicModel(this.db, this.userId, this.workspaceId).updateMetadata(topicId, {
+                slackContext: {
+                  projectId: this.slackInput?.projectId,
+                  repositoryId: this.slackInput?.repositoryId,
+                },
+              });
+            }
+          : undefined,
       });
 
       if (!execResult.success) {

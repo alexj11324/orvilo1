@@ -7,8 +7,14 @@ import type { ToolExecutionContext } from '../types';
 const mocks = vi.hoisted(() => ({
   apiHandler: vi.fn(),
   executeOrviloSkill: vi.fn(),
+  sourceTopic: vi.fn(),
 }));
 const mockApiHandler = mocks.apiHandler;
+vi.mock('@/database/models/topic', () => ({
+  TopicModel: class {
+    findOwnTopicById = mocks.sourceTopic;
+  },
+}));
 
 vi.mock('../serverRuntimes', () => ({
   hasServerRuntime: vi.fn().mockReturnValue(true),
@@ -586,5 +592,32 @@ describe('BuiltinToolsExecutor share-visitor gate', () => {
       },
     });
     expect(write.error?.code).toBe('SHARE_GATE_BLOCKED');
+  });
+});
+
+describe('Slack external platform sources', () => {
+  const executor = new BuiltinToolsExecutor({} as never, 'user-1');
+  it('blocks private platform documents and memory at dispatch while ordinary Orvilo remains usable', async () => {
+    mocks.apiHandler.mockReset().mockResolvedValue({ content: 'private content', success: true });
+    mocks.sourceTopic.mockResolvedValue({ trigger: 'slack' });
+    const scoped = {
+      ...context,
+      topicId: 'source',
+      serverDB: {} as never,
+      workspaceId: 'workspace',
+    };
+    const denied = await executor.execute(buildPayload('{}'), scoped);
+    expect(denied.success).toBe(false);
+    expect(mocks.apiHandler).not.toHaveBeenCalled();
+    const memory = await executor.execute(
+      { ...buildPayload('{}'), identifier: 'orvilo-user-memory', apiName: 'searchUserMemory' },
+      scoped,
+    );
+    expect(memory.success).toBe(false);
+    expect(mocks.apiHandler).not.toHaveBeenCalled();
+    mocks.sourceTopic.mockResolvedValue(null);
+    expect((await executor.execute(buildPayload('{}'), scoped)).success).toBe(false);
+    mocks.sourceTopic.mockResolvedValue({ trigger: 'chat' });
+    expect((await executor.execute(buildPayload('{}'), scoped)).success).toBe(true);
   });
 });

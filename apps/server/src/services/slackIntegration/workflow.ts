@@ -1,9 +1,13 @@
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import { WorkspaceModel } from '@/database/models/workspace';
 import { getServerDB } from '@/database/server';
+import { appEnv } from '@/envs/app';
 
 import { createSlackIntegrationService } from '.';
 import { getSlackChannelsRuntime } from './channelsRuntime';
+import { resolvePendingSlackReply, submitPendingSlackReply } from './nativeReply';
 import { createSlackChannelsStore } from './store';
 
 export const slackEventInput = z.object({
@@ -34,6 +38,24 @@ export const runSlackIntegrationEvent = async (input: z.infer<typeof slackEventI
     },
     {
       database,
+      issueUrl: async ({ taskId, userId, workspaceId }) => {
+        const workspace = await new WorkspaceModel(database, userId).findById(workspaceId);
+        if (!workspace) throw new TRPCError({ code: 'NOT_FOUND', message: 'Workspace not found' });
+        return `${appEnv.APP_URL.replace(/\/$/, '')}/${encodeURIComponent(workspace.slug)}/task/${encodeURIComponent(taskId)}`;
+      },
+      resolvePendingReply: async (scope) => {
+        try {
+          return await resolvePendingSlackReply({ ...scope, db: database });
+        } catch (error) {
+          if (
+            error instanceof TRPCError &&
+            (error.code === 'FORBIDDEN' || error.code === 'NOT_FOUND')
+          )
+            return null;
+          throw error;
+        }
+      },
+      submitReply: (scope) => submitPendingSlackReply({ ...scope, db: database }),
       resolveBinding: (identity) => service.resolveSlackBinding(identity),
       resolveUser: async (identity) => {
         const user = await service.resolveSlackUser(identity);

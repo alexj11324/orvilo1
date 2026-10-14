@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   identities: [] as { userId: string; workspaceId: string }[],
   requests: [] as CreateResponseRequest[],
   responseCount: 0,
+  attachments: [] as unknown[],
   stream: vi.fn(),
 }));
 
@@ -44,14 +45,26 @@ vi.mock('@copilotkit/channels-slack', async (importOriginal) => {
         ts: '900.001',
       });
       vi.spyOn(adapter.client.chat, 'update').mockResolvedValue({ ok: true });
+      vi.spyOn(adapter, 'getMessages').mockResolvedValue([]);
       mocks.adapters.push(adapter);
       return adapter;
     },
   };
 });
+vi.mock('./attachments', () => ({
+  downloadSlackAttachments: vi.fn(async (_token, ids: string[]) =>
+    ids.map((id) => ({ buffer: Buffer.from(id), name: id })),
+  ),
+}));
 vi.mock('@orvilo/openapi/src/services/responses.service', () => ({
   ResponsesService: class {
-    constructor(_database: OrviloDatabase, userId: string, workspaceId: string) {
+    constructor(
+      _database: OrviloDatabase,
+      userId: string,
+      workspaceId: string,
+      transport?: unknown,
+    ) {
+      mocks.attachments.push(transport);
       mocks.identities.push({ userId, workspaceId });
     }
 
@@ -104,6 +117,7 @@ describe('installed Channels SDK Slack runtime', () => {
     mocks.identities.length = 0;
     mocks.requests.length = 0;
     mocks.responseCount = 0;
+    mocks.attachments.length = 0;
     mocks.stream.mockReset();
     mocks.stream.mockImplementation(async function* (request: CreateResponseRequest) {
       mocks.requests.push(request);
@@ -175,7 +189,7 @@ describe('installed Channels SDK Slack runtime', () => {
     ]);
   });
 
-  it('does not start on channel chatter, and reports unsupported files without executing', async () => {
+  it('does not start on channel chatter, and retains directly uploaded files', async () => {
     const runtime = await createSlackChannelsRuntime(installation, dependencies());
     active.push(runtime);
     await runtime.dispatch(
@@ -187,9 +201,91 @@ describe('installed Channels SDK Slack runtime', () => {
     );
     await runtime.dispatch(envelope('100.011', 'UA', { files: [{ id: 'F1' }] }));
 
-    expect(mocks.requests).toEqual([]);
-    expect(mocks.adapters[0].client.chat.postMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ text: expect.stringContaining('attachments are not supported') }),
+    expect(mocks.requests).toHaveLength(1);
+    expect(mocks.requests[0].instructions).toContain('intakeIssue');
+    expect(mocks.attachments[0]).toMatchObject({ files: [{ name: 'F1' }] });
+  });
+
+  it('retains current-thread discussion without borrowing another author execution identity', async () => {
+    const runtime = await createSlackChannelsRuntime(installation, dependencies());
+    active.push(runtime);
+    vi.mocked(mocks.adapters[0].getMessages).mockResolvedValue([
+      { text: 'Discussion from a teammate', user: { id: 'UB', kind: 'human' } },
+    ]);
+    await runtime.dispatch(envelope('105.001', 'UA'));
+    expect(mocks.requests[0].input).toContain('Discussion from a teammate');
+    expect(mocks.identities).toEqual([{ userId: 'orvilo-UA', workspaceId: 'workspace-1' }]);
+  });
+
+  it('isolates the same human across Slack threads and applies channel and DM source rules', async () => {
+    const runtime = await createSlackChannelsRuntime(installation, dependencies());
+    active.push(runtime);
+    await runtime.dispatch(envelope('102.001'));
+    await runtime.dispatch(envelope('102.002', 'UA', { thread_ts: '101.001' }));
+    await runtime.dispatch(
+      envelope('102.003', 'UA', {
+        channel: 'D1',
+        thread_ts: '103.001',
+        type: 'message',
+        text: 'hello',
+      }),
+    );
+    expect(mocks.requests.map((request) => request.previous_response_id)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
+    expect(
+      mocks.requests.every((request) => request.instructions?.includes('readable Issue sessions')),
+    ).toBe(true);
+  });
+
+  it('answers only the native request token bound to this thread without starting another user run', async () => {
+    const deps = dependencies();
+    deps.resolvePendingReply = vi.fn(async () => ({
+      operationId: 'original-operation',
+      toolCallId: 'native-call',
+      toolMessageId: 'native-card',
+      windowId: 'window-1',
+      taskId: 'linked-issue',
+      topicId: 'issue-run',
+      deadline: Date.now() + 60000,
+      interactionKind: 'permission' as const,
+      prompt: 'Native permission',
+      questions: [],
+      options: [{ id: 'native-allow-once', label: 'Allow once' }],
+    }));
+    deps.issueUrl = vi.fn(async () => 'https://orvilo.test/workspace/task/linked-issue');
+    deps.submitReply = vi.fn(async () => ({ success: true }));
+    const runtime = await createSlackChannelsRuntime(installation, deps);
+    active.push(runtime);
+    await runtime.dispatch(envelope('104.001'));
+    const posts = vi.mocked(mocks.adapters[0].client.chat.postMessage).mock.calls;
+    const text = posts.map(([post]) => post.text).find((value) => value?.includes('Reply with:'))!;
+    const token = /reply ([\w-]+)/.exec(text)![1];
+    await runtime.dispatch(
+      envelope('104.002', 'UB', {
+        thread_ts: 'other-thread',
+        text: `reply ${token} native-allow-once`,
+      }),
+    );
+    expect(deps.submitReply).not.toHaveBeenCalled();
+    await runtime.dispatch(envelope('104.003', 'UB', { text: `reply ${token} native-allow-once` }));
+    expect(deps.submitReply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'orvilo-UB',
+        sourceTopicId: 'response-1',
+        topicId: 'issue-run',
+        operationId: 'original-operation',
+        optionId: 'native-allow-once',
+        windowId: 'window-1',
+      }),
+    );
+    expect(mocks.stream).toHaveBeenCalledTimes(1);
+    expect(mocks.adapters[0].client.chat.postMessage).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining('https://orvilo.test/workspace/task/linked-issue'),
+      }),
     );
   });
 
@@ -235,7 +331,7 @@ describe('installed Channels SDK Slack runtime', () => {
     );
   });
 
-  it('rejects files in edited Slack messages even without the original delivery marker', async () => {
+  it('retains files in edited Slack messages without the original delivery marker', async () => {
     const runtime = await createSlackChannelsRuntime(installation, dependencies());
     active.push(runtime);
     await runtime.dispatch(
@@ -254,10 +350,7 @@ describe('installed Channels SDK Slack runtime', () => {
       }),
     );
 
-    expect(mocks.stream).not.toHaveBeenCalled();
-    expect(mocks.adapters[0].client.chat.postMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ text: expect.stringContaining('attachments are not supported') }),
-    );
+    expect(mocks.stream).toHaveBeenCalledTimes(1);
   });
 
   it('keeps clients separate by team and replaces installations or token revisions', async () => {

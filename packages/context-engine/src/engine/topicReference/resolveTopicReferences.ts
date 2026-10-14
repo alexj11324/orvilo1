@@ -96,7 +96,7 @@ export async function resolveTopicReferences(
       }
 
       // Fallback: fetch recent messages
-      if (lookupMessages) {
+      if (topic && lookupMessages) {
         try {
           const allMessages = await lookupMessages(topicId);
 

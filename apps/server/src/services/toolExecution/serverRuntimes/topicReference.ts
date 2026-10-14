@@ -4,7 +4,11 @@ import { escapeXml } from '@orvilo/prompts';
 import type { BuiltinServerRuntimeOutput } from '@orvilo/types';
 
 import { MessageModel } from '@/database/models/message';
+import { ProjectModel } from '@/database/models/project';
+import { TaskModel } from '@/database/models/task';
+import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
+import { assertCanViewTopicTargets } from '@/server/routers/lambda/_helpers/conversationResourceGuard';
 
 import type { ServerRuntimeRegistration } from './types';
 
@@ -19,7 +23,12 @@ class TopicReferenceExecutionRuntime {
   private userId: string;
   private workspaceId?: string;
 
-  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
+  constructor(
+    db: OrviloDatabase,
+    userId: string,
+    workspaceId?: string,
+    private readonly sourceTopicId?: string,
+  ) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -34,12 +43,50 @@ class TopicReferenceExecutionRuntime {
 
     try {
       const topicModel = new TopicModel(this.db, this.userId, this.workspaceId);
+      const source = this.sourceTopicId
+        ? await topicModel.findOwnTopicById(this.sourceTopicId)
+        : null;
+      if (this.sourceTopicId && !source)
+        return { content: 'Source conversation is unavailable.', success: false };
+      const issue = await new TaskTopicModel(
+        this.db,
+        this.userId,
+        this.workspaceId,
+      ).findIssueTopicById(topicId);
+      if (
+        source?.trigger === 'slack' &&
+        (!this.workspaceId || !issue || issue.workspaceId !== this.workspaceId)
+      ) {
+        return {
+          content: 'Slack references require a readable Issue session in this workspace.',
+          success: false,
+        };
+      }
+      if (issue) {
+        const task = await new TaskModel(this.db, this.userId, this.workspaceId).findById(
+          issue.taskId,
+        );
+        if (
+          !task ||
+          (source?.trigger === 'slack' && task.workspaceId !== this.workspaceId) ||
+          (task.projectId &&
+            !(await new ProjectModel(this.db, this.userId, this.workspaceId).findById(
+              task.projectId,
+            )))
+        ) {
+          return { content: 'Issue session is not readable.', success: false };
+        }
+      }
+      await assertCanViewTopicTargets(
+        { db: this.db, userId: this.userId, workspaceId: this.workspaceId },
+        [topicId],
+      );
       // `findOwnTopicById`: this tool runs under the account owner's identity,
       // so a raw topic id must never resolve to an agent-share visitor topic
       // (those are stored under the creator's userId).
       const topic = await topicModel.findOwnTopicById(topicId);
 
-      if (!topic) {
+      if (!topic || (source?.trigger === 'slack' && topic.workspaceId !== this.workspaceId)) {
         return { content: `Topic not found: ${topicId}`, success: false };
       }
 
@@ -102,6 +149,7 @@ export const topicReferenceRuntime: ServerRuntimeRegistration = {
       context.serverDB,
       context.userId,
       context.workspaceId,
+      context.topicId,
     );
   },
   identifier: TopicReferenceIdentifier,

@@ -110,6 +110,27 @@ afterEach(() => {
 });
 
 describe('Issue plan confirmation', () => {
+  it('keeps an authorized intake repository in the Issue draft without starting delivery', async () => {
+    const repository = await new RepositoryModel(db, user, ws).upsertByRemoteIdentity({
+      providerHost: 'github.com',
+      remoteRepositoryId: 'slack-target',
+      coordinate: { owner: 'owner', name: 'slack-repo', defaultBranch: 'canary' },
+    });
+    const draft = await service().intake({
+      name: 'Slack code request',
+      instruction: 'Implement the supplied scope',
+      repositoryId: repository.id,
+    });
+    expect(draft.workflowCategory).toBe('triage');
+    expect(draft.config).toMatchObject({
+      workspace: { repo: 'owner/slack-repo', baseBranch: 'canary' },
+    });
+    expect((draft.context as TaskContext).issuePlan?.confirmedAt).toBeUndefined();
+    expect(TaskService.prototype.runReadySubtasks).not.toHaveBeenCalled();
+    await expect(
+      service().intake({ name: 'Request', instruction: 'Scope', repositoryId: 'unreadable-repo' }),
+    ).rejects.toThrow('Repository not found');
+  });
   it('drafts real A/B → C and child → parent edges without executing, then freezes all Checklists before dispatch', async () => {
     const draft = await service().draftIssuePlan(id);
     expect(draft.subtasks.map((task) => task.name)).toEqual(['A', 'B', 'C']);

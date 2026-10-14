@@ -1,3 +1,8 @@
+import { AgentDocumentsIdentifier } from '@orvilo/builtin-tool-agent-documents';
+import { KnowledgeBaseIdentifier } from '@orvilo/builtin-tool-knowledge-base';
+import { MemoryIdentifier } from '@orvilo/builtin-tool-memory';
+import { NotebookIdentifier } from '@orvilo/builtin-tool-notebook';
+import { PageAgentIdentifier } from '@orvilo/builtin-tool-page-agent';
 import { builtinTools } from '@orvilo/builtin-tools';
 import { type OrviloDatabase } from '@orvilo/database';
 import {
@@ -8,6 +13,7 @@ import {
 import { detectTruncatedJSON, safeParseJSON } from '@orvilo/utils';
 import debug from 'debug';
 
+import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { isShareBlockedBuiltinDispatch } from '@/server/services/aiAgent/shareGate';
 import { ComposioService } from '@/server/services/composio';
@@ -116,6 +122,32 @@ export class BuiltinToolsExecutor implements IToolExecutor {
     }
 
     const args = parsed || {};
+    // Slack references exclude platform knowledge and private independent conversations.
+    if (
+      context.topicId &&
+      context.serverDB &&
+      context.userId &&
+      [
+        AgentDocumentsIdentifier,
+        KnowledgeBaseIdentifier,
+        MemoryIdentifier,
+        NotebookIdentifier,
+        PageAgentIdentifier,
+      ].includes(identifier)
+    ) {
+      const topic = await new TopicModel(
+        context.serverDB,
+        context.userId,
+        context.workspaceId,
+      ).findOwnTopicById(context.topicId);
+      if (!topic) return { content: 'Source conversation is unavailable.', success: false };
+      if (topic?.trigger === 'slack')
+        return {
+          content:
+            'Read authorized repository files or a readable Issue session instead. Other Orvilo sources are unavailable from Slack.',
+          success: false,
+        };
+    }
 
     // Share-visitor gate at the ACTUAL dispatch site — retained for the
     // visitor operations persisted before visitor execution was retired

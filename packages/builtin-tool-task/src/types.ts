@@ -69,6 +69,7 @@ export interface IntakeIssueParams {
   issueId?: string;
   name: string;
   projectId?: string;
+  repositoryId?: string;
   teamId?: string;
 }
 

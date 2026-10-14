@@ -149,6 +149,8 @@ export class SlackIntegrationModel {
         slackChannelName: slackChannelBindings.slackChannelName,
         agentId: slackChannelBindings.agentId,
         agentName: agents.title,
+        projectId: slackChannelBindings.projectId,
+        repositoryId: slackChannelBindings.repositoryId,
       })
       .from(slackChannelBindings)
       .innerJoin(agents, eq(slackChannelBindings.agentId, agents.id))
@@ -171,6 +173,8 @@ export class SlackIntegrationModel {
   saveBinding = async (
     input: {
       agentId: string;
+      projectId?: string | null;
+      repositoryId?: string | null;
       slackChannelId: string;
       slackChannelName: string;
     },

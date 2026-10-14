@@ -2,6 +2,8 @@ import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 
 export interface BindingDraft {
   agentId: string;
+  projectId?: string;
+  repositoryId?: string;
   slackChannelId: string;
 }
 

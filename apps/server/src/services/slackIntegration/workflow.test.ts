@@ -11,6 +11,10 @@ vi.mock('.', () => ({
   }),
 }));
 vi.mock('./channelsRuntime', () => ({ getSlackChannelsRuntime: mocks.runtime }));
+vi.mock('./nativeReply', () => ({
+  resolvePendingSlackReply: vi.fn(),
+  submitPendingSlackReply: vi.fn(),
+}));
 vi.mock('./store', () => ({ createSlackChannelsStore: () => ({}) }));
 
 const input = {

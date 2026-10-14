@@ -32,6 +32,7 @@ import { notifyTaskAssigned } from '@/business/server/task/notifyTaskAssigned';
 import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
+import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { WorkspaceModel } from '@/database/models/workspace';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
@@ -288,7 +289,34 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
               toolCallId,
             }
           : undefined;
-      const task = await deps.taskPlanService.intake({ ...args, origin });
+      const source =
+        deps.db && deps.userId && topicId
+          ? await new TopicModel(deps.db, deps.userId, deps.workspaceId).findOwnTopicById(topicId)
+          : null;
+      const defaults = source?.trigger === 'slack' ? source.metadata?.slackContext : undefined;
+      if (
+        source?.trigger === 'slack' &&
+        !args.issueId &&
+        !args.projectId &&
+        !args.repositoryId &&
+        !defaults?.projectId &&
+        !defaults?.repositoryId
+      ) {
+        return {
+          content:
+            'Which Issue, project or repository is this delivery for? Please specify the target before creating its plan.',
+          success: false,
+        };
+      }
+      const task = await deps.taskPlanService.intake({
+        ...args,
+        projectId:
+          args.projectId ?? (args.issueId ? undefined : (defaults?.projectId ?? undefined)),
+        repositoryId:
+          args.repositoryId ??
+          (args.issueId || args.projectId ? undefined : (defaults?.repositoryId ?? undefined)),
+        origin,
+      });
       return {
         content: `${formatTaskCreated({ baseUrl: await taskLinkBaseUrl(), identifier: task.identifier, name: task.name, instruction: args.instruction, priority: task.priority, status: deriveLegacyTaskStatus(task) })}\nIssue Checklist drafted. Await human confirmation before delivery.`,
         state: {

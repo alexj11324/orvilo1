@@ -32,6 +32,7 @@ export enum RequestTrigger {
   Scheduled = 'scheduled',
   SemanticSearch = 'semantic_search',
   SignupEmailLLMReview = 'signup_email_llm_review',
+  Slack = 'slack',
   Topic = 'topic',
   Video = 'video',
 }

@@ -11,6 +11,7 @@ export const SLACK_BOT_SCOPES = [
   'groups:read',
   'groups:history',
   'users:read',
+  'files:read',
 ];
 export class SlackProviderError extends Error {
   constructor(public readonly code: string) {

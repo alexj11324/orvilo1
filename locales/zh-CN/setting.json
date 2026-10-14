@@ -619,6 +619,8 @@
   "integrations.slack.channel": "Slack 频道",
   "integrations.slack.connections": "频道连接",
   "integrations.slack.connectionsDescription": "将 Slack 频道连接到 Agent。",
+  "integrations.slack.defaultProject": "默认项目",
+  "integrations.slack.defaultRepository": "默认仓库",
   "integrations.slack.description": "将 Slack 工作区连接到 Orvilo。",
   "integrations.slack.disconnectDescription": "这将移除当前工作区的 Slack 安装、频道连接与个人账号关联。",
   "integrations.slack.disconnectTitle": "断开 Slack 工作区连接？",
@@ -627,6 +629,8 @@
   "integrations.slack.moreChannels": "加载更多频道",
   "integrations.slack.noAgents": "当前工作区中暂无可访问的 Agent。请先创建 Agent 或申请访问权限。",
   "integrations.slack.noChannels": "暂无可用频道。请检查 Slack 应用的频道访问权限，然后重试。",
+  "integrations.slack.noDefault": "未指定时询问",
+
   "integrations.slack.notConnected": "尚未连接 Slack 工作区。请安装 Slack 以继续。",
   "integrations.slack.oauth.dismissed": "授权完成前窗口已关闭。准备好后可重新连接。",
   "integrations.slack.oauth.failed": "Slack 授权未完成。请检查所需权限后重试。",

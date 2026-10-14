@@ -32,6 +32,8 @@ const BindingForm = ({ workspaceId, binding, onSaved }: BindingFormProps) => {
   const userId = useUserStore(userProfileSelectors.userId);
   const initial = {
     agentId: binding?.agentId || '',
+    projectId: binding?.projectId || '',
+    repositoryId: binding?.repositoryId || '',
     slackChannelId: binding?.slackChannelId || '',
   };
   const { draft, setDraft, markSaved } = useBindingDraft(
@@ -42,6 +44,8 @@ const BindingForm = ({ workspaceId, binding, onSaved }: BindingFormProps) => {
   const slackChannelId =
     binding?.slackChannelId ||
     (typeof draft?.slackChannelId === 'string' ? draft.slackChannelId : '');
+  const projectId = typeof draft?.projectId === 'string' ? draft.projectId : '';
+  const repositoryId = typeof draft?.repositoryId === 'string' ? draft.repositoryId : '';
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const status = useFetchSlackIntegration(workspaceId);
@@ -62,9 +66,12 @@ const BindingForm = ({ workspaceId, binding, onSaved }: BindingFormProps) => {
     setSaving(true);
     setSaveError(false);
     try {
-      await slackIntegrationService.saveBinding(workspaceId, slackChannelId, agentId);
+      await slackIntegrationService.saveBinding(workspaceId, slackChannelId, agentId, {
+        projectId: projectId || null,
+        repositoryId: repositoryId || null,
+      });
       await onSaved();
-      markSaved({ agentId, slackChannelId });
+      markSaved({ agentId, slackChannelId, projectId, repositoryId });
       close();
     } catch (error) {
       console.error('Slack channel binding failed', error);
@@ -171,6 +178,45 @@ const BindingForm = ({ workspaceId, binding, onSaved }: BindingFormProps) => {
             <p className="text-xs text-muted-foreground">{t('integrations.slack.noAgents')}</p>
           )}
         </div>
+        {(
+          [
+            {
+              field: 'projectId',
+              label: 'defaultProject',
+              value: projectId,
+              choices: status.data?.availableProjects,
+            },
+            {
+              field: 'repositoryId',
+              label: 'defaultRepository',
+              value: repositoryId,
+              choices: status.data?.availableRepositories,
+            },
+          ] as const
+        ).map(({ field, label, value, choices }) => (
+          <div className="flex flex-col gap-2" key={field}>
+            <label htmlFor={`slack-${field}`}>{t(`integrations.slack.${label}`)}</label>
+            <Select
+              disabled={saving || !status.data?.canManage}
+              value={value || '__none'}
+              onValueChange={(selected) =>
+                setDraft({ ...draft, [field]: selected === '__none' ? '' : selected || '' })
+              }
+            >
+              <SelectTrigger className="w-full" id={`slack-${field}`} size="normal">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">{t('integrations.slack.noDefault')}</SelectItem>
+                {choices?.map((choice) => (
+                  <SelectItem key={choice.id} value={choice.id}>
+                    {choice.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ))}
         {saveError && (
           <p className="text-sm text-destructive-text" role="alert">
             {t('integrations.slack.saveFailed')}

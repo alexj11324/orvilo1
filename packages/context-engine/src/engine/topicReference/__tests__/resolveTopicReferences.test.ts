@@ -74,6 +74,16 @@ describe('parseReferTopicTags', () => {
 // ============ resolveTopicReferences ============
 
 describe('resolveTopicReferences', () => {
+  it('never fetches messages when the live source lookup denies access', async () => {
+    const lookupMessages = vi.fn().mockResolvedValue([{ content: 'private', role: 'user' }]);
+    const result = await resolveTopicReferences(
+      [{ content: '<refer_topic id="denied" />' }],
+      async () => null,
+      lookupMessages,
+    );
+    expect(lookupMessages).not.toHaveBeenCalled();
+    expect(result?.[0].recentMessages).toBeUndefined();
+  });
   it('should return undefined when no refer_topic tags found', async () => {
     const lookup = vi.fn();
     const result = await resolveTopicReferences([{ content: 'Hello' }], lookup);

@@ -48,6 +48,7 @@ import {
   assertCanUseConversationTargets,
   assertCanUseSessionTargets,
   assertCanUseTopicTargets,
+  assertCanViewTopicTargets,
 } from './_helpers/conversationResourceGuard';
 import {
   batchResolveAgentIdFromSessions,
@@ -254,6 +255,7 @@ export const topicRouter = router({
     .query(async ({ input, ctx }) => {
       const topic = await ctx.topicModel.findOwnTopicById(input.id);
       if (!topic) return null;
+      await assertCanViewTopicTargets(ctx, [input.id]);
       return topic;
     }),
 

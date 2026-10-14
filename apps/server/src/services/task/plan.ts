@@ -165,6 +165,7 @@ export class TaskPlanService {
     name: string;
     instruction: string;
     projectId?: string;
+    repositoryId?: string;
     teamId?: string;
     issueId?: string;
     origin?: TaskOriginContext;
@@ -179,6 +180,16 @@ export class TaskPlanService {
         { db: this.db, userId: this.userId, workspaceId: this.workspaceId },
         [input.origin.topicId],
       );
+    let repository;
+    if (input.repositoryId) {
+      if (!this.workspaceId)
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Repository requires a workspace' });
+      repository = await new RepositoryModel(this.db, this.userId, this.workspaceId).findById(
+        input.repositoryId,
+      );
+      if (!repository || repository.status !== 'active')
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Repository not found' });
+    }
     let task: TaskItem;
     if (input.issueId) {
       const previous = await this.requireIssue(input.issueId, true);
@@ -204,6 +215,14 @@ export class TaskPlanService {
         instruction: input.instruction,
         description: input.instruction.slice(0, 255),
         projectId: input.projectId,
+        config: repository
+          ? {
+              workspace: {
+                repo: `${repository.coordinate.owner}/${repository.coordinate.name}`,
+                baseBranch: repository.coordinate.defaultBranch ?? undefined,
+              },
+            }
+          : undefined,
         teamId: input.teamId,
         workflowCategory: 'triage',
         triageStatus: 'untriaged',

@@ -1,4 +1,7 @@
 export default {
+  'integrations.slack.defaultProject': 'Default project',
+  'integrations.slack.defaultRepository': 'Default repository',
+  'integrations.slack.noDefault': 'Ask when not specified',
   'settingAgent.modelSettings.unavailable.disabled':
     'Provider is disabled. Enable it in AI provider settings first.',
   'notification.events.task_assigned': 'Issue assigned to me',

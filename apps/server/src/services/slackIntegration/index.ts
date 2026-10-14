@@ -3,6 +3,8 @@ import { randomBytes } from 'node:crypto';
 import { TRPCError } from '@trpc/server';
 import { and, eq, isNull } from 'drizzle-orm';
 
+import { ProjectModel } from '@/database/models/project';
+import { RepositoryModel } from '@/database/models/repository';
 import { SlackIntegrationModel } from '@/database/models/slackIntegration';
 import { hasActiveWorkspaceMembership, hasWorkspaceAdminAccess } from '@/database/models/workspace';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
@@ -106,11 +108,46 @@ export class SlackIntegrationService {
         return null;
       throw error;
     }
+    const projectId =
+      binding.projectId &&
+      (await new ProjectModel(this.db, input.userId, installation.workspaceId).findById(
+        binding.projectId,
+      ))
+        ? binding.projectId
+        : null;
+    const repository = binding.repositoryId
+      ? await new RepositoryModel(this.db, input.userId, installation.workspaceId).findById(
+          binding.repositoryId,
+        )
+      : null;
     return {
       agentId: binding.agentId,
       bindingId: binding.id,
+      projectId,
+      repositoryId: repository?.status === 'active' ? repository.id : null,
       workspaceId: installation.workspaceId,
     };
+  }
+  async assertDefaults(input: {
+    workspaceId: string;
+    userId: string;
+    projectId?: string | null;
+    repositoryId?: string | null;
+  }) {
+    if (
+      input.projectId &&
+      !(await new ProjectModel(this.db, input.userId, input.workspaceId).findById(input.projectId))
+    )
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'Slack default project not found' });
+    if (input.repositoryId) {
+      const repository = await new RepositoryModel(
+        this.db,
+        input.userId,
+        input.workspaceId,
+      ).findById(input.repositoryId);
+      if (!repository || repository.status !== 'active')
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Slack default repository not found' });
+    }
   }
   async assertAgent(workspaceId: string, userId: string, agentId: string) {
     const [agent] = await this.db
@@ -282,8 +319,11 @@ export class SlackIntegrationService {
     userId: string;
     slackChannelId: string;
     agentId: string;
+    projectId?: string | null;
+    repositoryId?: string | null;
   }) {
     await this.assertAgent(input.workspaceId, input.userId, input.agentId);
+    await this.assertDefaults(input);
     const model = new SlackIntegrationModel(this.db, input.workspaceId);
     const installation = await model.installation();
     if (!installation) throw new SlackProviderError('slack_installation_required');
@@ -302,12 +342,15 @@ export class SlackIntegrationService {
         slackChannelId: input.slackChannelId,
         slackChannelName: result.channel.name,
         agentId: input.agentId,
+        projectId: input.projectId ?? null,
+        repositoryId: input.repositoryId ?? null,
       },
       { id: installation.id, tokenRevision: installation.tokenRevision },
       async (tx) => {
         const writeService = new SlackIntegrationService(tx as OrviloDatabase);
         await writeService.assertLockedMember(input.workspaceId, input.userId, true);
         await writeService.assertAgent(input.workspaceId, input.userId, input.agentId);
+        await writeService.assertDefaults(input);
       },
     );
   }

@@ -45,7 +45,11 @@ export const TaskManifest: BuiltinToolManifest = {
             type: 'string',
             description: 'Existing Issue ID or identifier to link, when known.',
           },
-          projectId: { type: 'string', description: 'Existing project ID, when known.' },
+          projectId: { type: 'string', description: 'Explicit project ID, when known.' },
+          repositoryId: {
+            type: 'string',
+            description: 'Explicit authorized repository ID, when known.',
+          },
           teamId: { type: 'string', description: 'Existing team ID, when known.' },
         },
       },

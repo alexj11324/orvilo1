@@ -670,8 +670,8 @@ export const contextEngineering = async ({
     (await resolveTopicReferences(
       messages,
       async (topicId: string) => {
-        const topic = topicSelectors.getTopicById(topicId)(getChatStoreState());
-        return topic ?? null;
+        const { topicService } = await import('@/services/topic');
+        return topicService.getTopicDetail(topicId);
       },
       async (topicId: string) => {
         const { messageService } = await import('@/services/message');

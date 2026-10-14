@@ -117,7 +117,7 @@ export async function seedReviewedIssueDelivery(
       status: 'done',
     },
   ]);
-  const proof: IssueDeliveryProof = {
+  const proof = {
     taskId,
     deliveryOperationId: operationId,
     topicId,
@@ -130,7 +130,7 @@ export async function seedReviewedIssueDelivery(
     targetBranch: 'canary',
     checklistRevision: 1,
     deliveryKind: 'code',
-  };
+  } satisfies IssueDeliveryProof;
   const [topic] = await db
     .insert(taskTopics)
     .values({
@@ -144,6 +144,8 @@ export async function seedReviewedIssueDelivery(
       executionGeneration: proof.executionGeneration,
       status: 'completed',
       integration: {
+        attempts: 0,
+        targetBranch: proof.targetBranch,
         role: 'task',
         state: 'verification_pending',
         repo: proof.repo,
@@ -217,6 +219,7 @@ export async function seedReviewedIssueDelivery(
           required: true,
           onFail: 'manual',
           verifierType: 'agent',
+          verifierConfig: {},
         },
       ],
       status: 'passed',

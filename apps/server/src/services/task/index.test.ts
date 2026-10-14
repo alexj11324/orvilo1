@@ -429,8 +429,14 @@ describe('TaskService', () => {
           id: 'task_001',
           identifier: 'TASK-1',
           totalTopics: 0,
-          context: { execution: { parked: { reason: 'review_required' } } },
+          context: {
+            execution: { parked: { reason: 'review_required' } },
+            scheduler: { automationPaused: true },
+            origin: { topicId: 'private-source-topic', messageId: 'private-source-message' },
+          },
+          parentTaskId: 'parent-issue',
         });
+        mockTaskModel.findById.mockResolvedValue({ identifier: 'PARENT-1', name: 'Parent' });
         mockTaskModel.findAllDescendants.mockResolvedValue([]);
         mockTaskModel.getDependencies.mockResolvedValue([]);
         mockTaskTopicModel.findWithHandoff.mockResolvedValue([]);
@@ -449,7 +455,10 @@ describe('TaskService', () => {
           orchestrationAdmissionReason: reason,
           dispatchWaitingReason: 'caid_dispatch_disabled',
           parkedReason: 'review_required',
+          context: { scheduler: { automationPaused: true } },
+          parentTaskId: 'parent-issue',
         });
+        expect(result?.context?.origin).toBeUndefined();
         expect(admissionFlags.read).toHaveBeenCalledWith(userId);
       },
     );

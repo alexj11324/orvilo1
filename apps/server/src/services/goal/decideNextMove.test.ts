@@ -685,7 +685,16 @@ describe('Issue dependency frontier projection', () => {
         node('a', { taskId: 'issue-a', status: 'resolved' }),
         node('c', { taskId: 'issue-c' }),
       ],
-      edges: [{ id: 'old-edge', kind: 'depends_on', sourceNodeId: 'c', targetNodeId: 'a' }],
+      edges: [
+        {
+          createdAt: new Date(1000),
+          goalId: 'goal_1',
+          id: 'old-edge',
+          kind: 'depends_on',
+          sourceNodeId: 'c',
+          targetNodeId: 'a',
+        },
+      ],
     });
     expect(selectFrontier(snapshot, new Map([['issue-c', ['issue-b']]])).chosen).toBeUndefined();
     expect(selectFrontier(snapshot, new Map([['issue-c', []]])).chosen?.id).toBe('c');

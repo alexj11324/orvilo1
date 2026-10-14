@@ -563,7 +563,7 @@ export const runTaskDeliveryReviewSweep = async (
       // A task is not in delivery review until the remote branch and canonical
       // PR identity are durable. This also recovers the cross-system half-fail
       // where GitHub created the PR but the database write was interrupted.
-      let deliveryRecord = { ...record, targetBranch };
+      let deliveryRecord: TaskTopicIntegration = { ...record, targetBranch };
       let prNumber = record.prNumber;
       let prUrl = record.prUrl;
       if (!prNumber) {

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { TaskContext } from '@orvilo/types';
+import type { TaskConfig, TaskContext } from '@orvilo/types';
 import Ajv from 'ajv';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -311,7 +311,7 @@ describe('Issue plan confirmation', () => {
         .update(tasks)
         .set({
           config: {
-            ...current.config,
+            ...(current.config as TaskConfig | null),
             workspace: { repo: definition.repo, baseBranch: definition.targetBranch },
           },
         })
@@ -339,7 +339,9 @@ describe('Issue plan confirmation', () => {
       const current = (await new TaskModel(db, user, ws).findById(taskId))!;
       await db
         .update(tasks)
-        .set({ context: { ...current.context, issuePlan: standing.issuePlan } })
+        .set({
+          context: { ...(current.context as TaskContext | null), issuePlan: standing.issuePlan },
+        })
         .where(eq(tasks.id, taskId));
     }
     const proofModel = new IssueDeliveryModel(db, user, ws);
@@ -762,7 +764,7 @@ describe('confirmed implementation refinement', () => {
     const f = await refinementFixture();
     await db
       .update(agentOperations)
-      .set({ taskId: id, appContext: { taskId: id } })
+      .set({ taskId: id, appContext: {} })
       .where(eq(agentOperations.id, f.operationId));
     const result = await service().refineIssuePlan(f.input, f.operationId);
     expect(result.added).toHaveLength(1);
@@ -774,7 +776,7 @@ describe('confirmed implementation refinement', () => {
     const f = await refinementFixture();
     await db
       .update(agentOperations)
-      .set({ taskId: id, appContext: { taskId: id } })
+      .set({ taskId: id, appContext: {} })
       .where(eq(agentOperations.id, f.operationId));
     await db.insert(agentOperations).values({
       id: 'other-active-writer',

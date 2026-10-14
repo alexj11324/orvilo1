@@ -55,6 +55,7 @@ const LibraryList = memo(() => {
           title={t(
             listVisibility === 'private' ? 'library.privateEmpty' : 'library.workspaceEmpty',
           )}
+          onClick={() => undefined}
         />
       }
       onRetry={() => mutate()}

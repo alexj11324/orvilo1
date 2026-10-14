@@ -108,7 +108,11 @@ export const IssueChecklist = () => {
               )}
               {result?.userDecision && (
                 <p className="text-xs text-muted-foreground">
-                  {t(`taskDetail.checklist.decision.${result.userDecision}`)}
+                  {t(
+                    result.userDecision === 'overridden'
+                      ? 'taskDetail.checklist.decision.ignored'
+                      : `taskDetail.checklist.decision.${result.userDecision}`,
+                  )}
                   {result.userDecisionDetail?.decidedAt
                     ? ` · ${result.userDecisionDetail.decidedAt}`
                     : ''}

@@ -46,6 +46,8 @@ async function delivery(seq = 1, sourceSha = sha) {
     executionGeneration: seq,
     status: 'completed',
     integration: {
+      attempts: 0,
+      targetBranch: 'canary',
       role: 'task',
       state: 'verification_pending',
       repo: 'org/repo',

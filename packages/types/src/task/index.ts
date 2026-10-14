@@ -764,6 +764,8 @@ export interface TaskTopicIntegration {
     | 'verification_pending'
     | 'blocked'
     | 'skipped';
+  /** Confirmed final delivery target; can differ from a stacked execution base. */
+  targetBranch?: string;
   /**
    * @deprecated Legacy pre-R07 scalar counter stored under this key, later
    * briefly written as an unversioned map. Kept for mixed-version reads: new
@@ -1543,6 +1545,7 @@ export interface TaskDetailData {
   capabilities?: { canEdit: boolean; canDelete: boolean };
   checkpoint?: CheckpointConfig;
   config?: Record<string, unknown> & TaskConfig;
+  context?: TaskContext | null;
   createdAt?: string;
   /** Creator of the task; used by the UI to gate creator-only actions (e.g. make private). */
   createdByUserId?: string | null;
@@ -1608,6 +1611,7 @@ export interface TaskDetailData {
   /** Current admission gate reason, not the execution state of an existing run. */
   orchestrationAdmissionReason?: 'caid_dispatch_disabled' | null;
   parent?: { agentId?: string | null; identifier: string; name: string | null } | null;
+  parentTaskId?: string | null;
   /** Durable reason why execution is parked. */
   parkedReason?: string | null;
   priority?: number | null;

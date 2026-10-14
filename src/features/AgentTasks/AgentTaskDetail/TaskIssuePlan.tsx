@@ -35,7 +35,7 @@ export const TaskIssuePlan = ({ onChanged }: { onChanged?: () => Promise<unknown
   const plan = data?.data.plan;
   const subtasks = data?.data.subtasks ?? [];
   const { graph, edges } = issuePlanGraph(
-    parent ? [parent, ...subtasks] : subtasks,
+    parent?.id ? [{ ...parent, id: parent.id }, ...subtasks] : subtasks,
     data?.data.dependencies ?? [],
   );
   const taskLabel = (id: string) => {

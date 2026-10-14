@@ -2373,6 +2373,9 @@ export class TaskService {
       automationMode: task.automationMode ?? null,
       checkpoint: this.taskModel.getCheckpointConfig(task),
       config: taskConfig,
+      context: taskContext
+        ? { issuePlan: taskContext.issuePlan, scheduler: taskContext.scheduler }
+        : undefined,
       createdAt: task.createdAt ? new Date(task.createdAt).toISOString() : undefined,
       createdByUserId: task.createdByUserId,
       dependencies: dependencies.map((d): NonNullable<TaskDetailData['dependencies']>[number] => {
@@ -2414,6 +2417,7 @@ export class TaskService {
       labels: taskLabels.map(toTaskLabelSummary),
       name: task.name,
       parent,
+      parentTaskId: parent ? task.parentTaskId : null,
       parkedReason: executionParkedReason(task.context),
       priority: task.priority,
       projectId: task.projectId,

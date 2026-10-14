@@ -261,7 +261,9 @@ describe('installed Channels SDK Slack runtime', () => {
     active.push(runtime);
     await runtime.dispatch(envelope('104.001'));
     const posts = vi.mocked(mocks.adapters[0].client.chat.postMessage).mock.calls;
-    const text = posts.map(([post]) => post.text).find((value) => value?.includes('Reply with:'))!;
+    const text = posts
+      .map(([post]) => ('text' in post ? post.text : undefined))
+      .find((value) => value?.includes('Reply with:'))!;
     const token = /reply ([\w-]+)/.exec(text)![1];
     await runtime.dispatch(
       envelope('104.002', 'UB', {

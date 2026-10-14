@@ -95,7 +95,10 @@ describe('TaskExecutor.onAfterCall — portal auto-open', () => {
       success: true,
     });
 
-    const result = await taskExecutor.intakeIssue(params, { topicId: 'source-chat-topic' });
+    const result = await taskExecutor.intakeIssue(params, {
+      messageId: 'source-message',
+      topicId: 'source-chat-topic',
+    });
 
     expect(mocks.intakeIssue).toHaveBeenCalledWith({
       ...params,

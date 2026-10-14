@@ -1,7 +1,6 @@
 import { and, count, desc, eq, ilike, or } from 'drizzle-orm';
 
 import { KnowledgeBaseModel } from '@/database/models/knowledgeBase';
-import type { KnowledgeBaseItem } from '@/database/schemas';
 import { knowledgeBases } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { FileService as CoreFileService } from '@/server/services/file';
@@ -177,56 +176,10 @@ export class KnowledgeBaseService extends BaseService {
    * Update knowledge base
    */
   async updateKnowledgeBase(
-    id: string,
-    request: UpdateKnowledgeBaseRequest,
+    _id: string,
+    _request: UpdateKnowledgeBaseRequest,
   ): Promise<KnowledgeBaseDetailResponse> {
     throw this.createAuthorizationError('Platform knowledge bases are retired');
-    try {
-      // Permission check
-      const permissionResult = await this.resolveOperationPermission('KNOWLEDGE_BASE_UPDATE');
-
-      if (!permissionResult.isPermitted) {
-        throw this.createAuthorizationError(permissionResult.message || '无权更新此知识库');
-      }
-
-      this.log('info', 'Updating knowledge base', { id, request });
-
-      // Check if knowledge base exists and belongs to the current user
-      const existingKb = await this.db.query.knowledgeBases.findFirst({
-        where: and(eq(knowledgeBases.id, id), this.buildWorkspaceWhere(knowledgeBases)),
-      });
-
-      if (!existingKb) {
-        throw this.createNotFoundError('Knowledge base not found or access denied');
-      }
-
-      // `KNOWLEDGE_BASE_UPDATE:all` is a curation scope (restricted-KB
-      // visibility / permission management) that admins also hold, so it must
-      // not bypass the row gate. Mirror the lambda routers' creator/owner
-      // check — `KNOWLEDGE_BASE_DELETE:all` is owner-only in the role matrix.
-      if (
-        existingKb.userId !== this.userId &&
-        !(await this.hasGlobalPermission('KNOWLEDGE_BASE_DELETE'))
-      ) {
-        throw this.createAuthorizationError('仅创建者或工作区所有者可修改此知识库');
-      }
-
-      // Update knowledge base
-      await this.knowledgeBaseModel.update(id, request);
-
-      // Get updated knowledge base info
-      const updatedKb = await this.db.query.knowledgeBases.findFirst({
-        where: and(eq(knowledgeBases.id, id), this.buildWorkspaceWhere(knowledgeBases)),
-      });
-
-      this.log('info', 'Knowledge base updated successfully', { id });
-
-      return {
-        knowledgeBase: projectPublicKnowledgeBase(updatedKb as KnowledgeBaseItem),
-      };
-    } catch (error) {
-      this.handleServiceError(error, '更新知识库');
-    }
   }
 
   /**

@@ -26,8 +26,9 @@ vi.mock('@/server/services/aiAgent', () => ({
   }),
 }));
 
+const db = await getTestDB();
+
 it('revocation stops only this caller and Agent, including pending native questions', async () => {
-  const db = await getTestDB();
   const caller = await createTestUser(db);
   const hostOwner = await createTestUser(db);
   const workspaceId = `revocation-${caller}`;

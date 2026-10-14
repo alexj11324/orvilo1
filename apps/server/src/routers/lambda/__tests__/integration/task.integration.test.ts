@@ -151,11 +151,13 @@ describe('Task Router Integration', () => {
   });
 
   describe('automation result outputs', () => {
+    // Output metadata is editable on disabled drafts without arming native automation.
     const createAutomation = () =>
       caller.create({
         automationMode: 'schedule',
         instruction: 'Analyze each error report',
         schedulePattern: '0 * * * *',
+        status: 'paused',
       });
 
     it('persists destination and credential references without exposing credential ciphertext', async () => {
@@ -300,6 +302,7 @@ describe('Task Router Integration', () => {
         automationMode: 'schedule',
         instruction: 'Workspace errors',
         schedulePattern: '0 * * * *',
+        status: 'paused',
       });
       const memberContext = {
         ...createTestContext(otherUserId),
@@ -3990,6 +3993,7 @@ describe('Task Router Integration', () => {
         automationMode: 'schedule',
         instruction: 'Automated assigned task',
         schedulePattern: '0 9 * * *',
+        status: 'paused',
       });
       expect(createdScheduled.data.assigneeUserId).toBe(userId);
       expect(createdScheduled.data.automationMode).toBe('schedule');
@@ -3998,6 +4002,7 @@ describe('Task Router Integration', () => {
         automationMode: 'schedule',
         instruction: 'Automated task',
         schedulePattern: '0 9 * * *',
+        status: 'paused',
       });
       const assignedAutomated = await caller.update({
         assigneeUserId: userId,
@@ -4010,6 +4015,7 @@ describe('Task Router Integration', () => {
       const humanTask = await caller.create({
         assigneeUserId: userId,
         instruction: 'Human task',
+        status: 'paused',
       });
       const scheduled = await caller.update({
         automationMode: 'schedule',

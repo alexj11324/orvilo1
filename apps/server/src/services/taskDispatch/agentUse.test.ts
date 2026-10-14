@@ -47,8 +47,8 @@ describe('TaskDispatch reservation Agent Use', () => {
       .values({
         userId: ownerId,
         workspaceId,
-        visibility: 'private',
-        title: 'Selected private Agent',
+        visibility: 'public',
+        title: 'Selected shared Agent',
       })
       .returning();
     agentId = agent.id;
@@ -102,7 +102,10 @@ describe('TaskDispatch reservation Agent Use', () => {
   };
 
   it('reserves a selected private workspace Agent under the actual member principal', async () => {
-    await grant();
+    await db
+      .update(agents)
+      .set({ userId: memberId, visibility: 'private' })
+      .where(eq(agents.id, agentId));
     const result = await prepare();
     expect(result.dispatch.agentId).toBe(agentId);
     expect(result.dispatch.initiator).toBe(memberId);

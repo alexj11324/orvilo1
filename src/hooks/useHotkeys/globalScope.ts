@@ -26,18 +26,26 @@ export const isTaskPanelRoute = (pathname: string) =>
 export const isAgentProfilePanelRoute = (pathname: string) =>
   /^\/agent\/[^/]+\/profile\/?$/.test(pathname);
 
-// Switch to chat tab (and focus on Orvilo AI)
-export const useNavigateToChatHotkey = () => {
+/** Shared agent-surface destination: the inbox Agent while the built-in
+ * harness is offered, else the user's default Agent. Used by both the
+ * `ctrl+shift+\`` chat chord and Linear's `g then j` go-to. */
+const useNavigateToAgentDestination = () => {
   const navigateToAgent = useNavigateToAgent();
   const [, { unpinAgent }] = usePinnedAgentState();
   const builtinOffered = useBuiltinHarnessOffered();
   const fallbackAgentId = useFallbackAgentId();
 
-  return useHotkeyById(HotkeyEnum.NavigateToChat, () => {
+  return () => {
     if (!fallbackAgentId) return;
     navigateToAgent(builtinOffered ? INBOX_SESSION_ID : fallbackAgentId);
     unpinAgent();
-  });
+  };
+};
+
+// Switch to chat tab (and focus on Orvilo AI)
+export const useNavigateToChatHotkey = () => {
+  const navigate = useNavigateToAgentDestination();
+  return useHotkeyById(HotkeyEnum.NavigateToChat, navigate);
 };
 
 export const useOpenHotkeyHelperHotkey = () => {
@@ -162,6 +170,16 @@ export const useRegisterGoToHotkeys = () => {
   }
 };
 
+/**
+ * Linear's `g then j` — Go to Agent. Lands on the same agent surface as the
+ * `ctrl+shift+\`` chord; kept page-level like the other `g>` sequences so it
+ * never steals plain typing.
+ */
+export const useGoToAgentHotkey = () => {
+  const navigate = useNavigateToAgentDestination();
+  return useHotkeyById(HotkeyEnum.GoToAgent, navigate, BARE_KEY_HOTKEY_OPTIONS);
+};
+
 export const useRegisterGlobalHotkeys = () => {
   // Global auto-registration doesn't need enableScope
   useToggleRightPanelHotkey();
@@ -170,4 +188,5 @@ export const useRegisterGlobalHotkeys = () => {
   useCommandPaletteHotkey();
   useCreateTaskHotkey();
   useRegisterGoToHotkeys();
+  useGoToAgentHotkey();
 };

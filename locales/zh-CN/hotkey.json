@@ -13,6 +13,8 @@
   "desktop.showApp.title": "显示/隐藏主窗口",
   "editMessage.desc": "通过按住 Alt 并双击消息进入编辑模式",
   "editMessage.title": "编辑消息",
+  "goToAgent.desc": "按 G 然后按 J 打开智能体",
+  "goToAgent.title": "前往智能体",
   "goToDrafts.desc": "按 G 然后按 D 打开草稿箱",
   "goToDrafts.title": "前往草稿",
   "goToInbox.desc": "按 G 然后按 I 打开收件箱",

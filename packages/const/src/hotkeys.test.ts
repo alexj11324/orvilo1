@@ -41,6 +41,7 @@ describe('Linear parity mappings', () => {
     [HotkeyEnum.GoToInbox, 'g>i'],
     [HotkeyEnum.GoToMyIssues, 'g>m'],
     [HotkeyEnum.GoToReviews, 'g>r'],
+    [HotkeyEnum.GoToAgent, 'g>j'],
     [HotkeyEnum.GoToDrafts, 'g>d'],
     [HotkeyEnum.GoToProjects, 'g>p'],
     [HotkeyEnum.GoToViews, 'g>v'],

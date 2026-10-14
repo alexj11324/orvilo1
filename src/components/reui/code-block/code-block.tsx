@@ -641,7 +641,7 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
             type="button"
             onClick={(event) => {
               event.stopPropagation();
-              onToggleFold?.(line.number);
+              if (foldRegion) onToggleFold?.(foldRegion.start);
             }}
           >
             {`... ${hiddenCount} lines`}

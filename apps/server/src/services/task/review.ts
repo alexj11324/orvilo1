@@ -175,6 +175,14 @@ export async function submitIssueReview(
     reviewerOperationId: params.operationId,
   });
   if (result.repairPending) await resumeIssueReviewRepair(db, userId, result.task.id, workspaceId);
+  else if (params.verdict === 'pass') {
+    const { TaskRunnerService } = await import('../taskRunner');
+    await new TaskRunnerService(
+      db,
+      result.task.createdByUserId ?? userId,
+      workspaceId,
+    ).cascadeOnCompletion(result.task.id);
+  }
   return result;
 }
 

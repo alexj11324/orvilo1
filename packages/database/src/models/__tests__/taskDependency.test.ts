@@ -2,7 +2,10 @@
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { seedReviewedIssueDelivery } from '../../../tests/fixtures/issueDelivery';
+import {
+  seedConfirmedIssuePlan,
+  seedReviewedIssueDelivery,
+} from '../../../tests/fixtures/issueDelivery';
 import { getTestDB } from '../../core/getTestDB';
 import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import {
@@ -64,6 +67,7 @@ describe('task prerequisite invariants', () => {
     const a = await create('Task 1');
     const b = await create('Task 2');
     const dependent = await create('Task 4');
+    await seedConfirmedIssuePlan(db, dependent.id);
     await model.addDependency(dependent.id, a.id);
     await model.addDependency(dependent.id, b.id);
     await expect(model.reserveRun(dependent.id, 'run-1')).rejects.toBeInstanceOf(
@@ -173,6 +177,7 @@ describe('task prerequisite invariants', () => {
   it('keeps a newly added related issue from blocking an unfinished task', async () => {
     const upstream = await create('Related issue');
     const task = await create('Current issue');
+    await seedConfirmedIssuePlan(db, task.id);
     await model.addDependency(task.id, upstream.id, 'relates');
     expect(await model.getDependencies(task.id)).toMatchObject([
       { dependsOnId: upstream.id, type: 'relates' },

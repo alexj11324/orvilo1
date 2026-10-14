@@ -2,6 +2,10 @@
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import {
+  seedConfirmedIssuePlan,
+  seedReviewedIssueDelivery,
+} from '../../../tests/fixtures/issueDelivery';
 import { getTestDB } from '../../core/getTestDB';
 import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import {
@@ -1364,6 +1368,7 @@ describe('TaskModel', () => {
     it('reserves one run when two callers race', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Run once' });
+      await seedConfirmedIssuePlan(serverDB, task.id);
 
       const results = await Promise.all([
         model.reserveRun(task.id, 'reservation-a'),
@@ -1377,6 +1382,7 @@ describe('TaskModel', () => {
     it('only lets the reservation owner roll back its generation', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Fenced rollback' });
+      await seedConfirmedIssuePlan(serverDB, task.id);
 
       await expect(model.reserveRun(task.id, 'reservation-a')).resolves.toBe(true);
       await expect(model.releaseRunReservation(task.id, 'reservation-a')).resolves.toBe(true);
@@ -1396,6 +1402,7 @@ describe('TaskModel', () => {
         automationMode: 'schedule',
         instruction: 'Fenced lifecycle',
       });
+      await seedConfirmedIssuePlan(serverDB, task.id);
       await model.reserveRun(task.id, 'completion:owner');
 
       await expect(
@@ -1449,6 +1456,7 @@ describe('TaskModel', () => {
     it('does not reclaim a crashed dispatch while its agent operation is active', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Crash-safe dispatch' });
+      await seedConfirmedIssuePlan(serverDB, task.id);
       await serverDB.insert(agentOperations).values({
         id: 'op-active-task-dispatch',
         status: 'running',
@@ -1498,7 +1506,7 @@ describe('TaskModel', () => {
       expect(deps[0].dependsOnId).toBe(taskA.id);
     });
 
-    it('should check all dependencies completed', async () => {
+    it('requires current reviewed deliveries from all dependencies', async () => {
       const model = new TaskModel(serverDB, userId);
       const taskA = await model.create({ instruction: 'Task A' });
       const taskB = await model.create({ instruction: 'Task B' });
@@ -1513,11 +1521,13 @@ describe('TaskModel', () => {
 
       // Complete A only
       await model.updateStatus(taskA.id, 'completed');
+      await seedReviewedIssueDelivery(serverDB, taskA.id);
       allDone = await model.areAllDependenciesCompleted(taskC.id);
       expect(allDone).toBe(false);
 
       // Complete B too
       await model.updateStatus(taskB.id, 'completed');
+      await seedReviewedIssueDelivery(serverDB, taskB.id);
       allDone = await model.areAllDependenciesCompleted(taskC.id);
       expect(allDone).toBe(true);
     });
@@ -1547,7 +1557,7 @@ describe('TaskModel', () => {
       expect(dependents).toHaveLength(2);
     });
 
-    it('should find unlocked tasks after dependency completes', async () => {
+    it('finds unlocked tasks after both dependency deliveries are reviewed', async () => {
       const model = new TaskModel(serverDB, userId);
       const taskA = await model.create({ instruction: 'Task A' });
       const taskB = await model.create({ instruction: 'Task B' });
@@ -1559,17 +1569,19 @@ describe('TaskModel', () => {
 
       // Complete A — C still blocked by B
       await model.updateStatus(taskA.id, 'completed');
+      await seedReviewedIssueDelivery(serverDB, taskA.id);
       let unlocked = await model.getUnlockedTasks(taskA.id);
       expect(unlocked).toHaveLength(0);
 
       // Complete B — C now unlocked
       await model.updateStatus(taskB.id, 'completed');
+      await seedReviewedIssueDelivery(serverDB, taskB.id);
       unlocked = await model.getUnlockedTasks(taskB.id);
       expect(unlocked).toHaveLength(1);
       expect(unlocked[0].id).toBe(taskC.id);
     });
 
-    it('requires canceled and failed dependencies to be completed', async () => {
+    it('requires current reviewed deliveries to replace canceled and failed dependencies', async () => {
       const model = new TaskModel(serverDB, userId);
       const canceled = await model.create({ instruction: 'Canceled dependency' });
       const failed = await model.create({ instruction: 'Failed dependency' });
@@ -1582,8 +1594,10 @@ describe('TaskModel', () => {
       await expect(model.areAllDependenciesCompleted(dependent.id)).resolves.toBe(false);
 
       await model.updateStatus(failed.id, 'completed');
+      await seedReviewedIssueDelivery(serverDB, failed.id);
       await expect(model.areAllDependenciesCompleted(dependent.id)).resolves.toBe(false);
       await model.updateStatus(canceled.id, 'completed');
+      await seedReviewedIssueDelivery(serverDB, canceled.id);
       await expect(model.areAllDependenciesCompleted(dependent.id)).resolves.toBe(true);
       await expect(model.getUnlockedTasks(failed.id)).resolves.toEqual([
         expect.objectContaining({ id: dependent.id }),
@@ -2019,6 +2033,7 @@ describe('TaskModel', () => {
     it('invalidates the active run when a user-facing config write requests it', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Scheduled run' });
+      await seedConfirmedIssuePlan(serverDB, task.id);
       await model.reserveRun(task.id, 'completion:op-1:lease-1');
 
       const updated = await model.updateTaskConfig(
@@ -3342,6 +3357,7 @@ describe('TaskModel', () => {
     it('can clear run reservations atomically with a terminal cascade', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Reserved' });
+      await seedConfirmedIssuePlan(serverDB, task.id);
       await model.reserveRun(task.id, 'completion:op-1');
 
       await model.updateStatusForIds([task.id], 'canceled', {
@@ -3382,6 +3398,8 @@ describe('TaskModel', () => {
       await model.updateStatus(a.id, 'completed');
       await model.updateStatus(b.id, 'completed');
 
+      await seedReviewedIssueDelivery(serverDB, a.id);
+      await seedReviewedIssueDelivery(serverDB, b.id);
       const unlocked = await model.getUnlockedTasksForMany([a.id, b.id]);
 
       expect(unlocked.map(({ id }) => id).sort()).toEqual(
@@ -4861,6 +4879,7 @@ describe('Issue review cycle', () => {
   });
   it('leaves the manual pause and reservation untouched when a stale repair tries to reserve', async () => {
     const task = await setup();
+    await seedConfirmedIssuePlan(serverDB, task.id);
     const input = await start(task.id, 'review-stale-reserve');
     await model.recordIssueReviewVerdict(task.id, {
       ...input,

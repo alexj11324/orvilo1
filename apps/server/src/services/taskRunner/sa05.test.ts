@@ -156,6 +156,7 @@ const setupHappyPath = (task: TaskItem, topics: TaskTopicItem[] = []) => {
   vi.spyOn(TaskModel.prototype, 'updateStatus').mockResolvedValue(task);
   vi.spyOn(TaskModel.prototype, 'resolveTaskReviewRequirement').mockResolvedValue(false);
   vi.spyOn(TaskModel.prototype, 'areAllDependenciesCompleted').mockResolvedValue(true);
+  vi.spyOn(TaskModel.prototype, 'assertConfirmedIssuePlan').mockResolvedValue(undefined);
   vi.spyOn(TaskModel.prototype, 'claimRunKickoff').mockResolvedValue(true);
   vi.spyOn(TaskTopicModel.prototype, 'findByTaskId').mockResolvedValue(topics);
   vi.spyOn(TaskTopicModel.prototype, 'findByTopicId').mockResolvedValue(null);

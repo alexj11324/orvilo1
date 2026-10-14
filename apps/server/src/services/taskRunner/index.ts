@@ -349,6 +349,8 @@ export class TaskRunnerService {
       });
     }
 
+    await this.taskModel.assertConfirmedIssuePlan(task.id);
+
     // Preflight before assignment/provisioning; reserveRun repeats this check
     // under the dependency graph lock so a concurrent edit cannot bypass it.
     if (!(await this.taskModel.areAllDependenciesCompleted(task.id))) {

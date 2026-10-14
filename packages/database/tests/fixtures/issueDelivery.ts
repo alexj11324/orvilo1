@@ -12,6 +12,57 @@ import {
 } from '../../src/schemas/verify';
 import type { OrviloDatabase } from '../../src/type';
 
+/** Confirm scope without creating a Run, for tests of execution admission. */
+export async function seedConfirmedIssuePlan(db: OrviloDatabase, taskId: string) {
+  const [task] = await db.select().from(tasks).where(eq(tasks.id, taskId));
+  if (!task?.createdByUserId) throw new Error('Test Issue requester missing');
+  const [aggregate] = await db.select().from(acceptances).where(eq(acceptances.subjectId, taskId));
+  const definition = aggregate?.metadata?.issueChecklist ?? {
+    revision: 1,
+    deliveryKind: 'artifact' as const,
+    items: [{ id: 'outcome', title: 'Outcome', required: true }],
+    confirmedAt: new Date().toISOString(),
+    confirmedBy: task.createdByUserId,
+  };
+  if (!aggregate)
+    await db.insert(acceptances).values({
+      userId: task.createdByUserId,
+      workspaceId: task.workspaceId,
+      subjectType: 'task',
+      subjectId: taskId,
+      metadata: { issueChecklist: definition },
+    });
+  const config = (task.config ?? {}) as Record<string, unknown>;
+  await db
+    .update(tasks)
+    .set({
+      config:
+        definition.deliveryKind === 'code'
+          ? { ...config, workspace: { ...(config.workspace as object), repo: definition.repo } }
+          : config,
+      context: {
+        ...(task.context as object),
+        issuePlan: {
+          revision: 1,
+          parentTaskId: taskId,
+          confirmedAt: definition.confirmedAt,
+          confirmedBy: definition.confirmedBy,
+          checklists: [
+            {
+              taskId,
+              expectedRevision: definition.revision - 1,
+              items: definition.items,
+              deliveryKind: definition.deliveryKind,
+              repo: definition.repo,
+              targetBranch: definition.targetBranch,
+            },
+          ],
+        },
+      },
+    })
+    .where(eq(tasks.id, taskId));
+}
+
 /** Seed an exact reviewed, unaccepted, unmerged delivery for admission tests. */
 export async function seedReviewedIssueDelivery(
   db: OrviloDatabase,

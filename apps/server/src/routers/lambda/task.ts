@@ -334,7 +334,12 @@ const updateSchema = z.object({
   automationMode: z.enum(['heartbeat', 'schedule', 'event']).nullish(),
   beforeId: z.string().nullish(),
   config: z.record(z.string(), z.unknown()).optional(),
-  context: z.record(z.string(), z.unknown()).optional(),
+  context: z
+    .record(z.string(), z.unknown())
+    .refine((context) => !('issuePlan' in context), {
+      message: 'Issue plan confirmation is owned by confirmIssuePlan',
+    })
+    .optional(),
   description: z.string().optional(),
   /** Issue deadline as `YYYY-MM-DD`; `null` clears it. */
   dueDate: z.iso.date().nullish(),
@@ -2526,6 +2531,11 @@ export const taskRouter = router({
           data.assigneeAgentId,
         );
         const resolved = await resolveOrThrow(model, id);
+        if (data.context)
+          data.context = {
+            ...(resolved.context as Record<string, unknown> | null),
+            ...data.context,
+          };
         if (status !== undefined) {
           await assertTaskExecutionUse(
             ctx,

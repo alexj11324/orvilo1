@@ -150,6 +150,26 @@ describe('Task Router Integration', () => {
     otherUserId = undefined;
   });
 
+  it('keeps plan confirmation server-owned when editing Issue context', async () => {
+    const model = new TaskModel(serverDB, userId);
+    const task = await model.create({ instruction: 'Scope' });
+    await expect(
+      caller.update({
+        id: task.id,
+        context: {
+          issuePlan: { confirmedAt: 'forged', confirmedBy: userId },
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    const issuePlan = { confirmedAt: 'recorded', confirmedBy: userId };
+    await serverDB.update(tasks).set({ context: { issuePlan } }).where(eq(tasks.id, task.id));
+    await caller.update({ id: task.id, context: { note: 'Discussion' } });
+    expect((await model.findById(task.id))?.context).toMatchObject({
+      issuePlan,
+      note: 'Discussion',
+    });
+  });
+
   describe('automation result outputs', () => {
     // Output metadata is editable on disabled drafts without arming native automation.
     const createAutomation = () =>

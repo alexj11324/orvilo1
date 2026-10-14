@@ -2,7 +2,10 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { seedReviewedIssueDelivery } from '../../../tests/fixtures/issueDelivery';
+import {
+  seedConfirmedIssuePlan,
+  seedReviewedIssueDelivery,
+} from '../../../tests/fixtures/issueDelivery';
 import { getTestDB } from '../../core/getTestDB';
 import {
   projects,
@@ -38,6 +41,7 @@ async function diamond() {
   const a = await taskModel.create({ instruction: 'A' });
   const b = await taskModel.create({ instruction: 'B' });
   const c = await taskModel.create({ instruction: 'C' });
+  await seedConfirmedIssuePlan(db, c.id);
   await taskModel.addDependency(c.id, a.id);
   await taskModel.addDependency(c.id, b.id);
   return { a, b, c };
@@ -188,6 +192,7 @@ describe('Issue delivery readiness', () => {
       projectId: 'delivery-private-project',
     });
     await owner.addDependency(dependent.id, upstream.id);
+    await seedConfirmedIssuePlan(db, dependent.id);
     await seedReviewedIssueDelivery(db, upstream.id);
     expect(
       await new IssueDeliveryModel(db, other, ws).readCurrentDeliveryProof([upstream.id]),

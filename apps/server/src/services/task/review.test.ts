@@ -30,6 +30,7 @@ const mocks = vi.hoisted(() => ({
   settleRunning: vi.fn(),
   finalize: vi.fn(),
   runTask: vi.fn(),
+  cascade: vi.fn(),
   updateStatus: vi.fn(),
   deliver: vi.fn(),
 }));
@@ -112,7 +113,7 @@ vi.mock('../taskResultBridge', () => ({
 }));
 vi.mock('../taskRunner', () => ({
   TaskRunnerService: vi.fn(function () {
-    return { runTask: mocks.runTask };
+    return { runTask: mocks.runTask, cascadeOnCompletion: mocks.cascade };
   }),
 }));
 const review = {
@@ -238,6 +239,7 @@ describe('ordinary Issue review', () => {
     expect(mocks.runTask).not.toHaveBeenCalled();
     expect(mocks.updateStatus).not.toHaveBeenCalled();
     expect(mocks.deliver).not.toHaveBeenCalled();
+    expect(mocks.cascade).toHaveBeenCalledWith(task.id);
   });
   it('runs an automation reviewer with the native full-access requirement from the delivery', async () => {
     mocks.findDelivery.mockResolvedValue({ trigger: 'schedule', operationId: 'delivery' });

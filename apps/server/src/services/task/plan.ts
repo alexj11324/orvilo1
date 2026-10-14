@@ -18,7 +18,6 @@ import { assertCanViewTopicTargets } from '@/server/routers/lambda/_helpers/conv
 import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { runAcpJudgment } from '@/server/services/aiGeneration/judgment';
 import { resolveWorkflowTransition } from '@/server/services/taskSettlement/workflowTransition';
-import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
 import { IssueChecklistService } from './checklist';
 import { TaskService } from './index';
@@ -281,14 +280,29 @@ export class TaskPlanService {
         }),
       )
     ).filter((candidate) => candidate !== null);
-    const binding = await new TaskWorkspaceService(
-      this.db,
-      this.userId,
-      this.workspaceId,
-    ).resolveWorkspaceConfig(task);
     const repositories = this.workspaceId
       ? await new RepositoryModel(this.db, this.userId, this.workspaceId).listByWorkspace()
       : [];
+    const declared = (
+      task.config as {
+        workspace?: { repo?: string; baseBranch?: string };
+      } | null
+    )?.workspace;
+    const association =
+      this.workspaceId && !declared?.repo
+        ? await new RepositoryModel(this.db, this.userId, this.workspaceId).resolveForTask(task.id)
+        : undefined;
+    const associated = association?.ok
+      ? repositories.find((repo) => repo.id === association.repositoryId)
+      : undefined;
+    const binding = declared?.repo
+      ? { repo: declared.repo, baseBranch: declared.baseBranch }
+      : associated?.coordinate.owner && associated.coordinate.name
+        ? {
+            repo: `${associated.coordinate.owner}/${associated.coordinate.name}`,
+            baseBranch: associated.coordinate.defaultBranch,
+          }
+        : undefined;
     const allowedRepos = new Set(
       repositories.flatMap((repo) =>
         repo.remoteRepositoryId && repo.coordinate.owner && repo.coordinate.name

@@ -2977,6 +2977,40 @@ export class TaskModel {
     return Boolean(updated);
   }
 
+  private confirmedIssuePlanWhere() {
+    return sql`nullif(${tasks.context} #>> '{issuePlan,confirmedAt}', '') is not null
+      and exists (
+        select 1 from ${acceptances} a,
+          jsonb_array_elements(coalesce(${tasks.context} #> '{issuePlan,checklists}', '[]'::jsonb)) planned
+        where a.subject_type = 'task' and a.subject_id = ${tasks.id}
+          and a.user_id = ${tasks.createdByUserId}
+          and a.workspace_id is not distinct from ${tasks.workspaceId}
+          and planned ->> 'taskId' = ${tasks.id}
+          and a.metadata #>> '{issueChecklist,confirmedBy}' = ${tasks.context} #>> '{issuePlan,confirmedBy}'
+          and nullif(a.metadata #>> '{issueChecklist,confirmedAt}', '') is not null
+          and a.metadata #>> '{issueChecklist,revision}' = ((planned ->> 'expectedRevision')::integer + 1)::text
+          and a.metadata #> '{issueChecklist,items}' = planned -> 'items'
+          and a.metadata #>> '{issueChecklist,deliveryKind}' = planned ->> 'deliveryKind'
+          and a.metadata #>> '{issueChecklist,repo}' is not distinct from planned ->> 'repo'
+          and a.metadata #>> '{issueChecklist,targetBranch}' is not distinct from planned ->> 'targetBranch'
+          and (planned ->> 'deliveryKind' <> 'code'
+            or planned ->> 'repo' = ${tasks.config} #>> '{workspace,repo}')
+      )`;
+  }
+
+  async assertConfirmedIssuePlan(id: string): Promise<void> {
+    const [task] = await this.db
+      .select({ id: tasks.id })
+      .from(tasks)
+      .where(and(eq(tasks.id, id), this.ownership(), this.confirmedIssuePlanWhere()))
+      .limit(1);
+    if (!task)
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Confirm the Issue plan and its current Checklist before execution.',
+      });
+  }
+
   /**
    * Atomically reserve the single dispatch slot for a task.
    *
@@ -3007,6 +3041,7 @@ export class TaskModel {
       );
     }
     await this.assertDependenciesForStatus([id], 'running');
+    await this.assertConfirmedIssuePlan(id);
     const reserved = await this.db
       .update(tasks)
       .set({
@@ -3021,6 +3056,7 @@ export class TaskModel {
       .where(
         and(
           eq(tasks.id, id),
+          this.confirmedIssuePlanWhere(),
           expectedIssueReviewCycleId === undefined
             ? undefined
             : and(
@@ -3216,7 +3252,13 @@ export class TaskModel {
     if (!this.dependencyLockHeld) {
       return this.withDependencyLock((model) => model.batchUpdateStatus(ids, status));
     }
-    return (await this.updateStatusForIds(ids, status)).length;
+    const readable = await this.findByIds(ids);
+    return (
+      await this.updateStatusForIds(
+        readable.map((task) => task.id),
+        status,
+      )
+    ).length;
   }
 
   /**

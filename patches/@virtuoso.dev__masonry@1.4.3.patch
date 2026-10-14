@@ -1,7 +1,15 @@
 diff --git a/dist/index.js b/dist/index.js
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -497,7 +497,9 @@
+@@ -490,14 +490,16 @@
+   },
+   unobserve: () => {
+   }
+-}, be = ({ style: t, ...e }) => {
++}, be = ({ style: t, footer: footer, ...e }) => {
+   const n = Xt(), [r] = Ut(() => {
+     if (typeof ResizeObserver > "u") {
+       if (typeof window < "u")
          throw new Error("ResizeObserver not found. Please ensure that you have a polyfill installed.");
        return pe;
      }
@@ -58,3 +66,43 @@ diff --git a/dist/index.js b/dist/index.js
    return St(() => {
      if (B) {
        const c = l.current?.ownerDocument.defaultView, d = () => {
+@@ -597,9 +630,14 @@
+           flexDirection: "row",
+           overflowY: "scroll"
+         },
++        ...footer != null ? {
++          display: "grid",
++          gridTemplateColumns: `repeat(${$.columns.length || 1}, minmax(0, 1fr))`,
++          alignContent: "start"
++        } : {},
+         ...t
+       },
+-      children: $.columns.map((c, d) => /* @__PURE__ */ A(
++      children: [...$.columns.map((c, d) => /* @__PURE__ */ A(
+         "div",
+         {
+           "data-testid": "virtuoso-list",
+@@ -614,7 +652,10 @@
+           children: c.items.map((S) => /* @__PURE__ */ A(we, { item: S, ItemContent: y, mount: o, unmount: s }, S.index))
+         },
+         `column-${d}`
+-      ))
++      )), footer != null ? /* @__PURE__ */ A("div", {
++        style: { gridColumn: "1 / -1", minWidth: 0 },
++        children: footer
++      }, "masonry-footer") : null]
+     }
+   );
+ }, we = ({ item: t, ItemContent: e, mount: n, unmount: r }) => {
+diff --git a/dist/index.d.ts b/dist/index.d.ts
+--- a/dist/index.d.ts
++++ b/dist/index.d.ts
+@@ -81,6 +81,8 @@
+      * Use this prop for SSR rendering of a pre-defined amount of items.
+      */
+     initialItemCount?: number;
++    /** Optional full-width content after all columns, inside the masonry scroller. */
++    footer?: React.ReactNode;
+     /**
+      * A React component that renders each individual item in the masonry grid.
+      * Receives `data`, `index`, and `context` as props.

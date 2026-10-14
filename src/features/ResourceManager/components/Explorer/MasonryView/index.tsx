@@ -265,13 +265,15 @@ const MasonryView = memo(function MasonryView({
             columnCount={columnCount}
             context={masonryContext}
             data={data}
+            footer={
+              isLoadingMore ? (
+                <div className="flex min-h-10 flex-none flex-col items-center justify-center text-sm text-muted-foreground">
+                  {t('loading', { defaultValue: 'Loading...' })}
+                </div>
+              ) : null
+            }
             onScrollCapture={handleScroll}
           />
-          {isLoadingMore && (
-            <div className="flex min-h-10 flex-none flex-col items-center justify-center text-sm text-muted-foreground">
-              {t('loading', { defaultValue: 'Loading...' })}
-            </div>
-          )}
         </div>
       </div>
     </div>

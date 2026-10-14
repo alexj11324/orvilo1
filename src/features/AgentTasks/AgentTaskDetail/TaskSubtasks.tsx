@@ -1,7 +1,7 @@
 import { type TreeDataNode } from '@lobehub/ui/base-ui';
 import { Tree } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask } from '@orvilo/types';
-import { ListTodoIcon, MoreHorizontal, PlayCircle, Plus } from 'lucide-react';
+import { ArrowDownWideNarrow, ListTodoIcon, MoreHorizontal, PlayCircle, Plus } from 'lucide-react';
 import type { MouseEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -36,6 +36,7 @@ import { styles } from '../shared/style';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import AddSubIssueMenu from './AddSubIssueMenu';
 import RunSubtasksPreview from './RunSubtasksPreview';
+import { sortSubtasksByStatus } from './subtaskOrdering';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskDetailSectionHeader from './TaskDetailSectionHeader';
 
@@ -80,12 +81,8 @@ const SubtaskTitle = memo<SubtaskTitleProps>(({ onOpenMenu, task }) => {
 
   return (
     <div className="flex items-center justify-between gap-2" style={{ minWidth: 0, width: '100%' }}>
-      <span
-        style={{ alignItems: 'center', display: 'inline-flex', flex: 'none' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <TaskPriorityTag priority={task.priority} size={14} taskIdentifier={task.identifier} />
-      </span>
+      {/* Linear's sub-issue row grammar: status mark first, then the
+          priority mark, identifier and title. */}
       <span
         style={{ alignItems: 'center', display: 'inline-flex', flex: 'none' }}
         onClick={(e) => e.stopPropagation()}
@@ -96,6 +93,12 @@ const SubtaskTitle = memo<SubtaskTitleProps>(({ onOpenMenu, task }) => {
           workflowCategory={task.workflowCategory}
           workflowStateId={task.workflowStateId}
         />
+      </span>
+      <span
+        style={{ alignItems: 'center', display: 'inline-flex', flex: 'none' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <TaskPriorityTag priority={task.priority} size={14} taskIdentifier={task.identifier} />
       </span>
       {hasName && (
         <div className="font-mono text-xs text-muted-foreground" style={{ flex: 'none' }}>
@@ -225,6 +228,10 @@ const TaskSubtasks = memo<TaskSubtasksProps>(({ composerOpen, onComposerOpenChan
   );
   const [isExpanded, setIsExpanded] = useState(true);
   const [isPlanning, setIsPlanning] = useState(false);
+  // Linear keeps a sort control in the Sub-issues header; the client-side
+  // toggle orders rows by Issue status (board column order) or restores the
+  // server's own order.
+  const [sortByStatus, setSortByStatus] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     anchor: { getBoundingClientRect: () => DOMRect };
     items: NativeContextMenuItem[];
@@ -299,15 +306,20 @@ const TaskSubtasks = memo<TaskSubtasksProps>(({ composerOpen, onComposerOpenChan
     [canEditTask, subtaskMap, openRowMenu],
   );
 
+  const orderedSubtasks = useMemo(
+    () => (sortByStatus ? sortSubtasksByStatus(subtasks) : subtasks),
+    [sortByStatus, subtasks],
+  );
+
   const treeData = useMemo(() => {
-    if (subtasks.length === 0) return [];
+    if (orderedSubtasks.length === 0) return [];
     return toTreeData(
-      buildTree(subtasks),
+      buildTree(orderedSubtasks),
       canEditTask
         ? (subtask, anchor) => openRowMenu(subtask, () => anchor.getBoundingClientRect())
         : undefined,
     );
-  }, [subtasks, canEditTask, openRowMenu]);
+  }, [orderedSubtasks, canEditTask, openRowMenu]);
 
   const handleRunAll = useCallback(async () => {
     if (!canEditTask) return;
@@ -374,12 +386,24 @@ const TaskSubtasks = memo<TaskSubtasksProps>(({ composerOpen, onComposerOpenChan
       {hasSubtasks ? (
         <>
           <TaskDetailSectionHeader
-            count={subtasks.length}
             icon={ListTodoIcon}
             open={isExpanded}
             title={t('taskDetail.subtasks')}
             actions={
               <>
+                <ActionIcon
+                  active={sortByStatus}
+                  aria-label={t('taskDetail.subIssue.sortByStatus')}
+                  aria-pressed={sortByStatus}
+                  icon={ArrowDownWideNarrow}
+                  size="small"
+                  title={
+                    sortByStatus
+                      ? t('taskDetail.subIssue.sortManual')
+                      : t('taskDetail.subIssue.sortByStatus')
+                  }
+                  onClick={() => setSortByStatus((prev) => !prev)}
+                />
                 <ActionIcon
                   disabled={!canEditTask || isPlanning}
                   icon={PlayCircle}
@@ -415,7 +439,7 @@ const TaskSubtasks = memo<TaskSubtasksProps>(({ composerOpen, onComposerOpenChan
             trailing={
               <TaskSubtaskProgressTag
                 currentIdentifier={taskId}
-                subtasks={subtasks}
+                subtasks={orderedSubtasks}
                 onSubtaskClick={handleNavigate}
               />
             }

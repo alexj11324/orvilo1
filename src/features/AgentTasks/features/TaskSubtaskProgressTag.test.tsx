@@ -108,7 +108,10 @@ describe('TaskSubtaskProgressTag', () => {
       />,
     );
 
-    expect(screen.getByText('1/1')).toBeInTheDocument();
+    // The projected workflow category is canonical: an in-progress Issue is
+    // not done even when the legacy status projection still reads completed —
+    // the same rule the server's subtask progress SQL applies.
+    expect(screen.getByText('0/1')).toBeInTheDocument();
     expect(screen.getByTestId('subtask-T-2').querySelector('svg')).toHaveAttribute(
       'data-workflow-icon',
       'in_progress',

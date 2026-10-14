@@ -2307,6 +2307,8 @@
   "taskDetail.subIssue.createNew": "新建子 Issue",
   "taskDetail.subIssue.removeFromParent": "从父 Issue {{identifier}} 中移出",
   "taskDetail.subIssue.rowActions": "{{identifier}} 的操作",
+  "taskDetail.subIssue.sortByStatus": "按状态排序",
+  "taskDetail.subIssue.sortManual": "手动排序",
   "taskDetail.subIssueOf": "隶属于",
   "taskDetail.subscription.off": "未订阅。点击后会收到这个 Issue 的通知。",
   "taskDetail.subscription.on": "已订阅。你会收到这个 Issue 的通知。点击退订。",

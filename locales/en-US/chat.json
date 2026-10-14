@@ -2308,6 +2308,8 @@
   "taskDetail.subIssue.createNew": "Create new sub-issue",
   "taskDetail.subIssue.removeFromParent": "Remove from parent {{identifier}}",
   "taskDetail.subIssue.rowActions": "Actions for {{identifier}}",
+  "taskDetail.subIssue.sortByStatus": "Sort by status",
+  "taskDetail.subIssue.sortManual": "Manual order",
   "taskDetail.subIssueOf": "Sub-issue of",
   "taskDetail.subscription.off": "Not subscribed. Click to get notifications about this Issue.",
   "taskDetail.subscription.on": "Subscribed. You get notifications about this Issue. Click to unsubscribe.",

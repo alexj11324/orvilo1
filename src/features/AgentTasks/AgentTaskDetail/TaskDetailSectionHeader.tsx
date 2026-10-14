@@ -20,7 +20,7 @@ interface TaskDetailSectionHeaderProps {
   trailing?: ReactNode;
   /**
    * 'heading' promotes the band to the 15px/600 top-level tier (Linear's
-   * Activity header); the default stays the compact 14px/500 collapse label.
+   * Activity header); the default stays the compact 12px/500 collapse label.
    */
   variant?: 'default' | 'heading';
 }
@@ -40,7 +40,7 @@ const TaskDetailSectionHeader = memo<TaskDetailSectionHeaderProps>(
           type="button"
           variant="ghost"
           className={cn(
-            'gap-2 text-sm font-medium text-muted-foreground',
+            'gap-2 text-xs font-medium text-muted-foreground',
             variant === 'heading' && taskDetailLayoutStyles.sectionHeading,
           )}
           onClick={onToggle}

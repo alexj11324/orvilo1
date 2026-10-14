@@ -354,6 +354,43 @@ describe('TaskSubtasks', () => {
     expect(mocks.navigate).toHaveBeenCalledWith('/task/T-child/child-task');
   });
 
+  it('draws the status mark before the priority mark, Linear-style', () => {
+    render(<TaskSubtasks />);
+
+    const row = screen.getByTestId('subtask-tree-node');
+    const text = row.textContent ?? '';
+    // The mocked pickers render 'status'/'priority' text nodes in DOM order.
+    expect(text.indexOf('status')).toBeGreaterThanOrEqual(0);
+    expect(text.indexOf('status')).toBeLessThan(text.indexOf('priority'));
+  });
+
+  it('reorders rows by Issue status when the header sort control toggles', () => {
+    mocks.taskState.taskDetailMap['T-parent'].subtasks = [
+      {
+        identifier: 'T-done',
+        name: 'Done task',
+        status: 'completed',
+        workflowCategory: 'done',
+      },
+      {
+        identifier: 'T-backlog',
+        name: 'Backlog task',
+        status: 'backlog',
+        workflowCategory: 'backlog',
+      },
+    ];
+    render(<TaskSubtasks />);
+
+    // Server order stands until the toggle is pressed.
+    expect(screen.getAllByTestId('subtask-tree-node')[0].textContent).toContain('T-done');
+
+    fireEvent.click(screen.getByRole('button', { name: /sortByStatus|Sort by status/ }));
+
+    const sorted = screen.getAllByTestId('subtask-tree-node');
+    expect(sorted[0].textContent).toContain('T-backlog');
+    expect(sorted[1].textContent).toContain('T-done');
+  });
+
   it('keeps one Issue status mark when a subtask has an active topic run', () => {
     mocks.taskState.taskDetailMap['T-parent'].subtasks = [
       {

@@ -9,6 +9,8 @@ import IssueRowChip from '@/components/IssueRowChip';
 import { DropdownMenu } from '@/components/ItemsMenu';
 import { toast } from '@/components/toast';
 
+import { countSubtaskProgress } from './subtaskProgress';
+
 interface FlattenedSubtask {
   depth: number;
   task: TaskDetailSubtask;
@@ -85,11 +87,11 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
       refreshedResult.sourceProgress === progress
         ? refreshedResult.subtasks
         : undefined;
+    const effectiveSubtasks = refreshedSubtasks ?? subtasks;
     const flattenedSubtasks = useMemo(() => {
-      const effectiveSubtasks = refreshedSubtasks ?? subtasks;
       if (!effectiveSubtasks || effectiveSubtasks.length === 0) return [];
       return flattenSubtasks(effectiveSubtasks);
-    }, [refreshedSubtasks, subtasks]);
+    }, [effectiveSubtasks]);
 
     const data = useMemo(() => {
       // Before interaction, the list summary is newer than a possibly cached
@@ -102,15 +104,13 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
       const completed =
         effectiveProgress !== undefined
           ? effectiveProgress.completed
-          : flattenedSubtasks.length > 0
-            ? flattenedSubtasks.filter((item) => item.task.status === 'completed').length
-            : 0;
+          : countSubtaskProgress(effectiveSubtasks ?? []).completed;
 
       return {
         text: `${completed}/${total}`,
         percent: (completed / total) * 100,
       };
-    }, [flattenedSubtasks, progress, refreshedSubtasks]);
+    }, [effectiveSubtasks, flattenedSubtasks, progress, refreshedSubtasks]);
 
     const navigationItems = flattenedSubtasks.map((subtask) => {
       const isActive = subtask.task.identifier === currentIdentifier;

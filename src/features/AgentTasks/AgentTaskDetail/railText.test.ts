@@ -54,11 +54,12 @@ describe('issue rail type scale', () => {
   it('keeps the top-level Activity band on the 15px/600 heading tier', () => {
     const classes = taskDetailLayoutStyles.sectionHeading.split(' ');
     expect(classes).toEqual(expect.arrayContaining(['text-[15px]', 'leading-5', 'font-semibold']));
-    // Only the Activity section opts in; the compact sections keep 14px/500.
+    // Only the Activity section opts in; the compact sections keep 12px/500
+    // (Linear's measured Sub-issues collapse label).
     expect(readSource('TaskActivities.tsx')).toContain('variant="heading"');
     const header = readSource('TaskDetailSectionHeader.tsx');
     expect(header).toContain('taskDetailLayoutStyles.sectionHeading');
-    expect(header).toContain('text-sm font-medium');
+    expect(header).toContain('text-xs font-medium');
   });
 
   it('keeps the description at 15px/450 rather than the editor default', () => {

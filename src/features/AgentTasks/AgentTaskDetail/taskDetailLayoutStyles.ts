@@ -14,7 +14,7 @@ export const taskDetailLayoutStyles = {
   side: 'flex flex-col gap-4 min-w-0 [@container_task-detail_(width>=720px)]:sticky [@container_task-detail_(width>=720px)]:top-4 [@container_task-detail_(width>=720px)]:col-start-2 [@container_task-detail_(width>=720px)]:row-span-3 [@container_task-detail_(width>=720px)]:row-start-1 [@container_task-detail_(width>=720px)]:self-start [@container_task-detail_(width>=720px)]:pbs-0',
   // Linear splits its section chrome into two tiers: the top-level "Activity"
   // band reads as a 15px/600 heading while the collapsible sections
-  // (Sub-issues, …) keep the compact 14px/500 label on the default variant.
+  // (Sub-issues, …) keep the compact 12px/500 label on the default variant.
   sectionHeading: 'text-[15px] leading-5 font-semibold',
   propertyGroups:
     'flex flex-wrap gap-2 items-center min-w-0 [&>div]:contents [@container_task-detail_(width>=720px)]:flex-col [@container_task-detail_(width>=720px)]:flex-nowrap [@container_task-detail_(width>=720px)]:gap-6 [@container_task-detail_(width>=720px)]:items-stretch [@container_task-detail_(width>=720px)]:[&>div]:flex',

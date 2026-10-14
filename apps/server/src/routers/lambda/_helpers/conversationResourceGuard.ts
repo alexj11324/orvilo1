@@ -1,8 +1,10 @@
-import { inArray } from 'drizzle-orm';
+import { TRPCError } from '@trpc/server';
+import { and, inArray } from 'drizzle-orm';
 
 import { RbacModel } from '@/database/models/rbac';
 import { agentsToSessions, messages, topics } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { buildTopicReadableWhere } from '@/database/utils/topicReadable';
 import {
   assertCanPerformResourceAction,
   canPerformResourceAction,
@@ -196,6 +198,13 @@ export const assertCanViewMessageTargets = async (
     ctx.userId,
     ctx.workspaceId,
   );
+  await assertCanViewTopicTargets(ctx, [
+    ...new Set(
+      rows.flatMap((row) =>
+        row.workspaceId === ctx.workspaceId && row.topicId ? [row.topicId] : [],
+      ),
+    ),
+  ]);
   const targets: ConversationTarget[] = [];
   const fallbackTopicIds = new Set<string>();
   for (const row of rows) {
@@ -250,6 +259,19 @@ const assertCanAccessTopicTargets = async (
 ): Promise<ResolvedConversationTarget[]> => {
   const workspaceId = ctx.workspaceId ?? undefined;
   if (!workspaceId) return [];
+
+  const readableTopics = await ctx.db
+    .select({ id: topics.id })
+    .from(topics)
+    .where(
+      and(
+        inArray(topics.id, topicIds),
+        buildTopicReadableWhere(ctx.db, { userId: ctx.userId, workspaceId }),
+      ),
+    );
+  if (topicIds.some((id) => !readableTopics.some((topic) => topic.id === id))) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found' });
+  }
 
   // Issue View follows workspace membership; Agent Use still gates every mutation.
   const issueTopics =
@@ -323,6 +345,16 @@ export const filterUserIdsByTopicViewAccess = async (
   const access = await Promise.all(
     activeUserIds.map(async (userId) => {
       const grantedPermissions = permissionsByUserId.get(userId)!;
+      const readableTopics = await ctx.db
+        .select({ id: topics.id })
+        .from(topics)
+        .where(
+          and(
+            inArray(topics.id, topicIds),
+            buildTopicReadableWhere(ctx.db, { userId, workspaceId }),
+          ),
+        );
+      if (topicIds.some((id) => !readableTopics.some((topic) => topic.id === id))) return false;
       const checks = await Promise.all(
         resolvedTargets.map(({ meta, resourceId, resourceType }) =>
           canPerformResourceAction({

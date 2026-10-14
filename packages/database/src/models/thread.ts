@@ -1,10 +1,11 @@
 import type { CreateThreadParams } from '@orvilo/types';
 import { RequestTrigger, ThreadStatus } from '@orvilo/types';
-import { and, desc, eq, notExists, notInArray, sql } from 'drizzle-orm';
+import { and, desc, eq, exists, notExists, notInArray, sql } from 'drizzle-orm';
 
 import type { ThreadItem } from '../schemas';
-import { agentOperations, messages, threads } from '../schemas';
+import { agentOperations, messages, threads, topics } from '../schemas';
 import type { OrviloDatabase } from '../type';
+import { buildTopicReadableWhere } from '../utils/topicReadable';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 /**
@@ -76,8 +77,18 @@ export class ThreadModel {
     this.workspaceId = workspaceId;
   }
 
-  private ownership = () =>
-    buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, threads);
+  private ownership = () => {
+    const ctx = { userId: this.userId, workspaceId: this.workspaceId };
+    return and(
+      buildWorkspaceWhere(ctx, threads),
+      exists(
+        this.db
+          .select({ one: sql`1` })
+          .from(topics)
+          .where(and(eq(topics.id, threads.topicId), buildTopicReadableWhere(this.db, ctx))),
+      ),
+    );
+  };
 
   /**
    * In workspace mode `ownership()` matches every member's threads, so a bulk

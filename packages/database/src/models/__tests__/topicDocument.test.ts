@@ -260,6 +260,7 @@ describe('TopicDocumentModel', () => {
       await serverDB.insert(topicsSchema).values({
         id: wsTopicId,
         sessionId: wsSessionId,
+        trigger: 'document',
         userId,
         workspaceId: wsId,
       });

@@ -5,6 +5,8 @@ import { pick } from 'es-toolkit';
 
 import { agents, tasks, taskTopics, topics, workspaceMembers } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { buildTaskReadableWhere } from '@/database/utils/taskTeamReadable';
+import { buildTopicReadableWhere } from '@/database/utils/topicReadable';
 import type {
   OperationStatusResult,
   PendingInterventionsResult,
@@ -27,6 +29,7 @@ export const isWorkspaceIssueAgentReadable = async (
     .where(
       and(
         eq(tasks.workspaceId, workspaceId),
+        buildTaskReadableWhere(db, { userId, workspaceId }),
         eq(agents.workspaceId, workspaceId),
         eq(agents.id, agentId),
         or(
@@ -67,6 +70,7 @@ export const readableWorkspaceIssueTopicIds = async (
         eq(tasks.workspaceId, workspaceId),
         eq(taskTopics.workspaceId, workspaceId),
         eq(topics.workspaceId, workspaceId),
+        buildTopicReadableWhere(db, { userId, workspaceId }),
         eq(workspaceMembers.userId, userId),
         isNull(workspaceMembers.deletedAt),
         isNull(workspaceMembers.suspendedAt),

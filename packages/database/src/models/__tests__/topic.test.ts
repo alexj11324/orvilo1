@@ -688,10 +688,7 @@ describe('TopicModel', () => {
       expect(topic.runStartedAt).toBeNull();
     });
 
-    // This feed is not scoped by agent, so in a workspace `ownership()` matches
-    // every member's rows. Without a parent check a teammate's PRIVATE agent
-    // conversation — title and last assistant reply included — lands in the
-    // home inbox of everyone in the workspace.
+    // Standalone topics remain creator-private even when their Agent is shared.
     describe('workspace parent scope', () => {
       const workspaceId = 'topic-model-test-workspace';
       const workspaceModel = new TopicModel(serverDB, userId, workspaceId);
@@ -750,17 +747,14 @@ describe('TopicModel', () => {
         ]);
       });
 
-      it('excludes topics whose owning agent is a teammate private or out-of-scope agent', async () => {
+      it('excludes teammate standalone topics even under a shared Agent', async () => {
         const result = await workspaceModel.queryTopics({ statuses: ['unread'] });
 
-        expect(result.map((t) => t.id).sort()).toEqual([
-          'ws-parentless',
-          'ws-private-mine',
-          'ws-shared',
-        ]);
+        expect(result.map((t) => t.id).sort()).toEqual(['ws-parentless', 'ws-private-mine']);
       });
 
       it('reports the parent visibility so a team view can drop private conversations', async () => {
+        await serverDB.update(topics).set({ userId }).where(eq(topics.id, 'ws-shared'));
         const result = await workspaceModel.queryTopics({ statuses: ['unread'] });
         const byId = new Map(result.map((t) => [t.id, t.parentVisibility]));
 

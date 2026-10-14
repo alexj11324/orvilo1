@@ -59,6 +59,7 @@ import { inJsonStringArray } from '../utils/inJsonStringArray';
 import { builtinMemoryTopic } from '../utils/memoryRuntime';
 import { searchableMessage } from '../utils/searchableMessage';
 import { notShareVisitorTopic } from '../utils/shareVisitor';
+import { buildTopicReadableWhere } from '../utils/topicReadable';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { recomputeTopicUsage } from './topicUsage';
 
@@ -471,7 +472,11 @@ export class TopicModel {
   private workspaceScope = () =>
     buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, topics);
 
-  private ownership = () => and(this.workspaceScope(), this.notShareVisitor());
+  private ownership = () =>
+    and(
+      buildTopicReadableWhere(this.db, { userId: this.userId, workspaceId: this.workspaceId }),
+      this.notShareVisitor(),
+    );
 
   /**
    * In workspace mode `ownership()` matches every member's topics, so a bulk

@@ -1,8 +1,9 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, exists, sql } from 'drizzle-orm';
 
 import type { DocumentItem, NewTopicDocument } from '../schemas';
-import { documents, topicDocuments } from '../schemas';
+import { documents, topicDocuments, topics } from '../schemas';
 import type { OrviloDatabase } from '../type';
+import { buildTopicReadableWhere } from '../utils/topicReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 
 export interface TopicDocumentWithDetails extends DocumentItem {
@@ -20,8 +21,18 @@ export class TopicDocumentModel {
     this.workspaceId = workspaceId;
   }
 
-  private ownership = () =>
-    buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, topicDocuments);
+  private ownership = () => {
+    const ctx = { userId: this.userId, workspaceId: this.workspaceId };
+    return and(
+      buildWorkspaceWhere(ctx, topicDocuments),
+      exists(
+        this.db
+          .select({ one: sql`1` })
+          .from(topics)
+          .where(and(eq(topics.id, topicDocuments.topicId), buildTopicReadableWhere(this.db, ctx))),
+      ),
+    );
+  };
 
   /**
    * Associate a document with a topic.
@@ -112,13 +123,17 @@ export class TopicDocumentModel {
    * Check if a document is associated with a topic
    */
   isAssociated = async (documentId: string, topicId: string): Promise<boolean> => {
-    const result = await this.db.query.topicDocuments.findFirst({
-      where: and(
-        eq(topicDocuments.documentId, documentId),
-        eq(topicDocuments.topicId, topicId),
-        this.ownership(),
-      ),
-    });
+    const [result] = await this.db
+      .select({ topicId: topicDocuments.topicId })
+      .from(topicDocuments)
+      .where(
+        and(
+          eq(topicDocuments.documentId, documentId),
+          eq(topicDocuments.topicId, topicId),
+          this.ownership(),
+        ),
+      )
+      .limit(1);
 
     return !!result;
   };

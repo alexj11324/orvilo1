@@ -94,6 +94,7 @@ import { idGenerator } from '../utils/idGenerator';
 import { inJsonStringArray } from '../utils/inJsonStringArray';
 import { searchableMessage } from '../utils/searchableMessage';
 import { notShareVisitorMessage, notShareVisitorTopicRef } from '../utils/shareVisitor';
+import { buildMessageReadableWhere, buildTopicReadableWhere } from '../utils/topicReadable';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { recomputeTopicUsage } from './topicUsage';
 import { WorkModel } from './work';
@@ -941,8 +942,10 @@ export class MessageModel {
    * effective visitor gate per-call ({@link deleteMessage},
    * {@link deleteMessages}, {@link query} via `allowShareVisitor`, …).
    */
-  private workspaceScope = () =>
-    buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, messages);
+  private workspaceScope = () => {
+    const ctx = { userId: this.userId, workspaceId: this.workspaceId };
+    return and(buildWorkspaceWhere(ctx, messages), buildMessageReadableWhere(this.db, ctx));
+  };
 
   /**
    * Default visitor exclusion applied by {@link ownership} — see
@@ -973,7 +976,7 @@ export class MessageModel {
       .from(topics)
       .where(
         and(
-          buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, topics),
+          buildTopicReadableWhere(this.db, { userId: this.userId, workspaceId: this.workspaceId }),
           eq(topics.id, topicId),
         ),
       )

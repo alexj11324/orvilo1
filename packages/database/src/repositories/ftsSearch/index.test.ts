@@ -141,6 +141,106 @@ const SCAN_ALIASES = [
 ];
 
 describe.skipIf(!isServerDB)('FtsSearchRepo', () => {
+  it('keeps shared Agent standalone chats private while preserving group and owner messages', async () => {
+    const workspaceId = 'search-privacy-workspace';
+    await serverDB.insert(workspaces).values({
+      id: workspaceId,
+      name: 'Privacy search',
+      primaryOwnerId: userId,
+      slug: workspaceId,
+    });
+    await serverDB.insert(agents).values({
+      id: 'search-privacy-agent',
+      userId: otherUserId,
+      visibility: 'public',
+      workspaceId,
+    });
+    await serverDB.insert(chatGroups).values({
+      id: 'search-privacy-group',
+      userId: otherUserId,
+      visibility: 'public',
+      workspaceId,
+    });
+    await serverDB.insert(topics).values([
+      {
+        id: 'search-privacy-own',
+        agentId: 'search-privacy-agent',
+        title: 'Privacycanary own chat',
+        userId,
+        workspaceId,
+      },
+      {
+        id: 'search-privacy-foreign',
+        agentId: 'search-privacy-agent',
+        title: 'Privacycanary teammate chat',
+        userId: otherUserId,
+        workspaceId,
+      },
+      {
+        id: 'search-privacy-group-topic',
+        groupId: 'search-privacy-group',
+        title: 'Privacycanary group chat',
+        userId: otherUserId,
+        workspaceId,
+      },
+    ]);
+    await serverDB.insert(messages).values([
+      {
+        id: 'search-privacy-own-message',
+        topicId: 'search-privacy-own',
+        userId,
+        workspaceId,
+        role: 'user',
+        content: 'Privacycanary own chat',
+      },
+      {
+        id: 'search-privacy-foreign-message',
+        topicId: 'search-privacy-foreign',
+        userId: otherUserId,
+        workspaceId,
+        role: 'user',
+        content: 'Privacycanary teammate chat',
+      },
+      {
+        id: 'search-privacy-group-message',
+        topicId: 'search-privacy-group-topic',
+        userId: otherUserId,
+        workspaceId,
+        role: 'user',
+        content: 'Privacycanary shared group chat',
+      },
+      {
+        id: 'search-privacy-own-unfiled',
+        userId,
+        workspaceId,
+        role: 'user',
+        content: 'Privacycanary own topicless chat',
+      },
+      {
+        id: 'search-privacy-foreign-unfiled',
+        userId: otherUserId,
+        workspaceId,
+        role: 'user',
+        content: 'Privacycanary teammate topicless chat',
+      },
+    ]);
+    const repo = new FtsSearchRepo(serverDB, userId, workspaceId);
+    for (const [type, expected] of [
+      ['topic', ['search-privacy-own', 'search-privacy-group-topic']],
+      [
+        'message',
+        [
+          'search-privacy-own-message',
+          'search-privacy-group-message',
+          'search-privacy-own-unfiled',
+        ],
+      ],
+    ] as const) {
+      const results = await repo.search({ query: 'Privacycanary', type, limitPerType: 10 });
+      expect(results.map(({ id }) => id).sort()).toEqual([...expected].sort());
+    }
+  });
+
   describe('search - empty query', () => {
     it('should return empty array for empty query', async () => {
       const results = await ftsSearchRepo.search({ query: '' });

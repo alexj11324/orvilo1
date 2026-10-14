@@ -1,5 +1,5 @@
 import { LIBRARY_HIDDEN_FILE_SOURCES } from '@orvilo/types';
-import { and, desc, eq, inArray, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
+import { and, desc, eq, exists, inArray, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
 
 import {
   agents,
@@ -15,6 +15,7 @@ import { sanitizeBm25Query } from '../../../utils/bm25';
 import { normalizeInboxAgentMeta, normalizeInboxAgentTitle } from '../../../utils/inboxAgent';
 import { searchableMessageText } from '../../../utils/searchableMessage';
 import { notShareVisitorMessage, notShareVisitorTopic } from '../../../utils/shareVisitor';
+import { buildMessageReadableWhere, buildTopicReadableWhere } from '../../../utils/topicReadable';
 import { buildWorkspaceWhere } from '../../../utils/workspace';
 import type {
   FtsSearchAgentResult,
@@ -180,6 +181,12 @@ export async function searchTopics(
     .where(
       and(
         context.liftedScopeWhere(hits.workspaceId),
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(topics)
+            .where(and(eq(topics.id, hits.id), buildTopicReadableWhere(db, context.scope))),
+        ),
         agentId ? eq(hits.agentId, agentId) : undefined,
       ),
     )
@@ -241,6 +248,7 @@ export async function searchMessages(
       score: sql<number>`paradedb.score(${messages.id})`.as('score'),
       summary: messages.summary,
       topicId: messages.topicId,
+      userId: messages.userId,
       updatedAt: messages.updatedAt,
       workspaceId: messages.workspaceId,
     })
@@ -287,6 +295,7 @@ export async function searchMessages(
     .where(
       and(
         context.liftedScopeWhere(hits.workspaceId),
+        buildMessageReadableWhere(db, context.scope, hits),
         agentId ? eq(hits.agentId, agentId) : undefined,
         // ParadeDB rejects regex predicates inside the scored BM25 scan. Blank content cannot
         // match content @@@, so filtering after the candidate pool preserves eligible hits.

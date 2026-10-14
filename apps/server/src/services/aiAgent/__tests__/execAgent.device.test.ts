@@ -1021,21 +1021,31 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       });
     });
 
-    it('queues a known offline Prime device before registering a canonical runtime', async () => {
+    it('refuses a known offline Prime device before registering a canonical runtime', async () => {
       await useAgencyConfig({
         boundDeviceId: 'device-001',
         executionTarget: 'device',
         heterogeneousProvider: { type: 'orvilo' },
       });
-      mockDevicePresence.mockResolvedValue(false);
-      vi.spyOn(AgentOperationModel.prototype, 'parkForDevice').mockResolvedValue(true);
+      mockQueryDeviceList.mockResolvedValue([{ deviceId: 'device-002', online: true }]);
+      const parked = vi
+        .spyOn(AgentOperationModel.prototype, 'parkForDevice')
+        .mockResolvedValue(true);
       const result = await service.execAgent({
         agentId: 'agent-1',
         prompt: 'Original Prime request',
       });
-      expect(result).toMatchObject({ status: 'idle', success: true, autoStarted: false });
+      expect(result).toMatchObject({
+        status: 'error',
+        success: false,
+        autoStarted: false,
+        error: 'DEVICE_OFFLINE',
+        errorData: { deviceId: 'device-001' },
+      });
       expect(mockComposeDevicePrimeRun).not.toHaveBeenCalled();
       expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+      expect(parked).not.toHaveBeenCalled();
     });
   });
 });

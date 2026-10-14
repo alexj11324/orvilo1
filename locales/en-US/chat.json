@@ -1953,7 +1953,7 @@
   "taskDetail.execution.hint.assignAgentToRun": "Assign an agent to run this Issue again.",
   "taskDetail.execution.hint.awaitingAcceptance": "The agent finished its run. Review the result to accept it or send it back.",
   "taskDetail.execution.hint.inProgressNoRun": "This Issue is In Progress, but no run has started.",
-  "taskDetail.execution.hint.moveToStart": "The agent starts when you move this Issue to In Progress.",
+  "taskDetail.execution.hint.moveToStart": "After you confirm the plan, the agent starts work automatically as dependencies become ready.",
   "taskDetail.execution.hint.needsAgent": "This Issue is In Progress but no agent is assigned. Assign an agent to run it.",
   "taskDetail.execution.hint.outcomeUnknown": "The run ended without a confirmed result. Check the latest run before you retry.",
   "taskDetail.execution.hint.reopenToRun": "This Issue is closed. Reopen it to run the agent again.",

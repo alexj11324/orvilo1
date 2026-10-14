@@ -1949,7 +1949,7 @@ export default {
     'The agent finished its run. Review the result to accept it or send it back.',
   'taskDetail.execution.hint.inProgressNoRun': 'This Issue is In Progress, but no run has started.',
   'taskDetail.execution.hint.moveToStart':
-    'The agent starts when you move this Issue to In Progress.',
+    'After you confirm the plan, the agent starts work automatically as dependencies become ready.',
   'taskDetail.execution.hint.needsAgent':
     'This Issue is In Progress but no agent is assigned. Assign an agent to run it.',
   'taskDetail.execution.hint.outcomeUnknown':

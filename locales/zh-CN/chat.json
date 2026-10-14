@@ -1953,7 +1953,7 @@
   "taskDetail.execution.hint.assignAgentToRun": "指派智能体后才能再次运行这个 Issue。",
   "taskDetail.execution.hint.awaitingAcceptance": "智能体已完成运行。请查看结果，然后验收或打回。",
   "taskDetail.execution.hint.inProgressNoRun": "这个 Issue 处于“进行中”，但还没有开始运行。",
-  "taskDetail.execution.hint.moveToStart": "把这个 Issue 移到“进行中”后，智能体就会开始运行。",
+  "taskDetail.execution.hint.moveToStart": "确认计划后，智能体会按依赖自动开始工作。",
   "taskDetail.execution.hint.needsAgent": "这个 Issue 处于“进行中”，但还没有指派智能体。指派智能体后才能运行。",
   "taskDetail.execution.hint.outcomeUnknown": "运行结束了，但结果没有得到确认。重试前请先查看最近一次运行。",
   "taskDetail.execution.hint.reopenToRun": "这个 Issue 已关闭。重新打开后才能再次运行智能体。",

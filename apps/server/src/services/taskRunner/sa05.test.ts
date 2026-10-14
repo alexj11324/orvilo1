@@ -221,6 +221,32 @@ const newRunner = () => {
   return service;
 };
 
+describe('confirmed Issue artifact delivery', () => {
+  it('dispatches a repository-bound report without preparing a git delivery', async () => {
+    const task = baseTask({
+      config: { workspace: { provider: 'git', repo: 'acme/widget', baseBranch: 'main' } },
+      context: {
+        issuePlan: {
+          confirmedAt: '2026-10-14T18:00:00.000Z',
+          checklists: [{ taskId: 'task-1', deliveryKind: 'artifact' }],
+        },
+      },
+    });
+    const { execAgent } = setupHappyPath(task);
+    const provision = vi.fn().mockRejectedValue(new Error('A report must not prepare a PR'));
+    const runner = newRunner();
+    Object.assign(runner, { taskWorkspace: { provision } });
+
+    await runner.runTask({ taskId: task.id, idempotencyKey: 'confirmed-report' });
+
+    expect(provision).not.toHaveBeenCalled();
+    expect(execAgent).toHaveBeenCalled();
+    const persistedRun = vi.mocked(TaskTopicModel.prototype.startRun).mock.calls[0]?.[2];
+    expect(persistedRun).toBeDefined();
+    expect(persistedRun?.integration).toBeUndefined();
+  });
+});
+
 const runParams = {
   idempotencyKey: 'k-1',
   taskId: 'task-1',

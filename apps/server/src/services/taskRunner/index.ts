@@ -369,13 +369,15 @@ export class TaskRunnerService {
     }
 
     await this.taskModel.assertConfirmedIssuePlan(task.id);
-    const periodicPlan = (task.context as TaskContext | null)?.issuePlan;
+    const issuePlan = (task.context as TaskContext | null)?.issuePlan;
+    const artifactDelivery =
+      issuePlan?.checklists.find((check) => check.taskId === task.id)?.deliveryKind === 'artifact';
     if (
       isAutomationRunTrigger(trigger) &&
       !parentAutomationDispatch &&
-      periodicPlan?.confirmedAt &&
-      periodicPlan.parentTaskId === task.id &&
-      periodicPlan.checklists.some((check) => check.taskId !== task.id)
+      issuePlan?.confirmedAt &&
+      issuePlan.parentTaskId === task.id &&
+      issuePlan.checklists.some((check) => check.taskId !== task.id)
     ) {
       try {
         await (
@@ -459,12 +461,9 @@ export class TaskRunnerService {
           // trigger is a new orchestrated writer and must pass the gate.
           origin: internalSettlement
             ? 'internal'
-            : trigger === 'orchestrator' &&
-                (task.context as TaskContext | null)?.issuePlan?.confirmedAt
-              ? 'external'
-              : trigger === 'orchestrator' || trigger === 'goal'
-                ? 'caid'
-                : 'external',
+            : !issuePlan?.confirmedAt && (trigger === 'orchestrator' || trigger === 'goal')
+              ? 'caid'
+              : 'external',
           planRevision,
           requestedBy,
           settlementGrant: settlement?.grant,
@@ -927,7 +926,7 @@ export class TaskRunnerService {
       // `workspaceOverride` (corrective merge runs) skips provisioning — the
       // caller already owns the workspace description. Runs before prompt
       // building so the contract can ride into the prompt via extraPrompt.
-      if (!workspaceOverride && !continueTopicId) {
+      if (!artifactDelivery && !workspaceOverride && !continueTopicId) {
         try {
           await this.taskDispatch.transition(preparedDispatch!, {
             expected: ['claimed'],

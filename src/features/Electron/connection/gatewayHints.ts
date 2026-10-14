@@ -1,9 +1,8 @@
 interface GatewayHintsInput {
   connectionCount: number;
+  connectionState: 'connected' | 'connecting' | 'disconnected' | 'unavailable';
   isConnected: boolean;
   isConnecting: boolean;
-  workspaceConnectionState: 'connected' | 'connecting' | 'disconnected' | 'unavailable';
-  workspaceScoped: boolean;
 }
 
 type GatewayHintKey =
@@ -11,10 +10,9 @@ type GatewayHintKey =
   | 'gateway.statusConnectedConnections'
   | 'gateway.statusConnecting'
   | 'gateway.statusDisconnected'
-  | 'gateway.workspaceStatusConnections'
-  | 'gateway.workspaceStatusDisconnected'
-  | 'gateway.workspaceStatusLoading'
-  | 'gateway.workspaceStatusUnavailable';
+  | 'gateway.statusLoading'
+  | 'gateway.statusNoConnections'
+  | 'gateway.statusUnavailable';
 
 export interface GatewayHint {
   count?: number;
@@ -22,49 +20,43 @@ export interface GatewayHint {
 }
 
 interface GatewayHints {
-  /** Workspace devices in a workspace, this account's connections outside one. */
-  connection?: GatewayHint;
-  /**
-   * This device's own connection: what the dot shows, in or out of a workspace.
-   * An Agent can run on a private device that no workspace device list includes.
-   */
+  /** Connections across this account's device inventory. */
+  connection: GatewayHint;
+  /** This device's own connection, independent of the device inventory. */
   device: GatewayHint;
-  /** The title-bar dot follows this device, not the workspace device list. */
+  /** The title-bar dot follows this device. */
   showConnectedDot: boolean;
 }
 
-const workspaceHint = (
-  state: GatewayHintsInput['workspaceConnectionState'],
+const connectionHint = (
+  state: GatewayHintsInput['connectionState'],
   count: number,
 ): GatewayHint => {
   switch (state) {
     case 'unavailable': {
-      return { key: 'gateway.workspaceStatusUnavailable' };
+      return { key: 'gateway.statusUnavailable' };
     }
     case 'connecting': {
-      return { key: 'gateway.workspaceStatusLoading' };
+      return { key: 'gateway.statusLoading' };
     }
     case 'connected': {
-      return { count, key: 'gateway.workspaceStatusConnections' };
+      return count > 0
+        ? { count, key: 'gateway.statusConnectedConnections' }
+        : { key: 'gateway.statusNoConnections' };
     }
     default: {
-      return { key: 'gateway.workspaceStatusDisconnected' };
+      return { key: 'gateway.statusNoConnections' };
     }
   }
 };
 
 export const resolveGatewayHints = ({
   connectionCount,
+  connectionState,
   isConnected,
   isConnecting,
-  workspaceConnectionState,
-  workspaceScoped,
 }: GatewayHintsInput): GatewayHints => ({
-  connection: workspaceScoped
-    ? workspaceHint(workspaceConnectionState, connectionCount)
-    : isConnected && connectionCount
-      ? { count: connectionCount, key: 'gateway.statusConnectedConnections' }
-      : undefined,
+  connection: connectionHint(connectionState, connectionCount),
   device: {
     key: isConnecting
       ? 'gateway.statusConnecting'

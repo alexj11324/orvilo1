@@ -4,47 +4,52 @@ import { resolveGatewayHints } from './gatewayHints';
 
 const base = {
   connectionCount: 0,
+  connectionState: 'disconnected' as const,
   isConnected: true,
   isConnecting: false,
-  workspaceConnectionState: 'disconnected' as const,
-  workspaceScoped: true,
 };
 
 describe('resolveGatewayHints', () => {
-  it('marks this device as connected in a workspace that lists no shared device', () => {
+  it('keeps the local connected dot when the inventory has zero connections', () => {
     expect(resolveGatewayHints(base)).toEqual({
-      connection: { key: 'gateway.workspaceStatusDisconnected' },
+      connection: { key: 'gateway.statusNoConnections' },
       device: { key: 'gateway.statusConnected' },
       showConnectedDot: true,
     });
   });
 
-  it('shows no dot while this device is disconnected, whatever the workspace reports', () => {
+  it('shows the global count independently of the local connection', () => {
     const hints = resolveGatewayHints({
       ...base,
       connectionCount: 2,
+      connectionState: 'connected',
       isConnected: false,
-      workspaceConnectionState: 'connected',
     });
 
     expect(hints.showConnectedDot).toBe(false);
     expect(hints.device.key).toBe('gateway.statusDisconnected');
-    expect(hints.connection).toEqual({ count: 2, key: 'gateway.workspaceStatusConnections' });
+    expect(hints.connection).toEqual({ count: 2, key: 'gateway.statusConnectedConnections' });
   });
 
-  it('says the workspace device list is still loading instead of hiding the line', () => {
-    expect(
-      resolveGatewayHints({ ...base, workspaceConnectionState: 'connecting' }).connection,
-    ).toEqual({ key: 'gateway.workspaceStatusLoading' });
+  it.each([
+    ['connecting', 'gateway.statusLoading'],
+    ['unavailable', 'gateway.statusUnavailable'],
+  ] as const)('reports global inventory state %s', (connectionState, key) => {
+    expect(resolveGatewayHints({ ...base, connectionState }).connection).toEqual({ key });
   });
 
-  it("reports this account's connections outside a workspace only when there are some", () => {
-    const personal = { ...base, workspaceScoped: false };
+  it('returns a readable hint for the current caller even with zero connections', () => {
+    const hints = resolveGatewayHints({ ...base, connectionState: 'connected' });
 
-    expect(resolveGatewayHints(personal).connection).toBeUndefined();
-    expect(resolveGatewayHints({ ...personal, connectionCount: 1 }).connection).toEqual({
-      count: 1,
-      key: 'gateway.statusConnectedConnections',
+    expect(hints.connection.count).toBeUndefined();
+    expect(hints.connection.key).toBe('gateway.statusNoConnections');
+  });
+
+  it('keeps the local connecting status independent of the inventory', () => {
+    expect(resolveGatewayHints({ ...base, isConnected: false, isConnecting: true })).toEqual({
+      connection: { key: 'gateway.statusNoConnections' },
+      device: { key: 'gateway.statusConnecting' },
+      showConnectedDot: false,
     });
   });
 });

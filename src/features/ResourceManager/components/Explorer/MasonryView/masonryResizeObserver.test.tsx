@@ -1,6 +1,6 @@
 import { act, cleanup, render } from '@testing-library/react';
 import { VirtuosoMasonry } from '@virtuoso.dev/masonry';
-import { StrictMode } from 'react';
+import { type ReactNode, StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mount the installed, patched dependency. Do not mock its measurement model.
@@ -74,6 +74,7 @@ describe('VirtuosoMasonry observer delivery', () => {
       frames.clear();
       queued.forEach((cb) => cb(0));
     });
+  const TestItem = ({ data }: { data: number }) => <div>{data}</div>;
   const mount = (strict = false) => {
     const masonry = (
       <VirtuosoMasonry
@@ -136,5 +137,57 @@ describe('VirtuosoMasonry observer delivery', () => {
     deliver(items[0], 100);
     flushFrame();
     expect(columns[0].style.height).toBe('100px');
+  });
+
+  it('owns the footer inside its scroller without forwarding it as a DOM attribute', () => {
+    const { getByTestId, getByText, container } = render(
+      <VirtuosoMasonry<number, undefined>
+        ItemContent={TestItem}
+        columnCount={2}
+        data={[1, 2]}
+        footer={<div>Loading...</div>}
+      />,
+    );
+    const scroller = getByTestId('virtuoso-scroller');
+    expect(scroller.contains(getByText('Loading...'))).toBe(true);
+    expect(scroller.hasAttribute('footer')).toBe(false);
+    expect(container.querySelectorAll('[data-testid="virtuoso-list"]')).toHaveLength(2);
+    expect(container.querySelectorAll('[data-index]')).toHaveLength(2);
+  });
+
+  it('adds and removes the footer without remounting columns or real item content', () => {
+    const data = [1, 2];
+    const masonry = (footer: ReactNode) => (
+      <VirtuosoMasonry<number, undefined>
+        ItemContent={TestItem}
+        columnCount={2}
+        data={data}
+        footer={footer}
+      />
+    );
+    const result = render(masonry(null));
+    const scroller = result.getByTestId('virtuoso-scroller');
+    const columns = result.getAllByTestId('virtuoso-list');
+    const items = Array.from(result.container.querySelectorAll('[data-index]'));
+    const contents = items.map((item) => item.firstElementChild);
+    expect(items).toHaveLength(2);
+    const expectOriginalNodes = () => {
+      expect(result.getByTestId('virtuoso-scroller')).toBe(scroller);
+      result.getAllByTestId('virtuoso-list').forEach((column, index) => {
+        expect(column).toBe(columns[index]);
+      });
+      const currentItems = Array.from(result.container.querySelectorAll('[data-index]'));
+      expect(currentItems).toHaveLength(items.length);
+      currentItems.forEach((item, index) => {
+        expect(item).toBe(items[index]);
+        expect(item.firstElementChild).toBe(contents[index]);
+      });
+    };
+    result.rerender(masonry(<div>Loading...</div>));
+    expect(scroller.contains(result.getByText('Loading...'))).toBe(true);
+    expectOriginalNodes();
+    result.rerender(masonry(null));
+    expect(result.queryByText('Loading...')).toBeNull();
+    expectOriginalNodes();
   });
 });

@@ -66,7 +66,7 @@ afterEach(() => {
 });
 
 describe('memoryRouter.reEmbedMemories', () => {
-  it('re-embeds memories across tables and returns aggregate stats', async () => {
+  it('rejects retired re-embedding without embedding or updating historical rows', async () => {
     const updateUserMemoryVectors = vi.fn().mockResolvedValue(undefined);
     const updateContextVectors = vi.fn().mockResolvedValue(undefined);
     const updatePreferenceVectors = vi.fn().mockResolvedValue(undefined);
@@ -126,44 +126,22 @@ describe('memoryRouter.reEmbedMemories', () => {
 
     const caller = userMemoriesRouter.createCaller(mockCtx as any);
 
-    const result = await caller.reEmbedMemories();
-
-    expect(result.success).toBe(true);
-    expect(result.aggregate).toEqual({ failed: 0, skipped: 0, succeeded: 6, total: 6 });
-    expect(result.results?.userMemories).toEqual({ failed: 0, skipped: 0, succeeded: 1, total: 1 });
-    expect(result.results?.contexts).toEqual({ failed: 0, skipped: 0, succeeded: 1, total: 1 });
-    expect(result.results?.preferences).toEqual({ failed: 0, skipped: 0, succeeded: 1, total: 1 });
-    expect(result.results?.identities).toEqual({ failed: 0, skipped: 0, succeeded: 1, total: 1 });
-    expect(result.results?.experiences).toEqual({ failed: 0, skipped: 0, succeeded: 1, total: 1 });
-    expect(result.results?.activities).toEqual({ failed: 0, skipped: 0, succeeded: 1, total: 1 });
-
-    expect(updateUserMemoryVectors).toHaveBeenCalledWith('memory-1', {
-      detailsVector1024: [2],
-      summaryVector1024: [1],
-    });
-    expect(updateContextVectors).toHaveBeenCalledWith('context-1', {
-      descriptionVector: [1],
-    });
-    expect(updatePreferenceVectors).toHaveBeenCalledWith('preference-1', {
-      conclusionDirectivesVector: [1],
-    });
-    expect(updateIdentityVectors).toHaveBeenCalledWith('identity-1', {
-      descriptionVector: [1],
-    });
-    expect(updateExperienceVectors).toHaveBeenCalledWith('experience-1', {
-      actionVector: [2],
-      keyLearningVector: [3],
-      situationVector: [1],
-    });
-    expect(updateActivityVectors).toHaveBeenCalledWith('activity-1', {
-      feedbackVector: [2],
-      narrativeVector: [1],
+    await expect(caller.reEmbedMemories()).rejects.toMatchObject({
+      code: 'METHOD_NOT_SUPPORTED',
+      message: 'Platform memory writing is unavailable.',
     });
 
-    expect(embeddingsMock).toHaveBeenCalledTimes(6);
-
-    for (const call of embeddingsMock.mock.calls) {
-      expect(call[1]).toEqual(expect.objectContaining({ user: 'test-user' }));
+    expect(initModelRuntimeFromDeploymentConfig).not.toHaveBeenCalled();
+    expect(embeddingsMock).not.toHaveBeenCalled();
+    for (const update of [
+      updateUserMemoryVectors,
+      updateContextVectors,
+      updatePreferenceVectors,
+      updateIdentityVectors,
+      updateExperienceVectors,
+      updateActivityVectors,
+    ]) {
+      expect(update).not.toHaveBeenCalled();
     }
   });
 });
@@ -607,7 +585,7 @@ describe('userMemories.retrieveMemory', () => {
 });
 
 describe('userMemories.toolAddActivityMemory', () => {
-  it('creates activity memory with embeddings and normalized fields', async () => {
+  it('rejects stale activity-memory writes before embedding or persistence', async () => {
     const createActivityMemory = vi.fn().mockResolvedValue({
       activity: { id: 'activity-1' },
       memory: { id: 'memory-1' },
@@ -647,42 +625,13 @@ describe('userMemories.toolAddActivityMemory', () => {
       },
     };
 
-    const result = await caller.toolAddActivityMemory(input as any);
-
-    expect(createActivityMemory).toHaveBeenCalledTimes(1);
-    expect(createActivityMemory).toHaveBeenCalledWith(
-      expect.objectContaining({
-        activity: expect.objectContaining({
-          associatedLocations: [{ name: 'HQ', type: 'place' }],
-          associatedObjects: [{ name: 'Slides' }],
-          associatedSubjects: [{ name: 'Alice' }],
-          endsAt: new Date('2024-05-01T11:00:00Z'),
-          feedback: 'Productive',
-          metadata: { source: 'chat' },
-          narrative: 'We reviewed milestones and risks',
-          notes: 'Follow up with action items',
-          startsAt: new Date('2024-05-01T10:00:00Z'),
-          status: 'completed',
-          tags: ['product'],
-          timezone: 'UTC',
-          type: 'meeting',
-        }),
-        memoryLayer: LayersEnum.Activity,
-        memoryType: TypesEnum.Activity,
-        summaryEmbedding: [1],
-      }),
-    );
-
-    expect(result).toEqual({
-      activityId: 'activity-1',
-      memoryId: 'memory-1',
-      message: 'Memory saved successfully',
-      success: true,
+    await expect(caller.toolAddActivityMemory(input as any)).rejects.toMatchObject({
+      code: 'METHOD_NOT_SUPPORTED',
+      message: 'Platform memory writing is unavailable.',
     });
-    expect(embeddingsMock).toHaveBeenCalledTimes(4);
 
-    for (const call of embeddingsMock.mock.calls) {
-      expect(call[1]).toEqual(expect.objectContaining({ user: 'test-user' }));
-    }
+    expect(createActivityMemory).not.toHaveBeenCalled();
+    expect(initModelRuntimeFromDeploymentConfig).not.toHaveBeenCalled();
+    expect(embeddingsMock).not.toHaveBeenCalled();
   });
 });

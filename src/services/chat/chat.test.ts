@@ -1629,8 +1629,8 @@ describe('ChatService', () => {
       });
     });
 
-    describe('memory enablement priority', () => {
-      it('should respect agent-level memory disabled even when user-level memory is enabled', async () => {
+    describe('retired platform memory settings', () => {
+      it('keeps platform memory disabled when only the user setting is enabled', async () => {
         const contextEngineeringSpy = vi
           .spyOn(mechaModule, 'contextEngineering')
           .mockResolvedValue([]);
@@ -1646,13 +1646,13 @@ describe('ChatService', () => {
           }),
         });
 
-        // agent-level off takes priority over user-level on
+        // Saved settings cannot reactivate retired platform memory.
         expect(contextEngineeringSpy).toHaveBeenCalledWith(
           expect.objectContaining({ enableUserMemories: false }),
         );
       });
 
-      it('should enable memory when agent-level is on even if user-level memory is disabled', async () => {
+      it('keeps platform memory disabled when the saved Agent setting is enabled', async () => {
         const contextEngineeringSpy = vi
           .spyOn(mechaModule, 'contextEngineering')
           .mockResolvedValue([]);
@@ -1668,13 +1668,13 @@ describe('ChatService', () => {
           }),
         });
 
-        // agent-level on takes priority over user-level off
+        // Saved settings cannot reactivate retired platform memory.
         expect(contextEngineeringSpy).toHaveBeenCalledWith(
-          expect.objectContaining({ enableUserMemories: true }),
+          expect.objectContaining({ enableUserMemories: false }),
         );
       });
 
-      it('should fall back to user-level setting when agent-level memory is not configured', async () => {
+      it('keeps platform memory disabled when the Agent setting is absent', async () => {
         const contextEngineeringSpy = vi
           .spyOn(mechaModule, 'contextEngineering')
           .mockResolvedValue([]);
@@ -1690,7 +1690,7 @@ describe('ChatService', () => {
           }),
         });
 
-        // no agent-level config, fallback to user-level off
+        // Platform memory stays retired without an Agent override.
         expect(contextEngineeringSpy).toHaveBeenCalledWith(
           expect.objectContaining({ enableUserMemories: false }),
         );

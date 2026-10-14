@@ -66,7 +66,7 @@ export const slackIntegrationRouter = router({
   saveBinding: adminProcedure
     .input(
       z.object({
-        slackChannelId: z.string().regex(/^[CG][A-Z0-9]+$/),
+        slackChannelId: z.string().regex(/^[CGD][A-Z0-9]+$/),
         agentId: z.string().min(1),
         projectId: z.string().min(1).nullable().optional(),
         repositoryId: z.string().min(1).nullable().optional(),

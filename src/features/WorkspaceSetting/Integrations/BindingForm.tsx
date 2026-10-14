@@ -100,7 +100,9 @@ const BindingForm = ({ workspaceId, binding, onSaved }: BindingFormProps) => {
           {binding ? (
             <>
               <div className="rounded-(--radius-card) border border-border bg-secondary p-2 text-sm">
-                #{binding.slackChannelName}
+                {binding.slackChannelId.startsWith('D')
+                  ? t('integrations.slack.directMessage', { name: binding.slackChannelName })
+                  : `#${binding.slackChannelName}`}
               </div>
               <p className="text-xs text-muted-foreground">
                 {t('integrations.slack.editChannelHint')}
@@ -118,7 +120,9 @@ const BindingForm = ({ workspaceId, binding, onSaved }: BindingFormProps) => {
               <SelectContent>
                 {channels.map((channel) => (
                   <SelectItem key={channel.id} value={channel.id}>
-                    #{channel.name}
+                    {channel.id.startsWith('D')
+                      ? t('integrations.slack.directMessage', { name: channel.name })
+                      : `#${channel.name}`}
                     {channel.isPrivate ? ` · ${t('integrations.slack.private')}` : ''}
                   </SelectItem>
                 ))}

@@ -4272,24 +4272,28 @@ export default {
   'integrations.slack.workspaces': 'Connected Slack workspace',
   'integrations.slack.workspaceConnected': 'Linked to this Orvilo workspace',
   'integrations.slack.notConnected': 'No Slack workspace connected. Install Slack to continue.',
-  'integrations.slack.connections': 'Channel connections',
-  'integrations.slack.connectionsDescription': 'Connect Slack channels to Agents.',
-  'integrations.slack.emptyConnections': 'Connected channels and Agents will appear here.',
+  'integrations.slack.connections': 'Conversation connections',
+  'integrations.slack.connectionsDescription':
+    'Connect Slack channels and direct messages to Agents.',
+  'integrations.slack.emptyConnections':
+    'Connected Slack conversations and Agents will appear here.',
   'integrations.slack.disconnectTitle': 'Disconnect Slack workspace?',
   'integrations.slack.disconnectDescription':
     'This removes the Slack installation, channel connections and linked personal accounts for this workspace.',
-  'integrations.slack.channel': 'Slack channel',
+  'integrations.slack.directMessage': 'Direct message · {{name}}',
+  'integrations.slack.channel': 'Slack conversation',
   'integrations.slack.agent': 'Agent',
-  'integrations.slack.selectChannel': 'Select a Slack channel',
+  'integrations.slack.selectChannel': 'Select a Slack channel or direct message',
   'integrations.slack.selectAgent': 'Select an Agent',
   'integrations.slack.private': 'Private',
   'integrations.slack.noChannels':
-    'No channels are available. Check the Slack app’s channel access, then retry.',
+    'No conversations are available. Open a direct message with the Slack app or check its channel access, then retry.',
   'integrations.slack.noAgents':
     'No accessible Agents are available in this workspace. Create an Agent or request access first.',
-  'integrations.slack.moreChannels': 'Load more channels',
-  'integrations.slack.bindingTitle': 'Connect Slack channel to Agent',
-  'integrations.slack.editChannelHint': 'To connect a different channel, add another connection.',
+  'integrations.slack.moreChannels': 'Load more conversations',
+  'integrations.slack.bindingTitle': 'Connect Slack conversation to Agent',
+  'integrations.slack.editChannelHint':
+    'To connect a different conversation, add another connection.',
   'integrations.slack.saveFailed':
     'The connection was not saved. Your selections are kept; retry Save connection.',
   'integrations.slack.writeFailed':

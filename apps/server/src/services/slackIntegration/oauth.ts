@@ -10,6 +10,8 @@ export const SLACK_BOT_SCOPES = [
   'channels:history',
   'groups:read',
   'groups:history',
+  'im:read',
+  'im:history',
   'users:read',
   'files:read',
 ];

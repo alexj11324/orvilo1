@@ -298,17 +298,23 @@ export class SlackIntegrationService {
     const installation = await new SlackIntegrationModel(this.db, workspaceId).installation();
     if (!installation) throw new SlackProviderError('slack_installation_required');
     const result = await slackApi('conversations.list', await this.getBotToken(installation), {
-      types: 'public_channel,private_channel',
+      types: 'public_channel,private_channel,im',
       exclude_archived: 'true',
       limit: '100',
       ...(cursor ? { cursor } : {}),
     });
     return {
       channels: result.channels.map(
-        (channel: { id: string; name: string; is_private: boolean }) => ({
+        (channel: {
+          id: string;
+          name?: string;
+          is_private?: boolean;
+          is_im?: boolean;
+          user?: string;
+        }) => ({
           id: channel.id,
-          name: channel.name,
-          isPrivate: channel.is_private,
+          name: channel.is_im ? channel.user || channel.id : channel.name || channel.id,
+          isPrivate: !!channel.is_private,
         }),
       ),
       nextCursor: result.response_metadata?.next_cursor || undefined,
@@ -333,14 +339,15 @@ export class SlackIntegrationService {
     if (
       result.channel?.id !== input.slackChannelId ||
       result.channel.is_archived ||
-      result.channel.is_im ||
       result.channel.is_mpim
     )
       throw new SlackProviderError('slack_channel_invalid');
     return model.saveBinding(
       {
         slackChannelId: input.slackChannelId,
-        slackChannelName: result.channel.name,
+        slackChannelName: result.channel.is_im
+          ? result.channel.user || result.channel.id
+          : result.channel.name || result.channel.id,
         agentId: input.agentId,
         projectId: input.projectId ?? null,
         repositoryId: input.repositoryId ?? null,

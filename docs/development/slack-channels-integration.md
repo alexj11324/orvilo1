@@ -8,9 +8,10 @@ standalone simulated preview. This implementation lives in Orvilo's existing
 workspace settings and retains Orvilo's components, identity and Agent model.
 
 Observable acceptance: a workspace administrator installs the actual Slack App,
-returns to a persisted connected workspace, binds a real Slack channel to an
-accessible Agent, and a linked Slack user mentions that Agent and receives its
-real response through CopilotKit Channels. Reload retains installation/bindings;
+returns to a persisted connected workspace, binds a real Slack channel or direct
+message to an accessible Agent, and a linked Slack user mentions that Agent or
+sends a direct message and receives its real response through CopilotKit Channels.
+Reload retains installation/bindings;
 provider cancellation, denied access and failed writes do not create success states. Disconnect
 removes access. Other workspace members link their own Slack identity before
 executing Agents. No sender inherits the installing administrator's authority.
@@ -31,10 +32,11 @@ executing Agents. No sender inherits the installing administrator's authority.
   AGPL preview components are imported into the production feature.
 - List: Integrations heading and concise description, Slack card with Configure.
 - Detail: Back to integrations; Slack header and Install/Connected; personal
-  account connection; connected Slack workspace; Channel connections list.
-- Channel mapping reuses Plane's channel-to-project layout, but maps a Slack
-  channel to an Orvilo Agent. Add/Edit opens a dialog selecting a real channel
-  and Agent; Delete removes that binding. Do not add project notification rules,
+  account connection; connected Slack workspace; Conversation connections list.
+- Conversation mapping reuses Plane's channel-to-project layout, but maps a Slack
+  channel or direct message to an Orvilo Agent. Add/Edit opens a dialog selecting
+  a real conversation and Agent; Delete removes that binding. Do not add project
+  notification rules,
   DM preferences, credential forms or a setup wizard without a working consumer.
 - Empty/loading/error/non-admin states must be explicit. Unconfigured deployment
   shows unavailable installation with an actionable explanation, never a demo
@@ -47,17 +49,20 @@ executing Agents. No sender inherits the installing administrator's authority.
 ## API and ownership
 
 `slackIntegration.status({workspaceId})` returns configuration availability,
-manage permission, installation, current member's connection, channel bindings,
+manage permission, installation, current member's connection, conversation
+bindings,
 and accessible Agent choices. `startOAuth` accepts workspace/personal mode and a
-correlated attempt nonce. Channel listing is paginated. Binding mutations validate
-the real channel and Agent; all data is scoped to the authorized workspace.
+correlated attempt nonce. Channel and direct-message listing is paginated. Binding
+mutations validate the real conversation and Agent; all data is scoped to the
+authorized workspace.
 Stopping the client's authorization wait does not revoke a provider grant; that
 control is labeled Stop waiting. Slack's Cancel returns a denied authorization.
 
 OAuth uses a single-use expiring server state and token exchange; permissions are
 rechecked on callback. Tokens are encrypted with the existing vault mechanism.
 One Slack team connects to one Orvilo workspace in this initial implementation.
-Separate installation, user-link and channel-binding records carry that boundary.
+Separate installation, user-link and conversation-binding records carry that
+boundary.
 
 CopilotKit Channels core/slack are pinned to 0.11.0. The Slack adapter needs a
 minimal Bolt Receiver injection patch so the existing server can accept signed
@@ -97,17 +102,33 @@ application or real Slack OAuth/message delivery.
 
 The Slack App uses HTTP events (Socket Mode off) with OAuth redirect
 `<APP_URL>/oauth/slack/callback`. Events and Interactivity both target
-`<APP_URL>/api/webhooks/slack`. Enable `app_mention`, `message.channels`, and
-`message.groups` events. The installed bot scopes are `app_mentions:read`,
-`chat:write`, `channels:read`, `channels:history`, `groups:read`, `groups:history`,
-and `users:read`; user OAuth requests `users:read` to verify the linked identity.
+`<APP_URL>/api/webhooks/slack`. Enable `app_mention`, `message.channels`,
+`message.groups`, and `message.im` events. The installed bot scopes are
+`app_mentions:read`, `chat:write`, `channels:read`, `channels:history`, `groups:read`, `groups:history`,
+`im:read`, `im:history`, `users:read`, and `files:read`; user OAuth requests
+`users:read` to verify the linked identity.
 Token rotation is off for this app; rotating grants fail closed instead of
 persisting tokens that this implementation cannot refresh.
 
+Existing installations must authorize the added DM scopes before DM setup works.
+Open a direct message with the app, then select that conversation in the existing
+Agent connection picker. DMs use the other Slack user's ID as their stable label;
+no additional profile lookup is required. Group DMs are not supported.
+
 Invite the app to the selected Slack channel (required for private channels).
 Only linked Orvilo members who can use the bound Agent execute messages. A
-mention starts a run; replies continue that user's existing Agent conversation.
-Attachments and approval resolution are not forwarded; messages explain when
-the user must return to Orvilo. A run with an ambiguous outcome remains blocked
-instead of automatically dispatching it again. SDK legacy streaming can swallow
+mention or direct message starts a run; replies continue that user's existing
+Agent conversation.
+Current Slack thread text and directly uploaded attachments are Agent inputs;
+attachments are resolved by file ID through the installation before downloading.
+When a single pending native question or permission request is available for the
+bound Issue Run, Slack displays a thread-scoped reply token. Reply with
+`reply <token> <native option ID>` for a permission decision, or
+`reply <token> {"question text":"answer"}` for questions (arrays for multiple
+selections). Submission revalidates the current Issue assignee scope, Agent Use
+permission, exact pending request and native options. Ambiguous or unavailable
+requests require opening the Issue in Orvilo. View evidence and accept final
+delivery in Orvilo using the Issue link. A run with an ambiguous outcome remains
+blocked instead of automatically dispatching it again. SDK legacy streaming can
+swallow
 some final Slack update errors; successful source checks do not prove delivery.

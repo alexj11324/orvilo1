@@ -50,18 +50,22 @@ const IssueSubscribeToggle = () => {
   };
 
   const Glyph = view.subscribed ? BellRingIcon : BellIcon;
+  // Linear presents the subscription as a quiet "Subscribe"/"Unsubscribe"
+  // text link. The control still lives in the header icon row, so it keeps the
+  // row's 28px height and its bell glyph — a text+icon ghost button rather
+  // than a bare icon. The visible label names the button, so no aria-label.
   return (
     <Button
-      aria-label={t(view.actionKey, { ns: 'common' })}
       aria-pressed={view.subscribed}
       data-subscribed={view.subscribed}
       disabled={!taskUuid || busy}
-      size="icon-sm"
+      size="sm"
       title={t(view.stateKey)}
       variant="ghost"
       onClick={() => void toggle()}
     >
-      <Glyph aria-hidden />
+      <Glyph aria-hidden data-icon="inline-start" />
+      {t(view.actionKey, { ns: 'common' })}
     </Button>
   );
 };

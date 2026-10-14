@@ -418,6 +418,35 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
     : t('taskList.contextMenu.favorite');
   const FavoriteGlyph = pinned ? FAVORITE_MARK_OFF.star : FAVORITE_MARK.star;
 
+  // Linear surfaces link / issue-ID / branch copies as quiet icons ahead of the
+  // subscribe control and the overflow; the same commands stay in the ··· Copy
+  // submenu below. `copyId` writes the readable identifier (T-1) once known —
+  // the same value Linear's "copy issue ID" produces.
+  const headerCopyButtons = [
+    {
+      action: copy.copyLink,
+      icon: <LinkIcon aria-hidden />,
+      key: 'copyLink',
+      label: t('taskList.contextMenu.copyLink'),
+    },
+    {
+      action: copy.copyId,
+      icon: <CopyIcon aria-hidden />,
+      key: 'copyId',
+      label: t('taskList.contextMenu.copyId'),
+    },
+    ...(copy.hasBranch
+      ? [
+          {
+            action: copy.copyBranch,
+            icon: <GitBranchIcon aria-hidden />,
+            key: 'copyBranch',
+            label: t('taskDetail.copyBranch'),
+          },
+        ]
+      : []),
+  ];
+
   const items: SidebarMenuItems = [
     // The host adapter decides what a tab is: an app tab on desktop, a browser
     // tab on web.
@@ -594,6 +623,18 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
 
   return (
     <div className="flex shrink-0 items-center gap-1">
+      {headerCopyButtons.map(({ action, icon, key, label }) => (
+        <Button
+          aria-label={label}
+          key={key}
+          size="icon-sm"
+          title={label}
+          variant="ghost"
+          onClick={() => void apply(action)}
+        >
+          {icon}
+        </Button>
+      ))}
       <IssueSubscribeToggle />
       <Button
         aria-label={favoriteLabel}

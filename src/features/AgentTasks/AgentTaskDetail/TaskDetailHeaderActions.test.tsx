@@ -23,8 +23,11 @@ const mocks = vi.hoisted(() => ({
   clearDuplicate: vi.fn(),
   confirmModal: vi.fn(),
   convertToTemplate: vi.fn(),
+  copyBranch: vi.fn(),
   copyEverything: vi.fn(),
+  copyId: vi.fn(),
   copyIssue: vi.fn(),
+  copyLink: vi.fn(),
   createFromTemplate: vi.fn(),
   createModal: vi.fn(),
   deleteTask: vi.fn(),
@@ -191,10 +194,10 @@ vi.mock('@/services/task', () => ({
 vi.mock('./createTaskIssueResourceModal', () => ({ openTaskIssueResourceModal: vi.fn() }));
 vi.mock('./useTaskCopyActions', () => ({
   useTaskCopyActions: () => ({
-    copyBranch: vi.fn(),
+    copyBranch: mocks.copyBranch,
     copyEverything: mocks.copyEverything,
-    copyId: vi.fn(),
-    copyLink: vi.fn(),
+    copyId: mocks.copyId,
+    copyLink: mocks.copyLink,
     copyMarkdown: vi.fn(),
     copyPrompt: vi.fn(),
     copyTitle: vi.fn(),
@@ -432,6 +435,69 @@ describe('TaskDetailHeaderActions', () => {
 
       await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Links unavailable'));
     });
+
+    describe('header icons', () => {
+      // The cluster's buttons in DOM order, named by aria-label or text.
+      const clusterLabels = () => {
+        const link = screen.getByRole('button', { name: 'taskList.contextMenu.copyLink' });
+        return [...(link.parentElement?.querySelectorAll('button') ?? [])].map(
+          (button) => button.getAttribute('aria-label') ?? button.textContent,
+        );
+      };
+
+      it('surfaces copy-link and copy-ID ahead of the subscribe control, branch hidden without one', () => {
+        render(<TaskDetailHeaderActions />);
+
+        expect(clusterLabels()).toEqual([
+          'taskList.contextMenu.copyLink',
+          'taskList.contextMenu.copyId',
+          'myWork.subscribe',
+          'taskList.contextMenu.favorite',
+          'taskDetail.menu.actions',
+        ]);
+      });
+
+      it('seats the branch copy between ID and subscribe for workspace-bound tasks', () => {
+        mocks.hasBranch = true;
+        render(<TaskDetailHeaderActions />);
+
+        expect(clusterLabels()).toEqual([
+          'taskList.contextMenu.copyLink',
+          'taskList.contextMenu.copyId',
+          'taskDetail.copyBranch',
+          'myWork.subscribe',
+          'taskList.contextMenu.favorite',
+          'taskDetail.menu.actions',
+        ]);
+      });
+
+      it('runs the same clipboard actions as the Copy submenu', async () => {
+        mocks.hasBranch = true;
+        render(<TaskDetailHeaderActions />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'taskList.contextMenu.copyLink' }));
+        fireEvent.click(screen.getByRole('button', { name: 'taskList.contextMenu.copyId' }));
+        fireEvent.click(screen.getByRole('button', { name: 'taskDetail.copyBranch' }));
+
+        await waitFor(() => {
+          expect(mocks.copyLink).toHaveBeenCalledTimes(1);
+          expect(mocks.copyId).toHaveBeenCalledTimes(1);
+          expect(mocks.copyBranch).toHaveBeenCalledTimes(1);
+        });
+        expect(childKeys('copy')).toEqual(
+          expect.arrayContaining(['copyId', 'copyLink', 'copyBranch']),
+        );
+      });
+
+      it('reports a failed header copy instead of presenting it as done', async () => {
+        mocks.copyLink.mockRejectedValueOnce(new Error('Clipboard blocked'));
+        render(<TaskDetailHeaderActions />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'taskList.contextMenu.copyLink' }));
+
+        await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Clipboard blocked'));
+      });
+    });
   });
 
   // Re-running moved here from the header button; starting, retrying and
@@ -502,6 +568,26 @@ describe('TaskDetailHeaderActions', () => {
       );
 
       expect(mocks.favoriteIds.at(-1)).toBe('task-uuid-2');
+    });
+  });
+
+  describe('subscribe', () => {
+    it('presents the control as a quiet text+icon button, not a bare icon', () => {
+      render(<TaskDetailHeaderActions />);
+
+      const subscribe = screen.getByRole('button', { name: 'myWork.subscribe' });
+      // Linear's link form: the action label is visible text on the control.
+      expect(subscribe.textContent).toContain('myWork.subscribe');
+      expect(subscribe.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('labels the control Unsubscribe while subscribed', () => {
+      setDetail({ isSubscribed: true });
+      render(<TaskDetailHeaderActions />);
+
+      const unsubscribe = screen.getByRole('button', { name: 'myWork.unsubscribe' });
+      expect(unsubscribe.getAttribute('aria-pressed')).toBe('true');
+      expect(unsubscribe.getAttribute('data-subscribed')).toBe('true');
     });
   });
 

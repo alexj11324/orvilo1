@@ -1,5 +1,7 @@
 # Agent Goals product and UX audit
 
+> Historical audit of the revision and journey described below. The [2026-10-14 product contract](./product-scope.md) replaces its independent Goal entry and Acceptance completion semantics. This evidence does not establish current implementation, acceptance or deployment.
+
 ## Scope
 
 Audited the complete implemented journey:

@@ -1,5 +1,7 @@
 # Acceptance entry in LobeHub
 
+> Upstream reference research, not an Orvilo product instruction. The [2026-10-14 Orvilo contract](../development/product-scope.md) supersedes standalone Acceptance/Verify entries, platform skill distribution and accept-as-complete semantics. Retain upstream source links as provenance; use Issue Checklist and final delivery acceptance for current work.
+
 ## Key conclusion
 
 The normal user journey starts from the delivery context: open a task and click its Acceptance state, checklist/report action, or verification tag. LobeHub opens the Acceptance in a panel beside that task. A project has a separate Acceptance workspace. The standalone `/acceptance/<acceptanceId>` page is the stable deep link produced by the coding-agent CLI and by the public Acceptance skill; it is not the primary desktop navigation entry.

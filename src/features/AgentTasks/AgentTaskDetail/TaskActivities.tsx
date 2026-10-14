@@ -491,8 +491,10 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
 
   const items = useMemo(
     () =>
-      // Linear's issue feed is one unified timeline — no per-kind tabs. The
-      // filter machinery stays so a deep-linked comment still passes through.
+      // Linear's issue feed is one unified timeline — no filter UI, so this
+      // always runs 'all' and every activity renders. The helper stays as the
+      // tested seam: it still encodes that a deep-linked comment passes
+      // through whatever filter is active.
       filterActivitiesForFeed(activities, 'all', hash)
         .map((act, i) => ({
           activity: act,
@@ -624,7 +626,10 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
         onToggle={() => setIsExpanded((prev) => !prev)}
       />
       <Collapsible open={isExpanded}>
-        <CollapsibleContent>
+        {/* keepMounted: the composer must not unmount on collapse — its draft
+            flushes on unmount and restores asynchronously on mount, so a
+            quick collapse → expand could mark it dirty and lose the draft. */}
+        <CollapsibleContent keepMounted>
           <div className="flex flex-col gap-3 px-3 py-1">
             {rows}
             {/* The composer closes the feed — Linear's "Leave a comment…" sits

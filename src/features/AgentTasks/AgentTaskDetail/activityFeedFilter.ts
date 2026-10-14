@@ -19,7 +19,11 @@ export const isLinkedCommentActivity = (
 ): boolean =>
   activity.type === 'comment' && !!activity.id && isCommentAnchorHash(hash, activity.id);
 
-/** A deep-linked comment passes through whatever the active filter is. */
+/**
+ * A deep-linked comment passes through whatever the active filter is. The
+ * issue feed itself no longer offers a filter and always calls this with
+ * 'all'; the helper stays as the seam its tests cover.
+ */
 export const filterActivitiesForFeed = <T extends Pick<TaskDetailActivity, 'id' | 'type'>>(
   activities: T[],
   filter: ActivityFeedFilter,

@@ -71,7 +71,7 @@ const TaskIssueResources = () => {
   return (
     <section aria-label={t('taskDetail.resources.title')} className="flex flex-col gap-2">
       <TaskDetailSectionHeader
-        count={data?.data.length}
+        count={data?.data.length ? data.data.length : undefined}
         icon={LinkIcon}
         open={isExpanded}
         title={t('taskDetail.resources.title')}

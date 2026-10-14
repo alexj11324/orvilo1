@@ -81,11 +81,11 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
           left={
             <>
               <Breadcrumb taskId={taskId} />
-              {/* Reference: the copy icons, subscribe link, star and overflow
+              {/* Reference: the copy icons, favourite star and overflow menu
                 sit inline right after the issue crumb — all rendered by
                 TaskDetailHeaderActions so they share one favourite identity.
-                The header's right side keeps task execution and the
-                agent-panel toggle. */}
+                Subscribe lives in the Activity section header. The header's
+                right side keeps task execution and the agent-panel toggle. */}
               <TaskDetailHeaderActions />
               <IssueSaveStatus key={taskId} taskId={taskId} />
             </>

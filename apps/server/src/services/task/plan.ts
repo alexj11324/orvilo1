@@ -847,8 +847,15 @@ export class TaskPlanService {
           code: 'PRECONDITION_FAILED',
           message: 'The parent report must depend on every confirmed implementation task',
         });
-      const affected = [...new Set([current.id, ...changes.map((change) => change.task.id)])];
-      await service.requireStoppedWriters(affected, isDeliveryWriter ? undefined : live.id);
+      const affected = new Set([current.id, ...changes.map((change) => change.task.id)]);
+      const dependencyEdges = await model.getDependenciesByTaskIds(
+        members.map((member) => member.id),
+      );
+      // Set iteration includes newly added members, following the existing blocks graph transitively.
+      for (const id of affected)
+        for (const edge of dependencyEdges)
+          if (edge.type === 'blocks' && edge.dependsOnId === id) affected.add(edge.taskId);
+      await service.requireStoppedWriters([...affected], isDeliveryWriter ? undefined : live.id);
       const added: TaskItem[] = [];
       const checklists = [...plan.checklists];
       const scopes = [...plan.executionScopes];

@@ -164,6 +164,22 @@ export class IssueDeliveryModel {
   async readCurrentDeliveryProof(taskIds: string[]): Promise<Record<string, IssueCurrentDelivery>> {
     const tasks = await this.readableTasks(taskIds);
     if (!tasks.length) return {};
+    const requestedIds = new Set(tasks.map((task) => task.id));
+    const seen = new Set(requestedIds);
+    const dependencies: { taskId: string; dependsOnId: string }[] = [];
+    const taskModel = new TaskModel(this.db, this.userId, this.workspaceId);
+    for (let frontier = [...tasks]; frontier.length;) {
+      const edges = (
+        await taskModel.getDependenciesByTaskIds(frontier.map((task) => task.id))
+      ).filter((edge) => edge.type === 'blocks');
+      dependencies.push(...edges);
+      const upstreamIds = [...new Set(edges.map((edge) => edge.dependsOnId))].filter(
+        (id) => !seen.has(id),
+      );
+      for (const id of upstreamIds) seen.add(id);
+      frontier = await this.readableTasks(upstreamIds);
+      tasks.push(...frontier);
+    }
     const ids = tasks.map((task) => task.id);
     const plannedIds = tasks
       .filter((task) => (task.context as TaskContext | null)?.issuePlan)
@@ -211,7 +227,10 @@ export class IssueDeliveryModel {
           )
       : [];
     const evidenceIds = new Set(evidence.map((row) => row.checkResultId));
-    return Object.fromEntries(
+    const latestTopics = new Map(
+      [...topics].sort((a, b) => a.seq - b.seq).map((topic) => [topic.taskId, topic]),
+    );
+    const deliveries: Record<string, IssueCurrentDelivery> = Object.fromEntries(
       tasks.map((task) => {
         const aggregate = aggregates.find(
           (row) =>
@@ -219,9 +238,7 @@ export class IssueDeliveryModel {
             row.workspaceId === task.workspaceId &&
             (Boolean(task.workspaceId) || row.userId === task.createdByUserId),
         );
-        const topic = topics
-          .filter((row) => row.taskId === task.id)
-          .sort((a, b) => b.seq - a.seq)[0];
+        const topic = latestTopics.get(task.id);
         const proof =
           !plannedIds.includes(task.id) || confirmedIds.has(task.id)
             ? currentIssueDeliveryProof(task, topic, aggregate?.metadata?.issueChecklist)
@@ -245,5 +262,37 @@ export class IssueDeliveryModel {
         ];
       }),
     );
+    // Recheck completed consumers too; running-only stale markers cannot protect final acceptance.
+    let invalidated = true;
+    while (invalidated) {
+      invalidated = false;
+      for (const task of tasks) {
+        if (!deliveries[task.id].proof) continue;
+        const required = dependencies.filter((edge) => edge.taskId === task.id);
+        const recorded =
+          latestTopics
+            .get(task.id)
+            ?.contract?.content?.dependencies?.filter((receipt) => receipt.type === 'blocks') ?? [];
+        if (
+          recorded.length === required.length &&
+          required.every((edge) => {
+            const receipt = recorded.find((input) => input.dependsOnId === edge.dependsOnId);
+            const upstream = deliveries[edge.dependsOnId];
+            return (
+              receipt?.issueDelivery &&
+              upstream?.reviewerPassed &&
+              upstream.necessaryChecksPassed &&
+              upstream.proof &&
+              upstream.runId === receipt.checklistRunId &&
+              sameIssueDeliveryProof(upstream.proof, receipt.issueDelivery)
+            );
+          })
+        )
+          continue;
+        deliveries[task.id] = issueDeliveryReadiness(undefined, undefined, [], new Set());
+        invalidated = true;
+      }
+    }
+    return Object.fromEntries([...requestedIds].map((id) => [id, deliveries[id]]));
   }
 }

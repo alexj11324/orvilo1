@@ -1,4 +1,5 @@
 // @vitest-environment node
+import type { TaskExecutionContract } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -48,6 +49,176 @@ async function diamond() {
 }
 
 describe('Issue delivery readiness', () => {
+  it('rejects completed transitive deliveries built on superseded inputs while preserving accepted history', async () => {
+    const d = await taskModel.create({ instruction: 'D' });
+    const a = await taskModel.create({ instruction: 'A' });
+    const b = await taskModel.create({ instruction: 'B' });
+    const unrelated = await taskModel.create({ instruction: 'Unrelated' });
+    await taskModel.addDependency(a.id, d.id);
+    await taskModel.addDependency(b.id, a.id);
+    const reviewed = async (
+      taskId: string,
+      inputs: Awaited<ReturnType<typeof seedReviewedIssueDelivery>>[],
+      seq = 1,
+    ) => {
+      const delivery = await seedReviewedIssueDelivery(db, taskId, { seq });
+      await db
+        .update(taskTopics)
+        .set({
+          contract: {
+            content: {
+              instruction: 'Consume actual prerequisites',
+              dependencies: inputs.map((input) => ({
+                type: 'blocks',
+                dependsOnId: input.proof.taskId,
+                issueDelivery: input.proof,
+                checklistRunId: input.run.id,
+              })),
+            },
+          } as TaskExecutionContract,
+        })
+        .where(eq(taskTopics.id, delivery.topic.id));
+      await db
+        .update(verifyRuns)
+        .set({ userDecision: 'accept' })
+        .where(eq(verifyRuns.id, delivery.run.id));
+      await db
+        .update(verifyCheckResults)
+        .set({ userDecision: 'accepted' })
+        .where(eq(verifyCheckResults.id, delivery.result.id));
+      return delivery;
+    };
+    const oldD = await reviewed(d.id, []);
+    const oldA = await reviewed(a.id, [oldD]);
+    const oldB = await reviewed(b.id, [oldA]);
+    await reviewed(unrelated.id, []);
+    const read = () => deliveryModel.readCurrentDeliveryProof([a.id, b.id, unrelated.id]);
+    expect((await read())[b.id]).toMatchObject({
+      availableForDependents: true,
+      deliveryAccepted: true,
+      itemsAccepted: true,
+    });
+    // D redelivery also invalidates B, whose direct A proof has not changed.
+    const newD = await reviewed(d.id, [], 2);
+    expect((await read())[a.id].availableForDependents).toBe(false);
+    expect((await read())[b.id].deliveryAccepted).toBe(false);
+    const newA = await reviewed(a.id, [newD], 2);
+    expect((await read())[a.id].availableForDependents).toBe(true);
+    expect((await read())[b.id].availableForDependents).toBe(false);
+    await reviewed(b.id, [newA], 2);
+    expect((await read())[b.id].availableForDependents).toBe(true);
+    // Refinement removes D -> A; B must consume redelivered A again.
+    await taskModel.removeDependency(a.id, d.id);
+    expect((await read())[a.id].availableForDependents).toBe(false);
+    await reviewed(a.id, [], 3);
+    expect((await read())[b.id].deliveryAccepted).toBe(false);
+    expect((await read())[unrelated.id]).toMatchObject({
+      availableForDependents: true,
+      deliveryAccepted: true,
+    });
+    const [historical] = await db.select().from(verifyRuns).where(eq(verifyRuns.id, oldB.run.id));
+    const [acceptedItem] = await db
+      .select()
+      .from(verifyCheckResults)
+      .where(eq(verifyCheckResults.id, oldB.result.id));
+    expect(historical.userDecision).toBe('accept');
+    expect(acceptedItem.userDecision).toBe('accepted');
+    expect((await taskModel.findById(b.id))?.executionGeneration).toBe(b.executionGeneration);
+  });
+
+  it('rejects accepted B after D -> A is removed and A redelivers in its refined generation', async () => {
+    const d = await taskModel.create({ instruction: 'D' });
+    const a = await taskModel.create({ instruction: 'A' });
+    const b = await taskModel.create({ instruction: 'B' });
+    await taskModel.addDependency(a.id, d.id);
+    await taskModel.addDependency(b.id, a.id);
+    const oldD = await seedReviewedIssueDelivery(db, d.id);
+    const oldA = await seedReviewedIssueDelivery(db, a.id);
+    const oldB = await seedReviewedIssueDelivery(db, b.id);
+    for (const [delivery, input] of [
+      [oldA, oldD],
+      [oldB, oldA],
+    ]) {
+      await db
+        .update(taskTopics)
+        .set({
+          contract: {
+            content: {
+              instruction: 'Use prerequisite',
+              dependencies: [
+                {
+                  type: 'blocks',
+                  dependsOnId: input.proof.taskId,
+                  issueDelivery: input.proof,
+                  checklistRunId: input.run.id,
+                },
+              ],
+            },
+          } as TaskExecutionContract,
+        })
+        .where(eq(taskTopics.id, delivery.topic.id));
+    }
+    await db
+      .update(verifyRuns)
+      .set({ userDecision: 'accept' })
+      .where(eq(verifyRuns.id, oldB.run.id));
+    await db
+      .update(verifyCheckResults)
+      .set({ userDecision: 'accepted' })
+      .where(eq(verifyCheckResults.id, oldB.result.id));
+    await seedConfirmedIssuePlan(db, b.id);
+    expect((await deliveryModel.readCurrentDeliveryProof([b.id]))[b.id].deliveryAccepted).toBe(
+      true,
+    );
+    await taskModel.removeDependency(a.id, d.id);
+    await db
+      .update(tasks)
+      .set({ executionGeneration: a.executionGeneration + 1 })
+      .where(eq(tasks.id, a.id));
+    const newA = await seedReviewedIssueDelivery(db, a.id, { seq: 2 });
+    await db
+      .update(verifyRuns)
+      .set({ userDecision: 'accept' })
+      .where(eq(verifyRuns.id, newA.run.id));
+    for (const delivery of [newA, oldB])
+      await db
+        .update(taskTopics)
+        .set({
+          integration: {
+            ...delivery.topic.integration!,
+            state: 'integrated',
+            mergedTargetBranch: 'canary',
+            integratedSha: 'e'.repeat(40),
+          },
+        })
+        .where(eq(taskTopics.id, delivery.topic.id));
+    const current = await deliveryModel.readCurrentDeliveryProof([a.id, b.id]);
+    expect(current[a.id].availableForDependents).toBe(true);
+    expect(current[b.id]).toMatchObject({
+      deliveryAccepted: false,
+      itemsAccepted: false,
+      availableForDependents: false,
+    });
+    expect(
+      (await db.select().from(verifyRuns).where(eq(verifyRuns.id, oldB.run.id)))[0].userDecision,
+    ).toBe('accept');
+    await expect(taskModel.updateStatus(b.id, 'completed')).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+    });
+  });
+
+  it('does not authorize a completed consumer when its new required input was never recorded', async () => {
+    const upstream = await taskModel.create({ instruction: 'Upstream' });
+    const consumer = await taskModel.create({ instruction: 'Consumer' });
+    await seedReviewedIssueDelivery(db, upstream.id);
+    await seedReviewedIssueDelivery(db, consumer.id);
+    await taskModel.addDependency(consumer.id, upstream.id);
+    expect(
+      (await deliveryModel.readCurrentDeliveryProof([consumer.id]))[consumer.id]
+        .availableForDependents,
+    ).toBe(false);
+  });
+
   it('admits C only when both exact A/B versions are reviewed, before acceptance, merge or Done', async () => {
     const { a, b, c } = await diamond();
     await seedReviewedIssueDelivery(db, a.id);

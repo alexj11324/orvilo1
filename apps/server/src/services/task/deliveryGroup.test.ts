@@ -1,11 +1,11 @@
 // @vitest-environment node
-import type { IssuePlan, TaskContext } from '@orvilo/types';
+import type { IssuePlan, TaskContext, TaskExecutionContract } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
 import { TaskModel } from '@/database/models/task';
-import { tasks, users } from '@/database/schemas';
+import { tasks, taskTopics, users } from '@/database/schemas';
 import { acceptances, verifyCheckResults, verifyRuns } from '@/database/schemas/verify';
 
 import { seedReviewedIssueDelivery } from '../../../../../packages/database/tests/fixtures/issueDelivery';
@@ -150,10 +150,85 @@ async function group() {
       .where(eq(verifyCheckResults.id, delivery.result.id));
     deliveries.push({ ...delivery, proof });
   }
+  await db
+    .update(taskTopics)
+    .set({
+      contract: {
+        content: {
+          instruction: parent.instruction,
+          dependencies: deliveries.slice(1).map((delivery) => ({
+            type: 'blocks',
+            dependsOnId: delivery.proof.taskId,
+            issueDelivery: delivery.proof,
+            checklistRunId: delivery.run.id,
+          })),
+        },
+      } as TaskExecutionContract,
+    })
+    .where(eq(taskTopics.id, deliveries[0].topic.id));
   return { parent: (await model().findById(parent.id))!, a, b, manual, deliveries, plan };
 }
 
 describe('confirmed delivery group', () => {
+  it('rejects final group acceptance when completed B still cites the previous A delivery', async () => {
+    const f = await group();
+    const [parent, a, b] = f.deliveries;
+    await model().addDependency(f.b.id, f.a.id);
+    await db
+      .update(taskTopics)
+      .set({
+        contract: {
+          content: {
+            instruction: f.b.instruction,
+            dependencies: [
+              {
+                type: 'blocks',
+                dependsOnId: f.a.id,
+                issueDelivery: a.proof,
+                checklistRunId: a.run.id,
+              },
+            ],
+          },
+        } as TaskExecutionContract,
+      })
+      .where(eq(taskTopics.id, b.topic.id));
+    const service = new IssueChecklistService(db, userId);
+    await service.acceptDelivery({
+      taskId: f.parent.id,
+      runId: parent.run.id,
+      proof: parent.proof,
+    });
+    expect((await readDeliveryGroup(db, userId, undefined, f.parent)).accepted).toBe(true);
+    const config = (await model().findById(f.a.id))!.config;
+    const next = await seedReviewedIssueDelivery(db, f.a.id, { seq: 2 });
+    await db
+      .update(tasks)
+      .set({
+        config: {
+          ...((await model().findById(f.a.id))!.config as object),
+          workspace: (config as { workspace: object }).workspace,
+        },
+      })
+      .where(eq(tasks.id, f.a.id));
+    const current = await readDeliveryGroup(db, userId, undefined, f.parent);
+    expect(current.proofs[f.a.id].availableForDependents).toBe(true);
+    expect(current.proofs[f.b.id]).toMatchObject({
+      proof: undefined,
+      runId: undefined,
+      deliveryAccepted: false,
+      itemsAccepted: false,
+    });
+    await expect(
+      service.acceptDelivery({ taskId: f.parent.id, runId: parent.run.id, proof: parent.proof }),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    expect(
+      (await db.select().from(verifyRuns).where(eq(verifyRuns.id, b.run.id)))[0].userDecision,
+    ).toBe('accept');
+    expect(
+      (await db.select().from(verifyRuns).where(eq(verifyRuns.id, next.run.id)))[0].userDecision,
+    ).not.toBe('accept');
+  });
+
   it('accepts current mixed-repository proofs together, excluding manual and old descendants', async () => {
     const f = await group();
     expect(confirmedDeliveryMemberIds(f.parent)).toEqual([f.parent.id, f.a.id, f.b.id].sort());
@@ -186,7 +261,7 @@ describe('confirmed delivery group', () => {
     const parent = f.deliveries[0];
     await expect(
       service.acceptDelivery({ taskId: f.parent.id, runId: parent.run.id, proof: parent.proof }),
-    ).rejects.toThrow('Every current plan delivery');
+    ).rejects.toThrow('Checklist delivery revision changed');
     const runs = await db.select().from(verifyRuns);
     expect(runs.every((run) => run.userDecision !== 'accept')).toBe(true);
   });
@@ -323,7 +398,7 @@ it('a Checklist target changed outside its confirmed plan cannot be finally acce
       runId: parent.run.id,
       proof: parent.proof,
     }),
-  ).rejects.toThrow('Every current plan delivery');
+  ).rejects.toThrow('Checklist delivery revision changed');
   expect((await readDeliveryGroup(db, userId, undefined, f.parent)).accepted).toBe(false);
 });
 

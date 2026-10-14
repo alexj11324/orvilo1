@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { TaskConfig, TaskContext } from '@orvilo/types';
+import type { TaskConfig, TaskContext, TaskExecutionContract } from '@orvilo/types';
 import Ajv from 'ajv';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -150,7 +150,10 @@ describe('Issue plan confirmation', () => {
         taskId: id,
         status: state === 'running' ? 'running' : 'done',
         appContext: { judgment: { purpose: 'task.plan', attempt: 0 } },
-        metadata: state === 'unconfirmed-stop' ? { remoteCancel: { state: 'unknown' } } : null,
+        metadata:
+          state === 'unconfirmed-stop'
+            ? { remoteCancel: { state: 'unknown', requestedAt: new Date().toISOString() } }
+            : null,
       });
 
       await expect(service().draftIssuePlan(id)).rejects.toMatchObject({ code: 'CONFLICT' });
@@ -344,6 +347,7 @@ describe('Issue plan confirmation', () => {
         })
         .where(eq(tasks.id, taskId));
     }
+    for (const child of draft.subtasks) await recordCurrentInputs(child.id);
     const proofModel = new IssueDeliveryModel(db, user, ws);
     const before = await proofModel.readCurrentDeliveryProof(
       draft.subtasks.map((child) => child.id),
@@ -540,6 +544,7 @@ describe('Issue plan confirmation', () => {
   it('appends a new scope on the same settled Issue and retains accepted historical results', async () => {
     const draft = await service().draftIssuePlan(id);
     await service().confirmIssuePlan({ id, revision: draft.plan!.revision });
+    for (const child of draft.subtasks) await reviewedArtifact(child.id);
     const topicId = 'issue-plan-delivery-topic';
     const operationId = 'issue-plan-delivery-operation';
     await db.insert(topics).values({ id: topicId, userId: user, workspaceId: ws });
@@ -560,6 +565,7 @@ describe('Issue plan confirmation', () => {
       .update(tasks)
       .set({ currentTopicId: topicId, executionGeneration: 1 })
       .where(eq(tasks.id, id));
+    await recordCurrentInputs(id);
     const ledger = new IssueChecklistService(db, user, ws);
     const review = await ledger.prepareReview(id, operationId);
     const [accepted] = await db
@@ -681,6 +687,54 @@ describe('Issue plan confirmation', () => {
   );
 });
 
+async function recordCurrentInputs(taskId: string) {
+  const dependencies = (
+    await new TaskModel(db, user, ws).getDependenciesByTaskIds([taskId])
+  ).filter((edge) => edge.type === 'blocks');
+  const current = await new IssueDeliveryModel(db, user, ws).readCurrentDeliveryProof(
+    dependencies.map((edge) => edge.dependsOnId),
+  );
+  const [topic] = (await db.select().from(taskTopics).where(eq(taskTopics.taskId, taskId))).sort(
+    (a, b) => b.seq - a.seq,
+  );
+  await db
+    .update(taskTopics)
+    .set({
+      contract: {
+        content: {
+          instruction: 'Use current prerequisites',
+          dependencies: dependencies.map((edge) => ({
+            type: 'blocks',
+            dependsOnId: edge.dependsOnId,
+            issueDelivery: current[edge.dependsOnId].proof,
+            checklistRunId: current[edge.dependsOnId].runId,
+          })),
+        },
+      } as TaskExecutionContract,
+    })
+    .where(eq(taskTopics.id, topic.id));
+}
+
+async function reviewedArtifact(taskId: string, seq = 1) {
+  const next = await seedReviewedIssueDelivery(db, taskId, { seq });
+  const proof = {
+    ...next.proof,
+    deliveryKind: 'artifact' as const,
+    sourceSha: undefined,
+    repo: undefined,
+    branch: undefined,
+    baseBranch: undefined,
+    targetBranch: undefined,
+  };
+  await db.update(taskTopics).set({ integration: null }).where(eq(taskTopics.id, next.topic.id));
+  await db
+    .update(verifyRuns)
+    .set({ metadata: { ...next.run.metadata, issueDelivery: proof } })
+    .where(eq(verifyRuns.id, next.run.id));
+  await recordCurrentInputs(taskId);
+  return next;
+}
+
 async function refinementFixture() {
   const topicId = 'refinement-origin';
   await db.insert(topics).values({ id: topicId, userId: user, workspaceId: ws });
@@ -712,7 +766,120 @@ async function refinementFixture() {
   return { draft, input, operationId };
 }
 
+async function refinementChainFixture() {
+  vi.mocked(runAcpJudgment).mockResolvedValue({
+    data: {
+      ...proposal(),
+      tasks: ['D', 'A', 'B', 'Unrelated'].map((name, index) => ({
+        name,
+        instruction: `Deliver ${name}`,
+        assigneeAgentId: agent,
+        reviewerAgentId: agent,
+        dependsOn: index === 1 ? [0] : index === 2 ? [1] : [],
+        checklist: check,
+      })),
+    },
+    run: { operationId: 'planning-operation', status: 'done' },
+  } as never);
+  const f = await refinementFixture();
+  const [d, a, b, unrelated] = f.draft.subtasks;
+  for (const task of [a, b]) {
+    const topicId = `prior-${task.id}`;
+    const operationId = `prior-operation-${task.id}`;
+    await db.insert(topics).values({ id: topicId, userId: user, workspaceId: ws });
+    await db
+      .insert(agentOperations)
+      .values({ id: operationId, userId: user, workspaceId: ws, taskId: task.id, status: 'done' });
+    await db.insert(taskTopics).values({
+      taskId: task.id,
+      topicId,
+      operationId,
+      userId: user,
+      workspaceId: ws,
+      seq: 1,
+      executionGeneration: task.executionGeneration,
+      status: 'completed',
+    });
+    await db
+      .update(tasks)
+      .set({ currentTopicId: topicId, workflowCategory: 'in_review' })
+      .where(eq(tasks.id, task.id));
+  }
+  return {
+    ...f,
+    d,
+    a,
+    b,
+    unrelated,
+    input: {
+      ...f.input,
+      addTasks: [],
+      dependencies: [
+        { identifier: a.identifier, dependsOnIdentifier: d.identifier, action: 'remove' as const },
+      ],
+    },
+  };
+}
+
 describe('confirmed implementation refinement', () => {
+  it('requeues completed downstream B after refining D -> A -> B and automatically dispatches it when new A is ready', async () => {
+    const f = await refinementChainFixture();
+    await service().refineIssuePlan(f.input, f.operationId);
+    const taskModel = new TaskModel(db, user, ws);
+    const b = (await taskModel.findById(f.b.id))!;
+    expect(b.workflowCategory).toBe('backlog');
+    expect(b.executionGeneration).toBe(f.b.executionGeneration + 1);
+    expect((await taskModel.findById(f.unrelated.id))?.executionGeneration).toBe(
+      f.unrelated.executionGeneration,
+    );
+    const oldTopics = await db.select().from(taskTopics).where(eq(taskTopics.taskId, f.b.id));
+    expect(oldTopics[0].status).toBe('completed');
+    await reviewedArtifact(f.a.id, 2);
+    expect(
+      (await new IssueDeliveryModel(db, user, ws).readCurrentDeliveryProof([f.a.id]))[f.a.id]
+        .availableForDependents,
+    ).toBe(true);
+    const graph = await new TaskGraphService(db, user, ws).planForParent(id);
+    expect(graph.plan.ineligible).not.toContain(f.b.identifier);
+    const run = vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
+    const resumed = await new TaskRunnerService(db, user, ws).cascadeOnCompletionMany([f.a.id]);
+    expect(resumed.started).toContain(f.b.identifier);
+    expect(run).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: f.b.id, trigger: 'orchestrator' }),
+    );
+  });
+
+  it.each(['running', 'unknown'] as const)(
+    'rejects refinement before mutating a downstream B with %s writer cancellation',
+    async (state) => {
+      const f = await refinementChainFixture();
+      const operationId = `prior-operation-${f.b.id}`;
+      await db
+        .update(agentOperations)
+        .set({
+          status: state === 'running' ? 'running' : 'interrupted',
+          metadata:
+            state === 'unknown'
+              ? { remoteCancel: { state: 'unknown', requestedAt: new Date().toISOString() } }
+              : null,
+        })
+        .where(eq(agentOperations.id, operationId));
+      await expect(service().refineIssuePlan(f.input, f.operationId)).rejects.toThrow(
+        'device acknowledgement',
+      );
+      const taskModel = new TaskModel(db, user, ws);
+      expect((await taskModel.findById(f.a.id))?.executionGeneration).toBe(f.a.executionGeneration);
+      expect((await taskModel.findById(f.b.id))?.executionGeneration).toBe(f.b.executionGeneration);
+      expect((await service().getIssuePlan(id)).plan?.refinement).toBeUndefined();
+      expect(
+        (await taskModel.getDependenciesByTaskIds([f.a.id])).some(
+          (edge) => edge.dependsOnId === f.d.id,
+        ),
+      ).toBe(true);
+      expect(TaskService.prototype.runReadySubtasks).not.toHaveBeenCalled();
+    },
+  );
+
   it.each(['added Issue', 'changed dependency'])(
     'starts the next periodic graph after a legal refinement of %s',
     async (change) => {

@@ -3955,7 +3955,8 @@ describe('AgentModel', () => {
     it('should still upsert a workingDirByDevice entry when value is a path', async () => {
       await serverDB
         .insert(devices)
-        .values({ userId, deviceId: 'device-b', identitySource: 'installation' });
+        .values({ deviceId: 'device-b', identitySource: 'installation', userId })
+        .onConflictDoNothing();
       const [agent] = await serverDB
         .insert(agents)
         .values({

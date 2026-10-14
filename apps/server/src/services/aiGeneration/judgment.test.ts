@@ -564,7 +564,7 @@ describe('runAcpJudgment', () => {
       schema: {
         name: 'Verdict',
         schema: {
-          properties: { verdict: { type: 'string' } },
+          properties: { verdict: { type: 'string' as const } },
           required: ['verdict'],
           type: 'object' as const,
         },

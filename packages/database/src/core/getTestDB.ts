@@ -14,7 +14,6 @@ import { serverDBEnv } from '@/config/db';
 
 import * as schema from '../schemas';
 import type { OrviloDatabase } from '../type';
-import { initializeFreshTaskReviewerSchema } from './initializeFreshTaskReviewerSchema';
 
 const migrationsFolder = join(__dirname, '../../migrations');
 
@@ -105,8 +104,6 @@ export const getTestDB = async (): Promise<OrviloDatabase> => {
     testServerDB = nodeDrizzle(client, { schema });
 
     await nodeMigrate(testServerDB, { migrationsFolder });
-    await initializeFreshTaskReviewerSchema(testServerDB as unknown as OrviloDatabase);
-
     return testServerDB as unknown as OrviloDatabase;
   }
 
@@ -144,6 +141,5 @@ export const getTestDB = async (): Promise<OrviloDatabase> => {
     );
   }
 
-  await initializeFreshTaskReviewerSchema(testClientDB as unknown as OrviloDatabase);
   return testClientDB as unknown as OrviloDatabase;
 };

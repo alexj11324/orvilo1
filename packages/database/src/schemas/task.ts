@@ -98,6 +98,10 @@ export const tasks = pgTable(
     reviewerAgentId: text('reviewer_agent_id').references(() => agents.id, {
       onDelete: 'set null',
     }),
+    /** Historical human reviewer assignment; current review uses reviewerAgentId. */
+    legacyReviewerUserId: text('reviewer_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     /**
      * Team intake state. NULL means the task is not in triage (legacy and
      * already-accepted work). Existing backlog rows are never backfilled to

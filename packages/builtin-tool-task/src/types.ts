@@ -1,4 +1,10 @@
-import type { TaskAutomationMode, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
+import type {
+  IssueChecklistReviewItem,
+  IssueDeliveryProof,
+  TaskAutomationMode,
+  TaskStatus,
+  TaskWorkflowCategory,
+} from '@orvilo/types';
 
 export const TaskApiName = {
   readAutomationInput: 'readAutomationInput',
@@ -334,6 +340,9 @@ export interface SetTaskVerifyState {
 export interface SubmitTaskReviewParams {
   comment?: string;
   identifier: string;
+  items: IssueChecklistReviewItem[];
+  proof: IssueDeliveryProof;
+  runId: string;
   verdict: 'pass' | 'fail';
 }
 

@@ -54,6 +54,40 @@ afterEach(async () => {
 });
 
 describe('VerifyCheckResultModel', () => {
+  it('keeps accepted result and evidence immutable across writer and re-ingest paths', async () => {
+    const model = new VerifyCheckResultModel(serverDB, userId);
+    const row = await model.create({
+      verifyRunId,
+      checkItemId: 'accepted-item',
+      verifierType: 'agent',
+      status: 'passed',
+      verdict: 'passed',
+      userDecision: 'accepted',
+    });
+    await new VerifyEvidenceModel(serverDB, userId).create({
+      checkResultId: row.id,
+      type: 'text',
+      content: 'Original observed outcome',
+    });
+    await model.update(row.id, { verdict: 'failed', userDecision: 'rejected' });
+    await model.updateByCheckItem(verifyRunId, row.checkItemId, { verdict: 'failed' });
+    await expect(
+      model.upsertByCheckItem({
+        verifyRunId,
+        checkItemId: row.checkItemId,
+        verifierType: 'agent',
+        verdict: 'failed',
+      }),
+    ).rejects.toThrow();
+    await model.delete(row.id);
+    expect(await model.findById(row.id)).toMatchObject({
+      verdict: 'passed',
+      userDecision: 'accepted',
+    });
+    expect(await new VerifyEvidenceModel(serverDB, userId).listByCheckResult(row.id)).toHaveLength(
+      1,
+    );
+  });
   it('batch-inserts pending rows and lists by run in index order', async () => {
     const model = new VerifyCheckResultModel(serverDB, userId);
     await model.createMany([

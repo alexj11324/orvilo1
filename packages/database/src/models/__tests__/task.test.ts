@@ -4678,7 +4678,7 @@ describe('Issue review cycle', () => {
     });
     return input;
   };
-  it('posts a normal Agent comment and completes once across ordinary saves', async () => {
+  it('posts a normal Agent comment and waits for acceptance without repeating review', async () => {
     const task = await setup();
     const input = await start(task.id, 'review-pass');
     await model.update(task.id, { name: 'Changed title', instruction: 'Criteria' });
@@ -4687,7 +4687,8 @@ describe('Issue review cycle', () => {
       verdict: 'pass',
       comment: 'Passed',
     });
-    expect(result?.task.workflowCategory).toBe('done');
+    expect(result?.task.workflowCategory).toBe('in_review');
+    expect(await model.claimIssueReview(task.id)).toBeNull();
     expect(
       await model.recordIssueReviewVerdict(task.id, {
         ...input,
@@ -4741,7 +4742,7 @@ describe('Issue review cycle', () => {
     expect(
       (await model.recordIssueReviewVerdict(task.id, { ...input, verdict: 'pass' }))?.task
         .workflowCategory,
-    ).toBe('done');
+    ).toBe('in_review');
   });
   it('fences reviewer changes and manual legacy status writes, but preserves a no-op category', async () => {
     const task = await setup();

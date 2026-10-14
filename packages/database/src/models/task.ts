@@ -826,6 +826,7 @@ export class TaskModel {
                   ...config.issueReview,
                   cycleId: newEventId(),
                   state: 'submitted',
+                  verdict: undefined,
                   reviewerOperationId: undefined,
                   repairPending: false,
                 },
@@ -3283,6 +3284,14 @@ export class TaskModel {
 
   // ========== Issue review ==========
 
+  /** Shared task/graph lock order for Checklist and review decisions. */
+  async withIssueDelivery<T>(
+    id: string,
+    write: (db: OrviloDatabase, task: TaskItem) => Promise<T>,
+  ) {
+    return this.withIssueReview(id, (model, task) => write(model.db, task));
+  }
+
   private async withIssueReview<T>(
     id: string,
     write: (model: TaskModel, task: TaskItem) => Promise<T>,
@@ -3319,6 +3328,12 @@ export class TaskModel {
     return this.withIssueReview(id, async (model, task) => {
       if (task.workflowCategory !== 'in_review' || !task.reviewerAgentId) return null;
       const previous = (task.config as TaskConfig)?.issueReview;
+      if (
+        previous?.state === 'submitted' &&
+        previous.verdict === 'pass' &&
+        (!input.deliveryOperationId || input.deliveryOperationId === previous.deliveryOperationId)
+      )
+        return null;
       if (
         previous &&
         previous.state !== 'submitted' &&
@@ -3569,6 +3584,7 @@ export class TaskModel {
       const next: IssueReviewState = {
         ...review,
         state: 'submitted',
+        verdict: input.verdict,
         consecutiveFailures: failures,
         lastFailureCommentId: failed ? comment?.id : undefined,
         repairPending: failed && !stopped,
@@ -3578,8 +3594,8 @@ export class TaskModel {
         id,
         {
           ...input.transition,
-          status: failed ? 'paused' : 'completed',
-          workflowCategory: failed ? 'in_progress' : 'done',
+          status: 'paused',
+          workflowCategory: failed ? 'in_progress' : 'in_review',
         },
         { source: 'agent' },
       );

@@ -1,5 +1,7 @@
 import type {
   CheckpointConfig,
+  IssueChecklistItem,
+  IssueDeliveryProof,
   TaskAutomationMode,
   TaskInstructionSynthesis,
   TaskIntentAnalysis,
@@ -11,6 +13,29 @@ import type {
 import { lambdaClient } from '@/libs/trpc/client';
 
 class TaskService {
+  getChecklist = async (taskId: string) => lambdaClient.task.getChecklist.query({ taskId });
+
+  confirmChecklist = async (params: {
+    taskId: string;
+    expectedRevision: number;
+    items: IssueChecklistItem[];
+    deliveryKind: 'code' | 'artifact';
+    repo?: string;
+    targetBranch?: string;
+  }) => lambdaClient.task.confirmChecklist.mutate(params);
+
+  reviewChecklistItems = async (params: {
+    taskId: string;
+    runId: string;
+    proof: IssueDeliveryProof;
+    resultIds: string[];
+    action: 'accept' | 'reject';
+    comment?: string;
+  }) => lambdaClient.task.reviewChecklistItems.mutate(params);
+
+  acceptDelivery = async (params: { taskId: string; runId: string; proof: IssueDeliveryProof }) =>
+    lambdaClient.task.acceptDelivery.mutate(params);
+
   // ── Queries ──
 
   find = async (id: string) => lambdaClient.task.find.query({ id });

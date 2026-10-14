@@ -124,6 +124,25 @@ describe('taskRuntime.factory', () => {
 
 describe('createTaskRuntime', () => {
   describe('submitTaskReview', () => {
+    const round = {
+      runId: '6a2e27c8-ec45-4c57-a77f-fd5019d24a9a',
+      proof: {
+        taskId: 'task-1',
+        topicId: 'topic-1',
+        deliveryOperationId: 'op-delivery',
+        executionGeneration: 1,
+        checklistRevision: 1,
+        deliveryKind: 'artifact' as const,
+      },
+      items: [
+        {
+          checkItemId: 'item-1',
+          verdict: 'pass' as const,
+          comment: 'Probe observed',
+          evidence: [{ type: 'text' as const, content: 'Executed probe output' }],
+        },
+      ],
+    };
     const makeRuntime = (overrides: Record<string, unknown> = {}) =>
       createTaskRuntime({
         agentId: 'agt-reviewer',
@@ -156,6 +175,7 @@ describe('createTaskRuntime', () => {
 
     it('records a failed review through the authenticated reviewer run', async () => {
       const result = await makeRuntime().submitTaskReview({
+        ...round,
         comment: 'The export is missing its title.',
         identifier: 'T-1',
         verdict: 'fail',
@@ -177,6 +197,7 @@ describe('createTaskRuntime', () => {
       'rejects a verdict without an authenticated review run: %o',
       async (missing) => {
         const result = await makeRuntime(missing).submitTaskReview({
+          ...round,
           identifier: 'T-1',
           verdict: 'pass',
         });
@@ -193,13 +214,24 @@ describe('createTaskRuntime', () => {
             id: 'other-task',
           }),
         },
-      }).submitTaskReview({ identifier: 'T-2', verdict: 'pass' });
+      }).submitTaskReview({ ...round, identifier: 'T-2', verdict: 'pass' });
       expect(result.success).toBe(false);
       expect(reviewMocks.submitIssueReview).not.toHaveBeenCalled();
     });
 
+    it('requires the frozen round and complete item evidence before dispatching a verdict', async () => {
+      const result = await makeRuntime().submitTaskReview({
+        ...round,
+        identifier: 'T-1',
+        verdict: 'pass',
+        items: [],
+      });
+      expect(result.success).toBe(false);
+      expect(reviewMocks.submitIssueReview).not.toHaveBeenCalled();
+    });
     it('requires a useful comment for a failed review', async () => {
       const result = await makeRuntime().submitTaskReview({
+        ...round,
         comment: ' ',
         identifier: 'T-1',
         verdict: 'fail',

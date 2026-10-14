@@ -72,6 +72,7 @@ import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
 import { acceptancePolicyChanged } from '@/server/services/task/activityLogChange';
+import { IssueChecklistService } from '@/server/services/task/checklist';
 import { mayTakeOverExecution } from '@/server/services/task/executionTakeover';
 import { TaskIntentService } from '@/server/services/task/intent';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
@@ -93,6 +94,11 @@ import { assertWorkspaceRowManageable } from './_helpers/assertWorkspaceRowManag
 import { assertIssueExecutionInput } from './_helpers/issueExecutionInput';
 import { assertCanUseWorkspaceAgent } from './_helpers/workspaceAgentGuard';
 import { projectWorkspaceConversationMetadata } from './_helpers/workspaceConversationMetadata';
+import {
+  confirmIssueChecklistSchema,
+  issueChecklistItemsDecisionSchema,
+  issueDeliveryDecisionSchema,
+} from './_schema/issueChecklist';
 
 const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -113,6 +119,7 @@ const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
       taskIntentService: new TaskIntentService(ctx.serverDB, ctx.userId, wsId),
       taskLabelModel: new TaskLabelModel(ctx.serverDB, ctx.userId, wsId),
       taskService: new TaskService(ctx.serverDB, ctx.userId, wsId),
+      issueChecklist: new IssueChecklistService(ctx.serverDB, ctx.userId, wsId),
       taskTopicModel: new TaskTopicModel(ctx.serverDB, ctx.userId, wsId),
       topicModel: new TopicModel(ctx.serverDB, ctx.userId, wsId),
     },
@@ -829,6 +836,33 @@ async function resolveSafeParentTaskId(
 }
 
 export const taskRouter = router({
+  acceptDelivery: taskProcedure
+    .input(issueDeliveryDecisionSchema)
+    .mutation(async ({ input, ctx }) => ({
+      data: await ctx.issueChecklist.acceptDelivery(input),
+      success: true,
+    })),
+
+  confirmChecklist: taskProcedure
+    .input(confirmIssueChecklistSchema)
+    .mutation(async ({ input, ctx }) => ({
+      data: await ctx.issueChecklist.confirmChecklist(input),
+      success: true,
+    })),
+
+  getChecklist: taskProcedure
+    .input(z.object({ taskId: z.string().min(1) }))
+    .query(async ({ input, ctx }) => ({
+      data: await ctx.issueChecklist.getChecklist(input.taskId),
+      success: true,
+    })),
+
+  reviewChecklistItems: taskProcedure
+    .input(issueChecklistItemsDecisionSchema)
+    .mutation(async ({ input, ctx }) => ({
+      data: await ctx.issueChecklist.reviewChecklistItems(input),
+      success: true,
+    })),
   /**
    * Read a composer draft and report what it means — a name, the outcome as
    * understood, the questions that would change the deliverable, and whether

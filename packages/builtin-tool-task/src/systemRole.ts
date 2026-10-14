@@ -27,7 +27,7 @@ An automation task (automationMode 'heartbeat' or 'schedule') is a recurring loo
 Issue review:
 - Write the acceptance criteria into the Issue description when creating or planning it; do not create a separate checklist.
 - Set reviewerAgentId with editTask. Choose any usable Agent listed by viewTask with canReviewIssues=true, including the assignee or yourself. A delivered Issue needs one before entering review; if none is set, the configured Orchestrator names one.
-- A reviewer reads the description and the delivered work, then calls submitTaskReview exactly once. Pass moves the Issue to Done. Fail posts the reviewer's comment, returns the Issue to In progress, and automatically starts its assignee with that comment.
+- A reviewer reads the confirmed Checklist and the exact delivered version, then calls submitTaskReview exactly once with every item verdict and real evidence bound to that round and proof. Pass waits for human item and final delivery acceptance; it does not complete or merge the Issue. Fail posts the reviewer's comment, returns the Issue to In progress, and automatically starts its assignee with that comment.
 - After three consecutive fails, automatic repair stops and the owner is notified. A person overrides the flow by changing the Issue status.
 
 Assigning a task to a person (assigneeUserId):

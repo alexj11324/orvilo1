@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   pending: vi.fn(),
   release: vi.fn(),
   verdict: vi.fn(),
+  prepareReview: vi.fn(),
   activeOperations: vi.fn(),
   probe: vi.fn(),
   settleRunning: vi.fn(),
@@ -31,6 +32,11 @@ const mocks = vi.hoisted(() => ({
   runTask: vi.fn(),
   updateStatus: vi.fn(),
   deliver: vi.fn(),
+}));
+vi.mock('./checklist', () => ({
+  IssueChecklistService: vi.fn(function () {
+    return { prepareReview: mocks.prepareReview, submitReviewItems: mocks.verdict };
+  }),
 }));
 vi.mock('@/database/models/task', () => ({
   TaskModel: Object.assign(
@@ -74,6 +80,7 @@ vi.mock('@/database/models/taskTopic', () => ({
   TaskTopicModel: vi.fn(function () {
     return {
       findByOperationId: mocks.findDelivery,
+      findByTopicId: mocks.findDelivery,
     };
   }),
 }));
@@ -143,6 +150,23 @@ const params = {
   operationId: 'review-op',
   actorAgentId: 'reviewer',
   verdict: 'pass' as const,
+  runId: 'round',
+  proof: {
+    taskId: 'task',
+    deliveryOperationId: 'delivery',
+    topicId: 'delivered-topic',
+    executionGeneration: 1,
+    checklistRevision: 1,
+    deliveryKind: 'artifact' as const,
+  },
+  items: [
+    {
+      checkItemId: 'item',
+      verdict: 'pass' as const,
+      comment: 'Observed behavior',
+      evidence: [{ type: 'text' as const, content: 'Probe output' }],
+    },
+  ],
 };
 
 describe('ordinary Issue review', () => {
@@ -155,6 +179,10 @@ describe('ordinary Issue review', () => {
     });
     mocks.findTopic.mockResolvedValue(null);
     mocks.claim.mockResolvedValue(review);
+    mocks.prepareReview.mockResolvedValue({
+      run: { id: 'round', plan: [{ id: 'item', title: 'Confirmed criterion' }] },
+      proof: params.proof,
+    });
     mocks.bind.mockResolvedValue(true);
     mocks.findOperation.mockResolvedValue(undefined);
     mocks.settleRunning.mockResolvedValue(true);
@@ -168,10 +196,11 @@ describe('ordinary Issue review', () => {
     });
     mocks.runTask.mockResolvedValue({ success: true });
   });
-  it('asks a fresh saved reviewer to judge description and delivered reply at the delivery cwd', async () => {
+  it('asks a fresh saved reviewer to judge the confirmed Checklist at the delivery cwd', async () => {
     await startIssueReview(db, 'user', 'task', {}, 'ws');
     const request = mocks.exec.mock.calls[0][0];
-    expect(request.prompt).toContain('Criterion in description');
+    expect(request.prompt).toContain('Confirmed criterion');
+    expect(request.prompt).toContain('sole acceptance criteria');
     expect(request.prompt).toContain('Delivered answer');
     expect(request.prompt).toContain('/work');
     expect(request.appContext.topicId).toBeUndefined();
@@ -203,21 +232,22 @@ describe('ordinary Issue review', () => {
       expect.objectContaining({ operationId: 'review-op', keepOperation: true }),
     );
   });
-  it('records pass once and does not start a repair', async () => {
-    mocks.verdict.mockResolvedValue({
-      task: { ...task, workflowCategory: 'done' },
-      repairPending: false,
-      stopped: false,
-    });
-    mocks.findTask.mockResolvedValue({ ...task, workflowCategory: 'done' });
-    expect((await submitIssueReview(db, 'user', params)).task.workflowCategory).toBe('done');
+  it('records pass without Done, merge, completion bridge or repair', async () => {
+    mocks.verdict.mockResolvedValue({ task, repairPending: false, stopped: false });
+    expect((await submitIssueReview(db, 'user', params)).task.workflowCategory).toBe('in_review');
     expect(mocks.runTask).not.toHaveBeenCalled();
-    expect(mocks.updateStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'task', workflowCategory: 'done' }),
-    );
-    expect(mocks.deliver).toHaveBeenCalledWith(
-      expect.objectContaining({ operationId: 'delivery', reason: 'done' }),
-    );
+    expect(mocks.updateStatus).not.toHaveBeenCalled();
+    expect(mocks.deliver).not.toHaveBeenCalled();
+  });
+  it('runs an automation reviewer with the native full-access requirement from the delivery', async () => {
+    mocks.findDelivery.mockResolvedValue({ trigger: 'schedule', operationId: 'delivery' });
+    await startIssueReview(db, 'user', 'task');
+    expect(mocks.exec.mock.calls[0][0].appContext.nativeFullAccess).toBe(true);
+  });
+  it('does not relaunch a submitted passing review while human acceptance waits', async () => {
+    mocks.claim.mockResolvedValue(null);
+    await startIssueReview(db, 'user', 'task');
+    expect(mocks.exec).not.toHaveBeenCalled();
   });
   it('starts the ordinary assignee from durable failing feedback', async () => {
     const failed = {
@@ -288,6 +318,7 @@ describe('ordinary Issue review', () => {
     ).toBe(true);
     expect(mocks.runTask).not.toHaveBeenCalled();
     mocks.verdict.mockResolvedValue(null);
+    mocks.verdict.mockRejectedValueOnce(new Error('Issue review cycle or operation changed'));
     await expect(submitIssueReview(db, 'user', params)).rejects.toThrow('changed');
   });
   it('does not accept a missing verdict; releases the same cycle for the next sweep', async () => {

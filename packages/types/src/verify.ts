@@ -163,11 +163,63 @@ export interface AcceptanceCheckGroup {
   title: string;
 }
 
+export interface IssueChecklistItem {
+  description?: string;
+  id: string;
+  required: boolean;
+  title: string;
+}
+
+export interface IssueChecklistDefinition {
+  confirmedAt: string;
+  confirmedBy: string;
+  deliveryKind: 'code' | 'artifact';
+  items: IssueChecklistItem[];
+  repo?: string;
+  revision: number;
+  targetBranch?: string;
+}
+
+/** Version authority stays on task_topics; this is the round's immutable receipt. */
+export interface IssueDeliveryProof {
+  baseBranch?: string;
+  branch?: string;
+  checklistRevision: number;
+  deliveryKind: 'code' | 'artifact';
+  deliveryOperationId: string;
+  dispatchId?: string;
+  executionGeneration: number;
+  repo?: string;
+  sourceSha?: string;
+  targetBranch?: string;
+  taskId: string;
+  topicId: string;
+}
+
+export interface IssueChecklistReviewItem {
+  checkItemId: string;
+  comment: string;
+  evidence: Array<Pick<VerifyEvidence, 'type' | 'content' | 'fileId' | 'description'>>;
+  verdict: 'pass' | 'fail' | 'uncertain';
+}
+
+export interface IssueCurrentDelivery {
+  availableForDependents: boolean;
+  deliveryAccepted: boolean;
+  itemsAccepted: boolean;
+  merged: boolean;
+  necessaryChecksPassed: boolean;
+  proof?: IssueDeliveryProof;
+  reviewerPassed: boolean;
+  runId?: string;
+}
+
 /** Generic acceptance extension bag for cross-subject state we have not modeled yet. */
 export interface AcceptanceMetadata {
   [key: string]: unknown;
   /** Current checklist organization; frozen plans, results and reviews keep their original IDs. */
   checkGrouping?: { groups: AcceptanceCheckGroup[]; version: number };
+  issueChecklist?: IssueChecklistDefinition;
   /** User-set display-title override for the acceptance (sidebar rename). */
   title?: string;
 }
@@ -577,6 +629,8 @@ export interface VerifyRunMetadata {
     status: 'passed' | 'rejected' | 'errored' | 'unjudgeable';
   };
   interactionCost?: VerifyInteractionCost;
+  issueDelivery?: IssueDeliveryProof;
+  issueReviewer?: { cycleId: string; operationId: string; verdict: 'pass' | 'fail' };
   /**
    * Per-run override for the repair-round cap, taking precedence over the
    * rubric's {@link VerifyRubricConfig.maxRepairRounds}. Set from a task's

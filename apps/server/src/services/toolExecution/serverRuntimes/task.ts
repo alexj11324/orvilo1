@@ -698,6 +698,11 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
     submitTaskReview: async (args: SubmitTaskReviewParams) => {
       if (!deps.db || !deps.userId || !agentId || !operationId || !taskId)
         return { content: 'No authenticated reviewer Agent run.', success: false };
+      const { submitIssueChecklistReviewSchema } =
+        await import('@/server/routers/lambda/_schema/issueChecklist');
+      const parsed = submitIssueChecklistReviewSchema.safeParse(args);
+      if (!parsed.success) return { content: parsed.error.message, success: false };
+      args = parsed.data;
       if (
         !['pass', 'fail'].includes(args.verdict) ||
         (args.verdict === 'fail' && !args.comment?.trim())
@@ -721,6 +726,9 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
             operationId,
             taskId: task.id,
             verdict: args.verdict,
+            runId: args.runId,
+            proof: args.proof,
+            items: args.items,
           },
           deps.workspaceId,
         );

@@ -1,5 +1,11 @@
 import { TaskIdentifier } from '@orvilo/builtin-tool-task';
-import type { IssueReviewState, TaskItem } from '@orvilo/types';
+import type {
+  IssueChecklistReviewItem,
+  IssueDeliveryProof,
+  IssueReviewState,
+  TaskItem,
+} from '@orvilo/types';
+import { isAutomationRunTrigger } from '@orvilo/types';
 import { toRecord } from '@orvilo/utils/object';
 import { and, eq, notInArray } from 'drizzle-orm';
 
@@ -8,7 +14,6 @@ import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
 import { agentOperations, taskDispatches } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
@@ -18,7 +23,7 @@ import { agentCanMountBuiltinToolSurface } from '@/server/services/aiAgent/pipel
 import { deviceGateway } from '@/server/services/deviceGateway';
 import { readRemoteRunAdmission } from '@/server/services/heterogeneousAgent/runAdmission';
 
-import { resolveWorkflowTransition } from '../taskSettlement/workflowTransition';
+import { IssueChecklistService } from './checklist';
 
 export const readIssueReview = (task: Pick<TaskItem, 'config'>): IssueReviewState | undefined =>
   toRecord(task.config)?.issueReview as IssueReviewState | undefined;
@@ -51,13 +56,24 @@ export async function startIssueReview(
   workspaceId?: string,
 ) {
   const model = new TaskModel(db, userId, workspaceId);
-  const review = await model.claimIssueReview(taskId, options);
+  const initial = await model.findById(taskId);
+  if (!initial) return;
+  const currentDelivery = initial.currentTopicId
+    ? await new TaskTopicModel(db, userId, workspaceId).findByTopicId(initial.currentTopicId)
+    : null;
+  const review = await model.claimIssueReview(taskId, {
+    deliveryOperationId: options.deliveryOperationId ?? currentDelivery?.operationId ?? undefined,
+  });
   if (!review || review.state !== 'pending') return;
   let operationId: string | undefined;
   try {
     const agentId = await resolveIssueReviewer(db, userId, taskId, workspaceId);
     const task = await model.findById(taskId);
     if (!task) return;
+    const { run, proof } = await new IssueChecklistService(db, userId, workspaceId).prepareReview(
+      taskId,
+      review.deliveryOperationId,
+    );
     const topicModel = new TaskTopicModel(db, userId, workspaceId);
     const delivery = review.deliveryOperationId
       ? await topicModel.findByOperationId(review.deliveryOperationId)
@@ -76,10 +92,12 @@ export async function startIssueReview(
     const finalReply = toRecord(delivery?.handoff)?.content;
     const prompt = [
       `Review Issue ${task.identifier}: ${task.name ?? ''}`,
-      `Issue description (including acceptance criteria):\n${task.instruction}`,
+      `Issue background and scope:\n${task.instruction}`,
+      `Confirmed Checklist (the sole acceptance criteria):\n${JSON.stringify(run.plan)}`,
+      `Checklist round: ${run.id}\nDelivery proof: ${JSON.stringify(proof)}`,
       `Delivered final reply:\n${typeof finalReply === 'string' ? finalReply : '(No final reply recorded)'}`,
       ...(cwd ? [`Working directory: ${cwd}`] : []),
-      `Check the delivery against the Issue description. Record exactly one verdict by calling submitTaskReview with identifier ${task.identifier}, verdict pass or fail, and a comment explaining what is missing when failing.`,
+      `Check every Checklist item against this delivery version. Record exactly one overall verdict using submitTaskReview with identifier ${task.identifier}, runId, the exact delivery proof, and items containing each checkItemId, verdict pass/fail/uncertain, comment and real evidence. Required uncertain or failing items cannot pass. A failing overall verdict requires a repair comment. Passing review waits for human acceptance and does not complete or merge the Issue.`,
     ].join('\n\n');
     const { AiAgentService } = await import('../aiAgent');
     const result = await new AiAgentService(db, userId, { workspaceId }).execAgent({
@@ -88,6 +106,7 @@ export async function startIssueReview(
       appContext: {
         taskId,
         issueReviewCycleId: review.cycleId,
+        nativeFullAccess: isAutomationRunTrigger(delivery?.trigger ?? undefined),
         ...(cwd ? { initialTopicMetadata: { workingDirectory: cwd } } : {}),
       },
       autoStart: true,
@@ -143,52 +162,18 @@ export async function submitIssueReview(
     actorAgentId: string;
     verdict: 'pass' | 'fail';
     comment?: string;
+    runId: string;
+    proof: IssueDeliveryProof;
+    items: IssueChecklistReviewItem[];
   },
   workspaceId?: string,
 ) {
   if (params.verdict === 'fail' && !params.comment?.trim())
     throw new Error('A failing review requires a comment.');
-  const model = new TaskModel(db, userId, workspaceId);
-  const task = await model.findById(params.taskId);
-  if (!task) throw new Error('Issue not found');
-  const states =
-    task.teamId && workspaceId
-      ? await new TeamModel(db, userId, workspaceId).listWorkflowStates(task.teamId)
-      : [];
-  const { patch } = resolveWorkflowTransition({
-    category: params.verdict === 'pass' ? 'done' : 'in_progress',
-    states,
-  });
-  const result = await model.recordIssueReviewVerdict(params.taskId, {
+  const result = await new IssueChecklistService(db, userId, workspaceId).submitReviewItems({
     ...params,
-    transition: patch,
+    reviewerOperationId: params.operationId,
   });
-  if (!result) throw new Error('Issue review cycle or operation changed');
-  if (params.verdict === 'pass') {
-    const { TaskService } = await import('./index');
-    await new TaskService(db, userId, workspaceId).finalizeCompletedTask(result.task);
-    const review = readIssueReview(result.task);
-    const current = await model.findById(result.task.id);
-    if (
-      review?.deliveryOperationId &&
-      current?.workflowCategory === 'done' &&
-      readIssueReview(current)?.cycleId === review.cycleId
-    ) {
-      const topic = await new TaskTopicModel(db, userId, workspaceId).findByOperationId(
-        review.deliveryOperationId,
-      );
-      const { TaskResultBridgeService } = await import('../taskResultBridge');
-      const content = toRecord(topic?.handoff)?.content;
-      await new TaskResultBridgeService(db, userId, workspaceId).deliver({
-        operationId: review.deliveryOperationId,
-        reason: 'done',
-        taskId: result.task.id,
-        taskIdentifier: result.task.identifier,
-        topicId: topic?.topicId ?? undefined,
-        lastAssistantContent: typeof content === 'string' ? content : undefined,
-      });
-    }
-  }
   if (result.repairPending) await resumeIssueReviewRepair(db, userId, result.task.id, workspaceId);
   return result;
 }

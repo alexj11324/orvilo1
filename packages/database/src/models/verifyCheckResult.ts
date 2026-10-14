@@ -114,7 +114,10 @@ export class VerifyCheckResultModel {
       .values(values)
       .onConflictDoUpdate({
         set: mutable,
-        setWhere: this.ownership(),
+        setWhere: and(
+          this.ownership(),
+          sql`${verifyCheckResults.userDecision} IS DISTINCT FROM 'accepted'`,
+        ),
         target: [verifyCheckResults.verifyRunId, verifyCheckResults.checkItemId],
       })
       .returning();
@@ -170,7 +173,13 @@ export class VerifyCheckResultModel {
     return this.db
       .update(verifyCheckResults)
       .set(value)
-      .where(and(eq(verifyCheckResults.id, id), this.ownership()));
+      .where(
+        and(
+          eq(verifyCheckResults.id, id),
+          this.ownership(),
+          sql`${verifyCheckResults.userDecision} IS DISTINCT FROM 'accepted'`,
+        ),
+      );
   };
 
   /**
@@ -182,7 +191,13 @@ export class VerifyCheckResultModel {
   delete = async (id: string) => {
     return this.db
       .delete(verifyCheckResults)
-      .where(and(eq(verifyCheckResults.id, id), this.ownership()));
+      .where(
+        and(
+          eq(verifyCheckResults.id, id),
+          this.ownership(),
+          sql`${verifyCheckResults.userDecision} IS DISTINCT FROM 'accepted'`,
+        ),
+      );
   };
 
   /**
@@ -203,6 +218,7 @@ export class VerifyCheckResultModel {
           eq(verifyCheckResults.verifyRunId, verifyRunId),
           eq(verifyCheckResults.checkItemId, checkItemId),
           this.ownership(),
+          sql`${verifyCheckResults.userDecision} IS DISTINCT FROM 'accepted'`,
         ),
       );
   };

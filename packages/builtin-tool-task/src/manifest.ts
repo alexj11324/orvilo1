@@ -208,12 +208,83 @@ export const TaskManifest: BuiltinToolManifest = {
     },
     {
       description:
-        'Record the verdict for the Issue you were asked to review. Read its description and investigate the delivered work with your runtime tools, then call this exactly once. A fail requires a comment explaining what is missing. Pass moves the Issue to Done; fail posts your comment and returns it to its assignee. A prose reply alone does not record a verdict. This call is authorized only for the current reviewer Agent run.',
+        'Record the verdict for the Issue you were asked to review. Read its confirmed Checklist and investigate the exact delivered version with your runtime tools, then submit every item and its evidence exactly once. A fail requires a comment explaining what is missing. Pass waits for human acceptance without completing or merging the Issue; fail posts your comment and returns it to its assignee. A prose reply alone does not record a verdict. This call is authorized only for the current reviewer Agent run.',
       humanIntervention: 'never',
       name: TaskApiName.submitTaskReview,
       parameters: {
         additionalProperties: false,
         properties: {
+          runId: {
+            description: 'The frozen Checklist round from the review request.',
+            type: 'string',
+          },
+          proof: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              taskId: { type: 'string' },
+              deliveryOperationId: { type: 'string' },
+              topicId: { type: 'string' },
+              executionGeneration: { type: 'integer' },
+              dispatchId: { type: 'string' },
+              sourceSha: { type: 'string' },
+              repo: { type: 'string' },
+              branch: { type: 'string' },
+              baseBranch: { type: 'string' },
+              targetBranch: { type: 'string' },
+              checklistRevision: { type: 'integer' },
+              deliveryKind: { enum: ['code', 'artifact'], type: 'string' },
+            },
+            required: [
+              'taskId',
+              'deliveryOperationId',
+              'topicId',
+              'executionGeneration',
+              'checklistRevision',
+              'deliveryKind',
+            ],
+          },
+          items: {
+            type: 'array',
+            minItems: 1,
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                checkItemId: { type: 'string' },
+                verdict: { enum: ['pass', 'fail', 'uncertain'], type: 'string' },
+                comment: { type: 'string' },
+                evidence: {
+                  type: 'array',
+                  minItems: 1,
+                  items: {
+                    type: 'object',
+                    additionalProperties: false,
+                    properties: {
+                      type: {
+                        enum: [
+                          'screenshot',
+                          'gif',
+                          'video',
+                          'audio',
+                          'text',
+                          'markdown',
+                          'dom_snapshot',
+                          'transcript',
+                        ],
+                        type: 'string',
+                      },
+                      content: { type: 'string' },
+                      fileId: { type: 'string' },
+                      description: { type: 'string' },
+                    },
+                    required: ['type'],
+                  },
+                },
+              },
+              required: ['checkItemId', 'verdict', 'comment', 'evidence'],
+            },
+          },
           identifier: {
             description: 'The Issue identifier in your review request.',
             minLength: 1,
@@ -227,7 +298,7 @@ export const TaskManifest: BuiltinToolManifest = {
             type: 'string',
           },
         },
-        required: ['identifier', 'verdict'],
+        required: ['identifier', 'runId', 'proof', 'items', 'verdict'],
         type: 'object',
       },
     },

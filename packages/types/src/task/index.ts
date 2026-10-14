@@ -1604,6 +1604,7 @@ export interface IssueReviewState {
   reviewerAgentId: string;
   reviewerOperationId?: string;
   state: 'pending' | 'running' | 'submitted';
+  verdict?: 'pass' | 'fail';
 }
 
 export interface TaskConfig {

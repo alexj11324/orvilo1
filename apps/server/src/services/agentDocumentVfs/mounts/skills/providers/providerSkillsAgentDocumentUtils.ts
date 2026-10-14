@@ -1,5 +1,4 @@
-import type { AgentDocument } from '@/database/models/agentDocuments';
-import { PolicyLoad } from '@/database/models/agentDocuments';
+import type { AgentDocument, PolicyLoad } from '@/database/models/agentDocuments';
 import type { AgentDocumentSourceType } from '@/database/models/agentDocuments/types';
 import { exportEditorDataSnapshot } from '@/server/services/agentDocuments/headlessEditor';
 import { AgentDocumentVfsError } from '@/server/services/agentDocumentVfs/errors';
@@ -8,8 +7,6 @@ import {
   SKILL_BUNDLE_FILE_TYPE,
   SKILL_INDEX_FILE_TYPE,
   SKILL_INDEX_FILENAME,
-  SKILL_MANAGEMENT_SOURCE,
-  SKILL_MANAGEMENT_SOURCE_TYPE,
 } from '@/server/services/skillManagement';
 
 import { getUnifiedSkillNamespaceRootPath } from '../path';
@@ -79,7 +76,7 @@ export const buildSkillDirectoryNode = (
   name: skillName,
   namespace,
   path: `${getUnifiedSkillNamespaceRootPath(namespace)}/${skillName}`,
-  readOnly: false,
+  readOnly: true,
   type: 'directory',
 });
 
@@ -89,7 +86,7 @@ export const buildSkillNamespaceRootNode = (
   name: 'skills',
   namespace,
   path: getUnifiedSkillNamespaceRootPath(namespace),
-  readOnly: false,
+  readOnly: true,
   type: 'directory',
 });
 
@@ -107,7 +104,7 @@ export const buildSkillFileNode = ({
   name: SKILL_FILE_NAME,
   namespace,
   path: `${getUnifiedSkillNamespaceRootPath(namespace)}/${skillName}/${SKILL_FILE_NAME}`,
-  readOnly: false,
+  readOnly: true,
   type: 'file',
 });
 
@@ -208,57 +205,6 @@ export const assertSkillDocument = <T>(document: T | undefined, message = 'Skill
   }
 
   return document;
-};
-
-export const createSkillTree = async ({
-  agentDocumentModel,
-  agentId,
-  content,
-  editorData,
-  namespace,
-  skillName,
-}: CreateSkillTreeInput) => {
-  const existingDocuments = await agentDocumentModel.findByAgent(agentId);
-  const existingFolder = getSkillBundle(existingDocuments, namespace, skillName);
-  const existingFile = getSkillFile(existingDocuments, namespace, skillName);
-
-  if (existingFolder || existingFile) {
-    throw new AgentDocumentVfsError('Skill already exists', 'CONFLICT');
-  }
-
-  // NOTICE:
-  // This path is used by direct Agent Document VFS writes, including `lb agent space fs`.
-  // It creates skill-shaped bundle/index documents for filesystem compatibility only.
-  // These documents are not authored through SkillManagementDocumentService and should not be
-  // assumed to be fully recognized as managed Agent Signal skills until that service supports
-  // importing or normalizing VFS-created skill-shaped documents.
-  // Removal condition: delete this once VFS create/update routes through the skill-management
-  // service or that service explicitly supports this compatibility document shape.
-  const metadata = { skill: { vfs: true } };
-  const bundle = await agentDocumentModel.create(agentId, skillName, '', {
-    editorData: EMPTY_EDITOR_DATA,
-    fileType: SKILL_BUNDLE_FILE_TYPE,
-    metadata,
-    policyLoad: PolicyLoad.DISABLED,
-    source: SKILL_MANAGEMENT_SOURCE,
-    sourceType: SKILL_MANAGEMENT_SOURCE_TYPE,
-    templateId: AGENT_SKILL_TEMPLATE_ID,
-    title: skillName,
-  });
-
-  const file = await agentDocumentModel.create(agentId, SKILL_FILE_NAME, content, {
-    editorData,
-    fileType: SKILL_INDEX_FILE_TYPE,
-    metadata,
-    parentId: bundle.documentId,
-    policyLoad: PolicyLoad.DISABLED,
-    source: SKILL_MANAGEMENT_SOURCE,
-    sourceType: SKILL_MANAGEMENT_SOURCE_TYPE,
-    templateId: AGENT_SKILL_TEMPLATE_ID,
-    title: SKILL_FILE_NAME,
-  });
-
-  return { fileDocumentId: file.documentId, folderDocumentId: bundle.documentId };
 };
 
 export const sortSkillFolders = (documents: AgentDocument[]) =>

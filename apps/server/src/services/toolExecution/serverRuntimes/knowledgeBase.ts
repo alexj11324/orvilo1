@@ -9,6 +9,7 @@ import { KnowledgeRepo } from '@/database/repositories/knowledge';
 import { DocumentService } from '@/server/services/document';
 import { FileService } from '@/server/services/file';
 import { KnowledgeBaseSearchService } from '@/server/services/knowledgeBase';
+import { rejectPlatformKnowledgeBaseWrite } from '@/server/services/knowledgeBase/retirement';
 
 import { type ServerRuntimeRegistration } from './types';
 
@@ -66,25 +67,8 @@ export const knowledgeBaseRuntime: ServerRuntimeRegistration = {
         },
       },
       {
-        addFilesToKnowledgeBase: async (knowledgeBaseId, ids) => {
-          try {
-            return await knowledgeBaseModel.addFilesToKnowledgeBase(knowledgeBaseId, ids);
-          } catch (e: any) {
-            // PG unique-constraint violation on (knowledge_base_id, file_id).
-            // Re-throw with a friendly message so the ExecutionRuntime's
-            // generic catch surfaces it directly.
-            if (e?.cause?.code === '23505' || e?.code === '23505') {
-              throw new Error('One or more files are already in this knowledge base.', {
-                cause: e,
-              });
-            }
-            throw e;
-          }
-        },
-        createKnowledgeBase: async ({ description, name }) => {
-          const data = await knowledgeBaseModel.create({ description, name });
-          return data?.id ?? '';
-        },
+        addFilesToKnowledgeBase: async () => rejectPlatformKnowledgeBaseWrite(),
+        createKnowledgeBase: async () => rejectPlatformKnowledgeBaseWrite(),
         getKnowledgeBaseById: async (id) => {
           const item = await knowledgeBaseModel.findById(id);
           if (!item) return undefined;
@@ -133,11 +117,8 @@ export const knowledgeBaseRuntime: ServerRuntimeRegistration = {
             })),
           };
         },
-        removeFilesFromKnowledgeBase: (knowledgeBaseId, ids) =>
-          knowledgeBaseModel.removeFilesFromKnowledgeBase(knowledgeBaseId, ids),
-        removeKnowledgeBase: async (id) => {
-          await knowledgeBaseModel.deleteWithFiles(id);
-        },
+        removeFilesFromKnowledgeBase: async () => rejectPlatformKnowledgeBaseWrite(),
+        removeKnowledgeBase: async () => rejectPlatformKnowledgeBaseWrite(),
       },
       {
         createDocument: async ({ content, fileType, knowledgeBaseId, parentId, title }) => {

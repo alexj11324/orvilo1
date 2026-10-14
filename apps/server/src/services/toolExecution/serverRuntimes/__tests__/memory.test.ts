@@ -79,6 +79,20 @@ describe('memoryRuntime', () => {
     vi.clearAllMocks();
   });
 
+  it('rejects stale persisted memory writes before embedding or persistence', async () => {
+    const runtime = await memoryRuntime.factory(createContext());
+    const result = await runtime.removeIdentityMemory({
+      id: 'historical-identity',
+      reason: 'stale tool call',
+    });
+    expect(result).toMatchObject({
+      success: false,
+      content: 'Platform memory writing is unavailable.',
+    });
+    expect(mocks.initModelRuntimeFromDeploymentConfig).not.toHaveBeenCalled();
+    expect(mocks.embeddings).not.toHaveBeenCalled();
+  });
+
   it('uses the deployment embedding runtime for memory search', async () => {
     mocks.embeddings.mockResolvedValueOnce([[0.1, 0.2, 0.3]]);
     mocks.initModelRuntimeFromDeploymentConfig.mockReturnValueOnce({

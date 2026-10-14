@@ -13,7 +13,6 @@ import {
 import AsyncError from '@/components/AsyncError';
 import { useChatbotSurface } from '@/features/AIChatbot/context';
 import { TopicNotFoundRedirect } from '@/features/TopicNotFound';
-import { useFetchTopicMemories } from '@/hooks/useFetchMemoryForTopic';
 import { useFetchNotebookDocuments } from '@/hooks/useFetchNotebookDocuments';
 import { getMessageListCacheIdentity } from '@/services/message/cache';
 import { useAgentStore } from '@/store/agent';
@@ -21,7 +20,7 @@ import { useChatStore } from '@/store/chat';
 import { operationSelectors, topicSelectors } from '@/store/chat/selectors';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
-import { authSelectors, settingsSelectors } from '@/store/user/selectors';
+import { authSelectors } from '@/store/user/selectors';
 
 import WideScreenContainer from '../../WideScreenContainer';
 import SkeletonList from '../components/SkeletonList';
@@ -131,7 +130,6 @@ const ChatList = memo<ChatListProps>(
   }) => {
     // Fetch messages (SWR key is null when skipFetch is true)
     const context = useConversationStore((s) => s.context);
-    const enableUserMemories = useUserStore(settingsSelectors.memoryEnabled);
     const [skipFetch, useFetchMessages] = useConversationStore((s) => [
       dataSelectors.skipFetch(s),
       s.useFetchMessages,
@@ -237,7 +235,6 @@ const ChatList = memo<ChatListProps>(
     // that actually render documents (working sidebar / doc page) fetch on their
     // own mount; the slash menu fetches the slim `non-web` variant.
     useFetchNotebookDocuments(isSharePage ? undefined : context.topicId!);
-    useFetchTopicMemories(enableUserMemories && !isSharePage ? context.topicId : undefined);
 
     // Use selectors for data
 

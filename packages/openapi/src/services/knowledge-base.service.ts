@@ -137,6 +137,7 @@ export class KnowledgeBaseService extends BaseService {
   async createKnowledgeBase(
     request: CreateKnowledgeBaseRequest,
   ): Promise<CreateKnowledgeBaseResponse> {
+    throw this.createAuthorizationError('Platform knowledge bases are retired');
     try {
       // Permission check
       const permissionResult = await this.resolveOperationPermission('KNOWLEDGE_BASE_CREATE');
@@ -179,6 +180,7 @@ export class KnowledgeBaseService extends BaseService {
     id: string,
     request: UpdateKnowledgeBaseRequest,
   ): Promise<KnowledgeBaseDetailResponse> {
+    throw this.createAuthorizationError('Platform knowledge bases are retired');
     try {
       // Permission check
       const permissionResult = await this.resolveOperationPermission('KNOWLEDGE_BASE_UPDATE');
@@ -231,6 +233,7 @@ export class KnowledgeBaseService extends BaseService {
    * Delete knowledge base
    */
   async deleteKnowledgeBase(id: string): Promise<DeleteKnowledgeBaseResponse> {
+    throw this.createAuthorizationError('Platform knowledge bases are retired');
     try {
       // Permission check
       const permissionResult = await this.resolveOperationPermission('KNOWLEDGE_BASE_DELETE');

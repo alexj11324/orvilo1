@@ -65,15 +65,6 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<SettingsTabs, string[]>> = {
   [SettingsTabs.Devices]: ['devices', 'sessions', 'logged in devices'],
   [SettingsTabs.Hotkey]: ['hotkey', 'shortcut', 'keyboard'],
   [SettingsTabs.Memory]: ['memory', 'memories', 'personalization'],
-  [SettingsTabs.Messenger]: [
-    'messenger',
-    'chat platform',
-    'bot',
-    'telegram',
-    'slack',
-    'discord',
-    'wechat',
-  ],
   [SettingsTabs.Notification]: ['notification', 'push', 'alerts', 'inbox'],
   [SettingsTabs.Plans]: ['subscription', 'plan', 'upgrade', 'pricing', 'membership'],
   [SettingsTabs.Profile]: [
@@ -157,7 +148,6 @@ export const TAB_SEARCH_KEYWORDS_KEYS: Partial<Record<SettingsTabs, string>> = {
   [SettingsTabs.Devices]: 'settingsSearch.tabKeywords.devices',
   [SettingsTabs.Hotkey]: 'settingsSearch.tabKeywords.hotkey',
   [SettingsTabs.Memory]: 'settingsSearch.tabKeywords.memory',
-  [SettingsTabs.Messenger]: 'settingsSearch.tabKeywords.messenger',
   [SettingsTabs.Notification]: 'settingsSearch.tabKeywords.notification',
   [SettingsTabs.Plans]: 'settingsSearch.tabKeywords.plans',
   [SettingsTabs.Profile]: 'settingsSearch.tabKeywords.profile',

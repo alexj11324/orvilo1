@@ -1,97 +1,34 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { OrviloDatabase } from '@/database/type';
-import { FileService } from '@/server/services/file';
 
 import { KnowledgeBaseService } from '../../packages/openapi/src/services/knowledge-base.service';
 
-vi.mock('@/server/services/file');
+vi.mock('@orvilo/database', async () => import('@/database/utils/workspace'));
+vi.mock('@/server/services/file', () => ({ FileService: vi.fn() }));
 
-describe('KnowledgeBaseService.deleteKnowledgeBase', () => {
-  let db: OrviloDatabase;
-  let deleteFilesSpy: ReturnType<typeof vi.fn>;
-
-  beforeEach(() => {
-    db = {
-      query: {
-        knowledgeBases: {
-          findFirst: vi.fn().mockResolvedValue({ id: 'kb-1', userId: 'user-1' }),
-        },
-      },
-    } as unknown as OrviloDatabase;
-
-    deleteFilesSpy = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(FileService).mockImplementation(function () {
-      return { deleteFiles: deleteFilesSpy } as any;
+// Retired producers must reject before any resource or object-storage access.
+describe('retired OpenAPI knowledge-base writes', () => {
+  it('rejects create/update/delete and preserves historical detail reads', async () => {
+    const historical = { id: 'kb-1', name: 'Historical', userId: 'user-1' };
+    const findById = vi.fn().mockResolvedValue(historical);
+    const service = new KnowledgeBaseService({} as OrviloDatabase, 'user-1');
+    Reflect.set(service, 'knowledgeBaseModel', { findById });
+    for (const write of [
+      () => service.createKnowledgeBase({ name: 'New' }),
+      () => service.updateKnowledgeBase('kb-1', { name: 'Changed' }),
+      () => service.deleteKnowledgeBase('kb-1'),
+    ]) {
+      await expect(write()).rejects.toMatchObject({
+        name: 'AuthorizationError',
+        message: 'Platform knowledge bases are retired',
+      });
+    }
+    expect(findById).not.toHaveBeenCalled();
+    Reflect.set(service, 'resolveOperationPermission', async () => ({ isPermitted: true }));
+    Reflect.set(service, 'log', () => undefined);
+    await expect(service.getKnowledgeBaseDetail('kb-1')).resolves.toMatchObject({
+      knowledgeBase: { id: 'kb-1', name: 'Historical' },
     });
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  const createService = () => {
-    const service = new KnowledgeBaseService(db, 'user-1');
-
-    vi.spyOn(service as any, 'log').mockImplementation(() => {});
-    vi.spyOn(service as any, 'resolveOperationPermission').mockResolvedValue({
-      isPermitted: true,
-      message: '',
-    });
-
-    return service;
-  };
-
-  it('should always delete exclusive files together with the knowledge base', async () => {
-    const service = createService();
-    const deleteWithFilesSpy = vi.fn().mockResolvedValue({
-      deletedFiles: [],
-    });
-
-    Reflect.set(service, 'knowledgeBaseModel', {
-      deleteWithFiles: deleteWithFilesSpy,
-    });
-
-    await expect(service.deleteKnowledgeBase('kb-1')).resolves.toEqual({
-      message: 'Knowledge base deleted successfully',
-      success: true,
-    });
-
-    expect(deleteWithFilesSpy).toHaveBeenCalledWith('kb-1');
-  });
-
-  it('should delete external files when deleted knowledge-base files have URLs', async () => {
-    const service = createService();
-
-    Reflect.set(service, 'knowledgeBaseModel', {
-      deleteWithFiles: vi.fn().mockResolvedValue({
-        deletedFiles: [
-          { id: 'file-1', url: 'https://example.com/a.pdf' },
-          { id: 'file-2', url: null },
-          { id: 'file-3', url: 'https://example.com/b.pdf' },
-        ],
-      }),
-    });
-
-    await service.deleteKnowledgeBase('kb-1');
-
-    expect(deleteFilesSpy).toHaveBeenCalledWith([
-      'https://example.com/a.pdf',
-      'https://example.com/b.pdf',
-    ]);
-  });
-
-  it('should skip external file deletion when deleted files have no URLs', async () => {
-    const service = createService();
-
-    Reflect.set(service, 'knowledgeBaseModel', {
-      deleteWithFiles: vi.fn().mockResolvedValue({
-        deletedFiles: [{ id: 'file-1', url: null }],
-      }),
-    });
-
-    await service.deleteKnowledgeBase('kb-1');
-
-    expect(deleteFilesSpy).not.toHaveBeenCalled();
   });
 });

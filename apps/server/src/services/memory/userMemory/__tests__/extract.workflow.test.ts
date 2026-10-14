@@ -1,12 +1,5 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import {
-  AsyncTaskError,
-  AsyncTaskErrorType,
-  AsyncTaskStatus,
-  AsyncTaskType,
-} from '@/types/asyncTask';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MemoryExtractionWorkflowService } from '../extract';
 
@@ -18,22 +11,11 @@ interface HourlyMetadataInput {
   startedAt: string;
 }
 
-const {
-  mockAppendUserMemoryWorkflowRunIds,
-  mockAsyncTaskModel,
-  mockCreate,
-  mockFindFirst,
-  mockGetServerDB,
-  mockTrigger,
-  mockUpdate,
-} = vi.hoisted(() => ({
-  mockAppendUserMemoryWorkflowRunIds: vi.fn(),
+const { mockAsyncTaskModel, mockCreate, mockGetServerDB, mockTrigger } = vi.hoisted(() => ({
   mockAsyncTaskModel: vi.fn(),
   mockCreate: vi.fn(),
-  mockFindFirst: vi.fn(),
   mockGetServerDB: vi.fn(),
   mockTrigger: vi.fn(),
-  mockUpdate: vi.fn(),
 }));
 
 vi.mock('@/database/server', () => ({
@@ -61,211 +43,32 @@ vi.mock('@/server/services/hatchet/workflows', () => ({
   triggerHatchetWorkflow: mockTrigger,
 }));
 
-describe('MemoryExtractionWorkflowService.triggerHourlyTracked', () => {
-  const originalServiceUserId = process.env.MEMORY_EXTRACTION_HOURLY_TASK_USER_ID;
+describe('retired platform memory scheduling', () => {
+  beforeEach(() => vi.clearAllMocks());
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-07-06T00:00:00.000Z'));
-
-    process.env.MEMORY_EXTRACTION_HOURLY_TASK_USER_ID = 'service-account-user';
-
-    mockGetServerDB.mockResolvedValue({
-      db: 'server',
-      query: { asyncTasks: { findFirst: mockFindFirst } },
-    });
-    mockCreate.mockResolvedValue('00000000-0000-4000-8000-000000000001');
-    mockFindFirst.mockResolvedValue(undefined);
-    mockAppendUserMemoryWorkflowRunIds.mockResolvedValue(undefined);
-    mockUpdate.mockResolvedValue(undefined);
-    mockTrigger.mockResolvedValue({ workflowRunId: 'workflow-run-1' });
-    mockAsyncTaskModel.mockImplementation(function () {
-      return {
-        appendUserMemoryWorkflowRunIds: mockAppendUserMemoryWorkflowRunIds,
-        create: mockCreate,
-        update: mockUpdate,
-      };
-    });
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-
-    if (originalServiceUserId === undefined) {
-      delete process.env.MEMORY_EXTRACTION_HOURLY_TASK_USER_ID;
-    } else {
-      process.env.MEMORY_EXTRACTION_HOURLY_TASK_USER_ID = originalServiceUserId;
-    }
-  });
-
-  it('creates an hourly async task, triggers the workflow, and appends the root run id', async () => {
-    /**
-     * @example
-     * await MemoryExtractionWorkflowService.triggerHourlyTracked({ baseUrl });
-     */
-    const result = await MemoryExtractionWorkflowService.triggerHourlyTracked(
-      {
-        baseUrl: 'https://app.example.com',
-        cursor: {
-          createdAt: '2026-07-05T23:00:00.000Z',
-          id: 'cursor-user',
-        },
-      },
-      { extraHeaders: { 'x-test-header': '1' } },
-    );
-
-    expect(result).toEqual({
-      taskId: '00000000-0000-4000-8000-000000000001',
-      workflowRunId: 'workflow-run-1',
-    });
-    expect(mockGetServerDB).toHaveBeenCalledTimes(1);
-    expect(mockAsyncTaskModel).toHaveBeenCalledWith(
-      { db: 'server', query: { asyncTasks: { findFirst: mockFindFirst } } },
-      'service-account-user',
-    );
-    expect(mockCreate).toHaveBeenCalledWith({
-      metadata: {
-        control: undefined,
-        cursor: {
-          createdAt: '2026-07-05T23:00:00.000Z',
-          id: 'cursor-user',
-        },
-        progress: {
-          processedUsers: 0,
-          scheduledBatches: 0,
-          scheduledChildRuns: 0,
-        },
-        source: 'hourly_chat_topic',
-        startedAt: '2026-07-06T00:00:00.000Z',
-      },
-      status: AsyncTaskStatus.Pending,
-      type: AsyncTaskType.UserMemoryExtractionHourly,
-    });
-    expect(mockTrigger).toHaveBeenCalledWith(
-      '/api/workflows/memory-user-memory/call-cron-hourly-analysis',
-      {
-        baseUrl: 'https://app.example.com',
-        cursor: {
-          createdAt: '2026-07-05T23:00:00.000Z',
-          id: 'cursor-user',
-        },
-        hourlyTaskId: '00000000-0000-4000-8000-000000000001',
-      },
-      {
-        concurrencyKey: 'memory-user-memory.hourly',
-        headers: { 'x-test-header': '1' },
-        workflowRunId: undefined,
-      },
-    );
-    expect(mockAppendUserMemoryWorkflowRunIds).toHaveBeenCalledWith(
-      '00000000-0000-4000-8000-000000000001',
-      ['workflow-run-1'],
-    );
-    expect(mockUpdate).not.toHaveBeenCalled();
-  });
-
-  it('uses deterministic workflow run ids when an entry workflow run id is provided', async () => {
-    /**
-     * @example
-     * await MemoryExtractionWorkflowService.triggerHourlyTracked({ baseUrl }, { entryWorkflowRunId });
-     */
-    const result = await MemoryExtractionWorkflowService.triggerHourlyTracked(
-      {
-        baseUrl: 'https://app.example.com',
-      },
-      { entryWorkflowRunId: 'entry-run-1' },
-    );
-
-    expect(result).toEqual({
-      taskId: '00000000-0000-4000-8000-000000000001',
-      workflowRunId: 'workflow-run-1',
-    });
-    expect(mockCreate).toHaveBeenCalledWith({
-      metadata: {
-        control: {
-          hatchet: {
-            entryWorkflowRunId: 'entry-run-1',
-            workflowRunIds: ['entry-run-1', 'memory-user-memory-hourly-entry-run-1'],
-          },
-        },
-        cursor: undefined,
-        progress: {
-          processedUsers: 0,
-          scheduledBatches: 0,
-          scheduledChildRuns: 0,
-        },
-        source: 'hourly_chat_topic',
-        startedAt: '2026-07-06T00:00:00.000Z',
-      },
-      status: AsyncTaskStatus.Pending,
-      type: AsyncTaskType.UserMemoryExtractionHourly,
-    });
-    expect(mockTrigger).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(Object),
-      expect.objectContaining({
-        workflowRunId: 'memory-user-memory-hourly-entry-run-1',
-      }),
-    );
-  });
-
-  it('marks the created async task as error and rethrows when workflow scheduling fails', async () => {
-    /**
-     * @example
-     * await expect(MemoryExtractionWorkflowService.triggerHourlyTracked({ baseUrl })).rejects.toThrow();
-     */
-    const triggerError = new Error('hatchet unavailable');
-    mockTrigger.mockRejectedValue(triggerError);
-
-    await expect(
-      MemoryExtractionWorkflowService.triggerHourlyTracked({
-        baseUrl: 'https://app.example.com',
-      }),
-    ).rejects.toBe(triggerError);
-
-    expect(mockCreate).toHaveBeenCalledWith({
-      metadata: {
-        control: undefined,
-        cursor: undefined,
-        progress: {
-          processedUsers: 0,
-          scheduledBatches: 0,
-          scheduledChildRuns: 0,
-        },
-        source: 'hourly_chat_topic',
-        startedAt: '2026-07-06T00:00:00.000Z',
-      },
-      status: AsyncTaskStatus.Pending,
-      type: AsyncTaskType.UserMemoryExtractionHourly,
-    });
-    expect(mockUpdate).toHaveBeenCalledWith('00000000-0000-4000-8000-000000000001', {
-      error: new AsyncTaskError(
-        AsyncTaskErrorType.TaskTriggerError,
-        'Failed to schedule hourly memory extraction workflow',
-      ),
-      status: AsyncTaskStatus.Error,
-    });
-    expect(mockAppendUserMemoryWorkflowRunIds).not.toHaveBeenCalled();
-  });
-
-  it('throws before triggering when the service-account user id env is missing', async () => {
-    /**
-     * @example
-     * await expect(MemoryExtractionWorkflowService.triggerHourlyTracked({ baseUrl })).rejects.toThrow();
-     */
-    delete process.env.MEMORY_EXTRACTION_HOURLY_TASK_USER_ID;
-
-    await expect(
-      MemoryExtractionWorkflowService.triggerHourlyTracked({
-        baseUrl: 'https://app.example.com',
-      }),
-    ).rejects.toThrow(
-      'MEMORY_EXTRACTION_HOURLY_TASK_USER_ID is required for tracked hourly extraction',
-    );
-
+  it.each([
+    [
+      'hourly',
+      () => MemoryExtractionWorkflowService.triggerHourly({ baseUrl: 'https://app.example.com' }),
+    ],
+    [
+      'tracked hourly',
+      () =>
+        MemoryExtractionWorkflowService.triggerHourlyTracked({
+          baseUrl: 'https://app.example.com',
+        }),
+    ],
+    [
+      'explicit users',
+      () =>
+        MemoryExtractionWorkflowService.triggerProcessUsers({
+          baseUrl: 'https://app.example.com',
+          userIds: ['user-1'],
+        }),
+    ],
+  ])('rejects %s before creating tasks or triggering workflows', async (_name, schedule) => {
+    await expect(schedule()).rejects.toThrow('Platform automatic memory extraction is unavailable');
     expect(mockGetServerDB).not.toHaveBeenCalled();
-    expect(mockAsyncTaskModel).not.toHaveBeenCalled();
     expect(mockCreate).not.toHaveBeenCalled();
     expect(mockTrigger).not.toHaveBeenCalled();
   });

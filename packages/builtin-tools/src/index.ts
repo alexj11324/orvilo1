@@ -10,7 +10,6 @@ import {
   agentSignalFeedbackIntentManifest,
   agentSignalReflectionManifest,
   agentSignalReviewManifest,
-  agentSignalSkillManagementManifest,
 } from '@orvilo/builtin-tool-agent-signal';
 import { AuvManifest } from '@orvilo/builtin-tool-auv';
 import { BriefManifest } from '@orvilo/builtin-tool-brief';
@@ -27,7 +26,6 @@ import { OrviloAgentManifest, resolveOrviloAgentManifest } from '@orvilo/builtin
 import { PageAgentManifest } from '@orvilo/builtin-tool-page-agent';
 import { RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
 import { selfFeedbackIntentManifest } from '@orvilo/builtin-tool-self-iteration';
-import { SkillMaintainerManifest } from '@orvilo/builtin-tool-skill-maintainer';
 import { resolveSkillsManifest, SkillsManifest } from '@orvilo/builtin-tool-skills';
 import { TaskManifest } from '@orvilo/builtin-tool-task';
 import { TopicReferenceManifest } from '@orvilo/builtin-tool-topic-reference';
@@ -285,13 +283,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
   {
     discoverable: false,
     hidden: true,
-    identifier: SkillMaintainerManifest.identifier,
-    manifest: SkillMaintainerManifest,
-    type: 'builtin',
-  },
-  {
-    discoverable: false,
-    hidden: true,
     identifier: selfFeedbackIntentManifest.identifier,
     manifest: selfFeedbackIntentManifest,
     type: 'builtin',
@@ -315,13 +306,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
     hidden: true,
     identifier: agentSignalFeedbackIntentManifest.identifier,
     manifest: agentSignalFeedbackIntentManifest,
-    type: 'builtin',
-  },
-  {
-    discoverable: false,
-    hidden: true,
-    identifier: agentSignalSkillManagementManifest.identifier,
-    manifest: agentSignalSkillManagementManifest,
     type: 'builtin',
   },
   {

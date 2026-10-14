@@ -33,7 +33,6 @@ import type {
   OrviloToolManifest,
   PlanTodoConfig,
   ToolDiscoveryConfig,
-  UserMemoryData,
   WorkspaceContext,
 } from '@orvilo/context-engine';
 import { resolveTopicReferences } from '@orvilo/context-engine';
@@ -86,7 +85,6 @@ import {
   isCanUseVideo,
   isCanUseVision,
 } from '../helper';
-import { combineUserMemoryData, resolveTopicMemories, resolveUserPersona } from './memoryManager';
 import { resolveClientSkills } from './skillEngineering';
 
 const log = debug('context-engine:contextEngineering');
@@ -154,7 +152,6 @@ export const contextEngineering = async ({
   provider,
   systemRole,
   inputTemplate,
-  enableUserMemories,
   enableHistoryCount,
   historyCount,
   historySummary,
@@ -168,7 +165,6 @@ export const contextEngineering = async ({
   plugins,
   stepContext,
   topicId,
-  memoryContext,
 }: ContextEngineeringContext): Promise<OpenAIChatMessage[]> => {
   log('tools: %o', tools);
 
@@ -363,15 +359,6 @@ export const contextEngineering = async ({
     .filter((kb) => kb.enabled)
     .map((kb) => ({ description: kb.description, id: kb.id, name: kb.name }));
 
-  // Resolve user memories: topic memories and user persona are independent layers
-  // Both functions now read from cache only (no network requests) to avoid blocking sendMessage
-  let userMemoryData: UserMemoryData | undefined;
-  if (enableUserMemories) {
-    const topicMemories = resolveTopicMemories();
-    const persona = resolveUserPersona();
-    userMemoryData = combineUserMemoryData(topicMemories, persona);
-  }
-
   // Resolve plan + todos context (now part of the orvilo-agent tool).
   // Orvilo-agent must be enabled and topicId must be provided.
   const isPlanTodoEnabled = tools?.includes(OrviloAgentIdentifier) ?? false;
@@ -478,14 +465,6 @@ export const contextEngineering = async ({
       log('Failed to resolve Composio services context:', error);
     }
   }
-
-  const userMemoryConfig =
-    enableUserMemories && userMemoryData
-      ? {
-          enabled: enableUserMemories,
-          memories: userMemoryData,
-        }
-      : undefined;
 
   // Build tool discovery config if orvilo-activator is enabled
   const enabledToolSet = new Set(tools || []);
@@ -808,7 +787,7 @@ export const contextEngineering = async ({
           ? formatUploadedFilesPrompt(chatSelectors.currentUserFiles(getChatStoreState()))
           : '',
       // NOTICE(@nekomeowww): required by builtin-tool-memory/src/systemRole.ts
-      memory_effort: () => (userMemoryConfig ? (memoryContext?.effort ?? '') : ''),
+      memory_effort: () => '',
       // Current agent + topic identity — referenced by the Orvilo builtin
       // skill (packages/builtin-skills/src/orvilo/content.ts) so the model
       // can run `orvilo agent run -a {{agent_id}}` etc without first having to
@@ -830,7 +809,7 @@ export const contextEngineering = async ({
     },
     world: {
       group: agentGroup,
-      userMemory: userMemoryConfig,
+      userMemory: undefined,
       userTimezone,
     },
   };

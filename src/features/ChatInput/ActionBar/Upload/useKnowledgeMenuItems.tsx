@@ -44,10 +44,7 @@ export const useKnowledgeMenuItems = ({
     isEqual,
   );
 
-  const [toggleFile, toggleKnowledgeBase] = useAgentStore((s) => [
-    s.toggleFile,
-    s.toggleKnowledgeBase,
-  ]);
+  const toggleFile = useAgentStore((s) => s.toggleFile);
 
   if (!canConfigureResource) return [];
 
@@ -74,22 +71,10 @@ export const useKnowledgeMenuItems = ({
           ),
         })),
 
-        // then the knowledge bases
         ...knowledgeBases.map((item) => ({
           icon: <RepoIcon size={MENU_ICON_SIZE} />,
           key: item.id,
-          label: (
-            <CheckboxItem
-              checked={item.enabled}
-              id={item.id}
-              label={item.name}
-              onUpdate={async (id, enabled) => {
-                onUpdatingChange(true);
-                await toggleKnowledgeBase(id, enabled);
-                onUpdatingChange(false);
-              }}
-            />
-          ),
+          label: item.name,
         })),
       ],
       key: 'relativeFilesOrLibraries',

@@ -24,8 +24,6 @@ const runtimeLoaders: Record<string, () => Promise<ServerRuntimeRegistration>> =
   'agent-signal-reflection': async () =>
     (await import('./agentSignalReflection')).agentSignalReflectionRuntime,
   'agent-signal-review': async () => (await import('./agentSignalReview')).agentSignalReviewRuntime,
-  'agent-signal-skill-management': async () =>
-    (await import('./agentSignalSkillManagement')).agentSignalSkillManagementRuntime,
   'orvilo-acceptance-evidence': async () =>
     (await import('./acceptanceEvidence')).acceptanceEvidenceRuntime,
   'orvilo-activator': async () => (await import('./activator')).activatorRuntime,
@@ -50,7 +48,6 @@ const runtimeLoaders: Record<string, () => Promise<ServerRuntimeRegistration>> =
   'orvilo-remote-device': async () => (await import('./remoteDevice')).remoteDeviceRuntime,
   'orvilo-self-feedback-intent': async () =>
     (await import('./selfFeedbackIntent')).selfFeedbackIntentRuntime,
-  'orvilo-skill-maintainer': async () => (await import('./skillManagement')).skillManagementRuntime,
   'orvilo-skills': async () => (await import('./skills')).skillsRuntime,
   'orvilo-topic-reference': async () => (await import('./topicReference')).topicReferenceRuntime,
   'orvilo-user-interaction': async () => (await import('./userInteraction')).userInteractionRuntime,

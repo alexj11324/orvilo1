@@ -1,12 +1,11 @@
 import { FileTypeIcon } from '@lobehub/ui';
 import { cn } from 'cn';
-import { ArrowUpIcon, PlusIcon } from 'lucide-react';
+import { ArrowUpIcon } from 'lucide-react';
 import { memo, type ReactNode, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Upload } from '@/components/Upload';
-import { useCreateNewModal } from '@/features/LibraryModal';
 import { useCurrentFolderId } from '@/features/ResourceManager/hooks/useCurrentFolderId';
 import { useTopLevelFileUpload } from '@/features/ResourceManager/hooks/useTopLevelFileUpload';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
@@ -38,7 +37,6 @@ const EmptyPlaceholder = () => {
   ]);
   const currentFolderId = useCurrentFolderId();
 
-  const { open } = useCreateNewModal();
   const { allowed: canCreate } = usePermission('create_content');
 
   // A narrowed source can empty a category that is not actually empty — the
@@ -58,7 +56,7 @@ const EmptyPlaceholder = () => {
     );
   }
 
-  if (!canCreate) {
+  if (!canCreate || libraryId) {
     return (
       <div className="flex flex-col items-center justify-center h-full w-full pbe-25">
         <h4 className="text-xl leading-7 font-semibold">{t('FileManager.emptyStatus.title')}</h4>
@@ -75,37 +73,6 @@ const EmptyPlaceholder = () => {
         </div>
       </div>
       <div className="flex flex-row gap-3">
-        {!libraryId && (
-          <div
-            {...clickableProps()}
-            className={cn('flex flex-col p-4', styles.card, CLICKABLE_FOCUS_RING)}
-            onClick={() => {
-              open();
-            }}
-          >
-            <span className={styles.actionTitle}>
-              {t('FileManager.emptyStatus.actions.knowledgeBase')}
-            </span>
-            <div className={styles.glow} style={{ background: 'var(--ant-purple)' }} />
-            <FileTypeIcon
-              className={styles.icon}
-              color={'var(--ant-purple)'}
-              size={ICON_SIZE}
-              type={'folder'}
-              icon={
-                <span className="anticon" role="img">
-                  <PlusIcon
-                    color={'#fff'}
-                    fill={'transparent'}
-                    height={'1em'}
-                    size={'1em'}
-                    width={'1em'}
-                  />
-                </span>
-              }
-            />
-          </div>
-        )}
         <Upload
           multiple={true}
 

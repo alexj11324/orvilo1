@@ -4,12 +4,9 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
-import { useCreateNewModal } from '@/features/LibraryModal';
 import EmptyNavItem from '@/features/NavPanel/components/EmptyNavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import { usePermission } from '@/hooks/usePermission';
 import { useKnowledgeBaseStore } from '@/store/library';
 import { getLibraryListAsyncState } from '@/utils/libraryListAsyncState';
 
@@ -38,20 +35,6 @@ const LibraryList = memo(() => {
   // failure-as-empty). Read `error` / `mutate` and branch the failure before empty.
   const { data, isLoading, isValidating, error, mutate } = useFetchKnowledgeBaseList(visibility);
 
-  const navigate = useWorkspaceAwareNavigate();
-
-  const { open } = useCreateNewModal();
-  const { allowed: canCreate } = usePermission('create_content');
-
-  const handleCreate = () => {
-    if (!canCreate) return;
-    open({
-      onSuccess: (id) => {
-        navigate(`/resource/library/${id}`);
-      },
-    });
-  };
-
   const {
     boundaryData,
     isEmpty,
@@ -68,11 +51,10 @@ const LibraryList = memo(() => {
       loading={<SkeletonList className="px-1" rows={3} />}
       empty={
         <EmptyNavItem
-          disabled={!canCreate}
+          disabled
           title={t(
             listVisibility === 'private' ? 'library.privateEmpty' : 'library.workspaceEmpty',
           )}
-          onClick={handleCreate}
         />
       }
       onRetry={() => mutate()}

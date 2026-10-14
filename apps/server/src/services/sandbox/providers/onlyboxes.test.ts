@@ -375,180 +375,27 @@ describe('OnlyboxesSandboxProvider', () => {
     );
   });
 
-  it('runs execScript from a prepared skill directory when skill zip URLs are available', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            exit_code: 0,
-            session_id: 'orvilo-user-1-topic-1',
-            stderr: '',
-            stdout: '',
-          }),
-          { status: 200 },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            exit_code: 0,
-            session_id: 'orvilo-user-1-topic-1',
-            stderr: '',
-            stdout: 'from skill\n',
-          }),
-          { status: 200 },
-        ),
-      );
-    vi.stubGlobal('fetch', fetchMock);
-
-    const { OnlyboxesSandboxProvider } = await import('./onlyboxes');
-    const provider = new OnlyboxesSandboxProvider({
-      marketService: {} as MarketService,
-      topicId: 'topic-1',
-      userId: 'user-1',
-    });
-
-    const result = await provider.callTool('execScript', {
-      activatedSkills: [{ id: 'skill-1', name: 'demo' }],
-      command: 'python scripts/run.py',
-      skillZipUrls: { demo: 'https://files.example.com/demo.zip' },
-    });
-
-    expect(result).toMatchObject({
-      result: {
-        stdout: 'from skill\n',
-        success: true,
-      },
-      success: true,
-    });
-
-    const setupBody = JSON.parse(String(fetchMock.mock.calls[0][1].body)) as { command: string };
-    const commandBody = JSON.parse(String(fetchMock.mock.calls[1][1].body)) as { command: string };
-    expect(setupBody.command).toContain("curl -fsSL 'https://files.example.com/demo.zip'");
-    expect(setupBody.command).toContain('unzip -q');
-    expect(commandBody.command).toContain("cd '/tmp/orvilo-skills/");
-    expect(commandBody.command).toContain("/demo'");
-    expect(commandBody.command).toContain('python scripts/run.py');
-  });
-
-  it('prepares all skill zip URLs and runs execScript from the last activated skill directory', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            exit_code: 0,
-            session_id: 'orvilo-user-1-topic-1',
-            stderr: '',
-            stdout: '',
-          }),
-          { status: 200 },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            exit_code: 0,
-            session_id: 'orvilo-user-1-topic-1',
-            stderr: '',
-            stdout: 'from second skill\n',
-          }),
-          { status: 200 },
-        ),
-      );
-    vi.stubGlobal('fetch', fetchMock);
-
-    const { OnlyboxesSandboxProvider } = await import('./onlyboxes');
-    const provider = new OnlyboxesSandboxProvider({
-      marketService: {} as MarketService,
-      topicId: 'topic-1',
-      userId: 'user-1',
-    });
-
-    const result = await provider.callTool('execScript', {
-      activatedSkills: [
-        { id: 'skill-1', name: 'first skill' },
-        { id: 'skill-2', name: 'second/skill' },
-      ],
-      command: 'python scripts/run.py',
-      skillZipUrls: {
-        'first skill': 'https://files.example.com/first.zip',
-        'second/skill': 'https://files.example.com/second.zip',
-      },
-    });
-
-    expect(result).toMatchObject({
-      result: {
-        stdout: 'from second skill\n',
-        success: true,
-      },
-      success: true,
-    });
-
-    const setupBody = JSON.parse(String(fetchMock.mock.calls[0][1].body)) as { command: string };
-    const commandBody = JSON.parse(String(fetchMock.mock.calls[1][1].body)) as { command: string };
-    expect(setupBody.command).toContain("curl -fsSL 'https://files.example.com/first.zip'");
-    expect(setupBody.command).toContain("curl -fsSL 'https://files.example.com/second.zip'");
-    expect(setupBody.command).toContain('/first-skill/');
-    expect(setupBody.command).toContain('/second-skill/');
-    expect(commandBody.command).toContain("cd '/tmp/orvilo-skills/");
-    expect(commandBody.command).toContain("/second-skill'");
-    expect(commandBody.command).toContain('python scripts/run.py');
-  });
-
-  it('uses the configured skill name for legacy single zipUrl execScript calls', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            exit_code: 0,
-            session_id: 'orvilo-user-1-topic-1',
-            stderr: '',
-            stdout: '',
-          }),
-          { status: 200 },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            exit_code: 0,
-            session_id: 'orvilo-user-1-topic-1',
-            stderr: '',
-            stdout: 'from legacy skill\n',
-          }),
-          { status: 200 },
-        ),
-      );
-    vi.stubGlobal('fetch', fetchMock);
-
-    const { OnlyboxesSandboxProvider } = await import('./onlyboxes');
-    const provider = new OnlyboxesSandboxProvider({
-      marketService: {} as MarketService,
-      topicId: 'topic-1',
-      userId: 'user-1',
-    });
-
-    const result = await provider.callTool('execScript', {
-      command: 'python scripts/run.py',
-      config: { name: 'legacy skill' },
-      zipUrl: 'https://files.example.com/legacy.zip',
-    });
-
-    expect(result).toMatchObject({
-      result: {
-        stdout: 'from legacy skill\n',
-        success: true,
-      },
-      success: true,
-    });
-
-    const setupBody = JSON.parse(String(fetchMock.mock.calls[0][1].body)) as { command: string };
-    const commandBody = JSON.parse(String(fetchMock.mock.calls[1][1].body)) as { command: string };
-    expect(setupBody.command).toContain("curl -fsSL 'https://files.example.com/legacy.zip'");
-    expect(setupBody.command).toContain('/legacy-skill/');
-    expect(commandBody.command).toContain('/legacy-skill');
-  });
+  it.each([
+    { skillZipUrls: { old: 'https://files.example.com/old.zip' } },
+    { zipUrl: 'https://files.example.com/old.zip' },
+  ])(
+    'rejects retired platform archive parameters without network access',
+    async (archiveParams) => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal('fetch', fetchMock);
+      const { OnlyboxesSandboxProvider } = await import('./onlyboxes');
+      const provider = new OnlyboxesSandboxProvider({
+        marketService: {} as MarketService,
+        topicId: 'topic-1',
+        userId: 'user-1',
+      });
+      expect(
+        await provider.callTool('execScript', { command: 'echo ok', ...archiveParams }),
+      ).toMatchObject({
+        success: false,
+        error: { message: 'Platform skill distribution has been retired' },
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
 });

@@ -401,6 +401,7 @@ export class FileUploadService extends BaseService {
     knowledgeBaseId: string,
     request: KnowledgeBaseFileBatchRequest,
   ): Promise<KnowledgeBaseFileOperationResult> {
+    throw this.createAuthorizationError('Platform knowledge bases are retired');
     try {
       await this.assertOwnedKnowledgeBase(knowledgeBaseId, 'KNOWLEDGE_BASE_UPDATE');
 
@@ -448,6 +449,7 @@ export class FileUploadService extends BaseService {
     knowledgeBaseId: string,
     request: KnowledgeBaseFileBatchRequest,
   ): Promise<KnowledgeBaseFileOperationResult> {
+    throw this.createAuthorizationError('Platform knowledge bases are retired');
     try {
       const uniqueFileIds = Array.from(new Set(request.fileIds));
       if (uniqueFileIds.length === 0) {
@@ -494,6 +496,7 @@ export class FileUploadService extends BaseService {
     sourceKnowledgeBaseId: string,
     request: MoveKnowledgeBaseFilesRequest,
   ): Promise<MoveKnowledgeBaseFilesResponse> {
+    throw this.createAuthorizationError('Platform knowledge bases are retired');
     try {
       if (sourceKnowledgeBaseId === request.targetKnowledgeBaseId) {
         throw this.createValidationError('目标知识库不能与源知识库相同');
@@ -695,6 +698,8 @@ export class FileUploadService extends BaseService {
    * File upload
    */
   async uploadFile(file: File, options: PublicFileUploadRequest = {}): Promise<FileDetailResponse> {
+    if (options.knowledgeBaseId)
+      throw this.createAuthorizationError('Platform knowledge bases are retired');
     try {
       const isPermitted = await this.resolveOperationPermission('FILE_UPLOAD');
 
@@ -1567,6 +1572,8 @@ export class FileUploadService extends BaseService {
     fileId: string,
     updateData: { knowledgeBaseId?: string | null },
   ): Promise<FileDetailResponse> {
+    if ('knowledgeBaseId' in updateData)
+      throw this.createAuthorizationError('Platform knowledge bases are retired');
     try {
       // 1. Permission check
       const permissionResult = await this.resolveOperationPermission('FILE_UPDATE', {

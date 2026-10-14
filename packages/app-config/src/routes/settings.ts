@@ -1,6 +1,6 @@
 import { SettingsTabs } from '@/store/global/initialState';
 
-/** Temporary product gate for Orvilo-owned memory during the ACP-only launch. */
+/** Platform automatic memory settings are retired; native CLI memory is independent. */
 export const BUILTIN_MEMORY_UI_ENABLED = false;
 
 /**
@@ -168,8 +168,7 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // Electron adds local sound controls to the same settings surface.
   [SettingsTabs.Notification]: { scope: 'user', status: 'enabled' },
 
-  // Withheld for the ACP-only launch: Orvilo memory belongs to the builtin harness.
-  // Keep the page and data for reopening the harness; CLI-native memory is independent.
+  // Platform memory settings are retired. Historical memory browsing remains at /memory.
   [SettingsTabs.Memory]: {
     gate: () => BUILTIN_MEMORY_UI_ENABLED,
     scope: 'user',

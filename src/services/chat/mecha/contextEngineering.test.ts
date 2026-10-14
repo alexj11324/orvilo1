@@ -866,11 +866,7 @@ describe('contextEngineering', () => {
       const injection = result.find(
         (m: any) => m.role === 'user' && String(m.content).includes('<user_memory>'),
       );
-      expect(injection).toBeDefined();
-      expect(injection!.role).toBe('user');
-      expect(injection!.content).toContain('<user_memory>');
-      expect(injection!.content).toContain('<contexts count="1">');
-      expect(injection!.content).toContain('<context id="ctx-1" title="Orvilo">');
+      expect(injection).toBeUndefined();
     });
 
     it('should handle missing placeholder variables gracefully', async () => {

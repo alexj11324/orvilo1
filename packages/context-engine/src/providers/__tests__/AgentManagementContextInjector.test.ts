@@ -245,7 +245,7 @@ describe('AgentManagementContextInjector', () => {
       const content = merged.content as string;
 
       // All three context blocks present in the SAME message
-      expect(content).toContain('<user_memory>');
+      expect(content).not.toContain('<user_memory>');
       expect(content).toContain('<current_agent_context>');
       expect(content).toContain('Builder Agent');
       expect(content).toContain('<agent_management_context>');
@@ -293,7 +293,7 @@ describe('AgentManagementContextInjector', () => {
 
       // [system, merged context, real user, delegation]
       expect(ctx.messages).toHaveLength(4);
-      expect(ctx.messages[1].content).toContain('<user_memory>');
+      expect(ctx.messages[1].content).not.toContain('<user_memory>');
       expect(ctx.messages[1].content).toContain('<agent_management_context>');
       expect(ctx.messages[2].content).toBe('real user msg');
       expect(ctx.messages[3].content).toContain('<mentioned_agents>');

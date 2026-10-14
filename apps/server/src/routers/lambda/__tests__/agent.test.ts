@@ -30,6 +30,7 @@ import { KnowledgeType } from '@/types/knowledgeBase';
 import { getWorkspaceIssueAgentProfile } from '../_helpers/workspaceIssueRead';
 import { agentRouter } from '../agent';
 
+vi.mock('@orvilo/database', async () => import('@/database/utils/workspace'));
 vi.mock('@/server/services/resourcePermission/revocation', () => ({
   snapshotWorkspaceAgentOperations: vi.fn().mockResolvedValue([]),
   stopWorkspaceAgentOperations: vi.fn().mockResolvedValue(undefined),
@@ -556,57 +557,45 @@ describe('agentRouter', () => {
   });
 
   describe('createAgentKnowledgeBase', () => {
-    it('should create agent knowledge base', async () => {
-      const mockInput = {
-        agentId: 'agent1',
-        knowledgeBaseId: 'kb1',
-        enabled: true,
-      };
-
+    it('rejects retired knowledge-base assignment writes', async () => {
       const caller = agentRouter.createCaller(mockCtx);
-      await caller.createAgentKnowledgeBase(mockInput);
-
-      expect(agentModelMock.createAgentKnowledgeBase).toHaveBeenCalledWith(
-        mockInput.agentId,
-        mockInput.knowledgeBaseId,
-        mockInput.enabled,
-      );
+      await expect(
+        caller.createAgentKnowledgeBase({
+          agentId: 'agent1',
+          knowledgeBaseId: 'kb1',
+          enabled: true,
+        }),
+      ).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+        message: 'Platform knowledge bases are retired',
+      });
+      expect(agentModelMock.createAgentKnowledgeBase).not.toHaveBeenCalled();
     });
   });
 
   describe('deleteAgentKnowledgeBase', () => {
-    it('should delete agent knowledge base', async () => {
-      const mockInput = {
-        agentId: 'agent1',
-        knowledgeBaseId: 'kb1',
-      };
-
+    it('rejects retired knowledge-base assignment writes', async () => {
       const caller = agentRouter.createCaller(mockCtx);
-      await caller.deleteAgentKnowledgeBase(mockInput);
-
-      expect(agentModelMock.deleteAgentKnowledgeBase).toHaveBeenCalledWith(
-        mockInput.agentId,
-        mockInput.knowledgeBaseId,
-      );
+      await expect(
+        caller.deleteAgentKnowledgeBase({ agentId: 'agent1', knowledgeBaseId: 'kb1' }),
+      ).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+        message: 'Platform knowledge bases are retired',
+      });
+      expect(agentModelMock.deleteAgentKnowledgeBase).not.toHaveBeenCalled();
     });
   });
 
   describe('toggleKnowledgeBase', () => {
-    it('should toggle knowledge base', async () => {
-      const mockInput = {
-        agentId: 'agent1',
-        knowledgeBaseId: 'kb1',
-        enabled: true,
-      };
-
+    it('rejects retired knowledge-base assignment writes', async () => {
       const caller = agentRouter.createCaller(mockCtx);
-      await caller.toggleKnowledgeBase(mockInput);
-
-      expect(agentModelMock.toggleKnowledgeBase).toHaveBeenCalledWith(
-        mockInput.agentId,
-        mockInput.knowledgeBaseId,
-        mockInput.enabled,
-      );
+      await expect(
+        caller.toggleKnowledgeBase({ agentId: 'agent1', knowledgeBaseId: 'kb1', enabled: true }),
+      ).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+        message: 'Platform knowledge bases are retired',
+      });
+      expect(agentModelMock.toggleKnowledgeBase).not.toHaveBeenCalled();
     });
   });
 

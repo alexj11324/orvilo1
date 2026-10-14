@@ -9,7 +9,6 @@ import { isDesktop } from '@/const/version';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import { useDefaultAgent } from '@/features/DefaultAgent/useDefaultAgent';
 import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
-import { useCreateNewModal } from '@/features/LibraryModal';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
@@ -64,7 +63,6 @@ export const useCommandMenu = () => {
   // Asking without naming an Agent uses the inbox only while that Agent is
   // available, and otherwise uses the configured default Agent.
   const askAgentId = builtinOffered ? inboxAgentId : defaultAgent?.agentId;
-  const { open: openCreateLibraryModal } = useCreateNewModal();
 
   // Debounce search input to reduce API calls
   const debouncedSearch = useDebounce(search, { wait: 600 });
@@ -202,17 +200,6 @@ export const useCommandMenu = () => {
     onClose();
   }, [canCreate, openNewTopicOrSaveTopic, onClose]);
 
-  const handleCreateLibrary = useCallback(() => {
-    if (!canCreate) return;
-
-    onClose();
-    openCreateLibraryModal({
-      onSuccess: (id) => {
-        navigate(`/resource/library/${id}`);
-      },
-    });
-  }, [canCreate, onClose, openCreateLibraryModal, navigate]);
-
   const handleCreateTask = useCallback(() => {
     if (!canCreate) return;
 
@@ -241,7 +228,6 @@ export const useCommandMenu = () => {
     handleAskOrviloAI,
     handleBack,
     handleCreateConversation,
-    handleCreateLibrary,
     handleCreateProject,
     handleCreateTask,
     handleCreateTopic,

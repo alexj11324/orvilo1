@@ -20,6 +20,7 @@ import type { OrviloDatabase } from '@/database/type';
 import type { AgentSignalOperationMarker } from '@/server/services/agentSignal/operationMarker';
 import { persistAgentSignalReceipts } from '@/server/services/agentSignal/services/receiptService';
 import { buildSelfIterationReceipts } from '@/server/services/agentSignal/services/selfIteration/completion/buildSelfIterationReceipts';
+import { isUserMemoryExtractionEnabled } from '@/server/services/memory/userMemory/gate';
 
 import type { RuntimeProcessorContext } from '../../../runtime/context';
 import { defineActionHandler } from '../../../runtime/middleware';
@@ -219,6 +220,10 @@ export const runMemoryActionAgent = async (
    */
   dispatch?: { marker: AgentSignalOperationMarker },
 ): Promise<MemoryAgentActionResult> => {
+  if (!(await isUserMemoryExtractionEnabled(options.userId, options.db))) {
+    return { detail: 'Platform automatic memory writing is unavailable.', status: 'skipped' };
+  }
+
   if (!input.agentId) {
     return {
       detail: 'Missing agentId for memory action.',

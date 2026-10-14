@@ -23,6 +23,7 @@ import { UserModel } from '@/database/models/user';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { resolveOrchestratorRuntimeForCreation } from '@/server/services/agent/orchestratorRuntimeCreation';
+import { rejectPlatformKnowledgeBaseWrite } from '@/server/services/knowledgeBase/retirement';
 import {
   resolveReadableActivityContainers,
   withReadableContainerNames,
@@ -220,6 +221,7 @@ export const projectRouter = router({
     }),
 
   addKnowledgeBase: projectWriteProcedure
+    .use(() => rejectPlatformKnowledgeBaseWrite())
     .input(
       idInput.extend({
         enabled: z.boolean().optional(),
@@ -693,6 +695,7 @@ export const projectRouter = router({
     }),
 
   removeKnowledgeBase: projectWriteProcedure
+    .use(() => rejectPlatformKnowledgeBaseWrite())
     .input(idInput.extend({ knowledgeBaseId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       try {

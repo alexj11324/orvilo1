@@ -66,11 +66,12 @@ describe('KnowledgeBaseItem', () => {
     expect(container.firstElementChild).toContainElement(screen.getByTestId('nav-item'));
   });
 
-  it('renders the rename input inside the row title while editing', () => {
+  it('ignores stale rename state and keeps historical library labels readable', () => {
     knowledgeBaseState.knowledgeBaseRenamingId = 'kb-1';
 
     render(<KnowledgeBaseItem id="kb-1" name="My Library" />);
 
-    expect(within(screen.getByTestId('nav-title')).getByRole('textbox')).toHaveValue('My Library');
+    expect(within(screen.getByTestId('nav-title')).queryByRole('textbox')).toBeNull();
+    expect(screen.getByTestId('nav-title')).toHaveTextContent('My Library');
   });
 });

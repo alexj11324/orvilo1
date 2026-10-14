@@ -1,25 +1,12 @@
 import type { OrviloDatabase } from '@orvilo/database';
 import { sha256 } from 'js-sha256';
 
-import { AgentDocumentModel, PolicyLoad } from '@/database/models/agentDocuments';
+import { AgentDocumentModel } from '@/database/models/agentDocuments';
 
 import type { AgentDocumentEditorSnapshot } from '../agentDocuments/headlessEditor';
-import { createMarkdownEditorSnapshot as createDefaultMarkdownEditorSnapshot } from '../agentDocuments/headlessEditor';
-import { DocumentService } from '../document';
-import {
-  AGENT_SKILL_TEMPLATE_ID,
-  SKILL_BUNDLE_FILE_TYPE,
-  SKILL_INDEX_FILE_TYPE,
-  SKILL_INDEX_FILENAME,
-  SKILL_MANAGEMENT_SOURCE,
-  SKILL_MANAGEMENT_SOURCE_TYPE,
-} from './constants';
-import {
-  normalizeSkillIndexContent,
-  parseSkillFrontmatter,
-  renderSkillIndexContent,
-  validateSkillName,
-} from './frontmatter';
+import type { DocumentService } from '../document';
+import { SKILL_BUNDLE_FILE_TYPE, SKILL_INDEX_FILE_TYPE, SKILL_INDEX_FILENAME } from './constants';
+import { parseSkillFrontmatter, validateSkillName } from './frontmatter';
 import type {
   CreateSkillInput,
   GetSkillInput,
@@ -60,10 +47,6 @@ interface SkillManagementDocumentServiceDeps {
   documentService: Pick<DocumentService, 'getDocumentById' | 'trySaveCurrentDocumentHistory'>;
 }
 
-const createEmptyEditorData = (): Record<string, unknown> => ({
-  root: { children: [], type: 'root' },
-});
-
 const toDocumentRef = (doc: SkillAgentDocument): SkillDocumentRef => ({
   agentDocumentId: doc.id,
   documentId: doc.documentId,
@@ -71,17 +54,11 @@ const toDocumentRef = (doc: SkillAgentDocument): SkillDocumentRef => ({
   title: doc.title,
 });
 
-const buildSkillMetadata = (
-  frontmatter: ReturnType<typeof parseSkillFrontmatter>,
-): Record<string, unknown> => ({
-  skill: { frontmatter },
-});
-
 /**
- * Owns managed skill bundle and index document invariants.
+ * Reads historical managed skill bundles; former production methods reject writes.
  *
  * Use when:
- * - Creating, reading, replacing, or renaming Agent Signal managed skills.
+ * - Reading historical Agent Signal managed skills.
  * - Callers need stable `agentDocumentId` and backing `documentId` semantics.
  *
  * Expects:
@@ -93,23 +70,15 @@ const buildSkillMetadata = (
  */
 export class SkillManagementDocumentService {
   private agentDocumentModel: SkillManagementAgentDocumentModel;
-  private createMarkdownEditorSnapshot: (content: string) => Promise<AgentDocumentEditorSnapshot>;
-  private documentService: Pick<
-    DocumentService,
-    'getDocumentById' | 'trySaveCurrentDocumentHistory'
-  >;
 
   constructor(
-    private db: OrviloDatabase,
+    db: OrviloDatabase,
     userId: string,
     workspaceId?: string,
     deps?: SkillManagementDocumentServiceDeps,
   ) {
     this.agentDocumentModel =
       deps?.agentDocumentModel ?? new AgentDocumentModel(db, userId, workspaceId);
-    this.createMarkdownEditorSnapshot =
-      deps?.createMarkdownEditorSnapshot ?? createDefaultMarkdownEditorSnapshot;
-    this.documentService = deps?.documentService ?? new DocumentService(db, userId, workspaceId);
   }
 
   /**
@@ -126,103 +95,8 @@ export class SkillManagementDocumentService {
    * Returns:
    * - The created skill detail with normalized frontmatter content.
    */
-  async createSkill(input: CreateSkillInput): Promise<SkillDetail> {
-    const name = validateSkillName(input.name);
-    const normalizedContent = renderSkillIndexContent({
-      bodyMarkdown: input.bodyMarkdown,
-      description: input.description,
-      name,
-    });
-    const frontmatter = parseSkillFrontmatter(normalizedContent);
-    const metadata = buildSkillMetadata(frontmatter);
-    // NOTICE:
-    // Managed skill indexes are Markdown-backed, but document history snapshots are
-    // editor-data-backed. Always keep `content` and `editorData` in sync so the next
-    // automated skill refinement can save a pre-mutation `document_histories` row.
-    // Root cause: older managed-skill writes only persisted Markdown content, which made
-    // `DocumentService.trySaveCurrentDocumentHistory` no-op for `editorData = NULL`.
-    // Removal condition: only if document history can snapshot Markdown content directly.
-    const indexEditorSnapshot = await this.createMarkdownEditorSnapshot(normalizedContent);
-    const duplicateBundles = (
-      await this.agentDocumentModel.listByParentAndFilename(input.agentId, null, name)
-    ).filter((doc) => doc.fileType === SKILL_BUNDLE_FILE_TYPE);
-
-    if (duplicateBundles.length > 0) {
-      throw new Error('Skill already exists');
-    }
-
-    // REVIEW(@nekomeowww):
-    // Direct Agent Document VFS writes, including `lb agent space fs`, can create skill-shaped
-    // bundle/index documents without going through this service. Should we support importing or
-    // normalizing those compatibility documents here so they become first-class managed skills?
-    const sourceDocument = input.sourceAgentDocumentId
-      ? await this.agentDocumentModel.findById(input.sourceAgentDocumentId)
-      : undefined;
-
-    if (input.sourceAgentDocumentId && !sourceDocument) {
-      throw new Error(`Source agent document not found: ${input.sourceAgentDocumentId}`);
-    }
-
-    if (sourceDocument && sourceDocument.agentId !== input.agentId) {
-      throw new Error(
-        `Source agent document does not belong to agent ${input.agentId}: ${input.sourceAgentDocumentId}`,
-      );
-    }
-
-    const { bundle, index } = await this.db.transaction(async (trx) => {
-      const bundle = await this.agentDocumentModel.createWithTx(trx, input.agentId, name, '', {
-        editorData: createEmptyEditorData(),
-        fileType: SKILL_BUNDLE_FILE_TYPE,
-        metadata,
-        policyLoad: PolicyLoad.DISABLED,
-        source: SKILL_MANAGEMENT_SOURCE,
-        sourceType: SKILL_MANAGEMENT_SOURCE_TYPE,
-        templateId: AGENT_SKILL_TEMPLATE_ID,
-        title: input.title,
-      });
-
-      if (input.sourceAgentDocumentId) {
-        const index = await this.agentDocumentModel.convertAgentDocumentToSkillIndexWithTx(trx, {
-          agentDocumentId: input.sourceAgentDocumentId,
-          content: normalizedContent,
-          editorData: indexEditorSnapshot.editorData,
-          filename: SKILL_INDEX_FILENAME,
-          metadata,
-          parentId: bundle.documentId,
-          source: SKILL_MANAGEMENT_SOURCE,
-          sourceType: SKILL_MANAGEMENT_SOURCE_TYPE,
-          title: SKILL_INDEX_FILENAME,
-        });
-
-        if (!index) {
-          throw new Error(`Source agent document not found: ${input.sourceAgentDocumentId}`);
-        }
-
-        return { bundle, index };
-      }
-
-      const index = await this.agentDocumentModel.createWithTx(
-        trx,
-        input.agentId,
-        SKILL_INDEX_FILENAME,
-        normalizedContent,
-        {
-          editorData: indexEditorSnapshot.editorData,
-          fileType: SKILL_INDEX_FILE_TYPE,
-          metadata,
-          parentId: bundle.documentId,
-          policyLoad: PolicyLoad.DISABLED,
-          source: SKILL_MANAGEMENT_SOURCE,
-          sourceType: SKILL_MANAGEMENT_SOURCE_TYPE,
-          templateId: AGENT_SKILL_TEMPLATE_ID,
-          title: SKILL_INDEX_FILENAME,
-        },
-      );
-
-      return { bundle, index };
-    });
-
-    return this.toSkillDetail(bundle, index, { includeContent: true });
+  async createSkill(_input: CreateSkillInput): Promise<SkillDetail> {
+    throw new Error('Platform skill production has been retired');
   }
 
   /**
@@ -323,7 +197,7 @@ export class SkillManagementDocumentService {
       documentId: detail.bundle.documentId,
       managed: true,
       targetTitle: detail.title,
-      writable: true,
+      writable: false,
     };
   }
 
@@ -341,55 +215,8 @@ export class SkillManagementDocumentService {
    * Returns:
    * - Updated skill detail with index content included.
    */
-  async replaceSkillIndex(input: ReplaceSkillIndexInput): Promise<SkillDetail | undefined> {
-    const resolved = await this.resolveBundle(input.agentId, input);
-    if (!resolved) return undefined;
-
-    const index = await this.getSingleIndex(input.agentId, resolved);
-    const description = input.description ?? parseSkillFrontmatter(index.content).description;
-    const normalizedContent = renderSkillIndexContent({
-      bodyMarkdown: input.bodyMarkdown,
-      description,
-      name: resolved.filename,
-    });
-    const frontmatter = parseSkillFrontmatter(normalizedContent);
-    const metadata = buildSkillMetadata(frontmatter);
-    // NOTICE:
-    // The replacement body must be projected into editor data before updating the backing
-    // document. Without this, history capture works for ordinary agent documents but silently
-    // skips managed skills because there is no valid editor state to snapshot.
-    // Root cause: `document_histories.editor_data` stores editor snapshots, not Markdown.
-    // Removal condition: only if document history can snapshot Markdown content directly.
-    const editorSnapshot = await this.createMarkdownEditorSnapshot(normalizedContent);
-
-    const preMutationHistory = await this.documentService.trySaveCurrentDocumentHistory(
-      index.documentId,
-      'llm_call',
-    );
-    const updatedBundle =
-      (await this.agentDocumentModel.updateDocumentIdentity(resolved.id, {
-        metadata,
-      })) ?? resolved;
-    await this.agentDocumentModel.update(index.id, {
-      content: normalizedContent,
-      editorData: editorSnapshot.editorData,
-      metadata,
-      policyLoad: PolicyLoad.DISABLED,
-    });
-
-    const updated = await this.agentDocumentModel.findById(index.id);
-    if (!updated) throw new Error(`Skill index disappeared during replace: ${index.id}`);
-    const updatedDocument = await this.documentService.getDocumentById(index.documentId);
-
-    return {
-      ...this.toSkillDetail(updatedBundle, updated, { includeContent: true }),
-      ...(updatedDocument?.updatedAt
-        ? { expectedCurrentDocumentUpdatedAt: updatedDocument.updatedAt.toISOString() }
-        : {}),
-      ...(preMutationHistory?.historyId
-        ? { preMutationHistoryId: preMutationHistory.historyId }
-        : {}),
-    };
+  async replaceSkillIndex(_input: ReplaceSkillIndexInput): Promise<SkillDetail | undefined> {
+    throw new Error('Platform skill production has been retired');
   }
 
   /**
@@ -406,48 +233,8 @@ export class SkillManagementDocumentService {
    * Returns:
    * - Updated skill detail with content included.
    */
-  async renameSkill(input: RenameSkillInput): Promise<SkillDetail | undefined> {
-    const resolved = await this.resolveBundle(input.agentId, input);
-    if (!resolved) return undefined;
-
-    const index = await this.getSingleIndex(input.agentId, resolved);
-    const name = input.newName ? validateSkillName(input.newName) : resolved.filename;
-    const title = input.newTitle?.trim() || resolved.title;
-    const normalizedContent = normalizeSkillIndexContent({
-      bundleName: name,
-      content: index.content,
-    });
-    const frontmatter = parseSkillFrontmatter(normalizedContent);
-    const metadata = buildSkillMetadata(frontmatter);
-    const editorSnapshot = await this.createMarkdownEditorSnapshot(normalizedContent);
-
-    if (normalizedContent !== index.content) {
-      await this.documentService.trySaveCurrentDocumentHistory(index.documentId, 'llm_call');
-    }
-
-    const updatedBundle =
-      (await this.agentDocumentModel.updateDocumentIdentity(resolved.id, {
-        filename: name,
-        metadata,
-        title,
-      })) ?? resolved;
-
-    await this.agentDocumentModel.updateDocumentIdentity(index.id, {
-      filename: SKILL_INDEX_FILENAME,
-      metadata,
-      title: SKILL_INDEX_FILENAME,
-    });
-    await this.agentDocumentModel.update(index.id, {
-      content: normalizedContent,
-      editorData: editorSnapshot.editorData,
-      metadata,
-      policyLoad: PolicyLoad.DISABLED,
-    });
-
-    const updatedIndex = await this.agentDocumentModel.findById(index.id);
-    if (!updatedIndex) throw new Error(`Skill index disappeared during rename: ${index.id}`);
-
-    return this.toSkillDetail(updatedBundle, updatedIndex, { includeContent: true });
+  async renameSkill(_input: RenameSkillInput): Promise<SkillDetail | undefined> {
+    throw new Error('Platform skill production has been retired');
   }
 
   private async resolveBundle(

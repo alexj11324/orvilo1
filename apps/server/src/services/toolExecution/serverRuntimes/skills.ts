@@ -25,12 +25,10 @@ import debug from 'debug';
 
 import { AgentModel } from '@/database/models/agent';
 import { AgentSkillModel } from '@/database/models/agentSkill';
-import { FileModel } from '@/database/models/file';
 import { UserModel } from '@/database/models/user';
 import type { OrviloDatabase } from '@/database/type';
 import { filterBuiltinSkills } from '@/helpers/skillFilters';
 import { AgentDocumentsService } from '@/server/services/agentDocuments';
-import { deviceGateway } from '@/server/services/deviceGateway';
 import { executeAuthorizedDeviceToolCall } from '@/server/services/deviceGateway/authorizedToolCall';
 import { FileService } from '@/server/services/file';
 import { MarketService } from '@/server/services/market';
@@ -58,9 +56,8 @@ interface UserSettingsWithMarketToken {
  * Device-execution wiring for the exec APIs, present only when the run's
  * execution plan routed a device (`plan.kind === 'device'` — the aiAgent sets
  * `context.activeDeviceId` from exactly that condition). When present,
- * `execScript` runs ON the device instead of the cloud sandbox: skill archives
- * are prepared device-side via the `prepareSkillDirectory` RPC and the command
- * executes through the local-system tool over the device gateway.
+ * `execScript` executes through the local-system tool over the device gateway.
+ * Native project skills retain their filesystem working directory.
  */
 interface SkillDeviceExecution {
   deviceId: string;
@@ -78,36 +75,12 @@ interface SkillDeviceExecution {
   workingDirectory?: string;
 }
 
-interface ActivatedSkillArchive {
-  name: string;
-  url: string;
-  zipHash: string;
-}
-
-/**
- * Sentinel returned by `execScriptOnDevice` when the routed device runs a
- * client build that predates the `prepareSkillDirectory` RPC (shipped with
- * this feature). The device dispatcher replies deterministically with an
- * unknown-method error, so this is a reliable capability probe — distinct
- * from network failures/timeouts, which must NOT trigger a fallback.
- */
-const LEGACY_DEVICE_CLIENT = Symbol('legacy-device-client');
-
-/**
- * Appended to the sandbox result on a legacy-client fallback so the model
- * discloses the degradation — the manifest already told it the command would
- * run on the user's device.
- */
-const LEGACY_FALLBACK_NOTE =
-  "Note: the user's device client is outdated and does not support on-device skill execution, so this command ran in the cloud sandbox instead. Tell the user to update their Orvilo app to run skills on their device.";
-
 class SkillServerRuntimeService implements SkillRuntimeService {
   private agentId?: string;
   private resourceService: SkillResourceService;
   private skillModel: AgentSkillModel;
   private marketService: MarketService;
   private fileService: FileService;
-  private fileModel: FileModel;
   private serverDB: OrviloDatabase;
   private topicId?: string;
   private userId: string;
@@ -125,7 +98,6 @@ class SkillServerRuntimeService implements SkillRuntimeService {
      * its name, independent of whatever's listed in `<available_skills>`.
      */
     disabledSkillIds?: Set<string>;
-    fileModel: FileModel;
     fileService: FileService;
     marketService: MarketService;
     resourceService: SkillResourceService;
@@ -140,7 +112,6 @@ class SkillServerRuntimeService implements SkillRuntimeService {
     this.resourceService = options.resourceService;
     this.marketService = options.marketService;
     this.fileService = options.fileService;
-    this.fileModel = options.fileModel;
     this.serverDB = options.serverDB;
     this.topicId = options.topicId;
     this.userId = options.userId;
@@ -270,60 +241,11 @@ class SkillServerRuntimeService implements SkillRuntimeService {
     }
   };
 
-  /**
-   * Resolve the presigned zip URLs (+ content hashes) of the activated skills
-   * that have a persisted archive, preserving activation order. Shared by the
-   * sandbox path (needs name → url) and the device path (needs the zipHash as
-   * the device-cache idempotency key).
-   */
-  private resolveActivatedSkillArchives = async (
-    activatedSkills?: ExecScriptActivatedSkill[],
-  ): Promise<ActivatedSkillArchive[]> => {
-    const archives: ActivatedSkillArchive[] = [];
-    if (!activatedSkills?.length) return archives;
-
-    for (const activatedSkill of activatedSkills) {
-      if (!activatedSkill.name) continue;
-
-      const skill = await this.skillModel.findByName(activatedSkill.name);
-
-      if (!skill) {
-        log('No persisted skill bundle found for activated skill: %s', activatedSkill.name);
-        continue;
-      }
-
-      if (!skill.zipFileHash) continue;
-
-      const fileInfo = await this.fileModel.checkHash(skill.zipFileHash);
-      if (!fileInfo.isExist || !fileInfo.url) continue;
-
-      const fullUrl = await this.fileService.getFullFileUrl(fileInfo.url);
-      if (fullUrl) {
-        archives.push({ name: skill.name, url: fullUrl, zipHash: skill.zipFileHash });
-        log('Resolved zipUrl for skill %s', skill.name);
-      }
-    }
-
-    return archives;
-  };
-
-  /**
-   * Run execScript ON the routed device: prepare every activated skill archive
-   * device-side (idempotent by zipHash), then execute the command through the
-   * local-system tool over the device gateway with cwd = the extracted skill
-   * directory.
-   *
-   * Failures return an explicit error and NEVER fall back to the sandbox — a
-   * silent sandbox run against a user who chose their device is exactly the
-   * regression this path fixes. Single exception: an older client build that
-   * doesn't know the `prepareSkillDirectory` RPC yet (version-skew window)
-   * returns the `LEGACY_DEVICE_CLIENT` sentinel, and the caller runs the
-   * sandbox path with an explicit disclosure note instead.
-   */
+  /** Execute native project/device skills through the routed local-system tool. */
   private execScriptOnDevice = async (
     command: string,
     activatedSkills?: ExecScriptActivatedSkill[],
-  ): Promise<CommandResult | typeof LEGACY_DEVICE_CLIENT> => {
+  ): Promise<CommandResult> => {
     const device = this.device!;
     const fail = (stderr: string): CommandResult => ({
       executionEnv: 'device',
@@ -334,86 +256,13 @@ class SkillServerRuntimeService implements SkillRuntimeService {
     });
 
     try {
-      const archives = await this.resolveActivatedSkillArchives(activatedSkills);
-      const archiveByName = new Map(archives.map((a) => [a.name.toLowerCase(), a]));
       const workspaceId = await device.resolveWorkspaceId();
-
-      // Resolve each activated skill to a device directory in activation
-      // order; the LAST resolvable one wins as cwd — mirrors the sandbox
-      // provider's resolveExecScriptSkillName. Filesystem (project/device)
-      // skills already live on the device, so their SKILL.md directory is the
-      // cwd directly; archive-backed skills are prepared device-side first
-      // (idempotent by zipHash).
-      //
-      // Prepares fire concurrently (deduped by zipHash — concurrent extraction
-      // of the same archive would also race device-side): each call is a full
-      // device-gateway round-trip and activatedSkills accumulates over the
-      // conversation, so awaiting one by one scales exec latency linearly with
-      // skill count. The walk below consumes the settled results in activation
-      // order, preserving the sequential semantics: last resolvable wins, and
-      // the FIRST failure in activation order is the one reported (including
-      // the legacy-client sentinel).
-      const isProjectSkill = (lowerName: string) =>
-        device.projectSkills?.some((s) => s.name.toLowerCase() === lowerName);
-      const prepareByHash = new Map<
-        string,
-        ReturnType<typeof deviceGateway.prepareSkillDirectory>
-      >();
-      for (const activated of activatedSkills ?? []) {
-        const lowerName = activated.name?.toLowerCase();
-        if (!lowerName || isProjectSkill(lowerName)) continue;
-        const archive = archiveByName.get(lowerName);
-        if (!archive || prepareByHash.has(archive.zipHash)) continue;
-        prepareByHash.set(
-          archive.zipHash,
-          deviceGateway.prepareSkillDirectory({
-            deviceId: device.deviceId,
-            url: archive.url,
-            userId: this.userId,
-            workspaceId,
-            zipHash: archive.zipHash,
-          }),
-        );
-      }
-      // Settle everything up front so the early return on a first failure
-      // below can't leave a later rejection unhandled (prepareSkillDirectory
-      // reports failures as `success: false` rather than throwing, so this is
-      // belt-and-braces; re-awaiting a settled entry in the walk is free).
-      await Promise.allSettled(prepareByHash.values());
-
       let runDir: string | undefined;
       for (const activated of activatedSkills ?? []) {
-        if (!activated.name) continue;
-        const lowerName = activated.name.toLowerCase();
-
-        // Filesystem skills take precedence on name collision, matching
-        // `activateSkill` in the ExecutionRuntime.
-        const projectSkill = device.projectSkills?.find((s) => s.name.toLowerCase() === lowerName);
-        if (projectSkill) {
-          runDir = getDirname(projectSkill.location) || runDir;
-          continue;
-        }
-
-        const archive = archiveByName.get(lowerName);
-        if (!archive) continue;
-
-        const prepared = await prepareByHash.get(archive.zipHash)!;
-
-        if (!prepared.success || !prepared.extractedDir) {
-          // The device dispatcher's deterministic reply for a method it does
-          // not know — the client predates this RPC, hand back to the caller
-          // for the sandbox fallback.
-          if (prepared.error?.includes('Unknown device RPC method')) {
-            log('Device %s predates prepareSkillDirectory, falling back', device.deviceId);
-            return LEGACY_DEVICE_CLIENT;
-          }
-
-          return fail(
-            `Failed to prepare skill "${archive.name}" on the user's device: ${prepared.error ?? 'unknown error'}. ` +
-              'Do not retry elsewhere — report this to the user (their Orvilo app may need an update).',
-          );
-        }
-        runDir = prepared.extractedDir;
+        const projectSkill = device.projectSkills?.find(
+          (skill) => skill.name.toLowerCase() === activated.name?.toLowerCase(),
+        );
+        if (projectSkill) runDir = getDirname(projectSkill.location) || runDir;
       }
 
       const cwd = runDir ?? device.workingDirectory;
@@ -511,16 +360,7 @@ class SkillServerRuntimeService implements SkillRuntimeService {
     // Execution target follows the run's plan: a routed device wins over the
     // sandbox (restores the pre-gateway desktop behavior).
     if (this.device) {
-      const deviceResult = await this.execScriptOnDevice(command, options.activatedSkills);
-      if (deviceResult !== LEGACY_DEVICE_CLIENT) return deviceResult;
-
-      // Version-skew fallback: the client predates the RPC. Run the sandbox
-      // path but disclose the degradation in stderr so the model relays it.
-      const sandboxResult = await this.execScriptInSandbox(command, options);
-      return {
-        ...sandboxResult,
-        stderr: [sandboxResult.stderr, LEGACY_FALLBACK_NOTE].filter(Boolean).join('\n'),
-      };
+      return this.execScriptOnDevice(command, options.activatedSkills);
     }
 
     return this.execScriptInSandbox(command, options);
@@ -559,15 +399,6 @@ class SkillServerRuntimeService implements SkillRuntimeService {
         command: lhResult.command,
         description,
       };
-
-      const archives = await this.resolveActivatedSkillArchives(activatedSkills);
-      if (archives.length > 0) {
-        enhancedParams.skillZipUrls = Object.fromEntries(archives.map((a) => [a.name, a.url]));
-        log(
-          'Added skillZipUrls to execScript params: %O',
-          archives.map((a) => a.name),
-        );
-      }
 
       const sandboxService = createSandboxService({
         fileService: this.fileService,
@@ -710,7 +541,6 @@ export const skillsRuntime: ServerRuntimeRegistration = {
       userInfo: { userId: context.userId, workspaceId: context.workspaceId },
     });
     const fileService = new FileService(context.serverDB, context.userId, context.workspaceId);
-    const fileModel = new FileModel(context.serverDB, context.userId, context.workspaceId);
 
     // `activeDeviceId` presence is the device-branch switch: execScript then
     // runs on the device instead of the cloud sandbox. The executors filter
@@ -737,7 +567,6 @@ export const skillsRuntime: ServerRuntimeRegistration = {
       agentId: context.agentId,
       device,
       disabledSkillIds,
-      fileModel,
       fileService,
       marketService,
       resourceService,

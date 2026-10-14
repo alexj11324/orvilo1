@@ -4,7 +4,6 @@ import { Command } from 'cmdk';
 import {
   FeatherIcon,
   LayersIcon,
-  LibraryBig,
   ListTodo,
   MessageSquarePlusIcon,
   Monitor,
@@ -42,7 +41,6 @@ const MainMenu = memo(() => {
   const {
     handleCreateConversation,
     handleCreateTopic,
-    handleCreateLibrary,
     handleCreateProject,
     handleCreateTask,
     handleNavigate,
@@ -101,16 +99,6 @@ const MainMenu = memo(() => {
             {t('cmdk.newTopic')}
           </CommandItem>
         )}
-
-        <CommandItem
-          disabled={!canCreate}
-          icon={<LibraryBig />}
-          unpinned={menuContext !== 'resource'}
-          value="create new library"
-          onSelect={handleCreateLibrary}
-        >
-          {t('cmdk.newLibrary')}
-        </CommandItem>
 
         {menuContext !== 'settings' &&
           (() => {

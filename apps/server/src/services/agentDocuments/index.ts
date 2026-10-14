@@ -499,6 +499,10 @@ export class AgentDocumentsService {
     createdAt,
     updatedAt,
   }: UpsertDocumentParams) {
+    const existing = await this.agentDocumentModel.findByFilename(agentId, filename);
+    if (templateId === 'agent-skill' || (existing && isManagedSkillDocument(existing))) {
+      throw new Error('Platform skill production has been retired');
+    }
     const snapshot = await createMarkdownEditorSnapshot(content);
 
     return this.agentDocumentModel.upsert(agentId, filename, snapshot.content, {
@@ -748,6 +752,9 @@ export class AgentDocumentsService {
     filename: string;
   }) {
     const existing = await this.agentDocumentModel.findByFilename(agentId, filename);
+    if (existing && isManagedSkillDocument(existing)) {
+      throw new Error('Platform skill production has been retired');
+    }
     const projectedExisting = await this.projectDocumentContent(existing);
     const snapshot = await createMarkdownEditorSnapshot(content);
 
@@ -763,6 +770,10 @@ export class AgentDocumentsService {
   async replaceDocumentContentById(documentId: string, content: string, expectedAgentId?: string) {
     const doc = await this.getDocumentByIdInAgent(documentId, expectedAgentId);
     if (!doc) return undefined;
+    if (isManagedSkillDocument(doc)) {
+      throw new Error('Platform skill production has been retired');
+    }
+
     const snapshot = await createMarkdownEditorSnapshot(content);
 
     if (doc.content !== snapshot.content) {
@@ -783,6 +794,9 @@ export class AgentDocumentsService {
   ) {
     const doc = await this.getDocumentByIdInAgent(documentId, expectedAgentId);
     if (!doc) return undefined;
+    if (isManagedSkillDocument(doc)) {
+      throw new Error('Platform skill production has been retired');
+    }
 
     const snapshot = await applyLiteXMLOperations({
       editorData: doc.editorData,

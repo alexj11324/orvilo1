@@ -130,6 +130,7 @@ function createCallerWithCtx(partialCtx: any = {}) {
   return { ctx, caller: fileRouter.createCaller(ctx) };
 }
 
+vi.mock('@orvilo/database', async () => import('@/database/utils/workspace'));
 vi.mock('@/config/db', () => ({
   serverDBEnv: {
     REMOVE_GLOBAL_FILE: false,
@@ -827,50 +828,23 @@ describe('fileRouter', () => {
       );
     });
 
-    it('should use workspace knowledge-base visibility over an explicit value', async () => {
+    it('rejects new historical KB membership before upload checks or file writes', async () => {
       ({ caller } = createCallerWithCtx({ workspaceId: 'workspace-1' }));
-      mockFileModelCheckHash.mockResolvedValue({ isExist: false });
-      mockFileModelCreate.mockResolvedValue({ id: 'new-file-id' });
-
-      await caller.createFile({
-        hash: 'test-hash',
-        fileType: 'text',
-        knowledgeBaseId: 'kb-1',
-        name: 'test.txt',
-        size: 100,
-        url: 'files/test.txt',
-        visibility: 'private',
-        metadata: {},
-      });
-
-      expect(mockKnowledgeBaseFindById).toHaveBeenCalledWith('kb-1');
-      expect(mockFileModelCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          knowledgeBaseId: 'kb-1',
-          visibility: 'public',
-        }),
-        true,
-        routerMocks.transactionClient,
-      );
-    });
-
-    it('should reject a workspace upload when the knowledge base is not accessible', async () => {
-      ({ caller } = createCallerWithCtx({ workspaceId: 'workspace-1' }));
-      mockFileModelCheckHash.mockResolvedValue({ isExist: false });
-      mockKnowledgeBaseFindById.mockResolvedValue(undefined);
-
       await expect(
         caller.createFile({
           hash: 'test-hash',
           fileType: 'text',
-          knowledgeBaseId: 'missing-kb',
+          knowledgeBaseId: 'kb-1',
           name: 'test.txt',
           size: 100,
           url: 'files/test.txt',
           metadata: {},
         }),
-      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
-
+      ).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+        message: 'Platform knowledge bases are retired',
+      });
+      expect(mockFileModelCheckHash).not.toHaveBeenCalled();
       expect(mockFileModelCreate).not.toHaveBeenCalled();
     });
 

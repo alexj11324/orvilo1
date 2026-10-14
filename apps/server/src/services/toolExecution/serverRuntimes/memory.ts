@@ -55,6 +55,7 @@ import { createFtsSearchRepo } from '@/server/services/ftsSearch';
 import { recordUserMemoryLexicalSearchDecision } from '@/server/services/ftsSearch/observability';
 import type { UserMemoryEmbeddingRuntime } from '@/server/services/memory/userMemory/embedding';
 import { embedUserMemoryTexts } from '@/server/services/memory/userMemory/embedding';
+import { isUserMemoryExtractionEnabled } from '@/server/services/memory/userMemory/gate';
 import { normalizeSearchMemoryParams } from '@/server/services/memory/userMemory/searchParams';
 
 import type { ServerRuntimeRegistration } from './types';
@@ -277,6 +278,9 @@ class MemoryServerRuntimeService implements MemoryRuntimeService {
   addContextMemory = async (
     input: z.infer<typeof ContextMemoryItemSchema>,
   ): Promise<AddContextMemoryResult> => {
+    if (!(await isUserMemoryExtractionEnabled(this.userId, this.serverDB))) {
+      return { message: 'Platform memory writing is unavailable.', success: false };
+    }
     try {
       const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(
         this.serverDB,
@@ -349,6 +353,9 @@ class MemoryServerRuntimeService implements MemoryRuntimeService {
   addActivityMemory = async (
     input: z.infer<typeof ActivityMemoryItemSchema>,
   ): Promise<AddActivityMemoryResult> => {
+    if (!(await isUserMemoryExtractionEnabled(this.userId, this.serverDB))) {
+      return { message: 'Platform memory writing is unavailable.', success: false };
+    }
     try {
       const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(
         this.serverDB,
@@ -428,6 +435,9 @@ class MemoryServerRuntimeService implements MemoryRuntimeService {
   addExperienceMemory = async (
     input: z.infer<typeof ExperienceMemoryItemSchema>,
   ): Promise<AddExperienceMemoryResult> => {
+    if (!(await isUserMemoryExtractionEnabled(this.userId, this.serverDB))) {
+      return { message: 'Platform memory writing is unavailable.', success: false };
+    }
     try {
       const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(
         this.serverDB,
@@ -501,6 +511,9 @@ class MemoryServerRuntimeService implements MemoryRuntimeService {
   addIdentityMemory = async (
     input: z.infer<typeof AddIdentityActionSchema>,
   ): Promise<AddIdentityMemoryResult> => {
+    if (!(await isUserMemoryExtractionEnabled(this.userId, this.serverDB))) {
+      return { message: 'Platform memory writing is unavailable.', success: false };
+    }
     try {
       const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(
         this.serverDB,
@@ -586,6 +599,9 @@ class MemoryServerRuntimeService implements MemoryRuntimeService {
   addPreferenceMemory = async (
     input: z.infer<typeof PreferenceMemoryItemSchema>,
   ): Promise<AddPreferenceMemoryResult> => {
+    if (!(await isUserMemoryExtractionEnabled(this.userId, this.serverDB))) {
+      return { message: 'Platform memory writing is unavailable.', success: false };
+    }
     try {
       const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(
         this.serverDB,
@@ -663,6 +679,9 @@ class MemoryServerRuntimeService implements MemoryRuntimeService {
   updateIdentityMemory = async (
     input: z.infer<typeof UpdateIdentityActionSchema>,
   ): Promise<UpdateIdentityMemoryResult> => {
+    if (!(await isUserMemoryExtractionEnabled(this.userId, this.serverDB))) {
+      return { message: 'Platform memory writing is unavailable.', success: false };
+    }
     try {
       const { agentRuntime, embeddingModel } = await getEmbeddingRuntime(
         this.serverDB,
@@ -804,6 +823,9 @@ class MemoryServerRuntimeService implements MemoryRuntimeService {
   removeIdentityMemory = async (
     input: z.infer<typeof RemoveIdentityActionSchema>,
   ): Promise<RemoveIdentityMemoryResult> => {
+    if (!(await isUserMemoryExtractionEnabled(this.userId, this.serverDB))) {
+      return { message: 'Platform memory writing is unavailable.', success: false };
+    }
     try {
       const removed = await this.memoryModel.removeIdentityEntry(input.id);
 

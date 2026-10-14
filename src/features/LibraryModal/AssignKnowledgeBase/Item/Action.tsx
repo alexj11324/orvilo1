@@ -33,6 +33,8 @@ const Actions = memo<ActionsProps>(({ id, type, enabled }) => {
 
   const [loading, setLoading] = useState(false);
 
+  if (type === KnowledgeType.KnowledgeBase) return null;
+
   const assignKnowledge = async () => {
     setLoading(true);
     if (type === KnowledgeType.KnowledgeBase) {

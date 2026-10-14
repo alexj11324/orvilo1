@@ -15,6 +15,22 @@ describe('MarketSandboxProvider', () => {
       })),
     }) as unknown as MarketService;
 
+  it('rejects retired platform archives without calling the remote market', async () => {
+    const marketService = createMarketService({ success: true });
+    const provider = new MarketSandboxProvider({
+      marketService,
+      topicId: 'topic-1',
+      userId: 'user-1',
+    });
+    expect(
+      await provider.callTool('execScript', {
+        command: 'echo ok',
+        skillZipUrls: { old: 'https://files.example.com/old.zip' },
+      }),
+    ).toMatchObject({ success: false });
+    expect(marketService.getSDK).not.toHaveBeenCalled();
+  });
+
   it('keeps the previous Market sandbox callTool success response shape', async () => {
     const marketService = createMarketService({
       data: {

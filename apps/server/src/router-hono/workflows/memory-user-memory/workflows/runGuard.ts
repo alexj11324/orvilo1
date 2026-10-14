@@ -1,6 +1,7 @@
 import { getRedisConfig } from '@/envs/redis';
 import { initializeRedis, isRedisEnabled } from '@/libs/redis';
 import { type BaseRedisProvider } from '@/libs/redis/types';
+import { isUserMemoryExtractionEnabled } from '@/server/services/memory/userMemory/gate';
 import type { WorkflowContext } from '@/server/workflows/context';
 import { assertWorkflowRunAllowed, WorkflowRunGuardError } from '@/server/workflows/runGuard';
 import { runStep } from '@/server/workflows/step';
@@ -167,6 +168,13 @@ export const checkGuard = async <
     context,
     `memory:user-memory:run-guard:${workflowPath}:${stepName ?? 'entry'}`,
     async () => {
+      if (!(await isUserMemoryExtractionEnabled(getPayloadUserId(context.requestPayload)))) {
+        return {
+          matchedKey: 'platform-memory-retired',
+          reason: 'platform memory retired',
+          scope: 'global',
+        };
+      }
       const redis = await getRedis();
 
       try {

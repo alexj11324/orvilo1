@@ -7,8 +7,6 @@ import {
   requireWorkspaceRoleWhenScoped,
   wsCompatProcedure,
 } from '@/business/server/trpc-middlewares/workspaceAuth';
-import { AgentSkillModel } from '@/database/models/agentSkill';
-import { FileModel } from '@/database/models/file';
 import { UserModel } from '@/database/models/user';
 import { type ToolCallContent } from '@/libs/mcp';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
@@ -248,41 +246,6 @@ const execInSandboxHandler = async ({
 
       if (lhResult.skipSkillLookup) {
         enhancedParams = { ...params, command: lhResult.command };
-      }
-    }
-
-    // For execScript tool, look up skill zipUrls from activatedSkills
-    if (toolName === 'execScript' && enhancedParams.activatedSkills?.length) {
-      const wsId = ctx.workspaceId ?? undefined;
-      const agentSkillModel = new AgentSkillModel(ctx.serverDB, userId, wsId);
-      const fileModel = new FileModel(ctx.serverDB, userId, wsId);
-
-      // Resolve zipUrls for all activated skills
-      const skillZipUrls: Record<string, string> = {};
-
-      for (const activatedSkill of enhancedParams.activatedSkills) {
-        if (!activatedSkill.name) continue;
-
-        const skill = await agentSkillModel.findByName(activatedSkill.name);
-        if (!skill?.zipFileHash) continue;
-
-        const fileInfo = await fileModel.checkHash(skill.zipFileHash);
-        if (!fileInfo.isExist || !fileInfo.url) continue;
-
-        const fullUrl = await ctx.fileService.getFullFileUrl(fileInfo.url);
-        if (fullUrl) {
-          skillZipUrls[activatedSkill.name] = fullUrl;
-          log('Resolved zipUrl for skill %s', activatedSkill.name);
-        }
-      }
-
-      // Add skillZipUrls to params if any were resolved
-      if (Object.keys(skillZipUrls).length > 0) {
-        enhancedParams = {
-          ...enhancedParams,
-          skillZipUrls,
-        };
-        log('Added skillZipUrls to execScript params: %O', Object.keys(skillZipUrls));
       }
     }
 

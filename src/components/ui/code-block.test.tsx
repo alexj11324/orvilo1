@@ -52,15 +52,13 @@ describe.each([
       );
 
     expect(displayedRows()).toEqual(['10', '14']);
-    const marker = screen.getByRole('button', { name: 'Unfold 3 hidden lines', exact: true });
+    const marker = screen.getByRole('button', { name: 'Unfold 3 hidden lines' });
     expect(marker).toHaveAttribute('data-slot', 'code-block-fold-marker');
     await user.click(marker);
 
     expect(onFoldedChange).toHaveBeenCalledExactlyOnceWith([]);
     expect(displayedRows()).toEqual(['10', '11', '12', '13', '14']);
-    expect(
-      screen.queryByRole('button', { name: 'Unfold 3 hidden lines', exact: true }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Unfold 3 hidden lines' })).not.toBeInTheDocument();
   });
 
   it.each([

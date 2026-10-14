@@ -11,7 +11,7 @@ import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/sty
 import type { UpdateGroupParams, UpdateGroupState } from '../../../types';
 
 const styles = {
-  statusIcon: 'ms-1 -mbe-0.5',
+  statusIcon: 'ms-1',
 };
 
 export const UpdateGroupInspector = memo<
@@ -72,7 +72,7 @@ export const UpdateGroupInspector = memo<
         </>
       )}
       {!isLoading && isSuccess && (
-        <Check className={styles.statusIcon} color={'var(--success)'} size={14} />
+        <Check className={styles.statusIcon} color={'var(--success-text)'} size={14} />
       )}
     </div>
   );

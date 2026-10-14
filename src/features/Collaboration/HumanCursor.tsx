@@ -13,7 +13,7 @@ const styles = {
     'pointer-events-none will-change-transform absolute inset-bs-0 inset-s-0 flex gap-1 items-start',
   label:
     'mbs-3.5 py-0.5 px-1.5 rounded-(--radius-chip) text-xs leading-5 font-medium text-primary-foreground whitespace-nowrap bg-primary',
-  pointer: 'block drop-shadow-[0_1px_2px_rgb(0_0_0_/_25%)]',
+  pointer: 'block',
 };
 
 /**

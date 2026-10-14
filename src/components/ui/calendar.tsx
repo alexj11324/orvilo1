@@ -187,6 +187,7 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       data-range-start={modifiers.range_start}
+      ref={ref}
       size="icon"
       variant="ghost"
       className={cn(

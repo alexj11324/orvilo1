@@ -136,7 +136,7 @@ const CommentReactions = memo<CommentReactionsProps>(({ onReact, reactions }) =>
             render={
               <span>
                 <span
-                  {...clickableProps(onReact)}
+                  {...clickableProps(Boolean(onReact))}
                   style={onReact ? undefined : { cursor: 'default' }}
                   className={cn(
                     styles.chip,

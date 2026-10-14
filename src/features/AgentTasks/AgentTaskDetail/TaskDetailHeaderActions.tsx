@@ -622,9 +622,14 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
 
   return (
     <div className="flex shrink-0 items-center gap-1">
+      {/* The copy icons fold away where the cluster's bar is narrow — the
+        peek panes' header and a slim surface both resolve this unnamed
+        container query. Every hidden command stays in the ··· Copy submenu,
+        so collapsing loses no action. */}
       {headerCopyButtons.map(({ action, icon, key, label }) => (
         <Button
           aria-label={label}
+          className="[@container_(width<480px)]:hidden"
           key={key}
           size="icon-sm"
           title={label}

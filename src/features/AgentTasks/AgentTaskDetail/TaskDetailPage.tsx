@@ -81,18 +81,19 @@ const TaskDetailPage = memo<TaskDetailPageProps>(({ taskId, showTaskAgentPanelTo
           left={
             <>
               <Breadcrumb taskId={taskId} />
-              {/* Reference: the copy icons, favourite star and overflow menu
-                sit inline right after the issue crumb — all rendered by
-                TaskDetailHeaderActions so they share one favourite identity.
-                Subscribe lives in the Activity section header. The header's
-                right side keeps task execution and the agent-panel toggle. */}
-              <TaskDetailHeaderActions />
               <IssueSaveStatus key={taskId} taskId={taskId} />
             </>
           }
           right={
             <>
               <IssueHeaderRunControl />
+              {/* Reference: the copy icons, favourite star and overflow menu
+                anchor the right end of the top bar — the breadcrumb hugs the
+                left. TaskDetailHeaderActions renders them as one cluster so
+                they share a favourite identity; the transient run control
+                joins on its left and the agent-panel toggle keeps the edge.
+                Subscribe lives in the Activity section header. */}
+              <TaskDetailHeaderActions />
               {showTaskAgentPanelToggle ? (
                 <ToggleRightPanelButton
                   hideWhenExpanded

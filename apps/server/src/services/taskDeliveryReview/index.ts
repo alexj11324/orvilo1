@@ -8,6 +8,7 @@ import debug from 'debug';
 import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
 
 import { AgentModel } from '@/database/models/agent';
+import { sameIssueDeliveryProof } from '@/database/models/issueDelivery';
 import { TaskModel } from '@/database/models/task';
 import { hasActiveExecution, isExecutionParked } from '@/database/models/taskExecutionSql';
 import { TaskTopicModel } from '@/database/models/taskTopic';
@@ -22,8 +23,14 @@ import {
   mergePullRequest,
   type RemotePrReviewSnapshot,
   resolveGithubAccessToken,
+  retargetPullRequest,
 } from '@/server/services/githubRepo';
 import { TaskService } from '@/server/services/task';
+import {
+  completeAcceptedArtifacts,
+  finishDeliveredIssue,
+  readDeliveryGroup,
+} from '@/server/services/task/deliveryGroup';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 
 const log = debug('task-delivery-review');
@@ -264,7 +271,7 @@ const markDeliveryMerged = async (params: {
     !snapshot.merged ||
     !snapshot.mergedAt ||
     !snapshot.mergeCommitSha ||
-    snapshot.baseBranch !== record.baseBranch ||
+    snapshot.baseBranch !== record.targetBranch ||
     snapshot.headBranch !== record.branch ||
     snapshot.number !== record.prNumber ||
     !record.expectedHeadSha ||
@@ -277,6 +284,8 @@ const markDeliveryMerged = async (params: {
   for (const row of rows) {
     if (
       !row.topicId ||
+      row.executionGeneration !== task.executionGeneration ||
+      row.integration?.expectedHeadSha !== record.expectedHeadSha ||
       row.integration?.branch !== record.branch ||
       row.integration.repo !== record.repo ||
       row.integration.baseBranch !== record.baseBranch ||
@@ -287,6 +296,7 @@ const markDeliveryMerged = async (params: {
       expectedBaseSha: snapshot.baseSha,
       expectedHeadSha: snapshot.headSha,
       integratedSha: snapshot.mergeCommitSha,
+      mergedTargetBranch: snapshot.baseBranch,
       lastError: null,
       lastErrorCode: null,
       prNumber: snapshot.number,
@@ -299,10 +309,8 @@ const markDeliveryMerged = async (params: {
   }
   if (updated === 0) throw new Error('No matching delivery row remains for merge confirmation');
 
-  await new TaskService(db, ownerId, workspaceId).updateStatus({
-    id: task.id,
-    status: 'completed',
-  });
+  await finishDeliveredIssue(db, ownerId, workspaceId, task);
+  await completeAcceptedArtifacts(db, ownerId, workspaceId, task.id);
 };
 
 const buildCorrectivePrompt = (params: {
@@ -512,15 +520,34 @@ export const runTaskDeliveryReviewSweep = async (
     }
 
     try {
+      const group = await readDeliveryGroup(db, ownerId, workspaceId, task);
+      const current = group.proofs[task.id];
+      if (
+        !group.accepted ||
+        !current?.proof ||
+        current.proof.sourceSha !== record.expectedHeadSha ||
+        current.proof.topicId !== row.topicId ||
+        current.proof.executionGeneration !== row.executionGeneration ||
+        group.dependencies.some(
+          (edge) =>
+            edge.type === 'blocks' && edge.taskId === task.id && !group.delivered(edge.dependsOnId),
+        )
+      ) {
+        result.waiting.push(task.identifier);
+        continue;
+      }
+      const targetBranch = current.proof.targetBranch!;
       // A delivery that already produced its merge proof retries the
       // completion transition. The database gate re-verifies that the merged
       // PR belongs to the current execution generation before letting it
       // through, so a stale row cannot complete a rerun task.
       if (record.state === 'integrated') {
-        await new TaskService(db, ownerId, workspaceId).updateStatus({
-          id: task.id,
-          status: 'completed',
-        });
+        if (!current.merged) {
+          result.waiting.push(task.identifier);
+          continue;
+        }
+        await finishDeliveredIssue(db, ownerId, workspaceId, task);
+        await completeAcceptedArtifacts(db, ownerId, workspaceId, task.id);
         result.merged.push(task.identifier);
         continue;
       }
@@ -536,7 +563,7 @@ export const runTaskDeliveryReviewSweep = async (
       // A task is not in delivery review until the remote branch and canonical
       // PR identity are durable. This also recovers the cross-system half-fail
       // where GitHub created the PR but the database write was interrupted.
-      let deliveryRecord = record;
+      let deliveryRecord = { ...record, targetBranch };
       let prNumber = record.prNumber;
       let prUrl = record.prUrl;
       if (!prNumber) {
@@ -583,7 +610,13 @@ export const runTaskDeliveryReviewSweep = async (
             prUrl,
           });
           if (!persisted) throw new Error('Pull request identity could not be persisted');
-          deliveryRecord = { ...record, expectedHeadSha: remoteHead, prNumber, prUrl };
+          deliveryRecord = {
+            ...record,
+            targetBranch,
+            expectedHeadSha: remoteHead,
+            prNumber,
+            prUrl,
+          };
         }
       }
 
@@ -601,11 +634,30 @@ export const runTaskDeliveryReviewSweep = async (
         continue;
       }
 
-      const snapshot = await getPullRequestReviewSnapshot(repo, prNumber, token, {
-        baseBranch: record.baseBranch,
-        headBranch: record.branch,
-        sameRepository: true,
-      });
+      let snapshot = await getPullRequestReviewSnapshot(repo, prNumber, token);
+      if (
+        snapshot &&
+        (snapshot.headBranch !== record.branch ||
+          snapshot.headRepositoryId !== snapshot.repositoryId)
+      )
+        snapshot = undefined;
+      if (
+        snapshot?.open &&
+        snapshot.headSha === deliveryRecord.expectedHeadSha &&
+        snapshot.baseBranch !== targetBranch &&
+        !record.mergeIssuedAt
+      ) {
+        if (!(await retargetPullRequest(repo, prNumber, targetBranch, token))) {
+          result.waiting.push(task.identifier);
+          continue;
+        }
+        snapshot = await getPullRequestReviewSnapshot(repo, prNumber, token, {
+          baseBranch: targetBranch,
+          headBranch: record.branch,
+          headSha: deliveryRecord.expectedHeadSha,
+          sameRepository: true,
+        });
+      }
       if (!snapshot) {
         const outcome = await noteVerificationPollFailure({
           detail:
@@ -641,13 +693,13 @@ export const runTaskDeliveryReviewSweep = async (
         continue;
       }
 
-      if (snapshot.baseBranch !== record.baseBranch) {
+      if (snapshot.baseBranch !== targetBranch) {
         await topicModel.updateIntegration(task.id, row.topicId, {
-          lastError: `PR targets ${snapshot.baseBranch}, expected ${record.baseBranch}`,
+          lastError: `PR targets ${snapshot.baseBranch}, expected ${targetBranch}`,
           state: 'blocked',
         });
         await taskModel.update(task.id, {
-          error: `Pull request must target ${record.baseBranch} before this task can finish.`,
+          error: `Pull request must target ${targetBranch} before this task can finish.`,
         });
         result.paused.push(task.identifier);
         continue;
@@ -837,13 +889,46 @@ export const runTaskDeliveryReviewSweep = async (
         deliveryRecord = { ...deliveryRecord, mergeIssuedAt: intentIssuedAt };
         let merge: Awaited<ReturnType<typeof mergePullRequest>>;
         try {
-          merge = await mergePullRequest({
-            expectedHeadSha: decision.headSha,
-            mergeMethod: 'squash',
-            prNumber: snapshot.number,
-            repo,
-            token,
-          });
+          const mergeLocked = async (
+            tx: OrviloDatabase,
+            index: number,
+          ): Promise<Awaited<ReturnType<typeof mergePullRequest>>> => {
+            if (index < group.ids.length) {
+              const result = await new TaskModel(tx, ownerId, workspaceId).withIssueDelivery(
+                group.ids[index],
+                async (next) => mergeLocked(next, index + 1),
+              );
+              if (!result) throw new Error('Delivery group member disappeared');
+              return result;
+            }
+            const freshTask = await new TaskModel(tx, ownerId, workspaceId).findById(task.id);
+            if (!freshTask) throw new Error('Delivery Issue disappeared');
+            const freshGroup = await readDeliveryGroup(tx, ownerId, workspaceId, freshTask);
+            const proof = freshGroup.proofs[task.id]?.proof;
+            if (
+              !freshGroup.accepted ||
+              !proof ||
+              !sameIssueDeliveryProof(proof, current.proof!) ||
+              freshGroup.dependencies.some(
+                (edge) =>
+                  edge.type === 'blocks' &&
+                  edge.taskId === task.id &&
+                  !freshGroup.delivered(edge.dependsOnId),
+              )
+            )
+              return {
+                outcome: 'confirmed_rejected',
+                message: 'Current accepted delivery group changed',
+              };
+            return mergePullRequest({
+              expectedHeadSha: decision.headSha,
+              mergeMethod: 'squash',
+              prNumber: snapshot.number,
+              repo,
+              token,
+            });
+          };
+          merge = await mergeLocked(db, 0);
         } catch (error) {
           // Unknown outcome with a persisted intent — the next sweep
           // reconciles by reading merged state, never by re-issuing.

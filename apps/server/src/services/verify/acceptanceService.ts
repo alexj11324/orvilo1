@@ -41,7 +41,6 @@ import {
   cancelQueuedDeviceOperation,
   finishQueuedDeviceOperation,
 } from '@/server/services/aiAgent/deviceQueue';
-import { TaskService } from '@/server/services/task';
 
 import { type AcceptanceMergeSummary, mergeAcceptanceRounds } from './acceptanceMerge';
 import { computeFalseFlags } from './feedbackService';
@@ -882,17 +881,12 @@ export class AcceptanceService {
   accept = async (acceptanceId: string, comment?: string): Promise<AcceptanceItem> => {
     const acceptance = await this.requireDecidableAcceptance(acceptanceId);
 
+    if (acceptance.subjectType === 'task')
+      throw new Error('Accept Issue delivery through its current Checklist and confirmed plan');
+
     const runs = await this.runModel.listByAcceptance(acceptanceId);
-    const { current, operationId } = await this.resolveDecisionBinding(acceptance, runs);
-    if (acceptance.subjectType === 'task') {
-      await this.assertTaskIntegrationSettled(operationId);
-    }
-
+    const { current } = await this.resolveDecisionBinding(acceptance, runs);
     await this.stampDecision(acceptance, runs, current, 'accept', comment);
-
-    if (acceptance.subjectType === 'task') {
-      await this.completeTaskSubject(acceptance.subjectId, operationId);
-    }
 
     return (await this.acceptanceModel.findById(acceptanceId))!;
   };
@@ -1144,64 +1138,6 @@ export class AcceptanceService {
         // Decisions and cancellation are committed; the watchdog retries terminal hooks.
         console.error('[acceptance] Queued verifier cleanup deferred', { operationId, error });
       }
-    }
-  };
-
-  /**
-   * Accepting a task subject completes the task when verification didn't
-   * already (e.g. the round failed but the user accepted anyway). Best-effort:
-   * a task error must not undo the recorded acceptance.
-   */
-  private completeTaskSubject = async (
-    subjectId: string,
-    operationId?: string | null,
-  ): Promise<void> => {
-    try {
-      const taskModel = new TaskModel(this.db, this.userId, this.workspaceId);
-      const task = await taskModel.resolve(subjectId);
-      if (!task || ['canceled', 'completed', 'failed'].includes(task.status)) return;
-      if (operationId) {
-        const taskTopic = await new TaskTopicModel(
-          this.db,
-          this.userId,
-          this.workspaceId,
-        ).findByOperationId(operationId);
-        const integration = taskTopic?.integration;
-        if (integration && integration.state !== 'integrated' && integration.state !== 'skipped') {
-          log(
-            'acceptance accepted for task %s but workspace integration is %s; task remains open',
-            task.id,
-            integration.state,
-          );
-          return;
-        }
-      }
-
-      // TaskService cascades checkpoint / sibling rollup / downstream unlock —
-      // the same completion path settle.ts drives on a passed verify.
-      await new TaskService(this.db, this.userId, this.workspaceId).updateStatus({
-        id: task.id,
-        status: 'completed',
-      });
-      log('acceptance accepted → task %s completed', task.id);
-    } catch (error) {
-      log('completeTaskSubject failed (non-fatal): %O', error);
-    }
-  };
-
-  /** Keep a manual acceptance retryable until its task branch is delivered. */
-  private assertTaskIntegrationSettled = async (operationId?: string | null): Promise<void> => {
-    if (!operationId) return;
-    const taskTopic = await new TaskTopicModel(
-      this.db,
-      this.userId,
-      this.workspaceId,
-    ).findByOperationId(operationId);
-    const integration = taskTopic?.integration;
-    if (integration && integration.state !== 'integrated' && integration.state !== 'skipped') {
-      throw new Error(
-        `Workspace integration is still ${integration.state}; retry acceptance after delivery completes`,
-      );
     }
   };
 

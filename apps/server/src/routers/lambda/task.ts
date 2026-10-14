@@ -887,10 +887,20 @@ export const taskRouter = router({
     })),
   acceptDelivery: taskProcedure
     .input(issueDeliveryDecisionSchema)
-    .mutation(async ({ input, ctx }) => ({
-      data: await ctx.issueChecklist.acceptDelivery(input),
-      success: true,
-    })),
+    .mutation(async ({ input, ctx }) => {
+      const data = await ctx.issueChecklist.acceptDelivery(input);
+      const task = await ctx.taskModel.findById(input.taskId);
+      if (task?.createdByUserId)
+        after(async () => {
+          const { runTaskDeliveryReviewSweep } =
+            await import('@/server/services/taskDeliveryReview');
+          await runTaskDeliveryReviewSweep(ctx.serverDB, {
+            createdByUserId: task.createdByUserId!,
+            workspaceId: task.workspaceId ?? undefined,
+          });
+        });
+      return { data, success: true };
+    }),
 
   confirmChecklist: taskProcedure
     .input(confirmIssueChecklistSchema)

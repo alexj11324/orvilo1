@@ -34,7 +34,7 @@ export interface GithubFetchResult {
 export const githubFetch = async (
   path: string,
   token?: string,
-  init?: { body?: unknown; method?: 'GET' | 'POST' | 'PUT' },
+  init?: { body?: unknown; method?: 'GET' | 'PATCH' | 'POST' | 'PUT' },
 ): Promise<GithubFetchResult> => {
   try {
     const res = await fetch(`${GITHUB_API}${path}`, {

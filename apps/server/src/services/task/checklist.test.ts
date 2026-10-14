@@ -122,6 +122,38 @@ beforeEach(async () => {
     workflowCategory: 'in_review',
     executionGeneration: 1,
   });
+  await db
+    .update(tasks)
+    .set({
+      context: {
+        issuePlan: {
+          revision: 1,
+          parentTaskId: taskId,
+          confirmedAt: '2026-10-14T00:00:00Z',
+          checklists: [
+            {
+              taskId,
+              expectedRevision: 0,
+              deliveryKind: 'code',
+              repo: 'org/repo',
+              targetBranch: 'canary',
+              items: [{ id: 'outcome', title: 'Required product outcome', required: true }],
+            },
+          ],
+          orchestratorAgentId: 'checklist-reviewer',
+          plannedBy: owner,
+          planningOperationId: 'plan',
+          requirement: 'Background only',
+          scope: {
+            description: 'Scope',
+            repositories: [{ repo: 'org/repo', targetBranch: 'canary' }],
+          },
+          scopeFingerprint: 'frozen',
+          summary: 'Plan',
+        },
+      },
+    })
+    .where(eq(tasks.id, taskId));
   await service().confirmChecklist({
     taskId,
     expectedRevision: 0,
@@ -292,4 +324,44 @@ describe('Issue Checklist ledger', () => {
     expect(await other.readCurrentDeliveryProof([taskId])).toEqual({});
     expect((await service().getChecklist(taskId)).history).toHaveLength(1);
   });
+});
+
+it('a merged stacked delivery permits new Checklist scope using the actual final target', async () => {
+  const input = await startReview(await delivery(2));
+  await service().submitReviewItems(input);
+  const rows = await db
+    .select()
+    .from(verifyCheckResults)
+    .where(eq(verifyCheckResults.verifyRunId, input.runId));
+  await service().reviewChecklistItems({
+    ...input,
+    resultIds: rows.map((row) => row.id),
+    action: 'accept',
+  });
+  await service().acceptDelivery(input);
+  const [topic] = await db
+    .select()
+    .from(taskTopics)
+    .where(eq(taskTopics.operationId, input.proof.deliveryOperationId));
+  await db
+    .update(taskTopics)
+    .set({
+      integration: {
+        ...topic.integration!,
+        mergedTargetBranch: 'canary',
+        integratedSha: 'b'.repeat(40),
+        state: 'integrated',
+      },
+    })
+    .where(eq(taskTopics.id, topic.id));
+  await expect(
+    service().confirmChecklist({
+      taskId,
+      expectedRevision: 1,
+      deliveryKind: 'code',
+      repo: 'org/repo',
+      targetBranch: 'canary',
+      items: [{ id: 'new-work', title: 'New work', required: true }],
+    }),
+  ).resolves.toMatchObject({ revision: 2 });
 });

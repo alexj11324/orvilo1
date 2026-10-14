@@ -10,6 +10,7 @@ import type {
   TaskAutomationMode,
   TaskAutomationSnapshot,
   TaskConfig,
+  TaskContext,
   TaskDispatchPhase,
   TaskDomainEventSource,
   TaskDomainEventType,
@@ -714,8 +715,64 @@ export class TaskModel {
     });
   }
 
+  /** Confirmed Issues complete only from their accepted current delivery ledger. */
+  private async assertCompletedDeliveries(ids: string[]): Promise<void> {
+    for (const task of await this.findByIds(ids)) {
+      const plan = (task.context as TaskContext | null)?.issuePlan;
+      if (!plan?.confirmedAt) continue;
+      const members = [...new Set(plan.checklists.map((check) => check.taskId))];
+      const dependencies = (await this.getDependenciesByTaskIds([task.id])).filter(
+        (edge) => edge.type === 'blocks' && edge.taskId === task.id,
+      );
+      const proofIds = [...new Set([...members, ...dependencies.map((edge) => edge.dependsOnId)])];
+      const proofs = await new IssueDeliveryModel(
+        this.db,
+        this.userId,
+        this.workspaceId,
+      ).readCurrentDeliveryProof(proofIds);
+      const delivered = (id: string) => {
+        const current = proofs[id];
+        return Boolean(
+          current?.deliveryAccepted &&
+          current.reviewerPassed &&
+          current.necessaryChecksPassed &&
+          current.itemsAccepted &&
+          (current.proof?.deliveryKind === 'artifact' || current.merged),
+        );
+      };
+      const scopeMatches =
+        members.includes(task.id) &&
+        plan.checklists.every((check) => {
+          if (task.id !== plan.parentTaskId && check.taskId !== task.id) return true;
+          const proof = proofs[check.taskId]?.proof;
+          return (
+            proof?.deliveryKind === check.deliveryKind &&
+            proof.checklistRevision === check.expectedRevision + 1 &&
+            (check.deliveryKind === 'artifact' ||
+              (proof.repo === check.repo && proof.targetBranch === check.targetBranch))
+          );
+        });
+      if (
+        !scopeMatches ||
+        !delivered(task.id) ||
+        dependencies.some((edge) => !delivered(edge.dependsOnId)) ||
+        (task.id === plan.parentTaskId && !members.every(delivered))
+      )
+        throw new TaskDependencyError(
+          'Accept the current confirmed delivery and merge its required PRs before marking this Issue Done.',
+          'PRECONDITION_FAILED',
+        );
+    }
+  }
+
   /** Guard every advancing writer; cancellation/pause remain available for recovery. */
-  private async assertDependenciesForStatus(ids: string[], status?: string): Promise<void> {
+  private async assertDependenciesForStatus(
+    ids: string[],
+    status?: string,
+    workflowCategory?: TaskWorkflowCategory,
+  ): Promise<void> {
+    if (status === 'completed' || workflowCategory === 'done')
+      await this.assertCompletedDeliveries(ids);
     if (status !== 'running' && status !== 'completed') return;
     const blocked = await this.findBlockedTaskIds(ids);
     if (blocked.length > 0) {
@@ -779,6 +836,7 @@ export class TaskModel {
         .select({
           id: tasks.id,
           config: tasks.config,
+          context: tasks.context,
           status: sql<string>`${legacyStatusExpr}`,
           workflowStateId: tasks.workflowStateId,
           workflowStateRefId: tasks.workflowStateRefId,
@@ -802,6 +860,10 @@ export class TaskModel {
           data.workflowCategory ??
           (data.status ? workflowCategoryForLegacyStatus(data.status) : undefined) ??
           row.workflowCategory;
+        if (category === 'done') await scoped.assertCompletedDeliveries([row.id]);
+        const preserveDeliveredReview =
+          category === 'done' &&
+          Boolean((row.context as TaskContext | null)?.issuePlan?.confirmedAt);
         const reviewer =
           data.reviewerAgentId === undefined ? row.reviewerAgentId : data.reviewerAgentId;
         if (category === 'in_review' && !reviewer) throw new TaskReviewerRequiredError();
@@ -809,6 +871,7 @@ export class TaskModel {
         const config = (row.config ?? {}) as TaskConfig;
         if (
           config.issueReview &&
+          !preserveDeliveredReview &&
           (category !== row.workflowCategory ||
             reviewer !== row.reviewerAgentId ||
             (!data.preserveIssueReviewCycle &&
@@ -1258,7 +1321,7 @@ export class TaskModel {
     ) {
       return this.withDependencyLock((model) => model.update(id, data, mutation));
     }
-    await this.assertDependenciesForStatus([id], data.status);
+    await this.assertDependenciesForStatus([id], data.status, data.workflowCategory);
 
     const eventType = taskMutationEventType(data);
     const updateWhere = [eq(tasks.id, id), this.ownership()];
@@ -2852,7 +2915,7 @@ export class TaskModel {
     }
     const expectedGuard = predicateForLegacyStatus(expected);
     if (!expectedGuard) return null;
-    await this.assertDependenciesForStatus([id], transition);
+    await this.assertDependenciesForStatus([id], transition, extra?.workflowCategory);
     const [task] = await this.db
       .update(tasks)
       .set({
@@ -2919,7 +2982,7 @@ export class TaskModel {
     }
     const expectedGuard = predicateForLegacyStatus(currentStatus);
     if (!expectedGuard) return null;
-    await this.assertDependenciesForStatus([id], status);
+    await this.assertDependenciesForStatus([id], status, extra?.workflowCategory);
     const [task] = await this.db
       .update(tasks)
       .set({
@@ -3196,6 +3259,7 @@ export class TaskModel {
         ),
       );
     }
+    await this.assertDependenciesForStatus([id], status, extra?.workflowCategory);
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
       if (beforeMutation && !(await beforeMutation(runner))) return null;
@@ -3293,7 +3357,7 @@ export class TaskModel {
         model.updateStatusForIds(ids, status, extra, mutation),
       );
     }
-    await this.assertDependenciesForStatus(ids, status);
+    await this.assertDependenciesForStatus(ids, status, extra?.workflowCategory);
     const updated = await this.db
       .update(tasks)
       .set({

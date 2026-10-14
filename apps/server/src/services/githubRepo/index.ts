@@ -249,3 +249,23 @@ export const getPullRequestReviewSnapshot = async (
   if (!coordinate) return undefined;
   return readPullRequestReviewSnapshot(githubFetch, coordinate, prNumber, token, expected);
 };
+
+/** Retarget a stacked PR; the caller re-reads head and gates after this mutation. */
+export const retargetPullRequest = async (
+  repo: string,
+  prNumber: number,
+  targetBranch: string,
+  token?: string,
+) => {
+  const coordinate = parseGithubRepo(repo);
+  if (!coordinate) return false;
+  const response = await githubFetch(
+    `/repos/${coordinate.owner}/${coordinate.name}/pulls/${prNumber}`,
+    token,
+    {
+      method: 'PATCH',
+      body: { base: targetBranch },
+    },
+  );
+  return response.ok && response.json?.base?.ref === targetBranch;
+};

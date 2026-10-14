@@ -4,6 +4,7 @@ import type {
   IssueChecklistDefinition,
   IssueChecklistItem,
   IssueChecklistReviewItem,
+  IssueCurrentDelivery,
   IssueDeliveryProof,
   TaskConfig,
   TaskItem,
@@ -37,6 +38,7 @@ import type { OrviloDatabase } from '@/database/type';
 
 import { resolveWorkflowTransition } from '../taskSettlement/workflowTransition';
 import { createEvidenceFileResolver } from '../verify/evidenceFiles';
+import { completeAcceptedArtifacts, readDeliveryGroup } from './deliveryGroup';
 
 export {
   currentIssueDeliveryProof,
@@ -172,7 +174,8 @@ export class IssueChecklistService {
           frozen.userDecision === 'accept' &&
           (frozen.metadata.issueDelivery.deliveryKind === 'artifact' ||
             (latest?.integration?.state === 'integrated' &&
-              latest.integration.baseBranch === frozen.metadata.issueDelivery.targetBranch &&
+              (latest.integration.mergedTargetBranch ?? latest.integration.baseBranch) ===
+                frozen.metadata.issueDelivery.targetBranch &&
               latest.integration.expectedHeadSha === frozen.metadata.issueDelivery.sourceSha &&
               !!latest.integration.integratedSha));
         if (!delivered)
@@ -476,23 +479,59 @@ export class IssueChecklistService {
   }
 
   async acceptDelivery(input: { taskId: string; runId: string; proof: IssueDeliveryProof }) {
-    return this.write(input.taskId, async (service, task) => {
-      await service.requireAcceptor(task);
-      const { current, run } = await service.requireCurrentRun(task.id, input.runId, input.proof);
-      if (!current.reviewerPassed || !current.necessaryChecksPassed || !current.itemsAccepted)
-        throw denied(
-          'Required Reviewer checks and item acceptance must pass before accepting delivery',
+    const task = await this.requireTask(input.taskId);
+    await this.requireAcceptor(task);
+    const group = await readDeliveryGroup(this.db, this.userId, this.workspaceId, task);
+    if (!group.valid || group.parent?.id !== task.id)
+      throw denied('Accept the confirmed plan delivery from its parent Issue');
+    // Lock every member in stable order: a new run cannot replace a child proof mid-acceptance.
+    const lock = async (db: OrviloDatabase, index: number): Promise<IssueCurrentDelivery> => {
+      if (index < group.ids.length) {
+        const locked = await new TaskModel(db, this.userId, this.workspaceId).withIssueDelivery(
+          group.ids[index],
+          async (tx) => lock(tx, index + 1),
         );
-      if (run.userDecision === 'accept') return current;
-      await new VerifyRunModel(service.db, run.userId, service.workspaceId).setDecision(
-        run.id,
-        'accept',
-        {
-          decidedAt: new Date().toISOString(),
-          decidedBy: service.userId,
-        },
-      );
-      return { ...current, deliveryAccepted: true };
-    });
+        if (!locked) throw denied('Confirmed delivery group member disappeared');
+        return locked;
+      }
+      const service = new IssueChecklistService(db, this.userId, this.workspaceId);
+      const parent = await service.requireTask(task.id);
+      await service.requireAcceptor(parent);
+      const currentGroup = await readDeliveryGroup(db, this.userId, this.workspaceId, parent);
+      if (!currentGroup.valid || JSON.stringify(currentGroup.ids) !== JSON.stringify(group.ids))
+        throw denied('Confirmed delivery group changed; reload before accepting');
+      await service.requireCurrentRun(task.id, input.runId, input.proof);
+      for (const id of currentGroup.ids) {
+        const current = currentGroup.proofs[id];
+        if (
+          !currentGroup.inConfirmedScope(id) ||
+          !current?.proof ||
+          !current.runId ||
+          !current.reviewerPassed ||
+          !current.necessaryChecksPassed ||
+          !current.itemsAccepted
+        )
+          throw denied(
+            'Every current plan delivery requires Reviewer checks, evidence and item acceptance',
+          );
+      }
+      for (const id of currentGroup.ids) {
+        const current = currentGroup.proofs[id];
+        const { run } = await service.requireCurrentRun(id, current.runId!, current.proof!);
+        if (run.userDecision !== 'accept')
+          await new VerifyRunModel(db, run.userId, service.workspaceId).setDecision(
+            run.id,
+            'accept',
+            {
+              decidedAt: new Date().toISOString(),
+              decidedBy: service.userId,
+            },
+          );
+      }
+      return { ...currentGroup.proofs[task.id], deliveryAccepted: true };
+    };
+    const accepted = await lock(this.db, 0);
+    await completeAcceptedArtifacts(this.db, task.createdByUserId!, this.workspaceId, task.id);
+    return accepted;
   }
 }

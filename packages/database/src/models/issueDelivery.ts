@@ -58,7 +58,7 @@ export const currentIssueDeliveryProof = (
       !/^[a-f\d]{40,64}$/i.test(integration.expectedHeadSha) ||
       integration.repo !== checklist.repo ||
       !integration.branch ||
-      ['conflict', 'publish_failed', 'blocked', 'skipped'].includes(integration.state) ||
+      ['skipped'].includes(integration.state) ||
       !checklist.targetBranch)
   )
     return;
@@ -132,7 +132,10 @@ export const issueDeliveryReadiness = (
     necessaryChecksPassed,
     itemsAccepted,
     deliveryAccepted,
-    availableForDependents: reviewerPassed && necessaryChecksPassed,
+    availableForDependents:
+      reviewerPassed &&
+      necessaryChecksPassed &&
+      !['conflict', 'publish_failed', 'blocked'].includes(topic?.integration?.state ?? ''),
     merged,
   };
 };

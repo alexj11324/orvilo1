@@ -135,6 +135,7 @@ export const useCreateTaskHotkey = () => {
 export const GO_TO_DESTINATIONS: ReadonlyArray<{ id: HotkeyId; path: string }> = [
   { id: HotkeyEnum.GoToInbox, path: '/inbox' },
   { id: HotkeyEnum.GoToMyIssues, path: '/my-issues' },
+  { id: HotkeyEnum.GoToReviews, path: '/reviews' },
   { id: HotkeyEnum.GoToDrafts, path: '/drafts' },
   { id: HotkeyEnum.GoToProjects, path: '/projects' },
   { id: HotkeyEnum.GoToViews, path: '/views' },

@@ -55,6 +55,7 @@ describe('GO_TO_DESTINATIONS', () => {
     expect(GO_TO_DESTINATIONS.map((d) => d.id)).toEqual([
       HotkeyEnum.GoToInbox,
       HotkeyEnum.GoToMyIssues,
+      HotkeyEnum.GoToReviews,
       HotkeyEnum.GoToDrafts,
       HotkeyEnum.GoToProjects,
       HotkeyEnum.GoToViews,

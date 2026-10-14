@@ -75,7 +75,7 @@ export const UpdateConfigInspector = memo<
         </>
       )}
       {!isLoading && isSuccess && (
-        <Check className="ms-1 -mbe-0.5" color={'var(--success)'} size={14} />
+        <Check className="ms-1" color={'var(--success-text)'} size={14} />
       )}
     </div>
   );

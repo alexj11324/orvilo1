@@ -40,9 +40,7 @@ export const RemoveIdentityMemoryInspector = memo<
           :<span className={highlightTextStyles.warning}>{id}</span>
         </>
       )}
-      {!isLoading && isSuccess && (
-        <Check className="-mbe-0.5 ms-1" color="var(--success)" size={14} />
-      )}
+      {!isLoading && isSuccess && <Check className="ms-1" color="var(--success-text)" size={14} />}
     </div>
   );
 });

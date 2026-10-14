@@ -26,10 +26,10 @@ import MasonryViewSkeleton from './Skeleton';
 import { useMasonryViewState } from './useMasonryViewState';
 
 const styles = {
+  stickyHeader: 'sticky z-1 inset-bs-0 bg-card',
   selectAllHint:
-    'sticky z-1 inset-bs-13.25 py-2 px-1 [border-block-end:1px_solid_var(--sidebar-border)] text-xs text-foreground-description bg-accent',
-  toolbar:
-    'sticky z-1 [inset-block-start:0] py-3 px-1 [border-block-end:1px_solid_var(--sidebar-border)] bg-card',
+    'py-2 px-1 [border-block-end:1px_solid_var(--sidebar-border)] text-xs text-foreground-description bg-accent',
+  toolbar: 'py-3 px-1 [border-block-end:1px_solid_var(--sidebar-border)] bg-card',
 };
 
 interface MasonryViewProps {
@@ -167,6 +167,8 @@ const MasonryView = memo(function MasonryView({
   // Handle scroll event to detect when near bottom
   const handleScroll = useCallback(
     (e: UIEvent<HTMLDivElement>) => {
+      if (e.target !== e.currentTarget) return;
+
       const target = e.currentTarget;
       const scrollTop = target.scrollTop;
       const scrollHeight = target.scrollHeight;
@@ -184,105 +186,93 @@ const MasonryView = memo(function MasonryView({
     <MasonryViewSkeleton columnCount={columnCount} />
   ) : (
     <div
-      style={{
-        flex: 1,
-        height: '100%',
-        opacity: isMasonryReady ? 1 : 0,
-        overflowY: 'auto',
-        transition: 'opacity 0.2s ease-in-out',
-      }}
-      onScroll={handleScroll}
+      className="flex h-full min-h-0 flex-1 flex-col transition-opacity duration-200 ease-in-out motion-reduce:transition-none"
+      style={{ opacity: isMasonryReady ? 1 : 0 }}
     >
-      <div style={{ paddingBlockEnd: 24, paddingBlockStart: 12, paddingInline: 24 }}>
-        <div className={cn('flex flex-row items-center gap-2', styles.toolbar)}>
-          <Checkbox
-            checked={allSelected}
-            disabled={!hasSelectableItems}
-            indeterminate={indeterminate}
-            onCheckedChange={handleSelectAllResults}
-          />
-          <span>
-            {selectedCount > 0 || selectAllState === 'all'
-              ? t(
+      <div className="flex min-h-0 flex-1 flex-col pbs-3 pbe-6 px-6">
+        <div className={cn('shrink-0', styles.stickyHeader)}>
+          <div className={cn('flex flex-row items-center gap-2', styles.toolbar)}>
+            <Checkbox
+              checked={allSelected}
+              disabled={!hasSelectableItems}
+              indeterminate={indeterminate}
+              onCheckedChange={handleSelectAllResults}
+            />
+            <span>
+              {selectedCount > 0 || selectAllState === 'all'
+                ? t(
+                    selectAllState === 'all'
+                      ? total
+                        ? isAllResultsSelected
+                          ? 'FileManager.total.allSelectedCount'
+                          : 'FileManager.total.selectedCount'
+                        : 'FileManager.total.allSelectedFallback'
+                      : 'FileManager.total.selectedCount',
+                    {
+                      count: selectedCount,
+                      ns: 'components',
+                    },
+                  )
+                : t('FileManager.total.fileCount', {
+                    count: resourceTotal || dataLength,
+                    ns: 'components',
+                  })}
+            </span>
+            <div className="flex flex-col flex-1" />
+            <SourceFilter />
+          </div>
+          {showSelectAllHint && (
+            <div
+              className={cn(
+                'flex flex-row items-center gap-1.5 px-1 flex-wrap',
+                styles.selectAllHint,
+              )}
+            >
+              <span>
+                {t(
                   selectAllState === 'all'
                     ? total
                       ? isAllResultsSelected
                         ? 'FileManager.total.allSelectedCount'
                         : 'FileManager.total.selectedCount'
                       : 'FileManager.total.allSelectedFallback'
-                    : 'FileManager.total.selectedCount',
+                    : 'FileManager.total.loadedSelectedCount',
                   {
                     count: selectedCount,
                     ns: 'components',
                   },
-                )
-              : t('FileManager.total.fileCount', {
-                  count: resourceTotal || dataLength,
-                  ns: 'components',
-                })}
-          </span>
-          <div className="flex flex-col flex-1" />
-          <SourceFilter />
-        </div>
-        {showSelectAllHint && (
-          <div
-            className={cn(
-              'flex flex-row items-center gap-1.5 px-1 flex-wrap',
-              styles.selectAllHint,
-            )}
-          >
-            <span>
-              {t(
-                selectAllState === 'all'
-                  ? total
-                    ? isAllResultsSelected
-                      ? 'FileManager.total.allSelectedCount'
-                      : 'FileManager.total.selectedCount'
-                    : 'FileManager.total.allSelectedFallback'
-                  : 'FileManager.total.loadedSelectedCount',
-                {
-                  count: selectedCount,
-                  ns: 'components',
-                },
+                )}
+              </span>
+              {selectAllState !== 'all' && (
+                <Button size="sm" variant="link" onClick={handleSelectAllResources}>
+                  {total && total > selectableCount
+                    ? t('FileManager.total.selectAll', {
+                        count: total,
+                        ns: 'components',
+                      })
+                    : t('FileManager.total.selectAllFallback', {
+                        ns: 'components',
+                      })}
+                </Button>
               )}
-            </span>
-            {selectAllState !== 'all' && (
-              <Button size="sm" variant="link" onClick={handleSelectAllResources}>
-                {total && total > selectableCount
-                  ? t('FileManager.total.selectAll', {
-                      count: total,
-                      ns: 'components',
-                    })
-                  : t('FileManager.total.selectAllFallback', {
-                      ns: 'components',
-                    })}
-              </Button>
-            )}
-          </div>
-        )}
-        <VirtuosoMasonry
-          ItemContent={MasonryItemWrapper}
-          columnCount={columnCount}
-          context={masonryContext}
-          data={data}
-          style={{
-            gap: '16px',
-            overflow: 'hidden',
-          }}
-        />
-        {isLoadingMore && (
-          <div
-            className="flex flex-col items-center justify-center"
-            style={{
-              color: 'var(--ant-color-text-description)',
-              fontSize: 14,
-              marginBlockStart: 16,
-              minHeight: 40,
-            }}
-          >
-            {t('loading', { defaultValue: 'Loading...' })}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
+          <VirtuosoMasonry
+            ItemContent={MasonryItemWrapper}
+            className="min-h-0 flex-1 gap-4"
+            columnCount={columnCount}
+            context={masonryContext}
+            data={data}
+            onScrollCapture={handleScroll}
+          />
+          {isLoadingMore && (
+            <div className="flex min-h-10 flex-none flex-col items-center justify-center text-sm text-foreground-description">
+              {t('loading', { defaultValue: 'Loading...' })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

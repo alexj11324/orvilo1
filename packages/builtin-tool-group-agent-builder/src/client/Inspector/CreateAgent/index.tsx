@@ -13,7 +13,7 @@ import type { CreateAgentParams, CreateAgentState } from '../../../types';
 
 const styles = {
   root: 'flex items-center gap-2 overflow-hidden',
-  statusIcon: 'shrink-0 -mbe-0.5',
+  statusIcon: 'shrink-0',
   title: 'shrink-0 whitespace-nowrap text-muted-foreground',
 };
 
@@ -51,7 +51,7 @@ export const CreateAgentInspector = memo<
       {avatar && <Avatar avatar={avatar} shape={'square'} size={20} title={title || undefined} />}
       {title && <span>{title}</span>}
       {!isLoading && isSuccess && (
-        <Check className={styles.statusIcon} color={'var(--success)'} size={14} />
+        <Check className={styles.statusIcon} color={'var(--success-text)'} size={14} />
       )}
     </div>
   );

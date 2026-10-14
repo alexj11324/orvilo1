@@ -10,7 +10,8 @@ import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/sty
 
 import type { ExecScriptParams, ExecScriptState } from '../../../types';
 
-const styles = { statusIcon: '-mbe-0.5 ms-1' };
+// Status glyphs stay in the receipt text line under the global SVG block reset.
+const styles = { statusIcon: 'inline-block align-middle ms-1' };
 
 export const ExecScriptInspector = memo<BuiltinInspectorProps<ExecScriptParams, ExecScriptState>>(
   ({ args, partialArgs, isArgumentsStreaming, isLoading, pluginState }) => {
@@ -59,9 +60,9 @@ export const ExecScriptInspector = memo<BuiltinInspectorProps<ExecScriptParams, 
             </span>
           ) : pluginState?.success !== undefined ? (
             isSuccess ? (
-              <Check className={styles.statusIcon} color={'var(--success)'} size={14} />
+              <Check className={styles.statusIcon} color={'var(--success-text)'} size={14} />
             ) : (
-              <X className={styles.statusIcon} color={'var(--destructive)'} size={14} />
+              <X className={styles.statusIcon} color={'var(--destructive-text)'} size={14} />
             )
           ) : null}
         </span>

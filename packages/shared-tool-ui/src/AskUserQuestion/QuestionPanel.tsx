@@ -12,7 +12,7 @@ const styles = {
   // Keep the free-text row aligned with OptionCard's numbered options.
   customRow: 'mbs-0.5 px-3',
   index:
-    'shrink-0 box-border size-5.5 rounded-(--radius-input) font-mono text-xs font-semibold leading-5.5 text-muted-foreground text-center bg-accent',
+    'inline-flex shrink-0 box-border size-5.5 items-center justify-center rounded-(--radius-input) font-mono text-xs font-semibold text-muted-foreground bg-accent',
 };
 
 interface QuestionPanelProps {

@@ -10,9 +10,12 @@ import { AgentModel } from '../agent';
 const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'agent-device-binding-user';
+const otherUserId = 'agent-device-binding-other';
 const wsId = 'agent-device-binding-ws';
 const personalDeviceId = 'personal-device-001';
 const workspaceDeviceId = 'workspace-device-001';
+const foreignDeviceId = 'foreign-device-001';
+const missingDeviceId = 'missing-device-001';
 
 const withRuntime = (config: Partial<NewAgent>, boundDeviceId = workspaceDeviceId) => ({
   ...config,
@@ -26,7 +29,7 @@ const withRuntime = (config: Partial<NewAgent>, boundDeviceId = workspaceDeviceI
 
 beforeEach(async () => {
   await serverDB.delete(users);
-  await serverDB.insert(users).values([{ id: userId }]);
+  await serverDB.insert(users).values([{ id: userId }, { id: otherUserId }]);
   await serverDB
     .insert(workspaces)
     .values([{ id: wsId, name: 'WS', slug: 'ws', primaryOwnerId: userId }]);
@@ -35,11 +38,10 @@ beforeEach(async () => {
     { userId, deviceId: personalDeviceId, identitySource: 'machine-id' },
     {
       userId,
-      workspaceId: wsId,
       deviceId: workspaceDeviceId,
       identitySource: 'machine-id',
-      visibility: 'public',
     },
+    { userId: otherUserId, deviceId: foreignDeviceId, identitySource: 'machine-id' },
   ]);
 });
 
@@ -47,7 +49,7 @@ afterEach(async () => {
   await serverDB.delete(users);
 });
 
-describe('AgentModel workspace device binding', () => {
+describe('AgentModel saved global device binding', () => {
   describe('create', () => {
     it('allows a personal agent to bind its saved device', async () => {
       const personalModel = new AgentModel(serverDB, userId);
@@ -60,7 +62,7 @@ describe('AgentModel workspace device binding', () => {
       expect(agent.agencyConfig?.boundDeviceId).toBe(personalDeviceId);
     });
 
-    it('allows a workspace agent to bind a workspace device', async () => {
+    it('allows a workspace agent to bind another owned global device', async () => {
       const wsModel = new AgentModel(serverDB, userId, wsId);
       const agent = await wsModel.create(
         withRuntime({
@@ -71,33 +73,32 @@ describe('AgentModel workspace device binding', () => {
       expect(agent.agencyConfig?.boundDeviceId).toBe(workspaceDeviceId);
     });
 
-    it('rejects a workspace agent bound to a personal device', async () => {
+    it('allows a workspace agent bound to its creator personal device', async () => {
       const wsModel = new AgentModel(serverDB, userId, wsId);
-      await expect(
-        wsModel.create(
-          withRuntime({
-            title: 'WS agent',
-            agencyConfig: { boundDeviceId: personalDeviceId },
-          }),
-        ),
-      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      const agent = await wsModel.create(
+        withRuntime({
+          title: 'WS agent',
+          agencyConfig: { boundDeviceId: personalDeviceId },
+        }),
+      );
+      expect(agent.agencyConfig?.boundDeviceId).toBe(personalDeviceId);
     });
 
-    it('rejects a workspace agent with a personal-device key in workingDirByDevice', async () => {
+    it('rejects a new working directory binding to a foreign-owned device', async () => {
       const wsModel = new AgentModel(serverDB, userId, wsId);
       await expect(
         wsModel.create(
           withRuntime({
             title: 'WS agent',
             agencyConfig: {
-              workingDirByDevice: { [personalDeviceId]: '/tmp' },
+              workingDirByDevice: { [foreignDeviceId]: '/tmp' },
             },
           }),
         ),
-      ).rejects.toThrow(/Workspace agent can only bind devices/);
+      ).rejects.toMatchObject({ code: 'FORBIDDEN', message: 'AGENT_HOST_UNAVAILABLE' });
     });
 
-    it('allows a fixed public workspace device target', async () => {
+    it('allows a fixed device target without a device visibility grant', async () => {
       const wsModel = new AgentModel(serverDB, userId, wsId);
       const agent = await wsModel.create(
         withRuntime({
@@ -127,7 +128,7 @@ describe('AgentModel workspace device binding', () => {
       },
     );
 
-    it('allows a saved local target bound to a public workspace device', async () => {
+    it('allows a saved local target bound to an owned global device', async () => {
       const wsModel = new AgentModel(serverDB, userId, wsId);
       const agent = await wsModel.create(
         withRuntime({
@@ -139,29 +140,24 @@ describe('AgentModel workspace device binding', () => {
       expect(agent.agencyConfig?.executionTarget).toBe('local');
     });
 
-    it('rejects fixed policy with a private workspace device', async () => {
-      const privateDeviceId = 'workspace-private-device';
-      await serverDB.insert(devices).values({
-        deviceId: privateDeviceId,
-        identitySource: 'machine-id',
-        userId,
-        visibility: 'private',
-        workspaceId: wsId,
-      });
-      const wsModel = new AgentModel(serverDB, userId, wsId);
+    it.each([missingDeviceId, foreignDeviceId])(
+      'rejects a new unavailable host: %s',
+      async (deviceId) => {
+        const wsModel = new AgentModel(serverDB, userId, wsId);
 
-      await expect(
-        wsModel.create(
-          withRuntime({
-            title: 'Private fixed WS agent',
-            agencyConfig: {
-              boundDeviceId: privateDeviceId,
-              executionTarget: 'device',
-            },
-          }),
-        ),
-      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
-    });
+        await expect(
+          wsModel.create(
+            withRuntime({
+              title: 'Unavailable host agent',
+              agencyConfig: {
+                boundDeviceId: deviceId,
+                executionTarget: 'device',
+              },
+            }),
+          ),
+        ).rejects.toMatchObject({ code: 'FORBIDDEN', message: 'AGENT_HOST_UNAVAILABLE' });
+      },
+    );
   });
 
   describe('updateConfig', () => {
@@ -186,13 +182,11 @@ describe('AgentModel workspace device binding', () => {
       ).rejects.toMatchObject({ message: 'AGENT_HOST_REQUIRED' });
     });
 
-    it('allows switching a workspace agent to another workspace device', async () => {
+    it('allows switching a workspace agent to another owned global device', async () => {
       const otherWorkspaceDeviceId = 'workspace-device-002';
       await serverDB.insert(devices).values({
         userId,
-        workspaceId: wsId,
         deviceId: otherWorkspaceDeviceId,
-        visibility: 'public',
         identitySource: 'machine-id',
       });
 
@@ -213,7 +207,7 @@ describe('AgentModel workspace device binding', () => {
       expect(result?.agencyConfig?.boundDeviceId).toBe(otherWorkspaceDeviceId);
     });
 
-    it('rejects setting a personal device on a workspace agent', async () => {
+    it('allows switching a workspace agent to its owner personal device', async () => {
       const wsModel = new AgentModel(serverDB, userId, wsId);
       const agent = await wsModel.create(
         withRuntime({
@@ -221,12 +215,25 @@ describe('AgentModel workspace device binding', () => {
           agencyConfig: { boundDeviceId: workspaceDeviceId },
         }),
       );
-      await expect(
-        wsModel.updateConfig(agent.id, {
-          agencyConfig: { boundDeviceId: personalDeviceId },
-        }),
-      ).rejects.toThrow(/Workspace agent can only bind devices/);
+      await wsModel.updateConfig(agent.id, {
+        agencyConfig: { boundDeviceId: personalDeviceId },
+      });
+      const stored = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
+      expect(stored?.agencyConfig?.boundDeviceId).toBe(personalDeviceId);
     });
+
+    it.each([missingDeviceId, foreignDeviceId])(
+      'rejects switching to an unavailable host: %s',
+      async (deviceId) => {
+        const wsModel = new AgentModel(serverDB, userId, wsId);
+        const agent = await wsModel.create(withRuntime({ title: 'WS agent' }));
+        await expect(
+          wsModel.updateConfig(agent.id, { agencyConfig: { boundDeviceId: deviceId } }),
+        ).rejects.toMatchObject({ code: 'FORBIDDEN', message: 'AGENT_HOST_UNAVAILABLE' });
+        const stored = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
+        expect(stored?.agencyConfig?.boundDeviceId).toBe(workspaceDeviceId);
+      },
+    );
 
     it('allows clearing a workingDirByDevice entry on a workspace agent (undefined value)', async () => {
       const wsModel = new AgentModel(serverDB, userId, wsId);
@@ -252,7 +259,7 @@ describe('AgentModel workspace device binding', () => {
   describe('publishToWorkspace', () => {
     const createPrivateFixedAgent = async () => {
       const wsModel = new AgentModel(serverDB, userId, wsId);
-      // Existing private Agent fixture; the current workspace create API rejects private rows.
+      // An existing private Agent can be published after its saved host is validated.
       const [agent] = await serverDB
         .insert(agents)
         .values({
@@ -272,7 +279,7 @@ describe('AgentModel workspace device binding', () => {
       return { agent, wsModel };
     };
 
-    it('publishes a fixed agent while its device is public', async () => {
+    it('publishes a fixed agent bound to its owner global device', async () => {
       const { agent, wsModel } = await createPrivateFixedAgent();
 
       const published = await wsModel.publishToWorkspace(agent.id);
@@ -280,12 +287,9 @@ describe('AgentModel workspace device binding', () => {
       expect(published.visibility).toBe('public');
     });
 
-    it('blocks publishing when the fixed device is no longer public', async () => {
+    it('blocks publishing when the saved host is no longer registered', async () => {
       const { agent, wsModel } = await createPrivateFixedAgent();
-      await serverDB
-        .update(devices)
-        .set({ visibility: 'private' })
-        .where(eq(devices.deviceId, workspaceDeviceId));
+      await serverDB.delete(devices).where(eq(devices.deviceId, workspaceDeviceId));
 
       await expect(wsModel.publishToWorkspace(agent.id)).rejects.toThrow(/AGENT_HOST_UNAVAILABLE/);
 
@@ -293,12 +297,9 @@ describe('AgentModel workspace device binding', () => {
       expect(stored?.visibility).toBe('private');
     });
 
-    it('blocks the direct visibility API from bypassing the fixed-device check', async () => {
+    it('blocks the direct visibility API from bypassing the missing-host check', async () => {
       const { agent, wsModel } = await createPrivateFixedAgent();
-      await serverDB
-        .update(devices)
-        .set({ visibility: 'private' })
-        .where(eq(devices.deviceId, workspaceDeviceId));
+      await serverDB.delete(devices).where(eq(devices.deviceId, workspaceDeviceId));
 
       await expect(wsModel.setVisibility(agent.id, 'public')).rejects.toThrow(
         /AGENT_HOST_UNAVAILABLE/,
@@ -310,11 +311,8 @@ describe('AgentModel workspace device binding', () => {
   });
 
   describe('duplicate', () => {
-    it('refuses duplication when a stale personal host cannot form a workspace runtime', async () => {
-      // Legacy row predating the workspace-device guard: a public workspace
-      // agent whose config still references a personal device (updateConfig
-      // grandfathers it on the source, but the copy is a fresh caller-owned
-      // row with nothing to grandfather).
+    it('refuses duplication when the saved host is missing', async () => {
+      // A duplicate is a fresh runtime and must revalidate its saved host.
       const [sourceAgent] = await serverDB
         .insert(agents)
         .values({
@@ -324,10 +322,10 @@ describe('AgentModel workspace device binding', () => {
           visibility: 'public',
           agencyConfig: {
             heterogeneousProvider: { type: 'codex', model: 'default' },
-            boundDeviceId: personalDeviceId,
+            boundDeviceId: missingDeviceId,
             executionTarget: 'device',
             workingDirByDevice: {
-              [personalDeviceId]: '/tmp/legacy',
+              [missingDeviceId]: '/tmp/legacy',
               [workspaceDeviceId]: '/tmp/ws',
             },
           },
@@ -337,10 +335,11 @@ describe('AgentModel workspace device binding', () => {
       const wsModel = new AgentModel(serverDB, userId, wsId);
       await expect(wsModel.duplicate(sourceAgent.id)).rejects.toMatchObject({
         code: 'FORBIDDEN',
+        message: 'AGENT_HOST_UNAVAILABLE',
       });
       expect(await serverDB.select().from(agents)).toHaveLength(1);
     });
-    it('preserves a valid fixed workspace-device contract when duplicating', async () => {
+    it('preserves a valid owned global-device contract when duplicating', async () => {
       const [sourceAgent] = await serverDB
         .insert(agents)
         .values({
@@ -371,39 +370,33 @@ describe('AgentModel workspace device binding', () => {
       });
     });
 
-    it('refuses a public duplicate bound to a private workspace host', async () => {
-      const privateDeviceId = 'workspace-private-device';
-      await serverDB.insert(devices).values({
-        userId,
-        workspaceId: wsId,
-        deviceId: privateDeviceId,
-        identitySource: 'machine-id',
-        visibility: 'private',
-      });
-
+    it('refuses a fresh duplicate bound to another owner host', async () => {
       const [sourceAgent] = await serverDB
         .insert(agents)
         .values({
           userId,
           workspaceId: wsId,
-          title: 'Legacy private-device agent',
+          title: 'Legacy foreign-device agent',
           visibility: 'public',
           agencyConfig: {
             heterogeneousProvider: { type: 'codex', model: 'default' },
-            boundDeviceId: privateDeviceId,
+            boundDeviceId: foreignDeviceId,
             executionTarget: 'device',
           },
         } as NewAgent)
         .returning();
 
       const wsModel = new AgentModel(serverDB, userId, wsId);
-      await expect(wsModel.duplicate(sourceAgent.id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(wsModel.duplicate(sourceAgent.id)).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+        message: 'AGENT_HOST_UNAVAILABLE',
+      });
       expect(await serverDB.select().from(agents)).toHaveLength(1);
     });
   });
 
   describe('transferAgent', () => {
-    it('strips a personal-device binding when moving an agent into a workspace', async () => {
+    it('preserves an owned personal-device binding when moving an agent into a workspace', async () => {
       const personalModel = new AgentModel(serverDB, userId);
       const agent = await personalModel.create(
         withRuntime({
@@ -421,11 +414,11 @@ describe('AgentModel workspace device binding', () => {
         where: eq(agents.id, agent.id),
       });
       expect(result?.workspaceId).toBe(wsId);
-      expect(result?.agencyConfig?.boundDeviceId).toBeUndefined();
-      expect(result?.agencyConfig?.workingDirByDevice).toBeUndefined();
+      expect(result?.agencyConfig?.boundDeviceId).toBe(personalDeviceId);
+      expect(result?.agencyConfig?.workingDirByDevice).toEqual({ [personalDeviceId]: '/work' });
     });
 
-    it('preserves a workspace-device binding when the target workspace owns the device', async () => {
+    it('preserves an owned global-device binding on a same-workspace transfer', async () => {
       const wsModel = new AgentModel(serverDB, userId, wsId);
       const agent = await wsModel.create(
         withRuntime({
@@ -446,7 +439,7 @@ describe('AgentModel workspace device binding', () => {
       expect(result?.agencyConfig?.workingDirByDevice?.[workspaceDeviceId]).toBe('/work');
     });
 
-    it('removes an unavailable local device when moving into a workspace', async () => {
+    it('preserves an owned local device when moving into a workspace', async () => {
       const personalModel = new AgentModel(serverDB, userId);
       const agent = await personalModel.create(
         withRuntime({
@@ -463,7 +456,7 @@ describe('AgentModel workspace device binding', () => {
       const result = await serverDB.query.agents.findFirst({
         where: eq(agents.id, agent.id),
       });
-      expect(result?.agencyConfig?.boundDeviceId).toBeUndefined();
+      expect(result?.agencyConfig?.boundDeviceId).toBe(personalDeviceId);
       expect(result?.agencyConfig?.executionTarget).toBe('local');
     });
 

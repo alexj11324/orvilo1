@@ -42,23 +42,15 @@ export const ConfiguredAgentRow = ({
       },
     },
   );
-  const {
-    agencyConfig,
-    canSelectExecutionTarget,
-    canSelectPersonalDevice,
-    isPreferenceLoading,
-    workspaceScoped,
-  } = useEffectiveAgencyConfig(row.id);
-  const workspaceId = useAgentStore((state) => state.agentMap[row.id]?.workspaceId);
+  const { agencyConfig, canSelectExecutionTarget, isPreferenceLoading, workspaceScoped } =
+    useEffectiveAgencyConfig(row.id);
   const devices = useDeviceList();
   const { selectableDevices, deviceInventoryComplete, deviceInventoryError } =
     useDeviceSelectorState({
       agentId: row.id,
       boundDeviceId: agencyConfig?.boundDeviceId,
       canSelectDevice: canSelectExecutionTarget,
-      canSelectPersonalDevice,
       permissionsLoaded: !isPreferenceLoading,
-      scope: workspaceId ? 'workspace' : 'personal',
     });
   const bindings = useFetchProviderBindings();
   const type = agencyConfig?.heterogeneousProvider?.type;

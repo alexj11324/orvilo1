@@ -36,14 +36,11 @@ beforeEach(async () => {
       deviceId: `creation-host-${creator}`,
       identitySource: 'installation',
       userId: creator,
-      visibility: 'private',
     },
     {
       deviceId: `creation-host-${ws}`,
       identitySource: 'installation',
       userId: creator,
-      visibility: 'public',
-      workspaceId: ws,
     },
   ]);
 });

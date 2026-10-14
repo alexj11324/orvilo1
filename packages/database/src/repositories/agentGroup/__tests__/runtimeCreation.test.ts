@@ -113,7 +113,6 @@ describe('resource-owned runtime creation', () => {
       primaryOwnerId: userId,
     });
     await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
-    await db.update(devices).set({ workspaceId }).where(eq(devices.deviceId, 'resource-host'));
     const copied = await repo.copyToWorkspace(original.group.id, workspaceId, userId, {
       targetVisibility: 'private',
     });
@@ -185,19 +184,20 @@ describe('resource-owned runtime creation', () => {
     expect(await db.select().from(agents)).toHaveLength(3);
   });
 
-  it('requires target-scope host authority for copies and rolls back the group', async () => {
+  it('requires an available saved host for copies and rolls back the group', async () => {
     await seedPrime();
     const group = await seedLegacyGroup({ title: 'Original' }, [], runtime);
     await db
       .insert(workspaces)
       .values({ id: workspaceId, primaryOwnerId: userId, name: 'Target', slug: workspaceId });
+    await db.delete(devices).where(eq(devices.deviceId, 'resource-host'));
     await expect(repo.copyToWorkspace(group.group.id, workspaceId, userId)).rejects.toThrow(
       'AGENT_HOST_UNAVAILABLE',
     );
     expect(await db.select().from(chatGroups)).toHaveLength(1);
   });
 
-  it('leaves owned and referenced members in place when a transfer clone lacks target authority', async () => {
+  it('leaves owned and referenced members in place when a transfer clone loses its saved host', async () => {
     await seedPrime();
     const member = await new AgentModel(db, userId).create({ ...runtime, title: 'Referenced' });
     const group = await seedLegacyGroup({ title: 'Original' }, [member.id], runtime);
@@ -207,6 +207,7 @@ describe('resource-owned runtime creation', () => {
       name: 'Target',
       slug: workspaceId,
     });
+    await db.delete(devices).where(eq(devices.deviceId, 'resource-host'));
     await expect(repo.transferToWorkspace(group.group.id, workspaceId, userId)).rejects.toThrow(
       'AGENT_HOST_UNAVAILABLE',
     );

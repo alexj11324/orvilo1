@@ -131,7 +131,7 @@ describe('PageAgentProvider', () => {
       context: { documentId: 'doc-1', scope: 'page' },
       skipFetch: true,
     });
-    expect(conversationProviderSpy.mock.calls.at(-1)![0].context.agentId).toBeUndefined();
+    expect(conversationProviderSpy.mock.calls.at(-1)![0].context.agentId).toBe('');
   });
 
   it('resets a stale page topic on initial scoped agent sync only', async () => {

@@ -975,7 +975,7 @@ export class ChatGroupModel {
 
     if (ownedAgentIds.length > 0) {
       const ownedRows = await trx
-        .select({ id: agents.id })
+        .select({ id: agents.id, visibility: agents.visibility })
         .from(agents)
         .where(inArray(agents.id, ownedAgentIds));
       for (const row of ownedRows) {

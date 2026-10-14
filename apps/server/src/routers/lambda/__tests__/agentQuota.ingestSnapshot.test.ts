@@ -16,14 +16,12 @@ vi.mock('@/business/server/trpc-middlewares/rbacPermission', () => ({
 }));
 
 const mockFindByDeviceId = vi.fn();
-const mockFindWorkspaceDeviceById = vi.fn();
 const mockIngestSnapshot = vi.fn(async () => ({ ok: true }));
 
 vi.mock('@/database/models/device', () => ({
   DeviceModel: vi.fn(function () {
     return {
-      findByDeviceId: mockFindByDeviceId,
-      findWorkspaceDeviceById: mockFindWorkspaceDeviceById,
+      findExecutionDeviceById: mockFindByDeviceId,
     };
   }),
 }));
@@ -104,37 +102,19 @@ describe('agentQuota.ingestSnapshot device resolution', () => {
     );
   });
 
-  it('resolves a workspace device enrolled by another member', async () => {
-    // A workspace device's identity is (workspaceId, deviceId); `userId` only
-    // records the first enroller, so the personal lookup misses a machine any
-    // other member enrolled and the snapshot would lose its attribution.
-    mockFindWorkspaceDeviceById.mockResolvedValue({ id: 'ws-device-uuid' });
-    mockFindByDeviceId.mockResolvedValue(undefined);
-
+  it('resolves an authorized saved Agent host in a workspace', async () => {
+    mockFindByDeviceId.mockResolvedValue({ id: 'authorized-device-uuid' });
     await ingest('shared-build-server', 'ws-1');
-
-    expect(mockFindWorkspaceDeviceById).toHaveBeenCalledWith('shared-build-server');
     expect(mockIngestSnapshot).toHaveBeenCalledWith(
-      expect.objectContaining({ deviceId: 'ws-device-uuid' }),
+      expect.objectContaining({ deviceId: 'authorized-device-uuid' }),
     );
   });
 
-  it('falls back to the personal device when a workspace request names one', async () => {
-    mockFindWorkspaceDeviceById.mockResolvedValue(undefined);
-    mockFindByDeviceId.mockResolvedValue({ id: 'personal-device-uuid' });
-
-    await ingest('my-laptop', 'ws-1');
-
+  it('does not attribute a sample to an unauthorized workspace host', async () => {
+    mockFindByDeviceId.mockResolvedValue(undefined);
+    await ingest('foreign-host', 'ws-1');
     expect(mockIngestSnapshot).toHaveBeenCalledWith(
-      expect.objectContaining({ deviceId: 'personal-device-uuid' }),
+      expect.objectContaining({ deviceId: undefined, readings: READINGS }),
     );
-  });
-
-  it('skips the workspace lookup outside a workspace context', async () => {
-    mockFindByDeviceId.mockResolvedValue({ id: 'personal-device-uuid' });
-
-    await ingest('my-laptop');
-
-    expect(mockFindWorkspaceDeviceById).not.toHaveBeenCalled();
   });
 });

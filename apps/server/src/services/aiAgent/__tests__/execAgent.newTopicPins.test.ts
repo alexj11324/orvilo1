@@ -297,12 +297,25 @@ describe('AiAgentService.execAgent - saved Agent runtime and conversation contro
     expect(mockDispatchHeteroAgent.mock.calls[0][2].heterogeneousProvider.effort).toBe('low');
   });
 
-  it('dispatches the existing conversation ACP permission', async () => {
+  it('dispatches the saved Agent ACP permission despite a legacy topic override', async () => {
+    mockAgentConfig.mockResolvedValue({
+      ...agentRow,
+      agencyConfig: {
+        heterogeneousProvider: {
+          type: 'claude-code',
+          permission: { configId: 'permission_mode', value: 'plan' },
+        },
+      },
+    });
     mockTopicFind.mockResolvedValue({
       id: 'topic-1',
       metadata: {
         executionConfig: {
-          permission: { provider: 'claude-code', configId: 'permission_mode', value: 'plan' },
+          permission: {
+            provider: 'claude-code',
+            configId: 'permission_mode',
+            value: 'bypassPermissions',
+          },
         },
       },
     });

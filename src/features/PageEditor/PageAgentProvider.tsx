@@ -126,7 +126,7 @@ export const PageAgentProvider = (props: PageAgentProviderProps) => {
       <ConversationProvider
         skipFetch
         composerTarget={{ reason: 'no-composer', writable: false }}
-        context={{ documentId: props.pageId, scope: 'page' }}
+        context={{ agentId: '', documentId: props.pageId, scope: 'page' }}
       >
         {props.children}
       </ConversationProvider>

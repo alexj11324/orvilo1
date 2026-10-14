@@ -8,6 +8,7 @@ import type {
   TaskWorkflowCategory,
 } from '@orvilo/types';
 import { TASK_ATTENTION_REASONS } from '@orvilo/types';
+import { isRecord } from '@orvilo/utils/object';
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
@@ -2840,7 +2841,7 @@ export const taskRouter = router({
           (await model.derivedStatusByIds([resolved.id]))[resolved.id] ?? resolved.status;
         await ctx.taskService.assertNativeAutomationConfiguration({
           ...resolved,
-          config: { ...resolved.config, ...config },
+          config: { ...(isRecord(resolved.config) ? resolved.config : {}), ...config },
           status,
         });
         const task = await model.updateTaskConfig(resolved.id, config, { invalidateRun: true });

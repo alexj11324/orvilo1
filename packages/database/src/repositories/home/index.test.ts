@@ -476,8 +476,6 @@ describe('HomeRepository', () => {
         deviceId: `creation-host-${workspaceId}`,
         identitySource: 'installation',
         userId,
-        visibility: 'public',
-        workspaceId,
       });
       const agent = await workspaceAgentModel.create({
         agencyConfig: {

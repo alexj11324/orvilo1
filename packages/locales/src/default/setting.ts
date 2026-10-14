@@ -3394,7 +3394,7 @@ export default {
   'workspaceSetting.devices.offline': 'Offline',
   'workspaceSetting.devices.online': 'Online',
   'workspaceSetting.devices.readonlyHint':
-    'Only the member who enrolled this device or a workspace owner can rename or remove it.',
+    'Only the member who enrolled this device can rename or remove it.',
   'workspaceSetting.devices.unknownEnroller': 'an unknown member',
   'workspaceSetting.group.admin': 'Admin',
   'workspaceSetting.group.agent': 'Agent',

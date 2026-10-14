@@ -57,14 +57,11 @@ export const seedPrimeRuntime = async (
             deviceId,
             identitySource: 'installation',
             userId,
-            visibility: 'public' as const,
-            workspaceId,
           }
         : {
             deviceId,
             identitySource: 'installation',
             userId,
-            visibility: 'private' as const,
           },
     )
     .onConflictDoNothing();

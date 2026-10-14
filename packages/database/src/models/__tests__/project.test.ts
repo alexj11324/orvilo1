@@ -63,7 +63,7 @@ describe('ProjectModel', () => {
 
   const runtimeFixture = {
     agencyConfig: {
-      boundDeviceId: 'resource-fixture-host',
+      boundDeviceId: `resource-fixture-host-${userId}`,
       executionTarget: 'device' as const,
       heterogeneousProvider: { type: 'orvilo' as const, model: 'gpt-4o' },
     },
@@ -126,17 +126,19 @@ describe('ProjectModel', () => {
         await serverDB
           .insert(devices)
           .values({
-            deviceId: 'resource-fixture-host',
+            deviceId: `resource-fixture-host-${actor.id}`,
             identitySource: 'fallback',
             userId: actor.id,
-            workspaceId: scope,
-            visibility: 'public',
           })
           .onConflictDoNothing();
         await serverDB
           .insert(agents)
           .values({
             ...runtimeFixture,
+            agencyConfig: {
+              ...runtimeFixture.agencyConfig,
+              boundDeviceId: `resource-fixture-host-${actor.id}`,
+            },
             id: `runtime-fixture-${actor.id}-${scope ?? 'personal'}`,
             userId: actor.id,
             workspaceId: scope,

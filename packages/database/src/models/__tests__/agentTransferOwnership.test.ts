@@ -64,8 +64,6 @@ const withRuntime = async (
       deviceId: boundDeviceId,
       identitySource: 'machine-id',
       userId: actor,
-      visibility: workspaceId ? 'public' : 'private',
-      workspaceId,
     })
     .onConflictDoNothing();
   return {
@@ -799,22 +797,18 @@ describe('AgentModel.transferAgentOwnership', () => {
     expect(docRows.find((d) => d.id === 'doc-vfs-shared')?.userId).toBe(ownerId);
   });
 
-  it('drops a binding to another member’s PRIVATE workspace device, keeps public ones', async () => {
+  it('preserves the saved host and directory bindings when Agent ownership changes', async () => {
     const agent = await createOwnerAgent({ title: 'Agent' });
     await serverDB.insert(devices).values([
       {
         deviceId: 'owner-private-ws-device',
         identitySource: 'machine-id',
         userId: ownerId,
-        visibility: 'private',
-        workspaceId: wsId,
       },
       {
         deviceId: 'public-ws-device',
         identitySource: 'machine-id',
         userId: ownerId,
-        visibility: 'public',
-        workspaceId: wsId,
       },
     ]);
     await serverDB
@@ -833,10 +827,11 @@ describe('AgentModel.transferAgentOwnership', () => {
     await handover({ agentId: agent.id, fromUserId: ownerId, toUserId: recipientId });
 
     const [updated] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
-    // The previous owner's private workspace enrollment is invisible to the
-    // recipient; only the public device survives the handover.
-    expect(updated.agencyConfig?.boundDeviceId).toBeUndefined();
-    expect(updated.agencyConfig?.workingDirByDevice).toEqual({ 'public-ws-device': '/srv/shared' });
+    expect(updated.agencyConfig?.boundDeviceId).toBe('owner-private-ws-device');
+    expect(updated.agencyConfig?.workingDirByDevice).toEqual({
+      'owner-private-ws-device': '/home/owner',
+      'public-ws-device': '/srv/shared',
+    });
   });
 
   it('detaches other users’ tasks from a PRIVATE agent, keeps public-agent tasks intact', async () => {
@@ -1013,7 +1008,7 @@ describe('AgentModel.transferAgentOwnership', () => {
     expect(cronRows.find((j) => j.id === 'teammate-cron')?.enabled).toBe(true);
   });
 
-  it('strips device bindings the recipient cannot reach', async () => {
+  it('preserves a historical saved binding without silently changing its runtime', async () => {
     const agent = await createOwnerAgent({ title: 'Agent' });
     await serverDB
       .update(agents)
@@ -1031,10 +1026,12 @@ describe('AgentModel.transferAgentOwnership', () => {
 
     const [updated] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
     expect(updated.userId).toBe(recipientId);
-    // The personal device is not enrolled in the workspace: binding, per-device
-    // working directories are removed; the recipient must explicitly bind a new device.
-    expect(updated.agencyConfig?.boundDeviceId).toBeUndefined();
-    expect(updated.agencyConfig?.workingDirByDevice).toBeUndefined();
+    // Ownership transfer records the new manager; future execution still validates
+    // the saved host rather than replacing or removing it during the transfer.
+    expect(updated.agencyConfig?.boundDeviceId).toBe('owner-personal-device');
+    expect(updated.agencyConfig?.workingDirByDevice).toEqual({
+      'owner-personal-device': '/home/owner',
+    });
   });
 
   it('refuses while a cross-scope backfill job still covers the agent', async () => {

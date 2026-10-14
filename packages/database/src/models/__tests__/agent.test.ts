@@ -54,8 +54,6 @@ const withRuntime = async (
       deviceId: boundDeviceId,
       identitySource: 'installation',
       userId: actor,
-      visibility: workspaceId ? 'public' : 'private',
-      workspaceId,
     })
     .onConflictDoNothing();
   return {
@@ -3608,10 +3606,8 @@ describe('AgentModel', () => {
       await serverDB.insert(workspaceMembers).values({ workspaceId: wsId, userId, role: 'owner' });
       await serverDB.insert(devices).values({
         deviceId: 'ws-device-1',
-        visibility: 'public',
         identitySource: 'machine-id',
         userId,
-        workspaceId: wsId,
       });
     };
 
@@ -3965,6 +3961,9 @@ describe('AgentModel', () => {
     });
 
     it('should still upsert a workingDirByDevice entry when value is a path', async () => {
+      await serverDB
+        .insert(devices)
+        .values({ userId, deviceId: 'device-b', identitySource: 'installation' });
       const [agent] = await serverDB
         .insert(agents)
         .values({

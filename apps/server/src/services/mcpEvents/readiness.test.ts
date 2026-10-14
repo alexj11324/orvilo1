@@ -318,14 +318,12 @@ describe('MCP automation readiness', () => {
       10000,
     );
   });
-  it('uses the saved Agent device despite an explicit or task device choice', async () => {
+  it('uses the saved Agent device despite a legacy task device choice', async () => {
     mocks.devices.mockResolvedValue([{ deviceId: 'one' }, { deviceId: 'two' }]);
     mocks.online.mockResolvedValue([{ deviceId: 'one' }, { deviceId: 'two' }]);
     const request = input();
     request.task.config.automationDeviceId = 'two';
-    expect((await checkMcpAutomationReadiness({ ...request, deviceId: 'two' })).deviceId).toBe(
-      'one',
-    );
+    expect((await checkMcpAutomationReadiness(request)).deviceId).toBe('one');
   });
   it('preserves an offline saved Agent device instead of switching to the online device', async () => {
     const agent = await mocks.agent();
@@ -337,7 +335,7 @@ describe('MCP automation readiness', () => {
   });
   it('does not authorize gateway-only workspace devices', async () => {
     mocks.devices.mockResolvedValue([]);
-    const result = await checkMcpAutomationReadiness({ ...input(), deviceId: 'one' });
+    const result = await checkMcpAutomationReadiness(input());
     expect(result.reasons).toContain('DEVICE_UNAVAILABLE');
     expect(mocks.probe).not.toHaveBeenCalled();
   });

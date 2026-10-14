@@ -54,8 +54,6 @@ beforeEach(async () => {
       deviceId: wsDeviceId,
       identitySource: 'machine-id',
       userId,
-      visibility: 'public',
-      workspaceId: wsId,
     },
   ]);
 });

@@ -39,7 +39,6 @@ const withRuntime = async (config: Partial<NewAgent> = {}, actor = userId) => {
       deviceId: boundDeviceId,
       identitySource: 'machine-id',
       userId: actor,
-      visibility: 'private',
     })
     .onConflictDoNothing();
   return {

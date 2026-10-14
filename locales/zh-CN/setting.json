@@ -3145,7 +3145,7 @@
   "workspaceSetting.devices.heroTitle": "尚未连接设备",
   "workspaceSetting.devices.offline": "离线",
   "workspaceSetting.devices.online": "在线",
-  "workspaceSetting.devices.readonlyHint": "仅注册该设备的成员或工作区所有者可以重命名或移除。",
+  "workspaceSetting.devices.readonlyHint": "仅注册该设备的成员可以重命名或移除。",
   "workspaceSetting.devices.unknownEnroller": "未知成员",
   "workspaceSetting.general.created": "创建时间",
   "workspaceSetting.general.logo": "图标",

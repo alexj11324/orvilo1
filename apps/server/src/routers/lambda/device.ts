@@ -2,7 +2,7 @@ import {
   type HeterogeneousAgentScanMap,
   REMOTE_HETEROGENEOUS_AGENT_CONFIGS,
 } from '@orvilo/heterogeneous-agents';
-import type { DeviceListItem } from '@orvilo/types';
+import type { DeviceListItem, OrviloAgentAgencyConfig } from '@orvilo/types';
 import {
   deriveWorktreePath,
   normalizeAgencyConfigHeterogeneousProvider,
@@ -178,29 +178,29 @@ const deviceCatalogProcedure = deviceContextProcedure.use(async (opts) => {
       type: z.string(),
     })
     .parse(await opts.getRawInput());
-  if (!input.agentId) {
-    const catalogHost = await opts.ctx.deviceModel.findByDeviceId(input.deviceId);
-    if (!catalogHost)
+  let catalogProvider: OrviloAgentAgencyConfig['heterogeneousProvider'];
+  let catalogHost = await opts.ctx.deviceModel.findByDeviceId(input.deviceId);
+  if (input.agentId) {
+    const { agent, savedHost } = await authorizeAgentDiscovery(opts.ctx, input.agentId);
+    const config = normalizeAgencyConfigHeterogeneousProvider(agent.agencyConfig);
+    catalogProvider = config?.heterogeneousProvider;
+    if (
+      !savedHost ||
+      config?.boundDeviceId !== input.deviceId ||
+      catalogProvider?.type !== input.type
+    )
       throw new TRPCError({
         code: 'FORBIDDEN',
-        message: 'An Agent is required for its shared host catalog.',
+        message: 'The catalog must use the Agent’s saved host and runtime.',
       });
-    return opts.next({
-      ctx: {
-        catalogProvider: undefined,
-        catalogHost,
-      },
-    });
+    catalogHost = savedHost;
   }
-  const { agent, savedHost } = await authorizeAgentDiscovery(opts.ctx, input.agentId);
-  const config = normalizeAgencyConfigHeterogeneousProvider(agent?.agencyConfig);
-  const provider = config?.heterogeneousProvider;
-  if (!savedHost || config?.boundDeviceId !== input.deviceId || provider?.type !== input.type)
+  if (!catalogHost)
     throw new TRPCError({
       code: 'FORBIDDEN',
-      message: 'The catalog must use the Agent’s saved host and runtime.',
+      message: 'An Agent is required for its shared host catalog.',
     });
-  return opts.next({ ctx: { catalogProvider: provider, catalogHost: savedHost } });
+  return opts.next({ ctx: { catalogProvider, catalogHost } });
 });
 
 // Content and Git RPCs use three existing input names for the approved directory.

@@ -81,27 +81,21 @@ beforeEach(async () => {
       deviceId: `creation-host-${userId}`,
       identitySource: 'installation',
       userId,
-      visibility: 'private',
     },
     {
       deviceId: `creation-host-${targetUserId}`,
       identitySource: 'installation',
       userId: targetUserId,
-      visibility: 'private',
     },
     {
       deviceId: `creation-host-${wsId1}`,
       identitySource: 'installation',
       userId,
-      visibility: 'public',
-      workspaceId: wsId1,
     },
     {
       deviceId: `creation-host-${wsId2}`,
       identitySource: 'installation',
       userId,
-      visibility: 'public',
-      workspaceId: wsId2,
     },
   ]);
 });
@@ -1951,7 +1945,7 @@ describe('AgentModel.transferAgents (batch)', () => {
           visibility: 'public',
         },
         targetUserId,
-        wsId1,
+        undefined,
       ),
     );
 

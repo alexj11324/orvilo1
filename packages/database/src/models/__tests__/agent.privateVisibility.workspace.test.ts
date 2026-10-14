@@ -26,8 +26,6 @@ beforeEach(async () => {
   await serverDB.insert(devices).values({
     deviceId: 'private-vis-host',
     userId: userA,
-    workspaceId,
-    visibility: 'public',
     identitySource: 'fixture',
   });
   await serverDB.insert(workspaceMembers).values([
@@ -192,7 +190,7 @@ describe('AgentModel — private/public cross-user isolation', () => {
       });
     };
 
-    it('rejects workspace demotion without changing the public folder placement', async () => {
+    it('demotes a workspace Agent and clears its public folder placement', async () => {
       await insertGroup('pub-group', 'public');
       await insertAgent({ id: 'a-grouped', userId: userA, visibility: 'public', workspaceId });
       await serverDB
@@ -201,17 +199,16 @@ describe('AgentModel — private/public cross-user isolation', () => {
         .where(eq(agents.id, 'a-grouped'));
 
       const callerA = new AgentModel(serverDB, userA, workspaceId);
-      const before = await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-grouped') });
-      await expect(callerA.setVisibility('a-grouped', 'private')).rejects.toMatchObject({
-        code: 'BAD_REQUEST',
-        message: 'Workspace Agents must be public',
-      });
-      expect(await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-grouped') })).toEqual(
-        before,
+      await callerA.setVisibility('a-grouped', 'private');
+      expect(
+        await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-grouped') }),
+      ).toMatchObject({ visibility: 'private', sessionGroupId: null });
+      expect(await new AgentModel(serverDB, userB, workspaceId).existsById('a-grouped')).toBe(
+        false,
       );
     });
 
-    it('rejects workspace demotion without changing the existing private folder reference', async () => {
+    it('demotes a workspace Agent and keeps its matching private folder', async () => {
       await insertGroup('priv-group', 'private');
       await insertAgent({ id: 'a-priv-grouped', userId: userA, visibility: 'public', workspaceId });
       await serverDB
@@ -220,30 +217,27 @@ describe('AgentModel — private/public cross-user isolation', () => {
         .where(eq(agents.id, 'a-priv-grouped'));
 
       const callerA = new AgentModel(serverDB, userA, workspaceId);
-      const before = await serverDB.query.agents.findFirst({
-        where: eq(agents.id, 'a-priv-grouped'),
-      });
-      await expect(callerA.setVisibility('a-priv-grouped', 'private')).rejects.toMatchObject({
-        code: 'BAD_REQUEST',
-        message: 'Workspace Agents must be public',
-      });
+      await callerA.setVisibility('a-priv-grouped', 'private');
       expect(
         await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-priv-grouped') }),
-      ).toEqual(before);
+      ).toMatchObject({ visibility: 'private', sessionGroupId: 'priv-group' });
+      expect(await new AgentModel(serverDB, userB, workspaceId).existsById('a-priv-grouped')).toBe(
+        false,
+      );
     });
 
-    it('rejects workspace demotion and keeps ungrouped agents unchanged', async () => {
+    it('demotes an ungrouped workspace Agent and preserves owner access', async () => {
       await insertAgent({ id: 'a-ungrouped', userId: userA, visibility: 'public', workspaceId });
 
       const callerA = new AgentModel(serverDB, userA, workspaceId);
-      const before = await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-ungrouped') });
-      await expect(callerA.setVisibility('a-ungrouped', 'private')).rejects.toMatchObject({
-        code: 'BAD_REQUEST',
-        message: 'Workspace Agents must be public',
-      });
+      await callerA.setVisibility('a-ungrouped', 'private');
       expect(
         await serverDB.query.agents.findFirst({ where: eq(agents.id, 'a-ungrouped') }),
-      ).toEqual(before);
+      ).toMatchObject({ visibility: 'private', sessionGroupId: null });
+      expect(await callerA.existsById('a-ungrouped')).toBe(true);
+      expect(await new AgentModel(serverDB, userB, workspaceId).existsById('a-ungrouped')).toBe(
+        false,
+      );
     });
   });
 

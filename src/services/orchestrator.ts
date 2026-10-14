@@ -50,7 +50,7 @@ export const verifyOnboardingOrchestrator = async (
     const device = devices.find((item) => item.deviceId === config.boundDeviceId && item.online);
     if (!device) throw new Error('FIRST_AGENT_DEVICE_REQUIRED');
     if (provider.type !== 'orvilo') {
-      const scanClient = device.scope === 'personal' ? personalClient : client;
+      const scanClient = client;
       const scan = await scanClient.device.scanAgents.query({ deviceId: device.deviceId });
       const cliType = resolveHeteroCliAgentType(provider);
       if (

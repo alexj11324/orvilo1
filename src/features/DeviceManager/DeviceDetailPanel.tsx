@@ -212,7 +212,9 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
       {!canEdit && (
         <div className="flex items-center gap-2">
           <LockIcon className="size-4 text-foreground-tertiary" size={16} />
-          <div className="text-xs text-muted-foreground">{t('devices.readonlyHint')}</div>
+          <div className="text-xs text-muted-foreground">
+            {t('workspaceSetting.devices.readonlyHint')}
+          </div>
         </div>
       )}
 

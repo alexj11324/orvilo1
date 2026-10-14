@@ -3,7 +3,7 @@ import { Tree } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask } from '@orvilo/types';
 import { ArrowDownWideNarrow, ListTodoIcon, MoreHorizontal, PlayCircle, Plus } from 'lucide-react';
 import type { MouseEvent } from 'react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -194,13 +194,7 @@ const toTreeData = (
   }));
 };
 
-interface TaskSubtasksProps {
-  /** The sub-issue composer is open. Owned by the host when the add row lives elsewhere. */
-  composerOpen?: boolean;
-  onComposerOpenChange?: (open: boolean) => void;
-}
-
-const TaskSubtasks = memo<TaskSubtasksProps>(({ composerOpen, onComposerOpenChange }) => {
+const TaskSubtasks = memo(() => {
   const { t } = useTranslation('chat');
 
   const navigate = useWorkspaceAwareNavigate();
@@ -216,16 +210,14 @@ const TaskSubtasks = memo<TaskSubtasksProps>(({ composerOpen, onComposerOpenChan
 
   const { buildItems, installKeyboardHandlers } = useTaskContextMenuActions();
 
-  const [localCreating, setLocalCreating] = useState(false);
-  const isCreating = composerOpen ?? localCreating;
-  const setIsCreating = useCallback(
-    (next: boolean | ((prev: boolean) => boolean)) => {
-      const value = typeof next === 'function' ? next(isCreating) : next;
-      setLocalCreating(value);
-      onComposerOpenChange?.(value);
-    },
-    [isCreating, onComposerOpenChange],
-  );
+  const [isCreating, setIsCreating] = useState(false);
+  // A composer left open belongs to the issue it was opened on — the detail
+  // switching to another task closes it rather than writing a child elsewhere.
+  const creatingTaskRef = useRef(taskId);
+  if (creatingTaskRef.current !== taskId) {
+    creatingTaskRef.current = taskId;
+    setIsCreating(false);
+  }
   const [isExpanded, setIsExpanded] = useState(true);
   const [isPlanning, setIsPlanning] = useState(false);
   // Linear keeps a sort control in the Sub-issues header; the client-side
@@ -378,18 +370,21 @@ const TaskSubtasks = memo<TaskSubtasksProps>(({ composerOpen, onComposerOpenChan
   if (!taskId) return null;
 
   const hasSubtasks = subtasks.length > 0;
-  // Nothing to show until there is a sub-issue or the composer is open.
-  if (!hasSubtasks && !isCreating) return null;
+  // The header "+" is now the only way to add the first sub-issue, so an
+  // editor keeps the Sub-issues section even before it has children — the
+  // same fixed slot Linear gives it. A viewer with nothing to read gets no
+  // empty section at all.
+  if (!hasSubtasks && !isCreating && !canEditTask) return null;
 
   return (
     <div className="flex flex-col gap-2">
-      {hasSubtasks ? (
-        <>
-          <TaskDetailSectionHeader
-            icon={ListTodoIcon}
-            open={isExpanded}
-            title={t('taskDetail.subtasks')}
-            actions={
+      <TaskDetailSectionHeader
+        icon={ListTodoIcon}
+        open={isExpanded}
+        title={t('taskDetail.subtasks')}
+        actions={
+          <>
+            {hasSubtasks && (
               <>
                 <ActionIcon
                   active={sortByStatus}
@@ -412,90 +407,78 @@ const TaskSubtasks = memo<TaskSubtasksProps>(({ composerOpen, onComposerOpenChan
                   title={canEditTask ? t('taskDetail.runAll') : reason}
                   onClick={handleRunAll}
                 />
-                {canEditTask ? (
-                  <AddSubIssueMenu
-                    align="end"
-                    trigger={
-                      // No `title`: its tooltip wrapper would take the menu trigger's props.
-                      <ActionIcon
-                        aria-label={t('taskDetail.addSubtask')}
-                        icon={Plus}
-                        size="small"
-                      />
-                    }
-                    onCreateNew={() => setIsCreating(true)}
-                  />
-                ) : (
-                  <ActionIcon
-                    disabled
-                    aria-label={t('taskDetail.addSubtask')}
-                    icon={Plus}
-                    size="small"
-                    title={reason}
-                  />
-                )}
               </>
-            }
-            trailing={
-              <TaskSubtaskProgressTag
-                currentIdentifier={taskId}
-                subtasks={orderedSubtasks}
-                onSubtaskClick={handleNavigate}
+            )}
+            {canEditTask ? (
+              <AddSubIssueMenu
+                align="end"
+                trigger={
+                  // No `title`: its tooltip wrapper would take the menu trigger's props.
+                  <ActionIcon aria-label={t('taskDetail.addSubtask')} icon={Plus} size="small" />
+                }
+                onCreateNew={() => setIsCreating(true)}
               />
-            }
-            onToggle={() => setIsExpanded((prev) => !prev)}
-          />
-          <Collapsible open={isExpanded || isCreating}>
-            <CollapsibleContent>
-              <div className="flex flex-col gap-2">
-                {isCreating && (
-                  <CreateTaskInlineEntry
-                    autoFocus
-                    agentId={agentId ?? undefined}
-                    defaultVisibility={parentVisibility}
-                    parentTaskId={taskId}
-                    placeholder={t('taskDetail.subtaskInstructionPlaceholder')}
-                    onCollapse={() => setIsCreating(false)}
-                    onCreated={() => setIsCreating(false)}
-                  />
-                )}
-                <Tree
-                  blockNode
-                  defaultExpandAll
-                  showLine
-                  classNames={{ title: styles.subtaskTreeTitle }}
-                  styles={{ node: { height: 36 } }}
-                  treeData={treeData}
-                  onRightClick={handleRightClick}
-                  onSelect={(keys) => {
-                    if (keys[0]) handleNavigate(keys[0]);
-                  }}
-                />
-                <SidebarContextMenuPopup
-                  anchor={contextMenu?.anchor}
-                  items={contextMenu?.items ?? []}
-                  open={Boolean(contextMenu)}
-                  onOpenChange={(open) => {
-                    if (!open) setContextMenu(null);
-                  }}
-                />
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </>
-      ) : isCreating ? (
-        // No sub-issues yet: the add row under the description opens the
-        // composer, and the section only exists while it is open.
-        <CreateTaskInlineEntry
-          autoFocus
-          agentId={agentId ?? undefined}
-          defaultVisibility={parentVisibility}
-          parentTaskId={taskId}
-          placeholder={t('taskDetail.subtaskInstructionPlaceholder')}
-          onCollapse={() => setIsCreating(false)}
-          onCreated={() => setIsCreating(false)}
-        />
-      ) : null}
+            ) : (
+              <ActionIcon
+                disabled
+                aria-label={t('taskDetail.addSubtask')}
+                icon={Plus}
+                size="small"
+                title={reason}
+              />
+            )}
+          </>
+        }
+        trailing={
+          hasSubtasks ? (
+            <TaskSubtaskProgressTag
+              currentIdentifier={taskId}
+              subtasks={orderedSubtasks}
+              onSubtaskClick={handleNavigate}
+            />
+          ) : undefined
+        }
+        onToggle={() => setIsExpanded((prev) => !prev)}
+      />
+      <Collapsible open={isExpanded || isCreating}>
+        <CollapsibleContent>
+          <div className="flex flex-col gap-2">
+            {isCreating && (
+              <CreateTaskInlineEntry
+                autoFocus
+                agentId={agentId ?? undefined}
+                defaultVisibility={parentVisibility}
+                parentTaskId={taskId}
+                placeholder={t('taskDetail.subtaskInstructionPlaceholder')}
+                onCollapse={() => setIsCreating(false)}
+                onCreated={() => setIsCreating(false)}
+              />
+            )}
+            {hasSubtasks && (
+              <Tree
+                blockNode
+                defaultExpandAll
+                showLine
+                classNames={{ title: styles.subtaskTreeTitle }}
+                styles={{ node: { height: 36 } }}
+                treeData={treeData}
+                onRightClick={handleRightClick}
+                onSelect={(keys) => {
+                  if (keys[0]) handleNavigate(keys[0]);
+                }}
+              />
+            )}
+            <SidebarContextMenuPopup
+              anchor={contextMenu?.anchor}
+              items={contextMenu?.items ?? []}
+              open={Boolean(contextMenu)}
+              onOpenChange={(open) => {
+                if (!open) setContextMenu(null);
+              }}
+            />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 });

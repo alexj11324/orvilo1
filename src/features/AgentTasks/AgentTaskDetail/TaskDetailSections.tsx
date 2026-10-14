@@ -1,12 +1,11 @@
 import { cn } from 'cn';
-import { memo, useRef, useState } from 'react';
+import { memo } from 'react';
 
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import TaskActivities from './TaskActivities';
 import TaskArtifacts from './TaskArtifacts';
-import TaskDetailAddActions from './TaskDetailAddActions';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector } from './TaskDetailScope';
 import TaskDetailTitleInput from './TaskDetailTitleInput';
@@ -27,13 +26,6 @@ import TaskSubtasks from './TaskSubtasks';
  */
 const TaskDetailSections = memo(() => {
   const taskId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
-  // The add row and the Sub-issues section share one composer.
-  const [subIssueComposerOpen, setSubIssueComposerOpen] = useState(false);
-  const composerTaskRef = useRef(taskId);
-  if (composerTaskRef.current !== taskId) {
-    composerTaskRef.current = taskId;
-    setSubIssueComposerOpen(false);
-  }
 
   return (
     <LinearTaskSyncProvider taskIds={taskId ? [taskId] : []}>
@@ -56,15 +48,14 @@ const TaskDetailSections = memo(() => {
             </div>
           </div>
           <div className={cn('flex flex-col gap-3', styles.description)}>
+            {/* Linear puts each "add" inside its own section's header — the
+                Sub-issues "+" and the Attachments "+" cover what the old
+                mid-page chip row offered. */}
             <TaskInstruction />
-            <TaskDetailAddActions onAddSubIssue={() => setSubIssueComposerOpen(true)} />
           </div>
           <div className={cn('flex flex-col gap-6', styles.body)}>
             <TaskBlockedNotice />
-            <TaskSubtasks
-              composerOpen={subIssueComposerOpen}
-              onComposerOpenChange={setSubIssueComposerOpen}
-            />
+            <TaskSubtasks />
             <TaskArtifacts />
             <TaskIssueResources />
             <TaskActivities />

@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type * as TaskTriggerModule from '../features/TaskTriggerTag';
@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   buildContextMenuItems: vi.fn(() => []),
   installKeyboardHandlers: vi.fn(),
   navigate: vi.fn(),
+  openRelationModal: vi.fn(),
   runReadySubtasks: vi.fn(),
   showContextMenuWithFallback: vi.fn((_items, _options, showWeb: () => void) => {
     showWeb();
@@ -41,6 +42,37 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/libs/contextMenu', () => ({
   showContextMenuWithFallback: mocks.showContextMenuWithFallback,
+}));
+
+// The header "+" opens AddSubIssueMenu; render its entries as plain buttons
+// so the test can pick one without a real dropdown portal.
+vi.mock('@/components/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: { children: ReactNode }) => <>{children}</>,
+  DropdownMenuContent: ({ children }: { children: ReactNode }) => <>{children}</>,
+  DropdownMenuGroup: ({ children }: { children: ReactNode }) => <>{children}</>,
+  DropdownMenuItem: ({
+    children,
+    onClick,
+    ...props
+  }: { children: ReactNode; onClick?: () => void } & ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button type="button" {...props} onClick={() => onClick?.()}>
+      {children}
+    </button>
+  ),
+  DropdownMenuTrigger: ({ render }: { render?: ReactNode }) => <>{render}</>,
+}));
+
+vi.mock('./TaskIssueRelationModal', () => ({
+  openTaskIssueRelationModal: mocks.openRelationModal,
+}));
+
+// Keep the panel in the DOM regardless of open state so assertions do not
+// depend on base-ui transition timing in happy-dom.
+vi.mock('@/components/ui/collapsible', () => ({
+  Collapsible: ({ children, open }: { children: ReactNode; open?: boolean }) => (
+    <div data-open={open}>{children}</div>
+  ),
+  CollapsibleContent: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('@/features/NavPanel/components/SidebarContextMenu', () => ({
@@ -196,14 +228,23 @@ describe('TaskSubtasks', () => {
     mocks.installKeyboardHandlers.mockClear();
     mocks.navigate.mockClear();
     mocks.showContextMenuWithFallback.mockClear();
-    mocks.taskState.taskDetailMap['T-parent'].subtasks = [
-      {
-        assignee: { avatar: null, backgroundColor: null, id: 'agt_child', title: 'Child' },
-        identifier: 'T-child',
-        name: 'Child task',
-        status: 'backlog',
-      },
-    ];
+    mocks.openRelationModal.mockClear();
+    // Reassign the whole detail so mutations a test makes (id, domainRevision)
+    // never leak into the next one.
+    mocks.taskState.taskDetailMap['T-parent'] = {
+      agentId: 'agt_parent',
+      identifier: 'T-parent',
+      instruction: 'Parent instruction',
+      status: 'running',
+      subtasks: [
+        {
+          assignee: { avatar: null, backgroundColor: null, id: 'agt_child', title: 'Child' },
+          identifier: 'T-child',
+          name: 'Child task',
+          status: 'backlog',
+        },
+      ],
+    };
   });
 
   afterEach(() => {
@@ -389,6 +430,55 @@ describe('TaskSubtasks', () => {
     const sorted = screen.getAllByTestId('subtask-tree-node');
     expect(sorted[0].textContent).toContain('T-backlog');
     expect(sorted[1].textContent).toContain('T-done');
+  });
+
+  it('keeps the header "+" on an empty issue and opens the composer from its menu', () => {
+    mocks.taskState.taskDetailMap['T-parent'].subtasks = [];
+    render(<TaskSubtasks />);
+
+    // With the mid-page add row gone this menu is how the first sub-issue is
+    // added; there are no rows yet, so sort and run stay out of the header.
+    expect(
+      screen.getByRole('button', { name: /taskDetail\.addSubtask|Add sub-issue/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /sortByStatus|Sort by status/ }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /subIssue\.createNew|Create new sub-issue/ }),
+    );
+    expect(screen.getByText('create task')).toBeInTheDocument();
+  });
+
+  it('attaches existing issues through the relation picker from the header "+"', () => {
+    mocks.taskState.taskDetailMap['T-parent'] = {
+      ...mocks.taskState.taskDetailMap['T-parent'],
+      domainRevision: 4,
+      id: 'task_db_1',
+      subtasks: [],
+    };
+    render(<TaskSubtasks />);
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /subIssue\.addExisting|Add existing issues/ }),
+    );
+
+    expect(mocks.openRelationModal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedDomainRevision: 4,
+        kind: 'parentOf',
+        taskId: 'task_db_1',
+      }),
+    );
+  });
+
+  it('renders nothing for a viewer on an empty issue', () => {
+    mocks.workspaceRole = 'viewer';
+    mocks.taskState.taskDetailMap['T-parent'].subtasks = [];
+    const { container } = render(<TaskSubtasks />);
+    // No sub-issues to read and no permission to add one — no empty section.
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('keeps one Issue status mark when a subtask has an active topic run', () => {

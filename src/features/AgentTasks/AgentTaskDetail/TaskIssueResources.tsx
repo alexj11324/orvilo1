@@ -20,9 +20,11 @@ import { openTaskIssueResourceTitleModal } from './TaskIssueResourceTitleModal';
 import { ISSUE_RESOURCE_KINDS, useIssueDetailActions } from './useIssueDetailActions';
 
 /**
- * Links and pull requests attached to the issue. Nothing renders until the
- * issue has at least one; adding happens from the row under the description or
- * the "+" in this header once it is showing.
+ * Links and pull requests attached to the issue. The header "+" holds the add
+ * menu (link / pull request / document), so an editor keeps the header even
+ * before anything is attached — with the mid-page add row gone it is where
+ * the first resource comes from. A viewer sees the section only once it has
+ * content.
  */
 const TaskIssueResources = () => {
   const { t } = useTranslation('chat');
@@ -65,7 +67,7 @@ const TaskIssueResources = () => {
   };
 
   if (!taskId) return null;
-  if (!error && !isLoading && !data?.data.length) return null;
+  if (!error && !isLoading && !data?.data.length && !capabilities.canAddResource) return null;
   return (
     <section aria-label={t('taskDetail.resources.title')} className="flex flex-col gap-2">
       <TaskDetailSectionHeader
@@ -74,7 +76,7 @@ const TaskIssueResources = () => {
         open={isExpanded}
         title={t('taskDetail.resources.title')}
         actions={
-          isExpanded && capabilities.canAddResource ? (
+          capabilities.canAddResource ? (
             <SidebarDropdownMenu
               items={ISSUE_RESOURCE_KINDS.map(([kind, Icon]) => ({
                 icon: <Icon />,

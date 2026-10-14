@@ -68,7 +68,8 @@
 
 ## 落地记录
 
-| #   | 差异          | 落地 commit | 说明                                                                                                                                                                                                                                             |
-| --- | ------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| E   | 排版          | `5c49500e6` | 标题 input / 只读 24px/600 (`text-2xl leading-8`);"活动" 区头经 `TaskDetailSectionHeader variant="heading"` → 15px/600; 描述 15px/450 此前已在 `INSTRUCTION_CONTENT_STYLE`                                                                       |
-| C   | Sub-issues 区 | `c9ea862d8` | 区头 12px/500（默认 variant `text-xs`，Artifacts/Attachments 同层落地）; `done/total` chip 此前已在 trailing（分子改为与服务端 SQL 一致的 `workflowCategory='done'`, 勘误「无进度比」）; 新增 status 排序开关；行序 = 状态点→优先级→ID→标题→头像 |
+| #   | 差异                  | 落地 commit | 说明                                                                                                                                                                                                                                                                 |
+| --- | --------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E   | 排版                  | `5c49500e6` | 标题 input / 只读 24px/600 (`text-2xl leading-8`);"活动" 区头经 `TaskDetailSectionHeader variant="heading"` → 15px/600; 描述 15px/450 此前已在 `INSTRUCTION_CONTENT_STYLE`                                                                                           |
+| C   | Sub-issues 区         | `c9ea862d8` | 区头 12px/500（默认 variant `text-xs`，Artifacts/Attachments 同层落地）; `done/total` chip 此前已在 trailing（分子改为与服务端 SQL 一致的 `workflowCategory='done'`, 勘误「无进度比」）; 新增 status 排序开关；行序 = 状态点→优先级→ID→标题→头像                     |
+| D+H | 顶栏操作簇 + 订阅控件 | `bc3e3b140` | 头部补 copy-link /copy-ID/copy-branch 幽灵图标（`icon-sm`，序 link→ID→branch，置于订阅控件前）；・・・Copy 子菜单保留全部命令；`IssueSubscribeToggle` 由纯图标改为 `size="sm"` text+icon ghost（Subscribe/Unsubscribe 文字 + 🔔），仍在头部行内 —— 区头右置归 Task 7 |

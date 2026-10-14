@@ -1,8 +1,8 @@
 'use client';
 
-import type { AgentModelSelectionPolicy, AgentTopicSharePolicy } from '@orvilo/types';
+import type { AgentTopicSharePolicy } from '@orvilo/types';
 
-import { useAgentSelectionPolicies } from '@/features/ResourcePermission/useAgentSelectionPolicies';
+import { useAgentTopicSharing } from '@/features/ResourcePermission/useAgentTopicSharing';
 import { useResourcePermission } from '@/features/ResourcePermission/useResourcePermission';
 import { usePermission } from '@/hooks/usePermission';
 import type { ResourceAccessLevel } from '@/services/resourcePermission';
@@ -15,50 +15,22 @@ export interface GroupPermissionState {
   accessLoading: boolean;
   /** Role-level gate for the model / execution-environment policies. */
   canEditConfig: boolean;
-  /**
-   * Whether the viewer may write the three policy rows. Narrower than
-   * {@link GroupPermissionState.canEditConfig} — see
-   * `AgentSelectionPoliciesState.canEditPolicies`.
-   */
+  /** Whether the viewer may change topic sharing. */
   canEditPolicies: boolean;
-  /** Fixing needs an execution environment resolvable on the supervisor. */
-  canFixExecutionTarget: boolean;
   /** Only the creator or a workspace owner may re-level members. */
   canManageAccess: boolean;
-  executionTargetPolicy: AgentModelSelectionPolicy;
   /** No supervisor row yet — the Editable settings have nothing to write to. */
   hasSupervisor: boolean;
   isPrivate: boolean;
   isWorkspaceGroup: boolean;
-  modelPolicy: AgentModelSelectionPolicy;
   retryAccess: () => void;
   setAccessLevel: (level: ResourceAccessLevel) => void;
-  setExecutionTargetPolicy: (policy: AgentModelSelectionPolicy) => void;
-  setModelPolicy: (policy: AgentModelSelectionPolicy) => void;
   setTopicSharePolicy: (policy: AgentTopicSharePolicy) => void;
   /** Whether members may publish share links for the topics held here. */
   topicSharePolicy: AgentTopicSharePolicy;
 }
 
-/**
- * View model of the Agent Group Permission page.
- *
- * The two halves have different subjects, which is the whole reason this page
- * can exist at all:
- *
- * - **Access level** is about the *group* resource — who may open and edit it.
- *   The server cascades it to the agents the group owns.
- * - **Editable settings** are about the *supervisor agent*, because a group
- *   conversation is a conversation with the supervisor: `useGroupContext`
- *   resolves the chat context's `agentId` to `supervisorAgentId`, so the group
- *   chat's model / execution-environment switcher reads exactly that row's
- *   policies. Deliberately NOT fanned out to the member agents — a workspace
- *   member has no per-member switcher to gate, and writing a `fixed` policy
- *   onto an agent with no execution target is rejected by `AgentModel`.
- *
- * The group store hydrates the supervisor into `agentMap` whenever group detail
- * loads (`agentGroup/action.ts`), so the shared agent hook has its row here.
- */
+/** Resource access and topic sharing for this permission page. */
 export const useGroupPermission = (groupId: string): GroupPermissionState => {
   const { allowed: canEditContent } = usePermission('edit_own_content');
   const group = useAgentGroupStore(agentGroupSelectors.getGroupById(groupId));
@@ -77,7 +49,7 @@ export const useGroupPermission = (groupId: string): GroupPermissionState => {
     setAccessLevel,
   } = useResourcePermission('agentGroup', isWorkspaceGroup ? groupId : undefined);
 
-  const policies = useAgentSelectionPolicies(supervisorAgentId ?? '');
+  const policies = useAgentTopicSharing(supervisorAgentId ?? '');
 
   return {
     ...policies,

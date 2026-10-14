@@ -32,7 +32,6 @@ export const STORE_DEFAULTS: ElectronMainStore = {
   gatewayDeviceId: '',
   gatewayEnabled: true,
   gatewayUrl: 'https://device-gateway.aspectlylabs.com',
-  gatewayWorkspaceEnrollments: [],
   heteroSessionDirPrefs: {},
   heteroTracingEnabled: false,
   lastWorkspaceSlugByAccount: {},

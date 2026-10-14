@@ -2,8 +2,6 @@ import type { DeviceListItem } from '@orvilo/types';
 import { isSelectableDevice, shouldShowDeviceSelector } from '@orvilo/types';
 import { useMemo } from 'react';
 
-import { executionTargetDeviceCandidates } from '@/helpers/executionTarget';
-
 import { useAgentDeviceCandidates, useDeviceList } from './useDeviceList';
 
 /**
@@ -15,13 +13,13 @@ import { useAgentDeviceCandidates, useDeviceList } from './useDeviceList';
 export interface DeviceSelectorState {
   /**
    * Binding resolution for `boundDeviceId`:
-   * - `unset` — nothing bound yet (auto-resolve happens at admission, never here)
+   * - `unset` — nothing bound yet (choose a host explicitly in settings)
    * - `valid` — the bound device is still a legal candidate
    * - `invalid` — bound device gone / illegal → `DEVICE_BINDING_INVALID` repair
    * - `pending` — inventory still resolving; the caller must not judge yet
    */
   bindingState: 'unset' | 'valid' | 'invalid' | 'pending';
-  /** Whether the caller may change the device (permission + policy not `fixed`). */
+  /** Whether the caller may change the device (Agent management permission). */
   canSelectDevice: boolean;
   /** `useDeviceList` settled successfully. Loading/failed is never 0 or 1. */
   deviceInventoryComplete: boolean;
@@ -35,14 +33,13 @@ export interface DeviceSelectorState {
   runtimeInventoryOfflineOnly: boolean;
   runtimeInventoryUnverified: boolean;
   /**
-   * Devices the principal may execute on — legal scope only. Offline devices
+   * Devices the principal may execute on through ownership or Agent Use. Offline devices
    * STAY in this set (offline ≠ removed from config); they just cannot start.
    */
   selectableDevices: DeviceListItem[];
   /**
-   * The contract formula verbatim: the picker renders only when the user has
-   * more than one legitimate candidate AND is allowed to change it. Hiding the
-   * picker never unbinds the device.
+   * Multiple candidates and unset/invalid bindings expose the settings picker.
+   * Hiding a valid singleton never unbinds its saved host.
    */
   showDeviceSelector: boolean;
 }
@@ -54,17 +51,6 @@ export interface UseDeviceSelectorStateOptions {
   boundDeviceId?: string;
   /** Caller-side permission/policy result (`useEffectiveAgencyConfig`). */
   canSelectDevice: boolean;
-  /** Authority to choose the caller's personal pool for a workspace Agent. */
-  canSelectPersonalDevice?: boolean;
-  /** Caller-owned device explicitly selected in the workspace member override. */
-  memberSelectedDeviceId?: string;
-  /**
-   * Which legal pool to select from. `personal` agents may only bind the
-   * caller's own devices; `workspace` agents use workspace-scope devices plus
-   * the caller's exact personal member override. Authorized private owners and
-   * member-selectable callers may also choose a new caller-personal device.
-   */
-  scope: 'personal' | 'workspace';
 }
 
 /**
@@ -78,10 +64,7 @@ export const useDeviceSelectorState = ({
   agentId,
   boundDeviceId,
   canSelectDevice,
-  canSelectPersonalDevice = false,
-  memberSelectedDeviceId,
   permissionsLoaded = true,
-  scope,
 }: UseDeviceSelectorStateOptions & { permissionsLoaded?: boolean }): DeviceSelectorState => {
   const { data: devices, error, isLoading, mutate: refreshList } = useDeviceList();
   const runtimeInventory = useAgentDeviceCandidates(permissionsLoaded ? agentId : undefined);
@@ -99,22 +82,9 @@ export const useDeviceSelectorState = ({
     (!agentId || runtimeInventory.data?.inventoryComplete === true);
 
   const { selectableDevices, runnableDevices } = useMemo(() => {
-    // ONE candidate set shared with the chat switcher, connect flow and the
-    // blocked-run repair UI: workspace scope includes the caller's private
-    // enrollments (`visibility === 'private'`), which are legal for their
-    // enroller — a surface that dropped them computed a different pool than
-    // the admission contract resolves against.
-    const scoped = executionTargetDeviceCandidates(devices, scope);
-    const personal =
-      scope === 'workspace'
-        ? (devices ?? []).filter(
-            (device) =>
-              device.scope === 'personal' &&
-              ((canSelectDevice && canSelectPersonalDevice) ||
-                (device.deviceId === boundDeviceId && memberSelectedDeviceId === boundDeviceId)),
-          )
-        : [];
-    const authorized = [...scoped, ...personal];
+    // Saved hosts from authorized Agents supplement the configuring member’s
+    // own devices, so another owner’s host remains visible as the current binding.
+    const authorized = devices ?? [];
     const runtimeIds = agentId
       ? new Set(
           runtimeInventory.data?.candidates
@@ -123,22 +93,15 @@ export const useDeviceSelectorState = ({
         )
       : undefined;
     const selectable = runtimeIds
-      ? (devices ?? []).filter((device) => runtimeIds.has(device.deviceId))
+      ? (runtimeInventory.data?.devices ?? devices ?? []).filter((device) =>
+          runtimeIds.has(device.deviceId),
+        )
       : authorized;
     return {
       runnableDevices: selectable.filter((device) => device.online),
       selectableDevices: selectable,
     };
-  }, [
-    agentId,
-    runtimeInventory.data,
-    boundDeviceId,
-    canSelectDevice,
-    canSelectPersonalDevice,
-    devices,
-    memberSelectedDeviceId,
-    scope,
-  ]);
+  }, [agentId, runtimeInventory.data, boundDeviceId, canSelectDevice, devices]);
 
   const bindingState: DeviceSelectorState['bindingState'] = useMemo(() => {
     if (!boundDeviceId) return 'unset';
@@ -165,11 +128,17 @@ export const useDeviceSelectorState = ({
     // The contract formula verbatim — shared with every resolution surface
     // (packages/types/src/agent/deviceExecution.ts). Hiding the picker never
     // unbinds the device.
-    showDeviceSelector: shouldShowDeviceSelector({
-      canSelectDevice,
-      deviceInventoryComplete,
-      permissionsLoaded,
-      selectableDeviceCount: selectableDevices.length,
-    }),
+    showDeviceSelector:
+      (canSelectDevice &&
+        deviceInventoryComplete &&
+        permissionsLoaded &&
+        !boundDeviceId &&
+        selectableDevices.length > 0) ||
+      shouldShowDeviceSelector({
+        canSelectDevice,
+        deviceInventoryComplete,
+        permissionsLoaded,
+        selectableDeviceCount: selectableDevices.length,
+      }),
   };
 };

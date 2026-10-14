@@ -118,14 +118,12 @@ const runDelayedStart: ScheduledRunHandlers['delayed_start'] = async (
     agentId: topic.agentId ?? undefined,
     appContext: { topicId: topic.id },
     autoStart: true,
-    model: run.model,
     // `suppressUserMessage` creates no user row, so the assistant turn anchors on
     // `parentMessageId` alone. Leave it out and the reply persists as a SECOND
     // root: the renderer walks the parentId forest depth-first, so it would land
     // above the very prompt it answers.
     parentMessageId: userMessage.id,
     prompt: userMessage.content ?? '',
-    provider: run.provider,
     // The user turn is already the tail of history — don't write it twice.
     suppressUserMessage: true,
     trigger: RequestTrigger.Scheduled,

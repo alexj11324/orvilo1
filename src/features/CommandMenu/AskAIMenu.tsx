@@ -1,3 +1,4 @@
+import { BUILTIN_AGENT_SLUGS, isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import { agentDisplayName } from '@orvilo/types';
 import { Command } from 'cmdk';
 import { memo } from 'react';
@@ -25,7 +26,8 @@ const AskAIMenu = memo(() => {
   // Get agent list (limit to first 20 items for simplicity)
   const allAgents = useHomeStore(homeAgentListSelectors.allAgents);
   const keep = useKeepSidebarListed();
-  const builtinOffered = useBuiltinHarnessOffered();
+  const builtinOffered =
+    useBuiltinHarnessOffered() && isBuiltinAgentAvailable(BUILTIN_AGENT_SLUGS.inbox);
   const agents = keep(allAgents)
     .filter((item) => item.type === 'agent')
     .slice(0, 20);

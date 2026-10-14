@@ -1,6 +1,9 @@
+import { isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
+
 import { isAgentRuntimeOffered } from '@/features/HeterogeneousAgent/builtinHarness';
 
 interface ResolveRuntimeAccessParams {
+  builtinAgentSlug?: string | null;
   builtinOffered: boolean;
   /** The Agent that took the inbox Agent's place, when one exists. */
   defaultAgentId?: string;
@@ -26,12 +29,14 @@ export type RuntimeAccess =
  *   built-in route with no Agent to hand over to.
  */
 export const resolveRuntimeAccess = ({
+  builtinAgentSlug,
   builtinOffered,
   defaultAgentId,
   isBuiltinAgent,
   listed,
   ready,
 }: ResolveRuntimeAccessParams): RuntimeAccess => {
+  if (!isBuiltinAgentAvailable(builtinAgentSlug)) return { kind: 'open' };
   if (builtinOffered) return { kind: 'open' };
   if (!ready) return { kind: 'pending' };
   if (isBuiltinAgent)

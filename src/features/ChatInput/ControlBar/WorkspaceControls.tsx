@@ -7,7 +7,6 @@ import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatIn
 
 import { SimpleTooltip } from '../SimpleTooltip';
 import CloudRepoSwitcher from './CloudRepoSwitcher';
-import HeteroDeviceSwitcher from './HeteroDeviceSwitcher';
 import { useWorkspaceSurface } from './useWorkspaceSurface';
 import WorkingDirectorySection from './WorkingDirectorySection';
 
@@ -24,10 +23,10 @@ interface WorkspaceControlsProps {
 
 /**
  * Workspace/Project control strip shared by the chat-input control bars:
- * device selector + working directory + git branch / file changes / PR info.
+ * working directory + git branch / file changes / PR info.
  *
  * Both ControlBar (normal agents) and HeteroControlBar (heterogeneous agents)
- * compose this, so the Device / Branch / diff / PR cluster can't drift between
+ * compose this, so the directory / branch / diff / PR cluster can't drift between
  * them. The bar-specific bits (ModeSelector, ApprovalMode, ContextWindow, the
  * full-access badge) stay in their respective bars.
  */
@@ -35,8 +34,8 @@ const WorkspaceControls = memo<WorkspaceControlsProps>(
   ({ agentId, alwaysShowWorkspace = false }) => {
     const { t } = useTranslation('setting');
     const { canConfigureResource, canUseResource } = useChatInputResourceAccess();
-    // Resolved from the effective (override-merged) execution target so the
-    // surface follows the device THIS member's run actually targets.
+    // Resolved from the Agent execution target so the
+    // surface follows the Agent's saved run device.
     const surface = useWorkspaceSurface(agentId, alwaysShowWorkspace);
 
     const renderWorkspace = () => {
@@ -55,12 +54,11 @@ const WorkspaceControls = memo<WorkspaceControlsProps>(
 
     // The directory picker and git controls write shared agent config / run
     // device git mutations, so members without edit access see the whole
-    // cluster disabled. The device switcher handles its own use-level gate.
+    // cluster disabled.
     const workspace = renderWorkspace();
 
     return (
       <>
-        <HeteroDeviceSwitcher agentId={agentId} />
         {workspace &&
           (canConfigureResource ? (
             workspace

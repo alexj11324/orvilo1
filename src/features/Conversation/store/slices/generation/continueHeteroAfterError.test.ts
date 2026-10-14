@@ -216,10 +216,10 @@ describe('continueHeteroAfterError (FIX-C unified admission)', () => {
 
     expect(selectRuntimeTypeSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        boundDeviceId: 'personal-device',
-        executionTarget: 'local',
+        boundDeviceId: 'workspace-device',
+        executionTarget: 'device',
         isWorkspaceAgent: true,
-        workspaceScoped: false,
+        workspaceScoped: true,
       }),
     );
     expect(mockExecuteGatewayAgent).toHaveBeenCalled();
@@ -253,7 +253,7 @@ describe('continueHeteroAfterError (FIX-C unified admission)', () => {
     expect(mockExecuteHeterogeneousAgent).not.toHaveBeenCalled();
   });
 
-  it("applies the owner's own local override while the Workspace Agent is private", async () => {
+  it("ignores the owner's old local override on a private Workspace Agent", async () => {
     // The owner's `local` pick lives in the per-user override even on a
     // private Workspace Agent — it still reaches the selector, which still
     // routes to gateway.
@@ -261,7 +261,7 @@ describe('continueHeteroAfterError (FIX-C unified admission)', () => {
     mockIsWorkspaceAgent = true;
     mockSharedExecutionTarget = 'device';
     mockWorkspaceOverride = {
-      boundDeviceId: 'personal-device',
+      boundDeviceId: 'workspace-device',
       executionTarget: 'local',
     };
     const selectRuntimeTypeSpy = vi.spyOn(agentDispatcher, 'selectRuntimeType');
@@ -276,10 +276,10 @@ describe('continueHeteroAfterError (FIX-C unified admission)', () => {
 
     expect(selectRuntimeTypeSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        boundDeviceId: 'personal-device',
-        executionTarget: 'local',
+        boundDeviceId: 'workspace-device',
+        executionTarget: 'device',
         isWorkspaceAgent: true,
-        workspaceScoped: false,
+        workspaceScoped: true,
       }),
     );
     expect(mockExecuteGatewayAgent).toHaveBeenCalled();

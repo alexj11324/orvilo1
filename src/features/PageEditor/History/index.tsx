@@ -1,5 +1,6 @@
 'use client';
 
+import { BUILTIN_AGENT_SLUGS, isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -197,16 +198,18 @@ const HistoryPanel = memo(() => {
         }
         right={
           <>
-            <Button
-              className={cn(styles.headerButton, 'text-sm leading-5.5')}
-              size="compact"
-              type="button"
-              variant="ghost"
-              onClick={() => setRightPanelMode('copilot')}
-            >
-              <ArrowLeftIcon data-icon="inline-start" />
-              {t('pageEditor.history.backToCopilot', { ns: 'file' })}
-            </Button>
+            {isBuiltinAgentAvailable(BUILTIN_AGENT_SLUGS.pageAgent) && (
+              <Button
+                className={cn(styles.headerButton, 'text-sm leading-5.5')}
+                size="compact"
+                type="button"
+                variant="ghost"
+                onClick={() => setRightPanelMode('copilot')}
+              >
+                <ArrowLeftIcon data-icon="inline-start" />
+                {t('pageEditor.history.backToCopilot', { ns: 'file' })}
+              </Button>
+            )}
             <ToggleRightPanelButton
               expand={showPageAgentPanel}
               showActive={false}

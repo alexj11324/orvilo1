@@ -269,56 +269,19 @@ describe('WorkspaceMemberModel', () => {
       expect(row.deletedAt).toBeNull();
     });
 
-    it('drops the departing member private + shared-from-personal devices, keeps shared infra', async () => {
+    it('preserves owned device enrollment when membership is removed', async () => {
       const model = new WorkspaceMemberModel(serverDB, inviterId);
       await model.addMember({ userId: memberId, workspaceId });
       await serverDB.insert(devices).values([
-        // their private enrollment — dropped
-        {
-          deviceId: 'dep-private',
-          identitySource: 'machine-id',
-          userId: memberId,
-          visibility: 'private',
-          workspaceId,
-        },
-        // shared from their personal list (even if published) — dropped
-        {
-          deviceId: 'dep-shared',
-          identitySource: 'machine-id',
-          sharedFromDeviceId: 'dep-personal',
-          userId: memberId,
-          visibility: 'public',
-          workspaceId,
-        },
-        // public machine they enrolled directly (shared infra) — stays
-        {
-          deviceId: 'team-box',
-          identitySource: 'machine-id',
-          userId: memberId,
-          visibility: 'public',
-          workspaceId,
-        },
-        // their personal row — untouched
-        { deviceId: 'dep-personal', identitySource: 'machine-id', userId: memberId },
-        // same-shape rows in another workspace — untouched
-        {
-          deviceId: 'other-ws-private',
-          identitySource: 'machine-id',
-          userId: memberId,
-          visibility: 'private',
-          workspaceId: otherWorkspaceId,
-        },
+        { deviceId: 'departing-host', identitySource: 'machine-id', userId: memberId },
+        { deviceId: 'other-host', identitySource: 'machine-id', userId: inviterId },
       ]);
-
       const { removedDeviceIds } = await model.removeMember(workspaceId, memberId);
-
-      // surfaced so callers can best-effort unenroll live gateway sockets
-      expect(removedDeviceIds.sort()).toEqual(['dep-private', 'dep-shared']);
-
+      expect(removedDeviceIds).toEqual([]);
       const remaining = (await serverDB.select({ deviceId: devices.deviceId }).from(devices))
-        .map((d) => d.deviceId)
+        .map(({ deviceId }) => deviceId)
         .sort();
-      expect(remaining).toEqual(['dep-personal', 'other-ws-private', 'team-box']);
+      expect(remaining).toEqual(['departing-host', 'other-host']);
     });
 
     it('revokes the departing member grants, so a re-invite does not restore them', async () => {

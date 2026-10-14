@@ -4,10 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SessionModel } from '@/database/models/session';
 import { SessionGroupModel } from '@/database/models/sessionGroup';
+import type * as WorkspaceModule from '@/database/models/workspace';
 import { assertCanEditResource } from '@/server/services/resourcePermission';
 
 import { sessionRouter } from '../session';
 
+vi.mock('@/server/services/resourcePermission/revocation', () => ({
+  snapshotWorkspaceAgentOperations: vi.fn().mockResolvedValue([]),
+  stopWorkspaceAgentOperations: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('@/database/core/db-adaptor', () => ({
   getServerDB: vi.fn(async () => ({})),
 }));
@@ -15,7 +20,7 @@ vi.mock('@/database/core/db-adaptor', () => ({
 // Workspace membership is verified for real — callers carrying workspaceId
 // resolve through this model seam, so tests stub an active member row.
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  ...(await importOriginal<typeof WorkspaceModule>()),
   getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
 }));
 

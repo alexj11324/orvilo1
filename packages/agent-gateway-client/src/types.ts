@@ -207,6 +207,8 @@ export type AgentInterventionProvider =
   | 'cursor'
   | 'devin'
   | 'droid'
+  | 'grok-build'
+  | 'trae'
   | 'kimi-code'
   | 'opencode'
   | 'pi'

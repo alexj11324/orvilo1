@@ -1,5 +1,6 @@
 'use client';
 
+import { BUILTIN_AGENT_SLUGS, isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import { agentDisplayName, agentSecondaryDisplayName, type SidebarAgentItem } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { useMemo } from 'react';
@@ -114,7 +115,12 @@ export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRo
     ]);
 
     const workspaceRows: AgentRow[] = [];
-    if (builtinOffered && inboxAgentId && !seen.has(inboxAgentId)) {
+    if (
+      builtinOffered &&
+      isBuiltinAgentAvailable(BUILTIN_AGENT_SLUGS.inbox) &&
+      inboxAgentId &&
+      !seen.has(inboxAgentId)
+    ) {
       seen.add(inboxAgentId);
       workspaceRows.push({
         avatar:

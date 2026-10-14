@@ -698,7 +698,7 @@ describe('TraeAcpSession', () => {
     });
   });
 
-  it('selects a non-persistent permission option actually offered by TRAE', async () => {
+  it('refuses native permission requests without an interactive bridge', async () => {
     const { child, requests, send } = createAcpProcess({
       onMessage: (message) => {
         if (message.method !== 'session/prompt') return;
@@ -725,7 +725,7 @@ describe('TraeAcpSession', () => {
     expect(requests).toContainEqual({
       id: 'permission-1',
       jsonrpc: '2.0',
-      result: { outcome: { optionId: 'allow-once', outcome: 'selected' } },
+      error: { code: -32603, message: 'trae permission requires an interactive bridge' },
     });
   });
 

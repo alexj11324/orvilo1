@@ -249,6 +249,7 @@ export const canPerformResourceAction = async (params: {
 
   if (resourceType === 'agent') {
     // Personal resources retain their owner boundary outside the workspace roster.
+    if (meta.visibility === 'private' && meta.userId !== userId) return false;
     const role = await getActiveWorkspaceMembershipRole(db, { userId, workspaceId });
     if (!role || (action !== 'view' && !['owner', 'admin', 'member'].includes(role))) return false;
     if (!meta.workspaceId) return meta.userId === userId;

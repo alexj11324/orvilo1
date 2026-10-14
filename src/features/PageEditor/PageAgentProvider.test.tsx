@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -24,6 +24,13 @@ interface ChatState {
 }
 
 const conversationProviderSpy = vi.fn();
+const availabilityState = vi.hoisted(() => ({ available: true }));
+
+vi.mock('@orvilo/builtin-agents', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  isBuiltinAgentAvailable: () => availabilityState.available,
+}));
+
 const operationState = { isInputLoading: false };
 
 let agentState: AgentState;
@@ -80,6 +87,7 @@ vi.mock('@/store/chat/utils/messageMapKey', () => ({
 
 beforeEach(() => {
   conversationProviderSpy.mockClear();
+  availabilityState.available = true;
 
   agentState = {
     activeAgentId: 'page-agent',
@@ -100,6 +108,32 @@ beforeEach(() => {
 });
 
 describe('PageAgentProvider', () => {
+  it('preserves the editor without initialization or global switching when paused', () => {
+    availabilityState.available = false;
+    agentState.pageAgentId = '';
+    agentState.activeAgentId = 'configured-agent';
+
+    render(
+      <PageAgentProvider pageId="doc-1">
+        <div>editor</div>
+      </PageAgentProvider>,
+    );
+
+    expect(screen.getByText('editor')).toBeInTheDocument();
+    expect(screen.queryByTestId('loading')).not.toBeInTheDocument();
+    expect(agentState.useInitBuiltinAgent).not.toHaveBeenCalled();
+    expect(agentState.setActiveAgentId).not.toHaveBeenCalled();
+    expect(chatState.switchTopic).not.toHaveBeenCalled();
+    expect(chatState.activeAgentId).toBe('previous-agent');
+    expect(chatState.activeTopicId).toBe('stale-topic');
+    expect(conversationProviderSpy.mock.calls.at(-1)![0]).toMatchObject({
+      composerTarget: { writable: false },
+      context: { documentId: 'doc-1', scope: 'page' },
+      skipFetch: true,
+    });
+    expect(conversationProviderSpy.mock.calls.at(-1)![0].context.agentId).toBeUndefined();
+  });
+
   it('resets a stale page topic on initial scoped agent sync only', async () => {
     const { rerender } = render(
       <PageAgentProvider>

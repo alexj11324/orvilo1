@@ -1,7 +1,7 @@
 'use client';
 
 import { isDesktop } from '@orvilo/const';
-import type { DeviceListItem, DeviceWorkspaceShare } from '@orvilo/types';
+import type { DeviceListItem } from '@orvilo/types';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { FolderOpenIcon, FolderPlusIcon, LockIcon, XIcon } from 'lucide-react';
@@ -9,8 +9,6 @@ import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import Avatar from '@/components/Avatar';
-import { confirmModal } from '@/components/Modal';
 import { Badge as Tag } from '@/components/reui/badge';
 import { Sortable, SortableItem, SortableItemHandle } from '@/components/reui/sortable';
 import { toast } from '@/components/toast';
@@ -18,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import DirIcon from '@/features/ChatInput/ControlBar/DirIcon';
 import { openAddWorkingDirModal } from '@/features/WorkingDirectory';
-import { createWorkspaceLambdaClient, lambdaQuery } from '@/libs/trpc/client';
+import { lambdaQuery } from '@/libs/trpc/client';
 import { getHostPort, hostResultOr } from '@/platform';
 import { deviceService } from '@/services/device';
 import { nextWorkingDirs } from '@/store/device';
@@ -58,9 +56,6 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
   const [name, setName] = useState(device.friendlyName ?? '');
   const [cwd, setCwd] = useState(device.defaultCwd ?? '');
 
-  // Workspace devices commit via the self-or-owner-gated, workspace-scoped
-  // mutation; personal devices stay userId-scoped. Route by the device's own
-  // scope.
   const onUpdateSuccess = () => refreshDeviceList();
   // A failed save must not leave the edited text sitting in the inputs as if it
   // had been stored. Preserve edits made after the failed request was submitted.
@@ -84,11 +79,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
     onError: onUpdateError,
     onSuccess: onUpdateSuccess,
   });
-  const updateWorkspace = lambdaQuery.device.updateWorkspaceDevice.useMutation({
-    onError: onUpdateError,
-    onSuccess: onUpdateSuccess,
-  });
-  const update = device.scope === 'workspace' ? updateWorkspace : updatePersonal;
+  const update = updatePersonal;
 
   // Only the machine you're on can browse its own filesystem natively.
   const canBrowse = !!isCurrent && isDesktop;
@@ -181,31 +172,6 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
     });
   };
 
-  // Revoke one workspace share of a personal device. The share
-  // entry's `deviceId` is the workspace-scoped twin, removed via the
-  // workspace-scoped mutation under an explicitly pinned workspace client —
-  // the personal settings page has no active workspace context to inherit.
-  const handleRevokeShare = (share: DeviceWorkspaceShare) =>
-    confirmModal({
-      content: t('devices.share.revokeConfirmDesc'),
-      okButtonProps: { danger: true },
-      okText: t('devices.share.revoke'),
-      onOk: async () => {
-        try {
-          await createWorkspaceLambdaClient(share.workspaceId).device.removeWorkspaceDevice.mutate({
-            deviceId: share.deviceId,
-          });
-          refreshDeviceList();
-        } catch (error) {
-          toast.error((error as Error).message);
-          throw error;
-        }
-      },
-      title: t('devices.share.revokeConfirmTitle', {
-        name: share.workspaceName ?? share.workspaceId,
-      }),
-    });
-
   const handleReorderRecent = (items: { id: string }[]) => {
     // SortableList items are keyed by path; map ids back to their entries so the
     // detected repoType survives a reorder.
@@ -242,56 +208,11 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
         />
       </div>
 
-      {/* Visible hint when the caller can't mutate the row — explains why the
-          fields below are read-only without the user needing to try and hit a
-          403. Only renders for workspace devices that aren't the caller's own
-          enrollment (personal scope is always editable). */}
+      {/* Device metadata is editable only by its enrolling owner. */}
       {!canEdit && (
         <div className="flex items-center gap-2">
           <LockIcon className="size-4 text-foreground-tertiary" size={16} />
-          <div className="text-xs text-muted-foreground">
-            {t('workspaceSetting.devices.readonlyHint')}
-          </div>
-        </div>
-      )}
-
-      {/* ─── Enrolled by (workspace only) ─── */}
-      {device.scope === 'workspace' && device.enroller && (
-        <div className="flex flex-col gap-2">
-          <FieldLabel>{t('workspaceSetting.devices.enrolledByLabel')}</FieldLabel>
-          <div className="flex items-center gap-2">
-            <Avatar avatar={device.enroller.avatar ?? undefined} size={24} />
-            <div>
-              {device.enroller.fullName ||
-                device.enroller.username ||
-                t('workspaceSetting.devices.unknownEnroller')}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─── Shared to workspaces (personal only) ─── */}
-      {device.scope === 'personal' && !!device.sharedWorkspaces?.length && (
-        <div className="flex flex-col gap-2">
-          <FieldLabel>{t('devices.share.detailLabel')}</FieldLabel>
-          {device.sharedWorkspaces.map((share) => (
-            <div className="flex items-center gap-2" key={share.workspaceId}>
-              <div className="truncate block flex-1 min-w-0">
-                {share.workspaceName ?? share.workspaceId}
-              </div>
-              <Tag size="sm">
-                {share.visibility === 'private'
-                  ? t('devices.share.visibilityTag.private')
-                  : t('devices.share.visibilityTag.public')}
-              </Tag>
-              <ActionIcon
-                icon={XIcon}
-                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                title={t('devices.share.revoke')}
-                onClick={() => handleRevokeShare(share)}
-              />
-            </div>
-          ))}
+          <div className="text-xs text-muted-foreground">{t('devices.readonlyHint')}</div>
         </div>
       )}
 

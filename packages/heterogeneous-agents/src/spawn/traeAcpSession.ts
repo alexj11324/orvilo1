@@ -1,15 +1,13 @@
 import type { HeterogeneousAgentModel } from '@orvilo/types';
 
+import type { AskUserBridge } from '../askUser/AskUserBridge';
 import type { AcpAgentSessionOptions } from './acpAgentSession';
-import {
-  ACP_PROTOCOL_VERSION,
-  AcpAgentSession,
-  selectAcpPermissionOption,
-} from './acpAgentSession';
+import { ACP_PROTOCOL_VERSION, AcpAgentSession } from './acpAgentSession';
 import type { AcpRpcMessage } from './acpStdioClient';
 import { AcpServerRequestError } from './acpStdioClient';
 import type { AgentPromptInput, BuildAgentInputOptions } from './input';
 import { normalizeImage } from './input';
+import { answerNativePermissionRequest } from './standardAcpPermissions';
 
 const NOTIFICATION_DRAIN_QUIET_MS = 250;
 const NOTIFICATION_DRAIN_TIMEOUT_MS = 2000;
@@ -222,6 +220,7 @@ export const parseTraeAcpModelCatalog = (
 };
 
 export interface TraeAcpSessionOptions extends AcpAgentSessionOptions {
+  askUserBridge?: AskUserBridge;
   initialModel?: string;
   inputOptions?: BuildAgentInputOptions;
   onModel?: (model: string) => void;
@@ -370,14 +369,12 @@ export class TraeAcpSession extends AcpAgentSession<
 
   protected handleServerRequest(message: AcpRpcMessage): unknown {
     if (message.method === 'session/request_permission') {
-      const optionId = selectAcpPermissionOption(message.params, [
-        (option) =>
-          option.optionId === 'allow_session' || option.optionId === 'approve_for_session',
-        (option) => option.kind === 'allow_once',
-        (option) => option.kind === 'reject_once',
-      ]);
-      if (optionId) return { outcome: { optionId, outcome: 'selected' } };
-      throw new AcpServerRequestError(-32_603, 'No safe permission option was offered');
+      return answerNativePermissionRequest(
+        message,
+        this.options.askUserBridge,
+        (update) => this.pushToPipeline(update),
+        'trae',
+      );
     }
     throw new AcpServerRequestError(-32_601, `Unsupported ACP client request: ${message.method}`);
   }

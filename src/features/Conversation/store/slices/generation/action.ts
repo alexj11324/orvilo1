@@ -1,7 +1,7 @@
 import { AgentManagementIdentifier } from '@orvilo/builtin-tool-agent-management';
 import { shouldDropUnsupportedClaudeAssistantPrefill } from '@orvilo/model-runtime/providers/anthropic/modelId';
 import type { ConversationContext } from '@orvilo/types';
-import { resolveAgentAgencyConfig } from '@orvilo/types';
+import { normalizeAgencyConfigHeterogeneousProvider } from '@orvilo/types';
 import { t } from 'i18next';
 import { type StateCreator } from 'zustand';
 
@@ -10,11 +10,6 @@ import { MESSAGE_CANCEL_FLAT } from '@/const/index';
 import { saveDraft } from '@/features/ChatInput/draftStorage';
 import { isHeterogeneousAgentStatusGuideError } from '@/features/Conversation/Error/heterogeneous';
 import { getEffectiveConversationModel } from '@/features/Conversation/store/utils/effectiveModel';
-import {
-  ensureAgentManagementAccess,
-  getRuntimeCanManageAgent,
-} from '@/helpers/agentManagementAccess';
-import { resolveWorkspaceScoped } from '@/helpers/executionTarget';
 import {
   getTopicAgencyConfig,
   getTopicWorkspaceScoped,
@@ -40,8 +35,6 @@ import {
   resolveActiveTopicDocumentInitialContext,
 } from '@/store/chat/utils/activeTopicDocumentContext';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
-import { getUserStoreState } from '@/store/user';
-import { userProfileSelectors } from '@/store/user/selectors';
 
 import { type Store as ConversationStore } from '../../action';
 import { MAX_HETERO_AUTO_RETRIES } from './heteroRetryConfig';
@@ -97,64 +90,19 @@ const settleGenerationEntry = (
   notify?.();
 };
 
-/**
- * Resolve management access from the server before `getEffectiveAgencyConfig`
- * runs on a cold cache (page reload straight into regenerate/continue) — an
- * admin must not be downgraded to member just because the picker's hook never
- * mounted. No-ops for authors, members-with-resolved-answers, and non-workspace
- * agents; a failed fetch falls back to authorship for this run.
- */
-const ensureEffectiveAgencyAccess = async (agentId: string) => {
-  const agentState = getAgentStoreState();
-  const agent = agentByIdSelectors.getAgentById(agentId)(agentState);
-  await ensureAgentManagementAccess({
-    agentId,
-    agentUserId: agent?.userId,
-    currentUserId: userProfileSelectors.userId(getUserStoreState()),
-    visibility: agent?.visibility,
-    workspaceId: agent?.workspaceId,
-  });
-};
-
 const getEffectiveAgencyConfig = (agentId: string, topicId?: string | null) => {
   const agentState = getAgentStoreState();
   const sharedAgencyConfig = agentSelectors.getAgentConfigById(agentId)(agentState)?.agencyConfig;
   const agent = agentByIdSelectors.getAgentById(agentId)(agentState);
-  const currentUserId = userProfileSelectors.userId(getUserStoreState());
-  // Author-or-admin, mirroring the picker (`useAgentManagementAccess`) and the
-  // server (`isResourceAuthorOrAdmin`) — an admin's own override must survive
-  // a `fixed` selection policy just like the author's does.
-  const canManage = getRuntimeCanManageAgent({
-    agentId,
-    agentUserId: agent?.userId,
-    currentUserId,
-  });
-  const usesWorkspaceMemberSelection =
-    !!agent?.workspaceId && agent.visibility !== 'private' && !canManage;
-  // Every workspace caller's override matters — a manager's / private owner's
-  // `local` pick also lives in `agentDeviceOverrides` (the shared row must
-  // never reference a personal device); `resolveAgentAgencyConfig` decides how
-  // it applies per role.
-  const deviceOverride = agent?.workspaceId
-    ? getUserStoreState().workspaceUserPreference.agentDeviceOverrides?.[agentId]
-    : undefined;
 
   return {
     agencyConfig: getTopicAgencyConfig(
-      resolveAgentAgencyConfig(sharedAgencyConfig, deviceOverride, {
-        canManage,
-        visibility: agent?.visibility,
-        workspaceId: agent?.workspaceId,
-      }),
+      normalizeAgencyConfigHeterogeneousProvider(sharedAgencyConfig),
       topicId,
     ),
     /** True workspace membership — stays true for the author, unlike `workspaceScoped`. */
     isWorkspaceAgent: !!agent?.workspaceId,
-    workspaceScoped: getTopicWorkspaceScoped(
-      sharedAgencyConfig,
-      topicId,
-      resolveWorkspaceScoped(usesWorkspaceMemberSelection, deviceOverride),
-    ),
+    workspaceScoped: getTopicWorkspaceScoped(sharedAgencyConfig, topicId, !!agent?.workspaceId),
   };
 };
 
@@ -263,7 +211,6 @@ const regenerateUserMessageFromSource = async (
     // agent throws here, leaving `activeBranchIndex` untouched — switching
     // first would persist one-past-the-end and hide the previous answer on a
     // failed regenerate.
-    await ensureEffectiveAgencyAccess(context.agentId);
     const { agencyConfig, isWorkspaceAgent, workspaceScoped } = getEffectiveAgencyConfig(
       context.agentId,
       context.topicId,
@@ -616,7 +563,6 @@ export const generationSlice: StateCreator<
       if (shouldProceed === false) return false;
     }
 
-    await ensureEffectiveAgencyAccess(context.agentId);
     const { agencyConfig, isWorkspaceAgent, workspaceScoped } = getEffectiveAgencyConfig(
       context.agentId,
       context.topicId,
@@ -712,7 +658,6 @@ export const generationSlice: StateCreator<
     // tool/provider error on a grouped reply is not resumable this way.
     if (!isHeterogeneousAgentStatusGuideError(erroredStep.error?.body)) return;
 
-    await ensureEffectiveAgencyAccess(context.agentId);
     const { agencyConfig, isWorkspaceAgent, workspaceScoped } = getEffectiveAgencyConfig(
       context.agentId,
       context.topicId,

@@ -15,6 +15,10 @@ import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { createFtsSearchRepo } from '@/server/services/ftsSearch';
 import { assertCanEditResource } from '@/server/services/resourcePermission';
+import {
+  snapshotWorkspaceAgentOperations,
+  stopWorkspaceAgentOperations,
+} from '@/server/services/resourcePermission/revocation';
 import { AgentChatConfigSchema } from '@/types/agent';
 import { OrviloMetaDataSchema } from '@/types/meta';
 import { type BatchTaskResult } from '@/types/service';
@@ -294,6 +298,14 @@ export const sessionRouter = router({
         }
       }
 
+      // Capture the caller identity before orphan deletion clears Agent foreign keys.
+      const operations =
+        ctx.workspaceId && session?.agent?.id
+          ? await snapshotWorkspaceAgentOperations(ctx.serverDB, {
+              agentId: session.agent.id,
+              workspaceId: ctx.workspaceId,
+            })
+          : [];
       const { orphanedAgentIds, result } = await ctx.sessionModel.delete(input.id);
 
       // Mirror `agent.removeAgent`: orphan-deleted shared agents must not
@@ -301,6 +313,18 @@ export const sessionRouter = router({
       if (ctx.workspaceId && orphanedAgentIds.length > 0) {
         const permissionModel = new ResourcePermissionModel(ctx.serverDB, ctx.workspaceId);
         await Promise.all(orphanedAgentIds.map((id) => permissionModel.removeAll('agent', id)));
+        await Promise.all(
+          orphanedAgentIds.map((agentId) =>
+            stopWorkspaceAgentOperations(
+              ctx.serverDB,
+              {
+                agentId,
+                workspaceId: ctx.workspaceId!,
+              },
+              operations,
+            ),
+          ),
+        );
       }
 
       return result;

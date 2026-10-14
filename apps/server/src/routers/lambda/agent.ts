@@ -49,6 +49,10 @@ import {
   assertCanPerformResourceAction,
   buildResourcePermissionState,
 } from '@/server/services/resourcePermission';
+import {
+  snapshotWorkspaceAgentOperations,
+  stopWorkspaceAgentOperations,
+} from '@/server/services/resourcePermission/revocation';
 import { assertTransferRecipientValid } from '@/server/services/resourceTransferRequest';
 import {
   hasWorkspaceScopedPermission,
@@ -182,17 +186,6 @@ export const agentRouter = router({
         ? await ctx.agentModel.getAssignableSessionGroupVisibility(input.groupId)
         : undefined;
 
-      if (
-        ctx.workspaceId &&
-        (folderVisibility === 'private' ||
-          input.visibility === 'private' ||
-          input.config?.visibility === 'private')
-      )
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'New workspace Agents must be public',
-        });
-
       if (folderVisibility && input.visibility && input.visibility !== folderVisibility)
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -257,7 +250,7 @@ export const agentRouter = router({
       return result;
     }),
 
-  /** Promote a managed legacy private Agent without removing confirmed Use. */
+  /** Change a managed Agent's visibility without changing its saved runtime. */
   setAgentVisibility: agentProcedure
     .use(withScopedPermission('agent:update'))
     .input(
@@ -268,9 +261,6 @@ export const agentRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      if (ctx.workspaceId && input.visibility === 'private')
-        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Workspace Agents must be public' });
-
       const meta = await ctx.agentModel.getAgentVisibilityMeta(input.id);
       if (!meta) throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
 
@@ -290,7 +280,7 @@ export const agentRouter = router({
       const permissionModel = new ResourcePermissionModel(ctx.serverDB, ctx.workspaceId);
       const permissionMeta = { ...meta, workspaceId: ctx.workspaceId };
       await assertCanPerformResourceAction({
-        action: 'changeVisibility',
+        action: 'manage',
         db: ctx.serverDB,
         grantedPermissions: (ctx as { workspacePermissionCodes?: string[] })
           .workspacePermissionCodes,
@@ -317,6 +307,15 @@ export const agentRouter = router({
 
       const updated = await ctx.agentModel.setVisibility(input.id, input.visibility);
       if (!updated) throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
+      if (input.visibility === 'private') {
+        const scope = { agentId: input.id, workspaceId: ctx.workspaceId };
+        const operations = await snapshotWorkspaceAgentOperations(ctx.serverDB, scope);
+        await stopWorkspaceAgentOperations(
+          ctx.serverDB,
+          scope,
+          operations.filter(({ userId }) => userId !== meta.userId),
+        );
+      }
 
       // Promotion keeps the configured level and all exact per-user Use rows.
       const accessLevel =
@@ -769,6 +768,12 @@ export const agentRouter = router({
           });
         }
       }
+      if (ctx.workspaceId) {
+        await stopWorkspaceAgentOperations(ctx.serverDB, {
+          agentId: input.agentId,
+          workspaceId: ctx.workspaceId,
+        });
+      }
       let result;
       try {
         result = await ctx.agentModel.delete(input.agentId);
@@ -1099,6 +1104,12 @@ export const agentRouter = router({
         });
       }
 
+      if (ctx.workspaceId) {
+        await stopWorkspaceAgentOperations(ctx.serverDB, {
+          agentId: input.agentId,
+          workspaceId: ctx.workspaceId,
+        });
+      }
       let result;
       try {
         result = await ctx.agentModel.transferAgent(
@@ -1283,6 +1294,16 @@ export const agentRouter = router({
         });
       }
 
+      if (ctx.workspaceId) {
+        await Promise.all(
+          agentIds.map((agentId) =>
+            stopWorkspaceAgentOperations(ctx.serverDB, {
+              agentId,
+              workspaceId: ctx.workspaceId!,
+            }),
+          ),
+        );
+      }
       let results;
       try {
         results = await ctx.agentModel.transferAgents(

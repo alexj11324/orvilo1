@@ -1,5 +1,6 @@
 'use client';
 
+import { BUILTIN_AGENT_SLUGS, isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import { ArrowLeftIcon, MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -43,7 +44,9 @@ const Header = memo(() => {
   // surface, so viewers can't open it; History is read-only and stays available
   // to everyone. Without this guard the button toggles the store, then disappears
   // via `hideWhenExpanded` while the panel refuses to open — a no-op control.
-  const canExpandRightPanel = hasEditPermission || rightPanelMode === 'history';
+  const canExpandRightPanel =
+    (hasEditPermission && isBuiltinAgentAvailable(BUILTIN_AGENT_SLUGS.pageAgent)) ||
+    rightPanelMode === 'history';
 
   return (
     <NavHeader

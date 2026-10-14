@@ -127,6 +127,7 @@ interface ExecOptions {
   /** Amp agent mode, forwarded as the native `--mode` flag. */
   mode?: string;
   model?: string;
+  nativeFullAccess?: boolean;
   operationId?: string;
   prompt?: string;
   /**
@@ -679,7 +680,8 @@ const exec = async (options: ExecOptions): Promise<void> => {
     agentType === 'droid' ||
     agentType === 'devin' ||
     agentType === 'qoder';
-  const nativePermissionSupported = ACP_RUNTIME_AGENT_TYPES.has(agentType);
+  const nativePermissionSupported =
+    ACP_RUNTIME_AGENT_TYPES.has(agentType) || agentType === 'grok-build' || agentType === 'trae';
   if (serverIngest && (askSupported || nativePermissionSupported) && serverIngester) {
     if (!askSupported && !mountBuiltinTools) {
       // Native ACP approvals do not require an unrelated builtin MCP tool.
@@ -1083,11 +1085,6 @@ const exec = async (options: ExecOptions): Promise<void> => {
     ...(aegisEnabled ? { AEGIS_ACTIVATION_MODE: 'auto' } : {}),
   };
   const runEnv = Object.keys(commandEnv).length > 0 ? commandEnv : undefined;
-  // Devin ACP's `--permission-mode` is a global flag; default to bypass so
-  // headless connected-device runs do not block on permission prompts. The mode
-  // response must not overwrite the model selected by `initialModel`.
-  const permissionMode = agentType === 'devin' ? 'bypass' : undefined;
-
   const first = await runOneAgent(
     {
       agentType,
@@ -1098,8 +1095,8 @@ const exec = async (options: ExecOptions): Promise<void> => {
       env: runEnv,
       extraArgs,
       mcpServers: askMcpServers,
-      permissionMode,
       initialPermission,
+      nativeFullAccess: options.nativeFullAccess,
       initialModel:
         agentType === 'droid' || agentType === 'devin' || agentType === 'trae'
           ? options.model
@@ -1139,13 +1136,13 @@ const exec = async (options: ExecOptions): Promise<void> => {
         env: runEnv,
         extraArgs,
         initialPermission,
+        nativeFullAccess: options.nativeFullAccess,
         initialModel:
           agentType === 'droid' || agentType === 'devin' || agentType === 'trae'
             ? options.model
             : undefined,
         mcpServers: askMcpServers,
         operationId,
-        permissionMode,
         prompt: resolved.resumeFallbackPrompt ?? resolved.prompt,
         uploadImage,
         // No resumeSessionId — start fresh
@@ -1284,6 +1281,7 @@ export function registerHeteroCommand(program: Command) {
     .option('-r, --resume <sessionId>', 'Resume an existing agent session by its native id')
     .option('-d, --cwd <path>', 'Working directory for the spawned agent (default: process.cwd())')
     .option('--mode <mode>', 'Forward a resolved Amp agent mode selection to the agent CLI')
+    .option('--native-full-access', 'Require an ACP-advertised native full-access mode')
     .option('--acp-permission-id <id>', 'ACP-advertised permission config id or mode')
     .option('--acp-permission-value <value>', 'ACP-advertised permission value')
     .option('--model <model>', 'Forward a resolved model selection to the agent CLI')

@@ -38,7 +38,6 @@ export interface PendingTransferRequest {
 export interface TransferManifest {
   connectorsAffected: number;
   cronJobs: number;
-  deviceBindingAffected: boolean;
   expertiseAffected: number;
   groupsToLeave: number;
   hiddenReferencedMember: boolean;

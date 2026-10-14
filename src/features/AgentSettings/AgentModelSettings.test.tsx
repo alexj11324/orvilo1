@@ -42,7 +42,9 @@ vi.mock('@/store/electron', () => ({
   useElectronStore: (selector: (s: unknown) => unknown) =>
     selector({ useFetchGatewayDeviceInfo: () => {} }),
 }));
-vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ allowed: true }) }));
+vi.mock('@/features/ResourcePermission/useAgentManagementAccess', () => ({
+  useAgentManagementAccess: () => ({ canManageAgent: true, isAccessLoading: false }),
+}));
 vi.mock('@/hooks/useEffectiveAgencyConfig', () => ({
   useEffectiveAgencyConfig: () => ({
     agencyConfig: {},

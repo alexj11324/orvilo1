@@ -27,6 +27,7 @@ import {
   isCollaborativeBuiltinAgent,
   isWorkspaceScopedMeta,
 } from '@/server/services/resourcePermission';
+import { stopRevokedCallerOperations } from '@/server/services/resourcePermission/revocation';
 
 import {
   getWorkspaceAgentParentGroupIds,
@@ -398,6 +399,14 @@ export const resourcePermissionRouter = router({
       await ctx.permissionModel.removeCollaborators(input.resourceType, input.resourceId, [
         input.userId,
       ]);
+
+      if (input.resourceType === 'agent') {
+        await stopRevokedCallerOperations(ctx.serverDB, {
+          agentId: input.resourceId,
+          userId: input.userId,
+          workspaceId: ctx.workspaceId,
+        });
+      }
 
       return { success: true };
     }),

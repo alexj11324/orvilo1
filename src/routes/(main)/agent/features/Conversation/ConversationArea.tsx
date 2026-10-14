@@ -1,5 +1,6 @@
 'use client';
 
+import { isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import debug from 'debug';
 import { memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -75,14 +76,20 @@ const Conversation = memo(() => {
   const isSubagentThread = useChatStore(threadSelectors.isActiveThreadSubagent);
   const inboxAgentConfigInit = useAgentStore(builtinAgentSelectors.isInboxAgentConfigInit);
   const agentSlug = useAgentStore((s) =>
-    context.agentId ? s.agentMap[context.agentId]?.slug : undefined,
+    context.agentId
+      ? (s.agentMap[context.agentId]?.slug ??
+        Object.entries(s.builtinAgentIdMap).find(([, id]) => id === context.agentId)?.[0])
+      : undefined,
   );
-  const isInboxResolving = shouldShowInboxAgentResolving({
-    agentId: context.agentId,
-    agentSlug,
-    inboxAgentConfigInit,
-    topicId: context.topicId,
-  });
+  const isAgentAvailable = isBuiltinAgentAvailable(agentSlug ?? context.agentId);
+  const isInboxResolving =
+    isAgentAvailable &&
+    shouldShowInboxAgentResolving({
+      agentId: context.agentId,
+      agentSlug,
+      inboxAgentConfigInit,
+      topicId: context.topicId,
+    });
 
   // Auto-reconnect to running Gateway operation on topic load
   const runningOperation = useChatStore((s) =>
@@ -110,7 +117,7 @@ const Conversation = memo(() => {
 
   const hooks = businessAnalyticsHooks;
 
-  const chatInput = !isSubagentThread && !topicPending && (
+  const chatInput = isAgentAvailable && !isSubagentThread && !topicPending && (
     <MessageForwardFooter>
       {isHeterogeneousAgent ? <HeterogeneousChatInput /> : <MainChatInput />}
     </MessageForwardFooter>
@@ -119,6 +126,7 @@ const Conversation = memo(() => {
   return (
     <ConversationProvider
       actionsBar={actionsBarConfig}
+      composerTarget={isAgentAvailable ? undefined : { reason: 'read-only', writable: false }}
       context={context}
       hasInitMessages={!!messages}
       hooks={hooks}
@@ -134,7 +142,11 @@ const Conversation = memo(() => {
         messageDeepLink={messageDeepLink}
         resolving={isInboxResolving}
         footer={
-          isSubagentThread ? (
+          !isAgentAvailable ? (
+            <p className="text-center text-xs text-muted-foreground">
+              {t('builtinAgent.pausedHint')}
+            </p>
+          ) : isSubagentThread ? (
             <p className="text-center text-xs text-muted-foreground">
               {t('thread.subagentReadOnlyHint')}
             </p>
@@ -166,12 +178,12 @@ const Conversation = memo(() => {
       <ExposeMainEditor />
       <ComposerDraftReceiver />
       <ThreadHydration />
-      <ForwardMessageDispatcher />
+      {isAgentAvailable && <ForwardMessageDispatcher />}
       {/* Held back while the topic is still migrating: the composer above is
           already disabled, and letting `?message=` through would send into the
           not-yet-migrated history this screen is waiting for. The param stays
           in the URL, so the send fires once the backfill lands. */}
-      {!topicPending && (
+      {isAgentAvailable && !topicPending && (
         <Suspense>
           <MessageFromUrl />
         </Suspense>

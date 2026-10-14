@@ -1,44 +1,19 @@
-import type { DeviceListItem, DeviceScope } from '@orvilo/types';
+import type { DeviceListItem } from '@orvilo/types';
 
-/**
- * Counts live connections within one principal scope.
- *
- * Use when:
- * - A scope-level control summarizes all authorized device presence
- * - A personal control needs the count for one logical device
- *
- * Expects:
- * - Device channels were already filtered by the server for the active principal
- *
- * Returns:
- * - The number of live connections in the requested scope and optional device
- */
-export const getScopedConnectionCount = (
+/** Count all live connections for the caller’s registered devices. */
+export const getDeviceConnectionCount = (
   devices: DeviceListItem[] | undefined,
-  scope: DeviceScope,
   deviceId?: string,
 ): number | undefined => {
   if (!devices) return undefined;
 
   return devices
-    .filter((device) => device.scope === scope && (!deviceId || device.deviceId === deviceId))
+    .filter((device) => !deviceId || device.deviceId === deviceId)
     .reduce((count, device) => count + device.channels.length, 0);
 };
 
-/**
- * Resolves the workspace presence state without treating a failed lookup as offline.
- *
- * Use when:
- * - A workspace-scoped surface summarizes device presence from an asynchronous list
- * - Cached presence may remain available while background revalidation fails
- *
- * Expects:
- * - `devices` is already scoped to the active workspace by the caller's data hook
- *
- * Returns:
- * - A presentation state that distinguishes unavailable data from an authoritative empty list
- */
-export const getWorkspaceConnectionState = (
+/** Distinguish query failure/loading from an authoritative offline result. */
+export const getDeviceConnectionState = (
   devices: DeviceListItem[] | undefined,
   isLoading: boolean,
   error: unknown,
@@ -46,5 +21,5 @@ export const getWorkspaceConnectionState = (
   if (!devices && error) return 'unavailable';
   if (!devices && isLoading) return 'connecting';
 
-  return getScopedConnectionCount(devices, 'workspace') ? 'connected' : 'disconnected';
+  return getDeviceConnectionCount(devices) ? 'connected' : 'disconnected';
 };

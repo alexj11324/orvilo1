@@ -15,12 +15,7 @@ import { createPathScopeAudit } from '@orvilo/builtin-tool-local-system';
 import { OrviloAgentManifest } from '@orvilo/builtin-tool-orvilo-agent';
 import { PageAgentIdentifier } from '@orvilo/builtin-tool-page-agent';
 import { manualModeExcludeToolIds } from '@orvilo/builtin-tools';
-import {
-  getSubAgentChatConfigOverride,
-  isDesktop,
-  resolveSubAgentChatConfig,
-  resolveSubAgentModel,
-} from '@orvilo/const';
+import { getSubAgentChatConfigOverride, isDesktop, resolveSubAgentChatConfig } from '@orvilo/const';
 import { type ToolsEngine } from '@orvilo/context-engine';
 import { buildTaskDetailPrompt, buildTaskListPrompt } from '@orvilo/prompts';
 import {
@@ -129,7 +124,6 @@ export class StreamingExecutorActionImpl {
     operationId,
     subAgentId: paramSubAgentId,
     isSubAgent,
-    modelOverride,
     chatConfigOverride,
   }: {
     messages: UIChatMessage[];
@@ -148,8 +142,6 @@ export class StreamingExecutorActionImpl {
      */
     subAgentId?: string;
     isSubAgent?: boolean;
-    /** Model/provider the run is forced onto, resolved by the caller that spawns it. */
-    modelOverride?: { model: string; provider: string };
     /** chatConfig patch merged over the resolved chatConfig (sub-agent thinking overrides). */
     chatConfigOverride?: Partial<OrviloAgentChatConfig> | null;
   }): {
@@ -191,25 +183,10 @@ export class StreamingExecutorActionImpl {
       agencyConfig: getTopicAgencyConfig(resolvedAgentConfig.agentConfig.agencyConfig, topicId),
     };
 
-    // Resolve the effective model/provider, in precedence order:
-    // 1. `modelOverride` — forced by the spawn site (see runClientSubAgent); not
-    //    re-derived here because `isSubAgent` is also set for isolated group
-    //    members which must keep their own model, so it can't gate on its own.
-    // 2. Topic-scoped model — a topic snapshots the model it was created with and
-    //    remembers switches made while active (top-level `topics.model`/`provider`
-    //    columns, read via `getTopicModelById`), overriding the agent default so
-    //    the whole model→topic chain (tools, context window, generation) uses it.
-    // resolveAgentConfig returns an immer-frozen config, so build a new object
-    // rather than mutating in place.
-    const topicModel = topicId ? topicSelectors.getTopicModelById(topicId)(this.#get()) : undefined;
-    const modelResolution = modelOverride ?? topicModel;
     const agentConfig: ResolvedAgentConfig =
-      (modelResolution || chatConfigOverride) && resolvedAgentConfig.agentConfig
+      chatConfigOverride && resolvedAgentConfig.agentConfig
         ? {
             ...resolvedAgentConfig,
-            ...(modelResolution
-              ? { agentConfig: { ...resolvedAgentConfig.agentConfig, ...modelResolution } }
-              : {}),
             ...(chatConfigOverride
               ? {
                   chatConfig:
@@ -531,13 +508,6 @@ export class StreamingExecutorActionImpl {
     skipCreateFirstMessage?: boolean;
     isSubAgent?: boolean;
     /**
-     * Forces the run onto a specific model, overriding the resolved agent config.
-     * Resolved by the spawn site — `runClientSubAgent` passes the parent's
-     * `agencyConfig.subagent` here. Group members deliberately don't, so they
-     * keep their own model.
-     */
-    modelOverride?: { model: string; provider: string };
-    /**
      * chatConfig overrides (thinking / reasoning-effort extend params) merged
      * over the resolved chatConfig, skipping nulled keys. Passed by
      * `runClientSubAgent` from the parent's `agencyConfig.subagent.chatConfig`.
@@ -671,7 +641,6 @@ export class StreamingExecutorActionImpl {
       operationId,
       subAgentId, // Pass subAgentId for agent config retrieval (behavior depends on scope)
       isSubAgent, // Pass isSubAgent to filter out orvilo-agent tool in sub-agent context
-      modelOverride: params.modelOverride,
       chatConfigOverride: params.chatConfigOverride,
     });
 
@@ -1086,26 +1055,8 @@ export class StreamingExecutorActionImpl {
         this.#get().replaceMessages(subMessages, { context: subContext });
       }
 
-      // 6. Run the sub-agent with the current client runtime.
-      //    The model is resolved here at the spawn site (mirrors the server's
-      //    callSubAgent runner): an explicit `agencyConfig.subagent` override
-      //    wins, otherwise the sub-agent follows the parent's *effective* model
-      //    — topic-pinned model over the agent default, the same precedence
-      //    internal_createAgentState applies to the parent run itself.
+      // Child runs use the selected Agent's saved runtime configuration.
       const parentAgentConfig = agentSelectors.getAgentConfigById(agentId)(getAgentStoreState());
-      const parentEffectiveModel =
-        topicSelectors.getTopicModelById(topicId)(this.#get()) ?? parentAgentConfig;
-      const subAgentModel = resolveSubAgentModel(
-        parentAgentConfig?.agencyConfig?.subagent,
-        parentEffectiveModel,
-      );
-      // Warm the sub-agent model's user-level reasoning config before the run:
-      // the ChatInput loader only fetches the parent's effective model, while
-      // resolveModelExtendParams reads this cache synchronously mid-run.
-      await getAiInfraStoreState().ensureModelReasoningConfig(
-        subAgentModel.model,
-        subAgentModel.provider,
-      );
       const runtimeResult = await this.#get().executeClientAgent({
         chatConfigOverride: getSubAgentChatConfigOverride(
           parentAgentConfig?.agencyConfig?.subagent,
@@ -1113,7 +1064,6 @@ export class StreamingExecutorActionImpl {
         context: subContext,
         isSubAgent: true,
         messages: subMessages,
-        modelOverride: subAgentModel,
         operationId: taskOperationId,
         parentMessageId: userMessageId,
         parentMessageType: 'user',

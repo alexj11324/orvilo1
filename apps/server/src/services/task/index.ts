@@ -18,9 +18,12 @@ import type {
   TaskWorkflowCategory,
   WorkspaceData,
 } from '@orvilo/types';
+import { deriveLegacyTaskStatus } from '@orvilo/types';
+import { isRecord } from '@orvilo/utils/object';
 import { TRPCError } from '@trpc/server';
 
 import { AgentModel } from '@/database/models/agent';
+import { DeviceModel } from '@/database/models/device';
 import { ProjectModel } from '@/database/models/project';
 import { RbacModel } from '@/database/models/rbac';
 import {
@@ -46,11 +49,13 @@ import {
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
+import { findUsableAgentExecutionBinding } from '@/database/utils/agent-access';
 import {
   taskDependencyRequestScope,
   taskDependencyRowScope,
 } from '@/database/utils/taskDependencyLock';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
+import { resolveDeviceWorkingDirectory } from '@/server/services/aiAgent/resolveDeviceWorkingDirectory';
 
 import { assertCanUseWorkspaceAgent } from '../../routers/lambda/_helpers/workspaceAgentGuard';
 import { AiAgentService } from '../aiAgent';
@@ -73,6 +78,7 @@ import {
   type ReadableIssueRefs,
 } from './activityLogChange';
 import { collapseActivityLog } from './collapseActivityLog';
+import { observeNativeAutomationReadiness } from './nativeAutomationReadiness';
 
 const emptyWorkspace: WorkspaceData = { nodeMap: {}, tree: [] };
 const UNTITLED_TOPIC_TITLE = 'Untitled';
@@ -273,6 +279,7 @@ export class TaskService {
       ? 'public'
       : (createData.visibility ?? parentVisibility ?? 'public');
 
+    await this.assertNativeAutomationConfiguration(createData);
     const task = await this.createTaskWithAssigneeLock(createData, mutation);
 
     // The parent's feed says it gained a sub-issue, credited to whoever the
@@ -295,13 +302,10 @@ export class TaskService {
 
   private interruptTaskOperation = async (service: AiAgentService, operationId: string) => {
     const result = await service.interruptTask({ operationId });
-    // `cancelState === 'unknown'` means the stop signal never provably landed —
-    // the remote writer may still be active. `requested` is allowed through:
-    // the signal was durably dispatched and the run's terminal callback
-    // resolves it.
+    // A dispatched stop is still pending until the execution host acknowledges it.
     const unconfirmed =
       result.cancelState !== undefined
-        ? result.cancelState === 'unknown'
+        ? result.cancelState !== 'confirmed'
         : !result.success || result.deviceCancellationConfirmed === false;
     if (unconfirmed) {
       throw new TRPCError({
@@ -596,6 +600,8 @@ export class TaskService {
     // `tasks.status` label recomputed from workflow/execution rows.
     const resolvedStatus =
       (await this.taskModel.derivedStatusByIds([resolved.id]))[resolved.id] ?? 'backlog';
+    if (['backlog', 'scheduled', 'running'].includes(status))
+      await this.assertNativeAutomationConfiguration({ ...resolved, status });
     if (
       (status === 'running' || status === 'completed') &&
       !(await this.taskModel.areAllDependenciesCompleted(resolved.id))
@@ -1216,6 +1222,68 @@ export class TaskService {
     return { failed, kickedOff, plan };
   }
 
+  /** Disabled drafts remain editable; arming a recurring Issue requires native full access. */
+  async assertNativeAutomationConfiguration(task: {
+    assigneeAgentId?: string | null;
+    automationMode?: string | null;
+    config?: unknown;
+    context?: unknown;
+    workflowCategory?: string | null;
+    status?: string;
+  }): Promise<void> {
+    if (
+      !['schedule', 'heartbeat'].includes(task.automationMode ?? '') ||
+      !['backlog', 'scheduled', 'running'].includes(task.status ?? deriveLegacyTaskStatus(task))
+    )
+      return;
+    const unavailable = () =>
+      new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'NATIVE_FULL_ACCESS_UNAVAILABLE: The device could not confirm a native full-access permission mode for this Agent.',
+      });
+    if (!task.assigneeAgentId) throw unavailable();
+    const binding = await findUsableAgentExecutionBinding(this.db, task.assigneeAgentId, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    if (!binding) throw new TRPCError({ code: 'NOT_FOUND', message: 'Assignee agent not found' });
+    if (this.workspaceId) {
+      await assertCanUseWorkspaceAgent({
+        agentId: task.assigneeAgentId,
+        db: this.db,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+    }
+    const agent = await this.agentModel.getAgentConfigForExecution(task.assigneeAgentId);
+    const agency = agent?.agencyConfig;
+    const deviceId = agency?.boundDeviceId;
+    if (!agent || !deviceId) throw unavailable();
+    const device = (
+      await new DeviceModel(this.db, this.userId, this.workspaceId).queryForExecution()
+    ).find((row) => row.deviceId === deviceId);
+    if (!device) throw unavailable();
+    const config = isRecord(task.config) ? task.config : {};
+    const workspace = isRecord(config.workspace) ? config.workspace : {};
+    const cwd =
+      typeof workspace.repoPath === 'string'
+        ? workspace.repoPath
+        : resolveDeviceWorkingDirectory({
+            deviceId,
+            deviceDefaultCwd: device.defaultCwd,
+            workingDirByDevice: agency?.workingDirByDevice,
+          });
+    const observed = await observeNativeAutomationReadiness({
+      cwd,
+      deviceId,
+      deviceOwnerId: device.userId,
+      provider: agency?.heterogeneousProvider ?? { type: 'orvilo' },
+    });
+    if (observed?.installed !== true || observed.unattended !== true || !observed.nativePermission)
+      throw unavailable();
+  }
+
   private async assertAssigneeAgentBelongsToUser(assigneeAgentId?: string | null): Promise<void> {
     if (!assigneeAgentId) return;
     // `existsById` already applies the workspace + visibility predicate, so a
@@ -1344,6 +1412,30 @@ export class TaskService {
     if (data.projectId) {
       const project = await this.projectModel.findManageableById(data.projectId);
       if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
+    }
+
+    if (
+      [
+        'automationMode',
+        'assigneeAgentId',
+        'config',
+        'heartbeatInterval',
+        'schedulePattern',
+        'scheduleTimezone',
+        'status',
+        'context',
+        'workflowCategory',
+      ].some((key) => Object.hasOwn(data, key))
+    ) {
+      const current = await this.taskModel.findById(taskId);
+      if (current) {
+        const status =
+          data.status ??
+          (Object.hasOwn(data, 'context') || Object.hasOwn(data, 'workflowCategory')
+            ? deriveLegacyTaskStatus({ ...current, ...data })
+            : ((await this.taskModel.derivedStatusByIds([taskId]))[taskId] ?? current.status));
+        await this.assertNativeAutomationConfiguration({ ...current, ...data, status });
+      }
     }
 
     const invalidatesActiveRun =

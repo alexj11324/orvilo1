@@ -2874,6 +2874,67 @@ describe('HeterogeneousAgentCtr', () => {
     });
   });
 
+  it.each([
+    { agentType: 'grok-build', command: 'grok', runMock: grokAcpSessionRunMock },
+    { agentType: 'trae', command: 'traecli', runMock: traeAcpSessionRunMock },
+  ] as const)(
+    'keeps $agentType native permission pending until the user answers',
+    async ({ agentType, command, runMock }) => {
+      const send = vi.fn();
+      mockGetAllWindows.mockReturnValue([{ isDestroyed: () => false, webContents: { send } }]);
+      let answer: unknown;
+      runMock.mockImplementation(async (options) => {
+        answer = await options.askUserBridge.pending({
+          arguments: {
+            questions: [
+              {
+                header: 'Permission required',
+                multiSelect: false,
+                options: [
+                  { id: 'allow_once', label: 'Allow once' },
+                  { id: 'reject_once', label: 'Reject' },
+                ],
+                question: 'Run tests?',
+              },
+            ],
+          },
+          interactionKind: 'permission',
+          toolCallId: 'native-permission',
+        });
+      });
+      const ctr = new HeterogeneousAgentCtr({
+        appStoragePath,
+        storeManager: { get: vi.fn() },
+      } as any);
+      const { sessionId } = await ctr.startSession({ agentType, command });
+      const operationId = `op-permission-${agentType}`;
+      const run = ctr.sendPrompt({ operationId, prompt: 'work', sessionId });
+      await vi.waitFor(() =>
+        expect(send).toHaveBeenCalledWith(
+          'heteroAgentEvent',
+          expect.objectContaining({
+            event: expect.objectContaining({
+              type: 'agent_intervention_request',
+              data: expect.objectContaining({
+                provider: agentType,
+                toolCallId: 'native-permission',
+              }),
+            }),
+            sessionId,
+          }),
+        ),
+      );
+      expect(answer).toBeUndefined();
+      await ctr.submitIntervention({
+        operationId,
+        result: { 'Run tests?': 'allow_once' },
+        toolCallId: 'native-permission',
+      });
+      await run;
+      expect(answer).toEqual({ result: { 'Run tests?': 'allow_once' } });
+    },
+  );
+
   describe('pre-launch cancellation for local transports', () => {
     beforeEach(() => {
       spawnCalls.length = 0;

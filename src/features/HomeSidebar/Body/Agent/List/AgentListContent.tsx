@@ -1,5 +1,6 @@
 'use client';
 
+import { BUILTIN_AGENT_SLUGS, isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import { memo, useMemo } from 'react';
 
 import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
@@ -33,7 +34,10 @@ interface AgentListContentProps {
 const AgentListContent = memo<AgentListContentProps>(
   ({ hideInbox: hideInboxProp, onMoreClick }) => {
     // The inbox agent runs on the built-in harness.
-    const hideInbox = !useBuiltinHarnessOffered() || hideInboxProp;
+    const hideInbox =
+      !useBuiltinHarnessOffered() ||
+      !isBuiltinAgentAvailable(BUILTIN_AGENT_SLUGS.inbox) ||
+      hideInboxProp;
     const isInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
     const authLoaded = useUserStore(authSelectors.isLoaded);
     const isLogin = useUserStore(authSelectors.isLogin);

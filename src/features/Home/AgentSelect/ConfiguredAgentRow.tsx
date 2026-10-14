@@ -47,33 +47,35 @@ export const ConfiguredAgentRow = ({
     canSelectExecutionTarget,
     canSelectPersonalDevice,
     isPreferenceLoading,
-    memberSelectedDeviceId,
     workspaceScoped,
   } = useEffectiveAgencyConfig(row.id);
   const workspaceId = useAgentStore((state) => state.agentMap[row.id]?.workspaceId);
   const devices = useDeviceList();
-  const { selectableDevices } = useDeviceSelectorState({
-    boundDeviceId: agencyConfig?.boundDeviceId,
-    canSelectDevice: canSelectExecutionTarget,
-    canSelectPersonalDevice,
-    memberSelectedDeviceId,
-    permissionsLoaded: !isPreferenceLoading,
-    scope: workspaceId ? 'workspace' : 'personal',
-  });
+  const { selectableDevices, deviceInventoryComplete, deviceInventoryError } =
+    useDeviceSelectorState({
+      agentId: row.id,
+      boundDeviceId: agencyConfig?.boundDeviceId,
+      canSelectDevice: canSelectExecutionTarget,
+      canSelectPersonalDevice,
+      permissionsLoaded: !isPreferenceLoading,
+      scope: workspaceId ? 'workspace' : 'personal',
+    });
   const bindings = useFetchProviderBindings();
   const type = agencyConfig?.heterogeneousProvider?.type;
   const needsDevices =
     agencyConfig?.executionTarget === 'device' ||
-    (agencyConfig?.executionTarget === 'local' && !desktop);
+    (agencyConfig?.executionTarget === 'local' && (!desktop || workspaceScoped));
   const failed =
-    profile.error || (needsDevices && devices.error) || (type === 'orvilo' && bindings.error);
+    profile.error ||
+    (needsDevices && (devices.error || deviceInventoryError)) ||
+    (type === 'orvilo' && bindings.error);
   const loading =
     !failed &&
     (profile.isLoading ||
       profile.data === undefined ||
       (!!profile.data &&
         (isPreferenceLoading ||
-          (needsDevices && !devices.data) ||
+          (needsDevices && (!devices.data || !deviceInventoryComplete)) ||
           (type === 'orvilo' && !bindings.data))));
   const status = failed
     ? 'loadFailed'

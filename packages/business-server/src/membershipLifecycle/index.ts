@@ -4,12 +4,12 @@ import type { WorkspaceMemberItem } from '@orvilo/database/schemas';
 import { TRPCError } from '@trpc/server';
 
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
+import { stopRevokedCallerOperations } from '@/server/services/resourcePermission/revocation';
 
 import { emitWorkspaceEvent, recordAudit } from './audit';
 import {
   bumpAuthzVersion,
   countActiveDelegations,
-  countMemberBoundDevices,
   countMemberWorkload,
   countOpenTasksAssignedTo,
   countOpenTasksReviewedBy,
@@ -88,7 +88,7 @@ export const changeMemberRole = async (
     workspaceId: string;
   },
 ) => {
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     await lockWorkspaceForUpdate(tx, params.workspaceId);
     const memberModel = new WorkspaceMemberModel(tx, params.actorUserId);
     const target = activeMembership(
@@ -144,6 +144,13 @@ export const changeMemberRole = async (
     });
     return { changed: true as const, role: params.role };
   });
+  if (result.changed && params.role === 'viewer') {
+    await stopRevokedCallerOperations(db, {
+      userId: params.targetUserId,
+      workspaceId: params.workspaceId,
+    });
+  }
+  return result;
 };
 
 const setMemberSuspended = async (
@@ -157,7 +164,7 @@ const setMemberSuspended = async (
     workspaceId: string;
   },
 ) => {
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     await lockWorkspaceForUpdate(tx, params.workspaceId);
     const memberModel = new WorkspaceMemberModel(tx, params.actorUserId);
     const target = activeMembership(
@@ -211,6 +218,13 @@ const setMemberSuspended = async (
     });
     return { changed: true as const, suspended: params.suspended };
   });
+  if (params.suspended && result.changed) {
+    await stopRevokedCallerOperations(db, {
+      userId: params.targetUserId,
+      workspaceId: params.workspaceId,
+    });
+  }
+  return result;
 };
 
 export const suspendMember = (
@@ -234,26 +248,21 @@ export const previewMemberRemoval = async (
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Not an active member' });
   }
 
-  const [
-    assignedTaskCount,
-    reviewingTaskCount,
-    runningDelegationCount,
-    sharedDeviceCount,
-    assignedTasks,
-  ] = await Promise.all([
-    countOpenTasksAssignedTo(db, params.workspaceId, params.targetUserId),
-    countOpenTasksReviewedBy(db, params.workspaceId, params.targetUserId),
-    countActiveDelegations(db, params.workspaceId, params.targetUserId),
-    countMemberBoundDevices(db, params.workspaceId, params.targetUserId),
-    listOpenAssignedTaskTitles(db, params.workspaceId, params.targetUserId),
-  ]);
+  const [assignedTaskCount, reviewingTaskCount, runningDelegationCount, assignedTasks] =
+    await Promise.all([
+      countOpenTasksAssignedTo(db, params.workspaceId, params.targetUserId),
+      countOpenTasksReviewedBy(db, params.workspaceId, params.targetUserId),
+      countActiveDelegations(db, params.workspaceId, params.targetUserId),
+      listOpenAssignedTaskTitles(db, params.workspaceId, params.targetUserId),
+    ]);
 
   return {
     assignedTaskCount,
     assignedTasks,
     reviewingTaskCount,
     runningDelegationCount,
-    sharedDeviceCount,
+    // Released clients retain this preview field; removal never unenrolls hosts.
+    sharedDeviceCount: 0,
   };
 };
 
@@ -268,7 +277,7 @@ export const removeMember = async (
     workspaceId: string;
   },
 ) => {
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     await lockWorkspaceForUpdate(tx, params.workspaceId);
     const memberModel = new WorkspaceMemberModel(tx, params.actorUserId);
     const target = activeMembership(
@@ -362,13 +371,18 @@ export const removeMember = async (
 
     return { reassignedTaskCount, removedDeviceIds };
   });
+  await stopRevokedCallerOperations(db, {
+    userId: params.targetUserId,
+    workspaceId: params.workspaceId,
+  });
+  return result;
 };
 
 export const leaveWorkspace = async (
   db: OrviloDatabase,
   params: { ipAddress?: string; userId: string; workspaceId: string },
 ) => {
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     await lockWorkspaceForUpdate(tx, params.workspaceId);
     const memberModel = new WorkspaceMemberModel(tx, params.userId);
     const target = activeMembership(
@@ -403,4 +417,9 @@ export const leaveWorkspace = async (
     });
     return { left: true as const };
   });
+  await stopRevokedCallerOperations(db, {
+    userId: params.userId,
+    workspaceId: params.workspaceId,
+  });
+  return result;
 };

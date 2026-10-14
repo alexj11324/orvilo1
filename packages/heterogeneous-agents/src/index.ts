@@ -152,6 +152,7 @@ export {
   classifyHeteroProcessFailure,
   isHeteroStatusGuideErrorData,
 } from './spawn/classifyProcessFailure';
+export { resolveNativeFullAccessPermission } from './spawn/standardAcpPermissions';
 export type {
   CreateMessageIntent,
   CreateThreadIntent,

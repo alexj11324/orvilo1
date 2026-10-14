@@ -132,12 +132,12 @@ vi.mock('@/database/models/device', () => ({
   DeviceModel: vi.fn().mockImplementation(function () {
     return {
       findByDeviceId: vi.fn().mockResolvedValue(undefined),
-      findWorkspaceDeviceById: vi.fn().mockResolvedValue(undefined),
+      findExecutionDeviceById: vi.fn().mockResolvedValue(undefined),
       // Unified admission's authorized candidate set — no registered devices;
       // sandbox/`none` runs never consult it, and an explicit request for an
       // unregistered device is honestly unauthorized.
-      queryPersonal: vi.fn().mockResolvedValue([]),
-      queryWorkspaceDevices: vi.fn().mockResolvedValue([]),
+      query: vi.fn().mockResolvedValue([]),
+      queryForExecution: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -299,22 +299,23 @@ describe('AiAgentService.execAgent - topic history loading', () => {
     vi.restoreAllMocks();
   });
 
-  it('keeps a continued topic on its snapshotted execution target', async () => {
+  it('uses the saved Agent target instead of stale conversation runtime hints', async () => {
     mockTopicFindById.mockResolvedValue({
       id: 'topic-existing',
       metadata: { executionConfig: { executionTarget: 'none' } },
     });
     mockMessageQuery.mockResolvedValue([]);
+    const staleDeviceHint = { deviceId: 'another-desktop' };
     await service.execAgent({
+      ...staleDeviceHint,
       agentId: 'agent-1',
       appContext: { topicId: 'topic-existing' },
       prompt: 'Continue',
-      deviceId: 'another-desktop',
     });
     expect(mockDispatchHeteroAgent).toHaveBeenCalled();
     const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
     expect(runContext.agentConfig.agencyConfig).toMatchObject({
-      executionTarget: 'none',
+      executionTarget: 'sandbox',
     });
   });
 

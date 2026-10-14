@@ -70,6 +70,12 @@ export const AgentRuntimeWithheldGuard: FC<PropsWithChildren> = memo(({ children
   const isBuiltinAgent = useAgentStore(
     (s) => BUILTIN_SLUG_SET.has(aid) || Object.values(s.builtinAgentIdMap).includes(aid),
   );
+  const builtinAgentSlug = useAgentStore(
+    (s) =>
+      s.agentMap[aid]?.slug ??
+      Object.entries(s.builtinAgentIdMap).find(([, id]) => id === aid)?.[0] ??
+      aid,
+  );
   const listed = useHomeStore(homeAgentListSelectors.getAgentById(aid));
   // The verdict below waits on the Agent list, so this guard makes sure it loads.
   // A failed list fetch must not blank the page: the verdict then falls back to
@@ -78,6 +84,7 @@ export const AgentRuntimeWithheldGuard: FC<PropsWithChildren> = memo(({ children
   const { agent: defaultAgent, ready: listReady } = useDefaultAgentState();
   const ready = listReady || !!listError;
   const access = resolveRuntimeAccess({
+    builtinAgentSlug,
     builtinOffered,
     defaultAgentId: defaultAgent?.agentId,
     isBuiltinAgent,
@@ -127,12 +134,18 @@ export const TopicRuntimeWithheldGuard: FC<PropsWithChildren> = memo(({ children
     topicId ? (topicSelectors.getTopicById(topicId)(s)?.agentId ?? '') : '',
   );
   const isBuiltinAgent = useAgentStore((s) => Object.values(s.builtinAgentIdMap).includes(ownerId));
+  const builtinAgentSlug = useAgentStore(
+    (s) =>
+      s.agentMap[ownerId]?.slug ??
+      Object.entries(s.builtinAgentIdMap).find(([, id]) => id === ownerId)?.[0],
+  );
   const listed = useHomeStore(homeAgentListSelectors.getAgentById(ownerId));
   const { error: listError } = useFetchAgentList();
   const listReady = useHomeStore(homeAgentListSelectors.isAgentListInit);
   // No default Agent is named: a topic stays with its owner, so a built-in
   // owner is withheld instead of forwarded.
   const access = resolveRuntimeAccess({
+    builtinAgentSlug,
     builtinOffered,
     isBuiltinAgent,
     listed,

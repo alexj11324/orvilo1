@@ -5,6 +5,8 @@ import {
   agents,
   messagePlugins,
   messages,
+  tasks,
+  taskTopics,
   topics,
   workspaceMembers,
   workspaces,
@@ -209,7 +211,7 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     await serverDB.insert(agentOperations).values({ id, status: 'running', userId: ownerId });
   };
 
-  it('does not let another workspace member answer the owner operation', async () => {
+  it('keeps private Chat owner scoped while current Issue assignees may answer the original Run', async () => {
     const otherId = await createTestUser(serverDB);
     const workspaceId = `operation-owner-${userId}`;
     await serverDB.insert(workspaces).values({
@@ -258,6 +260,66 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
       });
       expect(store.events).toHaveLength(0);
       expect(business.resolveHeteroIntervention).not.toHaveBeenCalled();
+      await serverDB.insert(topics).values({
+        id: 'issue-response-topic',
+        userId,
+        workspaceId,
+        agentId: 'shared-operation-agent',
+      });
+      await serverDB.insert(tasks).values({
+        id: 'issue-response-task',
+        createdByUserId: userId,
+        workspaceId,
+        name: 'Issue response',
+        identifier: 'ISSUE-1',
+        seq: 1,
+        instruction: 'Continue the Issue',
+        assigneeAgentId: 'shared-operation-agent',
+        assigneeUserId: otherId,
+        currentTopicId: 'issue-response-topic',
+      });
+      await serverDB.insert(taskTopics).values({
+        taskId: 'issue-response-task',
+        seq: 1,
+        topicId: 'issue-response-topic',
+        operationId: 'owned-workspace-operation',
+        userId,
+        workspaceId,
+        status: 'running',
+      });
+      await serverDB
+        .update(agentOperations)
+        .set({ topicId: 'issue-response-topic' })
+        .where(eq(agentOperations.id, 'owned-workspace-operation'));
+      await expect(
+        caller.submitHeteroIntervention({
+          operationId: 'owned-workspace-operation',
+          toolCallId: 'issue-question',
+          result: { answer: 'continue' },
+        }),
+      ).resolves.toMatchObject({ success: true });
+      expect(store.events).toHaveLength(1);
+      const [run] = await serverDB
+        .select()
+        .from(agentOperations)
+        .where(eq(agentOperations.id, 'owned-workspace-operation'));
+      expect(run.userId).toBe(userId);
+      await serverDB
+        .update(tasks)
+        .set({ assigneeUserId: userId })
+        .where(eq(tasks.id, 'issue-response-task'));
+      await expect(
+        caller.submitHeteroIntervention({
+          operationId: 'owned-workspace-operation',
+          toolCallId: 'issue-question',
+          result: {},
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await serverDB
+        .update(agentOperations)
+        .set({ topicId: null })
+        .where(eq(agentOperations.id, 'owned-workspace-operation'));
+      store.events.length = 0;
       const owner = aiAgentRouter.createCaller({
         userId,
         workspaceId,

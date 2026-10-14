@@ -366,6 +366,7 @@
   "globalSearch.placeholder": "搜索 Issue、项目、视图…",
   "goToTarget": "前往目标",
   "gotIt": "知道了",
+  "heteroAgent.permission.effectiveMode": "当前原生权限模式：{{name}}（{{value}}）。",
   "history": "历史",
   "historyRange": "历史范围",
   "home.suggestQuestions": "试试这些示例",

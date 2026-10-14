@@ -702,15 +702,7 @@ describe('spawnAgent', () => {
     await expect(handle.exit).resolves.toEqual({ code: 0, signal: null });
 
     expect(spawnCalls[0]).toMatchObject({
-      args: [
-        '--no-auto-update',
-        'agent',
-        '--no-leader',
-        '--always-approve',
-        '--model',
-        'grok-build',
-        'stdio',
-      ],
+      args: ['--no-auto-update', 'agent', '--no-leader', '--model', 'grok-build', 'stdio'],
       command: 'grok',
     });
     expect(fake.requests.map(({ method }) => method)).toEqual([

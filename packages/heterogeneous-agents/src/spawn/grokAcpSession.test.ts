@@ -329,19 +329,20 @@ describe('GrokAcpSession', () => {
 
     await session.run();
 
-    expect(spawnMock).toHaveBeenCalledWith(
-      '/usr/bin/grok',
-      [
-        '--no-auto-update',
-        'agent',
-        '--no-leader',
-        '--always-approve',
-        '--model',
-        'grok-build',
-        'stdio',
-      ],
-      expect.objectContaining({ cwd: '/workspace', stdio: ['pipe', 'pipe', 'pipe'] }),
-    );
+    const [command, args, options] = spawnMock.mock.calls[0];
+    expect(command).toBe('/usr/bin/grok');
+    expect(args).toEqual([
+      '--no-auto-update',
+      'agent',
+      '--no-leader',
+      '--model',
+      'grok-build',
+      'stdio',
+    ]);
+    expect({ cwd: options.cwd, stdio: options.stdio }).toEqual({
+      cwd: '/workspace',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
     expect(requests.map(({ method }) => method)).toEqual([
       'initialize',
       'authenticate',
@@ -448,7 +449,7 @@ describe('GrokAcpSession', () => {
     });
   });
 
-  it('answers Grok reverse requests with the P1 non-interactive policy', async () => {
+  it('refuses native permission requests without an interactive bridge', async () => {
     const { child, requests } = createAcpProcess({ sendReverseRequests: true });
     spawnMock.mockReturnValue(child);
     vi.spyOn(process, 'kill').mockImplementation(() => true);
@@ -456,8 +457,8 @@ describe('GrokAcpSession', () => {
 
     await session.run();
 
-    expect(requests.find(({ id }) => id === 'permission-1')?.result).toEqual({
-      outcome: { optionId: 'allow', outcome: 'selected' },
+    expect(requests.find(({ id }) => id === 'permission-1')?.error).toMatchObject({
+      message: 'grok-build permission requires an interactive bridge',
     });
     expect(requests.find(({ id }) => id === 'question-1')?.result).toEqual({
       outcome: 'cancelled',
@@ -564,7 +565,6 @@ describe('Grok ACP input helpers', () => {
       '--no-auto-update',
       'agent',
       '--no-leader',
-      '--always-approve',
       '--model',
       'grok-build',
       'stdio',

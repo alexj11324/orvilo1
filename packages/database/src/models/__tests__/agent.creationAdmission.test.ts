@@ -50,8 +50,6 @@ beforeEach(async () => {
       deviceId: 'shared-host',
       identitySource: 'installation',
       userId,
-      visibility: 'public',
-      workspaceId,
     },
   ]);
   await db.insert(credentials).values({
@@ -175,7 +173,7 @@ describe('Agent creation admission', () => {
       agencyConfig: {
         boundDeviceId: 'saved-host',
         executionTarget: 'local',
-        heterogeneousProvider: { type: 'pi' },
+        heterogeneousProvider: { type: 'pi', model: 'default' },
       },
     });
     await expect(
@@ -214,7 +212,7 @@ describe('Agent creation admission', () => {
       agencyConfig: {
         boundDeviceId: 'saved-host',
         executionTarget: 'local',
-        heterogeneousProvider: { command: 'codex', type: 'codex' },
+        heterogeneousProvider: { command: 'codex', type: 'codex', model: 'default' },
       },
       title: 'My Codex',
     });
@@ -255,27 +253,87 @@ describe('Agent creation admission', () => {
     expect(await db.select().from(agents)).toHaveLength(0);
   });
 
-  it('keeps private personal hosts private instead of allowing a shared workspace default', async () => {
-    const scoped = new AgentModel(db, userId, workspaceId);
-    await expect(scoped.create({ ...prime, visibility: 'public' })).rejects.toMatchObject({
-      code: 'FORBIDDEN',
+  it.each(['public', 'private'] as const)(
+    'binds a %s workspace Agent to the creator’s owned host',
+    async (visibility) => {
+      const scoped = new AgentModel(db, userId, workspaceId);
+      const created = await scoped.create({ ...prime, visibility });
+      const [saved] = await db.select().from(agents).where(eq(agents.id, created.id));
+      expect(saved).toMatchObject({
+        visibility,
+        workspaceId,
+        model: 'executable-model',
+        agencyConfig: prime.agencyConfig,
+      });
+      await scoped.setVisibility(created.id, visibility === 'public' ? 'private' : 'public');
+      const [changed] = await db.select().from(agents).where(eq(agents.id, created.id));
+      expect(changed?.agencyConfig).toEqual(prime.agencyConfig);
+      expect(changed?.visibility).toBe(visibility === 'public' ? 'private' : 'public');
+    },
+  );
+
+  it('allows a manager to bind their own host and preserves that saved host during another manager’s permission edit', async () => {
+    await db.insert(workspaceMembers).values({ role: 'admin', userId: otherUserId, workspaceId });
+    const creator = new AgentModel(db, userId, workspaceId);
+    const created = await creator.create({
+      visibility: 'public',
+      agencyConfig: {
+        boundDeviceId: 'saved-host',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'opencode', model: 'saved-model' },
+      },
     });
-    await expect(scoped.create({ ...prime, visibility: 'private' })).rejects.toMatchObject({
-      code: 'BAD_REQUEST',
-      message: 'New workspace Agents must be public',
+    await new AgentModel(db, otherUserId, workspaceId).updateConfig(created.id, {
+      agencyConfig: { boundDeviceId: 'other-host' },
     });
-    expect(await db.select().from(agents)).toHaveLength(0);
+    await creator.updateConfig(created.id, {
+      agencyConfig: {
+        heterogeneousProvider: { type: 'opencode', permission: { configId: 'mode', value: 'ask' } },
+      },
+    });
+    const [changed] = await db.select().from(agents).where(eq(agents.id, created.id));
+    expect(changed).toMatchObject({
+      userId,
+      agencyConfig: {
+        boundDeviceId: 'other-host',
+        heterogeneousProvider: {
+          type: 'opencode',
+          model: 'saved-model',
+          permission: { configId: 'mode', value: 'ask' },
+        },
+      },
+    });
   });
 
-  it('refuses legacy metadata-only duplication while leaving existing name edits available', async () => {
-    const [legacy] = await db.insert(agents).values({ title: 'Legacy', userId }).returning();
-    await model.updateConfig(legacy.id, { name: 'My legacy name' });
+  it('keeps the saved Prime credential owner when another manager edits metadata', async () => {
+    await db.insert(workspaceMembers).values({ role: 'admin', userId: otherUserId, workspaceId });
+    const creator = new AgentModel(db, userId, workspaceId);
+    const created = await creator.create({ ...prime, visibility: 'public' });
+    await new AgentModel(db, otherUserId, workspaceId).updateConfig(created.id, {
+      title: 'Managed title',
+    });
+    const [saved] = await db.select().from(agents).where(eq(agents.id, created.id));
+    expect(saved).toMatchObject({
+      title: 'Managed title',
+      userId,
+      model: prime.model,
+      provider: prime.provider,
+      agencyConfig: prime.agencyConfig,
+    });
+  });
+
+  it('refuses saving and duplicating legacy metadata-only Agents', async () => {
+    const [legacy] = await db
+      .insert(agents)
+      .values({ title: 'Legacy', name: 'Legacy', userId })
+      .returning();
+    await expect(model.updateConfig(legacy.id, { name: 'My legacy name' })).rejects.toMatchObject({
+      message: 'AGENT_RUNTIME_REQUIRED',
+    });
     await expect(model.duplicate(legacy.id)).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
     });
-    expect((await db.select().from(agents).where(eq(agents.id, legacy.id)))[0].name).toBe(
-      'My legacy name',
-    );
+    expect((await db.select().from(agents).where(eq(agents.id, legacy.id)))[0].name).toBe('Legacy');
     expect(await db.select().from(agents)).toHaveLength(1);
   });
 });

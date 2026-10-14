@@ -46,13 +46,14 @@ describe('sanitizeAgentInterventionRequestForReview', () => {
     });
   });
 
-  it('accepts Droid as an explicit permission provider', () => {
-    expect(
-      sanitizeAgentInterventionRequestForReview(
-        request({ identifier: 'droid', provider: 'droid' }),
-      ),
-    ).toMatchObject({ interactionKind: 'permission', provider: 'droid' });
-  });
+  it.each(['droid', 'grok-build', 'trae'] as const)(
+    'accepts %s as an explicit permission provider',
+    (provider) => {
+      expect(
+        sanitizeAgentInterventionRequestForReview(request({ identifier: provider, provider })),
+      ).toMatchObject({ interactionKind: 'permission', provider });
+    },
+  );
 
   it('fails closed when a permission option lacks an id or ids are duplicated', () => {
     const missingId = request({

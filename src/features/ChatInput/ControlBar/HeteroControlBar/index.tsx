@@ -13,7 +13,6 @@ import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Skeleton } from '@/components/ui/skeleton';
-import HeteroDeviceSwitcher from '@/features/ChatInput/ControlBar/HeteroDeviceSwitcher';
 import WorkspaceControls from '@/features/ChatInput/ControlBar/WorkspaceControls';
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
 import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatInputResourceAccess';
@@ -23,8 +22,6 @@ import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 
 import { SimpleTooltip } from '../../SimpleTooltip';
-import ApprovalMode from '../ApprovalMode';
-import { PermissionSelector } from './PermissionSelector';
 import { ClaudeCodeQuotaMenu, CodexQuotaMenu } from './QuotaMenu';
 
 const styles = {
@@ -70,8 +67,7 @@ const HeteroControlBar = memo(() => {
 
   // All hooks must be called unconditionally (Rules of Hooks)
   const isLoading = useAgentStore(agentByIdSelectors.isAgentConfigLoadingById(agentId));
-  // Effective config = shared row + this member's device override,
-  // so the quota badges gate on where THIS member's run actually executes.
+  // Quota badges follow the Agent's saved run device.
   const { agencyConfig, workspaceScoped } = useTopicAgencyConfig(agentId);
 
   const heteroProvider = agencyConfig?.heterogeneousProvider;
@@ -94,22 +90,12 @@ const HeteroControlBar = memo(() => {
 
   if (isAccessLoading) return null;
 
-  // A can-use collaborator may choose only their execution device; working
-  // directory, git, provider quota and runtime details remain author/editor config.
-  if (!canConfigureResource) {
-    if (!agentId || isLoading) return null;
-    return (
-      <div className={cn('flex flex-row items-center justify-between', styles.bar)}>
-        <HeteroDeviceSwitcher agentId={agentId} />
-      </div>
-    );
-  }
+  if (!canConfigureResource) return null;
 
   // On web there's no full-access badge / skeleton — just the workspace
   // controls (the cloud repo switcher is rendered inside WorkspaceControls)
   // plus the Claude quota badge when the run executes on a bound device that
-  // can sample it. The CLI model + thinking-effort selector now lives in the
-  // input's bottom-left action bar (see HeterogeneousChatInput), not here.
+  // can sample it.
   if (!isDesktop) {
     if (!agentId) return null;
     return (
@@ -118,11 +104,6 @@ const HeteroControlBar = memo(() => {
           <WorkspaceControls alwaysShowWorkspace agentId={agentId} />
         </div>
         <div className={cn('flex flex-row items-center gap-1', styles.rightGroup)}>
-          {heteroProvider?.type === 'orvilo' ? (
-            <ApprovalMode />
-          ) : (
-            <PermissionSelector agentId={agentId} />
-          )}
           {shouldShowClaudeQuota && quotaDeviceId && (
             <div className={cn('flex flex-row items-center gap-1', styles.rightGroup)}>
               <ClaudeCodeQuotaMenu
@@ -208,11 +189,6 @@ const HeteroControlBar = memo(() => {
           />
         )}
         {sdkRuntimeBadge}
-        {heteroProvider?.type === 'orvilo' ? (
-          <ApprovalMode />
-        ) : (
-          <PermissionSelector agentId={agentId} />
-        )}
       </div>
     </div>
   );

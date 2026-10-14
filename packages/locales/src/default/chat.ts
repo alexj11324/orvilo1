@@ -1,4 +1,6 @@
 export default {
+  'builtinAgent.pausedHint':
+    'Built-in Agents are unavailable. Choose a configured Agent to continue.',
   'aiElementsMore.audioError': 'Unable to play this audio. Check the file or try again.',
   'aiElementsMore.copyHash': 'Copy commit hash',
   'aiElementsMore.copyStack': 'Copy stack trace',
@@ -751,10 +753,8 @@ export default {
   'input.disclaimer': 'Agents can make mistakes. Use your judgment for critical info.',
   'input.errorMsg': 'Send failed: {{errorMsg}}. Retry, or send again later.',
   'input.inputCompletionError.retry': 'Retry',
-  'input.modelFixedTip':
-    'The model is fixed in the Agent Profile and cannot be switched while chatting.',
   'input.modelUnavailable':
-    'The current model is no longer available. Choose another model to continue.',
+    'This Agent’s model is no longer available. Choose another Agent or update its model in settings.',
   'input.viewOnlyAgent': 'You can only view this agent',
   'input.viewOnlyGroup': 'You can only view this group',
   'input.heteroPlus.tooltip': 'Formatting and scheduling',

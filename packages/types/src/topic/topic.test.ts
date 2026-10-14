@@ -176,7 +176,7 @@ describe('parseTopicScheduledRun', () => {
   });
 });
 
-it('preserves execution selection alongside reasoning when creating a topic', () => {
+it('drops topic device routing while preserving reasoning', () => {
   const metadata = {
     executionConfig: {
       executionTarget: 'device',
@@ -185,65 +185,30 @@ it('preserves execution selection alongside reasoning when creating a topic', ()
     },
     reasoningConfig: { gpt5ReasoningEffort: 'high' },
   };
-  expect(chatTopicCreateMetadataSchema.parse(metadata)).toEqual(metadata);
+  expect(chatTopicCreateMetadataSchema.parse(metadata)).toEqual({
+    executionConfig: { inheritWorkspaceScope: false },
+    reasoningConfig: metadata.reasoningConfig,
+  });
 });
 
-// A permission pin belongs to a harness and remains independent of routing policy.
-describe('topic ACP permission persistence', () => {
+describe('saved Agent ACP permissions', () => {
   const defaults = {
     executionTarget: 'local' as const,
-    executionTargetSelectionPolicy: 'fixed' as const,
-    heterogeneousProvider: { type: 'codex' as const },
+    heterogeneousProvider: {
+      type: 'codex' as const,
+      permission: { configId: 'approval', value: 'ask' },
+    },
   };
-  it('applies a permission without overriding fixed execution routing', () => {
-    expect(
-      applyTopicExecutionConfig(defaults, {
-        executionTarget: 'sandbox',
-        permission: { provider: 'codex', configId: 'approval', value: 'ask' },
-      }),
-    ).toEqual({
-      ...defaults,
-      heterogeneousProvider: {
-        type: 'codex',
-        permission: { configId: 'approval', value: 'ask' },
-      },
-    });
-  });
-  it('ignores a permission saved for another harness', () => {
-    expect(
-      applyTopicExecutionConfig(defaults, {
-        permission: {
-          provider: 'claude-code',
-          configId: 'approval',
-          value: 'ask',
-        },
-      }),
-    ).toEqual(defaults);
-  });
-  it('snapshots the chosen permission for a new conversation', () => {
-    const config = {
-      ...defaults,
-      heterogeneousProvider: {
-        type: 'codex' as const,
-        permission: { configId: 'approval', value: 'ask' },
-      },
-    };
-    expect(snapshotTopicExecutionConfig(config).permission).toEqual({
-      provider: 'codex',
-      configId: 'approval',
-      value: 'ask',
-    });
-  });
-  it('retains advertised opaque values through metadata validation', () => {
-    const metadata = {
+  it('ignores legacy conversation permission overrides', () => {
+    const metadata = chatTopicMetadataUpdateSchema.parse({
       executionConfig: {
-        permission: {
-          provider: 'codex',
-          configId: 'approval',
-          value: 'ask-on-write',
-        },
+        permission: { provider: 'codex', configId: 'approval', value: 'bypass' },
       },
-    };
-    expect(chatTopicMetadataUpdateSchema.parse(metadata)).toEqual(metadata);
+    });
+    expect(metadata.executionConfig).toEqual({});
+    expect(applyTopicExecutionConfig(defaults, metadata.executionConfig)).toEqual(defaults);
+  });
+  it('does not pin permissions when creating a conversation', () => {
+    expect(snapshotTopicExecutionConfig(defaults)).toEqual({ inheritWorkspaceScope: true });
   });
 });

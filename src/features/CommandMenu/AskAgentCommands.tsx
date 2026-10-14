@@ -1,3 +1,4 @@
+import { BUILTIN_AGENT_SLUGS, isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import { DEFAULT_AVATAR, DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { Command } from 'cmdk';
@@ -23,7 +24,8 @@ const AskAgentCommands = memo(() => {
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const allAgents = useHomeStore(homeAgentListSelectors.allAgents);
   const keep = useKeepSidebarListed();
-  const builtinOffered = useBuiltinHarnessOffered();
+  const builtinOffered =
+    useBuiltinHarnessOffered() && isBuiltinAgentAvailable(BUILTIN_AGENT_SLUGS.inbox);
 
   // Check if search starts with "@"
   const isAtMention = search.trimStart().startsWith('@');

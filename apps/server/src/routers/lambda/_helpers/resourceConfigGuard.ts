@@ -162,27 +162,16 @@ export const redactAgentConfig = <T extends Record<string, any>>(agent: T): T =>
   const result = pick(agent, profileKeys) as Record<string, any>;
   const agencyConfig = agent.agencyConfig as Record<string, any> | null | undefined;
 
-  // Selection policies are authorization metadata, not executable Agent
-  // config. Use/view members need them so the chat controls cannot mistake a
-  // redacted fixed Agent for the legacy `member` default — same for
-  // `topicSharePolicy`, without which the share button would offer a member a
-  // link the server then refuses. The execution target is a safe semantic
-  // summary shown by use-only members; keep every other agency field (device
-  // ids, provider args/env, working directories, etc.) behind edit-level
-  // config access.
+  // Model and host identity are safe display metadata. Device execution still
+  // requires Agent Use; instructions, credentials, args, env, and paths remain private.
   if (agencyConfig) {
     const safeAgencySummary = pick(agencyConfig, [
+      'boundDeviceId',
       'executionTarget',
-      'executionTargetSelectionPolicy',
-      'modelSelectionPolicy',
       'topicSharePolicy',
     ]);
-    // The hetero marker is identity, not executable config: without it,
-    // use/view members render an external-CLI agent as a plain runtime agent
-    // (wrong model selector, wrong composer). Expose the type only — args,
-    // env and device bindings stay behind edit-level access.
-    const heteroType = agencyConfig.heterogeneousProvider?.type;
-    if (heteroType) safeAgencySummary.heterogeneousProvider = { type: heteroType };
+    const provider = agencyConfig.heterogeneousProvider;
+    if (provider?.type) safeAgencySummary.heterogeneousProvider = pick(provider, ['type', 'model']);
     if (Object.keys(safeAgencySummary).length > 0) result.agencyConfig = safeAgencySummary;
   }
   const chatConfig = agent.chatConfig as Record<string, any> | null | undefined;

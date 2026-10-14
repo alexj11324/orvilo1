@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   matchDeviceRuntimeInstallation,
+  scanDeviceAgents,
   verifyDeviceRuntimeInstallation,
 } from './installedRuntimeEvidence';
 
@@ -43,6 +44,45 @@ describe('installed runtime evidence', () => {
     expect(executeToolCall).not.toHaveBeenCalled();
   });
 
+  it('checks only the selected OpenCode installation even when a full scan times out', async () => {
+    executeToolCall.mockImplementation(async (_owner, request) =>
+      request.apiName === 'checkAutomationReadiness'
+        ? {
+            success: true,
+            content: JSON.stringify({
+              executor: 'opencode',
+              installed: true,
+              checkedAt: new Date().toISOString(),
+              authenticated: false,
+              unattended: false,
+              requiredToolsSupported: 'unknown',
+              repositoryAccessible: false,
+            }),
+          }
+        : { success: false, error: 'Full runtime scan timed out' },
+    );
+    expect(
+      await verifyDeviceRuntimeInstallation({
+        db: {} as never,
+        owner,
+        online: true,
+        requirement: { agentType: 'opencode', command: 'opencode' },
+      }),
+    ).toEqual({ installed: true });
+    expect(executeToolCall).toHaveBeenCalledExactlyOnceWith(
+      owner,
+      {
+        apiName: 'checkAutomationReadiness',
+        identifier: 'local',
+        arguments: JSON.stringify({ agentType: 'opencode' }),
+      },
+      10_000,
+    );
+    expect(persist).toHaveBeenCalledWith('device-1', {
+      opencode: { available: true, command: 'opencode', observedAt: expect.any(String) },
+    });
+  });
+
   it('does not certify a configured custom command from a default-command scan', async () => {
     const result = await verifyDeviceRuntimeInstallation({
       db: {} as never,
@@ -66,13 +106,8 @@ describe('installed runtime evidence', () => {
         },
       }),
     });
-    const result = await verifyDeviceRuntimeInstallation({
-      db: {} as never,
-      owner,
-      online: true,
-      requirement: { agentType: 'codex' },
-    });
-    expect(result).toMatchObject({ installed: true });
+    const result = await scanDeviceAgents({} as never, owner);
+    expect(result.agents.codex).toMatchObject({ available: true });
     expect(persist.mock.calls[0][1]).toMatchObject({
       'codex': {
         available: true,

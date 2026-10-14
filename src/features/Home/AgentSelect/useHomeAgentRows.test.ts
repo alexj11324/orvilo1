@@ -141,7 +141,7 @@ describe('useHomeAgentRows', () => {
 
     const { result } = renderHook(() => useHomeAgentRows());
 
-    expect(ids(result.current.workspaceRows)).toEqual(['agt_inbox', 'agt_a', 'agt_b']);
+    expect(ids(result.current.workspaceRows)).toEqual(['agt_a', 'agt_b']);
   });
 
   it('ignores hidden prefs on private agents too', () => {
@@ -166,7 +166,7 @@ describe('useHomeAgentRows', () => {
 
     expect(result.current.showPrivateSection).toBe(true);
     expect(ids(result.current.privateRows)).toEqual(['agt_p']);
-    expect(ids(result.current.workspaceRows)).toEqual(['agt_inbox', 'agt_a']);
+    expect(ids(result.current.workspaceRows)).toEqual(['agt_a']);
   });
 
   it("lists another member's Agent by default and keeps it after a stale override", () => {
@@ -178,13 +178,13 @@ describe('useHomeAgentRows', () => {
 
     const { rerender, result } = renderHook(() => useHomeAgentRows());
 
-    expect(ids(result.current.workspaceRows)).toEqual(['agt_inbox', 'agt_own', 'agt_shared']);
+    expect(ids(result.current.workspaceRows)).toEqual(['agt_own', 'agt_shared']);
 
     mocks.sidebarVisibilityOverrides = { agt_shared: false };
     rerender();
 
     // Visibility overrides are retired with the per-item preference — no drop.
-    expect(ids(result.current.workspaceRows)).toEqual(['agt_inbox', 'agt_own', 'agt_shared']);
+    expect(ids(result.current.workspaceRows)).toEqual(['agt_own', 'agt_shared']);
   });
 
   it('keeps agents inside a Category whose stale preference marks it hidden', () => {
@@ -197,7 +197,7 @@ describe('useHomeAgentRows', () => {
 
     const { result } = renderHook(() => useHomeAgentRows());
 
-    expect(ids(result.current.workspaceRows)).toEqual(['agt_inbox', 'agt_shown', 'agt_in_hidden']);
+    expect(ids(result.current.workspaceRows)).toEqual(['agt_shown', 'agt_in_hidden']);
   });
 
   it('keeps a single flat bucket in personal mode', () => {
@@ -233,12 +233,7 @@ describe('useHomeAgentRows', () => {
 
     const { result } = renderHook(() => useHomeAgentRows());
 
-    expect(ids(result.current.workspaceRows)).toEqual([
-      'agt_inbox',
-      'agt_pinned',
-      'agt_folder',
-      'agt_plain',
-    ]);
+    expect(ids(result.current.workspaceRows)).toEqual(['agt_pinned', 'agt_folder', 'agt_plain']);
     expect(result.current.workspaceRows.find((row) => row.id === 'agt_pinned')?.pinned).toBe(true);
   });
 
@@ -265,12 +260,12 @@ describe('useHomeAgentRows', () => {
     mocks.homeState.ungroupedAgents = [agent('agt_a', 'Shared')];
 
     const { result: withoutTaskAgent } = renderHook(() => useHomeAgentRows());
-    expect(ids(withoutTaskAgent.current.workspaceRows)).toEqual(['agt_inbox', 'agt_a']);
+    expect(ids(withoutTaskAgent.current.workspaceRows)).toEqual(['agt_a']);
 
     const { result: withTaskAgent } = renderHook(() =>
       useHomeAgentRows({ includeTaskAgent: true }),
     );
-    expect(ids(withTaskAgent.current.workspaceRows)).toEqual(['agt_inbox', 'agt_task', 'agt_a']);
+    expect(ids(withTaskAgent.current.workspaceRows)).toEqual(['agt_task', 'agt_a']);
   });
 
   it('excludes chat groups so only agent ids reach the home input', () => {
@@ -281,7 +276,7 @@ describe('useHomeAgentRows', () => {
 
     const { result } = renderHook(() => useHomeAgentRows());
 
-    expect(ids(result.current.workspaceRows)).toEqual(['agt_inbox', 'agt_a']);
+    expect(ids(result.current.workspaceRows)).toEqual(['agt_a']);
   });
 
   // While the product runs agents through ACP only, nothing on the built-in

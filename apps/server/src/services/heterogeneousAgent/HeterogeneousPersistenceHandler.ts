@@ -332,6 +332,8 @@ const INTERVENTION_PROVIDERS = new Set<AgentInterventionProvider>([
   'cursor',
   'devin',
   'droid',
+  'grok-build',
+  'trae',
   'kimi-code',
   'opencode',
   'pi',

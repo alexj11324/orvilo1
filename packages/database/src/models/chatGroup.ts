@@ -20,7 +20,6 @@ import {
   tasks,
 } from '../schemas';
 import type { OrviloDatabase, Transaction } from '../type';
-import { sanitizeAgencyConfigsForWorkspace } from '../utils/agencyConfigDevices';
 import { rehomeAgentConnectorsForRecipient } from '../utils/agentConnectors';
 import { rehomeAgentDocumentsForRecipient } from '../utils/agentDocumentsOwnership';
 import { rehomeAgentExpertiseForRecipient } from '../utils/agentExpertise';
@@ -975,29 +974,17 @@ export class ChatGroupModel {
       .where(eq(chatGroupsAgents.chatGroupId, groupId));
 
     if (ownedAgentIds.length > 0) {
-      // Re-home device bindings on the owned agents (supervisor + generated
-      // members): a boundDeviceId / fixed device policy pointing at the
-      // previous owner's personal or private device would leave the
-      // recipient's group runs unroutable. Same sanitation as the member
-      // agent handover.
       const ownedRows = await trx
-        .select({ agencyConfig: agents.agencyConfig, id: agents.id, visibility: agents.visibility })
+        .select({ id: agents.id })
         .from(agents)
         .where(inArray(agents.id, ownedAgentIds));
-      const cleanedConfigs = await sanitizeAgencyConfigsForWorkspace(
-        trx,
-        this.workspaceId,
-        ownedRows.map((row) => row.agencyConfig),
-        { viewerUserId: toUserId },
-      );
-      for (const [index, row] of ownedRows.entries()) {
+      for (const row of ownedRows) {
         // `clientId` cleared for the same reason as the single-agent handover:
         // it is unique per (clientId, userId) and belongs to the previous
         // owner's client-side sync.
         await trx
           .update(agents)
           .set({
-            agencyConfig: cleanedConfigs[index],
             clientId: null,
             updatedAt: agents.updatedAt,
             userId: toUserId,

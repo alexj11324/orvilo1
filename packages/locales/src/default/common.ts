@@ -1,4 +1,5 @@
 export default {
+  'heteroAgent.permission.effectiveMode': 'Native permission mode: {{name}} ({{value}}).',
   'about': 'About',
   'advanceSettings': 'Advanced Settings',
   'alert.cloud.action': 'Try now',

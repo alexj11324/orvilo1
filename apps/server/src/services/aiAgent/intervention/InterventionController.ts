@@ -289,7 +289,11 @@ export class InterventionController {
     // acknowledged process exit is authoritative; settle only the owned old
     // operation and its matching marker, preserving any newer run/outcome.
     if (deviceCancellationConfirmed === true) {
-      await this.deps.agentOperationModel.settleRunning(resolvedOperationId, 'interrupted');
+      await this.deps.agentOperationModel.recordCompletion(resolvedOperationId, {
+        completedAt: new Date(),
+        completionReason: 'interrupted',
+        status: 'interrupted',
+      });
       if (resolvedTopicId) {
         await this.deps.topicModel.settleRunningOperation(
           resolvedTopicId,
@@ -300,8 +304,8 @@ export class InterventionController {
     }
 
     if (!interrupted && deviceCancellationConfirmed !== true) {
-      const alreadyCancelled = thread?.status === ThreadStatus.Cancel;
-      const success = alreadyCancelled || durableIsTerminal;
+      // A visible Thread label is not a producer terminal acknowledgement.
+      const success = durableIsTerminal;
 
       // A terminal durable row means the host already reported terminal —
       // confirmed. Otherwise the signal never landed: unknown, not a silent
@@ -327,8 +331,12 @@ export class InterventionController {
       };
     }
 
-    // 4. Update Thread status to cancel
-    if (thread) {
+    // A remote stop request does not prove the producer has exited.
+    const cancelState =
+      deviceCancellationConfirmed === true || !admission ? 'confirmed' : 'requested';
+
+    // Update the visible Thread only after terminal acknowledgement.
+    if (thread && cancelState === 'confirmed') {
       await this.deps.threadModel.update(thread.id, {
         metadata: {
           ...thread.metadata,
@@ -337,13 +345,6 @@ export class InterventionController {
         status: ThreadStatus.Cancel,
       });
     }
-
-    // Cancel lifecycle: the host's own ack (device exited) or an in-process
-    // runtime interrupt is `confirmed`. A remote-admitted run whose signal was
-    // dispatched but whose host has not yet reported terminal is `requested` —
-    // its terminal callback resolves the ledger to `confirmed`.
-    const cancelState =
-      deviceCancellationConfirmed === true || !admission ? 'confirmed' : 'requested';
 
     return {
       cancelState,

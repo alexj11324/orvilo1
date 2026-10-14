@@ -77,6 +77,9 @@ const {
   },
 }));
 
+vi.mock('@/server/services/resourcePermission/revocation', () => ({
+  stopRevokedCallerOperations: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('@/business/server/membershipLifecycle/audit', () => audit);
 vi.mock('@/business/server/membershipLifecycle/queries', () => queries);
 vi.mock('@/business/server/workspaceInvitation/queries', () => invitationQueries);
@@ -543,7 +546,7 @@ describe('workspaceMemberRouter.listInvitations / removalPreview', () => {
     expect(preview).toMatchObject({
       assignedTaskCount: 3,
       runningDelegationCount: 1,
-      sharedDeviceCount: 2,
+      sharedDeviceCount: 0,
     });
   });
 });

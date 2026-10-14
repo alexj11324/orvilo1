@@ -1,20 +1,8 @@
 import { LOADING_FLAT } from '@orvilo/const';
 import type { OrviloDatabase } from '@orvilo/database';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
-import type {
-  ChatAudioItem,
-  ChatFileItem,
-  ChatTopicMetadata,
-  ChatVideoItem,
-  HeterogeneousProviderConfig,
-  HeterogeneousTopicPin,
-} from '@orvilo/types';
-import {
-  applyTopicExecutionConfig,
-  RequestTrigger,
-  resolveHeterogeneousProviderTopicModel,
-  snapshotTopicExecutionConfig,
-} from '@orvilo/types';
+import type { ChatAudioItem, ChatFileItem, ChatVideoItem } from '@orvilo/types';
+import { RequestTrigger } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 
@@ -48,42 +36,6 @@ export interface RunAttachments {
   videoList?: ChatVideoItem[];
   warnings: string[];
 }
-
-/**
- * Build the reasoning snapshot for a topic being created — see
- * `ChatTopicMetadata.reasoningConfig` / `heteroEffort`. Returns undefined when
- * there is nothing to pin (non-reasoning model, hetero agent without an effort)
- * so the caller leaves metadata untouched. Never throws: a failed lookup just
- * means the topic follows the user-level config until the user pins one.
- */
-const resolveTopicReasoningSnapshot = ({
-  heterogeneousProvider,
-}: {
-  heterogeneousProvider: HeterogeneousProviderConfig | undefined;
-}): Pick<ChatTopicMetadata, 'heteroEffort'> | undefined => {
-  const effort = heterogeneousProvider?.effort;
-  return effort === undefined ? undefined : { heteroEffort: effort };
-};
-
-/** Snapshot only newly created topics, including callers that pre-create before setupTurn. */
-export const resolveNewTopicSnapshot = (
-  agentConfig: AgentConfigWithId,
-  overrides?: { model?: string; provider?: string },
-) => {
-  const model = overrides?.model ?? agentConfig.model!;
-  const provider = overrides?.provider ?? agentConfig.provider!;
-  // Every run resolves to an ACP execution binding — an explicit provider, a
-  // legacy hetero model id, or the builtin 'orvilo' harness default.
-  const { heteroType, heterogeneousProvider } = resolveExecutionBinding(agentConfig, model);
-  const heteroModel = heterogeneousProvider
-    ? resolveHeterogeneousProviderTopicModel(heterogeneousProvider)
-    : undefined;
-  return {
-    metadata: resolveTopicReasoningSnapshot({ heterogeneousProvider }),
-    model: heteroModel?.model ?? (heteroType ? undefined : model),
-    provider: heteroModel?.provider ?? heteroType ?? provider,
-  };
-};
 
 /**
  * Resolve a run's attachments into the lists the message + context layers
@@ -272,7 +224,6 @@ const resolveRunAttachments = async (
 
 export interface TurnSetupInput {
   agentConfig: AgentConfigWithId;
-  agentSlug?: string | null;
   appContext?: InternalExecAgentParams['appContext'];
   assistantAgentId: string;
   attachedFileIds?: string[];
@@ -285,18 +236,9 @@ export interface TurnSetupInput {
   createdThreadId?: string;
   cronJobId?: string;
   files?: InternalExecAgentParams['files'];
-  modelOverride?: string;
-  /**
-   * Blank-composer picks for the topic this turn creates (`topics.model` /
-   * `topics.provider` + `metadata.heteroEffort`). Only read on the create path —
-   * a turn that reuses a topic keeps that topic's own pins.
-   */
-  newTopicPins?: HeterogeneousTopicPin;
   operationTaskId?: string;
   parentMessageId?: string;
   prompt: string;
-  providerOverride?: string;
-  requestedDeviceId?: string;
   resolvedAgentId: string;
   /** Raw resume flag — a resume run must land on an existing topic. */
   resume?: boolean;
@@ -309,14 +251,10 @@ export interface TurnSetupInput {
 export interface TurnSetupResult {
   assistantMessageId: string;
   canUseDevice: boolean;
-  effectiveRequestedDeviceId?: string;
   heterogeneousProvider?: NonNullable<AgentConfigWithId['agencyConfig']>['heterogeneousProvider'];
   heteroType: HeterogeneousAgentType;
-  isFixedDeviceTarget: boolean;
-  /** Effective model/provider after the topic-pinned model is applied. */
+  /** Model/provider from the Agent saved runtime. */
   model: string;
-  /** Topic-pinned model + reasoning effort for a heterogeneous run (reused topics only). */
-  pinnedHeterogeneousTopicModel?: HeterogeneousTopicPin;
   provider: string;
   requestTriggerMetadata: {
     agentDispatch?: { kind: 'callAgent'; visibility: 'internal' };
@@ -325,20 +263,13 @@ export interface TurnSetupResult {
   runAttachments: RunAttachments;
   /** Rows THIS turn persisted — the history loader must exclude them. */
   selfMessageIds: Set<string>;
-  /**
-   * The binding epoch paired with `topicBoundDeviceId`
-   * (`topic.metadata.bindingRevision`) — echoed back in admission errorData
-   * so a repair can present the exact revision it saw to the CAS gate.
-   */
-  topicBindingRevision?: number | null;
-  topicBoundDeviceId?: string | null;
   topicId: string;
   userMessageId?: string;
 }
 
 /**
  * Stage 3 + the shared turn setup of {@link AiAgentService.execAgent}: topic
- * creation/reuse (with the topic-pinned model), device-access policy, hetero
+ * creation/reuse, device-access policy, hetero
  * detection, attachment ingestion, and persisting the user + assistant turn.
  *
  * Everything here runs for BOTH hetero and normal agents, so it lives before
@@ -353,7 +284,6 @@ export const setupTurn = async (
 ): Promise<TurnSetupResult> => {
   const {
     agentConfig,
-    agentSlug,
     appContext,
     assistantAgentId,
     attachedFileIds,
@@ -364,13 +294,9 @@ export const setupTurn = async (
     createdThreadId,
     cronJobId,
     files,
-    modelOverride,
-    newTopicPins,
     operationTaskId,
     parentMessageId,
     prompt,
-    providerOverride,
-    requestedDeviceId,
     resolvedAgentId,
     resume,
     runFromHistory,
@@ -381,40 +307,26 @@ export const setupTurn = async (
 
   let topicId = appContext?.topicId;
 
-  const isFixedExecutionTargetSelection =
-    !!deps.workspaceId && agentConfig.agencyConfig?.executionTargetSelectionPolicy === 'fixed';
-  const isFixedDeviceTarget =
-    isFixedExecutionTargetSelection && agentConfig.agencyConfig?.executionTarget === 'device';
-  let effectiveRequestedDeviceId = isFixedExecutionTargetSelection ? undefined : requestedDeviceId;
-  let topicBoundDeviceId = isFixedDeviceTarget
-    ? agentConfig.agencyConfig?.boundDeviceId
-    : isFixedExecutionTargetSelection
-      ? undefined
-      : requestedDeviceId;
-  let topicBindingRevision: number | undefined;
-
-  // Effective model/provider for this run. Defaults to the agent config, but a
-  // topic pins its own model in the top-level `topics.model`/`provider` columns
-  // (config source of truth) — snapshotted on creation, and honored below when
-  // reusing a topic whose model was switched while active. Keeps the Gateway/
-  // cloud path in sync with the client local path (see streamingExecutor +
-  // getTopicModelById).
-  let model = agentConfig.model!;
-  let provider = agentConfig.provider!;
+  const savedModel = agentConfig.model!;
+  const savedProvider = agentConfig.provider!;
   // Execution binding: explicit `heterogeneousProvider` wins, a legacy hetero
   // `model` id keeps raw CLI semantics, everything else defaults to the
   // builtin 'orvilo' ACP harness. A synthesized binding is written back onto
   // the run-scoped agentConfig so every downstream
   // `agencyConfig.heterogeneousProvider` read (device/sandbox split, topic
   // model pin, env credentials) observes the same resolved binding.
-  const executionBinding = resolveExecutionBinding(agentConfig, model);
+  const executionBinding = resolveExecutionBinding(agentConfig, savedModel);
   if (executionBinding.synthesized)
     agentConfig.agencyConfig = {
       ...agentConfig.agencyConfig,
       heterogeneousProvider: executionBinding.heterogeneousProvider,
     };
   const heterogeneousProvider = executionBinding.heterogeneousProvider;
-  let pinnedHeterogeneousTopicModel: HeterogeneousTopicPin | undefined;
+  const model =
+    (heterogeneousProvider?.authMode === 'api'
+      ? heterogeneousProvider.apiConfig?.model
+      : heterogeneousProvider?.model) ?? savedModel;
+  const provider = heterogeneousProvider?.type ?? savedProvider;
 
   if (!topicId) {
     if (resume) {
@@ -432,15 +344,14 @@ export const setupTurn = async (
     // nothing filters on it yet.
     const { editingAgentId, editingGroupId } = appContext ?? {};
     const metadata = {
-      executionConfig: snapshotTopicExecutionConfig({
-        ...agentConfig.agencyConfig,
-        ...(effectiveRequestedDeviceId && { boundDeviceId: effectiveRequestedDeviceId }),
-      }),
-      boundDeviceId: topicBoundDeviceId,
       cronJobId: cronJobId || undefined,
       ...(editingAgentId && { editingAgentId }),
       ...(editingGroupId && { editingGroupId }),
       taskId: operationTaskId,
+      ...(initialTopicMeta?.executionConfig && {
+        executionConfig: initialTopicMeta.executionConfig,
+      }),
+      ...(initialTopicMeta?.heteroEffort && { heteroEffort: initialTopicMeta.heteroEffort }),
       ...(initialTopicMeta?.repos && { repos: initialTopicMeta.repos }),
       ...(initialTopicMeta?.workingDirectory && {
         workingDirectory: initialTopicMeta.workingDirectory,
@@ -451,28 +362,6 @@ export const setupTurn = async (
     };
 
     const fallbackTitleSource = markdownToTxt(prompt);
-    const agentSnapshot = resolveNewTopicSnapshot(agentConfig);
-    // A pick made in the blank composer outranks the agent's stored model and
-    // effort for THIS conversation, exactly as in the client's createTopic /
-    // sendMessage paths. It lands on the topic's own pin fields — the same
-    // `topics.model`/`topics.provider` columns and `metadata.heteroEffort` slot a
-    // later turn reads back through the topic-pin path below — and never on the
-    // agent row. With no pick the
-    // snapshot stays byte-identical to the agent-config snapshot.
-    const snapshot = {
-      metadata:
-        newTopicPins?.effort === undefined
-          ? agentSnapshot.metadata
-          : { heteroEffort: newTopicPins.effort },
-      model: newTopicPins?.model ?? agentSnapshot.model,
-      provider: newTopicPins?.provider ?? agentSnapshot.provider,
-    };
-    if (heterogeneousProvider?.type === 'orvilo') {
-      model = modelOverride || snapshot.model || model;
-      provider = providerOverride || snapshot.provider || provider;
-    }
-    const metadataWithSnapshot: ChatTopicMetadata | undefined =
-      metadata || snapshot.metadata ? { ...metadata, ...snapshot.metadata } : undefined;
     // Second argument: the id the client already rendered this topic under
     // (sidebar row, message bucket). Absent → the model mints one as before.
     const newTopicParams = {
@@ -485,10 +374,7 @@ export const setupTurn = async (
       // that reaches execAgent without a topicId (e.g. the async/queue run)
       // must carry the groupId through too (group topic sidebar + ownership fix).
       groupId: appContext?.groupId,
-      metadata: metadataWithSnapshot,
-      // Snapshot the effective model as the topic's pinned model (config).
-      model: snapshot.model,
-      provider: snapshot.provider,
+      metadata,
       title:
         title !== undefined
           ? title
@@ -504,35 +390,9 @@ export const setupTurn = async (
       appContext?.groupId || 'none',
       cronJobId || 'none',
     );
-
-    // Make the run honour the pins this topic was just born with, exactly as a
-    // reused topic does below: without them the FIRST turn of a composer-started
-    // conversation would execute on the agent default while the row it is
-    // writing to says otherwise. Each part is gated on its own pick, so a
-    // creation path with no picks — and a pick that only names an effort —
-    // keeps today's agent-config-derived run.
-    // Prime's inference route lives on its harness config. The first run must
-    // use the same snapshot its topic pins, rather than the legacy Agent model.
-    if (heterogeneousProvider?.type === 'orvilo') {
-      model = modelOverride || snapshot.model || model;
-      provider = providerOverride || snapshot.provider || provider;
-    }
-    if (newTopicPins?.model) model = newTopicPins.model;
-    if (newTopicPins?.provider) provider = newTopicPins.provider;
-    if (newTopicPins)
-      pinnedHeterogeneousTopicModel = {
-        ...(newTopicPins.effort !== undefined && { effort: newTopicPins.effort }),
-        ...(newTopicPins.model && { model: newTopicPins.model }),
-        ...(newTopicPins.provider && { provider: newTopicPins.provider }),
-      };
   } else {
     log('execAgent: reusing existing topic %s', topicId);
 
-    // Honor a topic-pinned model (snapshotted on creation, updated when the
-    // user switched model while the topic was active) over the agent default.
-    // Explicit per-run values (such as callSubAgent) override their own field.
-    // The pinned model lives in the top-level `topics.model`/`provider` columns
-    // (config source of truth), NOT in metadata.
     const existingTopic = await deps.topicModel.findById(topicId);
 
     // Fail-closed guard: no run may ever operate on a share-visitor topic.
@@ -556,56 +416,27 @@ export const setupTurn = async (
     }
 
     if (existingTopic) {
-      let executionConfig = existingTopic.metadata?.executionConfig;
-      if (!executionConfig) {
-        const fallback = snapshotTopicExecutionConfig({
-          ...agentConfig.agencyConfig,
-          ...(effectiveRequestedDeviceId && { boundDeviceId: effectiveRequestedDeviceId }),
-        });
-        const rows = await deps.topicModel.updateMetadata(
-          topicId,
-          { executionConfig: fallback },
-          {
-            executionConfigIfAbsent: true,
-          },
-        );
-        executionConfig = rows?.[0]?.metadata?.executionConfig ?? fallback;
+      const effort =
+        !existingTopic.groupId || existingTopic.agentId === resolvedAgentId
+          ? existingTopic.metadata?.heteroEffort
+          : undefined;
+      if (effort !== undefined && agentConfig.agencyConfig?.heterogeneousProvider) {
+        agentConfig.agencyConfig.heterogeneousProvider = {
+          ...agentConfig.agencyConfig.heterogeneousProvider,
+          effort,
+        };
       }
-      agentConfig.agencyConfig = applyTopicExecutionConfig(
-        agentConfig.agencyConfig,
-        executionConfig,
-      );
-      // A client hint cannot redirect a conversation pinned by another surface.
-      effectiveRequestedDeviceId = isFixedExecutionTargetSelection
-        ? undefined
-        : agentConfig.agencyConfig?.boundDeviceId;
-      topicBoundDeviceId = agentConfig.agencyConfig?.boundDeviceId;
-      topicBindingRevision = existingTopic.metadata?.bindingRevision;
     }
+  }
 
-    /** A group topic pins its owning agent; member runs keep their own model and effort. */
-    const canUseTopicPin = !existingTopic?.groupId || existingTopic.agentId === resolvedAgentId;
-    const pinnedModel = canUseTopicPin ? existingTopic?.model : undefined;
-    if (pinnedModel) {
-      model = modelOverride || pinnedModel;
-      provider = providerOverride || existingTopic?.provider || provider;
-      pinnedHeterogeneousTopicModel = { model, provider };
-      log(
-        'execAgent: using topic-pinned model=%s provider=%s for topic %s',
-        model,
-        provider,
-        topicId,
-      );
-    }
-    // The heterogeneous effort pin lives in metadata and is independent of the
-    // model pin (a runtime without a model selector can still pin an effort).
-    const pinnedHeteroEffort = canUseTopicPin ? existingTopic?.metadata?.heteroEffort : undefined;
-    if (pinnedHeteroEffort !== undefined) {
-      pinnedHeterogeneousTopicModel = {
-        ...pinnedHeterogeneousTopicModel,
-        effort: pinnedHeteroEffort,
-      };
-    }
+  const initialEffort = !appContext?.topicId
+    ? appContext?.initialTopicMetadata?.heteroEffort
+    : undefined;
+  if (initialEffort !== undefined && agentConfig.agencyConfig?.heterogeneousProvider) {
+    agentConfig.agencyConfig.heterogeneousProvider = {
+      ...agentConfig.agencyConfig.heterogeneousProvider,
+      effort: initialEffort,
+    };
   }
 
   await throwIfExecutionAborted('topic setup');
@@ -780,18 +611,13 @@ export const setupTurn = async (
   return {
     assistantMessageId: assistantMessageRecord.id,
     canUseDevice,
-    effectiveRequestedDeviceId,
     heteroType,
     heterogeneousProvider: agentConfig.agencyConfig?.heterogeneousProvider ?? heterogeneousProvider,
-    isFixedDeviceTarget,
     model,
-    pinnedHeterogeneousTopicModel,
     provider,
     requestTriggerMetadata,
     runAttachments,
     selfMessageIds,
-    topicBindingRevision,
-    topicBoundDeviceId,
     topicId,
     userMessageId: userMessageRecord?.id,
   };

@@ -341,8 +341,7 @@ class ChatService {
       model: payload.model,
       provider: payload.provider!,
       subAgentChatConfigOverride: resolvedAgentConfig.subAgentChatConfigOverride,
-      // The topic's own effort pin (only when pinned for this very model — a
-      // sub-agent modelOverride must not inherit the parent topic's effort).
+      // Another Agent's model must not inherit this topic's reasoning effort.
       topicReasoningConfig: topicId
         ? topicSelectors.getTopicReasoningConfigForModel(
             topicId,

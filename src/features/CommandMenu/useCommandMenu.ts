@@ -1,3 +1,4 @@
+import { BUILTIN_AGENT_SLUGS, isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import { useDebounce } from 'ahooks';
 import { useTheme as useNextThemesTheme } from 'next-themes';
 import { useCallback, useEffect } from 'react';
@@ -57,10 +58,11 @@ export const useCommandMenu = () => {
   const { allowed: canCreate } = usePermission('create_content');
   const { setTheme } = useNextThemesTheme();
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
-  const builtinOffered = useBuiltinHarnessOffered();
+  const builtinOffered =
+    useBuiltinHarnessOffered() && isBuiltinAgentAvailable(BUILTIN_AGENT_SLUGS.inbox);
   const defaultAgent = useDefaultAgent();
-  // Asking without naming an Agent goes to the inbox Agent while the built-in
-  // harness is offered, and to the user's default Agent otherwise.
+  // Asking without naming an Agent uses the inbox only while that Agent is
+  // available, and otherwise uses the configured default Agent.
   const askAgentId = builtinOffered ? inboxAgentId : defaultAgent?.agentId;
   const { open: openCreateLibraryModal } = useCreateNewModal();
 
@@ -166,7 +168,7 @@ export const useCommandMenu = () => {
   );
 
   const handleAskOrviloAI = useCallback(() => {
-    // Navigate to inbox agent with the message query parameter
+    // Navigate to the selected available Agent with the message query parameter
     if (askAgentId && search.trim()) {
       const message = encodeURIComponent(search.trim());
       navigate(`/agent/${askAgentId}?message=${message}`);

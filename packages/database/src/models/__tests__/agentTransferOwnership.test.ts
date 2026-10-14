@@ -73,7 +73,7 @@ const withRuntime = async (
     agencyConfig: {
       boundDeviceId,
       executionTarget: 'device' as const,
-      heterogeneousProvider: { type: 'codex' as const },
+      heterogeneousProvider: { model: 'default', type: 'codex' as const },
       ...config.agencyConfig,
     },
   };
@@ -1021,7 +1021,7 @@ describe('AgentModel.transferAgentOwnership', () => {
         agencyConfig: {
           boundDeviceId: 'owner-personal-device',
           executionTarget: 'device',
-          executionTargetSelectionPolicy: 'fixed',
+
           workingDirByDevice: { 'owner-personal-device': '/home/owner' },
         },
       })
@@ -1032,10 +1032,9 @@ describe('AgentModel.transferAgentOwnership', () => {
     const [updated] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
     expect(updated.userId).toBe(recipientId);
     // The personal device is not enrolled in the workspace: binding, per-device
-    // working dirs, and the fixed-device policy are all re-homed.
+    // working directories are removed; the recipient must explicitly bind a new device.
     expect(updated.agencyConfig?.boundDeviceId).toBeUndefined();
     expect(updated.agencyConfig?.workingDirByDevice).toBeUndefined();
-    expect(updated.agencyConfig?.executionTargetSelectionPolicy).toBe('member');
   });
 
   it('refuses while a cross-scope backfill job still covers the agent', async () => {

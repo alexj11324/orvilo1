@@ -1,6 +1,9 @@
 import { isRecord } from '@orvilo/utils/object';
 
+import type { AskUserBridge } from '../askUser/AskUserBridge';
 import type { HeterogeneousAgentPermissionCatalog } from '../types';
+import type { AcpRpcMessage } from './acpStdioClient';
+import { AcpServerRequestError } from './acpStdioClient';
 
 /** Keep the agent's labels and values verbatim; modes are the legacy ACP fallback. */
 export const parseStandardAcpPermissionCatalogs = (session: {
@@ -70,4 +73,71 @@ export const parseStandardAcpPermissionCatalogs = (session: {
   return options.length > 0
     ? [{ configId: 'mode', currentValue: modes.currentModeId, name: 'mode', options }]
     : [];
+};
+
+/** Select only a native full-access choice actually advertised by this ACP session. */
+export const resolveNativeFullAccessPermission = (
+  catalogs: HeterogeneousAgentPermissionCatalog[],
+) => {
+  for (const catalog of catalogs) {
+    const option = catalog.options.find(
+      ({ name, value }) =>
+        /^(?:bypass(?:permissions)?|(?:agent-|danger-)?full[-_ ]access)$/i.test(value) ||
+        /^(?:bypass(?: permissions)?|(?:Agent \()?full access\)?)$/i.test(name),
+    );
+    if (option) return { configId: catalog.configId, value: option.value };
+  }
+};
+
+/** Native requests wait for an explicit answer; clients never synthesize tool approval. */
+export const answerNativePermissionRequest = async (
+  message: AcpRpcMessage,
+  bridge: AskUserBridge | undefined,
+  push: (update: Record<string, unknown>) => Promise<void>,
+  provider: string,
+  strings = { fallbackTitle: 'Permission required', header: 'Permission required' },
+) => {
+  if (!bridge)
+    throw new AcpServerRequestError(
+      -32_603,
+      `${provider} permission requires an interactive bridge`,
+    );
+  const params = isRecord(message.params) ? message.params : undefined;
+  const tool = isRecord(params?.toolCall) ? params.toolCall : undefined;
+  const options = (Array.isArray(params?.options) ? params.options : []).flatMap((option) =>
+    isRecord(option) && typeof option.optionId === 'string' && typeof option.name === 'string'
+      ? [{ id: option.optionId, label: option.name }]
+      : [],
+  );
+  if (!options.length) throw new AcpServerRequestError(-32_602, 'No native permission options');
+  const question = typeof tool?.title === 'string' ? tool.title : strings.fallbackTitle;
+  const toolCallId = `${provider}-permission-${String(message.id)}-${String(tool?.toolCallId ?? '')}`;
+  const arguments_ = {
+    questions: [{ header: strings.header, multiSelect: false, options, question }],
+  };
+  await push({
+    identifier: provider,
+    rawInput: arguments_,
+    sessionUpdate: 'tool_call',
+    title: 'askUserQuestion',
+    toolCallId,
+  });
+  const answer = await bridge.pending({
+    arguments: arguments_,
+    interactionKind: 'permission',
+    toolCallId,
+  });
+  await push({
+    rawOutput: answer,
+    sessionUpdate: 'tool_call_update',
+    status: 'completed',
+    toolCallId,
+  });
+  const selection =
+    !answer.cancelled && isRecord(answer.result) ? answer.result[question] : undefined;
+  const values = Array.isArray(selection) ? selection : [selection];
+  const selected = options.find(({ id }) => values.includes(id));
+  return {
+    outcome: selected ? { optionId: selected.id, outcome: 'selected' } : { outcome: 'cancelled' },
+  };
 };

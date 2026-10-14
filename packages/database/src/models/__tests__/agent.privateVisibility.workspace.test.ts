@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { agents, sessionGroups, users, workspaceMembers, workspaces } from '../../schemas';
+import { agents, devices, sessionGroups, users, workspaceMembers, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AgentModel } from '../agent';
 
@@ -23,6 +23,13 @@ beforeEach(async () => {
     .values({ name: 'private-vis-ws', primaryOwnerId: userA, slug: 'private-vis-ws' })
     .returning();
   workspaceId = ws.id;
+  await serverDB.insert(devices).values({
+    deviceId: 'private-vis-host',
+    userId: userA,
+    workspaceId,
+    visibility: 'public',
+    identitySource: 'fixture',
+  });
   await serverDB.insert(workspaceMembers).values([
     { role: 'owner', userId: userA, workspaceId },
     { role: 'member', userId: userB, workspaceId },
@@ -51,6 +58,11 @@ describe('AgentModel — private/public cross-user isolation', () => {
     virtual?: boolean;
   }) => {
     await serverDB.insert(agents).values({
+      agencyConfig: {
+        executionTarget: 'device',
+        boundDeviceId: 'private-vis-host',
+        heterogeneousProvider: { type: 'codex', model: 'gpt-5.5' },
+      },
       avatar: 'avatar',
       backgroundColor: '#000',
       description: 'desc',

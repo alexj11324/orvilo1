@@ -99,6 +99,15 @@ describe('processTaskCancellation', () => {
     );
   });
 
+  it('retains stopping when the host has only acknowledged a stop request', async () => {
+    interruptTask.mockResolvedValue({ cancelState: 'requested', success: true });
+    await expect(
+      processTaskCancellation({ db: {} as never, dispatchId: 'dispatch-1' }),
+    ).resolves.toMatchObject({ outcome: 'retry' });
+    expect(dispatchModel.settleCancellation).not.toHaveBeenCalled();
+    expect(cleanupTaskWorktrees).not.toHaveBeenCalled();
+  });
+
   it('replays the same operation identity after response loss before settlement', async () => {
     interruptTask.mockResolvedValue({ deviceCancellationConfirmed: true, success: true });
     dispatchModel.settleCancellation
@@ -135,52 +144,19 @@ describe('processTaskCancellation', () => {
     });
   });
 
-  it('abandons the claim once the cancel-attempts ceiling is reached', async () => {
+  it.each([
+    { cancelAttempts: 5, cancelRequestedAt: new Date() },
+    { cancelAttempts: 1, cancelRequestedAt: new Date(Date.now() - 11 * 60 * 1000) },
+  ])('retains the execution slot while stop acknowledgement is missing: %j', async (pending) => {
     dispatchModel.claimCancellation.mockResolvedValue({
       ...claim(),
-      dispatch: { ...claim().dispatch, cancelAttempts: 5, cancelRequestedAt: new Date() },
+      dispatch: { ...claim().dispatch, ...pending },
     });
-    dispatchModel.abandonCancellation.mockResolvedValue({
-      dispatch: { phase: 'abandoned' },
-      topicId: 'topic-1',
-    });
-
+    interruptTask.mockResolvedValue({ cancelState: 'requested', success: true });
     await expect(
-      processTaskCancellation({
-        db: {} as never,
-        dispatchId: 'dispatch-1',
-        workspaceId: 'workspace-1',
-      }),
-    ).resolves.toMatchObject({ outcome: 'abandoned', taskId: 'task-1' });
-
-    expect(dispatchModel.abandonCancellation).toHaveBeenCalledWith(
-      expect.objectContaining({ dispatchId: 'dispatch-1', fence: 3, owner: expect.any(String) }),
-    );
-    expect(interruptTask).not.toHaveBeenCalled();
-    expect(dispatchModel.retryCancellation).not.toHaveBeenCalled();
-  });
-
-  it('abandons a cancel intent older than the age ceiling even on early attempts', async () => {
-    dispatchModel.claimCancellation.mockResolvedValue({
-      ...claim(),
-      dispatch: {
-        ...claim().dispatch,
-        cancelAttempts: 1,
-        cancelRequestedAt: new Date(Date.now() - 11 * 60 * 1000),
-      },
-    });
-    dispatchModel.abandonCancellation.mockResolvedValue({
-      dispatch: { phase: 'abandoned' },
-      topicId: 'topic-1',
-    });
-
-    await expect(
-      processTaskCancellation({
-        db: {} as never,
-        dispatchId: 'dispatch-1',
-        workspaceId: 'workspace-1',
-      }),
-    ).resolves.toMatchObject({ outcome: 'abandoned' });
-    expect(interruptTask).not.toHaveBeenCalled();
+      processTaskCancellation({ db: {} as never, dispatchId: 'dispatch-1' }),
+    ).resolves.toMatchObject({ outcome: 'retry' });
+    expect(dispatchModel.abandonCancellation).not.toHaveBeenCalled();
+    expect(dispatchModel.settleCancellation).not.toHaveBeenCalled();
   });
 });

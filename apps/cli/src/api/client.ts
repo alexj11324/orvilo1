@@ -97,7 +97,7 @@ export function createLambdaClient(
     token: string;
     tokenType: 'apiKey' | 'jwt' | 'serviceToken';
   },
-  /** When set, scopes the request to a workspace (e.g. workspace-device enrollment). */
+  /** When set, scopes resource authorization to a workspace. */
   workspaceId?: string,
 ): TrpcClient {
   const headers: Record<string, string> = {

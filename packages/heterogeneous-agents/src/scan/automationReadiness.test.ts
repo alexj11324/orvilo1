@@ -6,12 +6,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { checkAutomationReadinessOnHost } from './automationReadiness';
 
-const { detect, spawnPlan, directory, remote, primeProbe } = vi.hoisted(() => ({
+const { detect, spawnPlan, directory, remote, primeProbe, permissions } = vi.hoisted(() => ({
   detect: vi.fn(),
+  permissions: vi.fn(),
   primeProbe: vi.fn(),
   directory: vi.fn(),
   remote: vi.fn(),
   spawnPlan: vi.fn(),
+}));
+vi.mock('../models/listHeterogeneousAgentPermissions', () => ({
+  listHeterogeneousAgentPermissions: permissions,
 }));
 vi.mock('node:child_process', () => ({ execFile: vi.fn() }));
 vi.mock('node:fs/promises', () => ({ access: vi.fn() }));
@@ -30,6 +34,14 @@ describe('automation host readiness', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
+    permissions.mockResolvedValue([
+      {
+        configId: 'mode',
+        currentValue: 'auto',
+        name: 'Mode',
+        options: [{ name: 'Full access', value: 'full-access' }],
+      },
+    ]);
     primeProbe.mockResolvedValue({ installed: true });
     remote.mockResolvedValue({ available: false, error: 'Unknown platform' });
     auth = 'Logged in using ChatGPT';
@@ -65,10 +77,7 @@ describe('automation host readiness', () => {
       installed: true,
       unattended: true,
     });
-    expect(spawnPlan.mock.calls.map((call) => call[1])).toEqual([
-      ['login', 'status'],
-      ['exec', '--help'],
-    ]);
+    expect(spawnPlan.mock.calls.map((call) => call[1])).toEqual([['login', 'status']]);
     expect(childProcess.execFile).toHaveBeenCalledWith(
       '/validated/codex',
       ['login', 'status'],
@@ -93,7 +102,7 @@ describe('automation host readiness', () => {
     expect(await checkAutomationReadinessOnHost({ agentType: 'codex' })).toMatchObject({
       authenticated: 'unknown',
       installed: true,
-      unattended: 'unknown',
+      unattended: true,
     });
   });
 
@@ -123,7 +132,7 @@ describe('automation host readiness', () => {
     expect(await checkAutomationReadinessOnHost({ agentType: 'cursor' })).toMatchObject({
       authenticated: 'unknown',
       installed: true,
-      unattended: 'unknown',
+      unattended: true,
     });
     expect(childProcess.execFile).not.toHaveBeenCalled();
   });
@@ -174,8 +183,6 @@ describe('automation host readiness', () => {
         unattended: true,
       });
       expect(spawnPlan.mock.calls.map((call) => call[1])).toEqual([
-        ['acp', '--help'],
-        ['run', '--help'],
         ['models', 'opencode', '--verbose'],
       ]);
     });
@@ -246,7 +253,7 @@ describe('automation host readiness', () => {
         executor: 'prime',
         installed: true,
         authenticated: 'unknown',
-        unattended: true,
+        unattended: false,
       });
       expect(result.blockers).toBeUndefined();
       expect(primeProbe).toHaveBeenCalledOnce();
@@ -276,7 +283,7 @@ describe('automation host readiness', () => {
       executor: 'prime',
       installed: true,
       authenticated: 'unknown',
-      unattended: true,
+      unattended: false,
     });
   });
 
@@ -288,7 +295,7 @@ describe('automation host readiness', () => {
         executor: 'prime',
         installed,
         authenticated: 'unknown',
-        unattended: true,
+        unattended: false,
       });
     },
   );
@@ -319,6 +326,44 @@ describe('automation host readiness', () => {
       expect(childProcess.execFile).not.toHaveBeenCalled();
     },
   );
+
+  it('discovers the saved custom runtime configuration on the bound host', async () => {
+    await checkAutomationReadinessOnHost({
+      agentType: 'codex',
+      command: '/custom/codex',
+      args: ['--profile', 'qa'],
+      env: { QA_PROFILE: 'synthetic-only' },
+      cwd: '/repository',
+    });
+    expect(detect.mock.calls[0].slice(0, 2)).toEqual(['codex', '/custom/codex']);
+    const discovery = permissions.mock.calls[0][0];
+    expect({
+      args: discovery.args,
+      command: discovery.command,
+      cwd: discovery.cwd,
+      profile: discovery.env.QA_PROFILE,
+    }).toEqual({
+      args: ['--profile', 'qa'],
+      command: '/validated/codex',
+      cwd: '/repository',
+      profile: 'synthetic-only',
+    });
+  });
+
+  it('refuses automation without an advertised native full-access option', async () => {
+    permissions.mockResolvedValue([
+      {
+        configId: 'mode',
+        currentValue: 'auto',
+        name: 'Mode',
+        options: [{ name: 'Auto', value: 'auto' }],
+      },
+    ]);
+    expect(await checkAutomationReadinessOnHost({ agentType: 'codex' })).toMatchObject({
+      installed: true,
+      unattended: false,
+    });
+  });
 
   it('rejects malformed payload before host inspection', async () => {
     await expect(

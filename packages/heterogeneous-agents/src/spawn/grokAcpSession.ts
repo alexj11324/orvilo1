@@ -3,17 +3,15 @@ import { pathToFileURL } from 'node:url';
 import { getAnyCliFlagValue, GROK_BUILD_REASONING_EFFORT_FLAGS } from '@orvilo/types';
 
 import { isAcpReplayMessage } from '../adapters/acpCommon';
+import type { AskUserBridge } from '../askUser/AskUserBridge';
 import type { AgentPromptInput } from '../protocol';
 import type { AcpAgentSessionOptions } from './acpAgentSession';
-import {
-  ACP_PROTOCOL_VERSION,
-  AcpAgentSession,
-  selectAcpPermissionOption,
-} from './acpAgentSession';
+import { ACP_PROTOCOL_VERSION, AcpAgentSession } from './acpAgentSession';
 import type { AcpRpcMessage } from './acpStdioClient';
 import { AcpServerRequestError } from './acpStdioClient';
 import type { NormalizeImageOptions } from './input';
 import { normalizeImage } from './input';
+import { answerNativePermissionRequest } from './standardAcpPermissions';
 
 const GROK_ACP_TRANSPORT = 'acp-stdio' as const;
 const GROK_MODEL_FLAGS = ['-m', '--model'] as const;
@@ -44,6 +42,7 @@ interface AcpNewSessionResult {
 }
 
 export interface GrokAcpSessionOptions extends AcpAgentSessionOptions {
+  askUserBridge?: AskUserBridge;
   prompt: GrokAcpContentBlock[];
 }
 
@@ -51,7 +50,6 @@ export const buildGrokAcpArgs = (args: string[] = []): string[] => [
   '--no-auto-update',
   'agent',
   '--no-leader',
-  '--always-approve',
   ...args,
   'stdio',
 ];
@@ -198,13 +196,12 @@ export class GrokAcpSession extends AcpAgentSession<AcpInitializeResult, GrokAcp
   protected handleServerRequest(message: AcpRpcMessage): unknown {
     switch (message.method) {
       case 'session/request_permission': {
-        const optionId = selectAcpPermissionOption(message.params, [
-          ({ kind }) => kind === 'allow_always',
-          ({ kind }) => kind === 'allow_once',
-        ]);
-        return {
-          outcome: optionId ? { optionId, outcome: 'selected' } : { outcome: 'cancelled' },
-        };
+        return answerNativePermissionRequest(
+          message,
+          this.options.askUserBridge,
+          (update) => this.pushToPipeline(update),
+          'grok-build',
+        );
       }
       case 'x.ai/ask_user_question': {
         // P1 is deliberately non-interactive. Match Grok's own headless

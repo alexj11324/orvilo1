@@ -1,5 +1,5 @@
 import type { AgentState } from '@orvilo/agent-execution';
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
+import { BUILTIN_AGENT_SLUGS, isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import { builtinSkills } from '@orvilo/builtin-skills';
 import { groupSupervisorToolIds, isBuiltinToolIdentifier } from '@orvilo/builtin-tools';
 import type { OrviloDatabase } from '@orvilo/database';
@@ -28,7 +28,6 @@ import { AgentModel } from '@/database/models/agent';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { ConnectorModel } from '@/database/models/connector';
 import { ConnectorToolModel } from '@/database/models/connectorTool';
-import { DeviceModel } from '@/database/models/device';
 import { MessageModel } from '@/database/models/message';
 import { PluginModel } from '@/database/models/plugin';
 import { TaskModel } from '@/database/models/task';
@@ -62,7 +61,7 @@ import { dispatchHeteroAgent } from './pipeline/heteroDispatch';
 import { resolveExternalToolSurface } from './pipeline/resolveExternalToolSurface';
 import { resolveRunAgentConfig } from './pipeline/resolveRunAgentConfig';
 import { resolveRunToolSurface } from './pipeline/runToolSurface';
-import { resolveNewTopicSnapshot, setupTurn } from './pipeline/turnSetup';
+import { setupTurn } from './pipeline/turnSetup';
 import type { SubAgentRunDeps } from './subAgentRuns';
 import { execAgentMember, execAgentThreadRun } from './subAgentRuns';
 import { acquireTopicStartReservation } from './topicStartReservation';
@@ -213,22 +212,9 @@ export class AiAgentService {
     return task?.id;
   }
 
-  /**
-   * If `deviceId` is a device enrolled into the caller's current workspace,
-   * return that workspaceId so device-gateway calls route to the
-   * `workspace:<id>` principal. Returns undefined for a personal device (or no
-   * workspace context), keeping the personal path byte-identical.
-   */
-  private async resolveDeviceWorkspaceId(
-    deviceId: string | undefined,
-  ): Promise<string | undefined> {
-    if (!deviceId || !this.workspaceId) return undefined;
-    const row = await new DeviceModel(
-      this.db,
-      this.userId,
-      this.workspaceId,
-    ).findWorkspaceDeviceById(deviceId);
-    return row ? this.workspaceId : undefined;
+  /** Physical hosts connect under their enrolling user, never a workspace principal. */
+  private async resolveDeviceWorkspaceId(_deviceId: string | undefined): Promise<undefined> {
+    return undefined;
   }
 
   /**
@@ -324,6 +310,12 @@ export class AiAgentService {
    * re-resolve. No-op for ordinary agent ids (getBuiltinAgent returns null).
    */
   private async resolveAgentConfigOrThrow(identifier: string) {
+    if (!isBuiltinAgentAvailable(identifier)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Built-in Agents are unavailable.',
+      });
+    }
     let agentConfig = await this.agentService.getAgentConfig(identifier);
     if (!agentConfig && (Object.values(BUILTIN_AGENT_SLUGS) as string[]).includes(identifier)) {
       await this.agentModel.getBuiltinAgent(identifier);
@@ -338,14 +330,17 @@ export class AiAgentService {
       throw new TRPCError({ code: 'NOT_FOUND', message: `Agent not found: ${identifier}` });
     }
 
+    if (!isBuiltinAgentAvailable(agentConfig.slug)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Built-in Agents are unavailable.',
+      });
+    }
     return agentConfig;
   }
 
-  /** Resolve caller model policy before a pre-created topic permanently pins its model. */
-  private async resolvePrecreatedTopicConfig(
-    identifier: string,
-    overrides?: { model?: string; provider?: string },
-  ) {
+  /** Resolve the saved Agent configuration before creating a topic. */
+  private async resolvePrecreatedTopicConfig(identifier: string) {
     const { agentConfig } = await resolveRunAgentConfig(
       {
         db: this.db,
@@ -355,8 +350,6 @@ export class AiAgentService {
       },
       {
         identifier,
-        modelOverride: overrides?.model,
-        providerOverride: overrides?.provider,
         throwIfExecutionAborted: async () => {},
       },
     );
@@ -376,7 +369,7 @@ export class AiAgentService {
    * One-shot only: recurring execution belongs to `tasks.automationMode = 'schedule'`.
    */
   async scheduleAgentRun(params: ScheduleAgentRunParams): Promise<ScheduleAgentRunResult> {
-    const { agentId, slug, prompt, runAt, fileIds, groupId, model, provider } = params;
+    const { agentId, slug, prompt, runAt, fileIds, groupId } = params;
 
     if (!agentId && !slug) throw new Error('Either agentId or slug must be provided');
 
@@ -388,16 +381,11 @@ export class AiAgentService {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'runAt must be in the future' });
     }
 
-    const agentConfig = await this.resolvePrecreatedTopicConfig(agentId || slug!, {
-      model,
-      provider,
-    });
+    const agentConfig = await this.resolvePrecreatedTopicConfig(agentId || slug!);
     const resolvedAgentId = agentConfig.id;
 
     const titleSource = markdownToTxt(prompt);
-    const snapshot = resolveNewTopicSnapshot(agentConfig, { model, provider });
     const topic = await this.topicModel.create({
-      ...snapshot,
       agentId: resolvedAgentId,
       groupId,
       // A scheduled run is still an ordinary user chat, just deferred — so it
@@ -425,8 +413,6 @@ export class AiAgentService {
     await this.topicModel.armScheduledRun(topic.id, {
       createdAt: now,
       kind: 'delayed_start',
-      model,
-      provider,
       // Normalize to UTC ISO: the dispatcher's due query compares this as text.
       runAt: runAtDate.toISOString(),
       updatedAt: now,
@@ -659,7 +645,6 @@ export class AiAgentService {
       createdThreadId,
       clientIp,
       userAgent,
-      deviceId: requestedDeviceId,
       localDeviceId,
       fileIds: attachedFileIds,
       files,
@@ -667,8 +652,6 @@ export class AiAgentService {
       instructions,
       chatConfigOverride,
       toolModeOverride,
-      model: modelOverride,
-      provider: providerOverride,
       title,
       trigger,
       cronJobId,
@@ -715,11 +698,6 @@ export class AiAgentService {
       !!resumeToolResult ||
       !!parentMessageId;
     const clientIds = isResumeLike ? undefined : params.clientIds;
-    // Same fresh-send rule for the composer's topic pins: they describe the topic
-    // this send is about to create, and a replay would re-write the row the
-    // original send already owns.
-    const newTopicPins = isResumeLike ? undefined : params.newTopicPins;
-
     // Validate that either agentId or slug is provided
     if (!agentId && !slug) {
       throw new Error('Either agentId or slug must be provided');
@@ -769,14 +747,10 @@ export class AiAgentService {
     // (see `pipeline/resolveRunAgentConfig`).
     const {
       agentConfig,
-      agentSlug,
       assistantAgentId,
-      canManageAgent,
       conversationAgentId,
-      isPublicWorkspaceAgent,
       isGroupSupervisor,
       groupSystemContext,
-      memberDeviceOverride,
       persistAgentId,
       resolvedAgentId,
     } = await resolveRunAgentConfig(
@@ -791,8 +765,6 @@ export class AiAgentService {
         chatConfigOverride,
         identifier,
         instructions,
-        modelOverride,
-        providerOverride,
         throwIfExecutionAborted,
         toolModeOverride,
       },
@@ -948,7 +920,6 @@ export class AiAgentService {
       },
       {
         agentConfig,
-        agentSlug,
         appContext,
         assistantAgentId,
         attachedFileIds,
@@ -959,13 +930,9 @@ export class AiAgentService {
         createdThreadId,
         cronJobId,
         files,
-        modelOverride,
-        newTopicPins,
         operationTaskId,
         parentMessageId,
         prompt,
-        providerOverride,
-        requestedDeviceId,
         resolvedAgentId,
         resume,
         runFromHistory,
@@ -1068,7 +1035,6 @@ export class AiAgentService {
       {
         beforeOperationStart,
         builtinToolSpecs: toolSurface.builtinToolSpecs,
-        canManageAgent,
         externalToolMounts: toolSurface.externalTools,
         toolSurfaceOutcomes: toolSurface.outcomes,
         clientIp,
@@ -1082,25 +1048,12 @@ export class AiAgentService {
         heteroType: turn.heteroType,
         heterogeneousProvider: turn.heterogeneousProvider,
         hooks,
-        isPublicWorkspaceAgent,
         localDeviceId,
         maxSteps,
-        memberDeviceOverride,
         operationTaskId,
         parentOperationId,
-        pinnedHeterogeneousTopicModel: turn.pinnedHeterogeneousTopicModel,
         requestTrigger: requestTriggerMetadata.trigger,
-        // The caller's raw per-request device id — admission treats it as the
-        // explicit request (subject to request authorization), NOT the pin.
-        requestedDeviceId,
         runAttachments,
-        // The binding epoch paired with the pin — echoed in admission
-        // errorData so repair can CAS on the revision it was shown.
-        sessionBindingRevision: turn.topicBindingRevision,
-        // The topic's durable device pin — the session binding admission
-        // consults first (invalid → DEVICE_BINDING_INVALID, never silently
-        // re-resolved onto another device).
-        sessionBoundDeviceId: turn.topicBoundDeviceId,
         selfMessageIds,
         skipTaskVerification,
         topicStartOwnerOperationId: params.topicStartOwnerOperationId,
@@ -1162,11 +1115,8 @@ export class AiAgentService {
       const topicTitle =
         newTopic?.title ||
         fallbackTitleSource.slice(0, 50) + (fallbackTitleSource.length > 50 ? '...' : '');
-      const agentConfig = await this.resolvePrecreatedTopicConfig(agentId);
-      const snapshot = resolveNewTopicSnapshot(agentConfig);
       const topicItem = await this.topicModel.create({
-        ...snapshot,
-        metadata: { ...snapshot.metadata, ...initialTopicMetadata },
+        metadata: initialTopicMetadata,
         agentId,
         groupId,
         messages: newTopic?.topicMessageIds,
@@ -1223,10 +1173,6 @@ export class AiAgentService {
       // recursively spawn; direct-mention dispatch intentionally does not.
       isSubAgent: params.isSubAgent === true,
       logScope: 'execSubAgent',
-      // Spawn-site resolved overrides (client `callSubAgent` / execSubAgentTask
-      // carry them; group members leave them undefined and keep their own).
-      model: params.model,
-      provider: params.provider,
     });
 
   /**
@@ -1241,11 +1187,6 @@ export class AiAgentService {
       chatConfig: params.chatConfig,
       isSubAgent: true,
       logScope: 'execVirtualSubAgent',
-      // Sub-agent model is resolved at the spawn site (callSubAgent runner) from
-      // the parent agent's `agencyConfig.subagent` and threaded through here as an
-      // explicit override, so execAgent never re-reads the parent config.
-      model: params.model,
-      provider: params.provider,
       resumeParentOnComplete: true,
     });
 

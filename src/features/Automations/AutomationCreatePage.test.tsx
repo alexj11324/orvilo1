@@ -157,6 +157,17 @@ describe('AutomationCreatePage', () => {
     expect(mocks.updateTaskStatus).not.toHaveBeenCalled();
   });
 
+  it('shows the native full-access blocker and retains its disabled draft when enabling fails', async () => {
+    mocks.updateTaskStatus.mockRejectedValueOnce(new Error('NATIVE_FULL_ACCESS_UNAVAILABLE'));
+    renderPage('/automations/new?template=investigate_top_datadog_errors');
+    fireEvent.click(await screen.findByRole('button', { name: 'Configure limit' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'create.submit' }));
+    await waitFor(() =>
+      expect(mocks.toastError).toHaveBeenCalledWith('events.reason.NATIVE_FULL_ACCESS_UNAVAILABLE'),
+    );
+    expect(mocks.createTask).toHaveBeenCalledWith(expect.objectContaining({ status: 'paused' }));
+  });
+
   it('submits the configured execution limit', async () => {
     mocks.updateTaskStatus.mockResolvedValue(undefined);
     renderPage('/automations/new?template=investigate_top_datadog_errors');
@@ -166,6 +177,7 @@ describe('AutomationCreatePage', () => {
       expect(mocks.createTask).toHaveBeenCalledWith(
         expect.objectContaining({
           config: { schedule: { maxExecutions: 7 } },
+          status: 'paused',
           schedulePattern: '0 9 * * *',
           scheduleTimezone: 'UTC',
         }),

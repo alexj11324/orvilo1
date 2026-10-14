@@ -1,5 +1,6 @@
 'use client';
 
+import { BUILTIN_AGENT_SLUGS, isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import { type FC } from 'react';
 import { memo, Suspense } from 'react';
 import { useParams } from 'react-router';
@@ -106,7 +107,14 @@ const AgentBuilderSlot = memo(() => {
   const isMobile = useIsMobile();
   // The builder is a desktop side rail — on mobile it widens the page past the
   // viewport; the same config it edits is reachable through the stacked cards.
-  if (isMobile || isHeterogeneous || lockedByOther || lockPending) return null;
+  if (
+    !isBuiltinAgentAvailable(BUILTIN_AGENT_SLUGS.agentBuilder) ||
+    isMobile ||
+    isHeterogeneous ||
+    lockedByOther ||
+    lockPending
+  )
+    return null;
   return <AgentBuilder />;
 });
 

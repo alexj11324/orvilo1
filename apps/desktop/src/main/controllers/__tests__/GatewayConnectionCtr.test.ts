@@ -1,3 +1,6 @@
+// Load the lazily used readiness module before fake timers begin.
+import '@orvilo/heterogeneous-agents/automationReadiness';
+
 import type * as ChildProcessModule from 'node:child_process';
 import type * as CryptoModule from 'node:crypto';
 import { EventEmitter } from 'node:events';
@@ -6,7 +9,6 @@ import os from 'node:os';
 import path from 'node:path';
 
 import type * as DeviceIdentityModule from '@orvilo/device-identity';
-import { resolvePersistentDeviceIdentity } from '@orvilo/device-identity';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { App } from '@/core/App';
@@ -317,6 +319,7 @@ describe('GatewayConnectionCtr', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValue('mock-access-token');
     resolveCliScriptMock.mockReturnValue('/mock/apps/cli/dist/index.js');
     primeProbeMock.mockResolvedValue({ installed: false });
     vi.useFakeTimers();
@@ -448,27 +451,6 @@ describe('GatewayConnectionCtr', () => {
 
       expect(result).toBe(false);
       expect(mockStoreSet).not.toHaveBeenCalled();
-    });
-
-    it('should reconnect a persisted workspace identity for this machine', async () => {
-      const workspaceId = 'workspace-1';
-      const fallbackId = 'mock-device-uuid';
-      mockStoreGet.mockImplementation((key: string) => {
-        if (key === 'gatewayEnabled') return true;
-        if (key === 'gatewayDeviceId') return fallbackId;
-        if (key === 'gatewayWorkspaceEnrollments') return [workspaceId];
-        return undefined;
-      });
-      vi.mocked(mockRemoteServerConfigCtr.isRemoteServerConfigured).mockResolvedValueOnce(false);
-      ctr.afterFirstFrame();
-      await vi.advanceTimersByTimeAsync(0);
-      mockStoreSet.mockClear();
-
-      const workspaceDevice = await resolvePersistentDeviceIdentity(`workspace:${workspaceId}`);
-      const result = await ctr.reconnectFromProtocol({ deviceId: workspaceDevice.deviceId });
-
-      expect(result).toBe(true);
-      expect(mockStoreSet).toHaveBeenCalledWith('gatewayEnabled', true);
     });
 
     it('should no-op when already connected', async () => {
@@ -644,7 +626,7 @@ describe('GatewayConnectionCtr', () => {
       expect(JSON.parse(response.result.content)).toMatchObject({
         authenticated: 'unknown',
         executor: 'prime',
-        unattended: true,
+        unattended: false,
         installed: false,
       });
       expect(response.result.state).toEqual(JSON.parse(response.result.content));
@@ -667,7 +649,7 @@ describe('GatewayConnectionCtr', () => {
         await vi.waitFor(() => expect(client.sendToolCallResponse).toHaveBeenCalled());
         expect(
           JSON.parse(client.sendToolCallResponse.mock.calls.at(-1)![0].result.content),
-        ).toMatchObject({ executor: 'prime', installed: true, unattended: true });
+        ).toMatchObject({ executor: 'prime', installed: true, unattended: false });
       },
     );
 
@@ -1130,9 +1112,7 @@ describe('GatewayConnectionCtr', () => {
       expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledWith(
         expect.objectContaining({
           agentType: 'openclaw',
-          // Reuses the device's own session token as the run identity, not the
-          // dispatched operation jwt.
-          jwt: 'mock-access-token',
+          jwt: 'mock-jwt',
           operationId: 'op-xyz',
           prompt: 'hello',
           serverUrl: 'https://server.example.com',
@@ -1141,21 +1121,24 @@ describe('GatewayConnectionCtr', () => {
       );
     });
 
-    it('reuses the device access token as the run jwt instead of request.jwt', async () => {
+    it('retains the initiating member’s operation token on another member’s device', async () => {
       const client = await connectAndOpen();
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockClear();
       client.simulateAgentRunRequest('claude-code', 'op-auth', 'hi', 'dispatched-operation-jwt');
       await vi.advanceTimersByTimeAsync(0);
 
       expect(mockHeterogeneousAgentCtr.spawnOrviloHeteroExec).toHaveBeenCalledWith(
-        expect.objectContaining({ jwt: 'mock-access-token' }),
+        expect.objectContaining({
+          jwt: 'dispatched-operation-jwt',
+          operationJwt: 'dispatched-operation-jwt',
+        }),
       );
+      expect(mockRemoteServerConfigCtr.getAccessToken).not.toHaveBeenCalled();
     });
 
-    it('falls back to request.jwt when the device has no access token', async () => {
+    it('retains the operation token without borrowing a device login', async () => {
       const client = await connectAndOpen();
-      // Set after connect so the auto-connect getAccessToken call isn't the one
-      // that returns null — only the executeAgentRun lookup should see no token.
-      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValueOnce(null);
+      vi.mocked(mockRemoteServerConfigCtr.getAccessToken).mockResolvedValue(null);
       client.simulateAgentRunRequest(
         'claude-code',
         'op-fallback',

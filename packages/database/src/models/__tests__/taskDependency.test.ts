@@ -642,7 +642,7 @@ describe('prerequisite review regressions', () => {
     expect(await model.findById(child.id)).not.toBeNull();
   });
 
-  it('fences deferred heartbeat writes by token, status, mode and interval while preserving counters', async () => {
+  it('fences deferred heartbeat writes by token, automation pause, mode and interval while preserving counters', async () => {
     const task = await model.create({
       instruction: 'Heartbeat',
       status: 'scheduled',
@@ -662,9 +662,10 @@ describe('prerequisite review regressions', () => {
       scheduler: { ...patch, consecutiveFailures: 2 },
     });
     expect(await model.updateContextIfHeartbeatTick(task.id, 'old', 600, patch)).toBe(false);
-    await model.updateStatus(task.id, 'paused');
+    await model.updateContext(task.id, { scheduler: { automationPaused: true } });
     expect(await model.updateContextIfHeartbeatTick(task.id, 'next', 600, patch)).toBe(false);
-    await model.update(task.id, { status: 'scheduled', automationMode: 'schedule' });
+    await model.updateContext(task.id, { scheduler: { automationPaused: false } });
+    await model.update(task.id, { automationMode: 'schedule' });
     expect(await model.updateContextIfHeartbeatTick(task.id, 'next', 600, patch)).toBe(false);
   });
 });

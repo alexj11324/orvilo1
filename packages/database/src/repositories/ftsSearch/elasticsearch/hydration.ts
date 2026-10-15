@@ -28,6 +28,7 @@ import {
 } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
 import { buildDocumentReadableWhere } from '../../../utils/documentAccess';
+import { buildFileTopicCeiling } from '../../../utils/fileTopicCeiling';
 import { normalizeInboxAgentMeta, normalizeInboxAgentTitle } from '../../../utils/inboxAgent';
 import { searchableMessage } from '../../../utils/searchableMessage';
 import { notShareVisitorMessage, notShareVisitorTopic } from '../../../utils/shareVisitor';
@@ -479,6 +480,7 @@ export const hydrateFiles = async (
           hits.map(({ id }) => id),
         ),
         buildWorkspaceWhere(scope, files),
+        buildFileTopicCeiling(db, scope),
         ne(files.fileType, 'custom/document'),
         or(isNull(files.source), notInArray(files.source, LIBRARY_HIDDEN_FILE_SOURCES)),
       ),

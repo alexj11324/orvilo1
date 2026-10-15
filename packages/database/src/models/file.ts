@@ -37,6 +37,7 @@ import {
   users,
 } from '../schemas';
 import type { OrviloDatabase, Transaction } from '../type';
+import { buildFileTopicCeiling } from '../utils/fileTopicCeiling';
 import { buildFileCategoryFilter } from '../utils/fileTypeCategory';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
@@ -67,6 +68,13 @@ export class FileModel {
     buildWorkspaceWhere(
       { callerAgentVisibility, userId: this.userId, workspaceId: this.workspaceId },
       files,
+    );
+
+  /** Library reads. Deletes and the public `/f/:id` proxy stay on their own paths. */
+  private readable = (callerAgentVisibility?: 'private' | 'public' | null) =>
+    and(
+      this.ownership(callerAgentVisibility),
+      buildFileTopicCeiling(this.db, { userId: this.userId, workspaceId: this.workspaceId }),
     );
 
   /**
@@ -381,7 +389,7 @@ export class FileModel {
     // 1. Build where clause
     let whereClause = and(
       q ? ilike(files.name, `%${q}%`) : undefined,
-      this.ownership(callerAgentVisibility),
+      this.readable(callerAgentVisibility),
       visibility ? eq(files.visibility, visibility) : undefined,
       // Artifacts owned by another surface (acceptance evidence) stay reachable
       // by id, but never appear in a listing. Applied here rather than in
@@ -496,14 +504,14 @@ export class FileModel {
 
   findByIds = async (ids: string[]) => {
     return this.db.query.files.findMany({
-      where: and(inArray(files.id, ids), this.ownership()),
+      where: and(inArray(files.id, ids), this.readable()),
     });
   };
 
   findById = async (id: string, trx?: Transaction) => {
     const database = trx || this.db;
     return database.query.files.findFirst({
-      where: and(eq(files.id, id), this.ownership()),
+      where: and(eq(files.id, id), this.readable()),
     });
   };
 
@@ -681,7 +689,7 @@ export class FileModel {
 
   findByNames = async (fileNames: string[]) =>
     this.db.query.files.findMany({
-      where: and(or(...fileNames.map((name) => like(files.name, `${name}%`))), this.ownership()),
+      where: and(or(...fileNames.map((name) => like(files.name, `${name}%`))), this.readable()),
     });
 
   // Abstract common method for deleting chunks

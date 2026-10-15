@@ -42,10 +42,13 @@ vi.mock('@lobehub/ui', () => ({
   Empty: ({ description }: { description?: ReactNode }) => <div>{description}</div>,
   Flexbox: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   Icon: () => null,
-  Image: ({ alt, src }: { alt?: string; src?: string }) => <img alt={alt} src={src} />,
   Markdown: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   Text: ({ children }: { children: ReactNode }) => <span>{children}</span>,
   Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@/components/Image', () => ({
+  default: ({ alt, src }: { alt?: string; src?: string }) => <img alt={alt} src={src} />,
 }));
 
 vi.mock('@lobehub/ui/base-ui', () => ({

@@ -1,11 +1,11 @@
 'use client';
-import { GroupAvatar } from '@lobehub/ui';
 import { type UIChatMessage } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { ListTodo } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import GroupAvatar from '@/components/Avatar/GroupAvatar';
 import { Badge } from '@/components/reui/badge';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import { useAgentGroupStore } from '@/store/agentGroup';

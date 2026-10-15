@@ -1,0 +1,18 @@
+.sheet {
+  position: relative;
+  flex: none;
+  line-height: 1;
+}
+
+/* The neutral sheet a material glyph sits on: the container surface in light
+ * mode and the strongest neutral fill in dark mode, where a container-colored
+ * sheet would vanish into the panel. `--scrollbar-fill` carries that fill. */
+.mono {
+  --file-icon-mono-fill: var(--card);
+  --file-icon-mono-fold: var(--scrollbar-fill);
+}
+
+:global(html[data-theme='dark']) .mono,
+:global(html.dark) .mono {
+  --file-icon-mono-fill: var(--scrollbar-fill);
+}

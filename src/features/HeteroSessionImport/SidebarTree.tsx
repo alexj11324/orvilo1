@@ -1,5 +1,4 @@
 import { ClaudeCode, Codex } from '@lobehub/icons';
-import { DraggablePanel } from '@lobehub/ui/base-ui';
 import type { HeteroSessionDirGroup, HeteroSessionDirPref } from '@orvilo/types';
 import { cn } from 'cn';
 import { ChevronRight, Eye, EyeOff, Folder, FolderGit2, Timer, X } from 'lucide-react';
@@ -7,6 +6,7 @@ import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import DraggablePanel from '@/components/DraggablePanel';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';

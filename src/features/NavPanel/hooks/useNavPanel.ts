@@ -1,8 +1,8 @@
 'use client';
 
-import { type DraggablePanelProps } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 
+import { type DraggablePanelProps } from '@/components/DraggablePanel';
 import { useTypeScriptHappyCallback } from '@/hooks/useTypeScriptHappyCallback';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';

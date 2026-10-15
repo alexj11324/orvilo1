@@ -1,10 +1,10 @@
 'use client';
 
-import { Image, PreviewGroup } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import path from 'path-browserify-esm';
 import { memo, useMemo } from 'react';
 
+import Image, { PreviewGroup } from '@/components/Image';
 import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 interface ReadArgs {

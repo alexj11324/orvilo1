@@ -1,0 +1,277 @@
+/* Ported from the retired @lobehub/ui DraggablePanel so the seam, handle and
+ * collapse toggle keep their look. Engine `colorFill` (the handle hover tone)
+ * is carried by `--scrollbar-fill`. */
+
+.root {
+  --draggable-panel-gap: 0px;
+
+  display: flex;
+  flex-shrink: 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+.fixed {
+  position: relative;
+}
+
+.float {
+  position: absolute;
+  z-index: 200;
+}
+
+.floatLeft {
+  inset-block: 0;
+  inset-inline-start: 0;
+  height: 100%;
+}
+
+.floatRight {
+  inset-block: 0;
+  inset-inline-end: 0;
+  height: 100%;
+}
+
+.floatTop {
+  inset-block-start: 0;
+  inset-inline: 0;
+  width: 100%;
+}
+
+.floatBottom {
+  inset-block-end: 0;
+  inset-inline: 0;
+  width: 100%;
+}
+
+/* The seam opens a gap around the toggle while it is shown. */
+.root[data-expandable='true']:hover,
+.root[data-expandable='true']:focus-within,
+.root[data-expandable='true'][data-expand='false'] {
+  --draggable-panel-gap: 17px;
+}
+
+.root[data-expandable='true'][data-resizing='true'] {
+  --draggable-panel-gap: 0px;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+
+  min-width: 0;
+  min-height: 0;
+
+  background: var(--draggable-panel-bg, transparent);
+}
+
+.handle {
+  touch-action: none;
+  position: absolute;
+  z-index: 100;
+}
+
+.handle::before,
+.handle::after {
+  content: '';
+  position: absolute;
+  background: var(--divider);
+  transition:
+    width 0.25s var(--orvilo-motion-ease-out),
+    height 0.25s var(--orvilo-motion-ease-out),
+    background 0.16s var(--orvilo-motion-ease-out);
+}
+
+.handle:hover::before,
+.handle:hover::after {
+  background: var(--scrollbar-fill);
+}
+
+.handle[data-resizing]::before,
+.handle[data-resizing]::after {
+  background: var(--primary);
+}
+
+.handle[data-border='false']::before,
+.handle[data-border='false']::after {
+  background: transparent;
+}
+
+.handle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.handleHorizontal {
+  cursor: row-resize;
+  inset-inline: 0;
+  height: var(--draggable-panel-handle-size);
+}
+
+.handleHorizontal::before,
+.handleHorizontal::after {
+  inset-block-start: 50%;
+  width: calc(50% - var(--draggable-panel-gap, 0px));
+  height: 1px;
+  margin-block-start: -0.5px;
+}
+
+.handleHorizontal::before {
+  inset-inline-start: 0;
+}
+
+.handleHorizontal::after {
+  inset-inline-end: 0;
+}
+
+.handleVertical {
+  cursor: col-resize;
+  inset-block: 0;
+  width: var(--draggable-panel-handle-size);
+}
+
+.handleVertical::before,
+.handleVertical::after {
+  inset-inline-start: 50%;
+  width: 1px;
+  height: calc(50% - var(--draggable-panel-gap, 0px));
+  margin-inline-start: -0.5px;
+}
+
+.handleVertical::before {
+  inset-block-start: 0;
+}
+
+.handleVertical::after {
+  inset-block-end: 0;
+}
+
+.toggle {
+  pointer-events: none;
+
+  position: absolute;
+  z-index: 110;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggle > button {
+  pointer-events: all;
+  cursor: pointer;
+
+  position: relative;
+
+  width: 26px;
+  height: 40px;
+  padding: 0;
+  border: none;
+
+  background: none;
+}
+
+.toggle > button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
+.toggle svg {
+  pointer-events: none;
+
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  transform: translate(-50%, -50%);
+
+  overflow: visible;
+
+  opacity: 0;
+
+  transition: opacity 0.18s var(--orvilo-motion-ease-out);
+}
+
+.toggle path {
+  transform-origin: center;
+  transform: scaleX(0);
+  vector-effect: non-scaling-stroke;
+  transition: transform 0.24s var(--orvilo-motion-ease-out);
+}
+
+/* The ends fade into the seam so the bend reads as the seam itself. */
+.toggle stop[data-end] {
+  stop-color: var(--divider);
+  transition: stop-opacity 0.18s var(--orvilo-motion-ease-out);
+}
+
+.toggle stop[data-tip] {
+  stop-color: var(--foreground-tertiary);
+  transition: stop-color 0.16s var(--orvilo-motion-ease-out);
+}
+
+.toggle button:hover stop[data-tip] {
+  stop-color: var(--muted-foreground);
+}
+
+/* The toggle wrapper carries an inline opacity when collapsed, so beat it. */
+.root[data-expandable='true']:hover .toggle,
+.root[data-expandable='true']:focus-within .toggle {
+  opacity: 1 !important;
+}
+
+.root[data-expandable='true']:hover .toggle svg,
+.root[data-expandable='true']:focus-within .toggle svg,
+.root[data-expandable='true'][data-expand='false'] .toggle svg {
+  opacity: 1;
+}
+
+.root[data-expandable='true']:hover .toggle path,
+.root[data-expandable='true']:focus-within .toggle path,
+.root[data-expandable='true'][data-expand='false'] .toggle path {
+  transform: scaleX(var(--seam-bend));
+}
+
+.root[data-expandable='true'][data-resizing='true'] .toggle svg {
+  opacity: 0;
+}
+
+/* The toggle sits on the seam opposite the panel's placement edge. */
+.toggleOnLeft {
+  inset-block: 0;
+  inset-inline-start: -13px;
+  width: 26px;
+}
+
+.toggleOnRight {
+  inset-block: 0;
+  inset-inline-end: -13px;
+  width: 26px;
+}
+
+.toggleOnTop,
+.toggleOnBottom {
+  inset-inline: 0;
+  height: 26px;
+}
+
+.toggleOnTop {
+  inset-block-start: -13px;
+}
+
+.toggleOnBottom {
+  inset-block-end: -13px;
+}
+
+.toggleOnTop > button,
+.toggleOnBottom > button {
+  width: 40px;
+  height: 26px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle svg,
+  .toggle path {
+    transition: none;
+  }
+}

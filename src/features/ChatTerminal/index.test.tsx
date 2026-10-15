@@ -12,9 +12,8 @@ vi.mock('@orvilo/const', async (importOriginal) => ({
   isDesktop: true,
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  DraggablePanel: ({ children, expand }: { children?: ReactNode; expand?: boolean }) => (
+vi.mock('@/components/DraggablePanel', () => ({
+  default: ({ children, expand }: { children?: ReactNode; expand?: boolean }) => (
     <div data-expand={String(expand)} data-testid="terminal-panel">
       {children}
     </div>

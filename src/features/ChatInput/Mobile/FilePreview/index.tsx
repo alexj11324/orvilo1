@@ -1,8 +1,8 @@
-import { PreviewGroup } from '@lobehub/ui';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
+import { PreviewGroup } from '@/components/Image';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { filesSelectors, useFileStore } from '@/store/file';

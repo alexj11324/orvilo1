@@ -1,9 +1,9 @@
-import { FileTypeIcon } from '@lobehub/ui';
 import { cn } from 'cn';
 import { ArrowUpIcon, PlusIcon } from 'lucide-react';
 import { memo, type ReactNode, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { FileTypeIcon } from '@/components/FileIcon';
 import { Button } from '@/components/ui/button';
 import { Upload } from '@/components/Upload';
 import { useCreateNewModal } from '@/features/LibraryModal';

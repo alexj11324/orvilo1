@@ -1,9 +1,10 @@
-import { SortableList } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import { ProviderIcon } from '@/components/OrviloIcons';
 import { type AiProviderListItem } from '@/types/aiProvider';
+
+import SortDragHandle from '../../features/SortDragHandle';
 
 interface GroupItemProps extends AiProviderListItem {
   disabled?: boolean;
@@ -26,7 +27,7 @@ const GroupItem = memo<GroupItemProps>(({ id, name, source, logo, disabled }) =>
         )}
         {name}
       </div>
-      {!disabled && <SortableList.DragHandle />}
+      {!disabled && <SortDragHandle />}
     </>
   );
 });

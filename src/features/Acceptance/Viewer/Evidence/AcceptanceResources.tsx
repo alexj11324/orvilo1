@@ -1,12 +1,12 @@
 'use client';
 
-import { Image } from '@lobehub/ui';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cn } from 'cn';
 import { FileText, Film, Paperclip } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Image from '@/components/Image';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { useIsHydrated } from '@/hooks/useIsHydrated';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';

@@ -1,6 +1,6 @@
-import { DraggablePanel, type DraggablePanelProps } from '@lobehub/ui/base-ui';
 import { memo, Suspense, useState } from 'react';
 
+import DraggablePanel, { type DraggablePanelProps } from '@/components/DraggablePanel';
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';

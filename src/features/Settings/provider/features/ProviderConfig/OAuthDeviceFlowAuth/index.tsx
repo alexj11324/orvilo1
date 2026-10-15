@@ -1,11 +1,11 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import { CircleCheckIcon, LogOutIcon, UnplugIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import CopyButton from '@/components/CopyButton';
 import { confirmModal, Modal } from '@/components/Modal';
 import { Button } from '@/components/ui/button';

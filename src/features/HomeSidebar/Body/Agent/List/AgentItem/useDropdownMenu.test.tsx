@@ -98,7 +98,6 @@ vi.mock('@/hooks/useResourceManageable', () => ({
 vi.mock('@/services/agent', () => ({ agentService: {} }));
 
 vi.mock('@/features/HomeSidebar/Body/Agent/ModalProvider', () => ({
-  useOptionalAgentModal: () => null,
   useAgentModal: () => ({ openCreateGroupModal: vi.fn() }),
 }));
 

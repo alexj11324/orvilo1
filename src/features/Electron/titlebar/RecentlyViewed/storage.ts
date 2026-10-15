@@ -41,14 +41,3 @@ export const savePinnedPages = (scope: TabScope, pages: TabItem[]): boolean => {
     return false;
   }
 };
-
-export const clearPinnedPages = (scope: TabScope): boolean => {
-  if (typeof window === 'undefined') return false;
-
-  try {
-    window.localStorage.removeItem(pinnedPagesStorageKey(scope));
-    return true;
-  } catch {
-    return false;
-  }
-};

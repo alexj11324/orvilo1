@@ -105,8 +105,6 @@ const getMediaAvailability = (messages: UIChatMessage[]) => ({
  */
 
 type Setter = StoreSetter<ChatStore>;
-export const streamingExecutor = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new StreamingExecutorActionImpl(set, get, _api);
 
 export class StreamingExecutorActionImpl {
   readonly #get: () => ChatStore;

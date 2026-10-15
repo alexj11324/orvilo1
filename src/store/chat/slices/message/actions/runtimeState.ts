@@ -11,8 +11,6 @@ import { preventLeavingFn, toggleBooleanList } from '../../../utils';
  */
 
 type Setter = StoreSetter<ChatStore>;
-export const messageRuntimeState = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new MessageRuntimeStateActionImpl(set, get, _api);
 
 export class MessageRuntimeStateActionImpl {
   readonly #get: () => ChatStore;

@@ -1,8 +1,8 @@
 import { type ChatToolPayload } from '@orvilo/types';
 import debug from 'debug';
 
-import { lambdaClient } from '@/libs/trpc/client';
 import { type StreamEvent } from '@/services/agentExecution';
+import { aiAgentService } from '@/services/aiAgent';
 import { operationSelectors } from '@/store/chat/slices/operation/selectors';
 import { type ChatStore } from '@/store/chat/store';
 import {
@@ -22,8 +22,6 @@ interface StreamingContext {
 }
 
 type Setter = StoreSetter<ChatStore>;
-export const agentSlice = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new AgentActionImpl(set, get, _api);
 
 export class AgentActionImpl {
   readonly #get: () => ChatStore;
@@ -391,7 +389,7 @@ export class AgentActionImpl {
       log(`Handling human intervention ${action} for operation ${messageOpId}:`, data);
 
       // Send human intervention request
-      await lambdaClient.aiAgent.processHumanIntervention.mutate({
+      await aiAgentService.processHumanIntervention({
         action: action as 'approve' | 'reject' | 'input' | 'select',
         data,
         operationId: messageOpId,

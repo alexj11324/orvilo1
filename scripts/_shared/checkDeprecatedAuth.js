@@ -1,11 +1,11 @@
 /**
  * Shared utility to check for deprecated authentication environment variables.
- * Used by both prebuild.mts (build time) and startServer.js (Docker runtime).
+ * Used by both dockerPrebuild.mts (build time) and startServer.js (Docker runtime).
  *
  * IMPORTANT: Keep this file as CommonJS (.js) for compatibility with startServer.js
  */
 
-const MIGRATION_DOC_BASE = 'https://orvilo.aspectlylabs.com/docs/self-hosting/migration/v2/auth';
+const AUTH_DOC_URL = 'https://orvilo.aspectlylabs.com/docs/self-hosting/auth';
 
 /**
  * Deprecated environment variable checks configuration
@@ -20,16 +20,16 @@ const MIGRATION_DOC_BASE = 'https://orvilo.aspectlylabs.com/docs/self-hosting/mi
  */
 const DEPRECATED_CHECKS = [
   {
-    docUrl: `${MIGRATION_DOC_BASE}/nextauth-to-betterauth`,
+    docUrl: AUTH_DOC_URL,
     getVars: () =>
       Object.keys(process.env).filter(
         (key) => key.startsWith('NEXT_AUTH') || key.startsWith('NEXTAUTH'),
       ),
-    message: 'NextAuth has been removed from Orvilo. Please migrate to Better Auth.',
+    message: 'NextAuth has been removed from Orvilo. Configure the Clerk accounts portal instead.',
     name: 'NextAuth',
   },
   {
-    docUrl: `${MIGRATION_DOC_BASE}/clerk-to-betterauth`,
+    docUrl: AUTH_DOC_URL,
     // The v1 in-app Clerk integration is gone; sign-in lives on the accounts
     // portal. CLERK_SECRET_KEY is NOT deprecated — it backs the Clerk session
     // exchange (POST /api/auth/clerk).
@@ -38,7 +38,7 @@ const DEPRECATED_CHECKS = [
         (key) => process.env[key],
       ),
     message:
-      'The in-app Clerk integration has been removed from Orvilo. Sign-in runs on the accounts portal; only CLERK_SECRET_KEY/CLERK_ISSUER/CLERK_AUTHORIZED_PARTIES are used server-side.',
+      'The in-app Clerk integration has been removed from Orvilo. Sign-in runs on the accounts portal; configure the server-side Clerk session exchange using the current authentication reference.',
     name: 'Clerk',
   },
   {
@@ -68,63 +68,21 @@ const DEPRECATED_CHECKS = [
   {
     getVars: () => (process.env['ACCESS_CODE'] ? ['ACCESS_CODE'] : []),
     message:
-      'ACCESS_CODE is no longer supported in Orvilo 2.0. Please use Better Auth authentication system instead.',
+      'ACCESS_CODE is no longer supported in Orvilo 2.0. Configure the Clerk accounts portal instead.',
     name: 'Access Code',
   },
   {
     getVars: () =>
       process.env['NEXT_PUBLIC_ENABLE_BETTER_AUTH'] ? ['NEXT_PUBLIC_ENABLE_BETTER_AUTH'] : [],
     message:
-      'NEXT_PUBLIC_ENABLE_BETTER_AUTH is no longer needed. Better Auth is now automatically detected via AUTH_SECRET presence.',
+      'Better Auth has been removed. Remove NEXT_PUBLIC_ENABLE_BETTER_AUTH and configure the Clerk accounts portal.',
     name: 'Better Auth Flag',
   },
   {
     getVars: () => ['NEXT_PUBLIC_AUTH_URL', 'AUTH_URL'].filter((key) => process.env[key]),
     message:
-      'AUTH_URL is no longer needed. The authentication URL is now automatically detected from request headers.',
+      'AUTH_URL is no longer needed. Configure APP_URL for the app and AUTH_ACCOUNTS_URL for the Clerk accounts portal.',
     name: 'Auth URL',
-  },
-  {
-    docUrl: `${MIGRATION_DOC_BASE}/nextauth-to-betterauth`,
-    formatVar: (envVar) => {
-      const mapping = {
-        AUTH_AZURE_AD_ID: 'AUTH_MICROSOFT_ID',
-        AUTH_AZURE_AD_SECRET: 'AUTH_MICROSOFT_SECRET',
-        AUTH_AZURE_AD_TENANT_ID: 'AUTH_MICROSOFT_TENANT_ID',
-        AZURE_AD_CLIENT_ID: 'AUTH_MICROSOFT_ID',
-        AZURE_AD_CLIENT_SECRET: 'AUTH_MICROSOFT_SECRET',
-        AZURE_AD_TENANT_ID: 'AUTH_MICROSOFT_TENANT_ID',
-      };
-      return `${envVar} → ${mapping[envVar]}`;
-    },
-    getVars: () =>
-      [
-        'AZURE_AD_CLIENT_ID',
-        'AZURE_AD_CLIENT_SECRET',
-        'AZURE_AD_TENANT_ID',
-        'AUTH_AZURE_AD_ID',
-        'AUTH_AZURE_AD_SECRET',
-        'AUTH_AZURE_AD_TENANT_ID',
-      ].filter((key) => process.env[key]),
-    message:
-      'Azure AD provider has been renamed to Microsoft. Please update your environment variables.',
-    name: 'Azure AD',
-  },
-  {
-    formatVar: (envVar) => {
-      const mapping = {
-        ZITADEL_CLIENT_ID: 'AUTH_ZITADEL_ID',
-        ZITADEL_CLIENT_SECRET: 'AUTH_ZITADEL_SECRET',
-        ZITADEL_ISSUER: 'AUTH_ZITADEL_ISSUER',
-      };
-      return `${envVar} → Please use ${mapping[envVar]} instead`;
-    },
-    getVars: () =>
-      ['ZITADEL_CLIENT_ID', 'ZITADEL_CLIENT_SECRET', 'ZITADEL_ISSUER'].filter(
-        (key) => process.env[key],
-      ),
-    message: 'ZITADEL environment variables have been renamed.',
-    name: 'ZITADEL',
   },
   {
     formatVar: () => 'OIDC_JWKS_KEY → Please use JWKS_KEY instead',
@@ -140,69 +98,42 @@ const DEPRECATED_CHECKS = [
     name: 'APP_URL Trailing Slash',
   },
   {
-    docUrl: `${MIGRATION_DOC_BASE}/providers/casdoor`,
-    getVars: () => {
-      const providers = process.env['AUTH_SSO_PROVIDERS'] || '';
-      if (providers.includes('casdoor') && !process.env['CASDOOR_WEBHOOK_SECRET']) {
-        return ['CASDOOR_WEBHOOK_SECRET'];
-      }
-      return [];
-    },
-    message:
-      'Casdoor webhook is recommended for syncing user data (email, avatar, etc.) to Orvilo. This is especially important for users migrating from NextAuth to Better Auth - users without email configured in Casdoor will not be able to login. Consider configuring CASDOOR_WEBHOOK_SECRET following the documentation.',
-    name: 'Casdoor Webhook',
-    severity: 'warning',
-  },
-  {
-    docUrl: `${MIGRATION_DOC_BASE}/providers/logto`,
-    getVars: () => {
-      const providers = process.env['AUTH_SSO_PROVIDERS'] || '';
-      if (providers.includes('logto') && !process.env['LOGTO_WEBHOOK_SIGNING_KEY']) {
-        return ['LOGTO_WEBHOOK_SIGNING_KEY'];
-      }
-      return [];
-    },
-    message:
-      'Logto webhook is recommended for syncing user data (email, avatar, etc.) to Orvilo. This is especially important for users migrating from NextAuth to Better Auth - users without email configured in Logto will not be able to login. Consider configuring LOGTO_WEBHOOK_SIGNING_KEY following the documentation.',
-    name: 'Logto Webhook',
-    severity: 'warning',
-  },
-  {
-    docUrl: `${MIGRATION_DOC_BASE}/nextauth-to-betterauth`,
-    formatVar: (envVar) => {
-      const mapping = {
-        AUTH_MICROSOFT_ENTRA_ID_BASE_URL: 'AUTH_MICROSOFT_AUTHORITY_URL',
-        AUTH_MICROSOFT_ENTRA_ID_ID: 'AUTH_MICROSOFT_ID',
-        AUTH_MICROSOFT_ENTRA_ID_SECRET: 'AUTH_MICROSOFT_SECRET',
-        AUTH_MICROSOFT_ENTRA_ID_TENANT_ID: 'AUTH_MICROSOFT_TENANT_ID',
-      };
-      return `${envVar} → ${mapping[envVar]}`;
-    },
+    docUrl: AUTH_DOC_URL,
     getVars: () =>
-      [
-        'AUTH_MICROSOFT_ENTRA_ID_ID',
-        'AUTH_MICROSOFT_ENTRA_ID_SECRET',
-        'AUTH_MICROSOFT_ENTRA_ID_TENANT_ID',
-        'AUTH_MICROSOFT_ENTRA_ID_BASE_URL',
-      ].filter((key) => process.env[key]),
+      Object.keys(process.env).filter(
+        (key) =>
+          process.env[key] &&
+          ([
+            'AUTH_SECRET',
+            'AUTH_SSO_PROVIDERS',
+            'AUTH_ALLOWED_EMAILS',
+            'AUTH_ADDITIONAL_TRUSTED_ORIGINS',
+            'AUTH_TRUSTED_ORIGINS',
+            'GOOGLE_CLIENT_ID',
+            'GOOGLE_CLIENT_SECRET',
+            'GITHUB_CLIENT_ID',
+            'GITHUB_CLIENT_SECRET',
+            'COGNITO_CLIENT_ID',
+            'COGNITO_CLIENT_SECRET',
+            'COGNITO_DOMAIN',
+            'COGNITO_REGION',
+            'COGNITO_USERPOOL_ID',
+            'MICROSOFT_CLIENT_ID',
+            'MICROSOFT_CLIENT_SECRET',
+            'ZITADEL_CLIENT_ID',
+            'ZITADEL_CLIENT_SECRET',
+            'ZITADEL_ISSUER',
+            'AZURE_AD_CLIENT_ID',
+            'AZURE_AD_CLIENT_SECRET',
+            'AZURE_AD_TENANT_ID',
+          ].includes(key) ||
+            /^AUTH_(?:AUTH0|AUTHELIA|AUTHENTIK|AZURE_AD|CASDOOR|CLOUDFLARE_ZERO_TRUST|COGNITO|GENERIC_OIDC|GITHUB|GOOGLE|KEYCLOAK|LOGTO|MICROSOFT|OKTA|ZITADEL)_/.test(
+              key,
+            )),
+      ),
     message:
-      'Microsoft Entra ID provider has been renamed to Microsoft. Please update your environment variables.',
-    name: 'Microsoft Entra ID',
-  },
-  {
-    docUrl: MIGRATION_DOC_BASE,
-    getVars: () => {
-      const hasEmailService =
-        process.env['SMTP_HOST'] || process.env['EMAIL_SERVICE_PROVIDER'] === 'resend';
-      const hasEmailVerification = process.env['AUTH_EMAIL_VERIFICATION'] === '1';
-      if (hasEmailService && !hasEmailVerification) {
-        return ['AUTH_EMAIL_VERIFICATION'];
-      }
-      return [];
-    },
-    message:
-      'Email service is configured but email verification is disabled. Consider setting AUTH_EMAIL_VERIFICATION=1 to verify user email ownership during registration.',
-    name: 'Email Verification',
+      'Better Auth settings are ignored. Configure sign-in providers and registration restrictions in Clerk, and connect the accounts portal using AUTH_ACCOUNTS_URL, CLERK_SECRET_KEY and CLERK_ISSUER. These settings do not configure GitHub App or Linear integrations.',
+    name: 'Retired Better Auth configuration',
     severity: 'warning',
   },
 ];
@@ -219,7 +150,7 @@ function printIssueBlock(name, vars, message, docUrl, formatVar, severity = 'err
   log('─'.repeat(50));
   log(
     isWarning
-      ? 'Missing recommended environment variables:'
+      ? 'Authentication configuration notice:'
       : 'Detected deprecated environment variables:',
   );
   for (const envVar of vars) {
@@ -257,7 +188,7 @@ function checkDeprecatedAuth(options = {}) {
   // Print warnings (non-blocking)
   if (warnings.length > 0) {
     console.warn('\n' + '═'.repeat(70));
-    console.warn(`⚠️  WARNING: Found ${warnings.length} recommended configuration(s) missing`);
+    console.warn(`⚠️  WARNING: Found ${warnings.length} authentication configuration notice(s)`);
     console.warn('═'.repeat(70));
 
     for (const issue of warnings) {

@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
+import * as localDeviceGateway from './local-device-gateway.mjs';
+
 for (const source of ['absent', 'shell', 'dotenv', 'cached', 'generator-failure']) {
   test(`seed launcher supplies local auth credentials (${source})`, async (t) => {
     const cwd = process.cwd();
@@ -16,9 +18,11 @@ for (const source of ['absent', 'shell', 'dotenv', 'cached', 'generator-failure'
     let generations = 0;
     const jwks = '{"keys":[{"kty":"RSA","d":"private-fixture"}]}';
     const jwksFile = '.records/env/agent-testing-jwks.json';
+    const tokenFile = path.join(dir, 'device-gateway.token');
     try {
       process.chdir(dir);
       delete process.env.CLERK_SECRET_KEY;
+      delete process.env.DEBUG;
       delete process.env.NODE_ENV;
       delete process.env.JWKS_KEY;
       Object.assign(process.env, {
@@ -36,6 +40,7 @@ for (const source of ['absent', 'shell', 'dotenv', 'cached', 'generator-failure'
         await mkdir(path.dirname(jwksFile), { recursive: true, mode: 0o700 });
         await writeFile(jwksFile, jwks, { mode: 0o600 });
       }
+      await writeFile(tokenFile, 'fixture-service-token');
       t.mock.module('node:child_process', {
         namedExports: {
           execFile: (command, args, options, callback) => {
@@ -46,12 +51,30 @@ for (const source of ['absent', 'shell', 'dotenv', 'cached', 'generator-failure'
               callback(new Error(`generator stderr: ${jwks}`), '', jwks);
             else callback(null, `${jwks}\n`, jwks);
           },
-          execFileSync: () => {
+          execFileSync: (command, args) => {
+            if (command === 'bash' && args?.includes('env')) {
+              if (args.some((arg) => String(arg).endsWith('local-gateway-setup.sh'))) {
+                return [
+                  'export ENABLE_AGENT_GATEWAY=1',
+                  'export AGENT_GATEWAY_URL=http://localhost:8788',
+                  `export AGENT_GATEWAY_SERVICE_TOKEN="$(cat '${tokenFile}')"`,
+                  '',
+                ].join('\n');
+              }
+              return [
+                'export DEVICE_GATEWAY_URL=http://localhost:8787',
+                `export DEVICE_GATEWAY_SERVICE_TOKEN="$(cat '${tokenFile}')"`,
+                '# Start Electron with DEVICE_GATEWAY_URL=http://localhost:8787 as well.',
+                '',
+              ].join('\n');
+            }
             throw new Error('No real subprocesses');
           },
           spawn: (command, args, options) => {
             launches.push({ args, env: options.env });
             const child = new EventEmitter();
+            child.stdout = new EventEmitter();
+            child.stderr = new EventEmitter();
             children.push(child);
             if (args.includes('dev:desktop'))
               queueMicrotask(() => {
@@ -60,6 +83,12 @@ for (const source of ['absent', 'shell', 'dotenv', 'cached', 'generator-failure'
               });
             return child;
           },
+        },
+      });
+      t.mock.module('./local-device-gateway.mjs', {
+        namedExports: {
+          ...localDeviceGateway,
+          waitForLocalPort: async () => {},
         },
       });
       t.mock.module('node:net', {
@@ -85,6 +114,14 @@ for (const source of ['absent', 'shell', 'dotenv', 'cached', 'generator-failure'
         return;
       }
       await import(`./desktop-with-seed-login.mjs?source=${source}`);
+      const gateway = launches.find(
+        ({ args }) =>
+          args.some((arg) => String(arg).endsWith('local-device-gateway-setup.sh')) &&
+          args.includes('start'),
+      );
+      assert.ok(gateway, 'skip-login starts the local device gateway before Next and Electron');
+      assert.equal(gateway.env.GATEWAY_PORT, '8787');
+      assert.equal(gateway.env.JWKS_KEY, jwks);
       const server = launches.find(({ args }) => args.includes('dev:next'));
       assert.equal(server.env.CLERK_API_URL, 'http://127.0.0.1:3411');
       assert.ok(
@@ -93,6 +130,21 @@ for (const source of ['absent', 'shell', 'dotenv', 'cached', 'generator-failure'
       );
       if (source === 'shell' || source === 'dotenv')
         assert.equal(server.env.CLERK_SECRET_KEY, `${source}-fixture-secret`);
+      assert.equal(server.env.DEVICE_GATEWAY_URL, 'http://localhost:8787');
+      assert.equal(server.env.DEVICE_GATEWAY_SERVICE_TOKEN, 'fixture-service-token');
+      assert.equal(server.env.AGENT_GATEWAY_URL, 'http://localhost:8788');
+      assert.equal(server.env.AGENT_GATEWAY_SERVICE_TOKEN, 'fixture-service-token');
+      assert.equal(server.env.ENABLE_AGENT_GATEWAY, '1');
+      const agentGateway = launches.find(
+        ({ args }) =>
+          args.some((arg) => String(arg).endsWith('local-gateway-setup.sh')) &&
+          args.includes('start'),
+      );
+      assert.ok(agentGateway, 'skip-login starts the local agent gateway before Next');
+      assert.equal(agentGateway.env.GATEWAY_PORT, '8788');
+      const desktop = launches.find(({ args }) => args.includes('dev:desktop'));
+      assert.equal(desktop.env.DEVICE_GATEWAY_URL, 'http://localhost:8787');
+      assert.equal(desktop.env.DEBUG, 'services:GatewayConnectionSrv');
       assert.ok(launches.every(({ env: childEnv }) => childEnv.JWKS_KEY === jwks));
       assert.equal(generations, source === 'absent' ? 1 : 0);
       if (source === 'absent' || source === 'cached') {

@@ -238,9 +238,6 @@ export const AGENT_SIGNAL_PROPOSAL_BRIEF_ACTIONS = [
   { key: 'feedback', label: 'Request changes', type: 'comment' },
 ] satisfies BriefAction[];
 
-/** Daily Brief actions for nightly self-review proposal cards. */
-export const AGENT_SIGNAL_SELF_REVIEW_PROPOSAL_BRIEF_ACTIONS = AGENT_SIGNAL_PROPOSAL_BRIEF_ACTIONS;
-
 const EvidenceRefSchema = z
   .object({
     id: z.string(),

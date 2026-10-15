@@ -19,7 +19,6 @@ services:
         condition: service_completed_successfully
     environment:
       - 'KEY_VAULTS_SECRET=${KEY_VAULTS_SECRET}'
-      - 'AUTH_SECRET=${AUTH_SECRET}'
       - 'DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${ORVILO_DB_NAME}'
       - 'ES_REINDEX_STATE_DIR=/app/.elasticsearch-reindex'
       - 'INTERNAL_APP_URL=http://localhost:3210'
@@ -104,6 +103,7 @@ services:
       - 'REDIS_URL=redis://redis:6379'
       - 'REDIS_PREFIX=orvilo'
       - 'REDIS_TLS=0'
+      - 'COLLABORATION_GATEWAY_URL=http://collaboration-gateway:3012'
     env_file:
       - .env
     entrypoint: ['/bin/node', '/app/hatchet-worker/worker.mjs']

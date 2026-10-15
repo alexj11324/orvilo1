@@ -22,8 +22,6 @@ const n = setNamespace('codeInterpreter');
 const log = debug('orvilo-store:builtin-tool');
 
 type Setter = StoreSetter<ChatStore>;
-export const codeInterpreterSlice = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new ChatCodeInterpreterActionImpl(set, get, _api);
 
 export class ChatCodeInterpreterActionImpl {
   readonly #get: () => ChatStore;

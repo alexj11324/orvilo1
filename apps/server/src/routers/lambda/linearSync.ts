@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
+import { TaskDomainError } from '@/database/errors/task';
 import {
   LINEAR_ISSUE_LINK_LIST_DEFAULT_LIMIT,
   LINEAR_ISSUE_LINK_TASK_ID_CAP,
@@ -122,7 +123,7 @@ const snapshotSchema = z.object({
 });
 
 const mapError = (error: unknown, operation: string): never => {
-  if (error instanceof TRPCError) throw error;
+  if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
   console.error(`[linearSync:${operation}]`, error);
   throw new TRPCError({
     cause: error,

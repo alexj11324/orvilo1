@@ -34,8 +34,6 @@ import { genParentMessages } from './selectors';
 const n = setNamespace('thd');
 
 type Setter = StoreSetter<ChatStore>;
-export const chatThreadMessage = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new ChatThreadActionImpl(set, get, _api);
 
 export class ChatThreadActionImpl {
   readonly #get: () => ChatStore;

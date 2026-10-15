@@ -505,23 +505,6 @@ export const createSelfReviewReceipts = (
 ): AgentSignalReceipt[] => createReceipts(input);
 
 /**
- * Projects one self-feedback summary receipt plus applied/proposed action receipts.
- *
- * Use when:
- * - Immediate self-feedback or self-reflection handlers finish a scoped run
- * - Receipt metadata carries self-feedback ideas or intents
- *
- * Expects:
- * - `plan.actions` and `result.actions` share action idempotency keys
- *
- * Returns:
- * - Receipts ordered as summary first, then action results in executor order
- */
-export const createSelfFeedbackReceipts = (
-  input: CreateSelfFeedbackReceiptsInput,
-): AgentSignalReceipt[] => createReceipts(input);
-
-/**
  * Projects terminal Agent Signal runtime results into user-visible receipts.
  *
  * Use when:

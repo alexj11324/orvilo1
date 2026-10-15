@@ -18,7 +18,7 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        pnpm install --node-linker=hoisted
+        pnpm install --frozen-lockfile --node-linker=hoisted
 
     - name: Assert open-source desktop business features are disabled
       shell: bash

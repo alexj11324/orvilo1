@@ -3,7 +3,7 @@ import { isLocalOrPrivateUrl } from '@orvilo/utils';
 
 import { getActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import type { ConnectorToolPermission } from '@/database/schemas';
-import { lambdaClient } from '@/libs/trpc/client';
+import { connectorService } from '@/services/connector';
 import { mcpService } from '@/services/mcp';
 import type { StoreSetter } from '@/store/types';
 
@@ -55,7 +55,7 @@ export class ConnectorActionImpl {
   fetchConnectors = async (): Promise<void> => {
     const scope = getActiveWorkspaceId();
     const requestId = ++this.#connectorListRequestId;
-    const data = await lambdaClient.connector.list.query();
+    const data = await connectorService.list();
     const committedRequestId = this.#connectorListCommittedRequestIds.get(scope) ?? 0;
     if (!this.#isStillInScope(scope) || requestId <= committedRequestId) return;
     this.#connectorListCommittedRequestIds.set(scope, requestId);
@@ -88,7 +88,7 @@ export class ConnectorActionImpl {
   fetchAgentBoundConnectors = async (): Promise<void> => {
     const scope = getActiveWorkspaceId();
     const requestId = ++this.#agentBoundListRequestId;
-    const data = await lambdaClient.connector.listAgentBound.query();
+    const data = await connectorService.listAgentBound();
     const committedRequestId = this.#agentBoundListCommittedRequestIds.get(scope) ?? 0;
     if (!this.#isStillInScope(scope) || requestId <= committedRequestId) return;
     this.#agentBoundListCommittedRequestIds.set(scope, requestId);
@@ -105,7 +105,7 @@ export class ConnectorActionImpl {
    */
   fetchAgentConnectors = async (agentId: string): Promise<void> => {
     const scope = getActiveWorkspaceId();
-    const data = await lambdaClient.connector.listByAgent.query({ agentId });
+    const data = await connectorService.listByAgent({ agentId });
     if (!this.#isStillInScope(scope)) return;
     this.#set(
       (s) => ({
@@ -119,14 +119,14 @@ export class ConnectorActionImpl {
 
   /** Copy a user connector into an agent-owned, independently editable row. */
   copyConnectorToAgent = async (connectorId: string, agentId: string): Promise<string> => {
-    const { id } = await lambdaClient.connector.copyToAgent.mutate({ agentId, connectorId });
+    const { id } = await connectorService.copyToAgent({ agentId, connectorId });
     await this.fetchAgentConnectors(agentId);
     return id;
   };
 
   /** Mount (reference + lock) a user connector onto an agent. */
   mountConnectorToAgent = async (connectorId: string, agentId: string): Promise<void> => {
-    await lambdaClient.connector.mountToAgent.mutate({ agentId, connectorId });
+    await connectorService.mountToAgent({ agentId, connectorId });
     await Promise.all([this.fetchAgentConnectors(agentId), this.fetchConnectors()]);
   };
 
@@ -137,9 +137,9 @@ export class ConnectorActionImpl {
     mode: 'unmount' | 'delete',
   ): Promise<void> => {
     if (mode === 'unmount') {
-      await lambdaClient.connector.unmountFromAgent.mutate({ connectorId });
+      await connectorService.unmountFromAgent({ connectorId });
     } else {
-      await lambdaClient.connector.delete.mutate({ id: connectorId });
+      await connectorService.delete({ id: connectorId });
     }
     await Promise.all([this.fetchAgentConnectors(agentId), this.fetchConnectors()]);
   };
@@ -150,7 +150,7 @@ export class ConnectorActionImpl {
    * Machine-managed OAuth tokens are excluded server-side.
    */
   getConnectorForEdit = async (id: string) => {
-    return lambdaClient.connector.getForEdit.query({ id });
+    return connectorService.getForEdit({ id });
   };
 
   /**
@@ -160,11 +160,11 @@ export class ConnectorActionImpl {
    * which is unreliable before `fetchConnectors` has completed.
    */
   createConnector = async (
-    params: Parameters<typeof lambdaClient.connector.create.mutate>[0],
+    params: Parameters<typeof connectorService.create>[0],
   ): Promise<{ id: string; isNew: boolean }> => {
     this.#set({ connectorCreating: true }, false, 'createConnector/start');
     try {
-      const created = await lambdaClient.connector.create.mutate(params);
+      const created = await connectorService.create(params);
       await this.fetchConnectors();
       return { id: created.id, isNew: created.isNew };
     } finally {
@@ -178,19 +178,19 @@ export class ConnectorActionImpl {
    * via pre-registration or DCR on the server.
    */
   startConnectorOAuth = async (id: string, attempt?: string): Promise<string> => {
-    const { authorizationUrl } = await lambdaClient.connector.startOAuth.mutate({ attempt, id });
+    const { authorizationUrl } = await connectorService.startOAuth({ attempt, id });
     return authorizationUrl;
   };
 
   /** Connect the official GitHub MCP through the server-held GitHub App grant. */
   connectGitHubMcp = async (attempt?: string) => {
-    const result = await lambdaClient.connector.connectGitHubMcp.mutate({ attempt });
+    const result = await connectorService.connectGitHubMcp({ attempt });
     if (result.status === 'connected') await this.#refreshConnectorLists();
     return result;
   };
 
   deleteConnector = async (id: string): Promise<void> => {
-    await lambdaClient.connector.delete.mutate({ id });
+    await connectorService.delete({ id });
     await this.#refreshConnectorLists();
   };
 
@@ -212,7 +212,7 @@ export class ConnectorActionImpl {
       };
     },
   ): Promise<void> => {
-    await lambdaClient.connector.update.mutate({ id, patch: patch as any });
+    await connectorService.update({ id, patch: patch as any });
     await this.#refreshConnectorLists();
   };
 
@@ -224,7 +224,7 @@ export class ConnectorActionImpl {
     );
     try {
       const syncedLocally = await this.#syncLocalConnectorTools(id);
-      if (!syncedLocally) await lambdaClient.connector.syncTools.mutate({ id });
+      if (!syncedLocally) await connectorService.syncTools({ id });
       await this.#refreshConnectorLists();
     } finally {
       this.#set(
@@ -254,7 +254,7 @@ export class ConnectorActionImpl {
     // header) needed to connect locally. OAuth2 tokens are machine-managed and
     // never leave the server — but OAuth against a localhost endpoint would be
     // server-unreachable anyway, so that combination stays on the server path.
-    const detail = await lambdaClient.connector.getForEdit.query({ id });
+    const detail = await connectorService.getForEdit({ id });
     const isStdio = detail.mcpConnectionType === 'stdio';
     const isLocalHttp = !!detail.mcpServerUrl && isLocalOrPrivateUrl(detail.mcpServerUrl);
     if (!isStdio && !isLocalHttp) return false;
@@ -304,7 +304,7 @@ export class ConnectorActionImpl {
       api = manifest.api ?? [];
     }
 
-    await lambdaClient.connector.syncToolsFromClientById.mutate({
+    await connectorService.syncToolsFromClientById({
       id,
       tools: api.map((a) => ({
         description: a.description,
@@ -316,7 +316,7 @@ export class ConnectorActionImpl {
   };
 
   disconnectConnector = async (id: string): Promise<void> => {
-    await lambdaClient.connector.update.mutate({
+    await connectorService.update({
       id,
       patch: { isEnabled: false },
     });
@@ -327,7 +327,7 @@ export class ConnectorActionImpl {
    * Reset all tool permissions for a connector back to 'auto' (fully open).
    */
   resetConnectorPermissions = async (id: string): Promise<void> => {
-    await lambdaClient.connector.resetPermissions.mutate({ id });
+    await connectorService.resetPermissions({ id });
     await this.#refreshConnectorLists();
   };
 
@@ -342,7 +342,7 @@ export class ConnectorActionImpl {
     sourceType: 'builtin' | 'custom' | 'marketplace';
     tools: Array<{ description?: string; inputSchema?: Record<string, unknown>; toolName: string }>;
   }): Promise<string> => {
-    const result = await lambdaClient.connector.syncToolsFromClient.mutate(params);
+    const result = await connectorService.syncToolsFromClient(params);
     await this.fetchConnectors();
     return result.connectorId;
   };
@@ -353,7 +353,7 @@ export class ConnectorActionImpl {
    * Returns the connectorId.
    */
   syncBuiltinTool = async (identifier: string): Promise<string> => {
-    const result = await lambdaClient.connector.syncBuiltinTool.mutate({ identifier });
+    const result = await connectorService.syncBuiltinTool({ identifier });
     await this.fetchConnectors();
     return result.connectorId;
   };
@@ -365,7 +365,7 @@ export class ConnectorActionImpl {
    * an MCP endpoint (those go through the frontend migration flow instead).
    */
   syncPluginTools = async (identifier: string): Promise<string | null> => {
-    const result = await lambdaClient.connector.syncPluginTools.mutate({ identifier });
+    const result = await connectorService.syncPluginTools({ identifier });
     await this.fetchConnectors();
     return result.connectorId;
   };
@@ -395,7 +395,7 @@ export class ConnectorActionImpl {
     );
 
     try {
-      await lambdaClient.connector.updateToolPermission.mutate({ permission, toolId });
+      await connectorService.updateToolPermission({ permission, toolId });
     } catch {
       // Roll back on error
       await this.#refreshConnectorLists();

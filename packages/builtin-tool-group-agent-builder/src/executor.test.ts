@@ -28,6 +28,10 @@ vi.mock('@/store/groupProfile', () => ({
   },
 }));
 
+vi.mock('@/services/agentManagerRuntime', () => ({
+  createClientAgentManagerCapabilities: vi.fn(() => ({})),
+}));
+
 vi.mock('@/services/agent', () => ({ agentService: {} }));
 vi.mock('@/services/discover', () => ({ discoverService: {} }));
 

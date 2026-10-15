@@ -251,13 +251,3 @@ export const getStableDesktopReleaseInfoFromUpdateServer = async (options?: {
 
   return { publishedAt, tag, urls, version: version.replace(/^v/i, '') };
 };
-
-export const resolveDesktopDownloadFromUpdateServer = async (options: {
-  baseUrl?: string;
-  type: DesktopDownloadType;
-}): Promise<DesktopDownloadInfo | null> => {
-  const info = await getStableDesktopReleaseInfoFromUpdateServer({ baseUrl: options.baseUrl });
-  if (!info) return null;
-
-  return resolveDesktopDownloadFromUrls({ ...info, type: options.type });
-};

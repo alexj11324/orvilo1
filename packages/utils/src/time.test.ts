@@ -338,6 +338,17 @@ describe('time utilities', () => {
       expect(result.text).toBe('4月29日');
     });
 
+    it('stays relative at any age when the threshold is unbounded', () => {
+      // The issue feed pins `relativeThresholdMs: Infinity` (Linear's feed
+      // never ages into absolute dates); the absolute value still ships as title.
+      const result = formatActivityTime('2000-01-01T00:00:00Z', {
+        now: '2026-05-01T10:00:00Z',
+        relativeThresholdMs: Number.POSITIVE_INFINITY,
+      });
+      expect(result.text).toBe('26 years ago');
+      expect(result.title).toBe(dayjs('2000-01-01T00:00:00Z').format('YYYY/MM/DD HH:mm:ss'));
+    });
+
     it('returns empty strings for missing or invalid input', () => {
       expect(formatActivityTime()).toEqual({ text: '', title: '' });
       expect(formatActivityTime('not a date')).toEqual({ text: '', title: '' });

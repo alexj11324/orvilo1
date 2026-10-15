@@ -30,6 +30,7 @@ import { userProfileSelectors } from '@/store/user/selectors';
 import { formatTaskItemDate } from '../features/formatTaskItemDate';
 import { useActiveTaskProject } from '../shared/useActiveTaskProject';
 import { useTaskProjectChange } from '../shared/useTaskProjectChange';
+import PropertyGroup from './PropertyGroup';
 import { RAIL_CONTROL_CLASS } from './railControl';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
@@ -278,15 +279,14 @@ const TaskProjectSection = memo(() => {
   ) : null;
 
   return (
-    <div className={styles.railSection}>
-      <span className={styles.railSectionLabel}>{t('taskDetail.project')}</span>
+    <PropertyGroup label={t('taskDetail.project')}>
       {projectRow}
       {/* The milestone row only exists where a milestone could: set, or a
           catalog the picker can file under. A project with zero milestones
           shows no row at all — there is nothing to choose and no state to
           claim. */}
       {(milestone || (canEdit && milestones.length > 0)) && project && milestoneRow}
-    </div>
+    </PropertyGroup>
   );
 });
 

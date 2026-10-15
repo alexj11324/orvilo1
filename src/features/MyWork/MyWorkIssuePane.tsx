@@ -32,7 +32,10 @@ const MyWorkIssuePane = memo<MyWorkIssuePaneProps>(({ identifier, onClose, onOpe
 
   return (
     <>
-      <div className="sticky z-2 inset-bs-0 flex items-center gap-1 py-2 ps-4 pe-2 border-be border-solid border-divider bg-card">
+      {/* The header is the cluster's size container: the copy icons in
+        `TaskDetailHeaderActions` fold into the ⋯ overflow when this bar is
+        narrow. */}
+      <div className="sticky z-2 inset-bs-0 flex items-center gap-1 py-2 ps-4 pe-2 border-be border-solid border-divider bg-card [container-type:inline-size]">
         <span className="text-sm font-medium">{identifier}</span>
         <div className="flex flex-row items-center justify-end gap-1 flex-1">
           <Suspense fallback={null}>

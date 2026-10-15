@@ -1,7 +1,16 @@
 import type { TaskWorkflowCategory } from '@orvilo/types';
 import { cn } from 'cn';
-import { CheckIcon, Flag, Link2, LinkIcon, MoreHorizontal, Plus, Search } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  CheckIcon,
+  ChevronDown,
+  Flag,
+  Link2,
+  LinkIcon,
+  MoreHorizontal,
+  Plus,
+  Search,
+} from 'lucide-react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
@@ -36,13 +45,16 @@ import {
   toggleRelationCandidate,
   writeRelationsOneByOne,
 } from './issueRelationPicker';
+import PropertyGroup from './PropertyGroup';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import {
+  collapseRelationRows,
   isOpenBlocker,
   ISSUE_RELATION_KINDS,
   type IssueRelationKind,
   relationKindOf,
 } from './relationGroups';
+import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 const TASK_STATUS_SET = new Set([
@@ -121,21 +133,18 @@ export const TaskBlockedNotice = () => {
   );
 };
 
-interface RelationFieldsProps {
-  /**
-   * A kind that was just added from "+ Add property": its search opens right
-   * away instead of leaving an empty field to click.
-   */
-  openKind?: string | null;
-  /** Empty relation kinds stay hidden unless listed here. */
-  revealedKinds?: ReadonlySet<string>;
+/**
+ * The Related group's rows and search, shared by the rail and the "Display
+ * properties" dialog. `showAllKinds` lists every kind's header, set or not —
+ * the dialog is a setup surface, the rail only shows kinds that have rows.
+ */
+export const TaskRelationFields = ({
+  showAllKinds = false,
+  taskId,
+}: {
+  showAllKinds?: boolean;
   taskId: string;
-}
-
-const isRelationKind = (kind?: string | null): kind is IssueRelationKind =>
-  ISSUE_RELATION_KINDS.includes(kind as IssueRelationKind);
-
-const TaskRelationFields = ({ openKind, revealedKinds, taskId }: RelationFieldsProps) => {
+}) => {
   const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
   const appOrigin = useAppOrigin();
@@ -151,20 +160,15 @@ const TaskRelationFields = ({ openKind, revealedKinds, taskId }: RelationFieldsP
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [selected, setSelected] = useState<SearchHit[]>([]);
-  // Follow `openKind` once per value (adjusted during render, no effect): the
-  // user can still close the search afterwards without it reopening.
-  const [followedKind, setFollowedKind] = useState<string | null>(null);
-  if ((openKind ?? null) !== followedKind) {
-    setFollowedKind(openKind ?? null);
-    if (isRelationKind(openKind) && allowed) {
-      setPicker(openKind);
-      setQuery('');
-      setHits([]);
-      setSelected([]);
-    }
-  }
+  // Rows past Linear's "Show N more" fold stay collapsed until asked for.
+  const [expanded, setExpanded] = useState(false);
   const [searching, setSearching] = useState(false);
+  // A "mark as" pick hands focus to the search input it opens; the menu must
+  // not pull focus back to its own trigger (same escape hatch as
+  // TaskProperties' "+ Add property" menu).
+  const pickerFromMenu = useRef(false);
   const { edges, grouped } = useRelationEdges();
+  const { hiddenCount, visible } = collapseRelationRows(grouped, expanded);
   const linkedKey = edges.map((edge) => edge.dependsOn).join('\n');
 
   const removalTotals = new Map<string, number>();
@@ -274,6 +278,9 @@ const TaskRelationFields = ({ openKind, revealedKinds, taskId }: RelationFieldsP
       );
       // A "blocking" edge is stored on the other Issue, so this one is refetched by hand.
       if (kind === 'blocking' && added.length > 0) await refreshTaskDetail(taskId);
+      // The change the user just made should be visible — a new edge in a
+      // folded kind must not stay behind "Show N more".
+      if (added.length > 0) setExpanded(true);
       if (failed.length === 0) {
         closePicker();
         return;
@@ -315,12 +322,25 @@ const TaskRelationFields = ({ openKind, revealedKinds, taskId }: RelationFieldsP
     );
   };
 
+  /** The group menu's "Mark current issue as" pick: opens that kind's search, or closes it again. */
+  const togglePicker = (kind: IssueRelationKind) => {
+    // Suppress focus restore only when the pick opens a search — its input
+    // autofocuses. Toggling the same kind off hands focus back to the menu
+    // trigger as usual.
+    pickerFromMenu.current = picker !== kind;
+    setPicker(picker === kind ? null : kind);
+    setQuery('');
+    setHits([]);
+    setSelected([]);
+  };
+
   return (
     <>
       {ISSUE_RELATION_KINDS.map((kind) => {
-        const rows = grouped[kind];
-        // Empty groups stay out of the rail until added from "Add property".
-        if (rows.length === 0 && picker !== kind && !revealedKinds?.has(kind)) return null;
+        const rows = visible[kind];
+        // An empty kind has no header row; the group's add menu still reaches
+        // its search. A kind can also sit entirely behind "Show N more".
+        if (rows.length === 0 && picker !== kind && !showAllKinds) return null;
         const { Icon, className: markClass } = RELATION_MARKS[kind];
         return (
           <div
@@ -334,22 +354,6 @@ const TaskRelationFields = ({ openKind, revealedKinds, taskId }: RelationFieldsP
             >
               <Icon aria-hidden className={markClass} size={16} />
               <span className="truncate">{t(`taskDetail.relations.${kind}`)}</span>
-              <span className="flex-1" />
-              {allowed && (
-                <Button
-                  aria-label={t('taskDetail.relations.add')}
-                  size="icon-sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setPicker(picker === kind ? null : kind);
-                    setQuery('');
-                    setHits([]);
-                    setSelected([]);
-                  }}
-                >
-                  <Plus />
-                </Button>
-              )}
             </div>
             {picker === kind && allowed && (
               <div className="overflow-hidden rounded-(--radius-card) border">
@@ -434,7 +438,7 @@ const TaskRelationFields = ({ openKind, revealedKinds, taskId }: RelationFieldsP
                   const canUnlink = Boolean(edge.relationId || edge.id);
                   return (
                     <div
-                      className="group flex min-h-8 items-center gap-1 hover:bg-accent"
+                      className="group flex min-h-7 items-center gap-1 hover:bg-accent"
                       key={edge.relationId ?? `${kind}:${edge.dependsOn}:${index}`}
                       // On the row, not the button: a disabled button swallows
                       // the pointer, and an unavailable issue still needs its id.
@@ -443,33 +447,25 @@ const TaskRelationFields = ({ openKind, revealedKinds, taskId }: RelationFieldsP
                       <Button
                         className="min-w-0 flex-1 justify-start gap-2 border-0 px-1 font-normal"
                         disabled={unavailable}
-                        size="compact"
+                        size="sm"
                         variant="ghost"
                         onClick={() =>
                           navigate(taskDetailPath(edge.dependsOn, undefined, edge.name))
                         }
                       >
                         {workflowVisual ? (
-                          <workflowVisual.icon color={workflowVisual.color} size={16} />
+                          <workflowVisual.icon color={workflowVisual.color} size={14} />
                         ) : (
-                          <TaskStatusIcon size={16} status={toTaskStatus(edge.status)} />
+                          <TaskStatusIcon size={14} status={toTaskStatus(edge.status)} />
                         )}
+                        {/* Linear's related row is just icon + title; the
+                            identifier only stands in when the title is absent. */}
                         <span
-                          className="shrink-0 font-mono text-muted-foreground"
+                          className={cn('min-w-0 flex-1 truncate', edge.name ? null : 'font-mono')}
                           style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
                         >
-                          {edge.dependsOn}
+                          {edge.name || edge.dependsOn}
                         </span>
-                        {edge.name ? (
-                          <span
-                            className="min-w-0 flex-1 truncate"
-                            style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
-                          >
-                            {edge.name}
-                          </span>
-                        ) : (
-                          <span className="flex-1" />
-                        )}
                         {unavailable ? (
                           <span
                             className="truncate text-muted-foreground"
@@ -521,6 +517,49 @@ const TaskRelationFields = ({ openKind, revealedKinds, taskId }: RelationFieldsP
           </div>
         );
       })}
+      {hiddenCount > 0 && (
+        <Button
+          className={styles.addProperty}
+          size="sm"
+          variant="ghost"
+          onClick={() => setExpanded(true)}
+        >
+          <ChevronDown data-icon="inline-start" />
+          {t('taskDetail.relations.showMore', { count: hiddenCount })}
+        </Button>
+      )}
+      {allowed && (
+        <DropdownMenu
+          onOpenChange={(open) => {
+            if (open) pickerFromMenu.current = false;
+          }}
+        >
+          <DropdownMenuTrigger
+            render={
+              <Button className={styles.addProperty} size="sm" variant="ghost">
+                <Plus data-icon="inline-start" />
+                {t('taskDetail.relations.add')}
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="start" finalFocus={() => !pickerFromMenu.current}>
+            <DropdownMenuGroup>
+              {/* Linear's "Mark current issue as" picks, in the header menu's
+                  order: each opens that kind's inline search under its header.
+                  Duplicate stays in the main column's TaskDuplicateRelation. */}
+              <DropdownMenuItem onClick={() => togglePicker('relates')}>
+                {t('taskDetail.menu.mark.relatedTo')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => togglePicker('blockedBy')}>
+                {t('taskDetail.menu.mark.blockedBy')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => togglePicker('blocking')}>
+                {t('taskDetail.menu.mark.blocking')}
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
       {!allowed && reason && <div className="px-2 text-xs text-muted-foreground">{reason}</div>}
       {errors.length > 0 && (
         <div className="flex flex-col gap-1 px-2 text-xs text-destructive" role="alert">
@@ -533,19 +572,28 @@ const TaskRelationFields = ({ openKind, revealedKinds, taskId }: RelationFieldsP
   );
 };
 
-const TaskPrerequisites = ({
-  openKind,
-  revealedKinds,
-}: Pick<RelationFieldsProps, 'openKind' | 'revealedKinds'>) => {
+/**
+ * The rail's "Related" group — Linear lists every issue this one is linked to
+ * as labelled kind groups (Blocked by → Blocks → Related) of status-icon +
+ * title rows that navigate on click (the identifier stands in only for a
+ * nameless row), folding long lists behind "Show N more". The group's one
+ * add affordance mirrors Linear's "Mark current issue as" menu.
+ */
+const TaskRelatedSection = memo(() => {
+  const { t } = useTranslation('chat');
   const taskId = useTaskDetailTaskId();
-  return taskId ? (
-    <TaskRelationFields
-      key={taskId}
-      openKind={openKind}
-      revealedKinds={revealedKinds}
-      taskId={taskId}
-    />
-  ) : null;
-};
+  if (!taskId) return null;
+  return (
+    <PropertyGroup label={t('taskDetail.relations.relates')}>
+      <div className={styles.properties}>
+        {/* Remount per Issue: picker state and the expanded fold belong to
+            the Issue they were opened on. */}
+        <TaskRelationFields key={taskId} taskId={taskId} />
+      </div>
+    </PropertyGroup>
+  );
+});
 
-export default TaskPrerequisites;
+TaskRelatedSection.displayName = 'TaskRelatedSection';
+
+export default TaskRelatedSection;

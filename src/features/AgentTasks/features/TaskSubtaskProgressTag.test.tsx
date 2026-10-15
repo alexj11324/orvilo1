@@ -93,6 +93,14 @@ describe('TaskSubtaskProgressTag', () => {
     expect(screen.getByText('2/3')).toBeInTheDocument();
   });
 
+  it('drops the chip chrome in borderless mode while keeping the summary', () => {
+    const { rerender } = render(<TaskSubtaskProgressTag progress={{ completed: 1, total: 3 }} />);
+    expect(screen.getByText('1/3').closest('[data-issue-row-chip]')).not.toBeNull();
+
+    rerender(<TaskSubtaskProgressTag borderless progress={{ completed: 1, total: 3 }} />);
+    expect(screen.getByText('1/3').closest('[data-issue-row-chip]')).toBeNull();
+  });
+
   it('uses the Issue category without a provider link, leaving execution progress alone', () => {
     render(
       <TaskSubtaskProgressTag
@@ -108,7 +116,10 @@ describe('TaskSubtaskProgressTag', () => {
       />,
     );
 
-    expect(screen.getByText('1/1')).toBeInTheDocument();
+    // The projected workflow category is canonical: an in-progress Issue is
+    // not done even when the legacy status projection still reads completed —
+    // the same rule the server's subtask progress SQL applies.
+    expect(screen.getByText('0/1')).toBeInTheDocument();
     expect(screen.getByTestId('subtask-T-2').querySelector('svg')).toHaveAttribute(
       'data-workflow-icon',
       'in_progress',

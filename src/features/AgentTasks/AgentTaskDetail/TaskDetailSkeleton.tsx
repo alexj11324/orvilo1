@@ -26,9 +26,9 @@ const TaskDetailBodySkeleton = () => (
   <div aria-busy className={cn('flex flex-1 flex-col', layout.root)}>
     <div className={layout.header}>
       <div className={cn('flex flex-col gap-3', layout.main)}>
-        {/* Title: 20px type on a 28px line. */}
+        {/* Title: 24px type on a 32px line. */}
         <div className="py-1">
-          <SkeletonBar height={20} width={'min(520px, 56%)'} />
+          <SkeletonBar height={24} width={'min(520px, 56%)'} />
         </div>
         {/* "Sub-issue of" parent bar: one 28px control line. */}
         <div className="flex h-7 items-center gap-2">
@@ -54,6 +54,20 @@ const TaskDetailBodySkeleton = () => (
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+          {/* The Labels group is always visible too — one affordance row. */}
+          <div className={layout.railSection}>
+            <span className={layout.railSectionLabel}>
+              <SkeletonBar height={12} width={48} />
+            </span>
+            <div className={layout.properties}>
+              <div className={layout.propertyRow}>
+                <div className={cn('gap-1.5', layout.propertyValue)}>
+                  <SkeletonBar height={16} radius={'50%'} width={16} />
+                  <SkeletonBar height={12} width={56} />
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -2,7 +2,15 @@ import { useEditor } from '@lobehub/editor/react';
 import { LexicalRenderer } from '@lobehub/editor/renderer';
 import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
-import { CornerDownRight, Link2, MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
+import {
+  CornerDownRight,
+  Link2,
+  MessageCircle,
+  MoreHorizontal,
+  Pencil,
+  Reply,
+  Trash,
+} from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
@@ -27,7 +35,7 @@ import {
 } from '@/features/EditorCanvas/editorAttachments';
 import { LinearFileCard } from '@/features/EditorCanvas/LinearFilePlugin';
 import { useWorkspaceCommentMentionOption } from '@/features/Portal/TopicComments/useWorkspaceCommentMentionOption';
-import { useActivityTime } from '@/hooks/useActivityTime';
+import { ALWAYS_RELATIVE, useActivityTime } from '@/hooks/useActivityTime';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 import { isOptimisticActivityId } from '@/store/task/slices/detail/optimisticActivity';
@@ -53,9 +61,18 @@ const rendererOverrides = {
 
 interface CommentCardProps {
   activity: TaskDetailActivity;
+  /**
+   * A reply inside a thread renders flat — the indent already carries the
+   * nesting, so it skips the card's border and padding chrome.
+   */
+  nested?: boolean;
+  /** Starts a composer reply aimed at this card's thread root. */
+  onReply?: (activity: TaskDetailActivity) => void;
+  /** This card's thread replies, in posting order. */
+  replies?: TaskDetailActivity[];
 }
 
-const CommentCard = memo<CommentCardProps>(({ activity }) => {
+const CommentCard = memo<CommentCardProps>(({ activity, nested, onReply, replies }) => {
   const { t } = useTranslation('chat');
   const deleteComment = useTaskStore((s) => s.deleteComment);
   const updateComment = useTaskStore((s) => s.updateComment);
@@ -65,7 +82,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
   const editor = useEditor();
   const mentionOption = useWorkspaceCommentMentionOption();
 
-  const { text: relTime, title: relTimeTitle } = useActivityTime(activity.time);
+  const { text: relTime, title: relTimeTitle } = useActivityTime(activity.time, ALWAYS_RELATIVE);
   const content = activity.content || t('taskDetail.activities.fallback.comment');
   const commentId = activity.id;
   const viewerId = useUserStore(userProfileSelectors.userId);
@@ -158,6 +175,11 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
     if (commentId) void copyCommentLink(commentId);
   }, [commentId, copyCommentLink]);
 
+  const canReply = canWrite && !!onReply && !!commentId && !isOptimisticActivityId(commentId);
+  const handleReply = useCallback(() => {
+    if (canReply) onReply?.(activity);
+  }, [activity, canReply, onReply]);
+
   const menuItems = useMemo(
     () => [
       ...(canEdit
@@ -199,12 +221,16 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
 
   return (
     <div
-      className={`relative flex flex-col gap-2 overflow-hidden rounded-(--radius-card) border px-2 py-3 transition-[box-shadow] duration-(--orvilo-motion-mid) motion-reduce:transition-none transition-orvilo-task-comment-highlight ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''}`}
+      className={`relative flex flex-col gap-2 rounded-(--radius-card) transition-[box-shadow] duration-(--orvilo-motion-mid) motion-reduce:transition-none transition-orvilo-task-comment-highlight ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''} ${nested ? 'py-1' : 'overflow-hidden border px-3 py-3'}`}
       id={commentId ? commentAnchorId(commentId) : undefined}
-      style={{
-        borderColor: 'var(--ant-color-border-secondary)',
-        background: 'var(--ant-color-bg-container)',
-      }}
+      style={
+        nested
+          ? undefined
+          : {
+              borderColor: 'var(--ant-color-border-secondary)',
+              background: 'var(--ant-color-bg-container)',
+            }
+      }
     >
       <div className="flex items-center gap-2">
         {activity.author?.type === 'agent' ? (
@@ -289,33 +315,57 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
         </Markdown>
       )}
 
-      {!isEditing && menuItems.length > 0 && commentId && !isOptimisticActivityId(commentId) && (
-        <div className={`${styles.commentActions} comment-actions`}>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <ActionIcon
-                  aria-label={t('more', { ns: 'common' })}
-                  icon={MoreHorizontal}
-                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                />
-              }
-            />
-            <DropdownMenuContent align={'end'} className="min-w-40">
-              {menuItems.map((item) => (
-                <DropdownMenuItem
-                  key={item.key}
-                  variant={item.danger ? 'destructive' : 'default'}
-                  onClick={item.onClick}
-                >
-                  <item.icon size={16} />
-                  <span className="flex-1">{item.label}</span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+      {/* Thread replies sit inside the card, one level deep like Linear. Each
+          keeps its own `comment-<id>` anchor so deep links still resolve. */}
+      {replies && replies.length > 0 && (
+        <div className="ms-2 flex flex-col gap-3 border-s border-divider ps-4">
+          {replies.map((reply) => (
+            <CommentCard nested activity={reply} key={reply.id} onReply={onReply} />
+          ))}
         </div>
       )}
+
+      {!isEditing &&
+        commentId &&
+        !isOptimisticActivityId(commentId) &&
+        (canReply || menuItems.length > 0) && (
+          <div className={`${styles.commentActions} comment-actions flex items-center gap-0.5`}>
+            {canReply && (
+              <ActionIcon
+                aria-label={t('taskDetail.comment.reply')}
+                icon={Reply}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                title={t('taskDetail.comment.reply')}
+                onClick={handleReply}
+              />
+            )}
+            {menuItems.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <ActionIcon
+                      aria-label={t('more', { ns: 'common' })}
+                      icon={MoreHorizontal}
+                      size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                    />
+                  }
+                />
+                <DropdownMenuContent align={'end'} className="min-w-40">
+                  {menuItems.map((item) => (
+                    <DropdownMenuItem
+                      key={item.key}
+                      variant={item.danger ? 'destructive' : 'default'}
+                      onClick={item.onClick}
+                    >
+                      <item.icon size={16} />
+                      <span className="flex-1">{item.label}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        )}
     </div>
   );
 });

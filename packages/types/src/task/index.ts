@@ -1408,6 +1408,11 @@ export interface TaskDetailActivity {
    * unlike `runningOperation`, which is cleared when the run terminates.
    */
   operationId?: string | null;
+  /**
+   * Comment-only: thread root this row replies to (Linear-style one-level
+   * threads). Absent/`null` on top-level comments.
+   */
+  parentCommentId?: string | null;
   priority?: string | null;
   /**
    * Property-only: something that changed on the Issue — a field, a relation,

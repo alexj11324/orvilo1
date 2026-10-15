@@ -23,8 +23,11 @@ const mocks = vi.hoisted(() => ({
   clearDuplicate: vi.fn(),
   confirmModal: vi.fn(),
   convertToTemplate: vi.fn(),
+  copyBranch: vi.fn(),
   copyEverything: vi.fn(),
+  copyId: vi.fn(),
   copyIssue: vi.fn(),
+  copyLink: vi.fn(),
   createFromTemplate: vi.fn(),
   createModal: vi.fn(),
   deleteTask: vi.fn(),
@@ -191,10 +194,10 @@ vi.mock('@/services/task', () => ({
 vi.mock('./createTaskIssueResourceModal', () => ({ openTaskIssueResourceModal: vi.fn() }));
 vi.mock('./useTaskCopyActions', () => ({
   useTaskCopyActions: () => ({
-    copyBranch: vi.fn(),
+    copyBranch: mocks.copyBranch,
     copyEverything: mocks.copyEverything,
-    copyId: vi.fn(),
-    copyLink: vi.fn(),
+    copyId: mocks.copyId,
+    copyLink: mocks.copyLink,
     copyMarkdown: vi.fn(),
     copyPrompt: vi.fn(),
     copyTitle: vi.fn(),
@@ -431,6 +434,69 @@ describe('TaskDetailHeaderActions', () => {
       act(() => child('copy', 'copyEverything')?.onClick?.());
 
       await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Links unavailable'));
+    });
+
+    describe('header icons', () => {
+      // The cluster's buttons in DOM order, named by aria-label or text.
+      const clusterLabels = () => {
+        const link = screen.getByRole('button', { name: 'taskList.contextMenu.copyLink' });
+        return [...(link.parentElement?.querySelectorAll('button') ?? [])].map(
+          (button) => button.getAttribute('aria-label') ?? button.textContent,
+        );
+      };
+
+      it('surfaces copy-link and copy-ID ahead of the favourite, branch hidden without one', () => {
+        render(<TaskDetailHeaderActions />);
+
+        // The subscribe control moved to the Activity section header — it is
+        // not part of this cluster any more.
+        expect(clusterLabels()).toEqual([
+          'taskList.contextMenu.copyLink',
+          'taskList.contextMenu.copyId',
+          'taskList.contextMenu.favorite',
+          'taskDetail.menu.actions',
+        ]);
+      });
+
+      it('seats the branch copy between ID and favourite for workspace-bound tasks', () => {
+        mocks.hasBranch = true;
+        render(<TaskDetailHeaderActions />);
+
+        expect(clusterLabels()).toEqual([
+          'taskList.contextMenu.copyLink',
+          'taskList.contextMenu.copyId',
+          'taskDetail.copyBranch',
+          'taskList.contextMenu.favorite',
+          'taskDetail.menu.actions',
+        ]);
+      });
+
+      it('runs the same clipboard actions as the Copy submenu', async () => {
+        mocks.hasBranch = true;
+        render(<TaskDetailHeaderActions />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'taskList.contextMenu.copyLink' }));
+        fireEvent.click(screen.getByRole('button', { name: 'taskList.contextMenu.copyId' }));
+        fireEvent.click(screen.getByRole('button', { name: 'taskDetail.copyBranch' }));
+
+        await waitFor(() => {
+          expect(mocks.copyLink).toHaveBeenCalledTimes(1);
+          expect(mocks.copyId).toHaveBeenCalledTimes(1);
+          expect(mocks.copyBranch).toHaveBeenCalledTimes(1);
+        });
+        expect(childKeys('copy')).toEqual(
+          expect.arrayContaining(['copyId', 'copyLink', 'copyBranch']),
+        );
+      });
+
+      it('reports a failed header copy instead of presenting it as done', async () => {
+        mocks.copyLink.mockRejectedValueOnce(new Error('Clipboard blocked'));
+        render(<TaskDetailHeaderActions />);
+
+        fireEvent.click(screen.getByRole('button', { name: 'taskList.contextMenu.copyLink' }));
+
+        await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('Clipboard blocked'));
+      });
     });
   });
 

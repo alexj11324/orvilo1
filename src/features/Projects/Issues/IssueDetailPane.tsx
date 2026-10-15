@@ -15,8 +15,10 @@ const LazyIssuePeekActions = lazy(() =>
 );
 
 const styles = {
+  // The header is the cluster's size container: the copy icons in
+  // `TaskDetailHeaderActions` fold into the ⋯ overflow when this bar is narrow.
   paneHeader:
-    'sticky top-0 z-2 flex items-center gap-1 border-be border-divider bg-background py-2 ps-4 pe-2',
+    'sticky top-0 z-2 flex items-center gap-1 border-be border-divider bg-background py-2 ps-4 pe-2 [container-type:inline-size]',
 };
 
 interface IssueDetailPaneProps {

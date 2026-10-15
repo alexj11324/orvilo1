@@ -7,13 +7,15 @@ import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TaskExecutionBadge from '../features/TaskExecutionBadge';
+import { taskDetailLayoutStyles } from './taskDetailLayoutStyles';
+import TaskProjectSection from './TaskProjectSection';
 import TaskProperties from './TaskProperties';
 
 const mocks = vi.hoisted(() => ({
   activeWorkspaceId: 'workspace-1' as string | undefined,
-  labelSelectorDefaultOpen: vi.fn(),
   moveWorkflow: vi.fn(),
   openTaskScheduleDialog: vi.fn(),
+  scheduleConfigDefaultOpen: vi.fn(),
   taskState: {
     activeTaskId: 'T-1',
     taskDetailMap: {
@@ -73,10 +75,7 @@ vi.mock('../features/AssigneeUserAvatar', () => ({
 }));
 
 vi.mock('../features/TaskLabelSelector', () => ({
-  default: ({ children, defaultOpen }: { children?: ReactNode; defaultOpen?: boolean }) => {
-    mocks.labelSelectorDefaultOpen(defaultOpen);
-    return <>{children}</>;
-  },
+  default: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('../features/TaskPriorityTag', () => ({
@@ -111,13 +110,37 @@ vi.mock('../shared/useUserDisplayMeta', () => ({
   useUserDisplayMeta: () => undefined,
 }));
 
-vi.mock('./TaskPrerequisites', () => ({
-  default: () => <div>relations</div>,
-  TaskBlockedNotice: () => null,
+vi.mock('../shared/useActiveTaskProject', () => ({
+  useActiveTaskProject: () => ({ milestones: [], taskDatabaseId: 'db-1' }),
+}));
+
+vi.mock('../shared/useTaskProjectChange', () => ({
+  useTaskProjectChange: () => ({ apply: vi.fn(), pending: false }),
+}));
+
+vi.mock('@/store/project', () => ({
+  useCurrentProjectList: () => [],
+  useProjectStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({ setTaskMilestone: vi.fn(), useFetchProjectList: () => undefined }),
+}));
+
+vi.mock('@/store/user', () => ({
+  useUserStore: () => 'user-1',
+}));
+
+vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
+  useWorkspaceAwareNavigate: () => vi.fn(),
+}));
+
+vi.mock('@/features/Workspace/WorkspaceLink', () => ({
+  default: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('./TaskScheduleConfig', () => ({
-  default: () => <div>schedule</div>,
+  default: ({ children, defaultOpen }: { children?: ReactNode; defaultOpen?: boolean }) => {
+    mocks.scheduleConfigDefaultOpen(defaultOpen);
+    return <div>{children}</div>;
+  },
 }));
 
 describe('TaskProperties', () => {
@@ -125,7 +148,7 @@ describe('TaskProperties', () => {
     mocks.activeWorkspaceId = 'workspace-1';
     mocks.moveWorkflow.mockClear();
     mocks.openTaskScheduleDialog.mockClear();
-    mocks.labelSelectorDefaultOpen.mockClear();
+    mocks.scheduleConfigDefaultOpen.mockClear();
   });
 
   afterEach(() => {
@@ -402,7 +425,6 @@ describe('TaskProperties', () => {
     for (const field of [
       'taskDetail.executionStatus',
       'taskDetail.dueDate',
-      'taskDetail.labels.title',
       'taskDetail.property.schedule',
     ]) {
       expect(screen.queryByRole('group', { name: field })).toBeNull();
@@ -417,14 +439,14 @@ describe('TaskProperties', () => {
     expect(mocks.openTaskScheduleDialog).toHaveBeenCalledWith({ dueDate: null, identifier: 'T-1' });
     expect(screen.queryByRole('group', { name: 'taskDetail.dueDate' })).toBeNull();
 
-    // Labels need their row as the picker's anchor: it appears with the picker open.
+    // A field whose picker anchors on its row appears with the picker open.
     fireEvent.click(screen.getByRole('button', { name: 'taskDetail.property.add' }));
-    fireEvent.click(await screen.findByText('taskDetail.labels.title'));
+    fireEvent.click(await screen.findByText('taskDetail.property.schedule'));
 
-    expect(screen.getByRole('group', { name: 'taskDetail.labels.title' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'taskDetail.property.schedule' })).toBeTruthy();
     // Open on mount, and only then: a later rebuild of the row must not reopen it.
-    expect(mocks.labelSelectorDefaultOpen.mock.calls[0]).toEqual([true]);
-    await waitFor(() => expect(mocks.labelSelectorDefaultOpen).toHaveBeenLastCalledWith(false));
+    expect(mocks.scheduleConfigDefaultOpen.mock.calls[0]).toEqual([true]);
+    await waitFor(() => expect(mocks.scheduleConfigDefaultOpen).toHaveBeenLastCalledWith(false));
   });
 
   // The due date used to be a clickable <div>: no role, no tab stop, so the
@@ -449,6 +471,72 @@ describe('TaskProperties', () => {
       });
     } finally {
       detailMap['T-1'] = original;
+    }
+  });
+
+  // The rail mirrors TaskDetailSections' mount: TaskProperties owns the
+  // Properties and Labels groups, TaskProjectSection the Project group.
+  it('orders the rail groups like Linear: Properties, then Labels, then Project', () => {
+    const { container } = render(
+      <div className={taskDetailLayoutStyles.propertyGroups}>
+        <TaskProperties />
+        <TaskProjectSection />
+      </div>,
+    );
+
+    const text = container.textContent ?? '';
+    const propertiesAt = text.indexOf('taskDetail.properties');
+    const labelsAt = text.indexOf('taskDetail.labels.title');
+    const projectAt = text.indexOf('taskDetail.project');
+    expect(propertiesAt).toBeGreaterThanOrEqual(0);
+    expect(labelsAt).toBeGreaterThan(propertiesAt);
+    expect(projectAt).toBeGreaterThan(labelsAt);
+  });
+
+  // Linear keeps the Labels section on screen permanently, with the
+  // "Add label" affordance standing in for an empty set.
+  it('always shows the Labels group with its add affordance when the issue has none', () => {
+    render(<TaskProperties />);
+
+    const labelsGroup = screen.getByText('taskDetail.labels.title').parentElement as HTMLElement;
+    const row = within(labelsGroup).getByRole('group', { name: 'taskDetail.labels.title' });
+    expect(within(row).getByText('taskDetail.property.addLabels')).toBeTruthy();
+  });
+
+  it('shows the label chips inside the Labels group once the issue has labels', () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    detail.labels = [{ id: 'label-1', name: 'bug' }];
+    try {
+      render(<TaskProperties />);
+
+      const labelsGroup = screen.getByText('taskDetail.labels.title').parentElement as HTMLElement;
+      expect(within(labelsGroup).getByText('labels')).toBeTruthy();
+      expect(within(labelsGroup).queryByText('taskDetail.property.addLabels')).toBeNull();
+    } finally {
+      detail.labels = [];
+    }
+  });
+
+  it('no longer offers labels in the add-property menu — it lives in its own group', async () => {
+    render(<TaskProperties />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'taskDetail.property.add' }));
+
+    expect(await screen.findByRole('menuitem', { name: 'taskDetail.dueDate' })).toBeTruthy();
+    expect(screen.queryByRole('menuitem', { name: 'taskDetail.labels.title' })).toBeNull();
+  });
+
+  // Relations moved out of the reveal model into the rail's own Related group.
+  it('no longer offers relation kinds in the add-property menu', async () => {
+    render(<TaskProperties />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'taskDetail.property.add' }));
+
+    expect(await screen.findByRole('menuitem', { name: 'taskDetail.dueDate' })).toBeTruthy();
+    for (const kind of ['blockedBy', 'blocking', 'relates']) {
+      expect(screen.queryByRole('menuitem', { name: `taskDetail.relations.${kind}` })).toBeNull();
     }
   });
 });

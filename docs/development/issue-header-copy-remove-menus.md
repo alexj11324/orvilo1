@@ -48,7 +48,7 @@ Delete
 - **条目标签描述的是对端 Issue**，标识符放在右侧 `extra`：`direction: 'blocking'` 的边显示为 “被阻塞的 Issue”，`blockedBy` 的边显示为 “阻塞方 Issue”。
 - **解除走现有 store 动作**：
   - 父 / 子 Issue → `updateTask(<子端 id>, { parentTaskId: null })`。该动作自带失败 toast，并会刷新父子两端的详情与列表。
-  - 关联 → 有 `relationId` 时走 `removeIssueRelation`，否则走 `removeDependency`，端点选择与 `TaskPrerequisites` 里的关联行完全一致；失败时提示 `taskDetail.menu.removeFailed`。
+  - 关联 → 有 `relationId` 时走 `removeIssueRelation`，否则走 `removeDependency`，端点选择与 `TaskRelatedSection` 里的关联行完全一致；失败时提示 `taskDetail.menu.removeFailed`。
 
 ### 取消 / 重新打开
 
@@ -62,7 +62,7 @@ Delete
 
 ## 范围之外
 
-- “添加子 Issue” / “添加关联” 快捷入口：现有入口是 `TaskSubtasks`、`TaskPrerequisites` 的组件内部状态，从头部菜单触发需要新的跨组件通道，暂不做。
+- “添加子 Issue” / “添加关联” 快捷入口：现有入口是 `TaskSubtasks`、`TaskRelatedSection` 的组件内部状态，从头部菜单触发需要新的跨组件通道，暂不做。
 - Plane 的 “Edit”：详情页本身就是就地编辑，没有对应动作。
 - 团队转移重写、截止日期 / 重复 / 链接资源、“创建关联 / 标记为” 弹窗、“复制全部内容”、收藏星标位置。
 - 依赖 `taskMenu` 服务端路由的条目（移除重复关系、移除链接、重复规则）在该路由落地前不提供。

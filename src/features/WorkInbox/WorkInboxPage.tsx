@@ -1026,7 +1026,10 @@ const WorkInboxPage = memo(() => {
       // first-class for approval-type cards. IssueContent mounts directly in
       // the pane's scroll owner — no nested scroll host, no page chrome.
       <>
-        <div className="sticky z-2 inset-bs-0 flex items-center gap-1 py-2 ps-4 pe-2 border-be border-solid border-divider bg-card">
+        {/* The header is the cluster's size container: the copy icons in
+          `TaskDetailHeaderActions` fold into the ⋯ overflow when this bar is
+          narrow. */}
+        <div className="sticky z-2 inset-bs-0 flex items-center gap-1 py-2 ps-4 pe-2 border-be border-solid border-divider bg-card [container-type:inline-size]">
           {surface === 'detail' ? (
             <Button
               aria-label={tCommon('back')}

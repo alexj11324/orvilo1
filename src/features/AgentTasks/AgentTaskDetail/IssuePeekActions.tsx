@@ -16,9 +16,9 @@ interface IssuePeekActionsProps {
 }
 
 /**
- * The right-hand cluster of a peek pane header: the issue's save status, the
- * favourite star and the "…" menu — the same pieces the full page header
- * mounts, bound to the pane's own issue.
+ * The right-hand cluster of a peek pane header: the issue's save status and
+ * header actions (copy icons, favourite star, the "…" menu) — the same
+ * pieces the full page header mounts, bound to the pane's own issue.
  */
 const IssuePeekActions = memo<IssuePeekActionsProps>(({ onDeleted, taskId }) => (
   <TaskDetailScope taskId={taskId}>

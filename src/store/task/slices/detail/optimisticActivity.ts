@@ -110,6 +110,8 @@ export interface BuildOptimisticCommentInput {
   content: string;
   editorData?: unknown;
   now: string;
+  /** Thread root when this is a reply — already normalized by the caller. */
+  parentCommentId?: string | null;
   topicId?: string | null;
 }
 
@@ -126,6 +128,7 @@ export const buildOptimisticCommentActivity = ({
   content,
   editorData,
   now,
+  parentCommentId,
   topicId,
 }: BuildOptimisticCommentInput): TaskDetailActivity | undefined => {
   if (!actor) return undefined;
@@ -134,6 +137,7 @@ export const buildOptimisticCommentActivity = ({
     content,
     editorData,
     id: `${OPTIMISTIC_ACTIVITY_ID_PREFIX}comment-${now}`,
+    parentCommentId: parentCommentId ?? null,
     time: now,
     topicId: topicId ?? null,
     type: 'comment',

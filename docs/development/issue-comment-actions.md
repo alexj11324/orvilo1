@@ -24,9 +24,8 @@ Changing server authorship policy requires a separate decision covering those ag
 `id="comment-<id>"`; when the URL hash matches, `CommentCard` scrolls it into view and rings it for
 two seconds.
 
-A valid comment fragment temporarily includes that specific comment even when the user's stored
-filter is Updates, and expands a collapsed activity feed. It does not write a new filter preference;
-removing the fragment restores ordinary filtering. Unknown fragments do not reveal other comments.
+A valid comment fragment expands a collapsed activity feed so the linked card mounts and can
+scroll itself into view. Unknown fragments expand nothing.
 
 ## Not done: "edited" marker
 
@@ -34,11 +33,11 @@ The activity payload for a comment (`apps/server/src/services/task/index.ts`, co
 carries `time` = `createdAt`. `task_comments.updatedAt` exists but is not returned, so an
 "edited" marker needs the server to add it to `TaskDetailActivity`.
 
-## Activity filter
+## Activity feed
 
-All / Comments / Updates is a single-choice `ToggleGroup`. The choice is stored per user in
-`localStorage` under `orvilo:task-activity-filter:<userId>` (default All; storage errors are
-ignored, including browsers that throw when the `localStorage` property itself is accessed).
+The feed is one unified timeline: no filter UI and no stored preference — every activity kind
+always renders. `filterActivitiesForFeed` remains only as the seam the list is built through,
+always called with `'all'`, which keeps the deep-linked comment path and its tests working.
 
 ## Failed comment submit
 

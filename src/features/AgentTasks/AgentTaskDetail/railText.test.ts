@@ -8,9 +8,12 @@ import { taskDetailLayoutStyles } from './taskDetailLayoutStyles';
 const readSource = (file: string) => readFileSync(path.join(__dirname, file), 'utf8');
 
 /**
- * Rail values keep DESIGN.md's scoped 13px role. The issue title consumes the
- * 20px/600 heading role on the control itself, including the responsive override.
- * Description keeps the scoped 15px/450 reading role.
+ * Rail values keep DESIGN.md's scoped 13px role while the rail's group labels
+ * carry Linear's measured 16px/400 muted heading line. The issue title
+ * consumes the 24px/600 heading step on the control itself (Linear's
+ * issue-title role, one step inside the 38/30/24/20/16 scale), including the
+ * responsive override. Description keeps the scoped 15px/450 reading role,
+ * and the top-level Activity band carries the 15px/600 heading tier.
  */
 describe('issue rail type scale', () => {
   it('pins the shared rail value size to the measured step', () => {
@@ -28,7 +31,7 @@ describe('issue rail type scale', () => {
     'TaskAcceptanceStateRow.tsx',
     'TaskProjectSection.tsx',
     'TaskParentBar.tsx',
-    'TaskPrerequisites.tsx',
+    'TaskRelatedSection.tsx',
   ])('%s sizes every rail Text explicitly — never the 14px default', (file) => {
     const source = readSource(file);
     expect(source).toContain('RAIL_VALUE_FONT_SIZE');
@@ -37,21 +40,73 @@ describe('issue rail type scale', () => {
     expect(unstyled).toEqual([]);
   });
 
-  it('keeps the issue title at the DESIGN.md 20px strong heading role', () => {
-    const classes = taskStyles.titleInput.split(' ');
-    expect(classes).toEqual(
-      expect.arrayContaining(['text-xl', 'md:text-xl', 'leading-7', 'font-semibold']),
-    );
-    expect(classes).not.toContain('text-2xl');
-    expect(classes).not.toContain('md:text-2xl');
-    expect(taskStyles.titleInput).not.toMatch(/text-\[\d+px\]/);
+  it('keeps the issue title at the 24px/600 heading step, input and text alike', () => {
+    for (const key of ['titleInput', 'titleText'] as const) {
+      const classes = taskStyles[key].split(' ');
+      expect(classes).toEqual(expect.arrayContaining(['text-2xl', 'leading-8', 'font-semibold']));
+      expect(classes).not.toContain('text-xl');
+      expect(taskStyles[key]).not.toMatch(/text-\[\d+px\]/);
+    }
+    // The editable control keeps the responsive pin that guards the 24px step.
+    expect(taskStyles.titleInput.split(' ')).toContain('md:text-2xl');
     expect(taskStyles.titleInput).not.toContain('.ant-input');
+  });
+
+  it('keeps the rail group labels on the measured 16px/400 muted tier', () => {
+    // Linear's rail section labels (Properties / Labels / Related) measure
+    // 16px at weight 400 on muted ink — a real heading line, not the compact
+    // 12px/500 the collapsible section headers keep.
+    const classes = taskDetailLayoutStyles.railSectionLabel.split(' ');
+    expect(classes).toEqual(
+      expect.arrayContaining(['text-base', 'font-normal', 'text-muted-foreground']),
+    );
+  });
+
+  it('keeps the top-level Activity band on the 15px/600 heading tier', () => {
+    const classes = taskDetailLayoutStyles.sectionHeading.split(' ');
+    expect(classes).toEqual(expect.arrayContaining(['text-[15px]', 'leading-5', 'font-semibold'])); // linear-token-override: asserts the annotated 15px Activity band literal in taskDetailLayoutStyles.sectionHeading.
+    // Only the Activity section opts in; the compact sections keep 12px/500
+    // (Linear's measured Sub-issues collapse label).
+    expect(readSource('TaskActivities.tsx')).toContain('variant="heading"');
+    const header = readSource('TaskDetailSectionHeader.tsx');
+    expect(header).toContain('taskDetailLayoutStyles.sectionHeading');
+    expect(header).toContain('text-xs font-medium');
   });
 
   it('keeps the description at 15px/450 rather than the editor default', () => {
     const source = readSource('TaskInstruction.tsx');
     expect(source).toMatch(/['"]?fontSize['"]?: 15/);
     expect(source).toMatch(/['"]?fontWeight['"]?: 450/);
+  });
+});
+
+/**
+ * The body section headers are Linear's flat rows, not pill chips: a 24px
+ * transparent collapse button led by the folding chevron (the Activity band
+ * lifts to a 32px container), the done/total progress reads inline without
+ * chip chrome, and section actions stay inside the same row.
+ */
+describe('issue section header chrome', () => {
+  const header = readSource('TaskDetailSectionHeader.tsx');
+
+  it('keeps the collapse toggle flat at the measured 24px/32px tiers', () => {
+    expect(header).toContain('min-h-6');
+    expect(header).toContain('min-h-8');
+    expect(header).toContain('bg-transparent');
+    // No pill chrome: the ghost button keeps no padding or border.
+    expect(header).toContain('px-0');
+    expect(header).toContain('border-0');
+  });
+
+  it('leads the label with the folding chevron, not a section icon', () => {
+    const chevron = header.indexOf('<AccordionArrowIcon');
+    expect(chevron).toBeGreaterThanOrEqual(0);
+    expect(chevron).toBeLessThan(header.indexOf('{title}'));
+    expect(header).not.toContain('LucideIcon');
+  });
+
+  it('reads the sub-issue progress inline without chip chrome', () => {
+    expect(readSource('TaskSubtasks.tsx')).toContain('borderless');
   });
 });
 

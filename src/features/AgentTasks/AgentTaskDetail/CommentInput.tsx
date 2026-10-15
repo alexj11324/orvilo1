@@ -1,9 +1,11 @@
 import { SendButton, useEditor } from '@lobehub/editor/react';
 import { $getRoot } from 'lexical';
-import { memo, useCallback, useState } from 'react';
+import { X } from 'lucide-react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
+import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
 import { toast } from '@/components/toast';
 import { AttachmentUploadButton } from '@/features/AttachmentInput';
@@ -22,7 +24,18 @@ import { useTaskStore } from '@/store/task';
 import { styles } from '../shared/style';
 import { useTaskCommentDraft } from './useTaskCommentDraft';
 
-const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
+/** The thread root a reply is aimed at; shown as a cancellable chip over the composer. */
+export interface CommentReplyTarget {
+  /** Parent author's display name for the replying-to chip. */
+  authorName?: string | null;
+  commentId: string;
+}
+
+const CommentInput = memo<{
+  onClearReply?: () => void;
+  replyTarget?: CommentReplyTarget | null;
+  taskId: string;
+}>(({ onClearReply, replyTarget, taskId }) => {
   const { t } = useTranslation('chat');
   const [searchParams] = useSearchParams();
   const { allowed: canEditTask } = usePermission('create_content');
@@ -53,6 +66,12 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
 
   const canSubmit = hasContent || hasAttachments;
 
+  // Reply intent was announced in the feed; put the caret where the answer goes.
+  const replyCommentId = replyTarget?.commentId;
+  useEffect(() => {
+    if (replyCommentId) editor?.focus();
+  }, [editor, replyCommentId]);
+
   const handleContentChange = useCallback(() => {
     const lexicalEditor = editor?.getLexicalEditor?.();
     if (!lexicalEditor) return;
@@ -81,7 +100,10 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
     setSubmitting(true);
     try {
       try {
-        await addComment(taskId, markdown, { editorData: json });
+        await addComment(taskId, markdown, {
+          editorData: json,
+          parentCommentId: replyTarget?.commentId,
+        });
       } catch (error) {
         // The draft stays in the editor so the user can retry. The store has
         // already rolled back the optimistic row; nothing else tells them.
@@ -92,14 +114,41 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
       editor?.cleanDocument?.();
       setHasContent(false);
       setHasAttachments(false);
+      onClearReply?.();
       await clearAfterSend();
     } finally {
       setSubmitting(false);
     }
-  }, [canEditTask, taskId, editor, addComment, clearAfterSend, submitting, t]);
+  }, [
+    canEditTask,
+    taskId,
+    editor,
+    addComment,
+    clearAfterSend,
+    onClearReply,
+    replyTarget,
+    submitting,
+    t,
+  ]);
 
   return (
     <div className={`flex flex-col gap-1.5 ${styles.commentInputCard}`} id="task-comment-composer">
+      {replyTarget && (
+        <div className="flex items-center gap-1 ps-1 text-xs text-muted-foreground">
+          <span className="truncate">
+            {t('taskDetail.comment.replyingTo', {
+              name: replyTarget.authorName ?? t('taskDetail.comment.replyFallback'),
+            })}
+          </span>
+          <ActionIcon
+            aria-label={t('taskDetail.comment.cancelReply')}
+            icon={X}
+            size={'small'}
+            title={t('taskDetail.comment.cancelReply')}
+            onClick={onClearReply}
+          />
+        </div>
+      )}
       <div className="flex items-center gap-2" style={{ minWidth: 0, width: '100%' }}>
         <Avatar avatar={userAvatar} size={24} style={{ flexShrink: 0 }} />
         <div

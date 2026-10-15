@@ -48,7 +48,6 @@ import { useIssueStatusMove } from '../features/useIssueStatusMove';
 import { taskDeleteConfirmCopy } from '../shared/taskDeleteConfirm';
 import { openTaskIssueResourceModal } from './createTaskIssueResourceModal';
 import { issueResourceRef } from './issueResourceRef';
-import IssueSubscribeToggle from './IssueSubscribeToggle';
 import { relationKindOf } from './relationGroups';
 import { openTaskDescriptionHistoryModal } from './TaskDescriptionHistoryModal';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
@@ -126,7 +125,7 @@ const useTaskRemoveMenuItems = (taskId: string | undefined, disabled: boolean) =
       const kind = relationKindOf(edge);
       if (!kind) continue;
 
-      // Same endpoints the relation rows in `TaskPrerequisites` unlink with.
+      // Same endpoints the relation rows in `TaskRelatedSection` unlink with.
       const unlink = () => {
         if (edge.relationId) return removeIssueRelation(taskId, edge.relationId);
         if (kind === 'blocking') return removeDependency(edge.dependsOn, taskId, 'blocks');
@@ -418,6 +417,35 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
     : t('taskList.contextMenu.favorite');
   const FavoriteGlyph = pinned ? FAVORITE_MARK_OFF.star : FAVORITE_MARK.star;
 
+  // Linear surfaces link / issue-ID / branch copies as quiet icons ahead of the
+  // favourite and the overflow; the same commands stay in the ··· Copy submenu
+  // below. `copyId` writes the readable identifier (T-1) once known — the same
+  // value Linear's "copy issue ID" produces.
+  const headerCopyButtons = [
+    {
+      action: copy.copyLink,
+      icon: <LinkIcon aria-hidden />,
+      key: 'copyLink',
+      label: t('taskList.contextMenu.copyLink'),
+    },
+    {
+      action: copy.copyId,
+      icon: <CopyIcon aria-hidden />,
+      key: 'copyId',
+      label: t('taskList.contextMenu.copyId'),
+    },
+    ...(copy.hasBranch
+      ? [
+          {
+            action: copy.copyBranch,
+            icon: <GitBranchIcon aria-hidden />,
+            key: 'copyBranch',
+            label: t('taskDetail.copyBranch'),
+          },
+        ]
+      : []),
+  ];
+
   const items: SidebarMenuItems = [
     // The host adapter decides what a tab is: an app tab on desktop, a browser
     // tab on web.
@@ -594,7 +622,23 @@ const TaskDetailHeaderActions = ({ onDeleted }: { onDeleted?: () => void }) => {
 
   return (
     <div className="flex shrink-0 items-center gap-1">
-      <IssueSubscribeToggle />
+      {/* The copy icons fold away where the cluster's bar is narrow — the
+        peek panes' header and a slim surface both resolve this unnamed
+        container query. Every hidden command stays in the ··· Copy submenu,
+        so collapsing loses no action. */}
+      {headerCopyButtons.map(({ action, icon, key, label }) => (
+        <Button
+          aria-label={label}
+          className="[@container_(width<480px)]:hidden"
+          key={key}
+          size="icon-sm"
+          title={label}
+          variant="ghost"
+          onClick={() => void apply(action)}
+        >
+          {icon}
+        </Button>
+      ))}
       <Button
         aria-label={favoriteLabel}
         aria-pressed={pinned}

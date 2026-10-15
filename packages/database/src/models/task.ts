@@ -4275,6 +4275,29 @@ export class TaskModel {
     // already have validated the task via `resolveOrThrow`).
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
+      // A reply must name a comment the caller can see on this same issue.
+      // Threads are one level deep (Linear-style): a reply to a reply lands
+      // on the thread root instead of nesting further.
+      let parentCommentId = data.parentCommentId ?? null;
+      if (parentCommentId) {
+        const [parent] = await runner
+          .select({
+            id: taskComments.id,
+            parentCommentId: taskComments.parentCommentId,
+            taskId: taskComments.taskId,
+          })
+          .from(taskComments)
+          .where(and(eq(taskComments.id, parentCommentId), this.commentsOwnership()))
+          .limit(1)
+          .for('key share');
+        if (!parent || parent.taskId !== data.taskId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Parent comment not found on this issue',
+          });
+        }
+        parentCommentId = parent.parentCommentId ?? parent.id;
+      }
       const visibility = await new TaskModel(
         runner,
         this.userId,
@@ -4282,7 +4305,7 @@ export class TaskModel {
       ).getTaskVisibility(data.taskId);
       const [comment] = await runner
         .insert(taskComments)
-        .values({ ...data, visibility, workspaceId: this.workspaceId ?? null })
+        .values({ ...data, parentCommentId, visibility, workspaceId: this.workspaceId ?? null })
         .returning();
       // A member who joins the discussion keeps hearing about the Issue.
       // Agent-authored comments subscribe nobody.

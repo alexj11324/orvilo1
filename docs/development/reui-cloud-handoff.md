@@ -68,7 +68,7 @@ PR285 新增 migration0195，并改动 Favorites 拖拽、TeamHome resources、P
 
 ### D. 右侧 Issue 属性栏未迁移
 
-规格：[`../research/reui/issue-rail/SPEC.md`](../research/reui/issue-rail/SPEC.md)。主文件 `AgentTasks/AgentTaskDetail/{TaskDetailSections,TaskProperties,TaskProjectSection,TaskRailActions,TaskPrerequisites,taskDetailLayoutStyles}` 与共享 property pickers。该内容被 full-page / MyIssues pane /chat portal 复用。
+规格：[`../research/reui/issue-rail/SPEC.md`](../research/reui/issue-rail/SPEC.md)。主文件 `AgentTasks/AgentTaskDetail/{TaskDetailSections,TaskProperties,TaskProjectSection,TaskRailActions,TaskRelatedSection,taskDetailLayoutStyles}` 与共享 property pickers。该内容被 full-page / MyIssues pane /chat portal 复用。
 
 参考顺序：quick copy actions → Properties（Status/Priority/Assignee）→ 独立 Labels → Project → 缩进 milestone。普通 value 文本和按钮中性、透明 idle；不要仍混用强调色。保留 reviewer、acceptance、schedule 等 Orvilo 真功能。精确 workflow state/CAS、disabled running、project-owner milestone 权限必须保留。
 

@@ -39,31 +39,23 @@ import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionS
 import { getPriorityIconColor } from '@/components/PriorityIcon';
 import SimpleEmpty from '@/components/SimpleEmpty';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import type { BriefItem } from '@/features/DailyBrief/types';
-import { useActivityTime } from '@/hooks/useActivityTime';
+import { ALWAYS_RELATIVE, useActivityTime } from '@/hooks/useActivityTime';
 import { useTaskStore } from '@/store/task';
 import { taskActivitySelectors, taskDetailSelectors } from '@/store/task/selectors';
-import { useUserStore } from '@/store/user';
-import { userProfileSelectors } from '@/store/user/selectors';
 
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import { PRIORITY_META } from '../features/TaskPriorityTag';
 import { styles } from '../shared/style';
-import {
-  ACTIVITY_FEED_FILTERS,
-  type ActivityFeedFilter,
-  filterActivitiesForFeed,
-  isLinkedCommentActivity,
-  readStoredActivityFilter,
-  writeStoredActivityFilter,
-} from './activityFeedFilter';
+import { filterActivitiesForFeed, isLinkedCommentActivity } from './activityFeedFilter';
 import { resolveAssignmentActivityCopy } from './assignmentActivityCopy';
 import CommentCard from './CommentCard';
 import { commentComposerKey } from './commentComposerKey';
-import CommentInput from './CommentInput';
+import CommentInput, { type CommentReplyTarget } from './CommentInput';
+import { splitCommentThreads } from './commentThreads';
+import IssueSubscribeToggle from './IssueSubscribeToggle';
 import PropertyChangeSentence from './PropertyChangeSentence';
 import TaskBriefCard from './TaskBriefCard';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
@@ -168,7 +160,7 @@ const ActivityAuthor = memo<{
 });
 
 const RelativeTime = memo<{ time?: string }>(({ time }) => {
-  const { text, title } = useActivityTime(time);
+  const { text, title } = useActivityTime(time, ALWAYS_RELATIVE);
   if (!text) return null;
   return (
     <span style={{ color: 'var(--ant-color-text-quaternary)', marginInlineStart: 4 }} title={title}>
@@ -486,46 +478,74 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   const activeTaskDatabaseId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
   const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
   const [isExpanded, setIsExpanded] = useState(true);
-  const viewerId = useUserStore(userProfileSelectors.userId);
   const { hash } = useLocation();
-  const [feedFilter, setFeedFilter] = useState<ActivityFeedFilter>(() =>
-    readStoredActivityFilter(viewerId),
-  );
   const hasLinkedComment = activities.some((activity) => isLinkedCommentActivity(activity, hash));
   useEffect(() => {
     // The target card must be mounted before its scroll/highlight effect can run.
     // Expand once for this link; a later manual collapse remains the user's choice.
     if (hasLinkedComment) setIsExpanded(true);
   }, [hasLinkedComment, hash]);
-  const handleFilterChange = useCallback(
-    (values: string[]) => {
-      // A single-choice control: pressing the active item again must not clear it.
-      const next = values[0] as ActivityFeedFilter | undefined;
-      if (!next) return;
-      setFeedFilter(next);
-      writeStoredActivityFilter(viewerId, next);
-    },
-    [viewerId],
-  );
+  useEffect(() => {
+    // The card's own anchor scroll fires while a collapsed panel is still
+    // `hidden` — a no-op. Re-fire it now that the section is open; on an
+    // already-open feed this is the same scroll the card just ran.
+    if (!isExpanded || !hasLinkedComment) return;
+    document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'center' });
+  }, [isExpanded, hasLinkedComment, hash]);
 
   const refreshActiveTask = useCallback(async () => {
     if (activeTaskId) await refreshTaskDetail(activeTaskId);
   }, [activeTaskId, refreshTaskDetail]);
 
-  const items = useMemo(
-    () =>
-      filterActivitiesForFeed(activities, feedFilter, hash)
+  /**
+   * The comment the composer is replying to. The target is always the thread
+   * root — the feed nests a single level, so reply-to-reply still lands on
+   * the same thread (the model normalizes the same way).
+   */
+  const [replyTarget, setReplyTarget] = useState<CommentReplyTarget | null>(null);
+  useEffect(() => {
+    // The chip names a comment on this issue — left set across a task switch
+    // it would aim the composer at the previous issue's thread and hit the
+    // cross-issue parent check on submit.
+    setReplyTarget(null);
+  }, [activeTaskId]);
+  const handleReply = useCallback((activity: TaskDetailActivity) => {
+    const commentId = activity.parentCommentId ?? activity.id;
+    if (!commentId) return;
+    setReplyTarget({ authorName: activity.author?.name ?? null, commentId });
+    document.getElementById('task-comment-composer')?.scrollIntoView({ block: 'center' });
+  }, []);
+  const clearReplyTarget = useCallback(() => setReplyTarget(null), []);
+
+  const { items, repliesByParent } = useMemo(() => {
+    // Linear's issue feed is one unified timeline — no filter UI, so this
+    // always runs 'all' and every activity renders. The helper stays as the
+    // tested seam: it still encodes that a deep-linked comment passes
+    // through whatever filter is active.
+    const filtered = filterActivitiesForFeed(activities, 'all', hash);
+    // Replies leave the flat list and nest under their thread root instead —
+    // they keep `activities` order (chronological) inside the thread while
+    // the top level below reverses to newest-first.
+    const { repliesByParent, topLevel } = splitCommentThreads(filtered);
+    return {
+      items: topLevel
         .map((act, i) => ({
           activity: act,
           brief: act.type === 'brief' ? toBriefItem(act) : null,
           key: act.id ?? `activity-${i}`,
         }))
         .reverse(),
-    [activities, feedFilter, hash],
-  );
+      repliesByParent,
+    };
+  }, [activities, hash]);
 
   const commentInput = activeTaskId ? (
-    <CommentInput key={commentComposerKey(activeTaskId, workspaceId)} taskId={activeTaskId} />
+    <CommentInput
+      key={commentComposerKey(activeTaskId, workspaceId)}
+      replyTarget={replyTarget}
+      taskId={activeTaskId}
+      onClearReply={clearReplyTarget}
+    />
   ) : null;
 
   // A goal loop can produce many rounds; only the newest run opens by default so
@@ -586,7 +606,16 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
             return <TopicCard activity={activity} defaultExpanded={false} key={key} />;
           }
           if (activity.type === 'comment') {
-            return <CommentCard activity={activity} key={key} />;
+            return (
+              <CommentCard
+                activity={activity}
+                key={key}
+                replies={activity.id ? repliesByParent.get(activity.id) : undefined}
+                // The result panel mounts no composer — replying there would
+                // be a dead end, so cards in it never offer the affordance.
+                onReply={variant === 'activity' ? handleReply : undefined}
+              />
+            );
           }
           // Lifecycle bookkeeping ("created the task", reassignments). It belongs
           // to the activity timeline; in a result panel it is a row between the
@@ -636,32 +665,24 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   return (
     <div className="flex flex-col gap-2">
       <TaskDetailSectionHeader
-        icon={BotMessageSquare}
+        actions={<IssueSubscribeToggle />}
         open={isExpanded}
         title={t('taskDetail.activities')}
-        trailing={
-          <>
-            <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
-            <ToggleGroup
-              aria-label={t('taskDetail.activities.filter.label')}
-              size="sm"
-              value={[feedFilter]}
-              onValueChange={handleFilterChange}
-            >
-              {ACTIVITY_FEED_FILTERS.map((filter) => (
-                <ToggleGroupItem key={filter} value={filter}>
-                  {t(`taskDetail.activities.filter.${filter}`)}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </>
-        }
+        trailing={<LinearTaskSyncStatus taskId={activeTaskDatabaseId} />}
+        variant="heading"
         onToggle={() => setIsExpanded((prev) => !prev)}
       />
-      {commentInput}
       <Collapsible open={isExpanded}>
-        <CollapsibleContent>
-          <div className="flex flex-col gap-3 px-3 py-1">{rows}</div>
+        {/* keepMounted: the composer must not unmount on collapse — its draft
+            flushes on unmount and restores asynchronously on mount, so a
+            quick collapse → expand could mark it dirty and lose the draft. */}
+        <CollapsibleContent keepMounted>
+          <div className="flex flex-col gap-3 px-3 py-1">
+            {rows}
+            {/* The composer closes the feed — Linear's "Leave a comment…" sits
+                at the bottom of Activity, after the last entry. */}
+            {commentInput}
+          </div>
         </CollapsibleContent>
       </Collapsible>
     </div>

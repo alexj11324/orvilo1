@@ -1,6 +1,6 @@
 import type { TaskDetailWorkspaceNode } from '@orvilo/types';
 import { cn } from 'cn';
-import { FileLock2Icon, FileTextIcon, MoreHorizontal, Package, Trash } from 'lucide-react';
+import { FileLock2Icon, FileTextIcon, MoreHorizontal, Trash } from 'lucide-react';
 import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -137,7 +137,6 @@ const TaskArtifacts = memo(() => {
     <div className="flex flex-col gap-2">
       <TaskDetailSectionHeader
         count={items.length}
-        icon={Package}
         open={isExpanded}
         title={t('taskDetail.artifacts')}
         onToggle={() => setIsExpanded((prev) => !prev)}

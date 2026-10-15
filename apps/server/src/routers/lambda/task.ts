@@ -1023,6 +1023,10 @@ export const taskRouter = router({
         content: z.string().min(1),
         editorData: z.unknown().optional(),
         id: z.string(),
+        // '' is not "no parent" — it would be stored verbatim (the model's
+        // `?? null` only swallows null/undefined) and violate the self-FK.
+        // Reject like the sibling comment routers' `idSchema` does.
+        parentCommentId: z.string().trim().min(1).optional(),
         topicId: z.string().optional(),
       }),
     )
@@ -1048,6 +1052,7 @@ export const taskRouter = router({
           briefId: input.briefId,
           content: input.content,
           editorData: input.editorData as never,
+          parentCommentId: input.parentCommentId,
           taskId: task.id,
           topicId: input.topicId,
           userId: ctx.userId,

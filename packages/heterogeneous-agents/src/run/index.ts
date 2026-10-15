@@ -9,3 +9,13 @@ export { CoalescingBatchIngester } from './CoalescingBatchIngester';
 export { createOperationHeartbeat } from './OperationHeartbeat';
 export { createOperationTokenRenewal } from './OperationTokenRenewal';
 export { type HeteroIngestClient, type IngestAgentType, TrpcIngestSink } from './TrpcIngestSink';
+export {
+  buildHeteroFinishError,
+  consumeTurnEvents,
+  deriveTurnOutcome,
+  type HeteroFinishError,
+  isMissingGrokResumeSession,
+  looksLikeNeedsRetryWithoutResume,
+  RESUME_RETRY_PATTERNS,
+  type TurnEventSummary,
+} from './turnOutcome';

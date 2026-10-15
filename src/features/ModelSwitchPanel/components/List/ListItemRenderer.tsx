@@ -1,5 +1,5 @@
 import { Menu as MenuPrimitive } from '@base-ui/react/menu';
-import { Block, Flexbox, Icon } from '@lobehub/ui';
+import { Block } from '@lobehub/ui';
 import { cn } from 'cn';
 import { LucideArrowRight, LucideBolt } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
@@ -82,20 +82,16 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
             }}
           >
             {t('ModelSwitchPanel.emptyProvider')}
-            <Icon icon={LucideArrowRight} size={16} />
+            <LucideArrowRight size={16} />
           </Block>
         );
       }
 
       case 'group-header': {
         return (
-          <Flexbox
-            horizontal
-            className={styles.groupHeader}
-            justify="space-between"
+          <div
+            className={cn('flex justify-between pt-3 pb-1 ps-3 pe-2 w-full', styles.groupHeader)}
             key={`header-${item.provider.id}`}
-            paddingBlock={'12px 4px'}
-            paddingInline={'12px 8px'}
           >
             <ProviderItemRender
               logo={item.provider.logo}
@@ -120,16 +116,14 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                 onClose();
               }}
             />
-          </Flexbox>
+          </div>
         );
       }
 
       case 'empty-model': {
         return (
-          <Flexbox
-            horizontal
-            className={cn(styles.menuItem, styles.tertiaryText)}
-            gap={8}
+          <div
+            className={cn('flex gap-2', styles.menuItem, styles.tertiaryText)}
             key={`empty-${item.provider.id}`}
             onClick={() => {
               onClose();
@@ -137,8 +131,8 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
             }}
           >
             {t('ModelSwitchPanel.emptyModel')}
-            <Icon icon={LucideArrowRight} size={16} />
-          </Flexbox>
+            <LucideArrowRight size={16} />
+          </div>
         );
       }
 
@@ -148,7 +142,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
         const restricted = isModelRestricted?.(item.model.id, item.provider.id);
 
         return (
-          <Flexbox className="my-px mx-1">
+          <div className="flex flex-col my-px mx-1">
             <DropdownMenuSub open={detailOpen} onOpenChange={setDetailOpen}>
               <MenuPrimitive.SubmenuTrigger
                 className={cn(menuItemClassName, styles.menuRow, isActive && styles.menuItemActive)}
@@ -175,7 +169,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                 <ModelDetailPanel model={item.model.id} provider={item.provider.id} />
               </MenuPanelPopup>
             </DropdownMenuSub>
-          </Flexbox>
+          </div>
         );
       }
 
@@ -186,7 +180,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
         const restricted = isModelRestricted?.(item.data.model.id, singleProvider.id);
 
         return (
-          <Flexbox className="my-px mx-1">
+          <div className="flex flex-col my-px mx-1">
             <DropdownMenuSub open={detailOpen} onOpenChange={setDetailOpen}>
               <MenuPrimitive.SubmenuTrigger
                 className={cn(menuItemClassName, styles.menuRow, isActive && styles.menuItemActive)}
@@ -212,13 +206,13 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                 <ModelDetailPanel model={item.data.model.id} provider={singleProvider.id} />
               </MenuPanelPopup>
             </DropdownMenuSub>
-          </Flexbox>
+          </div>
         );
       }
 
       case 'model-item-multiple': {
         return (
-          <Flexbox className="my-px mx-1" key={item.data.displayName}>
+          <div className="flex flex-col my-px mx-1" key={item.data.displayName}>
             <MultipleProvidersModelItem
               activeKey={activeKey}
               data={item.data}
@@ -231,7 +225,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
               onModelChange={onModelChange}
               onRestrictedModelClick={onRestrictedModelClick}
             />
-          </Flexbox>
+          </div>
         );
       }
 

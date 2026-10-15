@@ -1,10 +1,10 @@
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { cn } from 'cn';
 import { TargetIcon, TerminalIcon, WrenchIcon } from 'lucide-react';
 import type { FC, MouseEvent } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SkillsIcon } from '@/components/icons';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { SimpleTooltip } from '../../SimpleTooltip';

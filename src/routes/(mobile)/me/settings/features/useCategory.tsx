@@ -1,4 +1,3 @@
-import { McpIcon } from '@lobehub/ui/icons';
 import {
   Bot,
   Brain,
@@ -23,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { type CellProps } from '@/components/Cell';
+import { McpIcon } from '@/components/icons';
 import { isSettingsTabOffered } from '@/config/routes/settings';
 import type { SettingsNavKey } from '@/features/Settings/hooks/useCategory';
 import { useSettingsCapabilityContext } from '@/features/Settings/hooks/useSettingsCapability';

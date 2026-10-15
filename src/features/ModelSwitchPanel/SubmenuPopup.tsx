@@ -1,4 +1,3 @@
-import { stopPropagation } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { PanelContent } from './components/PanelContent';
@@ -25,7 +24,7 @@ export const ModelSwitchSubmenuPopup = memo<ModelSwitchSubmenuPopupProps>(
       className={styles.container}
       placement="right"
       sideOffset={8}
-      onKeyDown={stopPropagation}
+      onKeyDown={(e) => e.stopPropagation()}
     >
       <PanelContent
         model={model}

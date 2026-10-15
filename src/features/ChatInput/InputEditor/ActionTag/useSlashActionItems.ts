@@ -1,5 +1,4 @@
 import type { IEditor, SlashOptions } from '@lobehub/editor';
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import { type ProjectSkillItem } from '@orvilo/electron-client-ipc';
 import isEqual from 'fast-deep-equal';
@@ -9,6 +8,7 @@ import { ArchiveIcon, MessageSquarePlusIcon } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SkillsIcon } from '@/components/icons';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
 import { useFetchProjectSkills } from '@/hooks/useFetchProjectSkills';
 import { useProjectSkillsDeviceId } from '@/hooks/useProjectSkillsDeviceId';

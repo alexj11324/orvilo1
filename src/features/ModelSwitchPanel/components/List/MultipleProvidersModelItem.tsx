@@ -1,5 +1,4 @@
 import { Menu as MenuPrimitive } from '@base-ui/react/menu';
-import { Flexbox } from '@lobehub/ui';
 import { cn } from 'cn';
 import { Check } from 'lucide-react';
 import { memo, useState } from 'react';
@@ -136,8 +135,8 @@ export const MultipleProvidersModelItem = memo<MultipleProvidersModelItemProps>(
                     {isProviderActive ? <Check size={16} /> : null}
                   </span>
                   <span className="min-w-0 flex-1 truncate">
-                    <Flexbox horizontal align="center" gap={8}>
-                      <Flexbox horizontal align="center" className="flex-none">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center flex-none">
                         <ProviderItemRender
                           logo={p.logo}
                           name={p.name}
@@ -146,13 +145,13 @@ export const MultipleProvidersModelItem = memo<MultipleProvidersModelItemProps>(
                           source={p.source}
                           type={'avatar'}
                         />
-                      </Flexbox>
+                      </div>
                       {providerRestricted && proLabel && (
                         <Badge size="sm" variant="warning-light">
                           {proLabel}
                         </Badge>
                       )}
-                    </Flexbox>
+                    </div>
                   </span>
                 </MenuPrimitive.Item>
               );

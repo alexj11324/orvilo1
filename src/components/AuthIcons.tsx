@@ -1,31 +1,30 @@
-import { Apple, Aws, Google, Microsoft } from '@lobehub/icons';
+import { Apple, Aws, Cloudflare, Github, Google, Microsoft } from '@lobehub/icons';
+import { User } from 'lucide-react';
+
 import {
   Auth0,
-  Authelia,
-  Authentik,
-  Casdoor,
-  Cloudflare,
-  Github,
-  Logto,
-  MicrosoftEntra,
-  Zitadel,
-} from '@lobehub/ui/icons';
-import { User } from 'lucide-react';
+  AutheliaColor,
+  AuthentikColor,
+  CasdoorColor,
+  LogtoColor,
+  MicrosoftEntraColor,
+  ZitadelColor,
+} from '@/components/icons/brand';
 
 const iconComponents: { [key: string]: any } = {
   'apple': Apple,
   'auth0': Auth0,
-  'authelia': Authelia.Color,
-  'authentik': Authentik.Color,
-  'casdoor': Casdoor.Color,
+  'authelia': AutheliaColor,
+  'authentik': AuthentikColor,
+  'casdoor': CasdoorColor,
   'cloudflare': Cloudflare.Color,
   'cognito': Aws.Color,
   'github': Github,
   'google': Google.Color,
-  'logto': Logto.Color,
+  'logto': LogtoColor,
   'microsoft': Microsoft.Color,
-  'microsoft-entra-id': MicrosoftEntra.Color,
-  'zitadel': Zitadel.Color,
+  'microsoft-entra-id': MicrosoftEntraColor,
+  'zitadel': ZitadelColor,
 };
 
 /**

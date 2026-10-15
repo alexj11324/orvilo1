@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo, useMemo } from 'react';
 import useMergeState from 'use-merge-value';
 
@@ -55,8 +54,8 @@ const ReasoningTokenSlider80k = memo<ReasoningTokenSlider80kProps>(
     }, [token]);
 
     return (
-      <Flexbox horizontal align={'center'} gap={12} paddingInline={'4px 0'}>
-        <Flexbox flex={1} style={{ minWidth: 200, maxWidth: 320 }}>
+      <div className="flex items-center gap-3 ps-1">
+        <div className="flex min-w-50 max-w-80 flex-1 flex-col">
           <DiscreteSlider
             options={options}
             value={sliderIndex}
@@ -65,7 +64,7 @@ const ReasoningTokenSlider80k = memo<ReasoningTokenSlider80kProps>(
               setTokens(MARK_TOKENS[v] * Kibi);
             }}
           />
-        </Flexbox>
+        </div>
         <div>
           <InputNumber
             changeOnWheel
@@ -82,7 +81,7 @@ const ReasoningTokenSlider80k = memo<ReasoningTokenSlider80kProps>(
             }}
           />
         </div>
-      </Flexbox>
+      </div>
     );
   },
 );

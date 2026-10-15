@@ -1,12 +1,11 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import {
   AccordionHeader,
   AccordionItem,
   AccordionPanel,
   AccordionRoot,
   AccordionTrigger,
-  Text,
 } from '@lobehub/ui/base-ui';
+import { cn } from 'cn';
 import { ArrowDownToDot, ArrowUpFromDot, CircleFadingArrowUp } from 'lucide-react';
 import type { FC } from 'react';
 import { memo } from 'react';
@@ -147,17 +146,11 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
       : undefined;
 
     return (
-      <Flexbox className={styles.container}>
+      <div className={cn('flex flex-col', styles.container)}>
         {description && (
-          <Text
-            as={'p'}
-            className={styles.description}
-            fontSize={14}
-            lineHeight={'22px'}
-            type={'secondary'}
-          >
+          <p className={cn('text-sm leading-5.5 text-foreground-description', styles.description)}>
             {description}
-          </Text>
+          </p>
         )}
         {/* Sections */}
         {(hasRating || hasPricing || contextWindowLabel || hasAbilities) && (
@@ -172,16 +165,16 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
               <AccordionItem value="rating">
                 <AccordionHeader>
                   <AccordionTrigger style={{ paddingBlock: 6, paddingInline: 8 }}>
-                    <Flexbox horizontal align={'center'} gap={8}>
+                    <div className="flex items-center gap-2">
                       <div className="h-3.5 w-px shrink-0 rounded-full bg-border" />
                       <span className={styles.titleText}>
                         {t('ModelSwitchPanel.detail.rating')}
                       </span>
-                    </Flexbox>
+                    </div>
                   </AccordionTrigger>
                 </AccordionHeader>
                 <AccordionPanel>
-                  <Flexbox gap={4}>
+                  <div className="flex flex-col gap-1">
                     {ratedDimensions.length >= RADAR_MIN_DIMENSIONS ? (
                       <Tooltip>
                         <TooltipTrigger
@@ -203,13 +196,10 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                         </TooltipContent>
                       </Tooltip>
                     ) : (
-                      <Flexbox gap={4}>
+                      <div className="flex flex-col gap-1">
                         {ratedDimensions.map((dimension) => (
-                          <Flexbox
-                            horizontal
-                            align={'center'}
-                            className={styles.row}
-                            justify={'space-between'}
+                          <div
+                            className={cn('flex items-center justify-between w-full', styles.row)}
                             key={dimension.key}
                           >
                             <span>{dimension.label}</span>
@@ -232,11 +222,11 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                               </TooltipTrigger>
                               <TooltipContent>{dimension.tooltip}</TooltipContent>
                             </Tooltip>
-                          </Flexbox>
+                          </div>
                         ))}
-                      </Flexbox>
+                      </div>
                     )}
-                  </Flexbox>
+                  </div>
                 </AccordionPanel>
               </AccordionItem>
             )}
@@ -245,10 +235,10 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
             {contextWindowLabel && (
               <AccordionItem disabled value="context">
                 <AccordionHeader style={{ paddingBlock: 6, paddingInline: 8 }}>
-                  <Flexbox horizontal align={'center'} flex={1} gap={8}>
+                  <div className="flex items-center flex-1 gap-2">
                     <div className="h-3.5 w-px shrink-0 rounded-full bg-border" />
                     <span className={styles.titleText}>{t('ModelSwitchPanel.detail.context')}</span>
-                  </Flexbox>
+                  </div>
                   <span className={styles.actionText}>{contextWindowLabel}</span>
                 </AccordionHeader>
               </AccordionItem>
@@ -259,51 +249,48 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
               <AccordionItem value="abilities">
                 <AccordionHeader>
                   <AccordionTrigger style={{ paddingBlock: 6, paddingInline: 8 }}>
-                    <Flexbox horizontal align={'center'} gap={8}>
+                    <div className="flex items-center gap-2">
                       <div className="h-3.5 w-px shrink-0 rounded-full bg-border" />
                       <span className={styles.titleText}>
                         {t('ModelSwitchPanel.detail.abilities')}
                       </span>
-                    </Flexbox>
+                    </div>
                   </AccordionTrigger>
                   {!isAbilitiesExpanded && (
-                    <Flexbox horizontal gap={2}>
+                    <div className="flex gap-0.5">
                       {enabledAbilities.map((ability) => (
                         <Badge
                           className="min-w-0 px-1"
                           key={ability.key}
                           variant={ABILITY_BADGE_VARIANTS[ability.color] ?? 'secondary'}
                         >
-                          <Icon icon={ability.icon} style={{ fontSize: 12 }} />
+                          <ability.icon size={12} />
                         </Badge>
                       ))}
-                    </Flexbox>
+                    </div>
                   )}
                 </AccordionHeader>
                 <AccordionPanel>
-                  <Flexbox gap={4}>
+                  <div className="flex flex-col gap-1">
                     {enabledAbilities.map((ability) => (
-                      <Flexbox
-                        horizontal
-                        align={'center'}
-                        className={styles.row}
-                        justify={'space-between'}
+                      <div
+                        className={cn('flex items-center justify-between w-full', styles.row)}
                         key={ability.key}
                       >
-                        <Flexbox horizontal align={'center'} gap={6}>
-                          <Icon icon={ability.icon} style={{ fontSize: 12 }} />
+                        <div className="flex items-center gap-1.5">
+                          <ability.icon size={12} />
                           <span>
                             {t(`ModelSwitchPanel.detail.abilities.${ability.key}` as any)}
                           </span>
-                        </Flexbox>
+                        </div>
                         <span className="text-xs leading-5 text-muted-foreground">
                           {t(
                             `ModelSelect.featureTag.${ability.key === 'files' ? 'file' : ability.key}` as any,
                           )}
                         </span>
-                      </Flexbox>
+                      </div>
                     ))}
-                  </Flexbox>
+                  </div>
                 </AccordionPanel>
               </AccordionItem>
             )}
@@ -313,22 +300,22 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
               <AccordionItem value="pricing">
                 <AccordionHeader>
                   <AccordionTrigger style={{ paddingBlock: 6, paddingInline: 8 }}>
-                    <Flexbox horizontal align={'center'} gap={8}>
+                    <div className="flex items-center gap-2">
                       <div className="h-3.5 w-px shrink-0 rounded-full bg-border" />
                       <span className={styles.titleText}>
                         {t('ModelSwitchPanel.detail.pricing')}
                       </span>
-                    </Flexbox>
+                    </div>
                   </AccordionTrigger>
                   {!isPricingExpanded &&
                     (approximatePriceLabel ? (
                       <span className={styles.actionText}>{approximatePriceLabel}</span>
                     ) : (
-                      <Flexbox horizontal align={'center'} className={styles.actionText} gap={8}>
+                      <div className={cn('flex items-center gap-2', styles.actionText)}>
                         {hasCachedInputPricing && (
                           <Tooltip>
                             <TooltipTrigger render={<span className="flex items-center gap-0.5" />}>
-                              <Icon icon={CircleFadingArrowUp} size={'small'} />
+                              <CircleFadingArrowUp size={14} />
                               <PriceValue price={formatPrice!.cachedInput} />
                             </TooltipTrigger>
                             <TooltipContent>
@@ -338,7 +325,7 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                         )}
                         <Tooltip>
                           <TooltipTrigger render={<span className="flex items-center gap-0.5" />}>
-                            <Icon icon={ArrowUpFromDot} size={'small'} />
+                            <ArrowUpFromDot size={14} />
                             <PriceValue price={formatPrice!.input} />
                           </TooltipTrigger>
                           <TooltipContent>
@@ -347,62 +334,60 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger render={<span className="flex items-center gap-0.5" />}>
-                            <Icon icon={ArrowDownToDot} size={'small'} />
+                            <ArrowDownToDot size={14} />
                             <PriceValue price={formatPrice!.output} />
                           </TooltipTrigger>
                           <TooltipContent>
                             {getPricingTooltip('output', formatPrice!.output.current)}
                           </TooltipContent>
                         </Tooltip>
-                      </Flexbox>
+                      </div>
                     ))}
                 </AccordionHeader>
                 <AccordionPanel>
-                  <Flexbox gap={8}>
+                  <div className="flex flex-col gap-2">
                     {approximatePriceLabel && (
-                      <Flexbox className={`${styles.row} font-medium`}>
+                      <div className={cn('flex flex-col font-medium', styles.row)}>
                         {approximatePriceLabel}
-                      </Flexbox>
+                      </div>
                     )}
                     {pricingGroups.map(({ group, units }) => (
-                      <Flexbox gap={4} key={group}>
+                      <div className="flex flex-col gap-1" key={group}>
                         {pricingGroups.length > 1 && (
-                          <Flexbox className={`${styles.row} font-medium`}>
+                          <div className={cn('flex flex-col font-medium', styles.row)}>
                             {t(`ModelSwitchPanel.detail.pricing.group.${group}` as any)}
-                          </Flexbox>
+                          </div>
                         )}
-                        {units.map((unit) => (
-                          <Flexbox
-                            horizontal
-                            align={'center'}
-                            className={styles.row}
-                            justify={'space-between'}
-                            key={unit.name}
-                          >
-                            <Flexbox horizontal align={'center'} gap={6}>
-                              {UNIT_ICON_MAP[unit.name] && (
-                                <Icon icon={UNIT_ICON_MAP[unit.name]!} size={'small'} />
-                              )}
-                              <span>
-                                {t(`ModelSwitchPanel.detail.pricing.unit.${unit.name}` as any)}
-                              </span>
-                            </Flexbox>
-                            <PriceValue
-                              prefix={isCreditPricing ? '' : '$'}
-                              price={formatUnitPrice(unit)}
-                              suffix={getUnitPriceSuffix(unit.unit)}
-                            />
-                          </Flexbox>
-                        ))}
-                      </Flexbox>
+                        {units.map((unit) => {
+                          const UnitIcon = UNIT_ICON_MAP[unit.name];
+                          return (
+                            <div
+                              className={cn('flex items-center justify-between w-full', styles.row)}
+                              key={unit.name}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                {UnitIcon && <UnitIcon size={14} />}
+                                <span>
+                                  {t(`ModelSwitchPanel.detail.pricing.unit.${unit.name}` as any)}
+                                </span>
+                              </div>
+                              <PriceValue
+                                prefix={isCreditPricing ? '' : '$'}
+                                price={formatUnitPrice(unit)}
+                                suffix={getUnitPriceSuffix(unit.unit)}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
                     ))}
-                  </Flexbox>
+                  </div>
                 </AccordionPanel>
               </AccordionItem>
             )}
           </AccordionRoot>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

@@ -1,4 +1,3 @@
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { EMPTY_ARRAY } from '@orvilo/const';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import { cn } from 'cn';
@@ -6,6 +5,7 @@ import { ChevronRightIcon, FileIcon, FolderIcon, type LucideIcon } from 'lucide-
 import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 
+import { SkillsIcon } from '@/components/icons';
 import { Button } from '@/components/ui/button';
 import {
   ContextMenu,

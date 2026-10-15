@@ -1,5 +1,6 @@
-import type { MenuInfo } from '@lobehub/ui';
 import type { NativeContextMenuItemTemplate, SFSymbol } from '@orvilo/electron-client-ipc';
+
+import type { MenuInfo } from '@/components/ItemsMenu';
 
 import { isSubmenuShaped } from './canGoNative';
 import type { NativeContextMenuItem } from './types';

@@ -1,6 +1,5 @@
 'use client';
 
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import { cn } from 'cn';
 import { XIcon } from 'lucide-react';
@@ -8,6 +7,7 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
+import { SkillsIcon } from '@/components/icons';
 import { confirmModal } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import {

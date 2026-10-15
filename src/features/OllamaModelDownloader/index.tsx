@@ -1,5 +1,4 @@
 import { Ollama } from '@lobehub/icons';
-import { Center, Flexbox } from '@lobehub/ui';
 import { XIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -63,7 +62,7 @@ const OllamaModelDownloader = memo<OllamaModelDownloaderProps>(
     );
 
     return (
-      <Center gap={16} paddingBlock={32} style={{ width: '100%' }}>
+      <div className="flex w-full flex-col items-center justify-center gap-4 py-8">
         <FormAction
           avatar={<Ollama color={'var(--primary)'} size={64} />}
           description={isDownloading ? t('ollama.download.desc') : t('ollama.unlock.description')}
@@ -83,28 +82,24 @@ const OllamaModelDownloader = memo<OllamaModelDownloaderProps>(
           )}
         </FormAction>
         {isDownloading && (
-          <Flexbox flex={1} gap={8} style={{ maxWidth: 300 }} width={'100%'}>
+          <div className="flex w-full max-w-75 flex-1 flex-col gap-2">
             <Progress
               className="flex flex-row-reverse items-center gap-2 [&_[data-slot=progress-indicator]]:!bg-success"
               value={percent}
             >
               <ProgressValue />
             </Progress>
-            <Flexbox
-              horizontal
-              distribution={'space-between'}
-              style={{ color: 'var(--foreground-description)', fontSize: 12 }}
-            >
+            <div className="flex w-full justify-between text-xs text-foreground-description">
               <span>
                 {t('ollama.download.remainingTime')}: {remainingTime}
               </span>
               <span>
                 {t('ollama.download.speed')}: {downloadSpeed}
               </span>
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         )}
-        <Flexbox gap={12} style={{ maxWidth: 300 }} width={'100%'}>
+        <div className="flex w-full max-w-75 flex-col gap-3">
           {error?.message && error !== dismissedError && (
             <Alert variant="destructive">
               <AlertTitle>{t('ollama.download.failed')}</AlertTitle>
@@ -151,8 +146,8 @@ const OllamaModelDownloader = memo<OllamaModelDownloaderProps>(
           ) : (
             extraAction
           )}
-        </Flexbox>
-      </Center>
+        </div>
+      </div>
     );
   },
 );

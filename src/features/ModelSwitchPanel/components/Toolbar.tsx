@@ -1,9 +1,9 @@
-import { Flexbox, Icon, stopPropagation } from '@lobehub/ui';
-import { ProviderIcon } from '@lobehub/ui/icons';
+import { cn } from 'cn';
 import { Brain } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ProviderIcon } from '@/components/icons';
 import SearchBar from '@/components/SearchBar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -24,17 +24,10 @@ export const Toolbar = memo<ToolbarProps>(
     const { t } = useTranslation('components');
 
     return (
-      <Flexbox
-        horizontal
-        align="center"
-        className={styles.toolbar}
-        gap={4}
-        justify="space-between"
-        paddingBlock={8}
-        paddingInline={8}
-        width="100%"
+      <div
+        className={cn('flex items-center gap-1 justify-between py-2 px-2 w-full', styles.toolbar)}
       >
-        <Flexbox flex={1} width="100%">
+        <div className="flex flex-col flex-1 w-full">
           <SearchBar
             className={styles.toolbarSearch}
             clearOnEscape={false}
@@ -42,9 +35,9 @@ export const Toolbar = memo<ToolbarProps>(
             value={searchKeyword}
             visualSize="compact"
             onChange={(e) => onSearchKeywordChange(e.target.value)}
-            onKeyDown={stopPropagation}
+            onKeyDown={(e) => e.stopPropagation()}
           />
-        </Flexbox>
+        </div>
         {showGroupModeSwitch && (
           <Tabs
             className={styles.toolbarTabs}
@@ -57,7 +50,7 @@ export const Toolbar = memo<ToolbarProps>(
                   ['byModel', Brain],
                   ['byProvider', ProviderIcon],
                 ] as const
-              ).map(([mode, icon]) => (
+              ).map(([mode, ModeIcon]) => (
                 <Tooltip key={mode}>
                   <TooltipTrigger
                     render={
@@ -68,7 +61,7 @@ export const Toolbar = memo<ToolbarProps>(
                       />
                     }
                   >
-                    <Icon icon={icon} size={16} />
+                    <ModeIcon size={16} />
                   </TooltipTrigger>
                   <TooltipContent>{t(`ModelSwitchPanel.${mode}`)}</TooltipContent>
                 </Tooltip>
@@ -76,7 +69,7 @@ export const Toolbar = memo<ToolbarProps>(
             </TabsList>
           </Tabs>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

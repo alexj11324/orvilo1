@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { type ComponentType, type FC, useMemo } from 'react';
 import { useState } from 'react';
 import { Rnd } from 'react-rnd';
@@ -122,7 +121,8 @@ export const PanelContent: FC<PanelContentProps> = ({
   }
 
   return (
-    <Flexbox
+    <div
+      className="flex flex-col"
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -138,6 +138,6 @@ export const PanelContent: FC<PanelContentProps> = ({
       }}
     >
       {content}
-    </Flexbox>
+    </div>
   );
 };

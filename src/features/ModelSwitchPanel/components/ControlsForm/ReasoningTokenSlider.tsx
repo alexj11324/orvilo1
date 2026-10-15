@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo, useMemo } from 'react';
 import useMergeState from 'use-merge-value';
 
@@ -57,10 +56,10 @@ const ReasoningTokenSlider = memo<MaxTokenSliderProps>(({ value, onChange, defau
   }, [token]);
 
   return (
-    <Flexbox horizontal align={'center'} gap={12} paddingInline={'4px 0'}>
-      <Flexbox flex={1}>
+    <div className="flex items-center gap-3 ps-1">
+      <div className="flex flex-1 flex-col">
         <DiscreteSlider options={options} value={powValue} onChange={updateWithPowValue} />
-      </Flexbox>
+      </div>
       <div>
         <InputNumber
           changeOnWheel
@@ -75,7 +74,7 @@ const ReasoningTokenSlider = memo<MaxTokenSliderProps>(({ value, onChange, defau
           }}
         />
       </div>
-    </Flexbox>
+    </div>
   );
 });
 export default ReasoningTokenSlider;

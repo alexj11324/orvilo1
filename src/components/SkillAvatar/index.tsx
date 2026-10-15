@@ -1,8 +1,9 @@
 'use client';
 
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { cn } from 'cn';
 import { type CSSProperties, memo } from 'react';
+
+import { SkillsIcon } from '@/components/icons';
 
 interface SkillAvatarProps {
   className?: string;

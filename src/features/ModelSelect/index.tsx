@@ -1,5 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { clsx } from 'cn';
 import { XIcon } from 'lucide-react';
 import { type CSSProperties, type ReactNode } from 'react';
@@ -269,12 +267,12 @@ const ModelSelect = memo<ModelSelectProps>(
       // the hint stay out of it: a <button> inside the trigger <button> is invalid
       // HTML. They live on `popupLabel`, which only `optionRender` reads.
       const renderStaleLabel = (withPopupExtras: boolean) => (
-        <Flexbox className="w-full" gap={4}>
-          <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex w-full flex-col gap-1">
+          <div className="flex items-center gap-2">
             <ModelIcon model={value.model} size={20} />
-            <Text ellipsis fontSize={14} lineHeight={'22px'}>
+            <div className="truncate text-sm leading-5.5 text-foreground">
               {meta?.displayName || value.model}
-            </Text>
+            </div>
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -322,13 +320,13 @@ const ModelSelect = memo<ModelSelectProps>(
                 </span>
               </>
             )}
-          </Flexbox>
+          </div>
           {withPopupExtras && (
             <span className="text-sm leading-5.5 whitespace-normal text-muted-foreground">
               {t(`ModelSelect.staleModel.${status}.hint`, { successorName })}
             </span>
           )}
-        </Flexbox>
+        </div>
       );
 
       const currentOption = {
@@ -351,7 +349,7 @@ const ModelSelect = memo<ModelSelectProps>(
         ? {
             __stale: true,
             label: (
-              <Flexbox horizontal>
+              <div className="flex">
                 {/* Visual-only button: the sentinel option row owns the click (via
                  * onChange), so pointer events are disabled to keep one hit target. */}
                 <Button
@@ -360,7 +358,7 @@ const ModelSelect = memo<ModelSelectProps>(
                 >
                   {actionLabel}
                 </Button>
-              </Flexbox>
+              </div>
             ),
             value: STALE_ACTION_VALUE,
           }

@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { AiProviderBaseURLSchema } from 'model-bank/aiProvider';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,9 +20,9 @@ import { CUSTOM_PROVIDER_SDK_OPTIONS } from '../customProviderSdkOptions';
 import { useCreateProvider } from './useCreateProvider';
 
 const SectionTitle = memo<{ children: React.ReactNode }>(({ children }) => (
-  <Text fontSize={13} type={'secondary'} weight={500}>
+  <div className="text-(length:--text-dense) font-medium text-foreground-description">
     {children}
-  </Text>
+  </div>
 ));
 
 const CreateNewProviderContent = memo(() => {
@@ -43,7 +41,7 @@ const CreateNewProviderContent = memo(() => {
       scrollToFirstError={{ behavior: 'instant', block: 'end', focus: true }}
       onFinish={onFinish}
     >
-      <Flexbox gap={16}>
+      <div className="flex flex-col gap-4">
         <SectionTitle>{t('createNewAiProvider.basicTitle')}</SectionTitle>
 
         <Form.Item
@@ -108,10 +106,10 @@ const CreateNewProviderContent = memo(() => {
             optionRender={({ label, value }) => {
               const iconProvider = value === 'router' ? 'newapi' : (value as string);
               return (
-                <Flexbox horizontal align={'center'} gap={8}>
+                <div className="flex items-center gap-2">
                   <ProviderIcon provider={iconProvider} size={18} />
                   {label}
-                </Flexbox>
+                </div>
               );
             }}
           />
@@ -148,7 +146,7 @@ const CreateNewProviderContent = memo(() => {
         <Button className="w-full" loading={loading} type={'submit'}>
           {t('createNewAiProvider.confirm')}
         </Button>
-      </Flexbox>
+      </div>
     </Form>
   );
 });

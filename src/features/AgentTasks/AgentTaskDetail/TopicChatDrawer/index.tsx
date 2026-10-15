@@ -1,6 +1,5 @@
 'use client';
 
-import { Freeze } from '@lobehub/ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ConversationContext, TaskDetailActivity } from '@orvilo/types';
 import {
@@ -18,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import FloatingPanel from '@/components/FloatingPanel';
+import Freeze from '@/components/Freeze';
 import { confirmModal } from '@/components/Modal';
 import { Badge as Tag } from '@/components/reui/badge';
 import { toast } from '@/components/toast';

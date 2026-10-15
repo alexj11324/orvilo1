@@ -1,7 +1,6 @@
 'use client';
 
 import { Menu as MenuPrimitive } from '@base-ui/react/menu';
-import { Flexbox, Icon } from '@lobehub/ui';
 import { cn } from 'cn';
 import { LucideArrowRight, LucideBolt } from 'lucide-react';
 import type { ComponentType } from 'react';
@@ -45,29 +44,30 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
     switch (item.type) {
       case 'no-provider': {
         return (
-          <Flexbox
-            horizontal
-            className={cn(modelSwitchPanelStyles.menuItem, modelSwitchPanelStyles.tertiaryText)}
-            gap={8}
+          <div
+            className={cn(
+              'flex gap-2',
+              modelSwitchPanelStyles.menuItem,
+              modelSwitchPanelStyles.tertiaryText,
+            )}
             onClick={() => {
               onClose();
               navigate('/settings/provider/all');
             }}
           >
             {t('ModelSwitchPanel.emptyProvider')}
-            <Icon icon={LucideArrowRight} size={16} />
-          </Flexbox>
+            <LucideArrowRight size={16} />
+          </div>
         );
       }
 
       case 'group-header': {
         return (
-          <Flexbox
-            horizontal
-            className={modelSwitchPanelStyles.groupHeader}
-            justify="space-between"
-            paddingBlock="12px 4px"
-            paddingInline="12px 8px"
+          <div
+            className={cn(
+              'flex justify-between pt-3 pb-1 ps-3 pe-2 w-full',
+              modelSwitchPanelStyles.groupHeader,
+            )}
           >
             <ProviderItemRender
               logo={item.provider.logo}
@@ -92,24 +92,26 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
                 onClose();
               }}
             />
-          </Flexbox>
+          </div>
         );
       }
 
       case 'empty-model': {
         return (
-          <Flexbox
-            horizontal
-            className={cn(modelSwitchPanelStyles.menuItem, modelSwitchPanelStyles.tertiaryText)}
-            gap={8}
+          <div
+            className={cn(
+              'flex gap-2',
+              modelSwitchPanelStyles.menuItem,
+              modelSwitchPanelStyles.tertiaryText,
+            )}
             onClick={() => {
               navigate(`/settings/provider/${item.provider.id}`);
               onClose();
             }}
           >
             {t('ModelSwitchPanel.emptyModel')}
-            <Icon icon={LucideArrowRight} size={16} />
-          </Flexbox>
+            <LucideArrowRight size={16} />
+          </div>
         );
       }
 
@@ -117,7 +119,7 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
         const key = menuKey(item.provider.id, item.model.id);
         const isActive = key === activeKey;
         return (
-          <Flexbox className="my-px mx-1">
+          <div className="flex flex-col my-px mx-1">
             <DropdownMenuSub open={detailOpen} onOpenChange={setDetailOpen}>
               <MenuPrimitive.SubmenuTrigger
                 className={cn(
@@ -150,7 +152,7 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
                 />
               </MenuPanelPopup>
             </DropdownMenuSub>
-          </Flexbox>
+          </div>
         );
       }
 
@@ -159,7 +161,7 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
         const key = menuKey(singleProvider.id, item.data.model.id);
         const isActive = key === activeKey;
         return (
-          <Flexbox className="my-px mx-1">
+          <div className="flex flex-col my-px mx-1">
             <DropdownMenuSub open={detailOpen} onOpenChange={setDetailOpen}>
               <MenuPrimitive.SubmenuTrigger
                 className={cn(
@@ -192,7 +194,7 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
                 />
               </MenuPanelPopup>
             </DropdownMenuSub>
-          </Flexbox>
+          </div>
         );
       }
 

@@ -137,7 +137,7 @@ export interface SpawnAgentHandle {
 }
 
 /** Guarded raw-wire tee: diagnostic sink failures must not affect the ACP run. */
-const teeAcpRawStdout =
+export const teeAcpRawStdout =
   (onRawStdout?: (chunk: Buffer) => void) =>
   (line: string): void => {
     if (!onRawStdout) return;
@@ -160,7 +160,7 @@ const teeAcpRawStdout =
  *   policy; transport failures with no terminal event still throw from the
  *   iterator.
  */
-const createAcpSpawnBridge = (operationId: string) => {
+export const createAcpSpawnBridge = (operationId: string) => {
   let lastStepIndex = 0;
   let lastTitleTimestamp = 0;
   const stderr = new PassThrough();
@@ -254,7 +254,7 @@ const createAcpSpawnBridge = (operationId: string) => {
   return { attach, events, onEvents, onSessionTitle, onStderr, stderr };
 };
 
-interface AcpSpawnSession {
+export interface AcpSpawnSession {
   close: (signal?: NodeJS.Signals) => void;
   interrupt: () => Promise<boolean>;
   pid?: number;
@@ -262,7 +262,7 @@ interface AcpSpawnSession {
   sessionId?: string;
 }
 
-const createAcpSpawnHandle = (
+export const createAcpSpawnHandle = (
   bridge: ReturnType<typeof createAcpSpawnBridge>,
   session: AcpSpawnSession,
   getSessionId: () => string | undefined = () => session.sessionId,
@@ -284,7 +284,7 @@ const createAcpSpawnHandle = (
 };
 
 /** Normalize a user-configured command: relative path-like commands resolve against cwd. */
-const resolveVendorCommand = (command: string, cwd: string): string =>
+export const resolveVendorCommand = (command: string, cwd: string): string =>
   isPathLikeCommand(command) && !path.isAbsolute(command) ? path.resolve(cwd, command) : command;
 
 const spawnGrokAcpAgent = async (

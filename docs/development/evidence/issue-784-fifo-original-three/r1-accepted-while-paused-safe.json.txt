@@ -1,0 +1,133 @@
+{
+  "capturedAt": "2026-10-15T04:39:32.771Z",
+  "checks": {
+    "parentFinalAccepted": true,
+    "childItemsAccepted": true,
+    "parentItemsAccepted": true,
+    "paused": true,
+    "queuedIds": true,
+    "queuedCount": true,
+    "topicIdsUnchanged": true,
+    "parentHistoryRetained": true,
+    "childProofUnchanged": true
+  },
+  "queue": {
+    "queued": 2,
+    "recent": [
+      {
+        "id": "dsp_acIuUwXJehBm",
+        "phase": "queued",
+        "createdAt": "2026-10-15T02:27:17.425Z",
+        "updatedAt": "2026-10-15T02:27:17.425Z"
+      },
+      {
+        "id": "dsp_SA3DPMPOhjx8",
+        "phase": "queued",
+        "createdAt": "2026-10-15T02:17:17.364Z",
+        "updatedAt": "2026-10-15T02:17:17.364Z"
+      },
+      {
+        "id": "dsp_rhOd6QyfuO4z",
+        "phase": "succeeded",
+        "createdAt": "2026-10-15T02:07:15.546Z",
+        "updatedAt": "2026-10-15T04:39:31.226Z"
+      }
+    ]
+  },
+  "states": [
+    {
+      "id": "task_A7YBylKf7SvG",
+      "status": "paused",
+      "current": {
+        "runId": "115ea62d-42b0-4978-8054-9daabcd213f7",
+        "proof": {
+          "taskId": "task_A7YBylKf7SvG",
+          "deliveryOperationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+          "topicId": "tpc_3xyaZBrsdDGT",
+          "executionGeneration": 1,
+          "dispatchId": "dsp_rhOd6QyfuO4z",
+          "checklistRevision": 1,
+          "deliveryKind": "artifact"
+        },
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": false
+      },
+      "history": [
+        {
+          "id": "115ea62d-42b0-4978-8054-9daabcd213f7",
+          "operationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+          "status": "passed",
+          "userDecision": "accept",
+          "roundIndex": 1,
+          "issueDelivery": {
+            "taskId": "task_A7YBylKf7SvG",
+            "topicId": "tpc_3xyaZBrsdDGT",
+            "dispatchId": "dsp_rhOd6QyfuO4z",
+            "deliveryKind": "artifact",
+            "checklistRevision": 1,
+            "deliveryOperationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+            "executionGeneration": 1
+          },
+          "issueReviewer": {
+            "cycleId": "622cffe7-800a-49b6-b641-0f8a439cafca",
+            "verdict": "pass",
+            "operationId": "op_1792038876355_agt_taIxMIVssPhE_tpc_eNz6zO8lbGwe_wXNcYtSX"
+          },
+          "createdAt": "2026-10-15T04:34:36.241Z",
+          "updatedAt": "2026-10-15T04:39:31.041Z"
+        }
+      ]
+    },
+    {
+      "id": "task_DAFosEUtomqE",
+      "status": "completed",
+      "current": {
+        "runId": "62eb3fe9-4517-48c9-90b3-5d1b71736fdb",
+        "proof": {
+          "taskId": "task_DAFosEUtomqE",
+          "deliveryOperationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs",
+          "topicId": "tpc_dRQ65DVXLeKV",
+          "executionGeneration": 3,
+          "dispatchId": "dsp_XhT2yzyJeNBo",
+          "checklistRevision": 1,
+          "deliveryKind": "artifact"
+        },
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": false
+      },
+      "history": [
+        {
+          "id": "62eb3fe9-4517-48c9-90b3-5d1b71736fdb",
+          "operationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs",
+          "status": "passed",
+          "userDecision": "accept",
+          "roundIndex": 1,
+          "issueDelivery": {
+            "taskId": "task_DAFosEUtomqE",
+            "topicId": "tpc_dRQ65DVXLeKV",
+            "dispatchId": "dsp_XhT2yzyJeNBo",
+            "deliveryKind": "artifact",
+            "checklistRevision": 1,
+            "deliveryOperationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs",
+            "executionGeneration": 3
+          },
+          "issueReviewer": {
+            "cycleId": "66927962-2a81-48b5-9773-56a1bc99b8cf",
+            "verdict": "pass",
+            "operationId": "op_1792030236362_agt_taIxMIVssPhE_tpc_WwmllWP9Yyq3_c3CQV8pu"
+          },
+          "createdAt": "2026-10-15T02:10:36.240Z",
+          "updatedAt": "2026-10-15T04:39:31.075Z"
+        }
+      ]
+    }
+  ]
+}

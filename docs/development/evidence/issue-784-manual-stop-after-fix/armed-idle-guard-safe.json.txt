@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-15T06:51:28.572Z",
+  "facts": {
+    "status": "paused",
+    "workflowCategory": "backlog",
+    "futurePaused": false,
+    "heartbeatInterval": 600,
+    "mode": "heartbeat",
+    "revision": 2,
+    "tokenPresent": true,
+    "tokenChanged": true,
+    "messagePresent": true,
+    "scheduledAtValid": true,
+    "noActiveNative": true,
+    "noRunningTopics": true,
+    "noReservation": true
+  },
+  "scheduledAt": "2026-10-15T06:51:24.215Z",
+  "tickTokenSha256": "25cff990dd53df30efd5fa2eff73740c4076e539a4817f3e28bc428b010cbce1",
+  "tickMessageId": "local-task-task_wqstgZSuOLUg-ae2d05cb76ebfdda48434a45389ccbb478832e3e34a910dd9206352d07924886",
+  "tickRevision": 2,
+  "dueAt": "2026-10-15T07:01:24.215Z"
+}

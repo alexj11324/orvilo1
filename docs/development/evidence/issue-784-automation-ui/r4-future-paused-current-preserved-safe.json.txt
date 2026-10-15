@@ -1,0 +1,333 @@
+{
+  "capturedAt": "2026-10-15T05:40:07.178Z",
+  "backendSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+  "rendererSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+  "rootRuntimeProvenance": {
+    "backendSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+    "rendererSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+    "rootGoAt": "2026-10-15T05:25:51.000Z",
+    "healthConfirmedAt": "2026-10-15T05:25:51.000Z",
+    "healthProvenance": "Root reports QA actual clean detached S, both Electron reloads to S, backend PID 26517/session 15902; Owner/Member API and devices 200, online one channel, loopback observer 8788 published, effective gateway mode false unchanged, global native zero, original three and proof/history preserved, future-paused queue zero."
+  },
+  "transportDecoded": true,
+  "scope": "Separate R4 UI acceptance only",
+  "originalMarkerSha256": "f12c810c11c552bc0f41a9391d2ebe608479e7a239d6848bb5bfae7524806527",
+  "r4Id": "dsp_1f9nFFwv5Pak",
+  "family": {
+    "capturedAt": "2026-10-15T05:40:06.966Z",
+    "tasks": [
+      {
+        "id": "task_A7YBylKf7SvG",
+        "identifier": "T-14",
+        "status": "running",
+        "workflowCategory": "backlog",
+        "domainRevision": 22,
+        "executionGeneration": 4,
+        "currentTopicId": null,
+        "assigneeAgentId": "agt_taIxMIVssPhE",
+        "reviewerAgentId": "agt_taIxMIVssPhE",
+        "scheduler": {
+          "tickTokenSha256": "6691fc72112d4155df160043566260fcb524de5d3457ebf841c96ed23bf95152",
+          "scheduledAt": "2026-10-15T05:38:52.599Z",
+          "tickRevision": 4,
+          "tickMessageId": "local-task-task_A7YBylKf7SvG-f817efe5d63f711463799c87ba72b186fff12172bc6a7fcb1dec6b995cb27869",
+          "automationPaused": true,
+          "consecutiveFailures": 0
+        },
+        "plan": {
+          "revision": 1,
+          "confirmedAt": "2026-10-15T01:57:11.229Z",
+          "fingerprint": "e41c62e562ebc604e9600690427fc7bc0dd9f36b2a5e1efa6d6040378ce73ff7",
+          "checklistTaskIds": [
+            "task_A7YBylKf7SvG",
+            "task_DAFosEUtomqE"
+          ]
+        },
+        "review": {
+          "state": "submitted",
+          "cycleId": "20c27d9c-c26d-44e2-abb0-4bc884dd9255",
+          "deliveryOperationId": "op_1792039644496_agt_taIxMIVssPhE_tpc_Ype6Knj8tB5d_2Iy0LSrD"
+        },
+        "current": {
+          "reviewerPassed": false,
+          "necessaryChecksPassed": false,
+          "itemsAccepted": false,
+          "deliveryAccepted": false,
+          "availableForDependents": false,
+          "merged": false
+        },
+        "history": [
+          {
+            "id": "115ea62d-42b0-4978-8054-9daabcd213f7",
+            "operationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+            "status": "passed",
+            "userDecision": "accept",
+            "roundIndex": 1,
+            "issueDelivery": {
+              "taskId": "task_A7YBylKf7SvG",
+              "topicId": "tpc_3xyaZBrsdDGT",
+              "dispatchId": "dsp_rhOd6QyfuO4z",
+              "deliveryKind": "artifact",
+              "checklistRevision": 1,
+              "deliveryOperationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+              "executionGeneration": 1
+            },
+            "issueReviewer": {
+              "cycleId": "622cffe7-800a-49b6-b641-0f8a439cafca",
+              "verdict": "pass",
+              "operationId": "op_1792038876355_agt_taIxMIVssPhE_tpc_eNz6zO8lbGwe_wXNcYtSX"
+            },
+            "createdAt": "2026-10-15T04:34:36.241Z",
+            "updatedAt": "2026-10-15T04:39:31.041Z"
+          },
+          {
+            "id": "702f5213-0ce5-4e27-9f5f-aa6d535eaa3e",
+            "operationId": "op_1792039644496_agt_taIxMIVssPhE_tpc_Ype6Knj8tB5d_2Iy0LSrD",
+            "status": "passed",
+            "userDecision": "accept",
+            "roundIndex": 2,
+            "issueDelivery": {
+              "taskId": "task_A7YBylKf7SvG",
+              "topicId": "tpc_Ype6Knj8tB5d",
+              "dispatchId": "dsp_acIuUwXJehBm",
+              "deliveryKind": "artifact",
+              "checklistRevision": 1,
+              "deliveryOperationId": "op_1792039644496_agt_taIxMIVssPhE_tpc_Ype6Knj8tB5d_2Iy0LSrD",
+              "executionGeneration": 3
+            },
+            "issueReviewer": {
+              "cycleId": "2c448a15-b018-461b-a94c-68c3db8d668a",
+              "verdict": "pass",
+              "operationId": "op_1792040231991_agt_taIxMIVssPhE_tpc_loAnW2kHYwgk_YihFWAXI"
+            },
+            "createdAt": "2026-10-15T04:57:11.736Z",
+            "updatedAt": "2026-10-15T04:59:55.220Z"
+          }
+        ],
+        "currentResults": [],
+        "topics": [
+          {
+            "id": "tpc_Ype6Knj8tB5d",
+            "operationId": "op_1792039644496_agt_taIxMIVssPhE_tpc_Ype6Knj8tB5d_2Iy0LSrD",
+            "status": "completed",
+            "seq": 2,
+            "createdAt": "2026-10-15T04:47:24.469Z",
+            "updatedAt": "2026-10-15T04:56:11.071Z"
+          },
+          {
+            "id": "tpc_3xyaZBrsdDGT",
+            "operationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+            "status": "completed",
+            "seq": 1,
+            "createdAt": "2026-10-15T02:15:03.469Z",
+            "updatedAt": "2026-10-15T04:34:26.733Z"
+          }
+        ]
+      },
+      {
+        "id": "task_DAFosEUtomqE",
+        "identifier": "T-15",
+        "status": "running",
+        "workflowCategory": "in_progress",
+        "domainRevision": 14,
+        "executionGeneration": 9,
+        "currentTopicId": "tpc_xiKn8vHDr3g8",
+        "assigneeAgentId": "agt_taIxMIVssPhE",
+        "reviewerAgentId": "agt_taIxMIVssPhE",
+        "plan": {
+          "revision": 1,
+          "confirmedAt": "2026-10-15T01:57:11.229Z",
+          "fingerprint": "e41c62e562ebc604e9600690427fc7bc0dd9f36b2a5e1efa6d6040378ce73ff7",
+          "checklistTaskIds": [
+            "task_A7YBylKf7SvG",
+            "task_DAFosEUtomqE"
+          ]
+        },
+        "review": {
+          "state": "submitted",
+          "cycleId": "a79ea25d-2a80-40b5-82ed-d522ee8a79b9",
+          "deliveryOperationId": "op_1792039412781_agt_taIxMIVssPhE_tpc_TJNKKSrSP3DU_dEbRAy0X"
+        },
+        "current": {
+          "reviewerPassed": false,
+          "necessaryChecksPassed": false,
+          "itemsAccepted": false,
+          "deliveryAccepted": false,
+          "availableForDependents": false,
+          "merged": false
+        },
+        "history": [
+          {
+            "id": "62eb3fe9-4517-48c9-90b3-5d1b71736fdb",
+            "operationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs",
+            "status": "passed",
+            "userDecision": "accept",
+            "roundIndex": 1,
+            "issueDelivery": {
+              "taskId": "task_DAFosEUtomqE",
+              "topicId": "tpc_dRQ65DVXLeKV",
+              "dispatchId": "dsp_XhT2yzyJeNBo",
+              "deliveryKind": "artifact",
+              "checklistRevision": 1,
+              "deliveryOperationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs",
+              "executionGeneration": 3
+            },
+            "issueReviewer": {
+              "cycleId": "66927962-2a81-48b5-9773-56a1bc99b8cf",
+              "verdict": "pass",
+              "operationId": "op_1792030236362_agt_taIxMIVssPhE_tpc_WwmllWP9Yyq3_c3CQV8pu"
+            },
+            "createdAt": "2026-10-15T02:10:36.240Z",
+            "updatedAt": "2026-10-15T04:39:31.075Z"
+          },
+          {
+            "id": "0fd76cea-f0b7-4171-9ae9-7e77f24c8f00",
+            "operationId": "op_1792039412781_agt_taIxMIVssPhE_tpc_TJNKKSrSP3DU_dEbRAy0X",
+            "status": "passed",
+            "userDecision": "accept",
+            "roundIndex": 2,
+            "issueDelivery": {
+              "taskId": "task_DAFosEUtomqE",
+              "topicId": "tpc_TJNKKSrSP3DU",
+              "dispatchId": "dsp_yqIrITWNKqcI",
+              "deliveryKind": "artifact",
+              "checklistRevision": 1,
+              "deliveryOperationId": "op_1792039412781_agt_taIxMIVssPhE_tpc_TJNKKSrSP3DU_dEbRAy0X",
+              "executionGeneration": 7
+            },
+            "issueReviewer": {
+              "cycleId": "cfb69531-0b32-4bd9-b845-32e108ad38e1",
+              "verdict": "pass",
+              "operationId": "op_1792039589631_agt_taIxMIVssPhE_tpc_aDRjKB4ir20V_Rpsi7lBt"
+            },
+            "createdAt": "2026-10-15T04:46:29.395Z",
+            "updatedAt": "2026-10-15T04:59:55.281Z"
+          }
+        ],
+        "currentResults": [],
+        "topics": [
+          {
+            "id": "tpc_xiKn8vHDr3g8",
+            "operationId": "op_1792042732346_agt_taIxMIVssPhE_tpc_xiKn8vHDr3g8_CsCu7DCF",
+            "status": "running",
+            "seq": 4,
+            "createdAt": "2026-10-15T05:38:52.288Z",
+            "updatedAt": "2026-10-15T05:39:04.978Z"
+          },
+          {
+            "id": "tpc_TJNKKSrSP3DU",
+            "operationId": "op_1792039412781_agt_taIxMIVssPhE_tpc_TJNKKSrSP3DU_dEbRAy0X",
+            "status": "completed",
+            "seq": 3,
+            "createdAt": "2026-10-15T04:43:32.749Z",
+            "updatedAt": "2026-10-15T04:46:47.354Z"
+          },
+          {
+            "id": "tpc_GBcdQg18Kz5B",
+            "operationId": "op_1792039235201_agt_taIxMIVssPhE_tpc_GBcdQg18Kz5B_bWVQu8Lg",
+            "status": "canceled",
+            "seq": 2,
+            "createdAt": "2026-10-15T04:40:35.161Z",
+            "updatedAt": "2026-10-15T04:43:32.215Z"
+          },
+          {
+            "id": "tpc_dRQ65DVXLeKV",
+            "operationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs",
+            "status": "completed",
+            "seq": 1,
+            "createdAt": "2026-10-15T02:07:17.058Z",
+            "updatedAt": "2026-10-15T02:10:49.883Z"
+          }
+        ]
+      }
+    ],
+    "queue": {
+      "queued": 0,
+      "recent": [
+        {
+          "id": "dsp_1f9nFFwv5Pak",
+          "phase": "waiting",
+          "createdAt": "2026-10-15T05:38:50.218Z",
+          "updatedAt": "2026-10-15T05:38:51.857Z"
+        },
+        {
+          "id": "dsp_acIuUwXJehBm",
+          "phase": "succeeded",
+          "createdAt": "2026-10-15T02:27:17.425Z",
+          "updatedAt": "2026-10-15T04:59:55.433Z"
+        },
+        {
+          "id": "dsp_SA3DPMPOhjx8",
+          "phase": "canceled",
+          "createdAt": "2026-10-15T02:17:17.364Z",
+          "updatedAt": "2026-10-15T04:43:32.178Z"
+        },
+        {
+          "id": "dsp_rhOd6QyfuO4z",
+          "phase": "succeeded",
+          "createdAt": "2026-10-15T02:07:15.546Z",
+          "updatedAt": "2026-10-15T04:39:31.226Z"
+        }
+      ],
+      "activeDispatchId": "dsp_1f9nFFwv5Pak"
+    },
+    "dependencies": [
+      {
+        "id": "45614d92-1f28-4f96-829b-f40588e0e9c1",
+        "taskId": "task_A7YBylKf7SvG",
+        "dependsOnId": "task_DAFosEUtomqE",
+        "type": "blocks"
+      }
+    ]
+  },
+  "native": [
+    {
+      "taskId": "task_DAFosEUtomqE",
+      "topicId": "tpc_xiKn8vHDr3g8",
+      "operation": {
+        "capturedAt": "2026-10-15T05:40:07.027Z",
+        "operationId": "op_1792042732346_agt_taIxMIVssPhE_tpc_xiKn8vHDr3g8_CsCu7DCF",
+        "isActive": true,
+        "isCompleted": false,
+        "hasError": false,
+        "needsHumanInput": false,
+        "status": "running",
+        "lastModified": "2026-10-15T05:39:05.027Z",
+        "remote": {
+          "durableStatus": "running",
+          "admission": {
+            "state": "running",
+            "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+            "generation": 1,
+            "updatedAt": "2026-10-15T05:39:05.027Z"
+          }
+        }
+      },
+      "messages": [
+        {
+          "id": "msg_jCVmfw8HNXPhGSVYue",
+          "role": "assistant",
+          "model": "opencode/mimo-v2.6-flash-free",
+          "provider": "opencode",
+          "createdAt": "2026-10-15T05:38:52.340Z",
+          "updatedAt": "2026-10-15T05:39:54.257Z",
+          "hasToolError": false,
+          "toolCallNames": [
+            "bash"
+          ]
+        },
+        {
+          "id": "msg_EYemAbtTreKRpFdKQ4",
+          "role": "tool",
+          "apiName": "bash",
+          "createdAt": "2026-10-15T05:39:09.333Z",
+          "updatedAt": "2026-10-15T05:39:09.405Z",
+          "toolState": "in_progress",
+          "hasToolError": false,
+          "commandClass": "native-sleep-90",
+          "commandSha256": "b89f6513fd6f83fb315c0c782914d9cd04fe80ea4e60b539d444a478a3d56a2c"
+        }
+      ]
+    }
+  ]
+}

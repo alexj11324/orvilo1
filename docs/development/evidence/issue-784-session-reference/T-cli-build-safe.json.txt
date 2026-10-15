@@ -1,0 +1,12 @@
+{
+  "recordedAt": "2026-10-15T05:58:31.532472+00:00",
+  "sourceSha": "3a2e2ca5e3896d8a4bfcec6a60988a082b952960",
+  "buildCommand": "bun run --cwd apps/cli build",
+  "buildExitCode": 0,
+  "cliEntry": "/Users/alexjiang/.codex/worktrees/issue784-checklist-ui/orvilo1/apps/cli/dist/index.js",
+  "cliEntrySha256": "76eb91e8712bcc9e2e4078bde976b2936ac08501e36d8e531f6bfe8aee09be30",
+  "dedicatedReferenceQueryPresent": true,
+  "sourceWorkingTreeClean": true,
+  "uiAndDesktopAndTaskCancelAndMigrationDiffFromS": [],
+  "buildLogSha256": "e39f159bcf9a5177ad4de023863bb75a25a57950cf39ad0a2a8f7deda997ebc1"
+}

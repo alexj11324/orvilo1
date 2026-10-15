@@ -1,0 +1,43 @@
+{
+  "capturedAt": "2026-10-15T06:10:14.061Z",
+  "taskId": "task_x943JumvczAo",
+  "operationId": "op_1792044111805_agt_taIxMIVssPhE_tpc_thCGhvuY43P0_nvRuRbWv",
+  "messages": [
+    {
+      "id": "msg_KU4JHKFJzLpnzmW3Mc",
+      "role": "user",
+      "contentType": "string",
+      "createdAt": "2026-10-15T06:01:51.769Z",
+      "updatedAt": "2026-10-15T06:01:51.769Z",
+      "model": null,
+      "provider": null,
+      "isOperationLinkedAssistant": false,
+      "hasParseableJson": false,
+      "topLevelKeys": [],
+      "wrapperKeys": {},
+      "isExpectedOperatorRequest": true
+    },
+    {
+      "id": "msg_8vseHEqgaHSxAE4VIG",
+      "role": "assistant",
+      "contentType": "string",
+      "createdAt": "2026-10-15T06:01:51.789Z",
+      "updatedAt": "2026-10-15T06:03:19.017Z",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "provider": "opencode",
+      "isOperationLinkedAssistant": true,
+      "hasParseableJson": true,
+      "topLevelKeys": [
+        "$schema",
+        "type",
+        "properties",
+        "required",
+        "additionalProperties"
+      ],
+      "wrapperKeys": {}
+    }
+  ],
+  "latestStoredAssistantId": "msg_8vseHEqgaHSxAE4VIG",
+  "linkedAssistantId": "msg_8vseHEqgaHSxAE4VIG",
+  "note": "Stored Topic message comparison only; raw ACP wire was not independently read by this script."
+}

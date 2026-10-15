@@ -1,0 +1,247 @@
+{
+  "stages": [
+    {
+      "stage": "items-only-no-merge",
+      "observedAt": "2026-10-15T04:11:29.680Z",
+      "sourceSha": "cec4c8397ec8aa1ed0aee43a36382f3f06039b25",
+      "rows": [
+        {
+          "repo": "alexj11324/orvilo-issue784-qa-a-20261014",
+          "expected": 3,
+          "targetSha": "8553812974dccb40fe7f6f09447416740433fbf7",
+          "targetValue": "export const value = () => 0;",
+          "workflowUnchanged": true,
+          "workflowSha256": "044d6098b81d39a5df4314523c0b23f6dceaf623f3cf5f747a04b3d3774dc5a7",
+          "pr": {
+            "url": "https://github.com/alexj11324/orvilo-issue784-qa-a-20261014/pull/1",
+            "baseRefName": "qa-target",
+            "headRefName": "task/T-11",
+            "headRefOid": "8a5baea6ec515b8aabde9a6e7b1118ed109071e7",
+            "isDraft": false,
+            "mergedAt": null,
+            "state": "OPEN",
+            "statusCheckRollup": [
+              {
+                "name": "fixture",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://github.com/alexj11324/orvilo-issue784-qa-a-20261014/actions/runs/38665612042/job/116196764740"
+              },
+              {
+                "name": "fixture",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://github.com/alexj11324/orvilo-issue784-qa-a-20261014/actions/runs/38665583954/job/116196674365"
+              },
+              {
+                "name": "GitGuardian Security Checks",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://dashboard.gitguardian.com"
+              }
+            ]
+          }
+        },
+        {
+          "repo": "alexj11324/orvilo-issue784-qa-b-20261014",
+          "expected": 6,
+          "targetSha": "a783054b7bcab5186738a8c0d8204ede4856c83b",
+          "targetValue": "export const value = () => 0;",
+          "workflowUnchanged": true,
+          "workflowSha256": "044d6098b81d39a5df4314523c0b23f6dceaf623f3cf5f747a04b3d3774dc5a7",
+          "pr": {
+            "url": "https://github.com/alexj11324/orvilo-issue784-qa-b-20261014/pull/1",
+            "baseRefName": "qa-target",
+            "headRefName": "task/T-12",
+            "headRefOid": "3b8a119d35bc32c5dc6ce5ed2f7d0c42dbffc779",
+            "isDraft": false,
+            "mergedAt": null,
+            "state": "OPEN",
+            "statusCheckRollup": [
+              {
+                "name": "fixture",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://github.com/alexj11324/orvilo-issue784-qa-b-20261014/actions/runs/38665657086/job/116196904543"
+              },
+              {
+                "name": "fixture",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://github.com/alexj11324/orvilo-issue784-qa-b-20261014/actions/runs/38665617292/job/116196780930"
+              },
+              {
+                "name": "GitGuardian Security Checks",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://dashboard.gitguardian.com"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "stage": "partial-A-merged-B-draft",
+      "observedAt": "2026-10-15T04:18:32.475Z",
+      "sourceSha": "cec4c8397ec8aa1ed0aee43a36382f3f06039b25",
+      "rows": [
+        {
+          "repo": "alexj11324/orvilo-issue784-qa-a-20261014",
+          "expected": 3,
+          "targetSha": "c37fbd8826df31548d826333227f3046d796022b",
+          "targetValue": "export const value = () => 3;",
+          "workflowUnchanged": true,
+          "workflowSha256": "044d6098b81d39a5df4314523c0b23f6dceaf623f3cf5f747a04b3d3774dc5a7",
+          "pr": {
+            "url": "https://github.com/alexj11324/orvilo-issue784-qa-a-20261014/pull/1",
+            "baseRefName": "qa-target",
+            "headRefName": "task/T-11",
+            "headRefOid": "8a5baea6ec515b8aabde9a6e7b1118ed109071e7",
+            "isDraft": false,
+            "mergedAt": "2026-10-15T04:18:15Z",
+            "state": "MERGED",
+            "statusCheckRollup": [
+              {
+                "name": "fixture",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://github.com/alexj11324/orvilo-issue784-qa-a-20261014/actions/runs/38665612042/job/116196764740"
+              },
+              {
+                "name": "fixture",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://github.com/alexj11324/orvilo-issue784-qa-a-20261014/actions/runs/38665583954/job/116196674365"
+              },
+              {
+                "name": "GitGuardian Security Checks",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://dashboard.gitguardian.com"
+              }
+            ]
+          }
+        },
+        {
+          "repo": "alexj11324/orvilo-issue784-qa-b-20261014",
+          "expected": 6,
+          "targetSha": "a783054b7bcab5186738a8c0d8204ede4856c83b",
+          "targetValue": "export const value = () => 0;",
+          "workflowUnchanged": true,
+          "workflowSha256": "044d6098b81d39a5df4314523c0b23f6dceaf623f3cf5f747a04b3d3774dc5a7",
+          "pr": {
+            "url": "https://github.com/alexj11324/orvilo-issue784-qa-b-20261014/pull/1",
+            "baseRefName": "qa-target",
+            "headRefName": "task/T-12",
+            "headRefOid": "3b8a119d35bc32c5dc6ce5ed2f7d0c42dbffc779",
+            "isDraft": true,
+            "mergedAt": null,
+            "state": "OPEN",
+            "statusCheckRollup": [
+              {
+                "name": "fixture",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://github.com/alexj11324/orvilo-issue784-qa-b-20261014/actions/runs/38665657086/job/116196904543"
+              },
+              {
+                "name": "fixture",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://github.com/alexj11324/orvilo-issue784-qa-b-20261014/actions/runs/38665617292/job/116196780930"
+              },
+              {
+                "name": "GitGuardian Security Checks",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://dashboard.gitguardian.com"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "stage": "final-both-merged",
+      "observedAt": "2026-10-15T04:21:45.215Z",
+      "sourceSha": "cec4c8397ec8aa1ed0aee43a36382f3f06039b25",
+      "rows": [
+        {
+          "repo": "alexj11324/orvilo-issue784-qa-a-20261014",
+          "expected": 3,
+          "targetSha": "c37fbd8826df31548d826333227f3046d796022b",
+          "targetValue": "export const value = () => 3;",
+          "workflowUnchanged": true,
+          "workflowSha256": "044d6098b81d39a5df4314523c0b23f6dceaf623f3cf5f747a04b3d3774dc5a7",
+          "pr": {
+            "url": "https://github.com/alexj11324/orvilo-issue784-qa-a-20261014/pull/1",
+            "baseRefName": "qa-target",
+            "headRefName": "task/T-11",
+            "headRefOid": "8a5baea6ec515b8aabde9a6e7b1118ed109071e7",
+            "isDraft": false,
+            "mergedAt": "2026-10-15T04:18:15Z",
+            "state": "MERGED",
+            "statusCheckRollup": [
+              {
+                "name": "fixture",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://github.com/alexj11324/orvilo-issue784-qa-a-20261014/actions/runs/38665612042/job/116196764740"
+              },
+              {
+                "name": "fixture",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://github.com/alexj11324/orvilo-issue784-qa-a-20261014/actions/runs/38665583954/job/116196674365"
+              },
+              {
+                "name": "GitGuardian Security Checks",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://dashboard.gitguardian.com"
+              }
+            ]
+          }
+        },
+        {
+          "repo": "alexj11324/orvilo-issue784-qa-b-20261014",
+          "expected": 6,
+          "targetSha": "93027b683c65aaea8f706747dc59064468b68432",
+          "targetValue": "export const value = () => 6;",
+          "workflowUnchanged": true,
+          "workflowSha256": "044d6098b81d39a5df4314523c0b23f6dceaf623f3cf5f747a04b3d3774dc5a7",
+          "pr": {
+            "url": "https://github.com/alexj11324/orvilo-issue784-qa-b-20261014/pull/1",
+            "baseRefName": "qa-target",
+            "headRefName": "task/T-12",
+            "headRefOid": "3b8a119d35bc32c5dc6ce5ed2f7d0c42dbffc779",
+            "isDraft": false,
+            "mergedAt": "2026-10-15T04:21:16Z",
+            "state": "MERGED",
+            "statusCheckRollup": [
+              {
+                "name": "fixture",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://github.com/alexj11324/orvilo-issue784-qa-b-20261014/actions/runs/38665657086/job/116196904543"
+              },
+              {
+                "name": "fixture",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://github.com/alexj11324/orvilo-issue784-qa-b-20261014/actions/runs/38665617292/job/116196780930"
+              },
+              {
+                "name": "GitGuardian Security Checks",
+                "status": "COMPLETED",
+                "conclusion": "SUCCESS",
+                "detailsUrl": "https://dashboard.gitguardian.com"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "at": "2026-10-15T05:33:42.522Z",
+  "operationId": "op_1792042179925_agt_taIxMIVssPhE_tpc_Boklgc9hWotl_drGMufQp",
+  "appContextSourceMessagePresent": true,
+  "sourceMessageEqualsActualConsumerUserMessage": true,
+  "operationTopicEqualsConsumer": true,
+  "appContextKeyNames": [
+    "scope",
+    "clientIp",
+    "threadId",
+    "userAgent",
+    "sourceMessageId",
+    "initialTopicMetadata",
+    "interventionApprovalMode"
+  ],
+  "noOtherValuesRead": true
+}

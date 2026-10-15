@@ -1,0 +1,221 @@
+{
+  "capturedAtUtc": "2026-10-15T07:12:53.483476+00:00",
+  "readOnlyAudit": true,
+  "workspace": "/Users/alexjiang/.codex/worktrees/issue784-checklist-ui/orvilo1",
+  "currentU": "e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b",
+  "requestedU": "e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b",
+  "remoteCanary": "6996af3d3c27f590220902e0fbda261b18e6b6c8",
+  "testedQSource": "d21041e8ce54bb5c2e3e2ed1f29e6e01b4817ca4",
+  "journal": {
+    "file": "packages/database/migrations/meta/_journal.json",
+    "uSha256": "a5483af287bda609c22963261da8178d4b64fc5e4feee364983de87077a44539",
+    "canarySha256": "860b17d08142e9a2642fd74056af54853b94b137ded88499b4764892a14c6844",
+    "testedQSha256": "a5483af287bda609c22963261da8178d4b64fc5e4feee364983de87077a44539",
+    "canaryEntryCount": 214,
+    "uEntryCount": 216,
+    "canaryMaximumIndex": 211,
+    "appendedEntries": [
+      {
+        "idx": 212,
+        "version": "7",
+        "when": 1791997412859,
+        "tag": "0212_issue784_saved_agent_runtime",
+        "breakpoints": true
+      },
+      {
+        "idx": 213,
+        "version": "7",
+        "when": 1792007070110,
+        "tag": "0213_issue784_issue_delivery",
+        "breakpoints": true
+      }
+    ],
+    "inheritedDuplicateIndices": [
+      {
+        "idx": 198,
+        "entries": [
+          {
+            "ordinal": 198,
+            "tag": "0198_sudden_magma",
+            "when": 1790822577561
+          },
+          {
+            "ordinal": 204,
+            "tag": "0198_mcp_events",
+            "when": 1790794374893
+          }
+        ]
+      },
+      {
+        "idx": 199,
+        "entries": [
+          {
+            "ordinal": 199,
+            "tag": "0199_dispatch_recovery_bounds",
+            "when": 1790897308249
+          },
+          {
+            "ordinal": 205,
+            "tag": "0199_core_execution_authority",
+            "when": 1790795715648
+          }
+        ]
+      }
+    ],
+    "inheritedNonIncreasingTimestampSteps": [
+      {
+        "previous": {
+          "ordinal": 203,
+          "idx": 203,
+          "version": "7",
+          "when": 1791162171349,
+          "tag": "0203_device_capability_snapshot",
+          "breakpoints": true
+        },
+        "current": {
+          "ordinal": 204,
+          "idx": 198,
+          "version": "7",
+          "when": 1790794374893,
+          "tag": "0198_mcp_events",
+          "breakpoints": true
+        }
+      }
+    ]
+  },
+  "sql": [
+    {
+      "file": "packages/database/migrations/0212_issue784_saved_agent_runtime.sql",
+      "sha256": "071fe22cbec51b2efeecbfbdfe1756dfe48e1e367bd15019269ff0bb095c0c65",
+      "matchesT1Audit": true,
+      "matchesTestedQSourceBytes": true,
+      "matchesParentTSourceBytes": true,
+      "recordedApplyTwiceReceiptSha256": null,
+      "matchesRecordedApplyTwiceHash": null
+    },
+    {
+      "file": "packages/database/migrations/0213_issue784_issue_delivery.sql",
+      "sha256": "5b3a2cffa06d49e6f435e0ee0bc0b554600e32736073458983dea041f558ec54",
+      "matchesT1Audit": true,
+      "matchesTestedQSourceBytes": true,
+      "matchesParentTSourceBytes": true,
+      "recordedApplyTwiceReceiptSha256": "5b3a2cffa06d49e6f435e0ee0bc0b554600e32736073458983dea041f558ec54",
+      "matchesRecordedApplyTwiceHash": true
+    }
+  ],
+  "checks": {
+    "actualUHead": true,
+    "cleanU": true,
+    "remoteCanaryMatchesRequestedRevision": true,
+    "journalMetadataMatchesCanary": true,
+    "canaryJournalEntriesExactPrefix": true,
+    "exactTwoAppendedEntries": true,
+    "appendedIndicesExactly212213": true,
+    "appendedIndicesUnique": true,
+    "appendedIndicesNoncolliding": true,
+    "appendedIndicesSequentialAfterCanaryMaximum": true,
+    "appendedTimestampsStrictlyLaterThanAllCanary": true,
+    "appendedTimestampsIncreasing": true,
+    "journalIdenticalToTestedQBytes": true,
+    "sqlHashesMatchT1Audit": true,
+    "sqlBytesMatchTestedQAndParentT": true,
+    "sql0213MatchesRecordedApplyTwiceHash": true,
+    "UCommitExactlySevenPaths": true,
+    "USevenPathsExcludeMigrations": true,
+    "TToUMigrationTreeUnchanged": true,
+    "inheritedDuplicateIndices198199Preserved": true,
+    "inheritedTimestampBackstepPreserved": true
+  },
+  "UCommitChangedPaths": [
+    "packages/database/src/models/__tests__/task.test.ts",
+    "packages/database/src/models/task.ts",
+    "src/features/AgentTasks/AgentTaskDetail/TaskDetailRunPauseAction.test.ts",
+    "src/features/AgentTasks/AgentTaskDetail/TaskDetailRunPauseAction.tsx",
+    "src/features/AgentTasks/AgentTaskDetail/TaskScheduleConfig.tsx",
+    "src/features/Automations/shared.test.ts",
+    "src/features/Automations/shared.ts"
+  ],
+  "applyTwiceEvidence": {
+    "0212": {
+      "receipt": "/private/tmp/issue784-runtime-migration-evidence.json",
+      "timingsMs": [
+        10,
+        1
+      ],
+      "idempotent": true,
+      "beforeEqualsAfter": true,
+      "ownerIndexesVerified": true,
+      "retiredColumnCount": 0,
+      "sourceHashRecorded": false,
+      "limit": "Receipt records two actual applications but no SQL digest; exact bytes are verified through tested Q source and the T1 audit, not a fabricated receipt hash."
+    },
+    "0213": {
+      "receipt": "/private/tmp/issue784-delivery-migration-runtime.json",
+      "recordedSourceSha256": "5b3a2cffa06d49e6f435e0ee0bc0b554600e32736073458983dea041f558ec54",
+      "applications": [
+        {
+          "index": 1,
+          "elapsedMs": 63
+        },
+        {
+          "index": 2,
+          "elapsedMs": 8
+        }
+      ],
+      "allBeforeCountsEqualAfter": true,
+      "initialAcceptanceVerifyLedgerCounts": {
+        "acceptances": 0,
+        "acceptance_flows": 0,
+        "acceptance_flow_nodes": 0,
+        "acceptance_flow_edges": 0,
+        "acceptance_comments": 0,
+        "verify_runs": 0,
+        "verify_check_results": 0,
+        "verify_criteria": 0,
+        "verify_evidence": 0,
+        "verify_reports": 0
+      },
+      "legacyReviewerHashPreserved": true,
+      "artifactGateInstalled": true,
+      "codePrGateRetained": true,
+      "historicalLedgerRowsPresent": false
+    }
+  },
+  "evidenceFiles": [
+    {
+      "file": "/private/tmp/issue784-runtime-migration-evidence.json",
+      "sha256": "58630ab5ddc01ace9610f312d3bdf178cc8eff6697340a14340e218f9510149b"
+    },
+    {
+      "file": "/private/tmp/issue784-delivery-migration-runtime.json",
+      "sha256": "86294f269f9a5bd10d3a318f4cd285c7a7eaf349ccf694e2b40b4759cef48d11"
+    },
+    {
+      "file": "/tmp/issue784-T1-migration-current-safe.json",
+      "sha256": "31b172e4db9d2dd8cc4ece1548ab43a5d4ed2abf3ee336b0d8e54d62fe0c542d"
+    },
+    {
+      "file": "/private/tmp/issue784-publication/fifo-original-three/cold-history-and-nine-native-idle-safe.json",
+      "sha256": "61bf83a705e1ce87cb60afd5331fdc58f11638647253da314387ad8f3698d08d"
+    },
+    {
+      "file": "/private/tmp/issue784-ui-R4/publication/cold-final-safe.json",
+      "sha256": "b3732e5693e296836de37f4ae077676d648c84fef8ca0d547b4e0d1894f38a1c"
+    },
+    {
+      "file": "/private/tmp/issue784-publication/manual-stop-after-fix/final-global-native-zero-and-original-t14-safe.json",
+      "sha256": "20b66ae58bb404516a6fdab6f72142b9b9eea854f4a74ca3822e4b9e217a9dbd"
+    },
+    {
+      "file": "/private/tmp/issue784-manual-stop-gen2-prep/final-private-reference-preservation-safe.json",
+      "sha256": "7dc1a74044221ed02fab29ed3fc74f0cf2abe0c10382b1fdc018ecded194888a"
+    }
+  ],
+  "limits": [
+    "No migration SQL was applied or replayed during this audit; no runtime/API/DB mutation, tests, type checks or git mutation occurred.",
+    "The original 0213 apply-twice receipt had empty Acceptance/Verify ledgers; it does not prove migration replay against populated legacy ledgers.",
+    "Later actual FIFO/cold UI receipts demonstrate populated delivery history and preservation; current U final guards preserve original four T14 outcomes and private reference operation/message hashes. These are later preservation receipts, not populated-ledger migration replay.",
+    "Inherited duplicate journal indices 198/199 and the old timestamp backstep are retained exactly; no repair was attempted.",
+    "No claim that every legacy Goal graph fixture or historical graph was exercised."
+  ]
+}

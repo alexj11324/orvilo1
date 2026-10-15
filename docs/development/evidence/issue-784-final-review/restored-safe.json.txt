@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-15T07:08:09.190Z",
+  "mode": "--execute-once-root-go",
+  "sourceSha": "e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b",
+  "globalNativeZero": true,
+  "originalConfigHashVerified": true,
+  "originalConfigSha256": "1055ed2684701d64e737b7fbcaadb903714c925a1c58744a966763588cdc5953",
+  "currentConfigSha256": "edab37d60af2849c02498318569e5269240d84dadb5543a69d3b181c87d5dc59",
+  "originalPluginsEmpty": true,
+  "currentOwnedPluginOnly": true,
+  "onlyAddedSmallModelInCurrentContent": true,
+  "currentAgencyOtherFieldsSha256": "9a15d9b54de040413b63c97517f5b69dcb7c5ab385e992b47426a37e5d6471b1",
+  "ownerUnrelatedPreferencesSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "memberUnrelatedPreferencesSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "scopedCalls": [
+    "agent.updateAgentConfig: plugins plus current agencyConfig with only original OPENCODE_CONFIG_CONTENT restored",
+    "workspaceUserSettings.updatePreference: orchestratorAgentId null"
+  ],
+  "touchesBuildMode": false,
+  "touchesCredentials": false,
+  "touchesServicesOrEnvironmentFiles": false,
+  "mutationsPerformed": true,
+  "originalContentRestored": true,
+  "originalPluginsRestored": true,
+  "otherAgencyFieldsPreserved": true,
+  "sharedOrchestratorClearedBothActors": true,
+  "unrelatedPreferencesPreservedBothActors": true
+}

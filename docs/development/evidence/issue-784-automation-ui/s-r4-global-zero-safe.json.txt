@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-15T05:41:40.851Z",
+  "sourceSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+  "globalActive": [],
+  "globalNativeZero": true,
+  "rootDispatches": [
+    {
+      "id": "dsp_rhOd6QyfuO4z",
+      "phase": "succeeded"
+    },
+    {
+      "id": "dsp_SA3DPMPOhjx8",
+      "phase": "canceled"
+    },
+    {
+      "id": "dsp_acIuUwXJehBm",
+      "phase": "succeeded"
+    },
+    {
+      "id": "dsp_1f9nFFwv5Pak",
+      "phase": "canceled"
+    }
+  ],
+  "originalThreePhasesPreserved": true,
+  "onlyOneNewGenuineR4": true,
+  "r4Canceled": true
+}

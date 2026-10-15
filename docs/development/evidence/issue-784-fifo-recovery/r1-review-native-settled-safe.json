@@ -1,0 +1,64 @@
+{
+  "active": [],
+  "at": "2026-10-15T04:37:37.572Z",
+  "dispatches": [
+    {
+      "id": "dsp_rhOd6QyfuO4z",
+      "phase": "waiting",
+      "generation": 1,
+      "fence": 1,
+      "operation_id": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+      "waiting_reason": "automation_delivery_pending"
+    },
+    {
+      "id": "dsp_SA3DPMPOhjx8",
+      "phase": "queued",
+      "generation": 2,
+      "fence": 0,
+      "operation_id": null,
+      "waiting_reason": null
+    },
+    {
+      "id": "dsp_acIuUwXJehBm",
+      "phase": "queued",
+      "generation": 2,
+      "fence": 0,
+      "operation_id": null,
+      "waiting_reason": null
+    }
+  ],
+  "facts": [
+    {
+      "path": "executionPlan.deviceId",
+      "value": "b26d477ac30d6080a4a038b66cb28a80"
+    },
+    {
+      "path": "executionPlan.modelRoute.model",
+      "value": "opencode/mimo-v2.6-flash-free"
+    },
+    {
+      "path": "heteroAgentType",
+      "value": "opencode"
+    },
+    {
+      "path": "remoteAdmission.deviceId",
+      "value": "b26d477ac30d6080a4a038b66cb28a80"
+    },
+    {
+      "path": "remoteAdmission.acpSessionId",
+      "value": "ses_ec228c18affe0z9uJAxJEIF3uu"
+    },
+    {
+      "path": "builtinToolContext.activeDeviceId",
+      "value": "b26d477ac30d6080a4a038b66cb28a80"
+    }
+  ],
+  "op": {
+    "id": "op_1792038876355_agt_taIxMIVssPhE_tpc_eNz6zO8lbGwe_wXNcYtSX",
+    "status": "done",
+    "model": "opencode/mimo-v2.6-flash-free",
+    "provider": "opencode",
+    "created_at": "2026-10-15T04:34:36.372Z",
+    "completed_at": "2026-10-15T04:36:36.305Z"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "at": "2026-10-15T06:03:22.853Z",
+  "stage": "intake_failed_stop",
+  "errorType": "Error"
+}

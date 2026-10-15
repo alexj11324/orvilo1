@@ -1,0 +1,83 @@
+{
+  "at": "2026-10-15T04:37:18.257Z",
+  "currentRun": {
+    "runId": "115ea62d-42b0-4978-8054-9daabcd213f7",
+    "proof": {
+      "taskId": "task_A7YBylKf7SvG",
+      "deliveryOperationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+      "topicId": "tpc_3xyaZBrsdDGT",
+      "executionGeneration": 1,
+      "dispatchId": "dsp_rhOd6QyfuO4z",
+      "checklistRevision": 1,
+      "deliveryKind": "artifact"
+    },
+    "reviewerPassed": true,
+    "necessaryChecksPassed": true,
+    "itemsAccepted": false,
+    "deliveryAccepted": false,
+    "availableForDependents": true,
+    "merged": false
+  },
+  "evidence": [
+    {
+      "id": "d9c45771-f022-46a5-80a0-72e40bbb6897",
+      "type": "text"
+    },
+    {
+      "id": "d7fc216b-859e-46de-965b-7d904a9ced85",
+      "type": "text"
+    },
+    {
+      "id": "68da427b-9419-4dbc-b222-f86b33ed6e06",
+      "type": "text"
+    },
+    {
+      "id": "905b2024-bbec-4849-9b90-3f001a5b0db8",
+      "type": "text"
+    },
+    {
+      "id": "803bf05d-cb60-4635-84ff-b7ac7e10defa",
+      "type": "text"
+    },
+    {
+      "id": "349ab1f4-0c36-4650-a1bd-36c9d292c437",
+      "type": "text"
+    }
+  ],
+  "history": [
+    {
+      "id": "115ea62d-42b0-4978-8054-9daabcd213f7",
+      "status": "passed",
+      "operationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+      "userDecision": null
+    }
+  ],
+  "results": [
+    {
+      "id": "e3fe7db0-5813-4027-838c-146827cec8f5",
+      "checkItemId": "70f8d7fc-57b3-4dcf-8334-944d3a8efc35",
+      "verdict": "passed",
+      "status": "passed",
+      "userDecision": null
+    },
+    {
+      "id": "5b3f07de-4cdd-44e8-b611-40fe854ca75a",
+      "checkItemId": "c608a250-12ed-4236-8250-7cd117f3dfeb",
+      "verdict": "passed",
+      "status": "passed",
+      "userDecision": null
+    }
+  ],
+  "task": {
+    "id": "task_A7YBylKf7SvG",
+    "status": "paused",
+    "workflowCategory": "in_review",
+    "review": {
+      "state": "submitted",
+      "verdict": "pass",
+      "reviewerOperationId": "op_1792038876355_agt_taIxMIVssPhE_tpc_eNz6zO8lbGwe_wXNcYtSX",
+      "deliveryOperationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+      "reviewerAgentId": "agt_taIxMIVssPhE"
+    }
+  }
+}

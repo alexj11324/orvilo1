@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-15T06:56:54.844Z",
+  "provenance": "Supported task.find derived API; no task.detail reconciliation query used",
+  "task": {
+    "id": "task_wqstgZSuOLUg",
+    "status": "paused",
+    "workflowCategory": "in_progress",
+    "automationMode": "heartbeat",
+    "heartbeatInterval": 600,
+    "executionGeneration": 2,
+    "lastHeartbeatAt": "2026-10-15T06:51:43.182Z",
+    "scheduler": {
+      "automationPaused": false,
+      "scheduledAt": "2026-10-15T06:51:24.215Z",
+      "tickRevision": 2,
+      "tickMessageId": "local-task-task_wqstgZSuOLUg-ae2d05cb76ebfdda48434a45389ccbb478832e3e34a910dd9206352d07924886",
+      "tickTokenSha256": "25cff990dd53df30efd5fa2eff73740c4076e539a4817f3e28bc428b010cbce1"
+    }
+  }
+}

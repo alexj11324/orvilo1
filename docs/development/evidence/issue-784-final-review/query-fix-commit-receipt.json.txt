@@ -1,0 +1,15 @@
+{
+  "commit": "acb24d0fec2af4fce5b052feab481f5d89ac39cb",
+  "parent": "e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b",
+  "tree": "0170a3b0153d2d5ff923af7d5a124fa8b7c67710",
+  "subject": "\ud83d\udea7 WIP: avoid extracted JSON null test in automation filters [ci full]",
+  "branch": "fix/issue784-safe-periodic-null",
+  "patchSha256": "64fa450580fbcb39017620addeb20b00392a2813f043cca51f63c0c138cd4733",
+  "onlyApprovedSourcePathChanged": true,
+  "committedAndWorkingTreeHashesMatchManifest": true,
+  "workingTreeCleanIncludingUntracked": true,
+  "normalHooksPassed": true,
+  "verification": "unchanged guard RED before fix; scoped lint clean and guard1 + PGlite task249 =250 PASS after fix",
+  "independentReview": "APPROVE exact patch hash; /private/tmp/issue784-safe-periodic-null-review.md",
+  "pushOrRuntimeChanges": false
+}

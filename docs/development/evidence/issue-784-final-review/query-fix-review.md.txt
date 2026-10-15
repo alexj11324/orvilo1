@@ -1,0 +1,22 @@
+# Independent scoped review
+
+Verdict: APPROVE. No introduced P0/P1/P2 findings or release-blocking defects found.
+
+Reviewed the one-line unstaged change in `packages/database/src/models/task.ts:2549` against base `e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b`. The staged diff is empty. Current diff bytes exactly match frozen patch SHA256 `64fa450580fbcb39017620addeb20b00392a2813f043cca51f63c0c138cd4733`; no other source changes are present.
+
+The replacement removes the extracted-JSON NullTest and uses the sentinel pattern explicitly documented in the maintained `jsonbNullTest.test.ts` guard. For the supported optional boolean scheduler field, missing/JSON-null values still take the legacy status predicate, while explicit false and true retain their existing branches. Empty text would also take the fallback, but the declared field and current writers use booleans; this is not an observed supported-path failure. Event automation, ordinary lists, user/workspace ownership, count/page predicates, and scheduling writes are unchanged.
+
+Evidence inspected: the CI failure log at lines 1507–1538 and the author's local RED log both identify exactly this NullTest; the final focused-check log reports lint clean and 250 passing tests. Existing task tests cover schedule and heartbeat canceled runs with explicit false (Active only), true (Paused only), and missing flag (legacy Paused), plus event and ordinary-list behavior. `git diff --check` passes. No runtime, database mutation, full-suite rerun, or local type check was performed by this reviewer. These receipts support this narrow query correction; they do not establish production pg_search runtime acceptance.
+
+Applied the light Quick checklists for ai-coding-bad-habits, code-style, logic, business-logic, reuse-architecture, performance, release-risk, security, observability, and workflow. Pruned new-feature, compatibility, UX, and skill-freshness because the patch introduces no capability, UI/API/platform change, or instruction change. No extension packs were supplied for this instantiated review. No new helper, suppression, schema, dependency, outbound effect, or model-cost path is introduced.
+
+## Review Summary
+
+| Severity | Count | Status |
+|----------|-------|--------|
+| CRITICAL | 0 | pass |
+| HIGH | 0 | pass |
+| MEDIUM | 0 | pass |
+| LOW | 0 | pass |
+
+Verdict: APPROVE — no introduced reproducible failures found within the frozen scope.

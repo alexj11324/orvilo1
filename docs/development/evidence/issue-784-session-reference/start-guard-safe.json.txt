@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-15T05:03:22.136Z",
+  "sourceSha": "d21041e8ce54bb5c2e3e2ed1f29e6e01b4817ca4",
+  "sourceClean": true,
+  "globalActiveCount": 0,
+  "agentId": "agt_taIxMIVssPhE",
+  "model": "opencode/mimo-v2.6-flash-free",
+  "smallModel": "opencode/mimo-v2.6-flash-free",
+  "host": "b26d477ac30d6080a4a038b66cb28a80",
+  "configChanged": false
+}

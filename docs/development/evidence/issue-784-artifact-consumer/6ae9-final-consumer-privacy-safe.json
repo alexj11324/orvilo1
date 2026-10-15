@@ -1,0 +1,177 @@
+{
+  "agentId": "agt_taIxMIVssPhE",
+  "environment": "current local QA source/Issue consumer path",
+  "mutationsPerformed": false,
+  "observedAt": "2026-10-15T01:45:11.992Z",
+  "results": [
+    {
+      "actor": "owner",
+      "expectedUserId": "user_agent_testing_001",
+      "records": [
+        {
+          "method": "user.getUserState",
+          "status": 200,
+          "nonnull": true
+        },
+        {
+          "method": "topic.getTopicDetail",
+          "status": 200,
+          "nonnull": true,
+          "topic": {
+            "id": "tpc_mHuZ2x0toY0t",
+            "userId": "user_agent_testing_001"
+          }
+        },
+        {
+          "method": "topic.getTopicTranscript",
+          "status": 200,
+          "nonnull": true,
+          "transcript": {
+            "topicId": "tpc_mHuZ2x0toY0t",
+            "itemCount": 5,
+            "total": 5,
+            "messageIds": [
+              "msg_mhu8Rus8ACdURKTAQp",
+              "msg_a57YbeQwzDn67iv5AV",
+              "msg_by9FKZDOukI4fbYiCS",
+              "msg_OmM5N0thdxiKLVCtEa",
+              "msg_R60MYKoqk9zHF9mCuB"
+            ],
+            "containsOriginalAmbiguousRequest": true,
+            "containsConfirmedMarkers": true
+          }
+        },
+        {
+          "method": "task.detail",
+          "status": 200,
+          "nonnull": true,
+          "issue": {
+            "id": "task_knI1wX9SI6pC",
+            "workflowCategory": "done",
+            "reviewerAgentId": "agt_taIxMIVssPhE"
+          }
+        },
+        {
+          "method": "task.getChecklist",
+          "status": 200,
+          "nonnull": true,
+          "checklist": {
+            "runId": "93957ffa-5262-43ce-b5ae-8f4f345a8ec2",
+            "executionGeneration": 4,
+            "reviewerPassed": true,
+            "itemsAccepted": true,
+            "deliveryAccepted": true,
+            "historyIds": [
+              "037bb34f-a2b9-447f-aea1-9f051b69febb",
+              "93957ffa-5262-43ce-b5ae-8f4f345a8ec2"
+            ],
+            "resultIds": [
+              "d0ac7f9c-470a-4c32-b455-2ef49a890e75",
+              "a10b1cfb-ae61-49e2-871e-bdf3d95f4835",
+              "4301ff03-3752-4a6f-a129-3108b70dc9b8",
+              "13197636-31ea-4c19-84e3-d25dd53521e5"
+            ],
+            "evidenceIds": [
+              "728b3216-e48f-4cb5-a475-c98dd6619283",
+              "83b4a44c-8972-45b9-8cfe-ee32bf9a7a54",
+              "14301877-4a6c-432b-8c6b-0896c88214b9",
+              "5dcb9938-40b6-433e-b4ba-dde9648ee5fb",
+              "02f26362-b01c-417c-b408-1006d96a79c9",
+              "5e7a0086-6b0c-4647-ad00-89c3b17c38c8",
+              "9c904e57-f990-4e3e-b340-2e0d5f480c2d",
+              "b9dcdb27-0a2a-4e56-a9ee-2717bbde220d",
+              "03636ced-f5e8-4434-a8f6-61cfcefd5cf8"
+            ]
+          }
+        },
+        {
+          "method": "agent.getAgentConfigById",
+          "status": 200,
+          "nonnull": true,
+          "agent": {
+            "id": "agt_taIxMIVssPhE",
+            "primaryModel": "opencode/mimo-v2.6-flash-free",
+            "permissionMetadataKeyNames": ["accessedAt"]
+          }
+        }
+      ]
+    },
+    {
+      "actor": "member",
+      "expectedUserId": "user_issue784_member_001",
+      "records": [
+        {
+          "method": "user.getUserState",
+          "status": 200,
+          "nonnull": true
+        },
+        {
+          "method": "topic.getTopicDetail",
+          "status": 200,
+          "nonnull": false
+        },
+        {
+          "method": "topic.getTopicTranscript",
+          "status": 404,
+          "errorCode": "NOT_FOUND",
+          "nonnull": false
+        },
+        {
+          "method": "task.detail",
+          "status": 200,
+          "nonnull": true,
+          "issue": {
+            "id": "task_knI1wX9SI6pC",
+            "workflowCategory": "done",
+            "reviewerAgentId": "agt_taIxMIVssPhE"
+          }
+        },
+        {
+          "method": "task.getChecklist",
+          "status": 200,
+          "nonnull": true,
+          "checklist": {
+            "runId": "93957ffa-5262-43ce-b5ae-8f4f345a8ec2",
+            "executionGeneration": 4,
+            "reviewerPassed": true,
+            "itemsAccepted": true,
+            "deliveryAccepted": true,
+            "historyIds": [
+              "037bb34f-a2b9-447f-aea1-9f051b69febb",
+              "93957ffa-5262-43ce-b5ae-8f4f345a8ec2"
+            ],
+            "resultIds": [
+              "d0ac7f9c-470a-4c32-b455-2ef49a890e75",
+              "a10b1cfb-ae61-49e2-871e-bdf3d95f4835",
+              "4301ff03-3752-4a6f-a129-3108b70dc9b8",
+              "13197636-31ea-4c19-84e3-d25dd53521e5"
+            ],
+            "evidenceIds": [
+              "728b3216-e48f-4cb5-a475-c98dd6619283",
+              "83b4a44c-8972-45b9-8cfe-ee32bf9a7a54",
+              "14301877-4a6c-432b-8c6b-0896c88214b9",
+              "5dcb9938-40b6-433e-b4ba-dde9648ee5fb",
+              "02f26362-b01c-417c-b408-1006d96a79c9",
+              "5e7a0086-6b0c-4647-ad00-89c3b17c38c8",
+              "9c904e57-f990-4e3e-b340-2e0d5f480c2d",
+              "b9dcdb27-0a2a-4e56-a9ee-2717bbde220d",
+              "03636ced-f5e8-4434-a8f6-61cfcefd5cf8"
+            ]
+          }
+        },
+        {
+          "method": "agent.getAgentConfigById",
+          "status": 200,
+          "nonnull": true,
+          "agent": {
+            "id": "agt_taIxMIVssPhE",
+            "primaryModel": "opencode/mimo-v2.6-flash-free",
+            "permissionMetadataKeyNames": []
+          }
+        }
+      ]
+    }
+  ],
+  "sourceTopicId": "tpc_mHuZ2x0toY0t",
+  "taskId": "task_knI1wX9SI6pC"
+}

@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-15T06:24:30.667Z",
+  "uiStopAt": "2026-10-15T06:23:54.993Z",
+  "leafId": "task_wqstgZSuOLUg",
+  "rawStatus": "backlog",
+  "futurePaused": false,
+  "scheduledAt": "2026-10-15T06:20:19.594Z",
+  "tickRevision": 1,
+  "operation": {
+    "id": "op_1792045223357_agt_taIxMIVssPhE_tpc_hWh5Nch04vD7_eZIBOrUi",
+    "status": "interrupted",
+    "completedAt": "2026-10-15T06:23:57.300Z",
+    "remoteCancel": {
+      "state": "confirmed",
+      "reason": "host reported cancelled",
+      "resolvedAt": "2026-10-15T06:23:57.129Z",
+      "requestedAt": "2026-10-15T06:23:56.740Z"
+    },
+    "acpSessionId": "ses_ec1c7e593ffe8z8xggzshNHdPi"
+  },
+  "rpcSafeRecords": "",
+  "actualUiAfterStop": {
+    "switch": "off",
+    "label": "paused",
+    "button": "run"
+  },
+  "noFurtherControls": true
+}

@@ -1,0 +1,83 @@
+{
+  "at": "2026-10-15T04:35:10.973Z",
+  "dispatches": [
+    {
+      "id": "dsp_rhOd6QyfuO4z",
+      "phase": "waiting",
+      "waiting_reason": "automation_delivery_pending",
+      "generation": 1,
+      "fence": 1,
+      "operation_id": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL"
+    },
+    {
+      "id": "dsp_SA3DPMPOhjx8",
+      "phase": "queued",
+      "waiting_reason": null,
+      "generation": 2,
+      "fence": 0,
+      "operation_id": null
+    },
+    {
+      "id": "dsp_acIuUwXJehBm",
+      "phase": "queued",
+      "waiting_reason": null,
+      "generation": 2,
+      "fence": 0,
+      "operation_id": null
+    }
+  ],
+  "operations": [
+    {
+      "id": "op_1792038854382_agt_taIxMIVssPhE_tpc_whezfKPDuPWh_Wos7TFED",
+      "task_id": "task_A7YBylKf7SvG",
+      "topic_id": "tpc_whezfKPDuPWh",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "provider": "opencode",
+      "created_at": "2026-10-15T04:34:14.382Z",
+      "completed_at": "2026-10-15T04:34:26.478Z"
+    },
+    {
+      "id": "op_1792038866871_agt_taIxMIVssPhE_tpc_v4Klk6oYm8IB_UL3zX6JE",
+      "task_id": "task_A7YBylKf7SvG",
+      "topic_id": "tpc_v4Klk6oYm8IB",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "provider": "opencode",
+      "created_at": "2026-10-15T04:34:26.872Z",
+      "completed_at": "2026-10-15T04:34:35.954Z"
+    },
+    {
+      "id": "op_1792038876355_agt_taIxMIVssPhE_tpc_eNz6zO8lbGwe_wXNcYtSX",
+      "task_id": "task_A7YBylKf7SvG",
+      "topic_id": "tpc_eNz6zO8lbGwe",
+      "status": "running",
+      "model": null,
+      "provider": "opencode",
+      "created_at": "2026-10-15T04:34:36.372Z",
+      "completed_at": null
+    }
+  ],
+  "runs": [
+    {
+      "id": "115ea62d-42b0-4978-8054-9daabcd213f7",
+      "operation_id": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+      "status": "verifying",
+      "user_decision": null
+    }
+  ],
+  "task": {
+    "id": "task_A7YBylKf7SvG",
+    "paused": true,
+    "review_state": "running",
+    "review_verdict": null,
+    "reviewer_operation": "op_1792038876355_agt_taIxMIVssPhE_tpc_eNz6zO8lbGwe_wXNcYtSX"
+  },
+  "topic": {
+    "status": "completed",
+    "run_state": "succeeded",
+    "result_ready_at": "2026-10-15T04:34:36.505Z",
+    "contentLength": 574,
+    "contentSha256": "93f0894ae577d6e60ad01d9ba6651853aeb08f6144ae42de9f04db6e64d6ba09"
+  }
+}

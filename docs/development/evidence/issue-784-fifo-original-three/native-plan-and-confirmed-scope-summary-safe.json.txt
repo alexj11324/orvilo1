@@ -1,0 +1,62 @@
+{
+  "initialBackendSha": "e24075992d1c0888e3ac5db80481b06efba755b3",
+  "planningStartedAt": "2026-10-15T01:54:38.147Z",
+  "planningFinishedAt": "2026-10-15T01:56:10.690Z",
+  "planningOperationId": "op_1792029280663_agt_taIxMIVssPhE_tpc_nuSg9VOPipRS_BTYYKJOt",
+  "orchestratorAgentId": "agt_taIxMIVssPhE",
+  "ownerConfirmedRevision": 1,
+  "ownerConfirmedAt": "2026-10-15T01:57:11.229Z",
+  "scopeFingerprint": "e41c62e562ebc604e9600690427fc7bc0dd9f36b2a5e1efa6d6040378ce73ff7",
+  "executionScopeIds": [
+    "task_A7YBylKf7SvG",
+    "task_DAFosEUtomqE"
+  ],
+  "parentTaskId": "task_A7YBylKf7SvG",
+  "childTasks": [
+    {
+      "id": "task_DAFosEUtomqE",
+      "parentTaskId": "task_A7YBylKf7SvG",
+      "assigneeAgentId": "agt_taIxMIVssPhE",
+      "reviewerAgentId": "agt_taIxMIVssPhE"
+    }
+  ],
+  "checklists": [
+    {
+      "taskId": "task_A7YBylKf7SvG",
+      "deliveryKind": "artifact",
+      "criteria": [
+        {
+          "title": "Root aggregate per-Run persisted readable Markdown Agent Document",
+          "required": true
+        },
+        {
+          "title": "Independent native verification of arithmetic 2+3=5 on root aggregate",
+          "required": true
+        }
+      ]
+    },
+    {
+      "taskId": "task_DAFosEUtomqE",
+      "deliveryKind": "artifact",
+      "criteria": [
+        {
+          "title": "Per-Run persisted readable Markdown Agent Document on child Issue",
+          "required": true
+        },
+        {
+          "title": "Independent native verification of arithmetic 2+3=5 on child Run",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "45614d92-1f28-4f96-829b-f40588e0e9c1",
+      "taskId": "task_A7YBylKf7SvG",
+      "dependsOnId": "task_DAFosEUtomqE",
+      "type": "blocks"
+    }
+  ],
+  "note": "Semantic criteria from the actual native plan; accepted verdicts bind to each actual persisted Run.plan UUIDs in the current proof receipts."
+}

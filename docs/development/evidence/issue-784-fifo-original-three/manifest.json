@@ -1,0 +1,319 @@
+{
+  "backendProvenance": {
+    "timer": "e24075992d1c0888e3ac5db80481b06efba755b3",
+    "finalControls": "d21041e8ce54bb5c2e3e2ed1f29e6e01b4817ca4",
+    "rendererReportedSource": "cec4c8397ec8aa1ed0aee43a36382f3f06039b25"
+  },
+  "createdAt": "2026-10-15T05:07:45.116Z",
+  "credentialPatternScan": {
+    "matches": 0,
+    "contentFilesScanned": 16
+  },
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 4745,
+      "sha256": "04043dced58a94ca4ba4058c5fa05cd3794ffb9e58e1b65c3b1607f2e4f36a3c",
+      "purpose": "Scope, provenance, results, recovery boundary and evidence interpretation",
+      "originalPublishedSha256": "ba60416cc4853f9856f5546e8cd4832f79b2f0cf75dd349520cb9a8b3a4ce60d",
+      "originalPublishedBytes": 4473,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "correct-public-redaction-provenance-description"
+      }
+    },
+    {
+      "file": "cold-history-and-nine-native-idle-safe.json.txt",
+      "bytes": 20281,
+      "sha256": "37b7db14db86a2c3c3609257072285c6c09a94cf2b190a4aabae526a08026faf",
+      "purpose": "Fresh-process cold API history, periodic issue alive, eleven checks and family native idle",
+      "sourceFilename": "cold-history-and-nine-native-idle-safe.json",
+      "originalPublishedSha256": "61bf83a705e1ce87cb60afd5331fdc58f11638647253da314387ad8f3698d08d",
+      "originalPublishedBytes": 20227,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/issue/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "b8104ac98a63d3cb5d8d41df2b16e96b22adcedc14ac53d10ccea7cd490b0e57"
+          },
+          {
+            "jsonPointer": "/family/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "b8104ac98a63d3cb5d8d41df2b16e96b22adcedc14ac53d10ccea7cd490b0e57"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    },
+    {
+      "file": "future-pause-past-next-deadline-safe.json.txt",
+      "bytes": 1407,
+      "sha256": "9e9823a6e7d68466309ab7630817b7e5d7cb07e6fceb1fe52960426aca9028c5",
+      "purpose": "Real observation after next 600-second deadline with no fourth capture",
+      "sourceFilename": "future-pause-past-next-deadline-safe.json",
+      "originalPublishedSha256": "71fa502cffe8fb37778e316951267fca4b8e2b67f785cdefa5f7bf1b110db71f",
+      "originalPublishedBytes": 1380,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "b8104ac98a63d3cb5d8d41df2b16e96b22adcedc14ac53d10ccea7cd490b0e57"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    },
+    {
+      "file": "global-native-zero-before-ui-release-safe.json.txt",
+      "bytes": 233,
+      "sha256": "15c251a3cb9e057e5eb9ebaff34e934e43185d7354bbff20a135191a1a8d1db4",
+      "purpose": "Global native-zero read-only guard at 05:02:20.501 UTC",
+      "sourceFilename": "global-native-zero-before-ui-release-safe.json"
+    },
+    {
+      "file": "native-and-new-artifact-attestation-safe.json.txt",
+      "bytes": 15559,
+      "sha256": "7f7652a6bf935e383fab1cfe37df1e7e91db7f22bba94f4de2aa54fefd574c0c",
+      "purpose": "Derived native/model/check/document/ACP facts only; no raw native output",
+      "sourceFilename": "native-and-new-artifact-attestation-safe.json"
+    },
+    {
+      "file": "native-plan-and-confirmed-scope-summary-safe.json.txt",
+      "bytes": 1931,
+      "sha256": "3dd0694b14b72f374d20bc67db5b78e4f0870faa567b068a3eec49d054003f39",
+      "purpose": "Actual native Orchestrator plan and Owner-confirmed two-task standing criteria summary",
+      "sourceFilename": "native-plan-and-confirmed-scope-summary-safe.json"
+    },
+    {
+      "file": "original-three-final-marker-safe.json.txt",
+      "bytes": 1261,
+      "sha256": "f12c810c11c552bc0f41a9391d2ebe608479e7a239d6848bb5bfae7524806527",
+      "purpose": "Immutable identity and hashes of the original three-occurrence final acceptance",
+      "sourceFilename": "original-three-final-marker-safe.json"
+    },
+    {
+      "file": "owner-final-history-paused-cold.png",
+      "bytes": 343272,
+      "sha256": "39f85dcc5f6f971edf0ea9ebc9bab0d5acd9916a83cc5fa4bd587623771aee04",
+      "purpose": "Actual Owner CmdR: paused header and all five retained run rows"
+    },
+    {
+      "file": "owner-final-two-results-cold.png",
+      "bytes": 367809,
+      "sha256": "d3250b18afc26302ed6f54444ec65a9150c069786edff30f569c8aa1b6ac1532",
+      "purpose": "Actual Owner CmdR: both nonempty persisted R1/R3 aggregate outputs"
+    },
+    {
+      "file": "owner-r2-native-active.png",
+      "bytes": 314800,
+      "sha256": "43dfefd1f0dc92ca1f8da3240b45da8946a8efbad594c2fb3c96ace97ab73806",
+      "purpose": "Visually checked actual Owner UI before native R2 cancellation"
+    },
+    {
+      "file": "owner-r3-active-r2-canceled-cold.png",
+      "bytes": 326593,
+      "sha256": "fdc426347fdd02cb8cb1688c0a05b65b228786baf2085dfc1773eb9415d24742",
+      "purpose": "Actual cold Owner UI with active R3 and canceled R2; not a future-pause UI assertion"
+    },
+    {
+      "file": "r1-accepted-while-paused-safe.json.txt",
+      "bytes": 4357,
+      "sha256": "6f9c24bb4370b74748d91487d9a47be9c6eff4e1b35c47f1d0decabe0f2c7555",
+      "purpose": "Nine R1 acceptance/paused-queue preservation checks",
+      "sourceFilename": "r1-accepted-while-paused-safe.json"
+    },
+    {
+      "file": "r1-operator-recovery-limit-safe.json.txt",
+      "bytes": 1334,
+      "sha256": "da3e26729c44c6665be9bf2497d7b6bc6e5dc85baf586e997f4304b361d6c1bb",
+      "purpose": "R1 retained callback recovery attestation; no private callback payload",
+      "sourceFilename": "r1-operator-recovery-limit-safe.json"
+    },
+    {
+      "file": "r2-native-ack-before-auto-r3-safe.json.txt",
+      "bytes": 15461,
+      "sha256": "6b6ff86f715af2cf7f2bb3321381372a1fa567f771e3ec2fadbb832eb09e8995",
+      "purpose": "Actual native interruption ACK, canceled original R2, and subsequent automatic R3",
+      "sourceFilename": "r2-native-ack-before-auto-r3-safe.json",
+      "originalPublishedSha256": "9fb9b30a648a931adb0b5f478d4a02c3d38f40622cbee87d43e61a76c808edad",
+      "originalPublishedBytes": 15407,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/before/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "b8104ac98a63d3cb5d8d41df2b16e96b22adcedc14ac53d10ccea7cd490b0e57"
+          },
+          {
+            "jsonPointer": "/after/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "b8104ac98a63d3cb5d8d41df2b16e96b22adcedc14ac53d10ccea7cd490b0e57"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    },
+    {
+      "file": "r2-saved-model-and-acp-attestation-safe.json.txt",
+      "bytes": 921,
+      "sha256": "d5bfdc46bafe0de8cda8a8e66571bcb6de8e747e2a6a98a72ea9a9ab198aef5e",
+      "purpose": "Independent safe route/host/ACP attestation; interrupted operation model remains null",
+      "sourceFilename": "r2-saved-model-and-acp-attestation-safe.json"
+    },
+    {
+      "file": "r2-supported-resume-safe.json.txt",
+      "bytes": 15747,
+      "sha256": "7051697ae630286e4a908dbaa180139d6c3658477f8957834e1422db2283524e",
+      "purpose": "Supported Resume activates the original queued R2",
+      "sourceFilename": "r2-supported-resume-safe.json",
+      "originalPublishedSha256": "55d62d2759f30cc40b34f4829fb780cae38e0944351e6f6e62c2e2908c30923f",
+      "originalPublishedBytes": 15693,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/before/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "481d32058775bfed965c795548543f68fe38a7e2fa04217d6e13ae3bc7345793"
+          },
+          {
+            "jsonPointer": "/after/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "b8104ac98a63d3cb5d8d41df2b16e96b22adcedc14ac53d10ccea7cd490b0e57"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    },
+    {
+      "file": "r3-current-preserved-future-paused-safe.json.txt",
+      "bytes": 15461,
+      "sha256": "0c64eee0af47e4a8c7a684a8e62d0de10a8ebdccfb76abe1a515cc1c8dbd82f1",
+      "purpose": "Nine checks prove future Pause preserves current automatic R3",
+      "sourceFilename": "r3-current-preserved-future-paused-safe.json",
+      "originalPublishedSha256": "b0770adc3735b376e7b4133a0a5b05467312bb0cc8164f3776458409d9a2f415",
+      "originalPublishedBytes": 15407,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/before/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "b8104ac98a63d3cb5d8d41df2b16e96b22adcedc14ac53d10ccea7cd490b0e57"
+          },
+          {
+            "jsonPointer": "/after/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "b8104ac98a63d3cb5d8d41df2b16e96b22adcedc14ac53d10ccea7cd490b0e57"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    },
+    {
+      "file": "r3-final-seventeen-checks-safe.json.txt",
+      "bytes": 24295,
+      "sha256": "507fc536ccef4e309d10abf0f7051e2d9b0201a7601b7f76946bec2b22448bc1",
+      "purpose": "Final R3 acceptance and all seventeen invariant checks",
+      "sourceFilename": "r3-final-seventeen-checks-safe.json",
+      "originalPublishedSha256": "70cbb88410f7c76159c6c1cad4b96d82032ba71c5e9bacec1727257643cf48d5",
+      "originalPublishedBytes": 24241,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/before/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "b8104ac98a63d3cb5d8d41df2b16e96b22adcedc14ac53d10ccea7cd490b0e57"
+          },
+          {
+            "jsonPointer": "/after/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "b8104ac98a63d3cb5d8d41df2b16e96b22adcedc14ac53d10ccea7cd490b0e57"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    },
+    {
+      "file": "three-genuine-captures-and-first-pause-safe.json.txt",
+      "bytes": 13220,
+      "sha256": "75232c86942489ff17d8693470976a5eff74d62372073b7936b3cd2c11098d63",
+      "purpose": "All three genuine e240 captures and first supported Pause preservation",
+      "sourceFilename": "three-genuine-captures-and-first-pause-safe.json",
+      "originalPublishedSha256": "18cd2a6450b58b6eda3a41c8a108ff7dcc7f8488eabbbd1c4170a1d50b4d69fb",
+      "originalPublishedBytes": 13152,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/before/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "ccdbe244b2b4289e19c57dd73046eac58beeccf06621025344caa3fdba7b1d73"
+          },
+          {
+            "jsonPointer": "/after/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "ccdbe244b2b4289e19c57dd73046eac58beeccf06621025344caa3fdba7b1d73"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    },
+    {
+      "file": "timer-start-safe.json.txt",
+      "bytes": 1024,
+      "sha256": "c2062646d0930c63c9ea06ffc121203ae40905d3e92622e93bf858e365701a5d",
+      "purpose": "Original e240 standing plan confirmation and genuine 600-second timer start",
+      "sourceFilename": "timer-start-safe.json",
+      "originalPublishedSha256": "98d30828935375c7ba62402383476fc58c1ee3a510c955230be5b9a53e16dba1",
+      "originalPublishedBytes": 997,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "cd8882a4aba5786d572188648a1196888996d352c342c6f316abad8ce0932e55"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    }
+  ],
+  "payloadSerialization": "JSON receipts use .json.txt to avoid formatter changes. Eight public receipts contain fourteen scheduler-token SHA-256 projections; manifests distinguish public hashes from unchanged private-original provenance.",
+  "publicRedaction": {
+    "description": "Only scheduler tickToken fields become SHA-256 projections; original source hashes retain provenance and are not redacted-public byte hashes.",
+    "fieldsInThisBundle": 14,
+    "sourceOriginalsModified": false,
+    "providerHistoryPurged": false
+  },
+  "scope": "Original three genuine T14/T15 FIFO occurrences only"
+}

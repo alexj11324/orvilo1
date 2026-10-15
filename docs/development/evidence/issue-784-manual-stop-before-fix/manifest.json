@@ -1,0 +1,178 @@
+{
+  "allPngVisuallyInspectedByRoot": true,
+  "backendSha": "3a2e2ca5e3896d8a4bfcec6a60988a082b952960",
+  "createdAt": "2026-10-15T06:32:36.901069+00:00",
+  "files": [
+    {
+      "file": "CANCELLATION-RESULT.md",
+      "bytes": 3054,
+      "sha256": "cbecd88530f5ddeb09198016ebcbee792ce053c8d983f4544ce45e63fa3b2580",
+      "sourceFilename": "CANCELLATION-RESULT.md",
+      "sourceSha256": "cbecd88530f5ddeb09198016ebcbee792ce053c8d983f4544ce45e63fa3b2580"
+    },
+    {
+      "file": "README.md",
+      "bytes": 3891,
+      "sha256": "edc9b9eaedfa57bfb71ac6fcadefa9df9afa365502717414757b565f010bb87f",
+      "sourceFilename": "README.md",
+      "sourceSha256": "28fdc9bf792241b65ced72c48d29a5c1c961c7c91431c5d9d7a036ccf231cc89"
+    },
+    {
+      "file": "after-ui-resume-safe.json.txt",
+      "bytes": 3458,
+      "sha256": "7280b8d759bc8c59fb1833298b775b74d09dc7d0304e9f2605a7d915a48662a9",
+      "sourceFilename": "after-ui-resume-safe.json",
+      "sourceSha256": "7280b8d759bc8c59fb1833298b775b74d09dc7d0304e9f2605a7d915a48662a9"
+    },
+    {
+      "file": "after-ui-stop-safe.json.txt",
+      "bytes": 3523,
+      "sha256": "db6b8e15bc2de9e7ca6c58634026cb08dff81258f0efdf7842fa793baeecf05f",
+      "sourceFilename": "after-ui-stop-safe.json",
+      "sourceSha256": "db6b8e15bc2de9e7ca6c58634026cb08dff81258f0efdf7842fa793baeecf05f"
+    },
+    {
+      "file": "clarification-plan-safe.json.txt",
+      "bytes": 6388,
+      "sha256": "a4ec7864db2d666c9bf8a4df7a879454b4560bf4459ffb7c2f151cf46443b8ac",
+      "sourceFilename": "clarification-plan-safe.json",
+      "sourceSha256": "a4ec7864db2d666c9bf8a4df7a879454b4560bf4459ffb7c2f151cf46443b8ac"
+    },
+    {
+      "file": "credential-scan-safe.json.txt",
+      "bytes": 441,
+      "sha256": "b47b66d5b4325e5655881146e6185a0916d9a4d92ca0948fbecdb791cc350495",
+      "sourceFilename": "credential-scan-safe.json",
+      "sourceSha256": "b47b66d5b4325e5655881146e6185a0916d9a4d92ca0948fbecdb791cc350495"
+    },
+    {
+      "file": "ended-family-safe.json.txt",
+      "bytes": 2103,
+      "sha256": "22734b47e733180a95a3d7a2245f0f4463d6986b92b2d90c4a303616fe289e4d",
+      "sourceFilename": "ended-family-safe.json",
+      "sourceSha256": "22734b47e733180a95a3d7a2245f0f4463d6986b92b2d90c4a303616fe289e4d"
+    },
+    {
+      "file": "existing-ledger-diagnosis-safe.json.txt",
+      "bytes": 773,
+      "sha256": "50b18b712130f58fdcd9d470dc199fb79443e5094feb128af03735aead2613b1",
+      "sourceFilename": "existing-ledger-diagnosis-safe.json",
+      "sourceSha256": "50b18b712130f58fdcd9d470dc199fb79443e5094feb128af03735aead2613b1"
+    },
+    {
+      "file": "explicit-pause-before-deadline-safe.json.txt",
+      "bytes": 1328,
+      "sha256": "aa2fccba183c0a832a1fcdc04d36642f5ad0fd7c5e458f40380d9af22bdae4ee",
+      "sourceFilename": "explicit-pause-before-deadline-safe.json",
+      "sourceSha256": "aa2fccba183c0a832a1fcdc04d36642f5ad0fd7c5e458f40380d9af22bdae4ee"
+    },
+    {
+      "file": "final-global-native-zero-and-original-t14-safe.json.txt",
+      "bytes": 978,
+      "sha256": "3ba8334749f4cdcbf124a42551268462890c03062ba96c4df3eb08c647178cb4",
+      "sourceFilename": "final-global-native-zero-and-original-t14-safe.json",
+      "sourceSha256": "3ba8334749f4cdcbf124a42551268462890c03062ba96c4df3eb08c647178cb4"
+    },
+    {
+      "file": "genuine-timer-safe.json.txt",
+      "bytes": 462,
+      "sha256": "93a8577a7c1ae37b6d59b69fb256f744efa8b8486edd4767639b1dfc42da18b3",
+      "sourceFilename": "genuine-timer-safe.json",
+      "sourceSha256": "93a8577a7c1ae37b6d59b69fb256f744efa8b8486edd4767639b1dfc42da18b3"
+    },
+    {
+      "file": "intake-failure-safe.json.txt",
+      "bytes": 96,
+      "sha256": "5277fba0f0251c6c27e76de7f63c81fe34fd7983872fd34519a5867d5f664042",
+      "sourceFilename": "intake-failure-safe.json",
+      "sourceSha256": "5277fba0f0251c6c27e76de7f63c81fe34fd7983872fd34519a5867d5f664042"
+    },
+    {
+      "file": "manual-run-safe.json.txt",
+      "bytes": 673,
+      "sha256": "349e8c0f8eca7bb6d885e8fc319ce0e66ac77ea98fe8e55163112f83ad9e03ad",
+      "sourceFilename": "manual-run-safe.json",
+      "sourceSha256": "349e8c0f8eca7bb6d885e8fc319ce0e66ac77ea98fe8e55163112f83ad9e03ad"
+    },
+    {
+      "file": "manual-stop-rpc-observation-limit-safe.json.txt",
+      "bytes": 687,
+      "sha256": "f95f66a42555a623b27f1bae93d0c31c7e19f42e62ed3e00d836012745dfedbd",
+      "sourceFilename": "manual-stop-rpc-observation-limit-safe.json",
+      "sourceSha256": "f95f66a42555a623b27f1bae93d0c31c7e19f42e62ed3e00d836012745dfedbd"
+    },
+    {
+      "file": "native-sleep300-start-safe.json.txt",
+      "bytes": 3457,
+      "sha256": "34f27fe1a563a1b090e5d7c2f2cd86174b8c38d52b5e2337a5fa26198cde3637",
+      "sourceFilename": "native-sleep300-start-safe.json",
+      "sourceSha256": "34f27fe1a563a1b090e5d7c2f2cd86174b8c38d52b5e2337a5fa26198cde3637"
+    },
+    {
+      "file": "owner-t17-active-paused-filter.png",
+      "bytes": 212820,
+      "sha256": "43275f68ac74552e125016b2057f05e659a4f2a8da99383b28615c7d97d764fc",
+      "sourceFilename": "owner-t17-active-paused-filter.png",
+      "sourceSha256": "43275f68ac74552e125016b2057f05e659a4f2a8da99383b28615c7d97d764fc"
+    },
+    {
+      "file": "owner-t17-resumed-current-active.png",
+      "bytes": 281047,
+      "sha256": "79ba99c8104387f112cea683831d0c7a5e4def6afeadd0a3aa7840387e0e0c51",
+      "sourceFilename": "owner-t17-resumed-current-active.png",
+      "sourceSha256": "79ba99c8104387f112cea683831d0c7a5e4def6afeadd0a3aa7840387e0e0c51"
+    },
+    {
+      "file": "owner-t17-stopped-cold-before-explicit-pause.png",
+      "bytes": 292442,
+      "sha256": "4f23f37f01ea2a50fa49cff3e1997c410bf7aec1b87e5c29dd8e6c9a0588ab3f",
+      "sourceFilename": "owner-t17-stopped-cold-before-explicit-pause.png",
+      "sourceSha256": "4f23f37f01ea2a50fa49cff3e1997c410bf7aec1b87e5c29dd8e6c9a0588ab3f"
+    },
+    {
+      "file": "reply-key-classification-safe.json.txt",
+      "bytes": 1321,
+      "sha256": "32b0ed17fca9f79eab29100f8414e253f5d03f3fc1ad50de2275033584e79647",
+      "sourceFilename": "reply-key-classification-safe.json",
+      "sourceSha256": "32b0ed17fca9f79eab29100f8414e253f5d03f3fc1ad50de2275033584e79647"
+    },
+    {
+      "file": "setup-hold-safe.json.txt",
+      "bytes": 2868,
+      "sha256": "bec027ca816845606b61264478f9c52313786278361a17237fb0024e94de0844",
+      "sourceFilename": "setup-hold-safe.json",
+      "sourceSha256": "bec027ca816845606b61264478f9c52313786278361a17237fb0024e94de0844"
+    },
+    {
+      "file": "structured-reply-diagnosis-safe.json.txt",
+      "bytes": 1437,
+      "sha256": "8c6cd8bb5d496315bfd39dd1b12d21819fc183a38309f2886135892bbbb30bad",
+      "sourceFilename": "structured-reply-diagnosis-safe.json",
+      "sourceSha256": "8c6cd8bb5d496315bfd39dd1b12d21819fc183a38309f2886135892bbbb30bad"
+    },
+    {
+      "file": "ui-controls-and-limits-safe.json.txt",
+      "bytes": 1781,
+      "sha256": "54012f8972f688a2b8016e684d2c3adb0a785c771b77e189a9584db192e77016",
+      "sourceFilename": "ui-controls-and-limits-safe.json",
+      "sourceSha256": "54012f8972f688a2b8016e684d2c3adb0a785c771b77e189a9584db192e77016"
+    },
+    {
+      "file": "ui-resume-current-preserved-safe.json.txt",
+      "bytes": 851,
+      "sha256": "82081115be19ed4eb5cf37c6c4732433b731111f9e7bea51d15d44a3c7d21406",
+      "sourceFilename": "ui-resume-current-preserved-safe.json",
+      "sourceSha256": "82081115be19ed4eb5cf37c6c4732433b731111f9e7bea51d15d44a3c7d21406"
+    },
+    {
+      "file": "ui-stop-immediate-observation-safe.json.txt",
+      "bytes": 797,
+      "sha256": "035141508359b21759dff5c44c945f4b31df58e82d0ad8178284b765406ec621",
+      "sourceFilename": "ui-stop-immediate-observation-safe.json",
+      "sourceSha256": "035141508359b21759dff5c44c945f4b31df58e82d0ad8178284b765406ec621"
+    }
+  ],
+  "rendererSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+  "scope": "Historical gen1 manual Stop cold UI failure before source fix; no later gen2 receipts",
+  "sourceManifestSha256": "a26c9b53f21ce5118889fe38c0046006893c7d30c65dc4563a4b3cca0f060459"
+}

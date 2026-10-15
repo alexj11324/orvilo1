@@ -1,0 +1,34 @@
+{
+  "scope": "Original T14/T15 three genuine occurrences only; immutable, exclude all later smoke tests",
+  "createdAt": "2026-10-15T05:07:45.080Z",
+  "initialTimerBackendSha": "e24075992d1c0888e3ac5db80481b06efba755b3",
+  "finalControlBackendSha": "d21041e8ce54bb5c2e3e2ed1f29e6e01b4817ca4",
+  "rendererReportedSourceSha": "cec4c8397ec8aa1ed0aee43a36382f3f06039b25",
+  "finalAcceptanceReadbackAt": "2026-10-15T04:59:56.713Z",
+  "coldApiReadbackAt": "2026-10-15T05:01:04.334Z",
+  "globalNativeZeroAt": "2026-10-15T05:02:20.501Z",
+  "originalOccurrences": [
+    {
+      "originalRound": 1,
+      "dispatchId": "dsp_rhOd6QyfuO4z",
+      "capturedAt": "2026-10-15T02:07:15.546Z",
+      "outcome": "succeeded"
+    },
+    {
+      "originalRound": 2,
+      "dispatchId": "dsp_SA3DPMPOhjx8",
+      "capturedAt": "2026-10-15T02:17:17.364Z",
+      "outcome": "canceled"
+    },
+    {
+      "originalRound": 3,
+      "dispatchId": "dsp_acIuUwXJehBm",
+      "capturedAt": "2026-10-15T02:27:17.425Z",
+      "outcome": "succeeded"
+    }
+  ],
+  "finalCheckCount": 17,
+  "coldCheckCount": 11,
+  "finalReceiptSha256": "70cbb88410f7c76159c6c1cad4b96d82032ba71c5e9bacec1727257643cf48d5",
+  "coldReceiptSha256": "61bf83a705e1ce87cb60afd5331fdc58f11638647253da314387ad8f3698d08d"
+}

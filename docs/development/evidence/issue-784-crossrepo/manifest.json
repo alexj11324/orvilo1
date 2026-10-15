@@ -1,0 +1,57 @@
+{
+  "derivedReceipts": "Explicit selected fields from completed private QA receipts; observed timestamps retained. Not new product execution.",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 5705,
+      "sha256": "8e7954a1cbda29e322622fba41b575af0f46b39a22c7bd5c25736caddcd65e8a"
+    },
+    {
+      "path": "credential-scan.json",
+      "bytes": 591,
+      "sha256": "c5de64c7c48a1cf634213cb27ddaa0fadc3c1f13e658f896b6604f35e8aab36d"
+    },
+    {
+      "path": "receipts/acceptance-stages.json",
+      "bytes": 25251,
+      "sha256": "263a2e65079ea31e72e4cd89106a5b5ca062111646053e40f14b9741b8771ab6"
+    },
+    {
+      "path": "receipts/final-cold-readback.json",
+      "bytes": 17396,
+      "sha256": "6c84bff437a681511712f6831b7c5e829f6ef04958221ceefbf93ec373369a8f"
+    },
+    {
+      "path": "receipts/native-versions.json",
+      "bytes": 5624,
+      "sha256": "dd128195386a09044e8eacd9dfc4b921d7b2a1da5d664f6514e502944cfb7199"
+    },
+    {
+      "path": "receipts/observer-history.json",
+      "bytes": 1829,
+      "sha256": "99b2339237912b0c1298835ff1d19be66ac502ec48564f9051c339a493a03306"
+    },
+    {
+      "path": "receipts/provider-stages.json",
+      "bytes": 10058,
+      "sha256": "c0312ff126376d3576de7988e1df9a35f10743dcd8f2b4cef6a58c2a03a0785d"
+    },
+    {
+      "path": "screenshots/owner-final-checklist.png",
+      "bytes": 482113,
+      "sha256": "9aadde07a6064136dcabeebb3a784d8d33f4dfa179f231ef6456505874e877f0"
+    },
+    {
+      "path": "screenshots/owner-final-cold.png",
+      "bytes": 539758,
+      "sha256": "c2a3367851740b4b47ec4553b1ec849375bd4aeeee024ef1208d5ff51aafb855"
+    },
+    {
+      "path": "screenshots/owner-partial.png",
+      "bytes": 541322,
+      "sha256": "14483098cb072efb253f6c1da393a85ad538c7270649212b1a54b6fb037323d4"
+    }
+  ],
+  "publicationNote": "Payload JSON is semantically identical and screenshots are byte-identical to the reviewed safe bundle; Markdown and JSON were formatted before hashing.",
+  "testedSourceSha": "cec4c8397ec8aa1ed0aee43a36382f3f06039b25"
+}

@@ -1,0 +1,61 @@
+{
+  "boundDeviceId": "b26d477ac30d6080a4a038b66cb28a80",
+  "contractContentUnchanged": true,
+  "exactNativeFileUpload": {
+    "report": "C",
+    "documentId": "docs_YpvBE2f9GSkWy9cI",
+    "fileId": "file_g0bihcYksVaH",
+    "sha256": "4a1896539b7594b3fb3f8859afbb71c1925f99d53e87cc3fac029c0471903864",
+    "size": 2789,
+    "uploaderUserId": "user_agent_testing_001",
+    "putStatus": 200,
+    "readbackStatus": 200,
+    "readbackSha256": "4a1896539b7594b3fb3f8859afbb71c1925f99d53e87cc3fac029c0471903864",
+    "readbackByteLength": 2789,
+    "nativeFileUnchanged": true
+  },
+  "nativeCreateDocumentCallId": "call_2dc6d7616e554f39a7b145b4",
+  "nativeDocumentEditFailuresPreserved": 4,
+  "nativeDocumentReplaceSucceeded": true,
+  "nativeOperationId": "op_1792026575400_agt_taIxMIVssPhE_tpc_GxCk8tXQ8Lsq_H9qAj1xD",
+  "nativeSessionId": "ses_ec2e47390ffembs1ZnXTXz4IZY",
+  "nativeStatus": "done",
+  "nativeUpstreamDocReadCallIds": [
+    "call_49d689a236b6404bb21a46fb",
+    "call_e0cb7cd1cb6744719875edb6"
+  ],
+  "nativeUpstreamSHABytesReadCallId": "call_74dd2c480b224c85bf997a38",
+  "nativeUpstreamStoredFetchCallIds": [
+    "call_508359a6c72343ef9564b487",
+    "call_492dba4ad9de4f3796027d04"
+  ],
+  "nativeWriteCallId": "call_b5d249f864b74980bf18934d",
+  "noManualReviewOrLedgerPass": true,
+  "noNativeUploadCapabilityClaim": true,
+  "normalFreshReviewerOperationId": "op_1792026941618_agt_taIxMIVssPhE_tpc_DsbXDWZROIIX_e6rP16jY",
+  "normalReviewerHTTPResults": [
+    {
+      "report": "C",
+      "status": 200,
+      "size": 2789
+    },
+    {
+      "report": "A",
+      "status": 200,
+      "size": 361
+    },
+    {
+      "report": "B",
+      "status": 200,
+      "size": 234
+    }
+  ],
+  "normalReviewerStoredByteCallId": "call_3d30b2a531e0400eb05bd390",
+  "observedAt": "2026-10-15T01:17:35.051394+00:00",
+  "ownerDocAppendReceipt": "6ae9-c-requester-provenance-append.json",
+  "primaryModel": "opencode/mimo-v2.6-flash-free",
+  "reviewerVerdictStillPendingAtReceipt": true,
+  "sourceContractId": "4fb0610e-4bf5-48ee-8242-9c684b7ce83e",
+  "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+  "supportingUploadAttribution": "Owner requester supporting action after native file and pinned document creation"
+}

@@ -1,0 +1,15 @@
+{
+  "at": "2026-10-15T07:00:51.784Z",
+  "sourceSha": "e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b",
+  "leafId": "task_wqstgZSuOLUg",
+  "observedUiSwitch": "off",
+  "observedUiLabel": "inactive",
+  "actualWorkflow": "canceled_after_explicit_pause_then_end",
+  "notPreEndPausedUiProof": true,
+  "pauseReceipt": "explicit-pause-before-deadline-safe.json",
+  "endedReceipt": "ended-family-safe.json",
+  "png": "owner-gen2-explicit-pause-ended-inactive-off.png",
+  "pngVisuallyInspected": true,
+  "enabledColdProofPreserved": "ui-controls-cold-enabled-safe.json",
+  "noFurtherControls": true
+}

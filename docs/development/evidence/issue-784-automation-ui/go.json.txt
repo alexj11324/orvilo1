@@ -1,0 +1,7 @@
+{
+  "backendSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+  "rendererSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+  "rootGoAt": "2026-10-15T05:25:51.000Z",
+  "healthConfirmedAt": "2026-10-15T05:25:51.000Z",
+  "healthProvenance": "Root reports QA actual clean detached S, both Electron reloads to S, backend PID 26517/session 15902; Owner/Member API and devices 200, online one channel, loopback observer 8788 published, effective gateway mode false unchanged, global native zero, original three and proof/history preserved, future-paused queue zero."
+}

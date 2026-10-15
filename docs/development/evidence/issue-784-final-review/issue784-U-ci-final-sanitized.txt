@@ -1,0 +1,24 @@
+U CI — terminal red receipt
+Source SHA: e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b
+Owning push Test CI: https://github.com/alexj11324/orvilo1/actions/runs/38694241285
+Owning push E2E CI: https://github.com/alexj11324/orvilo1/actions/runs/38694241311
+
+Attempt 1: Database job 116287122696 failed after runner shutdown during Lint. At 06:52:59 UTC lint/type-check received SIGTERM; database tests were skipped. The underlying shutdown cause is UNKNOWN. Workflow concurrency/duplicate cancellation was not supported by the observed routing, timestamps or continuing sibling jobs.
+
+One root-authorized failed-jobs rerun was requested at 07:02:09.991 UTC and accepted at 07:02:10.820 UTC. Guards verified the source branch still pointed to U, attempt 1 was terminal, and all other owning Test CI jobs plus owning E2E had succeeded. No further rerun was sent.
+
+Attempt 2: Database job 116292874498 passed Lint, then failed actual Test Coverage. Result: 5,755 passed, 1 failed, 2 skipped tests; 277 passed, 1 failed, 1 skipped test files. jsonbNullTest.test.ts:56 identified:
+  models/task.ts:2549: scheduler automationPaused JSON extraction followed by IS NULL.
+Required Quality Gate 116296732814 failed. This is an actual regression-guard failure, distinct from attempt 1 infrastructure interruption.
+
+All other owning Test CI jobs passed: Typecheck, both App shards, both Server shards, Packages, Desktop, App/Server coverage, Native Controls, Host Device Boundaries, Slimming Boundary and Windows Shell. E2E attempt 1 passed 36/36 scenarios and 221/221 steps.
+
+Fresh optional/current-check audit: push UI alignment 38694241196 and PR UI alignment 38694246449 succeeded; Verify Auth/Share/Workbench, Release CLI packaging, documentation/skeleton/token/affected-plan and GitGuardian checks succeeded. All 58 check runs and 17 workflow runs were terminal; no pending status contexts. PR Test CI mirror and Vercel Preview gate were red; preview deployment was skipped. These do not override the owning Test CI failure.
+
+Audit files:
+  /private/tmp/issue784-U-attempt1-frozen-safe.json
+  /private/tmp/issue784-U-failed-jobs-rerun-response-safe.json
+  /private/tmp/issue784-U-db-runner-audit-safe.json
+  /private/tmp/issue784-U-database-attempt2-failure.log
+  /private/tmp/issue784-U-current-checks-final-safe.json
+No source, workflow configuration, deployment or product runtime changes were made by the monitoring lane.

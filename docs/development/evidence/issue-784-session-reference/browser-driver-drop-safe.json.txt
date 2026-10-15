@@ -1,0 +1,35 @@
+{
+  "at": "2026-10-15T05:12:35.751Z",
+  "driver": "existing_playwright_1.64_connectOverCDP_locator.dragTo",
+  "syntheticEventsOrTagInjection": false,
+  "force": false,
+  "gestureCount": 1,
+  "before": {
+    "operation_count": 214,
+    "active_count": 0
+  },
+  "sourceRect": {
+    "x": 12,
+    "y": 234,
+    "width": 226,
+    "height": 32
+  },
+  "editorRect": {
+    "x": 280,
+    "y": 652,
+    "width": 882,
+    "height": 23.59375
+  },
+  "dragToReturned": true,
+  "editorText": "Disposable session reference QA Source. Current re...\n\n",
+  "editorHtml": "<p dir=\"ltr\"><span data-lexical-decorator=\"true\" contenteditable=\"false\"><span role=\"button\" tabindex=\"0\" class=\"outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset\" data-insp-path=\"src/features/ChatInput/InputEditor/ReferTopic/ReferTopicView.tsx:32:5:span\" style=\"cursor: pointer; display: inline-flex; margin-inline-end: 4px; user-select: none;\"><span data-slot=\"badge\" class=\"relative inline-flex shrink-0 items-center justify-center w-fit border border-transparent font-medium whitespace-nowrap outline-none transition-shadow focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*=size-])]:size-3 bg-secondary text-secondary-foreground px-1.25 py-0.5 text-xs h-5 min-w-5 gap-1 rounded-(--radius-chip)\" data-icon=\"inline-start\" data-insp-path=\"src/features/ChatInput/InputEditor/ReferTopic/ReferTopicView.tsx:43:7:Badge\">Disposable session reference QA Source. Current re...</span></span></span><br></p>",
+  "sourceLabelPresent": true,
+  "after": {
+    "operation_count": 214,
+    "active_count": 0
+  },
+  "operationCountUnchanged": true,
+  "noAutomaticRun": true,
+  "screenshot": "browser-driver-drop-result.png",
+  "completedAt": "2026-10-15T05:12:37.131Z"
+}

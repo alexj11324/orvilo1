@@ -1,0 +1,67 @@
+{
+  "at": "2026-10-15T06:06:13.935Z",
+  "sourceUpdateUiSendAt": "2026-10-15T06:05:30.237Z",
+  "source": {
+    "operationId": "op_1792044331096_agt_taIxMIVssPhE_tpc_UiZhfu72hIg7_0juw2tvE",
+    "status": "done",
+    "createdAt": "2026-10-15T06:05:31.098Z",
+    "completedAt": "2026-10-15T06:05:52.434Z",
+    "modelRoute": {
+      "model": "opencode/mimo-v2.6-flash-free",
+      "provider": "opencode"
+    },
+    "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+    "sessionId": "ses_ec20e4ac1ffehWfzGFxrPeRWnV"
+  },
+  "sourceMessages": [
+    {
+      "id": "msg_fTO6lninFBZztDq7W4",
+      "role": "user",
+      "chars": 170,
+      "hasV1": true,
+      "hasV2": false,
+      "actualModel": null,
+      "actualProvider": null
+    },
+    {
+      "id": "msg_bs2fVJlSTmukASyCy8",
+      "role": "assistant",
+      "chars": 29,
+      "hasV1": true,
+      "hasV2": false,
+      "actualModel": "opencode/mimo-v2.6-flash-free",
+      "actualProvider": "opencode",
+      "exactV2Ack": false
+    },
+    {
+      "id": "msg_PHR6dHpDM94I",
+      "role": "user",
+      "chars": 186,
+      "hasV1": false,
+      "hasV2": true,
+      "actualModel": null,
+      "actualProvider": null
+    },
+    {
+      "id": "msg_Kdm5Efbax82L",
+      "role": "assistant",
+      "chars": 29,
+      "hasV1": false,
+      "hasV2": true,
+      "actualModel": "opencode/mimo-v2.6-flash-free",
+      "actualProvider": "opencode",
+      "exactV2Ack": true
+    }
+  ],
+  "consumerTopicId": "tpc_Boklgc9hWotl",
+  "consumerOperationCount": 2,
+  "consumerOperationsSame": true,
+  "consumerMessageCount": 21,
+  "consumerMessagesSame": true,
+  "consumerNoAutorun": true,
+  "ws": {
+    "authSuccessAt": "2026-10-15T06:05:31.657Z",
+    "terminalAt": "2026-10-15T06:05:52.137Z"
+  },
+  "noConsumerNewSendYet": true
+}

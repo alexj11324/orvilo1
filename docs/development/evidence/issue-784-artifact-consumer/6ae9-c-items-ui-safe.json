@@ -1,0 +1,30 @@
+{
+  "acceptDeliveryClicked": false,
+  "action": "actual Owner Electron individual content item then Accept All remaining item",
+  "coldReloadVerified": true,
+  "contentItemAcceptedAt": "2026-10-15T01:27:26.902Z",
+  "current": {
+    "runId": "245f0248-1f9d-4098-ae9d-8e5bc2435367",
+    "proof": {
+      "taskId": "task_z8qoSoNxdlN3",
+      "deliveryOperationId": "op_1792026575400_agt_taIxMIVssPhE_tpc_GxCk8tXQ8Lsq_H9qAj1xD",
+      "topicId": "tpc_GxCk8tXQ8Lsq",
+      "executionGeneration": 2,
+      "dispatchId": "dsp_HrcNWzBl4DuX",
+      "checklistRevision": 1,
+      "deliveryKind": "artifact"
+    },
+    "reviewerPassed": true,
+    "necessaryChecksPassed": true,
+    "itemsAccepted": true,
+    "deliveryAccepted": false,
+    "availableForDependents": true,
+    "merged": false
+  },
+  "durabilityItemAcceptedAt": "2026-10-15T01:27:31.216Z",
+  "itemIds": ["c99589cc-f9a5-42fc-81fa-08c9835cea48", "ec325345-cc86-4e7d-b903-d94fa63f17ea"],
+  "observedAt": "2026-10-15T01:28:03.573Z",
+  "resultIds": ["cc76b350-bfa6-4787-89c4-9a533a509b14", "8e52338a-c1a7-4c12-9002-a46d6b583c33"],
+  "screenshot": "6ae9-c-items-accepted-cold.png",
+  "visuallyInspected": true
+}

@@ -1,0 +1,311 @@
+{
+  "aBUnfinishedWhenCStarted": [
+    {
+      "id": "task_knI1wX9SI6pC",
+      "workflowCategory": "in_review",
+      "generation": 4
+    },
+    {
+      "id": "task_bqou63oSN3Fn",
+      "workflowCategory": "in_review",
+      "generation": 5
+    },
+    {
+      "id": "task_z8qoSoNxdlN3",
+      "workflowCategory": "in_progress",
+      "generation": 1
+    },
+    {
+      "id": "task_ZFUUxCAzbJNX",
+      "workflowCategory": "backlog",
+      "generation": 0
+    }
+  ],
+  "aCurrent": {
+    "runId": "63601250-78ab-4853-a541-82422e61d44d",
+    "proof": {
+      "taskId": "task_bqou63oSN3Fn",
+      "deliveryOperationId": "op_1792025762702_agt_taIxMIVssPhE_tpc_elIGxRYFoyrS_A8IfJMGz",
+      "topicId": "tpc_elIGxRYFoyrS",
+      "executionGeneration": 5,
+      "dispatchId": "dsp_0ZIvle2ziXC3",
+      "sourceSha": null,
+      "repo": null,
+      "branch": null,
+      "baseBranch": null,
+      "targetBranch": null,
+      "checklistRevision": 1,
+      "deliveryKind": "artifact"
+    },
+    "reviewerPassed": true,
+    "necessaryChecksPassed": true,
+    "itemsAccepted": false,
+    "deliveryAccepted": false,
+    "availableForDependents": true,
+    "merged": false
+  },
+  "aReviewObservedAt": "2026-10-15T01:02:27.776Z",
+  "aSupportingUpload": {
+    "fileId": "file_2DvPaa1JwyxK",
+    "documentId": "docs_Lu8p6WwZCBC6qrET",
+    "sha256": "ca989a0ffe5284cbaaf366c9159882d4047ff66ebea51fe6c3761a2bd378af32",
+    "byteLength": 361,
+    "uploaderUserId": "user_agent_testing_001",
+    "nativeImplementerStoredByteCurl": {
+      "callId": "call_d3b66ac2e4b349258ef1270a",
+      "httpStatus": 200,
+      "exit": 0,
+      "hashMatched": true,
+      "localBytesMatched": true
+    },
+    "normalFreshReviewerStoredByteCurl": {
+      "callId": "call_f0f38903b52149f583bf2b6f",
+      "exit": 0,
+      "hashMatched": true,
+      "localBytesMatched": true
+    }
+  },
+  "manualCStart": false,
+  "nativeOperations": [
+    {
+      "id": "op_1792022957182_agt_taIxMIVssPhE_tpc_Bo2cHEBKUdFr_ZGssU8Ad",
+      "status": "error",
+      "model": null,
+      "createdAt": "2026-10-15T00:09:17.201Z",
+      "completedAt": "2026-10-15T00:09:19.409Z"
+    },
+    {
+      "id": "op_1792022957506_agt_taIxMIVssPhE_tpc_h01NawVoduAY_yjb2LMEn",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec31ba82cffePLhy0gM3HTHgHg",
+      "createdAt": "2026-10-15T00:09:17.507Z",
+      "completedAt": "2026-10-15T00:09:32.437Z",
+      "purpose": "task.handoff"
+    },
+    {
+      "id": "op_1792022972896_agt_taIxMIVssPhE_tpc_UcO3XvNpMuap_T1UvwQQ7",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec31b6ba5ffed3I880H4RyC7l1",
+      "createdAt": "2026-10-15T00:09:32.896Z",
+      "completedAt": "2026-10-15T00:10:01.428Z",
+      "purpose": "task.briefJudge"
+    },
+    {
+      "id": "op_1792022976891_agt_taIxMIVssPhE_tpc_Ljt7RxhvQrqN_R1BnMnem",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec31b5d8cffeF9risWIKb1JJYB",
+      "createdAt": "2026-10-15T00:09:36.916Z",
+      "completedAt": "2026-10-15T00:13:53.034Z"
+    },
+    {
+      "id": "op_1792023002506_agt_taIxMIVssPhE_tpc_a6O40eswuJYA_FYLbCGJj",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec31af9c7ffe7LbNMd030wRuZ3",
+      "createdAt": "2026-10-15T00:10:02.507Z",
+      "completedAt": "2026-10-15T00:10:09.376Z",
+      "purpose": "task.brief"
+    },
+    {
+      "id": "op_1792025762702_agt_taIxMIVssPhE_tpc_elIGxRYFoyrS_A8IfJMGz",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2f0cd56ffe1MyBdhXo0CfE1L",
+      "createdAt": "2026-10-15T00:56:02.813Z",
+      "completedAt": "2026-10-15T00:57:36.313Z"
+    },
+    {
+      "id": "op_1792025851343_agt_taIxMIVssPhE_tpc_HzV1VMpbslEj_4FeD7Qod",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2ef7f9effePdXhnILB8c5p7E",
+      "createdAt": "2026-10-15T00:57:31.343Z",
+      "completedAt": "2026-10-15T00:58:06.777Z",
+      "purpose": "task.plan"
+    },
+    {
+      "id": "op_1792025856525_agt_taIxMIVssPhE_tpc_KjOlrW7HbkWn_Eq8a8wXe",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2ef6c30ffeYwAX6i6FR5D9jP",
+      "createdAt": "2026-10-15T00:57:36.536Z",
+      "completedAt": "2026-10-15T01:02:04.218Z"
+    },
+    {
+      "id": "op_1792025856753_agt_taIxMIVssPhE_tpc_2cFQymsizXAF_75kQdSML",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2ef67acffeIO4nuZdo9Kq3uy",
+      "createdAt": "2026-10-15T00:57:36.753Z",
+      "completedAt": "2026-10-15T00:57:53.918Z",
+      "purpose": "task.handoff"
+    },
+    {
+      "id": "op_1792025875065_agt_taIxMIVssPhE_tpc_rrLftnF52wRI_yaI3vpBK",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2ef23fdffe15D6jwQai0JrhC",
+      "createdAt": "2026-10-15T00:57:55.065Z",
+      "completedAt": "2026-10-15T00:58:07.533Z",
+      "purpose": "task.briefJudge"
+    },
+    {
+      "id": "op_1792025973640_agt_taIxMIVssPhE_tpc_b4AKjv6daRKx_ui5l1bYx",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2ed92fdffePmmoxiG92i0RAQ",
+      "createdAt": "2026-10-15T00:59:33.641Z",
+      "completedAt": "2026-10-15T01:00:51.173Z",
+      "purpose": "task.plan"
+    },
+    {
+      "id": "op_1792026112500_agt_taIxMIVssPhE_tpc_0VjviLukdhv1_snAgg14n",
+      "status": "interrupted",
+      "model": null,
+      "session": "ses_ec2eb8378ffeZEIAN2sJcjrAdU",
+      "createdAt": "2026-10-15T01:01:52.515Z",
+      "completedAt": "2026-10-15T01:07:21.383Z"
+    },
+    {
+      "id": "op_1792026575400_agt_taIxMIVssPhE_tpc_GxCk8tXQ8Lsq_H9qAj1xD",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2e47390ffembs1ZnXTXz4IZY",
+      "createdAt": "2026-10-15T01:09:35.411Z",
+      "completedAt": "2026-10-15T01:15:41.449Z"
+    },
+    {
+      "id": "op_1792026700457_agt_taIxMIVssPhE_tpc_5ULqfbcF6reu_CLEQSbeJ",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2e289d7ffei13jE0fjOHDHoG",
+      "createdAt": "2026-10-15T01:11:40.474Z",
+      "completedAt": "2026-10-15T01:16:11.310Z"
+    },
+    {
+      "id": "op_1792026941618_agt_taIxMIVssPhE_tpc_DsbXDWZROIIX_e6rP16jY",
+      "status": "running",
+      "model": null,
+      "createdAt": "2026-10-15T01:15:41.629Z",
+      "completedAt": null
+    },
+    {
+      "id": "op_1792026941958_agt_taIxMIVssPhE_tpc_bsr2xmAZy487_vrFeZdUh",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2ded744ffeLNFH6C217dWEr1",
+      "createdAt": "2026-10-15T01:15:41.958Z",
+      "completedAt": "2026-10-15T01:16:02.485Z",
+      "purpose": "task.handoff"
+    },
+    {
+      "id": "op_1792026949779_agt_taIxMIVssPhE_tpc_ZSLnwfk08iGT_fDIUdd4L",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2debe4affe5BMo4Uk8WAQeI4",
+      "createdAt": "2026-10-15T01:15:49.779Z",
+      "completedAt": "2026-10-15T01:17:43.680Z",
+      "purpose": "task.plan"
+    },
+    {
+      "id": "op_1792026963284_agt_taIxMIVssPhE_tpc_6ganurfghthA_2bYrmzpe",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2de881effeelWtVz249xcmMI",
+      "createdAt": "2026-10-15T01:16:03.284Z",
+      "completedAt": "2026-10-15T01:16:30.940Z",
+      "purpose": "task.briefJudge"
+    },
+    {
+      "id": "op_1792026971458_agt_taIxMIVssPhE_tpc_4Wh7zrB9KO2J_lPE02AM3",
+      "status": "running",
+      "model": null,
+      "createdAt": "2026-10-15T01:16:11.464Z",
+      "completedAt": null
+    },
+    {
+      "id": "op_1792026971688_agt_taIxMIVssPhE_tpc_qNTtlcIfAQNf_MNbGn8nV",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2de6252ffeEIATEZX3B1IhqZ",
+      "createdAt": "2026-10-15T01:16:11.690Z",
+      "completedAt": "2026-10-15T01:16:35.051Z",
+      "purpose": "task.handoff"
+    },
+    {
+      "id": "op_1792026995147_agt_taIxMIVssPhE_tpc_u9xXlZI0QPx3_30eteQw7",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2de0a79ffegGtyCVwRApSSU4",
+      "createdAt": "2026-10-15T01:16:35.147Z",
+      "completedAt": "2026-10-15T01:16:53.985Z",
+      "purpose": "task.briefJudge"
+    },
+    {
+      "id": "op_1792027014381_agt_taIxMIVssPhE_tpc_Nh4oerTNY5jy_dDBu4jm3",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2ddc24effexw5RCk6ZPUJxM0",
+      "createdAt": "2026-10-15T01:16:54.381Z",
+      "completedAt": "2026-10-15T01:17:03.441Z",
+      "purpose": "task.brief"
+    },
+    {
+      "id": "op_1792027264810_agt_taIxMIVssPhE_tpc_JE6dcC0ghH8O_dAtwjNbt",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "session": "ses_ec2d9eb5fffePAVH84hOCVY1Sy",
+      "createdAt": "2026-10-15T01:21:04.810Z",
+      "completedAt": "2026-10-15T01:22:42.022Z",
+      "purpose": "task.plan"
+    },
+    {
+      "id": "op_1792027490668_agt_taIxMIVssPhE_tpc_9493ZcYPCQGb_OpNpHb7U",
+      "status": "running",
+      "model": null,
+      "createdAt": "2026-10-15T01:24:50.678Z",
+      "completedAt": null
+    },
+    {
+      "id": "op_1792027490669_agt_taIxMIVssPhE_tpc_KdjLo6agfX5r_bipqSlnT",
+      "status": "running",
+      "model": null,
+      "createdAt": "2026-10-15T01:24:50.679Z",
+      "completedAt": null
+    },
+    {
+      "id": "op_1792027598069_agt_taIxMIVssPhE_tpc_EtC99mbP5BjJ_KGoDrCnL",
+      "status": "running",
+      "model": null,
+      "createdAt": "2026-10-15T01:26:38.122Z",
+      "completedAt": null
+    }
+  ],
+  "parentAutostartObservedAt": "2026-10-15T01:26:51.776Z",
+  "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+  "taskStatesWhenParentStarted": [
+    {
+      "id": "task_knI1wX9SI6pC",
+      "workflowCategory": "in_review",
+      "generation": 4
+    },
+    {
+      "id": "task_bqou63oSN3Fn",
+      "workflowCategory": "in_review",
+      "generation": 5
+    },
+    {
+      "id": "task_z8qoSoNxdlN3",
+      "workflowCategory": "in_review",
+      "generation": 2
+    },
+    {
+      "id": "task_ZFUUxCAzbJNX",
+      "workflowCategory": "in_progress",
+      "generation": 1
+    }
+  ]
+}

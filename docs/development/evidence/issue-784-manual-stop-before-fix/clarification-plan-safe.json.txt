@@ -1,0 +1,98 @@
+{
+  "startedAt": "2026-10-15T06:13:32.469Z",
+  "completedAt": "2026-10-15T06:14:12.188Z",
+  "parent": {
+    "id": "task_x943JumvczAo",
+    "identifier": "T-16",
+    "status": "backlog",
+    "domainRevision": 6,
+    "assigneeAgentId": "agt_taIxMIVssPhE",
+    "reviewerAgentId": "agt_taIxMIVssPhE"
+  },
+  "plan": {
+    "revision": 1,
+    "parentTaskId": "task_x943JumvczAo",
+    "orchestratorAgentId": "agt_taIxMIVssPhE",
+    "planningOperationId": "op_1792044813291_agt_taIxMIVssPhE_tpc_wVAlbNhDALxt_9kvDtwkS",
+    "scopeFingerprint": "c82abc5bec7219426703149140c17823c24225266e105c0d0c49a6e81ef65b2c",
+    "summary": "Replan existing Issue T16 only, preserving its failed planning operation and judgment: a disposable artifact delivery family for manual periodic Stop acceptance. Planning only via the normal native Orchestrator; execution waits for Owner confirmation. Exactly one leaf task with no prerequisites; parent consumes the leaf's reviewed artifact. The leaf's first native command must be exactly sleep 300, then compute 2+3=5 with a real native command, write a readable Agent Document arithmetic report with exact Issue/Run/Agent/native provenance, and the parent only reports the leaf's real reviewed result. All roles use saved workspace MiMo Agent agt_taIxMIVssPhE; no new Agent, model override, repositories, code, PRs, external publication, timers, or config changes; no other Issue (including T14) is touched.",
+    "scope": {
+      "description": "Existing Issue T16 only: clarify and replan as a disposable artifact acceptance family with exactly one leaf and a parent that consumes its reviewed artifact. Each of parent and leaf has exactly two required Checklist criteria: (1) readable artifact/report correctly records 2+3=5 with actual arithmetic evidence (parent links the actual child artifact); (2) factual saved Agent/model/native Run provenance plus explicit human delivery acceptance without premature Done. Cancellation/Stop by the human before delivery is not a successful arithmetic delivery. No fabricated evidence or PASS, no automatic Done. No Goal or Verify graph; no builder during planning; no timer armed; no Agent configuration change; no repository, code, pull request, or external publication; no touch to any other Issue. Execution gated on Owner confirmation.",
+      "repositories": []
+    },
+    "repositories": [],
+    "checklists": [
+      {
+        "taskId": "task_x943JumvczAo",
+        "deliveryKind": "artifact",
+        "expectedRevision": 0,
+        "items": [
+          {
+            "id": "p1",
+            "title": "Parent links readable child artifact recording 2+3=5 with actual arithmetic evidence",
+            "description": "Parent's reviewed artifact links the actual leaf Agent Document arithmetic report, which correctly records 2+3=5 with real native arithmetic evidence.",
+            "required": true
+          },
+          {
+            "id": "p2",
+            "title": "Parent records factual provenance and explicit human acceptance without premature Done",
+            "description": "Parent states factual saved Agent/model/native Run provenance for the reviewed leaf result and requires explicit human delivery acceptance; no fabricated PASS and no automatic Done.",
+            "required": true
+          }
+        ]
+      },
+      {
+        "taskId": "task_wqstgZSuOLUg",
+        "deliveryKind": "artifact",
+        "expectedRevision": 0,
+        "items": [
+          {
+            "id": "l1",
+            "title": "Leaf Agent Document report correctly records 2+3=5 with actual arithmetic evidence",
+            "description": "A readable Agent Document arithmetic report records 2+3=5 and includes the real output of the native arithmetic command executed after sleep 300.",
+            "required": true
+          },
+          {
+            "id": "l2",
+            "title": "Leaf records factual saved Agent/model/native Run provenance and awaits explicit human acceptance",
+            "description": "Report states factual Issue/Run/Agent/model/native provenance for the actual commands run; human delivery acceptance is explicit and there is no premature Done, fabricated evidence, or PASS.",
+            "required": true
+          }
+        ]
+      }
+    ]
+  },
+  "children": [
+    {
+      "id": "task_wqstgZSuOLUg",
+      "identifier": "T-17",
+      "name": "T16 leaf: sleep 300 then native 2+3=5 arithmetic report with provenance",
+      "parentTaskId": "task_x943JumvczAo",
+      "assigneeAgentId": "agt_taIxMIVssPhE",
+      "reviewerAgentId": null,
+      "nativeSleep300Requested": true,
+      "arithmeticScopePresent": true,
+      "instruction": "Use only saved workspace MiMo Agent agt_taIxMIVssPhE (OpenCode, opencode/mimo-v2.6-flash-free, Owner's saved device); no new Agent or model override. Disposable artifact only: no repositories, code changes, pull requests, or external publication; do not touch any other Issue including T14; do not arm a timer or change Agent configuration. The FIRST actual native command MUST be exactly `sleep 300`. Only after it completes, run a real native command to calculate 2+3=5 (e.g. `expr 2 + 3` or `echo $((2+3))`). Then write a readable Agent Document arithmetic report that correctly records 2+3=5 with the captured actual arithmetic evidence and exact Issue/Run/Agent/native provenance (Issue T16, Run identifier, Agent id/name/model, and the exact native commands with outputs). Record the native provenance factually; no fabricated evidence or PASS. Do not mark Done automatically: the family is disposable and a human may intentionally Stop/End/cancel before delivery, and such cancellation must not be treated as a successful arithmetic delivery; explicit human delivery acceptance is required. This is planning-time instruction only; execution waits for Owner confirmation."
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "be9b0491-04f8-48e7-a8fc-5be00049cf10",
+      "taskId": "task_x943JumvczAo",
+      "dependsOnId": "task_wqstgZSuOLUg",
+      "type": "blocks"
+    }
+  ],
+  "checks": {
+    "existingParentPreserved": true,
+    "unconfirmedPlan": true,
+    "exactlyOneLeaf": true,
+    "actualSavedOrchestrator": true,
+    "allSavedMiMoAssignees": true,
+    "allSavedMiMoReviewers": false,
+    "exactlyTwoRequiredArtifactCriteriaEach": true,
+    "noRepositories": true,
+    "leafHasNoPrerequisites": true,
+    "parentConsumesLeaf": true
+  }
+}

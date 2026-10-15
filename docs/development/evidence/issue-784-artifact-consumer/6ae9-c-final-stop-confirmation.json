@@ -1,0 +1,26 @@
+{
+  "dispatches": [
+    {
+      "id": "dsp_uX8Pb0RJaKsu",
+      "task_id": "task_z8qoSoNxdlN3",
+      "phase": "canceled",
+      "generation": 1,
+      "fence": 2,
+      "operation_id": "op_1792026112500_agt_taIxMIVssPhE_tpc_0VjviLukdhv1_snAgg14n"
+    }
+  ],
+  "observedAt": "2026-10-15T01:07:32.365Z",
+  "operations": [
+    {
+      "id": "op_1792026112500_agt_taIxMIVssPhE_tpc_0VjviLukdhv1_snAgg14n",
+      "status": "interrupted",
+      "completed_at": "2026-10-15T01:07:21.383Z",
+      "remote_cancel": {
+        "state": "confirmed",
+        "reason": "host reported cancelled",
+        "resolvedAt": "2026-10-15T01:07:21.323Z",
+        "requestedAt": "2026-10-15T01:07:21.104Z"
+      }
+    }
+  ]
+}

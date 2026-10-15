@@ -1,0 +1,43 @@
+{
+  "at": "2026-10-15T06:27:42.229Z",
+  "backendSha": "3a2e2ca5e3896d8a4bfcec6a60988a082b952960",
+  "rendererSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+  "parentId": "task_x943JumvczAo",
+  "leafId": "task_wqstgZSuOLUg",
+  "topicId": "tpc_hWh5Nch04vD7",
+  "operationId": "op_1792045223357_agt_taIxMIVssPhE_tpc_hWh5Nch04vD7_eZIBOrUi",
+  "dispatchId": "dsp_YoDsbjH8Ebk6",
+  "actualSleep300Started": "2026-10-15T06:21:14.651Z",
+  "originalReal600Deadline": "2026-10-15T06:30:19.594Z",
+  "actualUiResumeOnceAt": "2026-10-15T06:22:44.853Z",
+  "afterResumeReadGuardAt": "2026-10-15T06:23:00.429Z",
+  "actualUiStopOnceAt": "2026-10-15T06:23:54.993Z",
+  "cancelRequestedAt": "2026-10-15T06:23:56.740Z",
+  "nativeCancelAcknowledgedAt": "2026-10-15T06:23:57.129Z",
+  "operationInterruptedAt": "2026-10-15T06:23:57.300Z",
+  "acpSessionId": "ses_ec1c7e593ffe8z8xggzshNHdPi",
+  "checks": {
+    "pausedFilterIncludesCurrentLeafWhileNativeRunning": true,
+    "resumeFutureFlagFalsePreservedSameNativeAndTick": true,
+    "actualStopWithinNativeSleep300": true,
+    "nativeCancelAcknowledged": true,
+    "stopPreservedBackendFutureFlagFalseAndPendingTick": true
+  },
+  "limitations": {
+    "rpcObserverMatchedZero": true,
+    "actualRpcProcedureNotClaimedFromNetwork": true,
+    "postStopColdUiShowsPausedDespiteBackendFutureFlagFalse": true,
+    "reviewerNullNeverExercised": true,
+    "canceledBeforeArithmeticAndArtifactDelivery": true,
+    "noReviewerOrDeliveryPassClaim": true
+  },
+  "coldProofThenCleanupReleaseToHarness": true,
+  "allUiPngsVisuallyInspected": true,
+  "pngs": [
+    "owner-t17-active-paused-filter.png",
+    "owner-t17-resumed-current-active.png",
+    "owner-t17-stopped-cold-before-explicit-pause.png"
+  ],
+  "noRepeatStopOrRun": true,
+  "originalT14Untouched": true
+}

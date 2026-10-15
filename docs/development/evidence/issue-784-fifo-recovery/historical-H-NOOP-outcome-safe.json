@@ -1,0 +1,20 @@
+{
+  "automationPaused": true,
+  "earliestObservedSourceBoundary": "TaskTopic.settleIfRunning excludes isParked task before dispatch phase exception",
+  "firstReceiptSha256": "ee20ca91d568b63043b9ae988945335b745c3cf501c2212d88b650242afecfb7",
+  "handlerAcknowledged": true,
+  "handlerSuccessIsNotReviewerEntry": true,
+  "newHandoffOrReviewerOperationObserved": false,
+  "observedAt": "2026-10-15T03:49:15.390691+00:00",
+  "operatorReplayAt": "2026-10-15T03:46:56.953Z",
+  "originalOccurrenceCount": 3,
+  "originalOperationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+  "parentCurrentChecklistRunPresent": false,
+  "parentIssueReviewPresent": false,
+  "parkedMarkerAt": "2026-10-15T02:27:34.578Z",
+  "parkedReasonFieldPresent": false,
+  "postReplayTopicStatus": "running",
+  "queuedCount": 2,
+  "replayedAgain": false,
+  "sourceSha": "cec4c8397ec8aa1ed0aee43a36382f3f06039b25"
+}

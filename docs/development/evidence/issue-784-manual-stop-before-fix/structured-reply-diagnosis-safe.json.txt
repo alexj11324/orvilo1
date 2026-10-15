@@ -1,0 +1,50 @@
+{
+  "capturedAt": "2026-10-15T06:08:42.665Z",
+  "taskId": "task_x943JumvczAo",
+  "operationId": "op_1792044111805_agt_taIxMIVssPhE_tpc_thCGhvuY43P0_nvRuRbWv",
+  "tracing": [
+    {
+      "id": "881bd35a-d6da-441d-9c49-5ff7632e62cf",
+      "scenario": "task.plan",
+      "success": false,
+      "errorCode": "schema_mismatch",
+      "validationFailed": false,
+      "model": "opencode/mimo-v2.6-flash-free",
+      "provider": "opencode",
+      "createdAt": "2026-10-15T06:03:21.287Z"
+    }
+  ],
+  "replyShape": {
+    "assistantMessageExists": true,
+    "hasNonemptyReply": true,
+    "hasParseableJson": true,
+    "type": "object",
+    "expectedKeyTypes": {
+      "summary": "undefined",
+      "scope": "undefined",
+      "checklist": "undefined",
+      "reviewerAgentId": "undefined",
+      "tasks": "undefined"
+    }
+  },
+  "native": {
+    "capturedAt": "2026-10-15T06:08:43.076Z",
+    "operationId": "op_1792044111805_agt_taIxMIVssPhE_tpc_thCGhvuY43P0_nvRuRbWv",
+    "isActive": false,
+    "isCompleted": true,
+    "hasError": false,
+    "needsHumanInput": false,
+    "status": "done",
+    "lastModified": "2026-10-15T06:03:19.440Z",
+    "remote": {
+      "durableStatus": "done",
+      "admission": {
+        "state": "running",
+        "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+        "acpSessionId": "ses_ec1d8c216ffeF7xinGEiWhhUOg",
+        "generation": 1,
+        "updatedAt": "2026-10-15T06:03:19.440Z"
+      }
+    }
+  }
+}

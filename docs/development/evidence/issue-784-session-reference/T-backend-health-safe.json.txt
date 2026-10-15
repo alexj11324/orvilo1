@@ -1,0 +1,41 @@
+{
+  "startedAt": "2026-10-15T05:59:03.844Z",
+  "at": "2026-10-15T05:59:18.052Z",
+  "backendSourceSha": "3a2e2ca5e3896d8a4bfcec6a60988a082b952960",
+  "rendererSourceSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+  "newNativeCliSha256": "76eb91e8712bcc9e2e4078bde976b2936ac08501e36d8e531f6bfe8aee09be30",
+  "checks": [
+    {
+      "actor": "owner",
+      "elapsedMs": 14155,
+      "userStateReadable": true,
+      "devices": [
+        {
+          "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+          "online": true,
+          "connectionCount": 1
+        }
+      ],
+      "deviceShapeKnown": true
+    },
+    {
+      "actor": "member",
+      "elapsedMs": 14113,
+      "userStateReadable": true,
+      "devices": [
+        {
+          "deviceId": "943ad1571ff1079323550034fd8f9123",
+          "online": true,
+          "connectionCount": 1
+        }
+      ],
+      "deviceShapeKnown": true
+    }
+  ],
+  "publicConfig": {
+    "enableGatewayMode": false,
+    "agentGatewayUrl": "http://127.0.0.1:8788"
+  },
+  "restartCount": 1,
+  "existingElectronHostsRetained": true
+}

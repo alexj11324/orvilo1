@@ -1,0 +1,231 @@
+{
+  "bundleScope": "Artifact consumer full acceptance and post-cutover preservation/retirement only",
+  "createdAt": "2026-10-15T01:56:19.765226+00:00",
+  "environment": "LOCAL QA Electron/backend/S3; not production/cloud",
+  "files": [
+    {
+      "file": "6ae9-group-prefinal-safe.json",
+      "sha256": "a3495ec688dc2bf50194b662a2277f3e61ade52720c6f8eb940348d08d9d8743",
+      "bytes": 4410,
+      "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+      "scenario": "full-consumer-current-gates",
+      "who": "Owner requester / saved MiMo reviewers",
+      "action": "Read current ledger before final acceptance",
+      "verdict": "PASS: current reviewer gates passed; final delivery still pending",
+      "provenance": "Exact selected safe receipt parsed and reserialized; no raw native/Task/environment/auth payloads copied."
+    },
+    {
+      "file": "6ae9-group-final-safe.json",
+      "sha256": "cd0c72366365010ccd4a96e50e5139451c09bec4d9a5eaff625783dd72c27f17",
+      "bytes": 4793,
+      "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+      "scenario": "full-consumer-final",
+      "who": "Owner requester in Electron",
+      "action": "Accept parent whole group exactly once",
+      "verdict": "PASS: all four current deliveries accepted",
+      "provenance": "Exact selected safe receipt parsed and reserialized; no raw native/Task/environment/auth payloads copied."
+    },
+    {
+      "file": "6ae9-final-consumer-privacy-safe.json",
+      "sha256": "57b1f759b27b5f4c21266dd6294f83daa9677bfb2028e4ec932b453ea2e903e8",
+      "bytes": 5561,
+      "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+      "scenario": "full-consumer-privacy",
+      "who": "Owner and Member",
+      "action": "Read private source topic and shared Checklist",
+      "verdict": "PASS: private topic isolated; shared evidence readable",
+      "provenance": "Exact selected safe receipt parsed and reserialized; no raw native/Task/environment/auth payloads copied."
+    },
+    {
+      "file": "6ae9-c-durable-delivery-safe.json",
+      "sha256": "c61751e013e38f2d978f399f21c844267fb7f16a49e0323667e499fbbf8a92af",
+      "bytes": 2216,
+      "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+      "scenario": "native-upstream-consumption",
+      "who": "Saved MiMo implementer/reviewer; Owner supporting uploader",
+      "action": "Read upstream documents/stored bytes; upload exact native C bytes locally",
+      "verdict": "PASS: native consumption and requester upload provenance",
+      "provenance": "Exact selected safe receipt parsed and reserialized; no raw native/Task/environment/auth payloads copied."
+    },
+    {
+      "file": "6ae9-c-single-operational-repair-safe.json",
+      "sha256": "58ddd32e9bfce5c22f8a813054eeb0632a74bc0507cc4973e48a536097a34541",
+      "bytes": 1239,
+      "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+      "scenario": "bounded-operational-repair",
+      "who": "Owner requester",
+      "action": "One supported C repair after acknowledged stop; preserve criteria and A/B proofs",
+      "verdict": "PASS: explicit repair; not autonomous uninterrupted C success",
+      "provenance": "Exact selected safe receipt parsed and reserialized; no raw native/Task/environment/auth payloads copied."
+    },
+    {
+      "file": "6ae9-c-final-stop-confirmation.json",
+      "sha256": "6194a3fe11ea29e26ec1959b2cd2a834064ea930fadb67ab3060f70bf58050fd",
+      "bytes": 703,
+      "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+      "scenario": "bounded-stop",
+      "who": "Owner requester / native host",
+      "action": "Stop drifting first C attempt and wait for native acknowledgement",
+      "verdict": "PASS: confirmed stop before repair",
+      "provenance": "Exact selected safe receipt parsed and reserialized; no raw native/Task/environment/auth payloads copied."
+    },
+    {
+      "file": "6ae9-c-items-ui-safe.json",
+      "sha256": "7c325ef3116d1505a8c66e8fa4e09fd0e3847d41cfee7277711ef379fcc91aa0",
+      "bytes": 1160,
+      "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+      "scenario": "individual-and-batch-item-acceptance",
+      "who": "Owner requester in Electron",
+      "action": "Accept C content individually then remaining item in batch; cold reload",
+      "verdict": "PASS: item acceptance persisted before final group delivery",
+      "provenance": "Exact selected safe receipt parsed and reserialized; no raw native/Task/environment/auth payloads copied."
+    },
+    {
+      "file": "6ae9-parent-native-summary-safe.json",
+      "sha256": "1109df8c8b7e648dca0b8e5da5dcaf865ce79ede295f0975fbbfc583ba56419f",
+      "bytes": 490,
+      "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+      "scenario": "parent-artifact-provenance",
+      "who": "Saved MiMo parent implementer",
+      "action": "Publish combined pinned summary",
+      "verdict": "PASS: values/IDs/current runs; prose timestamp limitation documented",
+      "provenance": "Exact selected safe receipt parsed and reserialized; no raw native/Task/environment/auth payloads copied."
+    },
+    {
+      "file": "e240-retirement-probe-safe.json",
+      "sha256": "fca3f87309b699aa2c6c8979e5e1aa770b3a5fcbdb1389f134c3c89148ca4818",
+      "bytes": 3960,
+      "sourceSha": "e24075992d1c0888e3ac5db80481b06efba755b3",
+      "scenario": "post-cutover-archive-retirement",
+      "who": "Owner requester",
+      "action": "Read archive/current Checklist; attempt retired writers rejected before write",
+      "verdict": "PASS: read preservation; retired writers rejected",
+      "provenance": "Exact selected safe receipt parsed and reserialized; no raw native/Task/environment/auth payloads copied."
+    },
+    {
+      "file": "e240-final-consumer-privacy-safe.json",
+      "sha256": "4f5b2c7ed5e688f5e008408243f3be72099da0b205d56344a6f61780af4ec2eb",
+      "bytes": 5561,
+      "sourceSha": "e24075992d1c0888e3ac5db80481b06efba755b3",
+      "scenario": "post-cutover-privacy",
+      "who": "Owner and Member",
+      "action": "Read private topic/shared current and historical evidence",
+      "verdict": "PASS: privacy and shared read preserved",
+      "provenance": "Exact selected safe receipt parsed and reserialized; no raw native/Task/environment/auth payloads copied."
+    },
+    {
+      "file": "e240-artifact-readback-safe.json",
+      "sha256": "062e9e06b6227e96d5c71832fa609e0fc205ab103ebfcb0b4a6a0d832d28554d",
+      "bytes": 1267,
+      "sourceSha": "e24075992d1c0888e3ac5db80481b06efba755b3",
+      "scenario": "post-cutover-stored-bytes",
+      "who": "Owner requester",
+      "action": "GET stored files and read pinned document references",
+      "verdict": "PASS: all three hashes/sizes unchanged",
+      "provenance": "Exact selected safe receipt parsed and reserialized; no raw native/Task/environment/auth payloads copied."
+    },
+    {
+      "file": "6ae9-native-dependency-provenance-safe.json",
+      "sha256": "d4262ed2ea675599cc054e28b46b9fd71df0862a0b4746a65da492ec6558fa74",
+      "bytes": 10319,
+      "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+      "scenario": "native-dependency-release",
+      "who": "Saved MiMo native roles / Owner uploader",
+      "action": "Observe A/B reviewed release C, then reviewed C release parent before final Done",
+      "verdict": "PASS: native IDs/chronology preserved; no manual C start",
+      "provenance": "Whitelisted fields extracted from two safe receipts; no prompts, commands, raw output or signed URLs."
+    },
+    {
+      "file": "6ae9-group-done-cold.png",
+      "sha256": "a86d283b45d0202dc638eecf2c6e342e4f56f3a2cd4dc816048f35f82aba5f54",
+      "bytes": 485701,
+      "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+      "scenario": "cold-whole-group-done",
+      "who": "Real Electron Owner",
+      "action": "Parent and three children Done after reload",
+      "verdict": "PASS; visually inspected original image: no signed read URL or credential visible",
+      "provenance": "Unedited original purpose-built CDP capture; visually inspected via view_image. No image redaction/transformation."
+    },
+    {
+      "file": "6ae9-parent-final-accepted-cold.png",
+      "sha256": "a99305b270a50542c920c68ac45e8a50f191e94aaf96c3ff2b46e795bec40e3e",
+      "bytes": 522592,
+      "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+      "scenario": "cold-final-ledger",
+      "who": "Real Electron Owner",
+      "action": "Accepted item timestamp, hashes and disabled final control after reload",
+      "verdict": "PASS; visually inspected original image: no signed read URL or credential visible",
+      "provenance": "Unedited original purpose-built CDP capture; visually inspected via view_image. No image redaction/transformation."
+    },
+    {
+      "file": "6ae9-b-history-failed-verdict-postfinal-cold.png",
+      "sha256": "9a1fa3726126f34d8b05f7fb0c54faf35782d9392c7072a9d7be43c4a3f4a6d9",
+      "bytes": 462679,
+      "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+      "scenario": "cold-prior-failed-history",
+      "who": "Real Electron Owner",
+      "action": "Prior B failure and nonempty original pending-upload evidence retained after final Done",
+      "verdict": "PASS; visually inspected original image: no signed read URL or credential visible",
+      "provenance": "Unedited original purpose-built CDP capture; visually inspected via view_image. No image redaction/transformation."
+    },
+    {
+      "file": "e240-member-accepted-ledger.png",
+      "sha256": "4a59e871bd12d4dd46063200bf112fb432efb1f3ae59ea1149be13a4f2be156e",
+      "bytes": 575702,
+      "sourceSha": "e24075992d1c0888e3ac5db80481b06efba755b3",
+      "scenario": "post-cutover-member-ledger",
+      "who": "Real Electron Member",
+      "action": "Member reads shared accepted parent evidence and completed children",
+      "verdict": "PASS; visually inspected original image: no signed read URL or credential visible",
+      "provenance": "Unedited original purpose-built CDP capture; visually inspected via view_image. No image redaction/transformation."
+    },
+    {
+      "file": "e240-retired-sidebar-menu.png",
+      "sha256": "99550bd23891c7fcd167de19f42a1b42ea2bca26f5c56b4e64295b82ecdc0dbb",
+      "bytes": 594215,
+      "sourceSha": "e24075992d1c0888e3ac5db80481b06efba755b3",
+      "scenario": "post-cutover-retired-navigation",
+      "who": "Real Electron Member",
+      "action": "Actual sidebar and More menu omit standalone Goal/Acceptance/Verify entry",
+      "verdict": "PASS; visually inspected original image: no signed read URL or credential visible",
+      "provenance": "Unedited original purpose-built CDP capture; visually inspected via view_image. No image redaction/transformation."
+    },
+    {
+      "file": "README.md",
+      "sha256": "718c5c920f8b04213b83c4a42124b7c713964262eb948a676edb46fdc6dd18bf",
+      "bytes": 4934,
+      "sourceSha": [
+        "6ae9741a75482e2267228c945c116907142e7c28",
+        "e24075992d1c0888e3ac5db80481b06efba755b3"
+      ],
+      "scenario": "scope-and-limitations",
+      "who": "QA observer",
+      "action": "Describe completed evidence and explicit remaining gates",
+      "verdict": "Artifact lane passed; wider Issue 784 gates pending",
+      "provenance": "Authored summary of selected receipts; no raw logs or secrets."
+    },
+    {
+      "file": "secret-scan-counts.json",
+      "sha256": "8c8ab71997e488ae8304105e5debb2c6d11cc77782cb76b1b7f7afb8e989d963",
+      "bytes": 514,
+      "sourceSha": [
+        "6ae9741a75482e2267228c945c116907142e7c28",
+        "e24075992d1c0888e3ac5db80481b06efba755b3"
+      ],
+      "scenario": "publication-secret-scan",
+      "who": "QA observer",
+      "action": "Scan selected files, report counts only",
+      "verdict": "PASS: zero pattern matches; five images visually inspected",
+      "provenance": "Counts only; no matching values are retained or printed."
+    }
+  ],
+  "fullConsumerSourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+  "pendingWiderGates": [
+    "cross-repository delivery",
+    "FIFO recurrence",
+    "Slack acceptance",
+    "remote CI"
+  ],
+  "postCutoverSourceSha": "e24075992d1c0888e3ac5db80481b06efba755b3",
+  "sourceOrServicesModified": false
+}

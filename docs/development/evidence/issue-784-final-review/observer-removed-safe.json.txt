@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-15T07:13:38.965Z",
+  "sourceSha": "e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b",
+  "ownedObserverPid": 20908,
+  "verifiedBinarySha256": "6d92ad316e9d5ed4ed63229e6b9d97b5ca9fd4c21a967ace39be9eb87632f93c",
+  "observerStopped": true,
+  "port8788Closed": true,
+  "ephemeralOwnTokenRemoved": true,
+  "originalDeviceGatewayTokenUntouched": true,
+  "otherListenerPidsPreserved": {
+    "3411": [
+      "84682"
+    ],
+    "5184": [
+      "79472"
+    ],
+    "5185": [
+      "79872"
+    ],
+    "8784": [
+      "84706"
+    ],
+    "9000": [
+      "84619"
+    ],
+    "9284": [
+      "80044"
+    ],
+    "9285": [
+      "80045"
+    ],
+    "31784": [
+      "73809"
+    ]
+  },
+  "existingEnvironmentFilesChanged": false,
+  "rawTokenPrinted": false
+}

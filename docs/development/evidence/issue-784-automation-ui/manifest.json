@@ -1,0 +1,255 @@
+{
+  "backendSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+  "coldApiCheckCount": 13,
+  "credentialPatternFindings": 0,
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 3998,
+      "sha256": "e7d0a4ea5da21be9763b88d662dce80b3f833a13aba70732851b2486b1d9d454",
+      "sourceFilename": "README.md",
+      "sourceSha256": "5ea9f31e238b7a4a8f31eee9fe3b884ad563629508a90f053da881dd972a123c",
+      "originalPublishedSha256": "d1fc518189ea56a0bcd781e373053f2467e961a580c20948d0320db35a44785c",
+      "originalPublishedBytes": 3675,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "correct-public-redaction-provenance-description"
+      }
+    },
+    {
+      "file": "cold-final-safe.json.txt",
+      "bytes": 12143,
+      "sha256": "f39ef60dd64fb6041c01f0947709c07782aa9069417b8ec0d495e344df6ede76",
+      "sourceFilename": "cold-final-safe.json",
+      "sourceSha256": "b3732e5693e296836de37f4ae077676d648c84fef8ca0d547b4e0d1894f38a1c",
+      "originalPublishedSha256": "b3732e5693e296836de37f4ae077676d648c84fef8ca0d547b4e0d1894f38a1c",
+      "originalPublishedBytes": 12109,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/family/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "6691fc72112d4155df160043566260fcb524de5d3457ebf841c96ed23bf95152"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    },
+    {
+      "file": "go.json.txt",
+      "bytes": 562,
+      "sha256": "ffdfec9a61729a0ef6d1b5f73882a31797d485036f15e83a64f7ab262b5cc6d7",
+      "sourceFilename": "go.json",
+      "sourceSha256": "ffdfec9a61729a0ef6d1b5f73882a31797d485036f15e83a64f7ab262b5cc6d7"
+    },
+    {
+      "file": "no-r5-after-genuine-deadline-safe.json.txt",
+      "bytes": 11370,
+      "sha256": "31434a09c137eb6c162847519041a59948f7dd81daa34a08d2db6d664ba71bec",
+      "sourceFilename": "no-r5-after-genuine-deadline-safe.json",
+      "sourceSha256": "6faf281bb9d0aff813aea2760ba1b98287e8b2809de8405aba4b1201220b89d4",
+      "originalPublishedSha256": "6faf281bb9d0aff813aea2760ba1b98287e8b2809de8405aba4b1201220b89d4",
+      "originalPublishedBytes": 11336,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/family/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "6691fc72112d4155df160043566260fcb524de5d3457ebf841c96ed23bf95152"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    },
+    {
+      "file": "r4-future-paused-current-preserved-safe.json.txt",
+      "bytes": 12494,
+      "sha256": "cef37d2cee67d243260c9f114abb6703050da3f2f487743af5b15433a6ceeca6",
+      "sourceFilename": "r4-future-paused-current-preserved-safe.json",
+      "sourceSha256": "c630ad7ee3a3b8c731302a318fb1e90632fa6278c825147b62156d1f44db4d13",
+      "originalPublishedSha256": "c630ad7ee3a3b8c731302a318fb1e90632fa6278c825147b62156d1f44db4d13",
+      "originalPublishedBytes": 12460,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/family/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "6691fc72112d4155df160043566260fcb524de5d3457ebf841c96ed23bf95152"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    },
+    {
+      "file": "r4-genuine-capture-safe.json.txt",
+      "bytes": 11957,
+      "sha256": "2e8dba96b1ef12fdb40f545bf8c1b62a321ff9d0ceec75f494cebd4c9f847e0d",
+      "sourceFilename": "r4-genuine-capture-safe.json",
+      "sourceSha256": "2e85f1a10047e09c14809b66ffcd178ebe9e70d7e49963d6b31cad329973773e",
+      "originalPublishedSha256": "2e85f1a10047e09c14809b66ffcd178ebe9e70d7e49963d6b31cad329973773e",
+      "originalPublishedBytes": 11923,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/family/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "6691fc72112d4155df160043566260fcb524de5d3457ebf841c96ed23bf95152"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    },
+    {
+      "file": "r4-native-sleep-ready-safe.json.txt",
+      "bytes": 12495,
+      "sha256": "2b74f3467e1323963a8730d8bdce50830b8be4988e710855a814f1a4496c4c90",
+      "sourceFilename": "r4-native-sleep-ready-safe.json",
+      "sourceSha256": "1c21edf2eed409bad6712f524632a3183998b1a9d181a6dee6a0cc510f63717a",
+      "originalPublishedSha256": "1c21edf2eed409bad6712f524632a3183998b1a9d181a6dee6a0cc510f63717a",
+      "originalPublishedBytes": 12461,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/family/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "6691fc72112d4155df160043566260fcb524de5d3457ebf841c96ed23bf95152"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    },
+    {
+      "file": "r4-ui-stop-native-ack-safe.json.txt",
+      "bytes": 12745,
+      "sha256": "1dc03bc128fde39493908a374abccf1b5fcbb83d4fd0102d8680d06e68dbedf8",
+      "sourceFilename": "r4-ui-stop-native-ack-safe.json",
+      "sourceSha256": "aa7edbac28938f812badfcb56ab1eb45386b6bf90e1bd2b18180d61764607949",
+      "originalPublishedSha256": "aa7edbac28938f812badfcb56ab1eb45386b6bf90e1bd2b18180d61764607949",
+      "originalPublishedBytes": 12711,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/family/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "6691fc72112d4155df160043566260fcb524de5d3457ebf841c96ed23bf95152"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    },
+    {
+      "file": "s-detail-resumed-timer-running.png",
+      "bytes": 274629,
+      "sha256": "e5c74036565fca54d79f0dca54f527739f17fc2951b73714a5fa2818dad9481f",
+      "sourceFilename": "s-detail-resumed-timer-running.png",
+      "sourceSha256": "e5c74036565fca54d79f0dca54f527739f17fc2951b73714a5fa2818dad9481f"
+    },
+    {
+      "file": "s-paused-filter-initial.png",
+      "bytes": 179171,
+      "sha256": "1100b39298ee256833a5a20f640bfa1b5e41651a89d853171f4521c9e7dd0e11",
+      "sourceFilename": "s-paused-filter-initial.png",
+      "sourceSha256": "1100b39298ee256833a5a20f640bfa1b5e41651a89d853171f4521c9e7dd0e11"
+    },
+    {
+      "file": "s-r4-final-paused-filter-cold.png",
+      "bytes": 253909,
+      "sha256": "c7d29f877c056ef62ba4e6b8bb748983619565231ffaad056795e52f71feda1e",
+      "sourceFilename": "s-r4-final-paused-filter-cold.png",
+      "sourceSha256": "c7d29f877c056ef62ba4e6b8bb748983619565231ffaad056795e52f71feda1e"
+    },
+    {
+      "file": "s-r4-final-paused-resume-menu-cold.png",
+      "bytes": 263664,
+      "sha256": "7d274acd6409d88b110a5091b1838cc79aeb81a7d1295475dc02da4bb0aff6e4",
+      "sourceFilename": "s-r4-final-paused-resume-menu-cold.png",
+      "sourceSha256": "7d274acd6409d88b110a5091b1838cc79aeb81a7d1295475dc02da4bb0aff6e4"
+    },
+    {
+      "file": "s-r4-future-paused-active.png",
+      "bytes": 284028,
+      "sha256": "f82688ff186c9519fff1a6330b212937631dd6f974e2f1c4ce46096bf4048cd7",
+      "sourceFilename": "s-r4-future-paused-active.png",
+      "sourceSha256": "f82688ff186c9519fff1a6330b212937631dd6f974e2f1c4ce46096bf4048cd7"
+    },
+    {
+      "file": "s-r4-global-zero-safe.json.txt",
+      "bytes": 552,
+      "sha256": "c9cb8c2554216cad62951e997b550a33bb6726f1bc5c4307fb5c2267073ec703",
+      "sourceFilename": "s-r4-global-zero-safe.json",
+      "sourceSha256": "c9cb8c2554216cad62951e997b550a33bb6726f1bc5c4307fb5c2267073ec703"
+    },
+    {
+      "file": "s-r4-native-active-before-pause.png",
+      "bytes": 273493,
+      "sha256": "dc1b8c55e8dc079660ad3b6ffe82b66d2d10d804c1db6c510db0c5158c24a8e2",
+      "sourceFilename": "s-r4-native-active-before-pause.png",
+      "sourceSha256": "dc1b8c55e8dc079660ad3b6ffe82b66d2d10d804c1db6c510db0c5158c24a8e2"
+    },
+    {
+      "file": "s-r4-stopped-paused-detail-cold.png",
+      "bytes": 289671,
+      "sha256": "b8d98dd83b5849d2c900a0d656897abe1dedc366a7f7d0eeae4b19b7481f5be3",
+      "sourceFilename": "s-r4-stopped-paused-detail-cold.png",
+      "sourceSha256": "b8d98dd83b5849d2c900a0d656897abe1dedc366a7f7d0eeae4b19b7481f5be3"
+    },
+    {
+      "file": "ui-controls-and-status-timing-safe.json.txt",
+      "bytes": 1724,
+      "sha256": "dd7f84acd1c67c6f102cf985c9c5e4533dc87e120ec5aa866db5a9f8d6e822fb",
+      "sourceFilename": "ui-controls-and-status-timing-safe.json",
+      "sourceSha256": "dd7f84acd1c67c6f102cf985c9c5e4533dc87e120ec5aa866db5a9f8d6e822fb"
+    },
+    {
+      "file": "ui-resume-timer-start-safe.json.txt",
+      "bytes": 13480,
+      "sha256": "12dbd6ff029be0a9a3aa121f569f9c0d38bc3c582e48172e17c7e6aa756e892a",
+      "sourceFilename": "ui-resume-timer-start-safe.json",
+      "sourceSha256": "036104bb89c630a6f22d5324c4c9c0df04a6028e182fe4f393285b420a82aa26",
+      "originalPublishedSha256": "036104bb89c630a6f22d5324c4c9c0df04a6028e182fe4f393285b420a82aa26",
+      "originalPublishedBytes": 13453,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "scheduler-tick-token-sha256",
+        "redactedFields": [
+          {
+            "jsonPointer": "/snapshot/family/tasks/0/scheduler/tickToken",
+            "originalKey": "tickToken",
+            "replacementKey": "tickTokenSha256",
+            "valueSha256": "f4130ce1689e4c9e513f7d08b4a0f4b49bce08f0464b90d3edcf97c3549c40d6"
+          }
+        ],
+        "allOtherParsedDataUnchanged": true
+      }
+    }
+  ],
+  "noR5AfterDeadlineCheckCount": 8,
+  "originalThreeMarkerSha256": "f12c810c11c552bc0f41a9391d2ebe608479e7a239d6848bb5bfae7524806527",
+  "publicRedaction": {
+    "description": "Only scheduler tickToken fields become SHA-256 projections; original source hashes retain provenance and are not redacted-public byte hashes.",
+    "fieldsInThisBundle": 7,
+    "sourceOriginalsModified": false,
+    "providerHistoryPurged": false
+  },
+  "rendererSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+  "scope": "Separate fourth occurrence R4 UI acceptance only; original-three run history and private immutable bundle untouched",
+  "sourceManifestSha256": "0a75f10da0dd231f92f532947fe0275db705dbcd7023c747ca8a4bca9cd19e0a"
+}

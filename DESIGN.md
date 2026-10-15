@@ -1,48 +1,51 @@
 ---
 version: alpha
 name: Orvilo
-description: Orvilo's visual contract. Existing light theme values below are reference defaults; DESIGN.dark.md supplies dark color values. Runtime adapters must implement the same semantic roles.
+description: Orvilo's visual contract. Colour values below are the default light output of the local theme generator (src/styles/theme/generate.ts); DESIGN.dark.md lists the dark output. Runtime adapters must implement the same semantic roles.
 themeable:
-  # Users pick a primary and a neutral; components must read the semantic tokens
-  # below rather than hard-coding any single value from this list.
+  # Users pick a primary (accent) and a neutral (base); each stored name maps to
+  # one OKLCH seed in src/styles/theme/seeds.ts. Components must read the
+  # semantic roles below rather than hard-coding any value from this list.
   primaryColor:
-    default: ~ # monochrome (near-black in light) when unset — see colorPrimary
+    default: ~ # monochrome when unset: near-black in light, near-white in dark
     options:
       [red, orange, gold, yellow, lime, green, cyan, blue, geekblue, purple, magenta, volcano]
   neutralColor:
-    default: ~ # the built-in `gray` scale when unset
-    options: [mauve, slate, sage, olive, sand]
+    default: ~ # the built-in cool `gray` base, calibrated to Linear, when unset
+    options: [mauve, olive, sage, sand, slate]
+  contrast: 30 # internal generator input only; not a user setting
 colors:
-  # Existing engine token names for Orvilo semantic roles; light reference defaults
-  # `cssVar.colorPrimary`, `cssVar.colorText`, etc. Light-theme defaults shown.
-  colorPrimary: '#222222' # monochrome by default; becomes the chosen primaryColor[9]
-  colorSuccess: '#379d4a' # green
-  colorWarning: '#ee9e0b' # gold
-  colorError: '#ec5e41' # volcano
-  colorInfo: '#0072f5' # geekblue
-  # Text — solid neutrals from the `gray` scale; rank info with these
-  colorText: '#080808' # primary text and icons
-  colorTextSecondary: '#666666' # secondary text, labels
-  colorTextTertiary: '#999999' # placeholder, captions
-  colorTextQuaternary: '#bbbbbb' # disabled
-  # Surfaces — separate scale from text; never substitute one for the other
-  colorBgLayout: '#f8f8f8' # page background
-  colorBgContainer: '#ffffff' # primary card / panel surface
-  colorBgContainerSecondary: '#fbfbfb' # subtle secondary surface (orvilo-ui custom token)
-  colorBgElevated: '#ffffff' # popovers, menus, modals
-  colorBgSpotlight: '#dddddd' # retained engine spotlight role; not the local tooltip contract
-  # Borders are solid reference defaults; fills are translucent washes
-  colorBorder: '#e3e3e3' # stronger edge
-  colorBorderSecondary: '#eeeeee' # default divider / subtle border
-  colorFill: 'rgba(0, 0, 0, 0.12)'
-  colorFillSecondary: 'rgba(0, 0, 0, 0.06)'
-  colorFillTertiary: 'rgba(0, 0, 0, 0.03)' # hover wash
-  colorFillQuaternary: 'rgba(0, 0, 0, 0.015)' # active wash
+  # Generated semantic roles (CSS variable names), default light input.
+  primary: '#212223' # monochrome by default; the chosen accent seed otherwise
+  primary-foreground: '#ffffff'
+  success: '#27a644'
+  warning: '#f2c94c'
+  destructive: '#eb5757'
+  info: '#4ea7fc'
+  # Text — solved for contrast targets on the panel; rank info with these
+  foreground: '#171718' # primary text and icons (17.9:1)
+  muted-foreground: '#2e3138' # secondary text, labels (13:1)
+  foreground-tertiary: '#60646c' # captions, descriptions, placeholders, icons (5.9:1)
+  foreground-quaternary: '#898d95' # disabled (3.3:1)
+  # Surfaces — separate ladder from text; never substitute one for the other
+  background: '#f6f7f9' # page canvas and sidebar
+  card: '#ffffff' # primary panel surface
+  surface-secondary: '#fafbfd' # opaque secondary container surface
+  popover: '#ffffff' # popovers, menus, modals
+  # Borders: hairlines are decorative; the control edge reaches 3:1
+  border: '#e0e2e6' # stronger hairline
+  divider: '#e8ebef' # everyday divider
+  input: '#8a8d94' # control boundary
+  # Fills are translucent washes of the neutral ink
+  fill: 'rgba(16, 18, 21, 0.1)'
+  selected: 'rgba(16, 18, 21, 0.06)'
+  muted: 'rgba(16, 18, 21, 0.035)' # hover wash
+  fill-quaternary: 'rgba(16, 18, 21, 0.018)'
 elevation:
-  # Shared elevation roles; light reference values, dark values may differ
-  boxShadowTertiary: '0 3px 1px -1px rgba(26, 26, 26, 0.06)' # raised cards
-  boxShadowSecondary: '0 8px 16px -4px rgba(0, 0, 0, 0.2)' # popovers, menus
-  boxShadow: '0 20px 20px -8px rgba(0, 0, 0, 0.24)' # modals, dialogs
+  # Shared elevation roles; light values, dark values differ (generator output)
+  shadow-raised: '0 3px 1px -1px rgba(26, 26, 26, 0.06)' # raised cards
+  shadow-popover: '0 8px 16px -4px rgba(0, 0, 0, 0.2)' # popovers, menus
+  shadow-dialog: '0 20px 20px -8px rgba(0, 0, 0, 0.24)' # modals, dialogs
 typography:
   fontFamily: 'Geist, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, "HarmonyOS Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif'
   fontFamilyCode: '"Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Code", Consolas, "HarmonyOS Sans SC", monospace'
@@ -86,7 +89,7 @@ Orvilo is calm and content-first: restrained color, clear hierarchy, and space f
 
 ## Rule ownership
 
-This file is the single Orvilo visual contract for both appearances. [DESIGN.dark.md](DESIGN.dark.md) supplies dark color defaults only. The YAML above retains the existing light engine values as reference defaults, not a second palette or proof of accessibility.
+This file is the single Orvilo visual contract for both appearances. [DESIGN.dark.md](DESIGN.dark.md) supplies dark color defaults only. The YAML above lists the generator's default light output; the generator, not this list, is the source of the values, and its tests prove the contrast floors below.
 
 | Concern                                                                                    | Owner                                                                                                                                                                                                                                                                                       |
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -110,57 +113,81 @@ Use **primitive → semantic → component** layers, following the selected skil
 
 Components consume semantic roles directly or through component aliases. Their geometry may use an existing role mapping or variant; a CSS variable for every property is unnecessary. Keep the role consistent across concrete consumers before extracting a shared abstraction. The skill's blue palette, 40/48px controls, always-white foregrounds, HSL values, and Tailwind v3/class-dark snippets illustrate structure only.
 
-Orvilo currently has two implementations: the Lobe/antd theme engine exposes `cssVar.*` through `ThemeProvider` (`orvilo-vars`), while local primitives use Tailwind CSS variables in [globals.css](src/app/globals.css). Both must express this contract. The actual stack is Tailwind v4 with `@theme inline`, complete color values, and the `data-theme` route selected by [NextThemeProvider](src/layout/GlobalProvider/NextThemeProvider.tsx); respect that stack when implementing aliases. Never wrap a complete color value in `hsl()` merely because an upstream example does so. Differences between adapters are migration findings, not permission to introduce independent palettes.
+Every colour comes from one local generator, [generate.ts](src/styles/theme/generate.ts), seeded by [seeds.ts](src/styles/theme/seeds.ts). [ThemeRoles](src/styles/themeRoles.ts) publishes its output as Tailwind CSS variables on the document theme host, and [globals.css](src/app/globals.css) holds the same default output for paint before that host mounts (a test keeps them equal). Until the engine is removed (P5 of the [retirement plan](docs/development/antd-retirement-plan.md)), the remaining Lobe/antd components receive the same generated values as `theme.token`; they no longer supply any role. The actual stack is Tailwind v4 with `@theme inline`, complete color values, and the `data-theme` route selected by [NextThemeProvider](src/layout/GlobalProvider/NextThemeProvider.tsx); respect that stack when implementing aliases. Never wrap a complete color value in `hsl()` merely because an upstream example does so. Do not introduce an independent palette beside the generator.
 
 ## Colors
 
 Use role names rather than raw values from the reference tables. Text, surfaces, borders, action fills, state washes, and state text are separate roles:
 
-- `colorText` is primary text/icons; `colorTextSecondary` is secondary text/labels. Tertiary is subdued supporting content and quaternary disabled content. A lower hierarchy does not waive readable-text contrast.
-- Layout, container, secondary container, and elevated backgrounds describe canvas/panel depth. Use everyday divider and stronger-edge roles for borders; use translucent fills for washes.
-- Primary identifies the main action, links, and related emphasis. Success, warning, error, and info communicate state with a label or icon as well as color.
-- Filled actions pair their background with the corresponding foreground role. Tinted washes pair with state text, not the filled-action foreground. Text-only links use a legible text role. Visited hyperlink text uses the exact `--link-active` role (`visited:text-link-active`), resolved from the live engine's `colorLinkActive`; it does not assume a custom theme's primary fill or ordinary link text is the same value. Before the theme host mounts, the role references that same engine CSS variable without a new palette fallback. **Primary foreground is not always white**: the default dark primary fill is near-white and needs dark foreground text.
+- `foreground` is primary text/icons; `muted-foreground` is secondary text/labels. Tertiary is subdued supporting content (descriptions, placeholders, icons) and quaternary disabled content. A lower hierarchy does not waive readable-text contrast.
+- Background, card, secondary surface, and popover describe canvas/panel depth. Use the everyday divider and stronger border roles for hairlines, the `input` role for control boundaries, and translucent fills for washes.
+- Primary identifies the main action and related emphasis. Success, warning, error (`destructive`), and info communicate state with a label or icon as well as color.
+- Filled actions pair their background with the corresponding foreground role. Tinted washes pair with state text, not the filled-action foreground. Text-only links use the `--link` role; visited hyperlink text uses `--link-active` (`visited:text-link-active`). **Primary foreground is not always white**: the default dark primary fill is near-white, and bright accents (yellow, lime, cyan, blue) take the dark foreground.
 
-Hover/active colors are state roles, not a universal “darker” function: the correct direction can differ by theme, library, fill, and wash. Map each variant intentionally and check the resulting pair on its actual background. Do not assume matching token names or fixed reference values prove contrast.
+Hover/active colors are state roles, not a universal “darker” function: the generator moves a fill towards the panel for hover and away from it for press, then re-picks its foreground. Check each variant on its actual background; matching names or reference values do not prove contrast.
+
+### Generation
+
+[generate.ts](src/styles/theme/generate.ts) is a pure function of four inputs, following the method Linear published for its 2024 theme system (base, accent and contrast in a perceptual space), implemented in OKLCH:
+
+| Input      | Source                                                            | Drives                                             |
+| ---------- | ----------------------------------------------------------------- | -------------------------------------------------- |
+| `mode`     | `next-themes`                                                     | Direction of every adjustment                      |
+| `base`     | Stored neutral name (`gray` default, mauve/olive/sage/sand/slate) | Surfaces, borders, text, washes                    |
+| `accent`   | Stored primary name; unset keeps the monochrome primary           | Primary fill, washes, borders, primary text, links |
+| `contrast` | Fixed internal default `30`; not a user setting                   | Surface steps and text targets                     |
+
+Rules:
+
+- **Surfaces** use the base hue at a quarter of its chroma on a fixed lightness ladder: dark canvas/panel/menu at OKLCH L 0.139 / 0.172 / 0.213; light canvas 0.975 below a white panel and menu. Steps scale with contrast.
+- **Text** roles are solved, not picked: each finds the lightness that reaches a target ratio on the panel — foreground 17.9, secondary 13, tertiary 5.9, quaternary 3.3 — then is pushed further if needed so foreground, secondary and tertiary keep 4.5:1 on every surface and on the selected wash over it. Quaternary is disabled content and exempt.
+- **Borders**: `border` and `divider` are decorative hairlines; `input` is pushed until it reaches 3:1 on every surface. **Focus** uses `ring` = foreground, so the primitives' `ring-ring/50` stays above 3:1; an accent ring could not promise that for every stored accent.
+- **Fills** are the neutral ink at fixed alpha (light 0.10 / 0.06 / 0.035 / 0.018, dark 0.14 / 0.09 / 0.055 / 0.025 for fill / selected / hover / quaternary).
+- **Colored families** (primary and the fixed-hue status seeds success, warning, info, error) share one rule: the fill is the seed, nudged only if neither white nor the near-black ink reaches 4.5:1 on it; subtle/wash/wash-hover/border/border-hover mix 10/14/22/35/50% of the fill into the panel in OKLab (half for the monochrome primary); `*-text` is the hue pushed to 4.5:1 on the panel, page, menu and its own washes.
+- **Primary** stays monochrome by default (near-black in light, near-white in dark). A stored accent replaces it with that seed; links then use the accent text role.
+- **Palette** ramps (`--palette-{hue}-{1..10}`) are raw identity primitives with the seed at step 6, lightest at step 1 in light and at step 10 in dark. Memory category chips use a faint tint of their hue with AA text.
+
+Calibration: the dark surfaces and text ladder are the measured Linear product values from the archived [Linear reference](.agents/skills/linear-design/linear-app-DESIGN.md) (#08090a, #0f1011, #18191a, #23252a; #f7f8f8, #d0d6e0, #8a8f98, #62666d); the default `gray` base takes their faint cool tint (hue ≈ 262). A live authenticated Linear session was not available when the generator was written, so light mode mirrors the measured dark contrast ratios on a white panel rather than copying measured light values; status seeds use Linear's status colours (success #27a644 measured; error #eb5757, warning #f2c94c, info #4ea7fc). Re-measure both appearances through the [Linear parity](.agents/skills/linear-ui-parity/SKILL.md) CDP flow before treating light mode as matched. Accent and named neutral seeds are the exact OKLCH form of their existing settings swatches, so stored names and saved swatch colours keep working.
+
+[generate.test.ts](src/styles/theme/generate.test.ts) checks every accent × base × mode combination: body, secondary and tertiary text reach 4.5:1 on every surface and wash, filled-action foregrounds and status text reach 4.5:1, and control edges and the focus ring (solid and at 50%) reach 3:1.
 
 ### Local primitive fill roles
 
-Local primitives read these Tailwind roles. [themeRoles.ts](src/styles/themeRoles.ts) resolves them at runtime and [globals.css](src/app/globals.css) holds the matching fallbacks; change both together.
+Local primitives read these Tailwind roles from the generator.
 
-| Tailwind role                        | Engine role             | Light / dark default                        | Use                                                                          |
-| ------------------------------------ | ----------------------- | ------------------------------------------- | ---------------------------------------------------------------------------- |
-| `--muted`, `--secondary`, `--accent` | `colorFillTertiary`     | `rgba(0,0,0,.03)` / `rgba(255,255,255,.06)` | Soft static fill, track, skeleton, secondary action fill, and the hover wash |
-| `--selected`                         | `colorFillSecondary`    | `rgba(0,0,0,.06)` / `rgba(255,255,255,.1)`  | Persistent selected, pressed, or active state; one step above hover          |
-| `--ring`                             | `colorText`             | `#080808` / `#ffffff`                       | Focus indicator, used at 50% by primitives                                   |
-| `--invert` / `--invert-foreground`   | `colorText` / container | `#080808` on `#ffffff` / reversed           | Inverse badge and alert                                                      |
+| Tailwind role                        | Generator rule              | Light / dark default                             | Use                                                                          |
+| ------------------------------------ | --------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `--muted`, `--secondary`, `--accent` | Neutral ink, hover alpha    | `rgba(16,18,21,.035)` / `rgba(246,249,254,.055)` | Soft static fill, track, skeleton, secondary action fill, and the hover wash |
+| `--selected`                         | Neutral ink, selected alpha | `rgba(16,18,21,.06)` / `rgba(246,249,254,.09)`   | Persistent selected, pressed, or active state; one step above hover          |
+| `--ring`                             | Foreground                  | `#171718` / `#f7f8f8`                            | Focus indicator, used at 50% by primitives                                   |
+| `--invert` / `--invert-foreground`   | Foreground / card           | `#171718` on `#ffffff` / reversed                | Inverse badge and alert                                                      |
 
-Exact engine aliases also live on the document theme host, so body portals inherit resolved values:
+Further generated roles:
 
-| Tailwind role                                         | Engine role                                                     | Use                                                                            |
-| ----------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `--foreground-tertiary` / `--foreground-quaternary`   | `colorTextTertiary` / `colorTextQuaternary`                     | Subdued supporting / disabled content                                          |
-| `--foreground-description`                            | `colorTextDescription`                                          | Preserve existing description text; this is not necessarily secondary text     |
-| `--link`                                              | `colorLink`                                                     | Exact hyperlink text, independent of primary in custom themes                  |
-| `--fill-quaternary`                                   | `colorFillQuaternary`                                           | Faintest neutral wash                                                          |
-| `--divider`                                           | `colorBorderSecondary`                                          | Everyday divider outside the sidebar                                           |
-| `--overlay-mask` / `--overlay-mask-foreground`        | `colorBgMask` / `colorTextLightSolid`                           | Scrims and icon overlays on photographs; preserve the engine mask pair         |
-| `--{primary,success,warning,info,destructive}-wash`   | Corresponding `color{Primary,Success,Warning,Info,Error}Bg`     | Exact existing status background                                               |
-| `--highlight-gold` / `--highlight-primary`            | `gold4` / `colorPrimaryBgHover`                                 | Existing shared tool text underline washes; preserve their exact engine colors |
-| `--{primary,success,warning,info,destructive}-border` | Corresponding `color{Primary,Success,Warning,Info,Error}Border` | Exact existing status edge                                                     |
+| Tailwind role                                         | Rule                                                       | Use                                                                             |
+| ----------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `--foreground-tertiary` / `--foreground-quaternary`   | Text targets 5.9 / 3.3                                     | Subdued supporting / disabled content                                           |
+| `--foreground-description`, `-placeholder`, `-icon`   | Tertiary                                                   | Description text, placeholders and icons                                        |
+| `--link` / `--link-hover` / `--link-active`           | Accent text, stepping away from the panel; else foreground | Hyperlink text, independent of the primary fill                                 |
+| `--fill`, `--fill-quaternary`, `--split-divider`      | Neutral ink alphas                                         | Strong / faintest wash; internal parameter-section separators                   |
+| `--divider`                                           | Hairline ladder                                            | Everyday divider outside the sidebar                                            |
+| `--overlay-mask` / `--overlay-mask-foreground`        | Black at 45% (light) / 60% (dark); white                   | Scrims and icon overlays on photographs                                         |
+| `--{primary,success,warning,info,destructive}-wash`   | 14% mix into the panel (`-wash-hover` 22%)                 | Status background                                                               |
+| `--{primary,success,warning,info,destructive}-border` | 35% mix (`-border-hover` 50%)                              | Status edge; `border-primary-border-hover` marks an eligible Kanban drop target |
+| `--highlight-gold` / `--highlight-primary`            | `palette-gold-4` / primary wash-hover                      | Shared tool text underline washes                                               |
+| `--info-hover-wash`                                   | Info wash-hover                                            | Inactive Goal round-duration graphic                                            |
 
-The transient eligible Kanban drop edge uses `border-primary-border-hover`, mapped exactly to `colorPrimaryBorderHover`. Its matching 1px inset frame identifies the available drop target; it is a border contour rather than raised surface elevation. The existing `border-primary-border` role remains separate. ThemeRoles publishes the resolved hover edge on the document host, while globals references the same public engine variable before that host mounts; no independent palette is introduced.
+The `*-wash` roles and the 10% `*-subtle` roles are distinct; do not substitute one for the other by appearance. The mask pair is for a translucent scrim or an icon laid over image content; filled actions still use the foreground paired with their actual fill.
 
-The local `bg-info-hover-wash` role preserves the exact existing engine `colorInfoBgHover` for the inactive Goal round-duration graphic. It remains distinct from `bg-info-wash` (`colorInfoBg`) and carries no new palette. ThemeRoles resolves it on the document theme host; globals uses the same public engine variable until that host supplies the value. The duration graphic keeps its measured data-width scale inside a separate compact32 native audit trigger; the graphic height is not its keyboard or pointer target.
+The opaque secondary settings/container surface uses `bg-surface-secondary` / `--surface-secondary`. It is distinct from the translucent `bg-secondary` wash; use the container role when a surface must retain its own background.
 
-The `*-wash` aliases preserve engine backgrounds; existing `*-subtle` roles remain their computed 10% mixes. Do not substitute one for the other by appearance. Description text likewise keeps its exact alias: the current dark engine description is `#6f6f6f`, while secondary text is `#aaaaaa`. Hyperlink text uses `--link` (`text-link`), resolved from `colorLink`; it does not assume a custom theme's primary action fill is the same value. Before the theme host mounts, globals references the same existing engine variable without a new fallback palette. These aliases require the existing top-level theme host; they do not introduce a separate fallback palette.
+These fills are translucent washes, not surfaces: they stay visible on the page canvas, panels, and popovers alike. A sticky cell that must hide scrolling content keeps an opaque base and layers the wash as an image with the `wash-*` utility (`bg-background wash-muted`); never use a wash as the only paint there. Status colors used as text or icons take the `*-text` roles (`text-destructive-text`), not the fill roles. The mapping, consumer audit, and follow-ups are recorded in [semantic token roles](docs/development/semantic-token-roles.md).
 
-The mask pair is for a translucent scrim or an icon laid over image content. Its foreground preserves `colorTextLightSolid` on that mask and does not select the foreground for ordinary filled actions. Filled actions still use the foreground paired with their actual fill. Before the theme host mounts, the mask aliases reference the same existing engine CSS variables; they add no fallback palette.
+The local [Tooltip](src/components/ui/tooltip.tsx) uses the existing inverse **`bg-foreground` / `text-background`** pair, including its arrow. Preserve that tooltip contract.
 
-The opaque secondary settings/container surface uses `bg-surface-secondary` / `--surface-secondary`, mapped exactly to the live engine's `colorBgContainerSecondary` by ThemeRoles. It is distinct from the translucent `bg-secondary` wash; use the container role when a surface must retain its own background. The application theme host supplies this role before rendering settings content; no independent palette or guessed fallback is introduced.
+### Editor compatibility
 
-These fills are translucent washes, not surfaces: they stay visible on the page canvas, panels, and popovers alike. `colorBgContainerSecondary` remains an engine surface role and is no longer what `bg-muted` or `bg-secondary` paint. A sticky cell that must hide scrolling content keeps an opaque base and layers the wash as an image with the `wash-*` utility (`bg-background wash-muted`); never use a wash as the only paint there. Status colors used as text or icons take the `*-text` roles (`text-destructive-text`), not the fill roles. The mapping, consumer audit, and follow-ups are recorded in [semantic token roles](docs/development/semantic-token-roles.md).
-
-The local [Tooltip](src/components/ui/tooltip.tsx) uses the existing inverse **`bg-foreground` / `text-background`** pair, including its arrow. Preserve that tooltip contract. `colorBgSpotlight` remains a retained engine role; neither spotlight nor elevated is an instruction to recolor local tooltips.
+`@lobehub/editor` still reads antd-style engine variables. The generator exports `EDITOR_TOKEN_ROLES` (the 39 tokens the installed editor reads, re-extracted from `node_modules` and locked by a test) and `editorScopeCss()`, which aliases them to local roles on `.orvilo-editor-scope` only; `generateEngineToken()` supplies the same values for a local editor-only provider. No global engine variable is part of this contract.
 
 ## Typography
 
@@ -207,22 +234,22 @@ These settings roles do not change WorkSurface's document geometry above.
 
 Map shape by purpose and **resolved pixels**, not by assumptions about Tailwind class names:
 
-| Role                | Approved radius | Existing engine name |
-| ------------------- | --------------- | -------------------- |
-| Chip/tag            | 4px             | `borderRadiusXS`     |
-| Small control/input | 6px             | `borderRadiusSM`     |
-| Button/card         | 8px             | `borderRadius`       |
-| Overlay/menu/dialog | 12px            | `borderRadiusLG`     |
+| Role                | Approved radius | Variable           |
+| ------------------- | --------------- | ------------------ |
+| Chip/tag            | 4px             | `--radius-chip`    |
+| Small control/input | 6px             | `--radius-input`   |
+| Button/card         | 8px             | `--radius-card`    |
+| Overlay/menu/dialog | 12px            | `--radius-overlay` |
 
-Pills, avatars, and circular actions may be fully round. Role-specific shapes may coexist within one view. AppTheme's native scrollbar thumb uses this pill role. Its resting neutral fill is `--scrollbar-fill` (the resolved theme's `colorFill`), while the prefixed hover thumb uses `--foreground`; the track stays transparent. ThemeRoles publishes the resolved scrollbar fill on the document host, and globals supplies a consume-only engine-variable bootstrap. These source roles do not certify scrollbar paint or variable availability before the host mounts. The current Tailwind base radius resolves to 10px, with `rounded-lg` at 10px and `rounded-xl` at 14px (at a 16px root size); these differ from the approved 8/12px button-card/overlay roles. Record and resolve that drift in a scoped migration. Until then, name the role through its variable (`rounded-(--radius-card)`, `--radius-chip`, `--radius-input`, `--radius-button`, `--radius-overlay`) rather than a Tailwind size name or a pixel literal. ProjectSidePanel's former 10px card radius was migrated to the 8px card role; its measured 11px inset remains a separate optical exception.
+Pills, avatars, and circular actions may be fully round. Role-specific shapes may coexist within one view. AppTheme's native scrollbar thumb uses this pill role. Its resting neutral fill is `--scrollbar-fill` (the generated `fill` wash), while the prefixed hover thumb uses `--foreground`; the track stays transparent. The current Tailwind base radius resolves to 10px, with `rounded-lg` at 10px and `rounded-xl` at 14px (at a 16px root size); these differ from the approved 8/12px button-card/overlay roles. Record and resolve that drift in a scoped migration. Until then, name the role through its variable (`rounded-(--radius-card)`, `--radius-chip`, `--radius-input`, `--radius-button`, `--radius-overlay`) rather than a Tailwind size name or a pixel literal. ProjectSidePanel's former 10px card radius was migrated to the 8px card role; its measured 11px inset remains a separate optical exception.
 
 The local [Avatar](src/components/Avatar/index.tsx) uses `shape="square"` for entity tiles, including current 14px project breadcrumbs and 16px tool/project identities. Its local `--avatar-square-radius` consumes the 8px card role as a ceiling and caps each corner axis at 25% of its edge: `min(var(--radius-card), 25%)`. This keeps at least half of each edge straight (`edge - 2 × radius ≥ edge / 2`), so the square identity survives below 32px; default squares of 32px and larger retain 8px. This is a scoped shape constraint, not a shared radius scale. Circle avatars remain fully round, caller radius classes and styles keep precedence, and child images inherit the actual root radius. Current source purpose and the mathematical boundary establish the reason for this cap; delivery still requires real Electron small-corner paint, both themes/root sizes, the large-size ceiling and public overrides, plus a fresh independent review of this repair. Historical pixels or exception records alone do not establish necessity.
 
-The split-divider role (`border-split-divider` / `bg-split-divider`) preserves the resolved engine `colorSplit` for internal parameter-section separators. It is distinct from the everyday `--divider` (`colorBorderSecondary`); the two are not interchangeable. ThemeRoles publishes the existing exact value and globals bootstraps its public engine variable, without a new palette.
+The split-divider role (`border-split-divider` / `bg-split-divider`) is a translucent neutral separator for internal parameter sections. It is distinct from the everyday opaque `--divider`; the two are not interchangeable.
 
-Depth comes from surfaces and borders first. Shared elevation roles are raised cards (`boxShadowTertiary`, often none), popovers/menus (`boxShadowSecondary`), and dialogs (`boxShadow`). The light reference values above describe the existing engine; values may change between light and dark while those roles remain shared. Avoid imposing one library's shadow formula on another. In the dark theme dialogs take no shadow: the scrim and the 1px ring already define the edge.
+Depth comes from surfaces and borders first. Shared elevation roles are raised cards (`--shadow-raised`), popovers/menus (`--shadow-popover`), and dialogs (`--shadow-dialog`). The light values above are the generator's; dark shadows are heavier (popover 50%, raised 20% black) while those roles remain shared. Avoid imposing one library's shadow formula on another. In the dark theme dialogs take no shadow: the scrim and the 1px ring already define the edge.
 
-The local raised-surface role is `--shadow-raised`, used as `shadow-(--shadow-raised)`. It resolves to the existing `boxShadowTertiary` for document pages and other surfaces that already have that raised treatment; it does not add shadows to ordinary cards. The PDF viewer's clipped document page uses the 8px card radius and retains react-pdf's original paper/canvas paint. Its document canvas frame uses 16px block gutters while keeping the caller's 24px inline gutter; PDF page sizing and annotation coordinates remain owned by the renderer. ThemeRoles supplies the resolved light/dark engine value to the document host; globals uses the same engine variable with `none` until that value is available.
+The local raised-surface role is `--shadow-raised`, used as `shadow-(--shadow-raised)`. It applies to document pages and other surfaces that already have that raised treatment; it does not add shadows to ordinary cards. The PDF viewer's clipped document page uses the 8px card radius and retains react-pdf's original paper/canvas paint. Its document canvas frame uses 16px block gutters while keeping the caller's 24px inline gutter; PDF page sizing and annotation coordinates remain owned by the renderer.
 
 NumberField's scrub cursor is 26×14px pointer artwork with black fill and a white contour. Pointer lock lets it move across the field, surrounding surfaces and mixed document backgrounds; one theme text color cannot keep both sides of that contour distinct everywhere. Its local `--number-field-cursor-shadow` token in [number-field.module.css](src/components/reui/number-field.module.css) retains the exact `0 1px 1px #0008` contour shadow, including black alpha 8/15. This scoped pointer treatment does not define surface elevation or an ordinary action-icon size. Current source inspection establishes that purpose; acceptance still requires a fresh independent review and real Electron scrub, light/dark and mixed-background evidence rather than a prior exception record.
 
@@ -255,7 +282,7 @@ Verify WCAG AA text contrast on the rendered pair: **4.5:1 normal text; 3:1 larg
 
 ## Migration status
 
-These rules describe the approved target and explicitly retained scoped roles. Current Lobe theme values, Tailwind aliases, local Button sizing, tooltip styling, and project-rail geometry were inspected in source. That inspection identifies migration defaults and drift; it does not prove visual parity, contrast, native glass, or motion behavior in the running product.
+These rules describe the approved target and explicitly retained scoped roles. Colour roles now come from the local generator (P2 of the [retirement plan](docs/development/antd-retirement-plan.md)), whose unit tests prove the contrast floors for every generated pair; they do not prove visual parity with Linear, native glass, or motion behavior in the running product. Light/dark before/after screenshots and a side-by-side Linear comparison remain required on the delivery PR.
 
 Earlier frontend verification covered the shared App/Auth/Share/Workbench `ThemeRoles` mapping, selected shape-role consumers, and the API key creation form. Its runtime scope is recorded in [the frontend verification report](docs/development/design-md-frontend.md). The subsequent Agent, Project, API Key and custom MCP creation work has [Electron light/dark before/after evidence](docs/development/design-system-real-ui/evidence/README.md). These historical reports do not certify the current ordinary-default 36px migration, every frontend surface, or continued exceptions. Changes must name their consumers and verify affected paths in light/dark and the requested platform. Any proposed exception must have current evidence of necessity and a fresh independent review; prior acceptance alone is insufficient.
 

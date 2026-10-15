@@ -1,4 +1,3 @@
-import { ThemeProvider } from '@lobehub/ui';
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -12,16 +11,7 @@ import { resolveApprovalDuration, useApprovalMotion } from './useApprovalMotion'
 const QUERY = '(prefers-reduced-motion: reduce)';
 const ThemeHost = ({ children }: { children: ReactNode }) => {
   const mode = useUserStore(userGeneralSettingsSelectors.animationMode);
-  return createElement(
-    ThemeProvider,
-    {
-      appearance: 'light',
-      enableCustomFonts: false,
-      enableGlobalStyle: false,
-      theme: { token: { motion: mode !== 'disabled', motionUnit: mode === 'agile' ? 0.05 : 0.1 } },
-    },
-    createElement(ThemeRoles, { children }),
-  );
+  return createElement(ThemeRoles, { animationMode: mode, appearance: 'light', children });
 };
 
 describe('approval motion live policy', () => {

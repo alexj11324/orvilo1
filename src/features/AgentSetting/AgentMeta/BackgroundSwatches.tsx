@@ -1,9 +1,9 @@
-import { primaryColors } from '@lobehub/ui';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ColorSwatches, type ColorSwatchesProps } from '@/components/ColorSwatches';
 import { DEFAULT_BACKGROUND_COLOR } from '@/const/meta';
+import { PRIMARY_COLOR_NAMES, primarySwatch } from '@/styles/theme/seeds';
 
 interface BackgroundSwatchesProps extends Omit<ColorSwatchesProps, 'colors'> {
   disabled?: boolean;
@@ -27,54 +27,8 @@ const BackgroundSwatches = memo<BackgroundSwatchesProps>(
           color: 'rgba(0, 0, 0, 0)',
           title: t('default'),
         },
-        {
-          color: primaryColors.red,
-          title: t('red'),
-        },
-        {
-          color: primaryColors.orange,
-          title: t('orange'),
-        },
-        {
-          color: primaryColors.gold,
-          title: t('gold'),
-        },
-        {
-          color: primaryColors.yellow,
-          title: t('yellow'),
-        },
-        {
-          color: primaryColors.lime,
-          title: t('lime'),
-        },
-        {
-          color: primaryColors.green,
-          title: t('green'),
-        },
-        {
-          color: primaryColors.cyan,
-          title: t('cyan'),
-        },
-        {
-          color: primaryColors.blue,
-          title: t('blue'),
-        },
-        {
-          color: primaryColors.geekblue,
-          title: t('geekblue'),
-        },
-        {
-          color: primaryColors.purple,
-          title: t('purple'),
-        },
-        {
-          color: primaryColors.magenta,
-          title: t('magenta'),
-        },
-        {
-          color: primaryColors.volcano,
-          title: t('volcano'),
-        },
+        // Saved agent backgrounds hold these exact hex values.
+        ...PRIMARY_COLOR_NAMES.map((name) => ({ color: primarySwatch(name), title: t(name) })),
       ],
       [t],
     );

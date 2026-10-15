@@ -43,8 +43,8 @@ describe('role class forms', () => {
     );
     for (const name of names) {
       if (name === '--shadow-raised') {
-        // Elevation consumes the resolved engine role; it is not a pixel dimension.
-        expect(root).toContain('--shadow-raised: var(--ant-box-shadow-tertiary, none);');
+        // Elevation is a generated shadow role, not a pixel dimension.
+        expect(root).toMatch(/--shadow-raised: [^;]*rgba\(/);
       } else {
         expect(root).toMatch(new RegExp(`${name}:\\s*\\d+px;`));
       }

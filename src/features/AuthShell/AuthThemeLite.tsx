@@ -4,7 +4,7 @@ import { ConfigProvider, ThemeProvider } from '@lobehub/ui';
 import { domMax, LazyMotion } from 'motion/react';
 import * as m from 'motion/react-m';
 import { type PropsWithChildren } from 'react';
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ToastHost } from '@/components/toast';
@@ -14,6 +14,7 @@ import AntdStyleLayer from '@/layout/GlobalProvider/AntdStyleLayer';
 import Image from '@/libs/next/Image';
 import Link from '@/libs/next/Link';
 import { BaseGlobalStyle } from '@/styles';
+import { generateEngineToken, generateTheme } from '@/styles/theme/generate';
 import { ThemeRoles } from '@/styles/themeRoles';
 
 interface AuthThemeLiteProps extends PropsWithChildren {
@@ -24,6 +25,12 @@ const AuthThemeLite = memo<AuthThemeLiteProps>(({ children, globalCDN }) => {
   const isDark = useIsDark();
   const { i18n } = useTranslation();
   const currentAppearance = isDark ? 'dark' : 'light';
+  const fontFamily = genFontFamily({ locale: i18n.language });
+  const fontFamilyCode = genFontFamilyCode({ locale: i18n.language });
+  const engineToken = useMemo(
+    () => generateEngineToken(generateTheme({ mode: currentAppearance })),
+    [currentAppearance],
+  );
 
   return (
     <AntdStyleLayer>
@@ -45,14 +52,15 @@ const AuthThemeLite = memo<AuthThemeLiteProps>(({ children, globalCDN }) => {
           style={{ height: '100%' }}
           theme={{
             cssVar: { key: 'orvilo-vars' },
-            token: {
-              fontFamily: genFontFamily({ locale: i18n.language }),
-              fontFamilyCode: genFontFamilyCode({ locale: i18n.language }),
-            },
+            token: { ...engineToken, fontFamily, fontFamilyCode },
           }}
         >
           <BaseGlobalStyle />
-          <ThemeRoles>
+          <ThemeRoles
+            appearance={currentAppearance}
+            fontFamily={fontFamily}
+            fontFamilyCode={fontFamilyCode}
+          >
             <div className="h-full">
               <LazyMotion features={domMax}>{children}</LazyMotion>
               <ToastHost />

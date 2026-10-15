@@ -1,40 +1,47 @@
 ---
 version: alpha
 name: Orvilo (Dark)
-description: Dark color companion to DESIGN.md. Existing engine defaults below are reference values; semantic roles and all shared rules are owned by DESIGN.md.
+description: Dark color companion to DESIGN.md. Values below are the default dark output of the local theme generator (src/styles/theme/generate.ts); semantic roles, generation rules and all shared rules are owned by DESIGN.md.
 colors:
-  # Semantic tokens (orvilo-ui token names). Dark-theme defaults shown.
-  colorPrimary: '#eeeeee' # monochrome by default; becomes the chosen primaryColor[9]
-  colorSuccess: '#c4f042' # lime (dark uses a brighter hue than light's green)
-  colorWarning: '#ffb224' # gold
-  colorError: '#f4416c' # red (dark uses red; light uses volcano)
-  colorInfo: '#60b1ff' # blue (dark uses blue; light uses geekblue)
-  # Text — solid neutrals from the `gray` scale; rank info with these
-  colorText: '#ffffff' # primary text and icons
-  colorTextSecondary: '#aaaaaa' # secondary text, labels
-  colorTextTertiary: '#6f6f6f' # placeholder, captions
-  colorTextQuaternary: '#555555' # disabled
-  # Surfaces — separate scale from text; never substitute one for the other
-  colorBgLayout: '#000000' # page background (darkest)
-  colorBgContainer: '#0d0d0d' # primary card / panel surface
-  colorBgContainerSecondary: '#070707' # subtle secondary surface (orvilo-ui custom token)
-  colorBgElevated: '#1a1a1a' # popovers, menus, modals (lifts as it rises)
-  colorBgSpotlight: '#2d2d2d' # retained engine spotlight role; local tooltip is inverse
-  # Borders are solid reference defaults; fills are translucent washes
-  colorBorder: '#202020' # stronger edge
-  colorBorderSecondary: '#1a1a1a' # default divider / subtle border
-  colorFill: 'rgba(255, 255, 255, 0.16)'
-  colorFillSecondary: 'rgba(255, 255, 255, 0.1)'
-  colorFillTertiary: 'rgba(255, 255, 255, 0.06)' # hover wash
-  colorFillQuaternary: 'rgba(255, 255, 255, 0.02)' # active wash
+  # Generated semantic roles (CSS variable names), default dark input.
+  primary: '#e7e8e9' # monochrome by default; the chosen accent seed otherwise
+  primary-foreground: '#0c0d0f' # near-white fill takes the dark foreground
+  success: '#27a644'
+  warning: '#f2c94c'
+  destructive: '#eb5757'
+  info: '#4ea7fc'
+  # Text — Linear's measured dark ladder; tertiary lifted to stay AA on selected menu rows
+  foreground: '#f7f8f8' # primary text and icons
+  muted-foreground: '#d1d6de' # secondary text, labels
+  foreground-tertiary: '#91959d' # captions, descriptions, placeholders, icons
+  foreground-quaternary: '#62666d' # disabled
+  # Surfaces — Linear's measured canvas, panel and menu
+  background: '#08090a' # page canvas and sidebar (darkest)
+  card: '#0f1011' # primary panel surface
+  surface-secondary: '#0b0c0e' # opaque secondary container surface
+  popover: '#18191a' # popovers, menus, modals (lifts as it rises)
+  # Borders
+  border: '#25272a' # stronger hairline
+  divider: '#1e1f22' # everyday divider
+  input: '#63676c' # control boundary (3:1)
+  # Fills are translucent washes of the neutral ink
+  fill: 'rgba(246, 249, 254, 0.14)'
+  selected: 'rgba(246, 249, 254, 0.09)'
+  muted: 'rgba(246, 249, 254, 0.055)' # hover wash
+  fill-quaternary: 'rgba(246, 249, 254, 0.025)'
+  # Status text roles on dark surfaces
+  success-text: '#27a644'
+  warning-text: '#f2c94c'
+  destructive-text: '#f15c5b'
+  info-text: '#4ea7fc'
 ---
 
 # Orvilo dark colors
 
-[DESIGN.md](DESIGN.md) owns the visual contract, theme choices, token architecture, typography, density, spacing, shapes, elevation roles, motion, states, and copy. This file supplies the existing dark engine color defaults only; components consume semantic roles through the same Orvilo contract in every library.
+[DESIGN.md](DESIGN.md) owns the visual contract, theme choices, generation rules, token architecture, typography, density, spacing, shapes, elevation roles, motion, states, and copy. This file lists the generator's default dark output only; components consume semantic roles through the same Orvilo contract in every library.
 
-The dark canvas, containers, and elevated surfaces form distinct depth roles. Functional colors may use brighter values or different hues from light while preserving their meaning. Near-white primary fill needs the corresponding dark foreground; do not assume white action text. Transparent washes must be evaluated over their actual surface.
+The dark canvas, panel, and menu surfaces form distinct depth roles, calibrated to Linear's measured dark product ladder (#08090a, #0f1011, #18191a) with the default `gray` base's faint cool tint. Status fills keep the same seeds as light; their `*-text` roles are re-solved for dark surfaces. The near-white primary fill needs the dark foreground; do not assume white action text. Transparent washes must be evaluated over their actual surface.
 
-Local tooltips retain the inverse `bg-foreground` / `text-background` pair and matching arrow from [Tooltip](src/components/ui/tooltip.tsx). The retained `colorBgSpotlight` value above does not override that pair. Shared shadow roles can resolve to theme-specific values; this companion does not duplicate their tables.
+Local tooltips retain the inverse `bg-foreground` / `text-background` pair and matching arrow from [Tooltip](src/components/ui/tooltip.tsx). Dialogs take no shadow in dark (`--shadow-dialog: none`); the scrim and the 1px ring define the edge.
 
-These source reference values are not evidence of contrast, adapter parity, or runtime acceptance. Use the [color and accessibility rules](DESIGN.md#component-states-and-accessibility) to measure rendered foreground/background pairs, including user-selected primary and neutral colors. Current Tailwind variables and the Lobe engine may differ during migration; record the difference and resolve it under [rule ownership](DESIGN.md#rule-ownership).
+The generator's tests prove the contrast floors for every accent and base in dark as well as light (see the [color and accessibility rules](DESIGN.md#component-states-and-accessibility)). They are not evidence of Linear parity or runtime acceptance; capture those on the real product.

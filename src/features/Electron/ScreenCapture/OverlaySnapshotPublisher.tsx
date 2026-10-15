@@ -1,25 +1,21 @@
 'use client';
 
-import { ThemeContext } from '@emotion/react';
-import type { LobeCustomToken, ThemeProviderProps } from '@lobehub/ui';
 import type {
   ScreenCaptureAgentOption,
   ScreenCaptureOverlayTheme,
 } from '@orvilo/electron-client-ipc';
 import isEqual from 'fast-deep-equal';
-import { memo, use, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/slices/agentList/selectors';
+import { useGeneratedTheme } from '@/styles/themeRoles';
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
 import { resolveOverlayAgentOptions, resolveOverlayDefaultAgentId } from './overlaySnapshot';
-
-type ResolvedOverlayTheme = Parameters<NonNullable<ThemeProviderProps['customToken']>>[0]['token'] &
-  LobeCustomToken & { isDarkMode: boolean };
 
 const PANEL_SHADOW_DARK = '0 4px 4px color-mix(in srgb, #000 40%, transparent)';
 const PANEL_SHADOW_LIGHT = '0 4px 4px color-mix(in srgb, #000 4%, transparent)';
@@ -34,7 +30,7 @@ const OverlaySnapshotPublisher = memo(() => {
   useFetchAgentList();
 
   const allAgents = useHomeStore(homeAgentListSelectors.allAgents, isEqual);
-  const theme = use(ThemeContext) as ResolvedOverlayTheme;
+  const { mode, roles } = useGeneratedTheme();
   const activeAgentId = useAgentStore((s) => s.activeAgentId);
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const inboxMeta = useAgentStore((s) =>
@@ -62,42 +58,27 @@ const OverlaySnapshotPublisher = memo(() => {
     [activeAgentId, agentOptions, inboxAgentId],
   );
 
+  // The overlay window has no theme host of its own; send it resolved roles.
   const overlayTheme = useMemo<ScreenCaptureOverlayTheme>(
     () => ({
-      colorBgElevated: theme.colorBgElevated,
-      colorBorderSecondary: theme.colorBorderSecondary,
-      colorFill: theme.colorFill,
-      colorFillQuaternary: theme.colorFillQuaternary,
-      colorFillSecondary: theme.colorFillSecondary,
-      colorFillTertiary: theme.colorFillTertiary,
-      colorPrimary: theme.colorPrimary,
-      colorPrimaryActive: theme.colorPrimaryActive,
-      colorPrimaryHover: theme.colorPrimaryHover,
-      colorText: theme.colorText,
-      colorTextLightSolid: theme.colorTextLightSolid,
-      colorTextQuaternary: theme.colorTextQuaternary,
-      colorTextSecondary: theme.colorTextSecondary,
-      colorTextTertiary: theme.colorTextTertiary,
-      panelBorder: theme.isDarkMode ? theme.colorFillSecondary : theme.colorFill,
-      panelShadow: theme.isDarkMode ? PANEL_SHADOW_DARK : PANEL_SHADOW_LIGHT,
+      colorBgElevated: roles.popover,
+      colorBorderSecondary: roles.divider,
+      colorFill: roles.fill,
+      colorFillQuaternary: roles['fill-quaternary'],
+      colorFillSecondary: roles.selected,
+      colorFillTertiary: roles.muted,
+      colorPrimary: roles.primary,
+      colorPrimaryActive: roles['primary-active'],
+      colorPrimaryHover: roles['primary-hover'],
+      colorText: roles.foreground,
+      colorTextLightSolid: roles['primary-foreground'],
+      colorTextQuaternary: roles['foreground-quaternary'],
+      colorTextSecondary: roles['muted-foreground'],
+      colorTextTertiary: roles['foreground-tertiary'],
+      panelBorder: mode === 'dark' ? roles.selected : roles.fill,
+      panelShadow: mode === 'dark' ? PANEL_SHADOW_DARK : PANEL_SHADOW_LIGHT,
     }),
-    [
-      theme.colorBgElevated,
-      theme.colorBorderSecondary,
-      theme.colorFill,
-      theme.colorFillQuaternary,
-      theme.colorFillSecondary,
-      theme.colorFillTertiary,
-      theme.colorPrimary,
-      theme.colorPrimaryActive,
-      theme.colorPrimaryHover,
-      theme.colorText,
-      theme.colorTextLightSolid,
-      theme.colorTextQuaternary,
-      theme.colorTextSecondary,
-      theme.colorTextTertiary,
-      theme.isDarkMode,
-    ],
+    [mode, roles],
   );
 
   const lastPublishedRef = useRef<string>('');

@@ -23,8 +23,8 @@ const readIsDark = () => {
   }
 };
 
-const readNavPanelBackground = () =>
-  isDesktop && isMacOS() ? 'transparent' : 'var(--color-zinc-900)';
+// The real sidebar paints `bg-sidebar`; macOS desktop keeps native vibrancy.
+const readNavPanelBackground = () => (isDesktop && isMacOS() ? 'transparent' : 'var(--sidebar)');
 
 export const readBootShellGeometry = (): BootShellGeometry => {
   const base = {

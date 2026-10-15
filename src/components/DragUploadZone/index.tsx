@@ -22,7 +22,7 @@ const styles = {
   overlay:
     'pointer-events-none absolute inset-0 z-100 flex items-center justify-center bg-overlay-mask transition-opacity duration-(--orvilo-motion-mid) ease-in-out motion-reduce:transition-none',
   overlayContent:
-    "relative box-border w-[min(460px,72vw)] rounded-(--radius-overlay) bg-primary p-7 text-primary-foreground shadow-(--shadow-dialog) before:pointer-events-none before:absolute before:inset-2.5 before:rounded-(--radius-overlay) before:border-[1.5px] before:border-dashed before:border-current before:content-['']",
+    "relative box-border w-[min(460px,72vw)] rounded-(--radius-overlay) bg-primary p-7 text-primary-foreground shadow-(--shadow-dialog) before:pointer-events-none before:absolute before:inset-2.5 before:rounded-(--radius-overlay) before:border-[length:calc(var(--spacing)_*_3_/_8)] before:border-dashed before:border-current before:content-['']",
   overlayContentLocalPath: 'bg-info text-info-on-fill',
   title: 'text-base font-semibold leading-6',
 };

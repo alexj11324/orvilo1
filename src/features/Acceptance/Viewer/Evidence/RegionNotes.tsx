@@ -12,7 +12,7 @@ import type { DraftAnnotationEntry, RejectableEvidence } from '../Review/rejectD
 
 const styles = {
   index:
-    'flex-none size-4.5 rounded-[50%] text-xs font-semibold leading-4.5 text-white text-center bg-destructive',
+    'inline-flex flex-none size-4.5 items-center justify-center rounded-full text-xs font-semibold text-destructive-on-fill bg-destructive',
   jump: 'cursor-pointer inline-flex gap-1.25 items-center self-start py-1.75 px-0.5 border-none text-(length:--text-dense) text-(--ant-color-link) bg-none bg-transparent active:opacity-60',
 };
 

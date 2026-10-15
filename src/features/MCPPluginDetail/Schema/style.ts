@@ -7,5 +7,5 @@ export const styles = {
   name: 'font-mono text-sm font-medium leading-5',
   sectionDesc: 'm-0 text-(length:--text-dense) text-foreground-tertiary',
   subtitle: 'text-xs font-medium text-foreground-tertiary uppercase tracking-[0.04em]',
-  sectionTitle: 'm-0 text-base font-semibold leading-[1.5] whitespace-nowrap',
+  sectionTitle: 'm-0 text-base font-semibold leading-6 whitespace-nowrap',
 };

@@ -34,7 +34,7 @@ const styles = {
   container: 'pb-2',
   description: 'm-0 px-2 py-2 wrap-anywhere whitespace-pre-wrap',
   radarClickable:
-    'cursor-pointer rounded-(--radius-card) transition-[background] duration-(--orvilo-motion-mid) ease-[var(--ant-motion-ease-in-out)] hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 motion-reduce:transition-none',
+    'cursor-pointer rounded-(--radius-card) transition-[background] duration-(--orvilo-motion-mid) ease-(--ant-motion-ease-in-out) hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 motion-reduce:transition-none',
   ratingScoreLink:
     'inline-flex items-center gap-1 font-semibold text-foreground hover:text-primary-text',
   row: 'px-2 py-1 text-sm leading-5.5 text-muted-foreground',

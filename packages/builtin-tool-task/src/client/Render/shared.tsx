@@ -28,8 +28,7 @@ const styles = {
   label: 'shrink-0 text-xs text-foreground-tertiary',
   mono: 'font-mono text-xs text-muted-foreground',
   section: 'flex min-w-0 flex-col gap-1',
-  sectionValue:
-    'text-(length:--text-dense) leading-[1.6] text-muted-foreground [overflow-wrap:anywhere]',
+  sectionValue: 'text-sm text-muted-foreground [overflow-wrap:anywhere]',
   spacer: 'flex-1',
   title: 'text-(length:--text-dense) font-medium text-foreground',
 };

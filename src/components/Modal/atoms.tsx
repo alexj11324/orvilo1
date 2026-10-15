@@ -57,7 +57,7 @@ const ModalHeader = ({ className, ...rest }: HTMLAttributes<HTMLDivElement>) => 
 type ModalTitleProps = React.ComponentProps<typeof Dialog.Title>;
 const ModalTitle = ({ className, ...rest }: ModalTitleProps) => (
   <Dialog.Title
-    className={cn('m-0 text-sm leading-[1.4] font-semibold text-foreground', className)}
+    className={cn('m-0 text-base leading-6 font-semibold text-foreground', className)}
     {...rest}
   />
 );
@@ -114,7 +114,7 @@ const AlertModalPopup = ({ className, style, width, ...rest }: AlertModalPopupPr
 interface AlertModalTitleProps extends React.ComponentProps<typeof AlertDialogPrimitive.Title> {}
 const AlertModalTitle = ({ className, ...rest }: AlertModalTitleProps) => (
   <AlertDialogPrimitive.Title
-    className={cn('m-0 text-sm leading-[1.4] font-semibold text-foreground', className)}
+    className={cn('m-0 text-base leading-6 font-semibold text-foreground', className)}
     {...rest}
   />
 );

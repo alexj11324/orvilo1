@@ -14,7 +14,7 @@ import { openForwardModal } from './ForwardModal';
 
 const styles = {
   bar: 'relative [inline-size:100%] px-4 py-3 [border-block-start:1px_solid_var(--sidebar-border)] bg-card',
-  count: 'absolute [inset-block-start:50%] [inset-inline-start:16px] [transform:translateY(-50%)]',
+  count: 'absolute [inset-block-start:50%] inset-s-4 [transform:translateY(-50%)]',
 };
 
 /**

@@ -21,7 +21,7 @@ export const GetAgentDetailRender = memo<
   return (
     <div className="py-1">
       {meta && (
-        <div className="flex items-center gap-3 [margin-block-end:12px] [padding-block-end:12px] [border-block-end:1px_solid_var(--sidebar-border)]">
+        <div className="flex items-center gap-3 mbe-3 pbe-3 [border-block-end:1px_solid_var(--sidebar-border)]">
           <Avatar
             avatar={meta.avatar || DEFAULT_AVATAR}
             background={meta.backgroundColor || 'var(--card)'}
@@ -40,8 +40,8 @@ export const GetAgentDetailRender = memo<
         </div>
       )}
       {(config?.model || config?.provider) && (
-        <div className="[margin-block-end:8px] last:[margin-block-end:0]">
-          <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+        <div className="mbe-2 last:[margin-block-end:0]">
+          <div className="mbe-1 text-xs leading-[inherit] font-medium text-muted-foreground">
             Model
           </div>
           <div className="text-(length:--text-dense)">
@@ -51,8 +51,8 @@ export const GetAgentDetailRender = memo<
         </div>
       )}
       {config?.plugins && config.plugins.length > 0 && (
-        <div className="[margin-block-end:8px] last:[margin-block-end:0]">
-          <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+        <div className="mbe-2 last:[margin-block-end:0]">
+          <div className="mbe-1 text-xs leading-[inherit] font-medium text-muted-foreground">
             Plugins
           </div>
           <div className="flex flex-row gap-1 flex-wrap">
@@ -63,8 +63,8 @@ export const GetAgentDetailRender = memo<
         </div>
       )}
       {meta?.tags && meta.tags.length > 0 && (
-        <div className="[margin-block-end:8px] last:[margin-block-end:0]">
-          <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+        <div className="mbe-2 last:[margin-block-end:0]">
+          <div className="mbe-1 text-xs leading-[inherit] font-medium text-muted-foreground">
             Tags
           </div>
           <div className="flex flex-row gap-1 flex-wrap">
@@ -75,8 +75,8 @@ export const GetAgentDetailRender = memo<
         </div>
       )}
       {config?.systemRole && (
-        <div className="[margin-block-end:8px] last:[margin-block-end:0]">
-          <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
+        <div className="mbe-2 last:[margin-block-end:0]">
+          <div className="mbe-1 text-xs leading-[inherit] font-medium text-muted-foreground">
             System Prompt
           </div>
           <div

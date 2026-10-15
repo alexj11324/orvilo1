@@ -22,17 +22,16 @@ import { ENTITY_ICONS, FALLBACK_ENTITY_ICON } from './memoryArgs';
  * reads the same whichever layer it was written to.
  */
 export const memoryCardStyles = {
-  chip: '[padding-block:4px] [padding-inline:8px] rounded-(--radius-input) text-xs leading-[1.4] text-foreground bg-fill-quaternary',
+  chip: 'py-1 px-2 rounded-(--radius-input) text-xs text-foreground bg-fill-quaternary',
   chipType: 'text-foreground-quaternary',
   container: 'overflow-hidden w-full border border-sidebar-border rounded-(--radius-card) bg-card',
-  content: '[padding-block:12px] [padding-inline:16px]',
-  detail: 'text-(length:--text-dense) leading-[1.6] text-muted-foreground',
-  header:
-    '[padding-block:10px] [padding-inline:12px] [border-block-end:1px_solid_var(--sidebar-border)]',
+  content: 'py-3 px-4',
+  detail: 'text-sm text-muted-foreground',
+  header: 'py-2.5 px-3 [border-block-end:1px_solid_var(--sidebar-border)]',
   section: 'p-1 [border-block-start:1px_solid_var(--sidebar-border)]',
-  sectionBody: 'text-sm leading-[1.6] text-foreground',
-  summary: 'text-sm leading-[inherit] font-medium text-muted-foreground',
-  tags: '[padding-block-start:8px] [border-block-start:1px_dashed_var(--sidebar-border)]',
+  sectionBody: 'text-sm text-foreground',
+  summary: 'text-sm font-medium text-muted-foreground',
+  tags: 'pbs-2 [border-block-start:1px_dashed_var(--sidebar-border)]',
   title: 'line-clamp-1 font-medium text-foreground',
 };
 

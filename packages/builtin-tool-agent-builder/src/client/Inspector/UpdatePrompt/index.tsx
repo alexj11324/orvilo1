@@ -69,7 +69,7 @@ export const UpdatePromptInspector = memo<
         </span>
       )}
       {!isLoading && !isArgumentsStreaming && isSuccess && (
-        <Check className="ms-1 [margin-block-end:-2px]" color={'var(--success)'} size={14} />
+        <Check className="ms-1" color={'var(--success-text)'} size={14} />
       )}
     </div>
   );

@@ -6,6 +6,7 @@ enablePrePostScripts: true
 
 patchedDependencies:
   '@copilotkit/channels-slack@0.11.0': patches/@copilotkit__channels-slack@0.11.0.patch
+  '@virtuoso.dev/masonry@1.4.3': patches/@virtuoso.dev__masonry@1.4.3.patch
 
 publicHoistPattern:
   - '*@umijs/lint*'

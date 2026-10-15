@@ -10,7 +10,7 @@ const styles = {
   failedBadge:
     'shrink-0 rounded-(--radius-chip) bg-destructive-wash px-2 py-px text-xs text-destructive',
   header: 'flex items-center gap-2 px-3 py-2 [border-block-end:1px_solid_var(--sidebar-border)]',
-  headerCount: 'text-(length:--text-dense) font-medium text-foreground',
+  headerCount: 'text-sm font-medium text-foreground',
   identifier:
     'shrink-0 rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-xs text-muted-foreground',
   index: 'w-4.5 shrink-0 text-xs text-foreground-quaternary text-end',
@@ -18,8 +18,8 @@ const styles = {
   taskBody: 'flex min-w-0 flex-1 flex-col gap-1',
   taskItem:
     'flex items-start gap-2 px-3 py-2.5 [border-block-end:1px_dashed_var(--sidebar-border)] last:[border-block-end:none]',
-  instruction: 'line-clamp-2 text-xs leading-[1.5] text-foreground-tertiary',
-  title: 'text-(length:--text-dense) leading-[1.4] text-foreground',
+  instruction: 'line-clamp-2 text-sm text-foreground-tertiary',
+  title: 'text-sm text-foreground',
 };
 
 export const CreateTasksRender = memo<BuiltinRenderProps<CreateTasksParams, CreateTasksState>>(

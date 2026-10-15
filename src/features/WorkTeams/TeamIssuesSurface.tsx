@@ -74,7 +74,7 @@ import { ALL_TEAM_CYCLES, type TeamIssueScope, teamTaskQuery } from './teamWorkQ
 const styles = {
   detailLayout: 'relative overflow-hidden flex flex-1 h-0 min-h-0',
   detailPane:
-    'overflow-y-auto flex-none w-100 [padding-block-end:12px] border-s border-sidebar-border bg-background [@container_work-surface_(max-width:900px)]:absolute [@container_work-surface_(max-width:900px)]:z-10 [@container_work-surface_(max-width:900px)]:[inset-block:0] [@container_work-surface_(max-width:900px)]:end-0 [@container_work-surface_(max-width:900px)]:w-[min(400px,calc(100%-40px))] [@container_work-surface_(max-width:900px)]:shadow-(--ant-box-shadow-secondary)',
+    'overflow-y-auto flex-none w-100 pbe-3 border-s border-sidebar-border bg-background [@container_work-surface_(max-width:900px)]:absolute [@container_work-surface_(max-width:900px)]:z-10 [@container_work-surface_(max-width:900px)]:[inset-block:0] [@container_work-surface_(max-width:900px)]:end-0 [@container_work-surface_(max-width:900px)]:w-[min(400px,calc(100%-40px))] [@container_work-surface_(max-width:900px)]:shadow-(--ant-box-shadow-secondary)',
   filterChips: 'p-1',
   resultsBody: 'box-border min-h-full py-2',
   resultsScroll: 'overflow-auto overscroll-contain flex-1 min-w-0',

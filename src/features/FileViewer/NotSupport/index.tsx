@@ -1,9 +1,11 @@
 import { cn } from 'cn';
+import { FileQuestionMark } from 'lucide-react';
 import { type ComponentType, type CSSProperties } from 'react';
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
+import { EmptyMedia } from '@/components/ui/empty';
 import { MORE_FILE_PREVIEW_REQUEST_URL } from '@/const/url';
 import { downloadFile } from '@/utils/client/downloadFile';
 
@@ -25,7 +27,9 @@ const NotSupport: ComponentType<NotSupportProps> = ({ fileName, url, style }) =>
     <div className={cn('flex flex-col', styles.page)} id="not-support-renderer" style={style}>
       <div className="flex flex-col items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
-          <span className="text-[4rem] leading-none">{'👀'}</span>
+          <EmptyMedia aria-hidden="true" variant="icon">
+            <FileQuestionMark />
+          </EmptyMedia>
           <div className="flex flex-col text-center">
             <Trans
               i18nKey="preview.unsupportedFileAndContact"

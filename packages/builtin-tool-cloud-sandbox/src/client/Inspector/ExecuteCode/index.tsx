@@ -10,7 +10,8 @@ import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/sty
 
 import type { ExecuteCodeState } from '../../../types';
 
-const styles = { statusIcon: '[margin-block-end:-2px] ms-1' };
+// Status glyphs stay in the receipt text line under the global SVG block reset.
+const styles = { statusIcon: 'inline-block align-middle ms-1' };
 
 interface ExecuteCodeParams {
   code: string;
@@ -53,9 +54,9 @@ export const ExecuteCodeInspector = memo<
         </span>
         {description && <span className={highlightTextStyles.primary}>{description}</span>}
         {isLoading ? null : pluginState?.success ? (
-          <Check className={styles.statusIcon} color={'var(--success)'} size={14} />
+          <Check className={styles.statusIcon} color={'var(--success-text)'} size={14} />
         ) : (
-          <X className={styles.statusIcon} color={'var(--destructive)'} size={14} />
+          <X className={styles.statusIcon} color={'var(--destructive-text)'} size={14} />
         )}
       </span>
     </div>

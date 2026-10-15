@@ -145,7 +145,7 @@ function useCodeBlockConfig(part: string): CodeBlockConfigValue & { code: string
    rung is a style someone forgot. The parity suite enforces all-eight-or-one. */
 const ROOT_GHOST_CLASS = '[--code-block-bg:transparent]';
 
-const ROOT_RADIUS_CLASS = '[--code-block-radius:var(--radius-lg)]';
+const ROOT_RADIUS_CLASS = '[--code-block-radius:var(--radius-card)]';
 
 /*
  * Colour vars use the BASE theme tokens (--card, --primary, ...), never the
@@ -168,6 +168,10 @@ const ROOT_TOKEN_CLASS = [
   'data-[has-diff]:[--code-block-gutter-gap:--spacing(4)]',
   '[--code-block-line-height:calc(var(--text-sm)*22/14)]',
   '[--code-block-font-size:var(--text-sm)]',
+  /* Fold-count metadata follows the public code font: default12/20. */
+  '[--code-block-meta-font-size:calc(var(--code-block-font-size)*6/7)]',
+  '[--code-block-meta-line-height:calc(var(--code-block-font-size)*10/7)]',
+  '[--code-block-meta-height:max(var(--code-block-fold-width),var(--code-block-meta-line-height))]',
   '[--code-block-copy-inset:--spacing(2)]',
   /* Where a PINNED control starts. With a header composed in, the root's top
      edge is the header, so an unadjusted inset drops the copy button onto the
@@ -212,7 +216,7 @@ const ROOT_SURFACE_CLASS = 'border border-border bg-card text-card-foreground bg
  * highlighter that silently failed. Same reason the font size uses `length:`.
  */
 const TOKEN_COLOR_CLASS =
-  '[&_[data-slot=code-block-token]]:text-[color:var(--cb-c,currentColor)] dark:[&_[data-slot=code-block-token]]:text-[color:var(--cb-cd,currentColor)]';
+  '[&_[data-slot=code-block-token]]:text-(color:--cb-c,currentColor) dark:[&_[data-slot=code-block-token]]:text-(color:--cb-cd,currentColor)';
 
 /**
  * Line numbers are a CSS counter, never DOM: a pseudo-element cannot join a
@@ -419,7 +423,7 @@ function CodeBlockTokens({ tokens }: { tokens: CodeBlockToken[] }) {
             style={style}
             className={cn(
               token.word &&
-                'bg-primary/10 ring-primary/20 rounded-sm px-0.5 py-px ring-1 ring-inset',
+                'bg-primary/10 ring-primary/20 rounded-(--radius-chip) px-0.5 py-px ring-1 ring-inset',
             )}
           >
             {token.content}
@@ -631,13 +635,13 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
              the source. The copy button reads the raw code and never sees it. */
           <button
             aria-label={`Unfold ${hiddenCount} hidden lines`}
-            className="bg-muted/80 text-muted-foreground hover:bg-accent ml-2 inline-flex h-(--code-block-fold-width) translate-y-[calc((var(--code-block-line-height)-var(--code-block-fold-width))/2)] cursor-pointer items-center rounded-(--radius-button) px-1.5 align-top text-[0.8em] leading-none select-none"
+            className="bg-muted/80 text-muted-foreground hover:bg-accent ml-2 inline-flex h-(--code-block-meta-height) translate-y-[calc((var(--code-block-line-height)-var(--code-block-meta-height))/2)] cursor-pointer items-center rounded-(--radius-button) px-1.5 align-top text-(length:--code-block-meta-font-size) leading-(--code-block-meta-line-height) select-none"
             data-slot="code-block-fold-marker"
             tabIndex={selectable ? -1 : undefined}
             type="button"
             onClick={(event) => {
               event.stopPropagation();
-              onToggleFold?.(line.number);
+              if (foldRegion) onToggleFold?.(foldRegion.start);
             }}
           >
             {`... ${hiddenCount} lines`}

@@ -28,6 +28,39 @@ describe.each([
   const { CodeBlock, CodeBlockContent, CodeBlockHeader, CodeBlockLanguage, CodeBlockCopyButton } =
     components;
 
+  it('unfolds the actual inline marker with source-relative indices at a nondefault displayed start', async () => {
+    const user = userEvent.setup();
+    const onFoldedChange = vi.fn();
+    const code =
+      'function glyphSample() {\n  const sample = "Agpq 中文";\n  return sample;\n}\n// end';
+    const { container } = render(
+      <CodeBlock
+        foldable
+        showLineNumbers
+        code={code}
+        defaultFolded={[1]}
+        foldRegions={[{ start: 1, end: 4 }]}
+        highlight={false}
+        language="text"
+        startLine={10}
+        onFoldedChange={onFoldedChange}
+      />,
+    );
+    const displayedRows = () =>
+      Array.from(container.querySelectorAll('[data-slot="code-block-line"][data-code-line]')).map(
+        (row) => row.getAttribute('data-code-line'),
+      );
+
+    expect(displayedRows()).toEqual(['10', '14']);
+    const marker = screen.getByRole('button', { name: 'Unfold 3 hidden lines' });
+    expect(marker).toHaveAttribute('data-slot', 'code-block-fold-marker');
+    await user.click(marker);
+
+    expect(onFoldedChange).toHaveBeenCalledExactlyOnceWith([]);
+    expect(displayedRows()).toEqual(['10', '11', '12', '13', '14']);
+    expect(screen.queryByRole('button', { name: 'Unfold 3 hidden lines' })).not.toBeInTheDocument();
+  });
+
   it.each([
     ['en-US', 'Copy', 'Copied'],
     ['zh-CN', '复制', '已复制'],

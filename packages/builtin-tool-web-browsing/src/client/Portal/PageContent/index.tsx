@@ -15,7 +15,7 @@ import { copyToClipboard } from '@/utils/clipboard';
 import { CRAWL_CONTENT_LIMITED_COUNT } from '../../../const';
 
 const styles = {
-  description: '[margin-block-start:0] [margin-block-end:4px] text-muted-foreground',
+  description: '[margin-block-start:0] mbe-1 text-muted-foreground',
   footer: 'p-2 rounded-(--radius-input) text-center bg-fill-quaternary',
   footerText: 'text-xs leading-[inherit] text-foreground-tertiary',
   sliced: 'text-foreground-quaternary',

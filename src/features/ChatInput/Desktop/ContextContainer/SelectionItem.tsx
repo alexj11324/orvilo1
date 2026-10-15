@@ -17,10 +17,9 @@ import { useFileStore } from '@/store/file';
 
 const styles = {
   codeLine: 'grid grid-cols-[36px_minmax(0,1fr)] gap-2.5',
-  codePreview:
-    'overflow-auto max-w-[min(560px,80vw)] max-h-55 m-0 py-2 px-0 font-mono text-xs leading-[1.55]',
+  codePreview: 'overflow-auto max-w-[min(560px,80vw)] max-h-55 m-0 py-2 px-0 font-mono text-sm',
   content: 'overflow-hidden min-w-0 text-foreground text-ellipsis whitespace-pre',
-  lineNumber: 'select-none text-foreground-quaternary text-end',
+  lineNumber: 'select-none self-center text-xs text-foreground-quaternary text-end',
   meta: 'overflow-hidden max-w-[min(560px,80vw)] pb-1.5 border-b border-sidebar-border font-mono text-xs text-muted-foreground text-ellipsis whitespace-nowrap',
   textPreview: 'max-w-[min(420px,70vw)] text-foreground whitespace-pre-wrap',
   truncated: 'pt-1 text-foreground-quaternary',

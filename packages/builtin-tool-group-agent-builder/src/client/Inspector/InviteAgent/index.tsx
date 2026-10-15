@@ -13,7 +13,7 @@ import type { InviteAgentParams, InviteAgentState } from '../../../types';
 
 const styles = {
   root: 'flex items-center gap-2 overflow-hidden',
-  statusIcon: 'shrink-0 [margin-block-end:-2px]',
+  statusIcon: 'shrink-0',
   title: 'shrink-0 whitespace-nowrap text-muted-foreground',
 };
 
@@ -54,7 +54,7 @@ export const InviteAgentInspector = memo<
       )}
       {displayName && <span>{displayName}</span>}
       {!isLoading && isSuccess && (
-        <Check className={styles.statusIcon} color={'var(--success)'} size={14} />
+        <Check className={styles.statusIcon} color={'var(--success-text)'} size={14} />
       )}
     </div>
   );

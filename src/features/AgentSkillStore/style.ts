@@ -1,5 +1,5 @@
 export const gridStyles = {
-  grid: 'grid grid-cols-[repeat(2,1fr)] gap-3 [padding-block-end:16px] [padding-inline:16px] [@media(max-width:575.98px)]:grid-cols-1',
+  grid: 'grid grid-cols-[repeat(2,1fr)] gap-3 pbe-4 px-4 [@media(max-width:575.98px)]:grid-cols-1',
 };
 
 export const itemStyles = {

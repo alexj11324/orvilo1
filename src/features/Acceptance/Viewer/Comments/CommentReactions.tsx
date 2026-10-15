@@ -21,7 +21,7 @@ const QUICK_REACTIONS = ['👍', '👎', '😄', '🎉', '😕', '❤️', '🚀
 
 const styles = {
   bar: 'pt-2.5',
-  chip: 'inline-flex h-7 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 cursor-pointer items-center gap-1.25 rounded-full border border-sidebar-border bg-fill-quaternary px-2 py-0 text-sm leading-none hover:border-border',
+  chip: 'inline-flex min-h-7 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 cursor-pointer items-center gap-1.25 rounded-full border border-sidebar-border bg-fill-quaternary px-2 py-0 text-sm hover:border-border',
   chipMine: 'border-info-border bg-info-subtle text-info-text',
   count: 'text-xs text-muted-foreground',
   emojiButton:
@@ -136,7 +136,7 @@ const CommentReactions = memo<CommentReactionsProps>(({ onReact, reactions }) =>
             render={
               <span>
                 <span
-                  {...clickableProps(onReact)}
+                  {...clickableProps(Boolean(onReact))}
                   style={onReact ? undefined : { cursor: 'default' }}
                   className={cn(
                     styles.chip,

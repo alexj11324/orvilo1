@@ -49,7 +49,7 @@ import { ProjectCreationTimelineItem } from './ProjectCreationTimelineItem';
  */
 const styles = {
   body: 'overflow-y-auto flex-1 min-h-0 pbs-6 pbe-8 [padding-inline:max(24px,calc((100%_-_800px)/2))]',
-  card: 'py-0.5 px-3 border-[0.5px] border-border rounded-(--radius-card) bg-card',
+  card: 'py-0.5 px-3 border-[length:calc(var(--spacing)_/_8)] border-border rounded-(--radius-card) bg-card',
   empty: 'py-6 text-xs leading-5 text-foreground-tertiary text-center',
   link: 'font-medium text-foreground [overflow-wrap:anywhere] hover:underline',
   taskRef:

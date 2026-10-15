@@ -109,7 +109,7 @@ function DataGridColumnFilter<TData extends object, TValue>({
                     role="button"
                     tabIndex={0}
                     className={cn(
-                      'rounded-md relative flex cursor-pointer items-center gap-2 px-2 py-1.5 text-sm outline-hidden select-none',
+                      'rounded-(--radius-button) relative flex cursor-pointer items-center gap-2 px-2 py-1.5 text-sm outline-hidden select-none',
                       'hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
                     )}
                     onClick={toggleOption}
@@ -122,7 +122,7 @@ function DataGridColumnFilter<TData extends object, TValue>({
                   >
                     <div
                       className={cn(
-                        'border-primary rounded-sm flex h-4 w-4 items-center justify-center border',
+                        'border-primary rounded-(--radius-chip) flex h-4 w-4 items-center justify-center border',
                         isSelected
                           ? 'bg-primary text-primary-foreground'
                           : 'opacity-50 [&_svg]:invisible',
@@ -147,7 +147,7 @@ function DataGridColumnFilter<TData extends object, TValue>({
               <div className="bg-border -mx-1 my-1 h-px" />
               <div className="p-1">
                 <div
-                  className="hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground rounded-md relative flex cursor-pointer items-center justify-center px-2 py-1.5 text-sm outline-hidden select-none"
+                  className="hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground rounded-(--radius-button) relative flex cursor-pointer items-center justify-center px-2 py-1.5 text-sm outline-hidden select-none"
                   role="button"
                   tabIndex={0}
                   onClick={() => column?.setFilterValue(undefined)}

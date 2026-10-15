@@ -16,10 +16,11 @@ import { roomKey } from '@/store/collaboration';
 
 const styles = {
   agentBadge:
-    'absolute -inset-be-0.5 -inset-e-0.5 flex items-center justify-center size-5 border-[1.5px] border-card rounded-full text-primary-foreground bg-primary',
-  avatarCell: 'relative shrink-0 border-[1.5px] border-card rounded-full',
+    'absolute -inset-be-0.5 -inset-e-0.5 flex items-center justify-center size-5 border-[length:calc(var(--spacing)_*_3_/_8)] border-card rounded-full text-primary-foreground bg-primary',
+  avatarCell:
+    'relative shrink-0 border-[length:calc(var(--spacing)_*_3_/_8)] border-card rounded-full',
   countChip:
-    'flex items-center justify-center min-h-6 px-1.5 border-[1.5px] border-card rounded-full text-xs leading-5 text-muted-foreground bg-muted',
+    'flex items-center justify-center min-h-6 px-1.5 border-[length:calc(var(--spacing)_*_3_/_8)] border-card rounded-full text-xs leading-5 text-muted-foreground bg-muted',
   stack: 'flex flex-row-reverse items-center gap-0 [&>*]:-ms-1.5',
 };
 

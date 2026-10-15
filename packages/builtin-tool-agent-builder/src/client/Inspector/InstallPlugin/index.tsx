@@ -42,9 +42,9 @@ export const InstallPluginInspector = memo<
       {!isLoading &&
         hasResult &&
         (isSuccess ? (
-          <Check className="ms-1 [margin-block-end:-2px]" color={'var(--success)'} size={14} />
+          <Check className="ms-1" color={'var(--success-text)'} size={14} />
         ) : (
-          <X className="ms-1 [margin-block-end:-2px]" color={'var(--destructive)'} size={14} />
+          <X className="ms-1" color={'var(--destructive-text)'} size={14} />
         ))}
     </div>
   );

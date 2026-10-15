@@ -5,9 +5,9 @@ import { Check } from 'lucide-react';
 import { memo } from 'react';
 
 const styles = {
-  checked: 'border-primary bg-primary text-card',
+  checked: 'border-primary bg-primary text-primary-foreground',
   circle:
-    'flex-none [inline-size:20px] [block-size:20px] border-[1.5px] border-border rounded-[50%] transition-[background-color,border-color] duration-150 ease-(--ant-motion-ease-in-out)',
+    'flex-none [inline-size:20px] [block-size:20px] border-[length:calc(var(--spacing)_*_3_/_8)] border-border [--select-circle-radius:50%] rounded-(--select-circle-radius) transition-[background-color,border-color] duration-150 ease-(--ant-motion-ease-in-out)',
 };
 
 interface SelectCircleProps {

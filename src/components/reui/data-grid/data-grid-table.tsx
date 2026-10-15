@@ -1478,12 +1478,11 @@ function DataGridTableBodyRow<TData extends object>({
             ? cn('hover:bg-transparent', dataIndex % 2 === 0 && 'bg-muted/90 hover:bg-accent')
             : 'odd:bg-muted/90 odd:hover:bg-accent hover:bg-transparent'),
         props.tableLayout?.rowsPinnable && isRowPinned && 'bg-muted/30 hover:bg-accent',
-        pinnedBoundary === 'top' &&
-          '[&>td]:shadow-[0_2px_0_rgba(0,0,0,0.03)] dark:[&>td]:shadow-[0_2px_0_rgba(255,255,255,0.06)]',
+        // The pinned edge uses the theme's static wash; its offset faces scrolled content.
+        pinnedBoundary === 'top' && '[&>td]:shadow-[0_2px_0_var(--muted)]',
         // A bottom-pinned row borders scrolled content along its TOP edge,
         // so its separator shadow casts upward.
-        pinnedBoundary === 'bottom' &&
-          '[&>td]:shadow-[0_-2px_0_rgba(0,0,0,0.03)] dark:[&>td]:shadow-[0_-2px_0_rgba(255,255,255,0.06)]',
+        pinnedBoundary === 'bottom' && '[&>td]:shadow-[0_-2px_0_var(--muted)]',
         props.tableLayout?.rowsPinnable && isRowPinned && props.tableClassNames?.rowPinned,
         props.tableClassNames?.bodyRow,
       )}
@@ -1591,7 +1590,7 @@ function DataGridTableBodyRowCell<TData extends object>({
         // getCellStatus is wired: amber for "dirty", destructive for
         // "invalid".
         props.getCellStatus &&
-          "data-[cell-status=invalid]:after:border-t-destructive data-[cell-status]:relative data-[cell-status]:after:absolute data-[cell-status]:after:end-0 data-[cell-status]:after:top-0 data-[cell-status]:after:size-0 data-[cell-status]:after:border-s-[5px] data-[cell-status]:after:border-t-[5px] data-[cell-status]:after:border-s-transparent data-[cell-status]:after:content-[''] data-[cell-status=dirty]:after:border-t-amber-500",
+          "data-[cell-status=invalid]:after:border-t-destructive data-[cell-status]:relative data-[cell-status]:after:absolute data-[cell-status]:after:end-0 data-[cell-status]:after:top-0 data-[cell-status]:after:size-0 data-[cell-status]:after:border-s-5 data-[cell-status]:after:border-t-5 data-[cell-status]:after:border-s-transparent data-[cell-status]:after:content-[''] data-[cell-status=dirty]:after:border-t-amber-500",
         props.tableLayout?.cellBorder && 'border-e',
         // Mirror of the head cell rule: no floating border against the
         // resize filler strip.

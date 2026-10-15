@@ -10,7 +10,7 @@ import { memoryCardStyles as styles } from './MemoryCardParts';
 
 const localStyles = {
   id: 'font-mono text-xs leading-[inherit] text-foreground-quaternary',
-  reason: 'text-(length:--text-dense) leading-[1.6] text-muted-foreground',
+  reason: 'text-sm text-muted-foreground',
 };
 
 export interface RemovedIdentityCardProps {

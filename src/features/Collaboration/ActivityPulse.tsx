@@ -13,7 +13,8 @@ const styles = {
     'pointer-events-none will-change-transform absolute inset-bs-0 inset-s-0 size-2.5 rounded-full',
   committed: 'bg-success',
   failed: 'bg-destructive',
-  proposed: 'border-[1.5px] border-dashed border-muted-foreground bg-transparent',
+  proposed:
+    'border-[length:calc(var(--spacing)_*_3_/_8)] border-dashed border-muted-foreground bg-transparent',
   started:
     'bg-primary motion-safe:animate-pulse motion-safe:[animation-duration:1.4s] motion-safe:[animation-timing-function:ease-out]',
 };

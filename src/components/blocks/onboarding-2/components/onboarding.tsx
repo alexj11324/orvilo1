@@ -116,10 +116,8 @@ export function createTimezoneGroups(t: TFunction<'onboarding'>): TimezoneGroup[
 function StepHeading({ title, description }: { title: string; description: string }) {
   return (
     <div aria-live="polite" className="flex max-w-md flex-col gap-1.5">
-      <h1 className="text-foreground text-xl leading-7 font-semibold text-balance sm:text-[1.375rem]">
-        {title}
-      </h1>
-      <p className="text-muted-foreground text-sm leading-5 text-pretty">{description}</p>
+      <h1 className="text-foreground text-xl leading-7 font-semibold text-balance">{title}</h1>
+      <p className="text-muted-foreground text-sm text-pretty">{description}</p>
     </div>
   );
 }
@@ -281,7 +279,7 @@ function RoleStep({
               <Item key={option.value} size="sm" variant="outline">
                 <Field className="w-full gap-3" orientation="horizontal">
                   <RadioGroupItem id={fieldId} value={option.value} />
-                  <FieldLabel className="items-center leading-none" htmlFor={fieldId}>
+                  <FieldLabel className="items-center" htmlFor={fieldId}>
                     <span className="truncate font-medium">{option.label}</span>
                   </FieldLabel>
                 </Field>
@@ -494,7 +492,7 @@ function GoalsStep({
                   id={fieldId}
                   onCheckedChange={(checked) => onGoalToggle(option.value, checked === true)}
                 />
-                <FieldLabel className="items-center leading-none" htmlFor={fieldId}>
+                <FieldLabel className="items-center" htmlFor={fieldId}>
                   <span className="truncate font-medium">{option.label}</span>
                 </FieldLabel>
               </Field>
@@ -659,7 +657,7 @@ function SuccessStep({
           <h1 className="text-foreground text-2xl leading-8 font-semibold tracking-tight">
             {t('reui.workspace.successTitle', { name: displayName })}
           </h1>
-          <p className="text-muted-foreground mt-2 text-sm leading-6">
+          <p className="text-muted-foreground mt-2 text-sm">
             {t('reui.workspace.successDescription')}
           </p>
         </div>
@@ -936,7 +934,7 @@ export function Onboarding({
     );
 
   return (
-    <main className="orvilo-entry-surface bg-background text-foreground relative min-h-[var(--onboarding-viewport-height,100svh)] w-full overflow-x-hidden">
+    <main className="orvilo-entry-surface bg-background text-foreground relative min-h-(--onboarding-viewport-height,100svh) w-full overflow-x-hidden">
       <div className="absolute inset-x-0 top-0 z-40 h-1 w-full overflow-hidden">
         <OnboardingStepper currentStep={currentStep} steps={onboardingSteps} />
       </div>

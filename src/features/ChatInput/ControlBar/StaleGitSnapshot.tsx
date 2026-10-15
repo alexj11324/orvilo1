@@ -17,8 +17,8 @@ import { useSwitchWorktree } from './useSwitchWorktree';
 
 const styles = {
   action: 'flex gap-2 items-center',
-  explanation: 'max-w-80 pbs-1.5 pbe-2 px-2.5 text-xs leading-[1.5] text-muted-foreground',
-  path: 'block mbs-0.5 font-mono text-foreground-tertiary break-all',
+  explanation: 'max-w-80 pbs-1.5 pbe-2 px-2.5 text-sm text-muted-foreground',
+  path: 'block mbs-0.5 font-mono text-xs text-foreground-tertiary break-all',
   popup: 'p-0',
   triggerLabel: 'overflow-hidden text-ellipsis whitespace-nowrap',
 };

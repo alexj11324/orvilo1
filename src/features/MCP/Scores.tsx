@@ -23,7 +23,7 @@ const styles = {
   gradeB: 'text-warning-text bg-warning-wash',
   gradeF: 'text-destructive-text bg-destructive-wash',
   gradeIcon:
-    'flex-none size-5.5 rounded-full border-[1.5px] border-current text-xs leading-5 font-semibold',
+    'flex-none size-5.5 rounded-full border-[length:calc(var(--spacing)_*_3_/_8)] border-current text-xs leading-5 font-semibold',
   tag: 'rounded-(--radius-chip) bg-muted ps-2 pe-3 py-1 text-xs leading-5',
 };
 

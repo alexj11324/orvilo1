@@ -800,12 +800,13 @@ name: skill-name
     it.each(['accept', 'reject'] as const)(
       'persists the %s result after the real Lexical transaction and preserves undo/redo',
       async (review) => {
-        const { createHeadlessEditor } = await import('@lobehub/editor/headless');
+        const { createSDKPublicEditorFixture } =
+          await import('../../../../../packages/editor-runtime/src/__tests__/sdkPublicEditorFixture');
         const { DiffAction, LITEXML_MODIFY_COMMAND, LITEXML_DIFFNODE_ALL_COMMAND } =
           await import('@lobehub/editor/litexml-commands');
         const { HISTORY_PUSH_TAG, UNDO_COMMAND, REDO_COMMAND } = await import('lexical');
         const { commitEditorReview } = await import('@/features/EditorCanvas/commitEditorReview');
-        const headless = createHeadlessEditor({
+        const headless = createSDKPublicEditorFixture({
           initialValue: { type: 'markdown', content: 'Original paragraph.' },
         });
         try {
@@ -881,7 +882,7 @@ name: skill-name
             saveSource: 'manual',
           });
           expect(JSON.parse(persisted?.editorData ?? 'null')).toEqual(reviewed.editorData);
-          const reopened = createHeadlessEditor();
+          const reopened = createSDKPublicEditorFixture();
           try {
             reopened.kernel.setDocument('json', persisted?.editorData ?? 'null');
             // Production JSON hydration renews runtime node IDs by default.

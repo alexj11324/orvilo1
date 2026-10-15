@@ -1,4 +1,3 @@
-import { createHeadlessEditor } from '@lobehub/editor/headless';
 import {
   LITEXML_APPLY_COMMAND,
   LITEXML_MODIFY_COMMAND,
@@ -8,12 +7,13 @@ import { COMMAND_PRIORITY_EDITOR, type CommandPayloadType, createCommand } from 
 import { describe, expect, it, vi } from 'vitest';
 
 import { EditorRuntime } from '../EditorRuntime';
+import { createSDKPublicEditorFixture } from './sdkPublicEditorFixture';
 
 // Keep real SDK listeners: LiteXML handlers mutate then return false to allow
 // propagation. A mocked dispatch would conceal this actual backend contract.
 describe('EditorRuntime command backend binding', () => {
   it('persists a real SDK replacement despite a false dispatch result', async () => {
-    const headless = createHeadlessEditor();
+    const headless = createSDKPublicEditorFixture();
     try {
       headless.hydrateMarkdown('Original text');
       const runtime = new EditorRuntime();
@@ -32,7 +32,7 @@ describe('EditorRuntime command backend binding', () => {
     }
   });
   it('persists a real SDK node modification using backend-confirmed results', async () => {
-    const headless = createHeadlessEditor();
+    const headless = createSDKPublicEditorFixture();
     try {
       headless.hydrateMarkdown('Original text');
       const xml = headless.export({ litexml: true }).litexml;
@@ -54,7 +54,7 @@ describe('EditorRuntime command backend binding', () => {
     }
   });
   it('uses explicit command objects with real forwarding listeners for both mutation APIs', async () => {
-    const headless = createHeadlessEditor();
+    const headless = createSDKPublicEditorFixture();
     const releases: Array<() => void> = [];
     try {
       headless.hydrateMarkdown('Original text');

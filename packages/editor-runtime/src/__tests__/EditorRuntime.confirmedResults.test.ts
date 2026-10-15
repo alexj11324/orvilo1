@@ -1,12 +1,12 @@
-import { createHeadlessEditor } from '@lobehub/editor/headless';
 import { describe, expect, it, vi } from 'vitest';
 
 import { EditorRuntime } from '../EditorRuntime';
+import { createSDKPublicEditorFixture } from './sdkPublicEditorFixture';
 
 // Real SDK parsing/preflight/listeners, not dispatch mocks or approximate XML checks.
 describe('confirmed LiteXML operation results', () => {
   it('rejects missing remove/modify/insert targets and preserves a valid sibling operation', async () => {
-    const headless = createHeadlessEditor();
+    const headless = createSDKPublicEditorFixture();
     try {
       headless.hydrateMarkdown('Original text');
       const id = headless.export({ litexml: true }).litexml?.match(/<p id="([^"]+)"/u)?.[1];
@@ -36,7 +36,7 @@ describe('confirmed LiteXML operation results', () => {
     }
   });
   it('validates against earlier operations in the same batch', async () => {
-    const headless = createHeadlessEditor();
+    const headless = createSDKPublicEditorFixture();
     try {
       headless.hydrateMarkdown('First paragraph\n\nSecond paragraph');
       const ids = [
@@ -61,7 +61,7 @@ describe('confirmed LiteXML operation results', () => {
     }
   });
   it('accepts a valid unchanged node without requiring a document-hash difference', async () => {
-    const headless = createHeadlessEditor();
+    const headless = createSDKPublicEditorFixture();
     try {
       headless.hydrateMarkdown('Unchanged paragraph');
       const id = headless.export({ litexml: true }).litexml?.match(/<p id="([^"]+)"/u)?.[1];
@@ -78,7 +78,7 @@ describe('confirmed LiteXML operation results', () => {
     }
   });
   it('resolves a nested inline target through the backend rather than root-only matching', async () => {
-    const headless = createHeadlessEditor();
+    const headless = createSDKPublicEditorFixture();
     try {
       headless.hydrateMarkdown('Nested text');
       const id = headless.export({ litexml: true }).litexml?.match(/<span id="([^"]+)"/u)?.[1];

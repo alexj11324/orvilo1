@@ -20,8 +20,6 @@ const n = setNamespace('m');
  */
 
 type Setter = StoreSetter<ChatStore>;
-export const messagePublicApi = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new MessagePublicApiActionImpl(set, get, _api);
 
 export class MessagePublicApiActionImpl {
   readonly #get: () => ChatStore;

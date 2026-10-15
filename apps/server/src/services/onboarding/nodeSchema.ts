@@ -122,24 +122,6 @@ export const normalizeFromSchema = (
   return result;
 };
 
-export const getScopedPatch = (
-  node: UserAgentOnboardingNode,
-  patch: Record<string, unknown>,
-): Record<string, unknown> => {
-  const schema = NODE_SCHEMAS[node];
-  if (!schema) return {};
-
-  const nestedPatch = isRecord(patch[node]) ? patch[node] : undefined;
-  const result: Record<string, unknown> = {};
-
-  for (const key of Object.keys(schema.fields)) {
-    const value = patch[key] ?? nestedPatch?.[key];
-    if (value !== undefined) result[key] = value;
-  }
-
-  return result;
-};
-
 export const getMissingFields = (
   node: UserAgentOnboardingNode,
   patch: Record<string, unknown>,

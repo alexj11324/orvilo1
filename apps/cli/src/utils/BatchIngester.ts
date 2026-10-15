@@ -34,11 +34,6 @@ export interface IngestSink {
   ingest: (events: AgentStreamEvent[]) => Promise<void>;
 }
 
-export class NoopIngestSink implements IngestSink {
-  async finish(_params: Parameters<IngestSink['finish']>[0]): Promise<void> {}
-  async ingest(_events: AgentStreamEvent[]): Promise<void> {}
-}
-
 const MAX_BATCH = 50;
 const FLUSH_INTERVAL_MS = 250;
 const MAX_RETRIES = 5;

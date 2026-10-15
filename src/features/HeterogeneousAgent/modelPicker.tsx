@@ -3,13 +3,6 @@ import type { OrviloDefaultAiModelListItem } from 'model-bank';
 
 import { ModelItemRender } from '@/components/ModelSelect';
 
-import nativeStyles from './modelPicker.module.css';
-
-export const MODEL_PICKER_STYLE = { minWidth: 200, width: 'initial' } as const;
-
-/** Closed trigger next to the composer send button — hug the label, cap growth. */
-export const COMPACT_MODEL_PICKER_STYLE = { maxWidth: 160, minWidth: 0, width: 'auto' } as const;
-
 interface ServerDefaultModel {
   model: string;
 }
@@ -19,11 +12,6 @@ export const resolveServerDefaultAgentModels = (
   models: Partial<Record<ServerDefaultHeterogeneousAgentType, ServerDefaultModel[]>> | undefined,
   agentType: ServerDefaultHeterogeneousAgentType | undefined,
 ): ServerDefaultModel[] => (agentType ? (models?.[agentType] ?? []) : []);
-
-export const modelPickerStyles = {
-  compactLabel: nativeStyles.compactLabel,
-  picker: nativeStyles.picker,
-};
 
 export const resolveServerDefaultModelMeta = (
   model: string,

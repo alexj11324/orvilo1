@@ -22,8 +22,6 @@ interface StreamingContext {
 }
 
 type Setter = StoreSetter<ChatStore>;
-export const agentSlice = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new AgentActionImpl(set, get, _api);
 
 export class AgentActionImpl {
   readonly #get: () => ChatStore;

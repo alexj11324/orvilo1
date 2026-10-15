@@ -99,9 +99,6 @@ const toHeterogeneousSourceAction = (
   }
 };
 
-export const conversationControl = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new ConversationControlActionImpl(set, get, _api);
-
 export class ConversationControlActionImpl {
   readonly #get: () => ChatStore;
   /** Stable generic claim key shared by retries of one active Web action. */

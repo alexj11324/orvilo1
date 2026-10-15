@@ -36,8 +36,6 @@ const prefetchingMessageKeys = new Set<string>();
 const log = debug('orvilo-client:message-query');
 
 type Setter = StoreSetter<ChatStore>;
-export const messageQuery = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new MessageQueryActionImpl(set, get, _api);
 
 export class MessageQueryActionImpl {
   readonly #get: () => ChatStore;

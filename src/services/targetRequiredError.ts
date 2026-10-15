@@ -77,12 +77,6 @@ export class TargetQueryFailedError extends Error implements DeviceOperationErro
   }
 }
 
-export const isTargetQueryFailedError = (error: unknown): error is TargetQueryFailedError =>
-  error instanceof TargetQueryFailedError ||
-  (typeof error === 'object' &&
-    error !== null &&
-    (error as { code?: unknown }).code === TARGET_QUERY_FAILED_ERROR_CODE);
-
 /**
  * Evidence that THIS client is itself an execution device: the host's proven
  * local device identity, resolved via the gateway device handshake (see

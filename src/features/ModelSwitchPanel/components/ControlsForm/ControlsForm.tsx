@@ -1,15 +1,14 @@
-import { type FormItemProps } from '@lobehub/ui';
-import { Flexbox, Form } from '@lobehub/ui';
-import { Switch } from '@lobehub/ui/base-ui';
 import type { OrviloAgentChatConfig } from '@orvilo/types';
-import { Form as AntdForm } from 'antd';
 import isEqual from 'fast-deep-equal';
 import { MODEL_REASONING_EXTEND_PARAMS } from 'model-bank/aiModel';
-import type { ReactNode } from 'react';
-import { memo, useEffect, useMemo } from 'react';
+import type { ReactElement, ReactNode } from 'react';
+import { memo, useEffect, useId, useMemo } from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Trans, useTranslation } from 'react-i18next';
 
 import InfoTooltip from '@/components/InfoTooltip';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Switch } from '@/components/ui/switch';
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
 import { useUpdateAgentConfig } from '@/features/ChatInput/hooks/useUpdateAgentConfig';
 import {
@@ -62,6 +61,19 @@ import ThinkingLevelSlider from './ThinkingLevelSlider';
 import ThinkingSlider from './ThinkingSlider';
 
 const REASONING_PARAMS_SET = new Set<string>(MODEL_REASONING_EXTEND_PARAMS);
+
+interface ControlItem {
+  children: ReactElement<{
+    checked?: boolean;
+    id?: string;
+    onChange?: (value: unknown) => void;
+    onCheckedChange?: (value: boolean) => void;
+    value?: unknown;
+  }>;
+  label: ReactNode;
+  layout: 'horizontal' | 'vertical';
+  name: keyof OrviloAgentChatConfig;
+}
 
 interface ControlsFormProps {
   /**
@@ -130,7 +142,6 @@ const ControlsForm = memo<ControlsFormProps>(
     ]);
     const model = modelProp ?? agentModel;
     const provider = providerProp ?? agentProvider;
-    const [form] = Form.useForm();
 
     const storeConfig = useAgentStore(
       (s) => chatConfigByIdSelectors.getChatConfigById(agentId)(s),
@@ -153,12 +164,30 @@ const ControlsForm = memo<ControlsFormProps>(
       };
     }, [config, model]);
 
+    const formId = useId();
+    const { control, getValues, reset } = useForm<OrviloAgentChatConfig>({
+      defaultValues: initialValues,
+      shouldUnregister: false,
+    });
+
     useEffect(() => {
-      form.setFieldsValue(initialValues);
-    }, [form, initialValues]);
+      // setFieldsValue merged provided keys and retained hidden/omitted values.
+      // Sync without an autosave, and preserve that contract across model changes.
+      reset({ ...getValues(), ...initialValues });
+    }, [getValues, initialValues, reset]);
 
     const enableReasoningValue =
-      AntdForm.useWatch(['enableReasoning'], form) ?? initialValues.enableReasoning;
+      useWatch({ control, name: 'enableReasoning' }) ?? initialValues.enableReasoning;
+
+    const onValuesChange = async (values: Partial<OrviloAgentChatConfig>) => {
+      if (disabled) return;
+      onUpdatingChange?.(true);
+      try {
+        await (onChatConfigChange ?? updateAgentChatConfig)(values);
+      } finally {
+        onUpdatingChange?.(false);
+      }
+    };
 
     const gpt52ReasoningEffortDefaultValue = model === 'gpt-5.5' ? 'medium' : 'none';
     const thinkingLevelDefaultValue = resolveDefaultThinkingLevelForModel(model);
@@ -167,10 +196,10 @@ const ControlsForm = memo<ControlsFormProps>(
     // Show descriptions as a question-mark tooltip beside the label, matching
     // the ControlRow items rendered above this form in the params panel.
     const labelWithTooltip = (label: string, tooltip: ReactNode) => (
-      <Flexbox horizontal align={'center'} gap={6}>
+      <span className="flex items-center gap-1.5">
         {label}
         <InfoTooltip title={tooltip} />
-      </Flexbox>
+      </span>
     );
 
     const items = [
@@ -191,11 +220,10 @@ const ControlsForm = memo<ControlsFormProps>(
           </Trans>,
         ),
         layout: 'horizontal',
-        minWidth: undefined,
         name: 'disableContextCaching',
       },
       {
-        children: <Switch disabled={disabled} size={'small'} />,
+        children: <Switch disabled={disabled} />,
         label: labelWithTooltip(
           t('extendParams.enableReasoning.title'),
           <Trans i18nKey={'extendParams.enableReasoning.desc'} ns={'chat'}>
@@ -203,98 +231,67 @@ const ControlsForm = memo<ControlsFormProps>(
           </Trans>,
         ),
         layout: 'horizontal',
-        minWidth: undefined,
         name: 'enableReasoning',
       },
       {
-        children: <Switch disabled={disabled} size={'small'} />,
+        children: <Switch disabled={disabled} />,
         label: labelWithTooltip(
           t('extendParams.preserveThinking.title'),
           t('extendParams.preserveThinking.desc'),
         ),
         layout: 'horizontal',
-        minWidth: undefined,
         name: 'preserveThinking',
       },
       {
-        children: <Switch size={'small'} />,
+        children: <Switch disabled={disabled} />,
         label: labelWithTooltip(
           t('extendParams.enableAdaptiveThinking.title'),
           t('extendParams.enableAdaptiveThinking.desc'),
         ),
         layout: 'horizontal',
-        minWidth: undefined,
         name: 'enableAdaptiveThinking',
       },
       (enableReasoningValue || modelExtendParams?.includes('reasoningBudgetToken')) && {
         children: <ReasoningTokenSlider />,
         label: t('extendParams.reasoningBudgetToken.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'reasoningBudgetToken',
-        style: {
-          paddingBottom: 0,
-        },
       },
       modelExtendParams?.includes('reasoningBudgetToken32k') && {
         children: <ReasoningTokenSlider32k />,
         label: t('extendParams.reasoningBudgetToken.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'reasoningBudgetToken32k',
-        style: {
-          paddingBottom: 0,
-        },
       },
       modelExtendParams?.includes('reasoningBudgetToken80k') && {
         children: <ReasoningTokenSlider80k />,
         label: t('extendParams.reasoningBudgetToken.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'reasoningBudgetToken80k',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <DeepSeekV4GAReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'deepseekV4GAReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <DeepSeekReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'deepseekV4ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <Qwen38ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'qwen38ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'reasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <ReasoningModeSegmented />,
@@ -303,356 +300,259 @@ const ControlsForm = memo<ControlsFormProps>(
           t('extendParams.reasoningMode.desc'),
         ),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'reasoningMode',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <EffortSlider />,
         label: labelWithTooltip(t('extendParams.effort.title'), t('extendParams.effort.desc')),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'effort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <Opus47EffortSlider />,
         label: labelWithTooltip(t('extendParams.effort.title'), t('extendParams.effort.desc')),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'opus47Effort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <GPT5ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'gpt5ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <GPT51ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'gpt5_1ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <GPT52ReasoningEffortSlider defaultValue={gpt52ReasoningEffortDefaultValue} />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'gpt5_2ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <GPT56ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'gpt5_6ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <GPT6ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'gpt6ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <GPT52ProReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'gpt5_2ProReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <GLM52ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'glm5_2ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <GLM53ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'glm5_3ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <Grok420ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'grok4_20ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <Grok43ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'grok4_3ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <Grok45ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'grok4_5ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <Grok46ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'grok4_6ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <Hy3ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'hy3ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <KimiK3ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'kimiK3ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <Ring26ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'ring2_6ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <CodexMaxReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'codexMaxReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <Step3_5ReasoningEffortSlider />,
         label: t('extendParams.reasoningEffort.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'step3_5ReasoningEffort',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <TextVerbositySlider />,
         label: t('extendParams.textVerbosity.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'textVerbosity',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <ThinkingBudgetSlider />,
         label: t('extendParams.thinkingBudget.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'thinkingBudget',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
-        children: <Switch disabled={disabled} size={'small'} />,
+        children: <Switch disabled={disabled} />,
         label: labelWithTooltip(
           t('extendParams.urlContext.title'),
           t('extendParams.urlContext.desc'),
         ),
         layout: 'horizontal',
-        minWidth: undefined,
         name: 'urlContext',
-        style: undefined,
       },
       {
         children: <ThinkingSlider />,
         label: t('extendParams.thinking.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'thinking',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <ThinkingLevelSlider defaultValue={thinkingLevelDefaultValue} />,
         label: t('extendParams.thinkingLevel.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'thinkingLevel',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <ThinkingLevel2Slider />,
         label: t('extendParams.thinkingLevel.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'thinkingLevel2',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <ThinkingLevel3Slider defaultValue={thinkingLevel3DefaultValue} />,
         label: t('extendParams.thinkingLevel.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'thinkingLevel3',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <ThinkingLevel4Slider />,
         label: t('extendParams.thinkingLevel.title'),
         layout: 'vertical',
-        minWidth: undefined,
         name: 'thinkingLevel4',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <ImageAspectRatioSelect />,
         label: t('extendParams.imageAspectRatio.title'),
         layout: 'horizontal',
-        minWidth: undefined,
         name: 'imageAspectRatio',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <ImageAspectRatio2Select />,
         label: t('extendParams.imageAspectRatio.title'),
         layout: 'horizontal',
-        minWidth: undefined,
         name: 'imageAspectRatio2',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <ImageResolutionSlider />,
         label: t('extendParams.imageResolution.title'),
         layout: 'horizontal',
-        minWidth: undefined,
         name: 'imageResolution',
-        style: {
-          paddingBottom: 0,
-        },
       },
       {
         children: <ImageResolution2Slider />,
         label: t('extendParams.imageResolution.title'),
         layout: 'horizontal',
-        minWidth: undefined,
         name: 'imageResolution2',
-        style: {
-          paddingBottom: 0,
-        },
       },
-    ].filter(Boolean) as FormItemProps[];
+    ].filter(Boolean) as ControlItem[];
+
+    const visibleItems = (modelExtendParams || [])
+      .filter((name) => !(hideReasoningParams && REASONING_PARAMS_SET.has(name)))
+      .map((name) => items.find((item) => item.name === name))
+      .filter((item): item is ControlItem => Boolean(item));
 
     return (
-      <div
-        style={{
-          opacity: disabled ? 0.5 : undefined,
-          pointerEvents: disabled ? 'none' : undefined,
-        }}
-      >
-        <Form
-          form={form}
-          initialValues={initialValues}
-          itemsType={'flat'}
-          size={'small'}
-          style={{ fontSize: 12 }}
-          variant={'borderless'}
-          items={
-            (modelExtendParams || [])
-              .filter((item: any) => !(hideReasoningParams && REASONING_PARAMS_SET.has(item)))
-              .map((item: any) => items.find((i) => i.name === item))
-              .filter(Boolean) as FormItemProps[]
-          }
-          onValuesChange={async (values) => {
-            if (disabled) return;
-            onUpdatingChange?.(true);
-            try {
-              await (onChatConfigChange ?? updateAgentChatConfig)(values);
-            } finally {
-              onUpdatingChange?.(false);
-            }
-          }}
-        />
-      </div>
+      <form onSubmit={(event) => event.preventDefault()}>
+        <fieldset
+          className={disabled ? 'min-w-0 border-0 p-0 opacity-50' : 'min-w-0 border-0 p-0'}
+          disabled={disabled}
+        >
+          <FieldGroup className="gap-4 text-sm text-foreground">
+            {visibleItems.map((item) => (
+              <Controller
+                control={control}
+                key={item.name}
+                name={item.name}
+                render={({ field }) => {
+                  const controlId = `${formId}-${item.name}`;
+                  const labelId = `${controlId}-label`;
+                  const Control = item.children.type;
+                  const isSwitch = item.children.type === Switch;
+                  const onChange = (value: unknown) => {
+                    if (disabled) return;
+                    field.onChange(value);
+                    return onValuesChange({ [item.name]: value });
+                  };
+
+                  return (
+                    <Field
+                      aria-labelledby={labelId}
+                      orientation={item.layout}
+                      className={
+                        item.layout === 'horizontal'
+                          ? 'min-w-0 justify-between gap-3'
+                          : 'min-w-0 gap-2'
+                      }
+                    >
+                      <FieldLabel
+                        className="min-w-0 text-sm leading-5.5 font-medium"
+                        htmlFor={isSwitch ? controlId : undefined}
+                        id={labelId}
+                      >
+                        {item.label}
+                      </FieldLabel>
+                      <Control
+                        {...item.children.props}
+                        id={controlId}
+                        {...(isSwitch
+                          ? { checked: Boolean(field.value), onCheckedChange: onChange }
+                          : { onChange, value: field.value })}
+                      />
+                    </Field>
+                  );
+                }}
+              />
+            ))}
+          </FieldGroup>
+        </fieldset>
+      </form>
     );
   },
 );

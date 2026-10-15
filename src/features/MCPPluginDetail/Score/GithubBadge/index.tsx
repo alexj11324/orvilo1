@@ -55,6 +55,7 @@ const GithubBadge = memo(() => {
         <Badge variant="secondary">style</Badge>
         <Select
           options={styleOptions}
+          size="small"
           value={selectedStyle}
           onChange={(v) => {
             if (typeof v === 'string') setSelectedStyle(v as BadgeStyle);
@@ -77,6 +78,7 @@ const GithubBadge = memo(() => {
         <Badge variant="secondary">theme</Badge>
         <Select
           options={themeOptions}
+          size="small"
           value={selectedTheme}
           onChange={(v) => {
             if (typeof v === 'string') setSelectedTheme(v as BadgeTheme);

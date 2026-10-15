@@ -272,7 +272,7 @@ const ConnectorList = memo<ConnectorListProps>((props) => {
         <div
           {...clickableProps()}
           className={cn(
-            'flex cursor-pointer items-center gap-1 px-1 pbs-3 pbe-1 text-[12px] font-medium text-muted-foreground select-none hover:text-foreground',
+            'flex cursor-pointer items-center gap-1 px-1 pbs-3 pbe-1 text-xs font-medium text-muted-foreground select-none hover:text-foreground',
             CLICKABLE_FOCUS_RING,
           )}
           onClick={() => toggleSection(key)}

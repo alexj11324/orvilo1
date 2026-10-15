@@ -40,8 +40,8 @@ import { ALL_TEAM_CYCLES } from './teamWorkQuery';
 
 const styles = {
   controlPopover: 'w-[min(420px,calc(100vw-32px))] p-3',
-  optionLabel: 'flex-none w-24 text-[13px] text-muted-foreground',
-  sectionLabel: '[padding-block-start:4px] text-[12px] font-medium text-muted-foreground',
+  optionLabel: 'flex-none w-24 text-(length:--text-dense) text-muted-foreground',
+  sectionLabel: '[padding-block-start:4px] text-xs font-medium text-muted-foreground',
 };
 
 const OptionRow = memo<{ children: ReactNode; label: string }>(({ children, label }) => (
@@ -188,7 +188,11 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                         if (typeof next === 'string') onCycleChange(next);
                       }}
                     >
-                      <SelectTrigger aria-label={t('teams.cycle')} style={{ minWidth: 160 }}>
+                      <SelectTrigger
+                        aria-label={t('teams.cycle')}
+                        size="compact"
+                        style={{ minWidth: 160 }}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -213,7 +217,7 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
               />
               {activeFilterCount > 0 ? (
                 <div className="flex flex-row justify-end">
-                  <Button variant="ghost" onClick={onResetFilters}>
+                  <Button size="compact" variant="ghost" onClick={onResetFilters}>
                     {t('myWork.filtersReset')}
                   </Button>
                 </div>
@@ -244,7 +248,11 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                     if (next === 'board' || next === 'list') onLayoutChange(next);
                   }}
                 >
-                  <SelectTrigger aria-label={t('myWork.displayLayout')} style={{ minWidth: 140 }}>
+                  <SelectTrigger
+                    aria-label={t('myWork.displayLayout')}
+                    size="compact"
+                    style={{ minWidth: 140 }}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -278,7 +286,11 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                     }
                   }}
                 >
-                  <SelectTrigger aria-label={t('savedViews.grouping')} style={{ minWidth: 150 }}>
+                  <SelectTrigger
+                    aria-label={t('savedViews.grouping')}
+                    size="compact"
+                    style={{ minWidth: 150 }}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -301,7 +313,11 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                       }
                     }}
                   >
-                    <SelectTrigger aria-label={t('myWork.subGrouping')} style={{ minWidth: 150 }}>
+                    <SelectTrigger
+                      aria-label={t('myWork.subGrouping')}
+                      size="compact"
+                      style={{ minWidth: 150 }}
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -324,7 +340,11 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                     }
                   }}
                 >
-                  <SelectTrigger aria-label={t('savedViews.ordering')} style={{ minWidth: 170 }}>
+                  <SelectTrigger
+                    aria-label={t('savedViews.ordering')}
+                    size="compact"
+                    style={{ minWidth: 170 }}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -348,7 +368,11 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                     }
                   }}
                 >
-                  <SelectTrigger aria-label={t('myWork.completedIssues')} style={{ minWidth: 140 }}>
+                  <SelectTrigger
+                    aria-label={t('myWork.completedIssues')}
+                    size="compact"
+                    style={{ minWidth: 140 }}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -395,7 +419,7 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                 />
               </OptionRow>
               <div className="flex flex-row justify-end">
-                <Button variant="ghost" onClick={onResetDisplay}>
+                <Button size="compact" variant="ghost" onClick={onResetDisplay}>
                   {t('myWork.filtersReset')}
                 </Button>
               </div>

@@ -1,3 +1,4 @@
+
 // Disable the auto sort key eslint rule to make the code more logic and readable
 import { type AgentRuntimeContext } from '@orvilo/agent-runtime';
 import { MESSAGE_CANCEL_FLAT } from '@orvilo/const';
@@ -11,7 +12,6 @@ import { t } from 'i18next';
 
 import { type ChatInputEditor } from '@/features/ChatInput';
 import { getTopicAgencyConfig, resolveIsGroupSupervisor } from '@/helpers/topicExecutionConfig';
-import { lambdaClient } from '@/libs/trpc/client';
 import {
   type AgentInterventionSourceAction,
   aiAgentService,
@@ -98,9 +98,6 @@ const toHeterogeneousSourceAction = (
       : undefined;
   }
 };
-
-export const conversationControl = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new ConversationControlActionImpl(set, get, _api);
 
 export class ConversationControlActionImpl {
   readonly #get: () => ChatStore;
@@ -1740,7 +1737,7 @@ export class ConversationControlActionImpl {
         // retry reads the receipt, so a failed write must not let the card
         // resolve — it throws into the outer catch and stays pending
         // (fail-closed; the receipt can never grant what wasn't recorded).
-        await lambdaClient.aiAgent.submitHeteroIntervention.mutate(
+        await aiAgentService.submitHeteroIntervention(
           actionType === 'submit'
             ? {
                 operationId,
@@ -1793,7 +1790,7 @@ export class ConversationControlActionImpl {
         const resolutionRequestId =
           this.#heteroResolutionRequestIds.get(resolutionKey) ?? globalThis.crypto.randomUUID();
         this.#heteroResolutionRequestIds.set(resolutionKey, resolutionRequestId);
-        await lambdaClient.aiAgent.submitHeteroIntervention.mutate(
+        await aiAgentService.submitHeteroIntervention(
           actionType === 'submit'
             ? {
                 operationId: remoteOperationId,

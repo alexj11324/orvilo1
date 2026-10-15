@@ -91,14 +91,14 @@ const SocialOAuthCallbackPage = memo(() => {
         </EmptyMedia>
         <EmptyTitle>
           {
-            <div className="text-[32px] font-bold">
+            <div className="text-3xl font-semibold">
               {status === 'success' ? t('success.title') : t('error.title')}
             </div>
           }
         </EmptyTitle>
         <EmptyDescription>
           {
-            <div className="text-[16px] text-muted-foreground">
+            <div className="text-sm text-muted-foreground">
               {status === 'success' && provider
                 ? t('success.subTitleWithCountdown', {
                     countdown,

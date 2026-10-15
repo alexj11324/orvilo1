@@ -32,7 +32,7 @@ const styles = {
   sections: 'overflow-hidden w-[min(100%,760px)]',
   sectionItem:
     'grid grid-cols-[72px_minmax(0,1fr)] gap-4 py-3.5 px-4 [&+&]:[border-block-start:1px_solid_var(--sidebar-border)]',
-  title: 'max-w-[880px] text-balance',
+  title: 'max-w-220 text-balance',
   hitTitle: 'min-w-0',
 };
 
@@ -105,17 +105,14 @@ const LessonDetail = memo(() => {
             {data && (
               <div className="flex flex-col gap-5" style={{ paddingBlock: '14px 64px' }}>
                 <div className="flex flex-col gap-2.5">
-                  <div className="text-[12px] text-muted-foreground font-semibold">
+                  <div className="text-xs text-muted-foreground font-semibold">
                     {t('rules.detail.eyebrow', { code: data.lesson.code })}
                   </div>
-                  <div
-                    className={cn('text-[26px] font-bold', styles.title)}
-                    style={{ lineHeight: 1.35 }}
-                  >
+                  <div className={cn('text-xl font-semibold', styles.title)}>
                     {data.lesson.title}
                   </div>
                   <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-                    <div className="text-muted-foreground" style={{ fontSize: 12.5 }}>
+                    <div className="text-xs text-muted-foreground">
                       {t('rules.detail.meta', {
                         hits: data.lesson.hitCount,
                         runs: data.lesson.hitRunCount,
@@ -132,18 +129,18 @@ const LessonDetail = memo(() => {
                     {/* The real revision counter, not an invented version number — S60 forbids
                         faking one, and this table has the chain to back it up. */}
                     {data.lesson.currentRevision > 1 && (
-                      <div className="text-[12px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {t('rules.detail.revision', { revision: data.lesson.currentRevision })}
                       </div>
                     )}
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {t('rules.detail.updatedAt', {
                         time: dayjs(data.lesson.updatedAt).fromNow(),
                       })}
                     </div>
                   </div>
                   {domainError && (
-                    <div className="text-destructive" style={{ fontSize: 12.5 }}>
+                    <div className="text-xs text-destructive">
                       {t('rules.detail.domainUnavailable')} ·{' '}
                       <Button
                         className="h-auto p-0 text-info"
@@ -166,18 +163,16 @@ const LessonDetail = memo(() => {
                 >
                   {sections?.map((section) => (
                     <div className={styles.sectionItem} key={section.key}>
-                      <div className="text-[12px] text-muted-foreground font-semibold">
+                      <div className="text-xs text-muted-foreground font-semibold">
                         <SectionLabel sectionKey={section.key} />
                       </div>
-                      <div className="text-[14px]" style={{ lineHeight: 1.65 }}>
-                        {section.body}
-                      </div>
+                      <div className="text-sm">{section.body}</div>
                     </div>
                   ))}
                 </div>
 
                 <div className="flex flex-col gap-2.5">
-                  <div className="text-[15px] font-semibold">{t('rules.detail.examples')}</div>
+                  <div className="text-sm font-semibold">{t('rules.detail.examples')}</div>
                   {data.hits.length === 0 ? (
                     <Empty>
                       <EmptyHeader>
@@ -188,34 +183,29 @@ const LessonDetail = memo(() => {
                   ) : (
                     data.hits.map((hit, index) => (
                       <div
-                        className="flex flex-col gap-1.5 p-[14px] border border-sidebar-border bg-card"
+                        className="flex flex-col gap-1.5 p-3.5 border border-sidebar-border bg-card"
                         key={`${hit.createdAt}-${index}`}
                       >
                         <div className="flex items-start gap-3 justify-between">
-                          <div
-                            className={cn('text-[13px]', styles.hitTitle)}
-                            style={{ lineHeight: 1.65 }}
-                          >
-                            {hit.example}
-                          </div>
+                          <div className={cn('text-sm', styles.hitTitle)}>{hit.example}</div>
                           <Badge variant={hit.outcome === 'pass' ? 'success' : 'destructive'}>
                             {t(`rules.detail.outcome.${hit.outcome}`)}
                           </Badge>
                         </div>
                         {hit.note && (
-                          <div className="text-[12px] text-muted-foreground">{hit.note}</div>
+                          <div className="text-xs text-muted-foreground">{hit.note}</div>
                         )}
                         {hit.subjectType === 'topic' && activeAgentId ? (
                           <Link to={urlJoin('/agent', activeAgentId, hit.subjectId)}>
-                            <div className="flex items-center gap-[5px]">
+                            <div className="flex items-center gap-1.25">
                               <MessagesSquare className="text-muted-foreground" size={13} />
-                              <div className="text-[12px] text-muted-foreground">
+                              <div className="text-xs text-muted-foreground">
                                 {hit.runTitle ?? `#${hit.runIndex}`}
                               </div>
                             </div>
                           </Link>
                         ) : (
-                          <div className="text-[11px] text-muted-foreground">
+                          <div className="text-xs text-muted-foreground">
                             {hit.runTitle ?? `#${hit.runIndex}`}
                           </div>
                         )}

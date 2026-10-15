@@ -23,11 +23,11 @@ const InaccessibleFileItem = memo(() => {
   const { t } = useTranslation('chat');
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border p-3">
+    <div className="flex items-center gap-3 rounded-(--radius-card) border p-3">
       <FileLock2Icon size={32} style={{ opacity: 0.45 }} />
       <div className="flex flex-col" style={{ overflow: 'hidden' }}>
         <div className="truncate text-muted-foreground">{t('inaccessibleFile.name')}</div>
-        <div className="text-[12px] text-muted-foreground">{t('inaccessibleFile.desc')}</div>
+        <div className="text-xs text-muted-foreground">{t('inaccessibleFile.desc')}</div>
       </div>
     </div>
   );

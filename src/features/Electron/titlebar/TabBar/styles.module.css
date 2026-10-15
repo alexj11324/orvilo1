@@ -1,0 +1,98 @@
+@reference '../../../../app/globals.css';
+
+.closeIcon {
+  @apply pointer-events-none absolute end-0 shrink-0 text-foreground-tertiary opacity-0;
+  transition: opacity var(--orvilo-motion-mid) var(--orvilo-motion-ease-in-out);
+
+  &:hover { @apply text-foreground; }
+}
+
+.runningDot {
+  @apply absolute -inset-be-0.5 -end-0.5 size-2 rounded-full border-[1.5px] border-background bg-warning;
+  box-shadow: 0 0 6px var(--warning);
+}
+
+/* Absolute placement keeps pinning and width springs on the same layout plane. */
+.strip { @apply relative flex-none h-8; }
+
+.tab {
+  @apply absolute inset-bs-0 start-0 flex h-8 shrink-0 cursor-default select-none items-center gap-1.5 rounded-(--radius-button) bg-transparent text-xs leading-5;
+  padding-inline: 8px 6px;
+  transition: background-color var(--orvilo-motion-mid) var(--orvilo-motion-ease-in-out);
+
+  &:hover { @apply bg-fill-quaternary; }
+
+  /* The target tier changes before the width spring finishes. Never move layout here. */
+  &[data-tier='icon'] {
+    [data-tab-title] { opacity: 0; }
+  }
+
+  /* Reservation and visibility share the same pointer AND keyboard state. */
+  &[data-tier='full']:hover:has([data-tab-close]),
+  &[data-tier='compact']:hover:has([data-tab-close]),
+  &[data-tier='full']:has([data-tab-close]:focus-visible),
+  &[data-tier='compact']:has([data-tab-close]:focus-visible) {
+    [data-tab-close] { pointer-events: auto; opacity: 1; }
+    /* Compact32 action + 0px end inset - the tab's 6px end padding. */
+    [data-tab-title] { margin-inline-end: 26px; }
+  }
+}
+
+.pinnedDivider {
+  @apply absolute start-0 h-4.5 w-px bg-border;
+  /* Keep the original 18px guide; centre it in the compact32 control plane. */
+  inset-block-start: calc((100% - 18px) / 2);
+  transition: opacity var(--orvilo-motion-mid) var(--orvilo-motion-ease-in-out);
+}
+
+/* Pinned precedes active at equal specificity; active always wins. */
+.tabPinned {
+  @apply bg-fill-quaternary;
+  &:hover { @apply bg-accent; }
+}
+
+.tabSplitVisible::after {
+  content: '';
+  @apply absolute inset-be-px h-px rounded-full bg-primary;
+  inset-inline: calc(var(--spacing) * 2);
+  opacity: 0.65;
+}
+
+.tabActive {
+  @apply bg-popover;
+  box-shadow: var(--shadow-raised);
+  &:hover { @apply bg-popover; }
+}
+
+:global(html.desktop[data-theme='dark']) .tabActive {
+  @apply bg-selected;
+  box-shadow: inset 0 0 0 1px var(--divider);
+  &:hover { @apply bg-selected; }
+}
+
+/* Actual closed cx arguments put dragging after active. Keep that cascade. */
+.tabDragging {
+  @apply cursor-grabbing bg-popover;
+  z-index: 1;
+  box-shadow: var(--shadow-popover);
+}
+
+.tabTitle {
+  @apply min-w-0 flex-1 overflow-hidden whitespace-nowrap text-xs leading-5 text-foreground;
+  transition:
+    margin-inline-end var(--orvilo-motion-mid) var(--orvilo-motion-ease-in-out),
+    opacity var(--orvilo-motion-fast) var(--orvilo-motion-ease-in-out);
+  /* Opaque alpha is a mask, not an application paint color. */
+  mask-image: linear-gradient(to right, #000 max(60%, calc(100% - 20px)), transparent);
+  &:dir(rtl) {
+    mask-image: linear-gradient(to left, #000 max(60%, calc(100% - 20px)), transparent);
+  }
+}
+
+.container[data-disable-motion='true'] {
+  .tab, .tabTitle, .closeIcon, .pinnedDivider { transition: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab, .tabTitle, .closeIcon, .pinnedDivider { transition: none; }
+}

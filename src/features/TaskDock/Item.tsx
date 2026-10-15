@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { CopyIcon, ExternalLinkIcon, RotateCwIcon, XIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -9,49 +8,17 @@ import { Button } from '@/components/ui/button';
 
 import type { DockTask } from './type';
 
-const styles = createStaticStyles(({ css }) => ({
-  action: css`
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  `,
-  container: css`
-    &:hover .dock-task-action {
-      opacity: 1;
-    }
-  `,
-  progress: css`
-    pointer-events: none;
-
-    position: absolute;
-    inset-block-end: 0;
-    inset-inline-start: 0;
-
-    height: 2px;
-
-    background: ${cssVar.geekblue};
-
-    transition: inset-inline-end 0.2s linear;
-  `,
-  result: css`
-    border-block-start: 1px solid ${cssVar.colorFillQuaternary};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  resultLabel: css`
-    min-width: 0;
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: ${cssVar.fontSizeSM}px;
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    font-size: 14px;
-    line-height: 1.4;
-    text-overflow: ellipsis;
-  `,
-}));
+const styles = {
+  action:
+    'opacity-0 transition-opacity duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-in-out) [@media(hover:none)]:opacity-100',
+  container:
+    '[&:hover_.dock-task-action]:opacity-100 [&:focus-within_.dock-task-action]:opacity-100',
+  progress:
+    'pointer-events-none absolute inset-be-0 inset-s-0 h-0.5 bg-primary transition-[inset-inline-end] duration-(--orvilo-motion-mid) ease-linear',
+  result: 'border-bs border-divider bg-fill-quaternary',
+  resultLabel: 'min-w-0 font-mono text-xs leading-5',
+  title: 'overflow-hidden line-clamp-1 text-sm leading-5.5 text-ellipsis',
+};
 
 interface ItemProps extends DockTask {
   /** A solo card has no group gutter, so its result strip is flush left. */
@@ -67,12 +34,9 @@ const Item = memo<ItemProps>(
 
     return (
       <div className="flex flex-col">
-        <div
-          className={`flex items-center gap-3 px-3 py-2 ${styles.container}`}
-          style={{ position: 'relative' }}
-        >
+        <div className={`relative flex items-center gap-3 p-4 ${styles.container}`}>
           {icon}
-          <div className="flex flex-1 flex-col gap-0.5" style={{ overflow: 'hidden' }}>
+          <div className="flex flex-1 flex-col gap-0.5 overflow-hidden">
             <div className={styles.title}>{title}</div>
             {detail}
             {extra}
@@ -82,18 +46,28 @@ const Item = memo<ItemProps>(
             <ActionIcon
               className={`${styles.action} dock-task-action`}
               icon={XIcon}
-              size="small"
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               title={t('cancel')}
               onClick={cancel}
             />
           )}
 
           {retry && (
-            <ActionIcon icon={RotateCwIcon} size="small" title={t('retry')} onClick={retry} />
+            <ActionIcon
+              icon={RotateCwIcon}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+              title={t('retry')}
+              onClick={retry}
+            />
           )}
 
           {closable && (
-            <ActionIcon icon={XIcon} size="small" title={t('close')} onClick={dismiss} />
+            <ActionIcon
+              icon={XIcon}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+              title={t('close')}
+              onClick={dismiss}
+            />
           )}
 
           {status === 'running' && progress !== undefined && (
@@ -103,8 +77,11 @@ const Item = memo<ItemProps>(
 
         {result && (
           <div
-            className={`flex items-center gap-2 py-1.5 ${styles.result}`}
-            style={{ paddingInlineEnd: 8, paddingInlineStart: solo ? 12 : 48 }}
+            className={cn(
+              'flex items-center gap-2 py-1.5 pe-2',
+              solo ? 'ps-4' : 'ps-12',
+              styles.result,
+            )}
           >
             <div
               className={cn(
@@ -116,18 +93,23 @@ const Item = memo<ItemProps>(
               {result.label}
             </div>
             {result.onCopy && (
-              <ActionIcon icon={CopyIcon} size="small" title={t('copy')} onClick={result.onCopy} />
+              <ActionIcon
+                icon={CopyIcon}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                title={t('copy')}
+                onClick={result.onCopy}
+              />
             )}
             {result.onOpen && (
               <ActionIcon
                 icon={ExternalLinkIcon}
-                size="small"
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={t('taskDock.open')}
                 onClick={result.onOpen}
               />
             )}
             {result.action && (
-              <Button size="sm" onClick={result.onAction}>
+              <Button size="compact" onClick={result.onAction}>
                 {result.action}
               </Button>
             )}

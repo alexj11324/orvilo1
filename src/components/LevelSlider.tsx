@@ -1,4 +1,3 @@
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import type { CSSProperties, ReactNode } from 'react';
 import { memo, useMemo } from 'react';
@@ -6,50 +5,14 @@ import useMergeState from 'use-merge-value';
 
 import { Slider } from '@/components/ui/slider';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  label: css`
-    cursor: pointer;
-
-    padding: 0;
-    border: none;
-
-    font: inherit;
-    font-size: 12px;
-    line-height: 16px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-    overflow-wrap: anywhere;
-
-    background: transparent;
-
-    transition: color 0.2s ease;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-    }
-
-    &:focus-visible {
-      border-radius: 6px;
-      outline: 1px solid ${cssVar.colorBorder};
-      outline-offset: 2px;
-    }
-  `,
-  labels: css`
-    display: grid;
-    gap: 8px;
-    width: 100%;
-  `,
-  root: css`
-    width: 100%;
-  `,
-  selectedLabel: css`
-    color: ${cssVar.colorText};
-  `,
-  slider: css`
-    width: 100%;
-    padding-inline: 6px;
-  `,
-}));
+const styles = {
+  label:
+    'min-h-7 cursor-pointer rounded-(--radius-input) border-0 bg-transparent p-0 text-sm leading-5.5 text-muted-foreground text-center wrap-anywhere transition-[color] duration-(--orvilo-motion-mid) ease-[ease] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-not-allowed motion-reduce:transition-none',
+  labels: 'grid w-full gap-2',
+  root: 'w-full',
+  selectedLabel: 'text-foreground',
+  slider: 'w-full px-1.5',
+};
 
 export type LevelSliderMark = ReactNode | { label?: ReactNode; style?: CSSProperties };
 
@@ -197,7 +160,7 @@ function LevelSlider<T extends string = string>({
           return (
             <button
               aria-current={selected ? 'true' : undefined}
-              className={cx(styles.label, selected && styles.selectedLabel)}
+              className={cn(styles.label, selected && styles.selectedLabel)}
               disabled={disabled}
               key={option.value}
               style={{ textAlign, ...option.style }}

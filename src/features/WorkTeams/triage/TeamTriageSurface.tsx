@@ -111,7 +111,7 @@ const TeamTriageSurface = memo<TeamTriageSurfaceProps>(
           </div>
         ) : state === 'empty' ? (
           <SimpleEmpty description={t('teams.triageEmpty')} icon={ListChecksIcon}>
-            <Button variant="outline" onClick={openComposer}>
+            <Button size="lg" variant="outline" onClick={openComposer}>
               <PlusIcon aria-hidden className="size-4" />
               {t('teams.triageCreate')}
             </Button>

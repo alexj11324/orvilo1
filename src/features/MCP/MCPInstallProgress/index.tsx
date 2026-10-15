@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import * as m from 'motion/react-m';
 import { memo } from 'react';
@@ -42,7 +41,7 @@ const MCPInstallProgress = memo<{ identifier: string }>(({ identifier }) => {
           <div className="flex flex-col py-1">
             <Progress className="h-1.5" value={installProgress.progress} />
             {stepText && (
-              <div style={{ fontSize: 11, marginTop: 4, color: cssVar.colorTextSecondary }}>
+              <div style={{ fontSize: 11, marginTop: 4, color: 'var(--ant-color-text-secondary)' }}>
                 ({installProgress.progress}%) {stepText}
               </div>
             )}

@@ -14,15 +14,15 @@ import { chatPortalSelectors } from '@/store/chat/selectors';
 import type { CreateTaskParams, CreateTaskState } from '../../../types';
 
 const styles = {
-  description: 'line-clamp-3 text-[12px] leading-[1.5] text-[var(--ant-color-text-tertiary)]',
+  description: 'line-clamp-3 text-xs leading-[1.5] text-foreground-tertiary',
   identifier:
-    'shrink-0 rounded-[4px] bg-accent px-1.5 py-px font-mono text-[12px] text-muted-foreground',
+    'shrink-0 rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-xs text-muted-foreground',
   // Fade the model-facing markdown preview; the detail panel contains the full content.
   instruction:
-    'max-h-[132px] overflow-hidden [mask-image:linear-gradient(to_bottom,black_78%,transparent)]',
+    'max-h-33 overflow-hidden [mask-image:linear-gradient(to_bottom,black_78%,transparent)]',
   row: 'flex items-center gap-2',
   taskItem: 'flex flex-col gap-1.5 px-3 py-2.5',
-  title: 'min-w-0 flex-1 truncate text-[13px] leading-[1.4] text-foreground',
+  title: 'min-w-0 flex-1 truncate text-(length:--text-dense) leading-[1.4] text-foreground',
 };
 
 export const CreateTaskRender = memo<BuiltinRenderProps<CreateTaskParams, CreateTaskState>>(
@@ -107,7 +107,7 @@ export const CreateTaskRender = memo<BuiltinRenderProps<CreateTaskParams, Create
             </div>
           ) : null}
           {parent && (
-            <span className="text-[11px]" style={{ color: 'var(--ant-color-text-tertiary)' }}>
+            <span className="text-xs" style={{ color: 'var(--ant-color-text-tertiary)' }}>
               {`Subtask of ${parent}`}
             </span>
           )}

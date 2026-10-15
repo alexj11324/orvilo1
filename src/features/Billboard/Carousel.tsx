@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import Autoplay from 'embla-carousel-autoplay';
 import { X } from 'lucide-react';
@@ -8,7 +7,6 @@ import * as m from 'motion/react-m';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import ActionIcon from '@/components/ActionIcon';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Carousel,
@@ -36,104 +34,19 @@ interface BillboardCarouselProps {
   set: GlobalBillboard;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  action: css`
-    display: block;
-    width: 100%;
-    margin-block-start: 8px;
-  `,
-  card: css`
-    position: fixed;
-    z-index: 1000;
-    inset-block-end: 56px;
-    inset-inline-start: 8px;
-    transform-origin: bottom left;
-
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-
-    width: 300px;
-    max-width: calc(100vw - 32px);
-    padding: 0;
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: 12px;
-
-    background: ${cssVar.colorBgContainer};
-    box-shadow: 0 4px 24px rgb(0 0 0 / 12%);
-  `,
-  closeButton: css`
-    position: absolute;
-    z-index: 10;
-    inset-block-start: 8px;
-    inset-inline-end: 8px;
-
-    /* Sits over the cover image (140px band) — give it its own opaque surface so
-       the icon reads on any image, and lift z-index above the carousel dots /
-       slick internals. */
-    color: #fff;
-
-    background: rgb(0 0 0 / 45%);
-    backdrop-filter: blur(4px);
-
-    &:hover {
-      color: #fff;
-      background: rgb(0 0 0 / 60%);
-    }
-  `,
-  description: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
-
-    font-size: 14px;
-    color: ${cssVar.colorTextSecondary};
-    text-overflow: ellipsis;
-  `,
-  dot: css`
-    cursor: pointer;
-
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-
-    background: ${cssVar.colorFillSecondary};
-
-    transition: all 0.2s;
-  `,
-  dotActive: css`
-    width: 18px;
-    border-radius: 3px;
-    background: ${cssVar.colorPrimary};
-  `,
-  dots: css`
-    padding-block-end: 10px;
-  `,
-  image: css`
-    display: block;
-
-    width: 100%;
-    height: 140px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    object-fit: cover;
-  `,
-  itemBody: css`
-    padding: 12px;
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    font-size: 16px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-  `,
-}));
+const styles = {
+  action: 'w-full mbs-2',
+  card: 'fixed z-1000 inset-be-14 inset-s-2 origin-bottom-left rtl:origin-bottom-right overflow-hidden flex flex-col w-75 max-w-[calc(100vw_-_32px)] p-0 border border-border rounded-(--radius-overlay) bg-card shadow-(--shadow-popover)',
+  closeButton:
+    'absolute z-10 inset-bs-2 inset-e-2 border-border bg-card text-foreground shadow-(--shadow-popover) hover:bg-card hover:text-foreground',
+  description: 'line-clamp-4 text-sm leading-5.5 text-muted-foreground',
+  dot: 'block h-1.5 w-1.5 shrink-0 rounded-full bg-selected transition-[width,background-color] duration-(--orvilo-motion-mid)',
+  dotActive: 'w-4.5 bg-primary',
+  dots: 'flex-wrap pbe-2.5',
+  image: 'block w-full h-35 border-be border-divider object-cover',
+  itemBody: 'p-4',
+  title: 'line-clamp-2 text-base leading-6 font-semibold text-foreground',
+};
 
 const ItemContent = memo<{
   billboardSlug: string;
@@ -211,9 +124,7 @@ const ItemContent = memo<{
         {titleOverflow ? (
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger
-                render={<span style={{ display: 'inline-flex' }}>{titleNode}</span>}
-              />
+              <TooltipTrigger render={<span className="inline-flex">{titleNode}</span>} />
               <TooltipContent>{resolved.title}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -224,9 +135,7 @@ const ItemContent = memo<{
           (descOverflow ? (
             <TooltipProvider>
               <Tooltip>
-                <TooltipTrigger
-                  render={<span style={{ display: 'inline-flex' }}>{descNode}</span>}
-                />
+                <TooltipTrigger render={<span className="inline-flex">{descNode}</span>} />
                 <TooltipContent>{resolved.description}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -236,6 +145,7 @@ const ItemContent = memo<{
         {action ? (
           <Button
             className={cn('w-full', styles.action)}
+            size="normal"
             variant="default"
             onClick={handleActionClick}
           >
@@ -244,10 +154,14 @@ const ItemContent = memo<{
         ) : (
           item.linkUrl && (
             <a
-              className={cn(buttonVariants({ variant: 'default' }), styles.action, 'w-full')}
               href={item.linkUrl}
               rel="noopener noreferrer"
               target="_blank"
+              className={cn(
+                buttonVariants({ variant: 'default', size: 'normal' }),
+                styles.action,
+                'w-full',
+              )}
               onClick={handleLinkClick}
             >
               {resolved.linkLabel ?? t('billboard.learnMore')}
@@ -341,7 +255,7 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
         {...cardDataProps}
         className={styles.card}
         initial={{ opacity: 0, scale: 0.92, y: 16 }}
-        transition={{ duration: 0.35, ease: [0.2, 0.8, 0.2, 1] }}
+        transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
         animate={
           closing
             ? { opacity: 0, scale: 0.15, x: exitTarget?.x ?? 0, y: exitTarget?.y ?? 40 }
@@ -353,13 +267,16 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
           if (closing) onAnimationFinish?.();
         }}
       >
-        <ActionIcon
+        <Button
           aria-label={tCommon('close')}
           className={styles.closeButton}
-          icon={X}
-          size={14}
+          size="icon"
+          type="button"
+          variant="ghost"
           onClick={onClose}
-        />
+        >
+          <X className="size-4" />
+        </Button>
         {single ? (
           <ItemContent
             billboardSlug={set.slug}
@@ -376,10 +293,8 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
             >
               <CarouselContent
                 className="items-start"
-                viewportStyle={{
-                  height: slideHeight,
-                  transition: 'height 0.3s ease',
-                }}
+                viewportClassName="transition-[height] duration-(--orvilo-motion-mid) ease-[ease]"
+                viewportStyle={{ height: slideHeight }}
               >
                 {set.items.map((item, idx) => (
                   <CarouselItem key={item.id}>
@@ -395,17 +310,22 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
             </Carousel>
             <div className={cn('flex gap-1.5 justify-center', styles.dots)}>
               {set.items.map((item, idx) => (
-                <div
+                <Button
                   {...clickableProps()}
                   aria-current={current === idx || undefined}
                   aria-label={`${idx + 1} / ${set.items.length}`}
+                  className={CLICKABLE_FOCUS_RING}
                   key={item.id}
-                  className={cn(
-                    `${styles.dot} ${current === idx ? styles.dotActive : ''}`,
-                    CLICKABLE_FOCUS_RING,
-                  )}
+                  size="icon"
+                  type="button"
+                  variant="ghost"
                   onClick={() => carouselApi?.scrollTo(idx)}
-                />
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn(styles.dot, current === idx ? styles.dotActive : '')}
+                  />
+                </Button>
               ))}
             </div>
           </>

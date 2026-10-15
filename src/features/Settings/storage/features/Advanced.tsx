@@ -49,6 +49,7 @@ const AdvancedActions = () => {
     return {
       children: (
         <Button
+          size="lg"
           variant="outline"
           onClick={() => {
             configService.exportAll();
@@ -73,7 +74,7 @@ const AdvancedActions = () => {
       ...(enableBusinessFeatures ? [renderExportButtonFormItem()] : []),
       {
         children: (
-          <Button variant="destructive" onClick={handleReset}>
+          <Button size="lg" variant="destructive" onClick={handleReset}>
             {t('danger.reset.action')}
           </Button>
         ),

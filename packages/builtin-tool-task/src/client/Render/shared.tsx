@@ -17,20 +17,21 @@ import { chatPortalSelectors } from '@/store/chat/selectors';
 
 const styles = {
   assignee: 'inline-flex min-w-0 max-w-full items-center gap-1.5',
-  assigneeName: 'truncate text-[13px] text-foreground',
+  assigneeName: 'truncate text-(length:--text-dense) text-foreground',
   body: 'flex flex-col gap-2.5 p-3',
   header: 'flex items-center gap-2 px-3 py-2.5',
   headerDivider: '[border-block-end:1px_solid_var(--sidebar-border)]',
   identifier:
-    'shrink-0 rounded-[4px] bg-accent px-1.5 py-px font-mono text-[12px] text-muted-foreground',
+    'shrink-0 rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-xs text-muted-foreground',
   inlineRow: 'flex min-w-0 items-center gap-2',
-  inlineValue: 'min-w-0 flex-1 overflow-hidden text-[13px] text-foreground',
-  label: 'shrink-0 text-[12px] text-[var(--ant-color-text-tertiary)]',
-  mono: 'font-mono text-[12px] text-muted-foreground',
+  inlineValue: 'min-w-0 flex-1 overflow-hidden text-(length:--text-dense) text-foreground',
+  label: 'shrink-0 text-xs text-foreground-tertiary',
+  mono: 'font-mono text-xs text-muted-foreground',
   section: 'flex min-w-0 flex-col gap-1',
-  sectionValue: 'text-[13px] leading-[1.6] text-muted-foreground [overflow-wrap:anywhere]',
+  sectionValue:
+    'text-(length:--text-dense) leading-[1.6] text-muted-foreground [overflow-wrap:anywhere]',
   spacer: 'flex-1',
-  title: 'text-[13px] font-medium text-foreground',
+  title: 'text-(length:--text-dense) font-medium text-foreground',
 };
 
 /**

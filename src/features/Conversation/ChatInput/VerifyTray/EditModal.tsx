@@ -44,18 +44,19 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {tv('acceptance.tray.editModal.nameLabel')}
         </div>
         <Input
           placeholder={tv('acceptance.tray.editModal.namePlaceholder')}
           value={name}
+          visualSize="normal"
           onChange={(e) => setName(e.target.value)}
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {tv('acceptance.tray.editModal.methodLabel')}
         </div>
         <Textarea
@@ -70,6 +71,7 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
       <div className="flex items-center justify-between">
         {onRemove ? (
           <Button
+            size="lg"
             variant="destructive"
             onClick={() => {
               onRemove();
@@ -82,12 +84,13 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
           <span />
         )}
         <div className="flex gap-2">
-          <Button disabled={saving} onClick={close}>
+          <Button disabled={saving} size="lg" onClick={close}>
             {tv('acceptance.actions.cancel')}
           </Button>
           <Button
             disabled={!name.trim() || saving}
             loading={saving}
+            size="lg"
             variant="default"
             onClick={handleSave}
           >

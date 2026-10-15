@@ -6,7 +6,7 @@ import { projectIssueProgress } from '../projectIssueProgress';
 
 const styles = {
   metric: 'm-0 flex-1 text-xs leading-5',
-  marker: 'size-1.5 rounded-[1px]', // linear-token-override: preserve the existing 1px progress legend marker radius; this is not a chip.
+  marker: 'size-1.5 rounded-full',
 };
 
 const colors = {

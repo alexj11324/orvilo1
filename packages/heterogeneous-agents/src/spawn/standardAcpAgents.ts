@@ -38,6 +38,15 @@ export interface AcpSpawnTarget {
   env: NodeJS.ProcessEnv;
 }
 
+export interface ResolveAcpSpawnTargetOptions {
+  /**
+   * Whether a missing bridge may be fetched through `bunx`/`npx`. A run allows
+   * it; a catalog probe must not, because it starts when a page opens and would
+   * download and execute a package the user never asked to run.
+   */
+  allowPackageRunner?: boolean;
+}
+
 /**
  * Resolve the process to spawn for `agentType`'s ACP endpoint.
  *
@@ -51,6 +60,7 @@ export const resolveAcpSpawnTarget = async (
   agentType: string,
   vendorCommand: string,
   env: NodeJS.ProcessEnv,
+  options: ResolveAcpSpawnTargetOptions = {},
 ): Promise<AcpSpawnTarget> => {
   const spec = getAcpAgentRuntime(agentType);
   if (!spec) throw new Error(`No ACP runtime is registered for agent type "${agentType}"`);
@@ -64,7 +74,10 @@ export const resolveAcpSpawnTarget = async (
     // requirement can still launch through an on-machine package runner
     // (bunx/npx fetches and caches the pinned bridge package) instead of
     // failing every prompt until the user hand-installs the bridge.
-    const runner = await detectAcpBridgeRunner(spec.bridge, env);
+    const runner =
+      options.allowPackageRunner === false
+        ? undefined
+        : await detectAcpBridgeRunner(spec.bridge, env);
     if (!runner) throw buildAcpBridgeNotFoundError(agentType);
 
     return {

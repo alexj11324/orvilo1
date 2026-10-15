@@ -35,6 +35,7 @@ const AllTopicsDrawer = memo<AllTopicsDrawerProps>(({ open, onClose }) => {
           <Input
             defaultValue={searchKeyword}
             placeholder={t('searchPlaceholder')}
+            visualSize="compact"
             onChange={(e) => {
               const keyword = e.target.value;
               if (!keyword) setSearchKeyword('');

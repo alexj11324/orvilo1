@@ -5,11 +5,13 @@ import {
   getOrviloSkillProviderById,
   matchMcpPresetByConnector,
 } from '@orvilo/const';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { memo, useCallback, useEffect, useState } from 'react';
 
 import { CustomConnectorModal } from '@/features/Connectors';
 import NavHeader from '@/features/NavHeader';
+import { settingWidthClassNames } from '@/features/Setting/settingWidth';
 import { useToolStore } from '@/store/tool';
 import {
   composioStoreSelectors,
@@ -145,7 +147,12 @@ export const ConnectorSettings = memo(() => {
   return (
     <>
       <NavHeader />
-      <div className={'flex h-full flex-1 overflow-hidden'}>
+      <div
+        className={cn(
+          'mx-auto flex h-full w-full flex-1 overflow-hidden',
+          settingWidthClassNames.wide,
+        )}
+      >
         <LeftPanel
           presetActions={presetActions}
           selectedIdentifier={selected?.identifier}

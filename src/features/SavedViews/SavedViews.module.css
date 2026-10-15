@@ -1,0 +1,298 @@
+@reference "../../app/globals.css";
+
+.directoryTable {
+  /* Metadata12/20/500 column headers; original row padding and grouped
+     table structure stay intact. */
+  thead th {
+    @apply text-xs leading-5;
+    font-weight: 500;
+    color: var(--foreground-description);
+    background: transparent;
+  }
+  
+  tbody tr:not([data-list-section]) td {
+    padding-block: calc(var(--spacing) * 5);
+  }
+  
+  tbody tr[data-list-section] td {
+    padding-block: calc(var(--spacing) * 1);
+    padding-inline: calc(var(--spacing) * 2);
+  }
+    
+}
+
+.displayPopover {
+  width: calc(var(--spacing) * 60);
+  padding: calc(var(--spacing) * 3);
+    
+}
+
+.emptyBlock {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 3.5);
+  align-items: flex-start;
+  
+  width: calc(var(--spacing) * 85);
+    
+}
+
+.entityTab {
+  display: inline-flex;
+  align-items: center;
+  
+  min-height: calc(var(--spacing) * 8);
+  padding-inline: calc(var(--spacing) * 2.5);
+  border-radius: var(--radius-button);
+  
+  @apply text-sm leading-5.5;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  
+  &:hover {
+    color: var(--foreground);
+    background: var(--accent);
+  }
+    
+  
+  @media (pointer: coarse) {
+    min-height: calc(var(--spacing) * 11);
+  }
+}
+
+.entityTabActive {
+  color: var(--foreground);
+  background: var(--selected);
+    
+}
+
+.groupBar {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  
+  min-height: calc(var(--spacing) * 9);
+  padding-inline: calc(var(--spacing) * 4) calc(var(--spacing) * 2);
+  border-radius: var(--radius-card);
+  
+  @apply text-sm leading-5.5;
+  font-weight: 500;
+  color: var(--foreground);
+  
+  background: var(--fill-quaternary);
+    
+}
+
+.groupDesc {
+  color: var(--foreground-description);
+    
+}
+
+.groupTitle {
+  overflow: hidden;
+  flex: 1;
+  
+  min-width: 0;
+  
+  text-overflow: ellipsis;
+  white-space: nowrap;
+    
+}
+
+.nameCell {
+  display: flex;
+  gap: calc(var(--spacing) * 2.5);
+  align-items: center;
+  min-width: 0;
+    
+}
+
+.name {
+  overflow: hidden;
+  
+  @apply text-sm leading-5.5;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+    
+}
+
+.nameLink {
+  @media (pointer: coarse) {
+    display: flex;
+    align-items: center;
+    min-block-size: calc(var(--spacing) * 11);
+  }
+
+  overflow: hidden;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+    
+}
+
+.ownerCell {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  min-width: 0;
+    
+}
+
+.boardColumn {
+  flex: none;
+  
+  width: calc(var(--spacing) * 75);
+  padding-block-end: calc(var(--spacing) * 3);
+  border-radius: var(--radius-card);
+  
+  background: var(--fill-quaternary);
+    
+}
+
+.boardColumnBody {
+  gap: calc(var(--spacing) * 1);
+  padding-inline: calc(var(--spacing) * 2);
+    
+}
+
+.boardColumnHeader {
+  display: flex;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  
+  padding-block: calc(var(--spacing) * 2.5);
+  padding-inline: calc(var(--spacing) * 3);
+  
+  @apply text-sm leading-5.5;
+  color: var(--muted-foreground);
+    
+}
+
+.controlPopover {
+  width: min(calc(var(--spacing) * 105), calc(100vw - calc(var(--spacing) * 8)));
+  padding: calc(var(--spacing) * 3);
+    
+}
+
+.detailLayout {
+  position: relative;
+  
+  overflow: hidden;
+  display: flex;
+  flex: 1;
+  
+  height: 0;
+  min-height: 0;
+    
+}
+
+.detailPane {
+  overflow-y: auto;
+  flex: none;
+  
+  width: calc(var(--spacing) * 100);
+  padding: calc(var(--spacing) * 3);
+  border-inline-start: calc(var(--spacing) * 0.25) solid var(--divider);
+  
+  background: var(--background);
+  
+  @container work-surface (max-width: 900px) {
+    position: absolute;
+    z-index: 10;
+    inset-block: 0;
+    inset-inline-end: 0;
+  
+    width: min(calc(var(--spacing) * 100), calc(100% - calc(var(--spacing) * 10)));
+  
+    box-shadow: var(--shadow-popover);
+  }
+    
+}
+
+.resultsBody {
+  box-sizing: border-box;
+  min-height: 100%;
+  padding-block: calc(var(--spacing) * 2);
+  padding-inline: calc(var(--spacing) * 4);
+    
+}
+
+.resultsScroll {
+  overflow: auto;
+  overscroll-behavior: contain;
+  flex: 1;
+  min-width: 0;
+    
+}
+
+.identifier {
+  @apply text-xs leading-5;
+  flex: none;
+  min-width: calc(var(--spacing) * 18);
+  color: var(--foreground-tertiary);
+    
+}
+
+.link {
+  display: flex;
+  flex: 1;
+  gap: calc(var(--spacing) * 2);
+  align-items: center;
+  
+  min-width: 0;
+  min-block-size: calc(var(--spacing) * 9);
+  padding-block: calc(var(--spacing) * 1.75);
+  box-sizing: border-box;
+  
+  color: inherit;
+
+  @media (pointer: coarse) {
+    min-block-size: calc(var(--spacing) * 11);
+  }
+}
+
+.row {
+  @apply text-sm leading-5.5;
+  padding-block: 0;
+  padding-inline: calc(var(--spacing) * 1) calc(var(--spacing) * 3);
+  border-radius: var(--radius-card);
+  color: inherit;
+  
+  &:hover {
+    background: var(--accent);
+  }
+    
+}
+
+.updatedAt {
+  @apply text-xs leading-5;
+  flex: none;
+  
+  min-width: calc(var(--spacing) * 22);
+  
+  color: var(--muted-foreground);
+  text-align: end;
+  white-space: nowrap;
+    
+}
+
+
+.compactAction {
+  position: relative;
+
+  @media (pointer: coarse) {
+    margin: calc(var(--spacing) * 1.5);
+
+    &::after {
+      position: absolute;
+      inset: calc(var(--spacing) * -1.5);
+      content: '';
+    }
+  }
+}

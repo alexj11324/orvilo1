@@ -28,7 +28,7 @@ const AutomationStatusBadge = memo<AutomationStatusBadgeProps>(({ status }) => {
           width: 8,
         }}
       />
-      <div className="text-[12px] text-muted-foreground">{t(`status.${status}`)}</div>
+      <div className="text-xs text-muted-foreground">{t(`status.${status}`)}</div>
     </div>
   );
 });

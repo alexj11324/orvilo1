@@ -36,13 +36,33 @@ const SETTINGS_SURFACE_FILES = [
   'src/features/Settings/agents/index.tsx',
   'src/features/Settings/agents/AgentSettingsDetailPage.tsx',
   'src/features/Settings/agents/AgentSettingsHeader.tsx',
-  'src/features/AgentSettings/AgentAccessSettings.tsx',
-  'src/features/AgentSettings/AgentAdvancedSettings.tsx',
   'src/features/AgentSettings/AgentDeviceSettings.tsx',
   'src/features/AgentSettings/AgentModelSettings.tsx',
   'src/features/AgentSettings/ExternalAgentConnectionSettings.tsx',
   'src/features/AgentSettings/SettingsGroup.tsx',
 ];
+
+describe('the agent settings page is one flat form', () => {
+  const page = read('src/features/Settings/agents/AgentSettingsDetailPage.tsx');
+
+  it('has no collapsible sections', () => {
+    expect(page).not.toContain('<details');
+    expect(page).not.toContain('<summary');
+  });
+
+  it('has no access-policy section; the member list is the only access control', () => {
+    expect(page).not.toContain('AgentAccessSettings');
+    expect(exists('src/features/AgentSettings/AgentAccessSettings.tsx')).toBe(false);
+    expect(page).toContain('<AgentUseSettings');
+  });
+
+  it('has no isolation switch among the execution rows', () => {
+    const runtime = read('src/features/AgentSettings/AgentRuntimeSettings.tsx');
+
+    expect(runtime).not.toContain('localSandbox');
+    expect(runtime).toContain('settingAgent.execution.cwd');
+  });
+});
 
 describe('the native agent settings page carries no profile chrome', () => {
   it('mounts AgentSettingsDetailPage instead of the profile embed', () => {
@@ -51,6 +71,12 @@ describe('the native agent settings page carries no profile chrome', () => {
     expect(index).toContain('AgentSettingsDetailPage');
     expect(index).not.toMatch(/import AgentProfile/);
     expect(index).not.toContain('<AgentProfile');
+  });
+
+  it('offers creating an Agent from the list, landing on its settings', () => {
+    const index = read('src/features/Settings/agents/index.tsx');
+
+    expect(index).toContain("createAgent({ origin: 'settings' })");
   });
 
   it('imports none of the retired profile chrome or management sections', () => {
@@ -76,8 +102,9 @@ describe('the native agent settings page carries no profile chrome', () => {
     expect(exists('src/features/ProfileEditor/AgentUserTools'), 'AgentUserTools is back').toBe(
       false,
     );
-    // The shared AgentTool component must NOT be deleted — group MemberProfile
-    // still mounts it. Assert the settings surface never re-imports it.
+    // Group MemberProfile was the last mount of the shared profile tool editor.
+    // That profile route is gone, so the editor itself stays gone too.
+    expect(exists('src/features/ProfileEditor/AgentTool.tsx'), 'AgentTool is back').toBe(false);
     for (const file of SETTINGS_SURFACE_FILES) {
       expect(read(file), `${file} re-mounts tool management`).not.toContain('AgentUserTools');
       expect(read(file), `${file} re-mounts tool management`).not.toContain('ProfileEditor');
@@ -98,9 +125,9 @@ describe('retired vocabulary stays out of the user-facing surface', () => {
     const setting = read('packages/locales/src/default/setting.ts');
     const chat = read('packages/locales/src/default/chat.ts');
 
-    // `agentTools.*`/`userTools.*`/`runtimeConfig.*` stay — AgentSkillStore,
-    // PluginTag and ReasoningEffortSelect still consume them on non-settings
-    // surfaces. Only the retired keys + retired vocabulary are asserted gone.
+    // `agentTools.*`/`userTools.*`/`runtimeConfig.*` stay — AgentSkillStore and
+    // ReasoningEffortSelect still consume them on non-settings surfaces. Only
+    // the retired keys + retired vocabulary are asserted gone.
     for (const banned of [
       'agentEngine.',
       'runtimeEnv.',

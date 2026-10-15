@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
@@ -81,12 +80,15 @@ const LoginConfirmClient = memo<LoginConfirmProps>(({ uid, clientMetadata }) => 
       >
         <div
           className="flex flex-col p-4 border"
-          style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
+          style={{
+            borderColor: 'var(--ant-color-border-secondary)',
+            background: 'var(--ant-color-bg-container)',
+          }}
         >
           {isUserStateInit ? (
             <div className="flex items-center gap-4">
               <Avatar alt={nickName || ''} avatar={avatar} shape={'square'} size={40} />
-              <div className="text-[18px] font-medium">{nickName}</div>
+              <div className="text-lg font-medium">{nickName}</div>
             </div>
           ) : (
             <div className="flex gap-4">

@@ -88,21 +88,11 @@ const serverSettings: PartialDeep<UserSettings> = {
 - `docs/self-hosting/environment-variables/basic.mdx` (EN)
 - `docs/self-hosting/environment-variables/basic.zh-CN.mdx` (CN)
 
-## Example: AI\_IMAGE\_DEFAULT\_IMAGE\_NUM
+## Current configuration example
 
-```typescript
-// packages/env/src/image.ts  (import as @/envs/image)
-AI_IMAGE_DEFAULT_IMAGE_NUM: z.coerce.number().min(1).max(20).optional(),
-
-// packages/types/src/serverConfig.ts
-image?: PartialDeep<UserImageConfig>;
-
-// apps/server/src/globalConfig/index.ts
-image: cleanObject({ defaultImageNum: imageEnv.AI_IMAGE_DEFAULT_IMAGE_NUM }),
-
-// src/store/user/slices/common/action.ts
-image: serverConfig.image,
-
-// .env.example
-# AI_IMAGE_DEFAULT_IMAGE_NUM=4
-```
+Use `packages/env/src/auth.ts` and
+`apps/server/src/globalConfig/getServerAuthConfig.ts` to follow the existing
+`AUTH_DISABLE_EMAIL_PASSWORD` → `disableEmailPassword` configuration path.
+The former image-default setting and `packages/env/src/image.ts` were removed;
+do not recreate them to follow an old example. A new user-setting default must
+first have an active consumer and a matching user-settings type.

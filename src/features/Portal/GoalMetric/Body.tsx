@@ -1,6 +1,5 @@
 import type { GoalSpend } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { memo, type ReactNode, useMemo, useState } from 'react';
@@ -29,30 +28,12 @@ import { goalSelectors, useGoalStore } from '@/store/goal';
  * lives instead of inventing a value.
  */
 
-const styles = createStaticStyles(({ css }) => ({
-  label: css`
-    font-size: 12px;
-    font-weight: 600;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  mono: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-variant-numeric: tabular-nums;
-  `,
-  row: css`
-    cursor: pointer;
-    padding-block: 6px;
-    padding-inline: 6px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  staticRow: css`
-    padding-block: 4px;
-  `,
-}));
+const styles = {
+  label: 'text-xs leading-5 font-semibold text-muted-foreground',
+  mono: 'font-mono tabular-nums',
+  row: 'cursor-pointer py-1.5 px-1.5 rounded-(--radius-button) hover:bg-accent',
+  staticRow: 'py-1',
+};
 
 const NodeRow = memo<{
   extra?: ReactNode;
@@ -66,21 +47,16 @@ const NodeRow = memo<{
 
   return (
     <div
-      className={cx('flex flex-row items-center gap-2', styles.row)}
+      className={cn('flex flex-row items-center gap-2', styles.row)}
       onClick={() => openGoalNode(goalId, nodeId)}
     >
       {view.seq !== undefined && (
-        <div
-          className={cn('text-[12px] text-muted-foreground', styles.mono)}
-          style={{ flex: 'none' }}
-        >
+        <div className={cn('flex-none text-xs text-muted-foreground', styles.mono)}>
           #{view.seq}
         </div>
       )}
       <KindDot kind={view.node.kind} />
-      <div className="truncate min-w-0 font-medium" style={{ flex: 1, minWidth: 0 }}>
-        {view.node.title}
-      </div>
+      <div className="truncate flex-1 min-w-0 font-medium">{view.node.title}</div>
       {extra}
     </div>
   );
@@ -99,7 +75,7 @@ const Lifecycle = memo<{ goalId: string; graph: GoalGraphView }>(({ graph }) => 
 
   if (events.length === 0)
     return (
-      <div className="text-[13px] text-muted-foreground">
+      <div className="text-sm text-muted-foreground">
         {t('goalProcess.metricDetail.lifecycle.empty')}
       </div>
     );
@@ -110,21 +86,18 @@ const Lifecycle = memo<{ goalId: string; graph: GoalGraphView }>(({ graph }) => 
         const subject = graph.byId[event.entityId]?.node.title;
         return (
           <div
-            className={cx('flex flex-row items-baseline gap-2.5', styles.staticRow)}
+            className={cn('flex flex-row items-baseline gap-2.5', styles.staticRow)}
             key={event.id}
           >
-            <div
-              className={cn('text-[12px] text-muted-foreground', styles.mono)}
-              style={{ flex: 'none' }}
-            >
+            <div className={cn('flex-none text-xs text-muted-foreground', styles.mono)}>
               {formatAbsoluteDateTime(event.createdAt)}
             </div>
-            <div className="flex flex-col flex-1 gap-[1px]" style={{ minWidth: 0 }}>
-              <div className="text-[13px]">
+            <div className="flex flex-col flex-1 min-w-0 gap-px">
+              <div className="text-sm">
                 {t(`goalProcess.eventType.${event.eventType}` as const)}
                 {subject ? ` · ${subject}` : ''}
               </div>
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 {t(`goalProcess.actor.${event.actorType}` as const)}
                 {event.reason ? ` · ${event.reason}` : ''}
               </div>
@@ -190,10 +163,7 @@ const Findings = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
           nodeId={view.node.id}
           extra={
             view.producedBy ? (
-              <div
-                className="truncate min-w-0 text-[12px] text-muted-foreground"
-                style={{ flexShrink: 1, minWidth: 0 }}
-              >
+              <div className="truncate min-w-0 shrink text-xs text-muted-foreground">
                 {t('goalProcess.findings.from', { title: view.producedBy.title })}
               </div>
             ) : undefined
@@ -285,12 +255,10 @@ const BudgetField = memo<{
     <div className="flex flex-col gap-0.5">
       <span className={styles.label}>{label}</span>
       <div className="flex flex-row items-center gap-2">
-        <div className={cn('font-semibold', styles.mono)} style={{ fontSize: 20 }}>
+        <div className={cn('text-xl leading-7 font-semibold', styles.mono)}>
           {money ? formatUsd(used) : used}
         </div>
-        <div className={cn('text-muted-foreground', styles.mono)} style={{ fontSize: 20 }}>
-          /
-        </div>
+        <div className={cn('text-xl leading-7 text-muted-foreground', styles.mono)}>/</div>
         <div
           onBlur={() => void commit()}
           onKeyDown={(e) => {
@@ -298,13 +266,13 @@ const BudgetField = memo<{
           }}
         >
           <InputNumber
-            className={styles.mono}
+            className={cn('w-30', styles.mono)}
             controls={false}
             disabled={!canEdit || saving}
             min={meta.min}
             placeholder={placeholder ?? t('goalProcess.metricDetail.budget.uncapped')}
-            prefix={money ? <div className="text-[12px] text-muted-foreground">$</div> : undefined}
-            style={{ width: 120 }}
+            prefix={money ? <div className="text-xs text-muted-foreground">$</div> : undefined}
+            size="sm"
             value={draft}
             onChange={setDraft}
           />
@@ -346,7 +314,7 @@ const CostBreakdown = memo<{ goalId: string; graph: GoalGraphView; spend?: GoalS
 
     if (rows.length === 0)
       return (
-        <div className="text-[13px] text-muted-foreground">
+        <div className="text-sm text-muted-foreground">
           {t('goalProcess.metricDetail.budget.perTaskEmpty')}
         </div>
       );
@@ -359,25 +327,17 @@ const CostBreakdown = memo<{ goalId: string; graph: GoalGraphView; spend?: GoalS
             const body = (
               <div className="flex flex-row items-center gap-2" key={row.taskId}>
                 {row.view?.seq !== undefined && (
-                  <div
-                    className={cn('text-[12px] text-muted-foreground', styles.mono)}
-                    style={{ flex: 'none' }}
-                  >
+                  <div className={cn('flex-none text-xs text-muted-foreground', styles.mono)}>
                     #{row.view.seq}
                   </div>
                 )}
-                <div className="truncate min-w-0" style={{ flex: 1, minWidth: 0 }}>
-                  {row.view?.node.title ?? row.taskId}
-                </div>
-                <div
-                  className={cn('text-[12px] text-muted-foreground', styles.mono)}
-                  style={{ flex: 'none' }}
-                >
+                <div className="truncate flex-1 min-w-0">{row.view?.node.title ?? row.taskId}</div>
+                <div className={cn('flex-none text-xs text-muted-foreground', styles.mono)}>
                   {t('goalProcess.metricDetail.budget.tokensValue', {
                     value: formatTokens(row.totalTokens),
                   })}
                 </div>
-                <div className={cn('font-medium', styles.mono)} style={{ flex: 'none' }}>
+                <div className={cn('flex-none font-medium', styles.mono)}>
                   {formatUsd(row.totalCost)}
                 </div>
               </div>
@@ -387,14 +347,14 @@ const CostBreakdown = memo<{ goalId: string; graph: GoalGraphView; spend?: GoalS
             // carries — still billed, but nothing to open.
             return row.view ? (
               <div
-                className={cx('flex flex-col', styles.row)}
+                className={cn('flex flex-col', styles.row)}
                 key={row.taskId}
                 onClick={() => openGoalNode(goalId, row.view!.node.id)}
               >
                 {body}
               </div>
             ) : (
-              <div className={cx('flex flex-col', styles.staticRow)} key={row.taskId}>
+              <div className={cn('flex flex-col', styles.staticRow)} key={row.taskId}>
                 {body}
               </div>
             );
@@ -420,7 +380,7 @@ const Budget = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph }
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-[14px]">
+      <div className="flex flex-col gap-3.5">
         <span className={styles.label}>{t('goalProcess.metricDetail.budget.controlTitle')}</span>
         <BudgetField
           cap={maxTotalCost}
@@ -447,7 +407,7 @@ const Budget = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph }
         {/* Raising a cap is how a user restarts a goal the coordinator parked on
             one — say so, because the alternative gesture (Resume) looks like the
             obvious one and does nothing while the budget is still binding. */}
-        <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.7 }}>
+        <div className="text-xs leading-5 text-muted-foreground">
           {t('goalProcess.metricDetail.budget.raiseNote')}
         </div>
       </div>
@@ -465,14 +425,14 @@ const Duration = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
   const works = graph.nodes.filter((view) => view.node.kind === 'task' && view.attempts.length > 0);
 
   return (
-    <div className="flex flex-col gap-[14px]">
+    <div className="flex flex-col gap-3.5">
       {startedAt && (
         <div className="flex flex-col gap-0.5">
           <span className={styles.label}>{t('goalProcess.metricDetail.duration.total')}</span>
-          <div className={cn('font-semibold', styles.mono)} style={{ fontSize: 20 }}>
+          <div className={cn('text-xl leading-7 font-semibold', styles.mono)}>
             {formatSpan(end.getTime() - startedAt.getTime())}
           </div>
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {formatAbsoluteDateTime(startedAt)} →{' '}
             {completedAt
               ? formatAbsoluteDateTime(completedAt)
@@ -494,10 +454,7 @@ const Duration = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
                 key={view.node.id}
                 nodeId={view.node.id}
                 extra={
-                  <div
-                    className={cn('text-[12px] text-muted-foreground', styles.mono)}
-                    style={{ flex: 'none' }}
-                  >
+                  <div className={cn('flex-none text-xs text-muted-foreground', styles.mono)}>
                     {dayjs(first.startedAt).format('HH:mm')}–
                     {last.endedAt ? dayjs(last.endedAt).format('HH:mm') : '…'} ·{' '}
                     {formatSpan(spanEnd.getTime() - first.startedAt.getTime())}
@@ -529,10 +486,10 @@ const Liveness = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
   );
 
   return (
-    <div className="flex flex-col gap-[14px]">
+    <div className="flex flex-col gap-3.5">
       <div className="flex flex-col gap-0.5">
         <span className={styles.label}>{t('goalProcess.metricDetail.liveness.latest')}</span>
-        <div className={cn('font-semibold', styles.mono)} style={{ fontSize: 20 }}>
+        <div className={cn('text-xl leading-7 font-semibold', styles.mono)}>
           {latest ? formatAbsoluteDateTime(latest) : '—'}
         </div>
       </div>
@@ -548,7 +505,7 @@ const Liveness = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
       )}
       {/* The contract that makes "walk away" safe: event-driven advancement
           plus the recovery sweep. State it where the user checks for a pulse. */}
-      <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.7 }}>
+      <div className="text-xs leading-5 text-muted-foreground">
         {t('goalProcess.metricDetail.liveness.driver')}
       </div>
     </div>
@@ -582,7 +539,7 @@ const Body = memo(() => {
   const { goalId, metric } = view;
 
   return (
-    <div className="flex flex-col flex-1 p-4" style={{ minHeight: 0, overflowY: 'auto' }}>
+    <div className="flex flex-col flex-1 min-h-0 overflow-y-auto p-4 text-sm leading-5.5">
       {metric === 'lifecycle' && <Lifecycle goalId={goalId} graph={graph} />}
       {metric === 'tasks' && <Tasks goalId={goalId} graph={graph} />}
       {metric === 'findings' && <Findings goalId={goalId} graph={graph} />}

@@ -2,7 +2,7 @@ import { ConfigProvider } from 'antd';
 import enUS from 'antd/locale/en_US';
 import dayjs from 'dayjs';
 import type { PropsWithChildren } from 'react';
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { isRtlLang } from 'rtl-detect';
 
 import Editor from '@/layout/GlobalProvider/Editor';
@@ -32,19 +32,20 @@ const dayjsLocaleLoaders: Record<string, DayjsLocaleGlobEntry> = {
   'zh-tw': () => import('dayjs/locale/zh-tw'),
 };
 
-const updateDayjs = async (lang: string) => {
+const updateDayjs = async (lang: string, isCurrent: () => boolean) => {
   const locale = normalizeDayjsLocale(lang);
   const loader = dayjsLocaleLoaders[locale] ?? dayjsLocaleLoaders.en;
 
   try {
     const mod = await loadDayjsLocaleModule(loader);
 
-    dayjs.locale(mod.default);
+    if (isCurrent()) dayjs.locale(mod.default);
   } catch (error) {
+    if (!isCurrent()) return;
     console.error('error', error);
     console.error(`dayjs locale for ${lang} not found, fallback to en`);
     const fallback = await loadDayjsLocaleModule(dayjsLocaleLoaders.en!);
-    dayjs.locale(fallback.default);
+    if (isCurrent()) dayjs.locale(fallback.default);
   }
 };
 
@@ -57,11 +58,18 @@ const Locale = memo<LocaleLayoutProps>(({ children, defaultLang, antdLocale }) =
   const [i18n] = useState(() => createI18nNext(defaultLang));
   const [lang, setLang] = useState(defaultLang);
   const [locale, setLocale] = useState(antdLocale);
+  const localeRequest = useRef(0);
+  const localeActive = useRef(true);
 
   // Set dayjs locale immediately on mount (don't wait for i18n init) to avoid
   // "a few seconds ago" showing in English when UI is already in Chinese
   useEffect(() => {
-    if (defaultLang) updateDayjs(defaultLang);
+    const request = localeRequest.current;
+    let active = true;
+    if (defaultLang) updateDayjs(defaultLang, () => active && localeRequest.current === request);
+    return () => {
+      active = false;
+    };
   }, [defaultLang]);
 
   // Load the antd locale for the initial language too — `languageChanged` can fire
@@ -69,10 +77,12 @@ const Locale = memo<LocaleLayoutProps>(({ children, defaultLang, antdLocale }) =
   // (antd then falls back to en_US, and pro-components intl to zh-CN)
   useEffect(() => {
     if (locale || !defaultLang) return;
+    const request = localeRequest.current;
     let canceled = false;
     getAntdLocale(defaultLang)
       .then((initialLocale) => {
-        if (!canceled) setLocale((prev: any) => prev ?? initialLocale);
+        if (!canceled && localeRequest.current === request)
+          setLocale((prev: any) => prev ?? initialLocale);
       })
       .catch((error) => {
         console.error(`antd locale for ${defaultLang} not found`, error);
@@ -84,20 +94,34 @@ const Locale = memo<LocaleLayoutProps>(({ children, defaultLang, antdLocale }) =
 
   if (!i18n.instance.isInitialized)
     i18n.init().then(async () => {
+      if (!localeActive.current) return;
+      const request = localeRequest.current;
       const resolvedLang = i18n.instance.language || defaultLang;
-      if (resolvedLang) await updateDayjs(resolvedLang);
+      if (resolvedLang)
+        await updateDayjs(
+          resolvedLang,
+          () => localeActive.current && localeRequest.current === request,
+        );
     });
 
   useEffect(() => {
+    let active = true;
+    localeActive.current = true;
     const handleLang = async (lng: string) => {
+      const request = ++localeRequest.current;
+      const isCurrent = () => active && localeRequest.current === request;
       setLang(lng);
       const newLocale = await getAntdLocale(lng);
+      if (!isCurrent()) return;
       setLocale(newLocale);
-      await updateDayjs(lng);
+      await updateDayjs(lng, isCurrent);
     };
 
     i18n.instance.on('languageChanged', handleLang);
     return () => {
+      active = false;
+      localeActive.current = false;
+      localeRequest.current += 1;
       i18n.instance.off('languageChanged', handleLang);
     };
   }, [i18n]);

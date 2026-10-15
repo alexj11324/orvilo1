@@ -16,12 +16,12 @@ import { CRAWL_CONTENT_LIMITED_COUNT } from '../../../const';
 
 const styles = {
   description: '[margin-block-start:0] [margin-block-end:4px] text-muted-foreground',
-  footer: 'p-2 rounded-[var(--radius-input)] text-center bg-[var(--ant-color-fill-quaternary)]',
-  footerText: 'text-xs leading-[inherit] text-[var(--ant-color-text-tertiary)]',
-  sliced: 'text-[var(--ant-color-text-quaternary)]',
+  footer: 'p-2 rounded-(--radius-input) text-center bg-fill-quaternary',
+  footerText: 'text-xs leading-[inherit] text-foreground-tertiary',
+  sliced: 'text-foreground-quaternary',
   title: 'line-clamp-2 [margin-block-end:0] text-base leading-[inherit] font-bold',
   titleRow: 'text-foreground',
-  url: 'text-[var(--ant-color-text-tertiary)]',
+  url: 'text-foreground-tertiary',
 };
 
 enum DisplayType {
@@ -112,6 +112,7 @@ const PageContent = memo<PageContentProps>(({ result }) => {
         <div className="flex flex-col gap-3" style={{ paddingBlock: '0 12px' }}>
           <div className="flex flex-row justify-between">
             <ToggleGroup
+              size="compact"
               value={[display]}
               onValueChange={(value) => value[0] && setDisplay(value[0] as DisplayType)}
             >

@@ -1,0 +1,3 @@
+.groupTitle {
+  --mobile-settings-category-tracking: calc(var(--spacing) * 0.125);
+}

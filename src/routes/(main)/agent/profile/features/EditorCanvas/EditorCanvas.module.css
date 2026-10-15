@@ -1,0 +1,5 @@
+/* Public CodeEditorPane root class slot; no vendor selector or important. */
+.sourceEditor {
+  background: transparent;
+  min-height: calc(var(--spacing) * 65.5);
+}

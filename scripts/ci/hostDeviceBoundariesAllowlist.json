@@ -1263,15 +1263,6 @@
     },
     {
       "rule": "isdesktop-census",
-      "importer": "src/features/ProfileEditor/AgentTool.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
       "importer": "src/features/ReUIShell/SidebarShell.tsx",
       "scope": "direct",
       "owner": "wd-05",
@@ -1525,15 +1516,6 @@
     {
       "rule": "isdesktop-census",
       "importer": "src/features/User/UserPanel/PanelContent.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/User/UserPanel/index.tsx",
       "scope": "direct",
       "owner": "wd-05",
       "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
@@ -2103,15 +2085,6 @@
       "importer": "src/store/user/slices/settings/selectors/general.ts",
       "scope": "direct",
       "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/styles/antdOverride.ts",
-      "scope": "direct",
-      "owner": "wd-05",
       "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
       "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
       "max": 2

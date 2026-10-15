@@ -35,6 +35,7 @@ export const genServerConfig = (identifier?: string, connection?: ConnectionConf
 export const getRecommendedDeployment = (deploymentOptions: DeploymentOption[]) =>
   deploymentOptions?.find((item) => item.isRecommended) || deploymentOptions?.[0];
 
+// Language identity colors distinguish metadata categories independently of the app theme.
 const languageColors: Record<string, string> = {
   'abap': '#e8274b',
   'actionscript': '#882b0f',

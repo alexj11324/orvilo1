@@ -1,80 +1,18 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { t as translate } from 'i18next';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import { createModal, useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { lambdaClient } from '@/libs/trpc/client';
+import { workTeamService } from '@/services/workTeam';
+import { useFetchTeamDocumentCandidates } from '@/store/workTeam/hooks';
 
 import { isPublicDocument } from './teamResourcePicker';
 import type { TeamResource } from './useTeamResources';
-
-const styles = createStaticStyles(({ css }) => ({
-  actions: css`
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-    margin-block-start: 20px;
-  `,
-  body: css`
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    padding: 20px;
-  `,
-  field: css`
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-
-    label {
-      font-size: 13px;
-      font-weight: 500;
-    }
-
-    input {
-      height: 34px;
-      padding-inline: 10px;
-      border: 1px solid ${cssVar.colorBorder};
-      border-radius: 7px;
-
-      color: ${cssVar.colorText};
-
-      background: ${cssVar.colorBgContainer};
-      outline-color: ${cssVar.colorPrimary};
-    }
-  `,
-  picker: css`
-    overflow: auto;
-    max-height: 330px;
-  `,
-  pickerRow: css`
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    justify-content: space-between;
-
-    width: 100%;
-    min-height: 38px;
-    padding-inline: 8px;
-    border: 0;
-    border-radius: 6px;
-
-    color: ${cssVar.colorText};
-    text-align: start;
-
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
 
 interface DialogOptions {
   onChanged: () => Promise<unknown>;
@@ -107,14 +45,14 @@ function LinkForm({
       setPending(true);
       setError(undefined);
       if (link) {
-        await lambdaClient.teamResource.updateLink.mutate({
+        await workTeamService.updateLink({
           resourceId: link.id,
           teamId,
           title: title.trim(),
           url: parsed.href,
         });
       } else {
-        await lambdaClient.teamResource.createLink.mutate({
+        await workTeamService.createLink({
           sectionId,
           teamId,
           title: title.trim() || undefined,
@@ -130,8 +68,8 @@ function LinkForm({
     }
   };
   return (
-    <form className={styles.body} onSubmit={submit}>
-      <div className={styles.field}>
+    <form className="flex flex-col gap-3.5 p-5" onSubmit={submit}>
+      <div className="flex flex-col gap-1.5 [&_label]:text-sm [&_label]:leading-5.5 [&_label]:font-medium [&_input]:h-9 [&_input]:px-2.5 [&_input]:border [&_input]:border-solid [&_input]:border-border [&_input]:rounded-(--radius-input) [&_input]:text-sm [&_input]:leading-5.5 [&_input]:text-foreground [&_input]:bg-card [&_input]:outline-primary">
         <label htmlFor="team-resource-url">{t('teams.resources.url')}</label>
         <Input
           autoFocus
@@ -144,7 +82,7 @@ function LinkForm({
           onChange={(event) => setUrl(event.target.value)}
         />
       </div>
-      <div className={styles.field}>
+      <div className="flex flex-col gap-1.5 [&_label]:text-sm [&_label]:leading-5.5 [&_label]:font-medium [&_input]:h-9 [&_input]:px-2.5 [&_input]:border [&_input]:border-solid [&_input]:border-border [&_input]:rounded-(--radius-input) [&_input]:text-sm [&_input]:leading-5.5 [&_input]:text-foreground [&_input]:bg-card [&_input]:outline-primary">
         <label htmlFor="team-resource-title">{t('teams.resources.titleOptional')}</label>
         <Input
           id="team-resource-title"
@@ -154,7 +92,7 @@ function LinkForm({
         />
       </div>
       <ErrorLine error={error} />
-      <div className={styles.actions}>
+      <div className="flex justify-end gap-2 mbs-5">
         <Button disabled={pending} onClick={close}>
           {t('cancel')}
         </Button>
@@ -179,7 +117,7 @@ function SectionForm({
   const [error, setError] = useState<unknown>();
   return (
     <form
-      className={styles.body}
+      className="flex flex-col gap-3.5 p-5"
       onSubmit={async (event) => {
         event.preventDefault();
         if (pending || !name.trim()) return;
@@ -187,13 +125,13 @@ function SectionForm({
         setError(undefined);
         try {
           if (sectionId) {
-            await lambdaClient.teamResource.renameSection.mutate({
+            await workTeamService.renameSection({
               name: name.trim(),
               sectionId,
               teamId,
             });
           } else {
-            await lambdaClient.teamResource.createSection.mutate({ name: name.trim(), teamId });
+            await workTeamService.createSection({ name: name.trim(), teamId });
           }
           await onChanged();
           close();
@@ -204,7 +142,7 @@ function SectionForm({
         }
       }}
     >
-      <div className={styles.field}>
+      <div className="flex flex-col gap-1.5 [&_label]:text-sm [&_label]:leading-5.5 [&_label]:font-medium [&_input]:h-9 [&_input]:px-2.5 [&_input]:border [&_input]:border-solid [&_input]:border-border [&_input]:rounded-(--radius-input) [&_input]:text-sm [&_input]:leading-5.5 [&_input]:text-foreground [&_input]:bg-card [&_input]:outline-primary">
         <label htmlFor="team-resource-section-name">{t('teams.resources.sectionName')}</label>
         <Input
           autoFocus
@@ -216,7 +154,7 @@ function SectionForm({
         />
       </div>
       <ErrorLine error={error} />
-      <div className={styles.actions}>
+      <div className="flex justify-end gap-2 mbs-5">
         <Button disabled={pending} onClick={close}>
           {t('cancel')}
         </Button>
@@ -235,43 +173,27 @@ function ExistingDocumentPicker({
   teamId,
 }: DialogOptions & { attachedIds: Set<string> }) {
   const { t } = useTranslation('common');
-  const [page, setPage] = useState(0);
-  const [items, setItems] = useState<
-    Awaited<ReturnType<typeof lambdaClient.document.queryDocuments.query>>['items']
-  >([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<unknown>();
-  const load = useCallback(async (nextPage: number) => {
-    setLoading(true);
-    setError(undefined);
-    try {
-      const result = await lambdaClient.document.queryDocuments.query({
-        current: nextPage,
-        excludeTeamDocuments: true,
-        pageSize: 100,
-      });
-      setItems((previous) => (nextPage === 0 ? result.items : [...previous, ...result.items]));
-      setTotal(result.total);
-      setPage(nextPage);
-    } catch (failure) {
-      setError(failure);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  useEffect(() => {
-    void load(0);
-  }, [load]);
+  const request = useFetchTeamDocumentCandidates(teamId);
+  const { items, total, loadMore } = request;
+  const loading = request.isLoading || request.isValidating;
   const eligible = items.filter(isPublicDocument);
   return (
-    <div className={styles.body}>
+    <div className="flex flex-col gap-3.5 p-5">
       <ErrorLine error={error} />
-      <div className={styles.picker}>
+      {request.error && (
+        <AsyncError
+          error={request.error}
+          retrying={request.isValidating}
+          variant="inline"
+          onRetry={() => void request.mutate().catch(() => undefined)}
+        />
+      )}
+      <div className="overflow-auto max-h-82.5">
         {eligible.map((document) => (
           <button
-            className={styles.pickerRow}
+            className="flex w-full min-h-9 items-center justify-between gap-2.5 px-2 border-0 rounded-(--radius-button) text-sm leading-5.5 text-foreground text-start bg-transparent hover:bg-accent focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={pendingId === document.id || attachedIds.has(document.id)}
             key={document.id}
             type="button"
@@ -279,7 +201,7 @@ function ExistingDocumentPicker({
               setPendingId(document.id);
               setError(undefined);
               try {
-                await lambdaClient.teamResource.attachDocument.mutate({
+                await workTeamService.attachDocument({
                   documentId: document.id,
                   sectionId,
                   teamId,
@@ -301,7 +223,11 @@ function ExistingDocumentPicker({
             </span>
           </button>
         ))}
-        {!loading && items.length === 0 && !error && t('teams.resources.noDocuments')}
+        {!loading &&
+          items.length === 0 &&
+          !error &&
+          !request.error &&
+          t('teams.resources.noDocuments')}
         {!loading &&
           items.length > 0 &&
           eligible.length === 0 &&
@@ -309,7 +235,7 @@ function ExistingDocumentPicker({
       </div>
       {loading && <span>{t('teams.loading')}</span>}
       {items.length < total && (
-        <Button disabled={loading} onClick={() => void load(page + 1)}>
+        <Button disabled={loading} size="compact" onClick={() => void loadMore()}>
           {t('teams.resources.loadMore')}
         </Button>
       )}

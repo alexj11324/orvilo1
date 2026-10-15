@@ -1,7 +1,11 @@
-import { dirname, join, resolve } from 'node:path';
+import path from 'node:path';
 
+import { lobeStaticCssPlugin } from '@lobehub/ui/static-css/vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
+
+import { antdStaticCssOptions, themeVarsCssOptions } from './apps/auth/staticCssOptions.mjs';
+import { staticCssAliases } from './plugins/vite/staticCssAliases';
 
 if (process.env.NODE_ENV === 'production') {
   Reflect.set(process.env, 'NODE_ENV', 'test');
@@ -12,40 +16,46 @@ const alias = {
   // internal implementations whose source files import alias paths that only exist
   // in the outer workspace, causing vite import-analysis to fail when running tests
   // from this repo. Pin the package to the local stub so tests here stay hermetic.
-  '@orvilo/business-model-runtime': resolve(
+  '@orvilo/business-model-runtime': path.resolve(
     __dirname,
     './packages/business/model-runtime/src/index.ts',
   ),
-  '@orvilo/business-model-bank/model-config': resolve(
+  '@orvilo/business-model-bank/model-config': path.resolve(
     __dirname,
     './packages/business/model-bank/src/model-config.ts',
   ),
-  '@orvilo/business-model-bank': resolve(__dirname, './packages/business/model-bank/src/index.ts'),
-  '@emoji-mart/data': resolve(__dirname, './tests/mocks/emojiMartData.mjs'),
-  '@emoji-mart/react': resolve(__dirname, './tests/mocks/emojiMartReact.mjs'),
-  '@/utils/client/switchLang': resolve(__dirname, './src/utils/client/switchLang'),
-  '@/const/locale': resolve(__dirname, './src/const/locale'),
+  '@orvilo/business-model-bank': path.resolve(
+    __dirname,
+    './packages/business/model-bank/src/index.ts',
+  ),
+  '@emoji-mart/data': path.resolve(__dirname, './tests/mocks/emojiMartData.mjs'),
+  '@emoji-mart/react': path.resolve(__dirname, './tests/mocks/emojiMartReact.mjs'),
+  '@/utils/client/switchLang': path.resolve(__dirname, './src/utils/client/switchLang'),
+  '@/const/locale': path.resolve(__dirname, './src/const/locale'),
   // TODO: after refactor the errorResponse, we can remove it
-  '@/utils/errorResponse': resolve(__dirname, './src/utils/errorResponse'),
-  '@/utils/unzipFile': resolve(__dirname, './src/utils/unzipFile'),
-  '@/utils/server': resolve(__dirname, './src/utils/server'),
+  '@/utils/errorResponse': path.resolve(__dirname, './src/utils/errorResponse'),
+  '@/utils/unzipFile': path.resolve(__dirname, './src/utils/unzipFile'),
+  '@/utils/server': path.resolve(__dirname, './src/utils/server'),
   // apps/auth sits outside the root tsconfig's include, so its files get no path
   // mapping from tsconfigPaths — pin the one server util its worker shares.
-  '@/server/utils/serializeForHtml': resolve(__dirname, './apps/server/src/utils/serializeForHtml'),
+  '@/server/utils/serializeForHtml': path.resolve(
+    __dirname,
+    './apps/server/src/utils/serializeForHtml',
+  ),
   // Same gap for the shared entry chrome the accounts portal renders.
-  '@/components/ui': resolve(__dirname, './src/components/ui'),
-  '@/features/AuthShell': resolve(__dirname, './src/features/AuthShell'),
-  '@/utils/identifier': resolve(__dirname, './src/utils/identifier'),
-  '@/utils/electron': resolve(__dirname, './src/utils/electron'),
-  '@/utils/markdownToTxt': resolve(__dirname, './src/utils/markdownToTxt'),
-  '@/utils/sanitizeFileName': resolve(__dirname, './src/utils/sanitizeFileName'),
+  '@/components/ui': path.resolve(__dirname, './src/components/ui'),
+  '@/features/AuthShell': path.resolve(__dirname, './src/features/AuthShell'),
+  '@/utils/identifier': path.resolve(__dirname, './src/utils/identifier'),
+  '@/utils/electron': path.resolve(__dirname, './src/utils/electron'),
+  '@/utils/markdownToTxt': path.resolve(__dirname, './src/utils/markdownToTxt'),
+  '@/utils/sanitizeFileName': path.resolve(__dirname, './src/utils/sanitizeFileName'),
   // Workspace store lives in the cloud repo; submodule-only tests get a stub
   // that reports no active workspace so workspace-aware nav helpers behave
   // like plain react-router.
-  '@/store/workspace': resolve(__dirname, './tests/mocks/storeWorkspace.ts'),
-  '~base-ui-stubs': resolve(__dirname, './tests/mocks/baseUiStubs.tsx'),
-  '~test-utils': resolve(__dirname, './tests/utils.tsx'),
-  'lru_map': resolve(__dirname, './tests/mocks/lru_map'),
+  '@/store/workspace': path.resolve(__dirname, './tests/mocks/storeWorkspace.ts'),
+  '~base-ui-stubs': path.resolve(__dirname, './tests/mocks/baseUiStubs.tsx'),
+  '~test-utils': path.resolve(__dirname, './tests/utils.tsx'),
+  'lru_map': path.resolve(__dirname, './tests/mocks/lru_map'),
 };
 
 const exclude = [
@@ -84,7 +94,10 @@ export default defineConfig({
     exclude: ['crypto', 'util', 'tty'],
   },
   plugins: [
-    tsconfigPaths({ projects: ['.'] }),
+    // SSR entry tests consume the same real static CSS manifest as the apps.
+    staticCssAliases(),
+    lobeStaticCssPlugin({ antd: antdStaticCssOptions, themeVars: themeVarsCssOptions }),
+    tsconfigPaths({ projects: ['.', 'apps/auth', 'apps/share', 'apps/workbench'] }),
     // Let `.md` imports resolve to their raw text content so Rollup/Vitest
     // doesn't try to parse Markdown as JavaScript.
     {
@@ -117,7 +130,7 @@ export default defineConfig({
         const from = importer?.replaceAll('\\', '/');
         if (!from || !from.includes('/@lobehub/ui/')) return null;
         if (id.endsWith('/MotionProvider/index.mjs') || id.endsWith('/MotionProvider/index.js'))
-          return resolve(__dirname, './tests/mocks/orviloUiMotionProvider.tsx');
+          return path.resolve(__dirname, './tests/mocks/orviloUiMotionProvider.tsx');
         return null;
       },
     },
@@ -141,7 +154,7 @@ export default defineConfig({
           spec.endsWith('/FluentEmoji/style/index.js?');
 
         if (isFluentEmojiEntry && isMissingStyleIndex)
-          return resolve(dirname(importer), 'style.js');
+          return path.resolve(path.dirname(importer), 'style.js');
 
         return null;
       },
@@ -151,7 +164,7 @@ export default defineConfig({
     alias,
     // `packages/const` can resolve this package through a second physical copy, which
     // breaks identity assertions (`icon === SiGithub`). Force a single copy.
-    dedupe: ['@icons-pack/react-simple-icons'],
+    dedupe: ['@emotion/react', '@icons-pack/react-simple-icons'],
   },
   test: {
     alias,
@@ -233,10 +246,10 @@ export default defineConfig({
                     /MotionProvider\/index\.m?js$/.test(source) &&
                     from?.includes('/@lobehub/ui/')
                   ) {
-                    return resolve(__dirname, './tests/mocks/orviloUiMotionProvider.tsx');
+                    return path.resolve(__dirname, './tests/mocks/orviloUiMotionProvider.tsx');
                   }
                   if (source === './style/index.js' && from?.endsWith('/FluentEmoji/index.js')) {
-                    return resolve(dirname(importer!), 'style.js');
+                    return path.resolve(path.dirname(importer!), 'style.js');
                   }
                   return null;
                 },
@@ -250,6 +263,8 @@ export default defineConfig({
           // vite-node loads a second copy of the library whose MotionProvider /
           // modal-stack contexts don't match the chunk's
           include: [
+            // App token consumers and the SDK provider must share one context.
+            '@emotion/react',
             '@lobehub/ui',
             '@lobehub/ui/base-ui',
             '@lobehub/ui/icons',
@@ -283,6 +298,6 @@ export default defineConfig({
         ],
       },
     },
-    setupFiles: join(__dirname, './tests/setup.ts'),
+    setupFiles: path.join(__dirname, './tests/setup.ts'),
   },
 });

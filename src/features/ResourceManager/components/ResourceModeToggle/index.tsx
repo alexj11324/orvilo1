@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { CheckIcon, LockIcon, UsersIcon } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -67,7 +66,7 @@ const ResourceModeToggle = memo(() => {
             option.key === listVisibility ? (
               <span className="anticon" role="img">
                 <CheckIcon
-                  color={cssVar.colorTextSecondary}
+                  color={'var(--ant-color-text-secondary)'}
                   fill={'transparent'}
                   height={14}
                   size={14}
@@ -78,7 +77,7 @@ const ResourceModeToggle = memo(() => {
           icon: (
             <span className="anticon" role="img">
               <OptionIcon
-                color={cssVar.colorTextSecondary}
+                color={'var(--ant-color-text-secondary)'}
                 fill={'transparent'}
                 height={16}
                 size={16}

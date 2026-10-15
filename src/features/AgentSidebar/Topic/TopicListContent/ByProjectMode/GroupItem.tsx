@@ -1,4 +1,4 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { FolderClosedIcon, FolderOpenIcon, type LucideIcon } from 'lucide-react';
 import { createElement, memo, useMemo } from 'react';
@@ -21,35 +21,13 @@ import {
   type ProjectTopicStatusCounts,
 } from './statusCounts';
 
-const styles = createStaticStyles(({ css }) => ({
-  statusBadge: css`
-    display: inline-flex;
-    gap: 2px;
-    align-items: center;
-    justify-content: center;
-
-    min-width: 20px;
-    height: 18px;
-    padding-inline: 4px;
-    border-radius: 9px;
-
-    font-size: 11px;
-    font-weight: 500;
-    line-height: 1;
-  `,
-  statusBadgeError: css`
-    color: ${cssVar.colorError};
-    background: color-mix(in srgb, ${cssVar.colorError} 14%, transparent);
-  `,
-  statusBadgeLoading: css`
-    color: ${cssVar.colorWarning};
-    background: color-mix(in srgb, ${cssVar.colorWarning} 14%, transparent);
-  `,
-  statusBadgeWaiting: css`
-    color: ${cssVar.colorInfo};
-    background: color-mix(in srgb, ${cssVar.colorInfo} 14%, transparent);
-  `,
-}));
+const styles = {
+  statusBadge:
+    'inline-flex min-h-6 min-w-6 items-center justify-center gap-0.5 rounded-(--radius-chip) px-1 py-0.5 text-xs font-medium leading-5',
+  statusBadgeError: 'bg-destructive-wash text-destructive-text',
+  statusBadgeLoading: 'bg-warning-wash text-warning-text',
+  statusBadgeWaiting: 'bg-info-wash text-info-text',
+};
 
 interface StatusBadgeConfig {
   className: string;
@@ -86,7 +64,7 @@ const CollapsedStatusBadges = memo<{ counts: ProjectTopicStatusCounts }>(({ coun
   if (items.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-[3px]">
+    <div className="flex items-center gap-1">
       {items.map(({ className, count, icon, label, loading }) => (
         <Tooltip key={label}>
           <TooltipTrigger
@@ -94,17 +72,17 @@ const CollapsedStatusBadges = memo<{ counts: ProjectTopicStatusCounts }>(({ coun
               <span>
                 <span
                   aria-label={label}
-                  className={cx(styles.statusBadge, className)}
+                  className={cn(styles.statusBadge, className)}
                   role="status"
                 >
                   {loading ? (
                     <RingLoadingIcon
-                      ringColor={`color-mix(in srgb, ${cssVar.colorWarning} 28%, transparent)`}
-                      size={11}
-                      style={{ color: cssVar.colorWarning }}
+                      className="text-warning-text"
+                      ringColor={'var(--warning-wash)'}
+                      size={16}
                     />
                   ) : (
-                    icon && createElement(icon, { size: 11, strokeWidth: 2 })
+                    icon && createElement(icon, { size: 16, strokeWidth: 2 })
                   )}
                   {count}
                 </span>
@@ -166,16 +144,17 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
         <div className="min-w-0 flex-1">
           <AccordionTrigger
             className={accordionStyles.trigger}
-            style={{ paddingBlock: 4, paddingInline: 8 }}
+            iconClassName={accordionStyles.triggerIcon}
           >
-            <div className="flex items-center gap-1.5 h-[24px]" style={{ overflow: 'hidden' }}>
-              <div className="flex flex-col items-center justify-center flex-none h-[16px] w-[16px]">
-                <ProjectFolderIcon color={cssVar.colorTextTertiary} size={15} strokeWidth={1.5} />
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 h-6 overflow-hidden">
+              <div className="flex flex-col items-center justify-center flex-none h-4 w-4">
+                <ProjectFolderIcon
+                  color={'var(--foreground-tertiary)'}
+                  size={16}
+                  strokeWidth={1.5}
+                />
               </div>
-              <div
-                className="truncate text-[12px] text-muted-foreground font-medium"
-                style={{ flex: 1 }}
-              >
+              <div className="truncate text-xs leading-5 text-muted-foreground font-medium flex-1">
                 {title}
               </div>
             </div>
@@ -184,7 +163,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
         {action && <div className="flex shrink-0 items-center">{action}</div>}
       </div>
       <AccordionContent className="p-0">
-        <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
+        <div className="flex flex-col gap-px py-px">
           {children.map((topic) => (
             <TopicItem
               agentId={topic.agentId}

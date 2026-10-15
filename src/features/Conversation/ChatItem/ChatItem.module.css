@@ -1,0 +1,34 @@
+@layer components {
+  .container {
+    position: relative;
+    transition: background-color var(--orvilo-motion-mid) var(--orvilo-motion-ease-out);
+  }
+
+  .container[data-message-locate-highlight] {
+    border-radius: var(--radius-card);
+    background-color: var(--primary-wash);
+    /* The actual locator owns its 1400ms residence after scroll settling.
+       Appearance and removal use the normal resolved motion duration. */
+  }
+
+  .container time {
+    pointer-events: none;
+    display: inline-block;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity var(--orvilo-motion-mid) var(--orvilo-motion-ease-out);
+  }
+
+  .container:hover time,
+  .container:focus-within time {
+    pointer-events: auto;
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .container,
+    .container time {
+      transition: none;
+    }
+  }
+}

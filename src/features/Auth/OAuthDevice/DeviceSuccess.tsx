@@ -20,14 +20,10 @@ const DeviceSuccess = memo(() => {
       <EmptyHeader>
         <EmptyMedia variant="default">{<CircleCheckIcon size={96} />}</EmptyMedia>
         <EmptyTitle>
-          {<div className="text-[32px] font-bold">{t('device.success.title')}</div>}
+          {<div className="text-xl font-semibold">{t('device.success.title')}</div>}
         </EmptyTitle>
         <EmptyDescription>
-          {
-            <div className="text-[16px] text-muted-foreground">
-              {t('device.success.description')}
-            </div>
-          }
+          {<div className="text-sm text-muted-foreground">{t('device.success.description')}</div>}
         </EmptyDescription>
       </EmptyHeader>
     </Empty>

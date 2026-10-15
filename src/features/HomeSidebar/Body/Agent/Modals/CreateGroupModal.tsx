@@ -58,7 +58,7 @@ const CreateGroupContent = memo<CreateGroupModalOptions>(({ id, visibility }) =>
 
   return (
     <>
-      <div className="flex flex-col py-[16px] px-[16px]">
+      <div className="flex flex-col py-4 px-4">
         <Input
           autoFocus
           aria-label={t('sessionGroup.inputPlaceholder')}

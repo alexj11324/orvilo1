@@ -1,5 +1,4 @@
 'use client';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { projectIssueProgressPercent } from '@/features/Projects/projectIssueProgress';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
-import { MUTED_LABEL_COLOR } from '@/features/Projects/sectionLabel';
 import { useProjectMembersQuery } from '@/features/Teammates/api/hooks';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import TeamIdentity from '@/features/WorkTeams/TeamIdentity';
@@ -25,57 +23,16 @@ import {
   ProjectLeadField,
   ProjectPriorityField,
 } from './ProjectPlanningFields';
-import { PROPERTY_CONTROL_CLASS, PROPERTY_LINK_CLASS } from './propertyControl';
+import { PROPERTY_CONTROL_CLASS } from './propertyControl';
 
-const styles = createStaticStyles(({ css }) => ({
-  // Reference geometry (§3.1): a 90px hard column, `flex: 0 0 auto`, with no gap
-  // after it. The two are one number — the reference's value column starts at
-  // 1048 + 90 = 1138 — and this file only owns the `90` and the `0`: the `1048`
-  // is the card's content box, which the rail card's start inset sets
-  // (`Layout/ProjectSidePanel`, where the 4px that moved it there is recorded).
-  //
-  // Reached as that sum, not as a total. The card used to run 84px with a 10px
-  // row gap, which also lands on 1138 — 1044 + 84 + 10 — so both sides agreed on
-  // the number while disagreeing on its parts, and the agreement held only while
-  // every label fitted in 84px. That is why the column is a width and a gap
-  // rather than an x: a shared total is not a shared structure.
-  label: css`
-    flex: 0 0 auto;
-    width: 90px;
-    font-weight: 450;
-  `,
-  value: css`
-    font-weight: 450;
-    color: ${cssVar.colorText};
-  `,
-  members: css`
-    display: flex;
-    align-items: center;
-
-    > * {
-      margin-inline-start: -6px;
-      border: 2px solid ${cssVar.colorBgContainer};
-      border-radius: 50%;
-
-      &:first-child {
-        margin-inline-start: 0;
-      }
-    }
-  `,
-  row: css`
-    display: flex;
-    align-items: center;
-    min-height: 28px;
-  `,
-  chipList: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-}));
+const styles = {
+  label: 'w-24 flex-none text-xs leading-5 font-normal text-muted-foreground',
+  value: 'text-sm leading-5.5 font-normal text-foreground',
+  members:
+    'flex items-center [&>*]:-ms-1.5 [&>*]:rounded-full [&>*]:border-2 [&>*]:border-card [&>*:first-child]:ms-0',
+  row: 'flex min-h-7 items-center',
+  chipList: 'flex min-w-0 flex-wrap items-center gap-1',
+};
 
 /**
  * Per-status behaviour of the inline status control, and deliberately nothing
@@ -155,11 +112,10 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
 
   return (
     // 8px between rows on the reference, which puts the row pitch at 36.
-    <div className="flex flex-col" style={{ gap: 8 }}>
+    <div className="flex flex-col gap-2">
       <div className={styles.row}>
         <span
-          className={cn('text-sm', styles.label)}
-          style={{ fontSize: 12, color: MUTED_LABEL_COLOR }}
+          className={cn(cn('text-sm', styles.label), 'text-xs leading-5 text-muted-foreground')}
         >
           {t('properties.status')}
         </span>
@@ -168,6 +124,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
             aria-label={t('properties.status')}
             className={PROPERTY_CONTROL_CLASS}
             disabled={updatingStatus || !detail.capabilities?.canEdit}
+            size="sm"
             variant="ghost"
           >
             <ProjectStatusIcon
@@ -181,8 +138,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
       </div>
       <div className={styles.row}>
         <span
-          className={cn('text-sm', styles.label)}
-          style={{ fontSize: 12, color: MUTED_LABEL_COLOR }}
+          className={cn(cn('text-sm', styles.label), 'text-xs leading-5 text-muted-foreground')}
         >
           {t('properties.priority')}
         </span>
@@ -190,8 +146,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
       </div>
       <div className={styles.row}>
         <span
-          className={cn('text-sm', styles.label)}
-          style={{ fontSize: 12, color: MUTED_LABEL_COLOR }}
+          className={cn(cn('text-sm', styles.label), 'text-xs leading-5 text-muted-foreground')}
         >
           {t('properties.lead')}
         </span>
@@ -199,8 +154,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
       </div>
       <div className={styles.row}>
         <span
-          className={cn('text-sm', styles.label)}
-          style={{ fontSize: 12, color: MUTED_LABEL_COLOR }}
+          className={cn(cn('text-sm', styles.label), 'text-xs leading-5 text-muted-foreground')}
         >
           {t('properties.members')}
         </span>
@@ -217,15 +171,12 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
             }
           />
         ) : (
-          <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
-            —
-          </span>
+          <span className="text-muted-foreground text-xs leading-5">—</span>
         )}
       </div>
       <div className={styles.row}>
         <span
-          className={cn('text-sm', styles.label)}
-          style={{ fontSize: 12, color: MUTED_LABEL_COLOR }}
+          className={cn(cn('text-sm', styles.label), 'text-xs leading-5 text-muted-foreground')}
         >
           {t('properties.dates')}
         </span>
@@ -233,26 +184,29 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
       </div>
       <div className={styles.row}>
         <span
-          className={cn('text-sm', styles.label)}
-          style={{ fontSize: 12, color: MUTED_LABEL_COLOR }}
+          className={cn(cn('text-sm', styles.label), 'text-xs leading-5 text-muted-foreground')}
         >
           {t('properties.teams', { defaultValue: 'Teams' })}
         </span>
         {teams.length === 0 ? (
-          <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
-            —
-          </span>
+          <span className="text-muted-foreground text-xs leading-5">—</span>
         ) : (
           <div className={styles.chipList}>
             {teams.map((team) => (
-              <WorkspaceLink className={PROPERTY_LINK_CLASS} key={team.id} to={`/teams/${team.id}`}>
-                <TeamIdentity
-                  color={team.color}
-                  id={team.id}
-                  letter={(team.key || team.name).slice(0, 1)}
-                  size={14}
-                />
-                {team.name}
+              <WorkspaceLink
+                className="group/project-team inline-flex min-w-0 rounded-(--radius-input) focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+                key={team.id}
+                to={`/teams/${team.id}`}
+              >
+                <span className="inline-flex h-7 max-w-full shrink-0 items-center gap-2 rounded-(--radius-input) px-1.5 py-0 text-sm leading-5.5 font-medium text-foreground group-hover/project-team:bg-accent group-focus-visible/project-team:bg-accent">
+                  <TeamIdentity
+                    color={team.color}
+                    id={team.id}
+                    letter={(team.key || team.name).slice(0, 1)}
+                    size={14}
+                  />
+                  {team.name}
+                </span>
               </WorkspaceLink>
             ))}
           </div>
@@ -260,8 +214,7 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
       </div>
       <div className={styles.row}>
         <span
-          className={cn('text-sm', styles.label)}
-          style={{ fontSize: 12, color: MUTED_LABEL_COLOR }}
+          className={cn(cn('text-sm', styles.label), 'text-xs leading-5 text-muted-foreground')}
         >
           {t('properties.labels')}
         </span>

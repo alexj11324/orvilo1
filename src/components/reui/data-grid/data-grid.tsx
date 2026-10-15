@@ -144,7 +144,7 @@ export const dataGridFeatures = tableFeatures({
   // columnResizingFeature requires columnSizingFeature, declared above.
   columnResizingFeature,
   columnFilteringFeature,
-  // Powers DataGridColumnFilter's column.getFacetedUniqueValues(). On v8 an
+  // Faceted row models back column.getFacetedUniqueValues(). On v8 an
   // unregistered facet silently returned an empty map; on v9 the method would
   // not exist at all, so the faceted row models below are required, not
   // optional.

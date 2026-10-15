@@ -17,8 +17,8 @@ import { canReviewAcceptance } from '../visibility';
 import { useAcceptanceComments } from './hooks';
 
 const styles = {
-  card: 'py-3.5 px-4 border border-sidebar-border rounded-[12px] bg-card',
-  description: 'text-[12px] text-(--ant-color-text-tertiary)',
+  card: 'py-3.5 px-4 border border-sidebar-border rounded-(--radius-card) bg-card',
+  description: 'text-xs text-foreground-tertiary',
 };
 
 /**
@@ -92,7 +92,7 @@ const ReviewerApprovalBar = memo(() => {
   return (
     <div className={`flex flex-col gap-2.5 ${styles.card}`}>
       <div className="flex items-center gap-2">
-        <BadgeCheck color={approvedCurrentRound ? 'var(--success)' : undefined} size={18} />
+        <BadgeCheck color={approvedCurrentRound ? 'var(--success-text)' : undefined} size={16} />
         <div className="font-semibold">
           {mine
             ? mine.contextRoundIndex === null
@@ -108,7 +108,9 @@ const ReviewerApprovalBar = memo(() => {
       </span>
       {approvedCurrentRound ? (
         <Button
+          className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
           loading={pending}
+          size="lg"
           style={{ alignSelf: 'flex-end' }}
           onClick={() => void run(() => remove(mine!.id))}
         >
@@ -124,7 +126,9 @@ const ReviewerApprovalBar = memo(() => {
             onChange={(event) => setSummary(event.target.value)}
           />
           <Button
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
             loading={pending}
+            size="lg"
             style={{ alignSelf: 'flex-end' }}
             variant="outline"
             onClick={() => void approve()}

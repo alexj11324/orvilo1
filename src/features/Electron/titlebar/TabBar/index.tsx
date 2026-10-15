@@ -11,14 +11,15 @@ import {
 } from '@dnd-kit/core';
 import { horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortable';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { ChevronDown, Plus } from 'lucide-react';
-import { useMotionValue, useSpring } from 'motion/react';
+import { useMotionValue } from 'motion/react';
 import * as m from 'motion/react-m';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
 import { captureVisibleTabPreviews } from '@/features/Electron/TabHost';
 import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
@@ -32,13 +33,12 @@ import { electronStylish } from '@/styles/electron';
 
 import { useResolvedTabs } from './hooks/useResolvedTabs';
 import { useStripWidth } from './hooks/useStripWidth';
-import { TAB_SPRING } from './motion';
+import { useTabMotionDisabled, useTabSpring } from './motion';
 import { resolveTabScope } from './scope';
 import { useStyles } from './styles';
 import TabItem from './TabItem';
 import {
   allocateTabWidths,
-  OVERFLOW_CONTROL_WIDTH,
   PINNED_DIVIDER_WIDTH,
   PINNED_TAB_WIDTH,
   resolvePlacements,
@@ -47,13 +47,15 @@ import {
 } from './tabLayout';
 
 const NEW_TAB_URL = '/';
-const NEW_TAB_BUTTON_WIDTH = 26 + TAB_GAP;
+const NEW_TAB_BUTTON_SIZE = 32;
+const NEW_TAB_BUTTON_WIDTH = NEW_TAB_BUTTON_SIZE + TAB_GAP;
 
 // Tabs only reorder along the horizontal axis, so lock the drag transform to X.
 const restrictToHorizontalAxis: Modifier = ({ transform }) => ({ ...transform, y: 0 });
 
 const TabBar = () => {
   const styles = useStyles;
+  const disableMotion = useTabMotionDisabled();
   const location = useActiveLocation();
   useRegisterDesktopTabHotkeys();
   const { t } = useTranslation('electron');
@@ -108,10 +110,10 @@ const TabBar = () => {
 
   const tabsById = useMemo(() => new Map(tabs.map((tab) => [tab.tab.id, tab])), [tabs]);
 
-  const targetTotal = useMotionValue(0);
-  const springTotal = useSpring(targetTotal, TAB_SPRING);
+  const targetTotal = useMotionValue(disableMotion ? total : 0);
+  const springTotal = useTabSpring(targetTotal, disableMotion);
   const targetDividerX = useMotionValue(dividerX);
-  const springDividerX = useSpring(targetDividerX, TAB_SPRING);
+  const springDividerX = useTabSpring(targetDividerX, disableMotion);
 
   // Read during render, so it still holds the width the strip had on the previous commit
   // — which is exactly where a tab appended this commit should enter from.
@@ -256,9 +258,9 @@ const TabBar = () => {
 
   return (
     <div
-      className={cx(styles.container, 'flex items-center')}
+      className={cx(styles.container, 'flex items-center gap-0.5')}
+      data-disable-motion={disableMotion || undefined}
       ref={stripRef}
-      style={{ gap: TAB_GAP }}
       onPointerEnter={captureVisibleTabPreviews}
     >
       {measured && (
@@ -318,23 +320,30 @@ const TabBar = () => {
             className={cx(electronStylish.nodrag, styles.newTabButton)}
             disabled={!canCreate}
             icon={Plus}
-            size="small"
             title={canCreate ? t('tab.newTab') : reason}
+            size={{
+              blockSize: NEW_TAB_BUTTON_SIZE,
+              borderRadius: 'var(--radius-button)',
+              size: 16,
+            }}
             onClick={canCreate ? () => handleNewTab() : undefined}
           />
           {layout.hiddenCount > 0 && (
             <SidebarDropdownMenu items={overflowItems} placement={'bottomRight'}>
-              <div
-                style={{ width: OVERFLOW_CONTROL_WIDTH }}
+              {/* Match the public allocator's 34px overflow reservation exactly. */}
+              <Button
+                size="icon"
                 title={t('tab.overflow', { count: layout.hiddenCount })}
+                type={'button'}
+                variant="ghost"
                 className={cx(
                   cx(electronStylish.nodrag, styles.overflowButton),
-                  'flex items-center gap-0.5',
+                  'flex w-8.5 items-center gap-0.5 border-0 p-0 bg-transparent focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2',
                 )}
               >
-                <ChevronDown size={12} />
+                <ChevronDown size={16} />
                 {layout.hiddenCount}
-              </div>
+              </Button>
             </SidebarDropdownMenu>
           )}
         </>

@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -12,54 +11,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const styles = createStaticStyles(({ css }) => ({
-  option: css`
-    display: flex;
-    flex: 1;
-    gap: 8px;
-    align-items: flex-start;
-
-    min-width: 0;
-  `,
-  optionDesc: css`
-    font-size: 12px;
-    line-height: 16px;
-    color: ${cssVar.colorTextDescription};
-    text-wrap: pretty;
-  `,
-  optionIcon: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    height: 20px;
-
-    color: ${cssVar.colorTextSecondary};
-  `,
-  optionLabel: css`
-    font-size: 14px;
-    line-height: 20px;
-    color: ${cssVar.colorText};
-  `,
-  popup: css`
-    max-width: calc(100vw - 24px);
-  `,
-  trigger: css`
-    display: flex;
-    flex: 1;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  triggerLabel: css`
-    overflow: hidden;
-    text-align: start;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  option: 'flex flex-1 gap-2 items-start min-w-0',
+  optionDesc: 'text-xs leading-5 text-foreground-description text-pretty',
+  optionIcon: 'flex flex-none items-center justify-center h-5.5 text-muted-foreground',
+  optionLabel: 'text-sm leading-5.5 text-foreground',
+  popup: 'max-w-[calc(100vw-24px)]',
+  trigger: 'flex flex-1 gap-2 items-center min-w-0',
+  triggerLabel: 'truncate text-start text-sm leading-5.5',
+};
 
 export interface PolicyOption<Value extends string> {
   /** Shown under the label inside the popup — also carries the "why is this disabled" reason. */
@@ -100,7 +60,7 @@ const PolicySelectInner = <Value extends string>({
         onChange(next as Value);
       }}
     >
-      <SelectTrigger className="w-full">
+      <SelectTrigger className="w-full" size="normal">
         <SelectValue>
           {(optionValue) => {
             const option = options.find((item) => item.value === optionValue);
@@ -128,7 +88,7 @@ const PolicySelectInner = <Value extends string>({
                   <option.icon fill={'transparent'} height={16} size={16} width={16} />
                 </span>
               </span>
-              <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+              <div className="flex flex-col flex-1 min-w-0 gap-0.5">
                 <span className={styles.optionLabel}>{option.label}</span>
                 {option.desc ? <span className={styles.optionDesc}>{option.desc}</span> : null}
               </div>

@@ -1,7 +1,6 @@
 'use client';
 
 import { ConfigProvider, ThemeProvider } from '@lobehub/ui';
-import { App } from 'antd';
 import { domMax, LazyMotion } from 'motion/react';
 import * as m from 'motion/react-m';
 import { type PropsWithChildren } from 'react';
@@ -53,11 +52,12 @@ const AuthThemeLite = memo<AuthThemeLiteProps>(({ children, globalCDN }) => {
           }}
         >
           <BaseGlobalStyle />
-          <ThemeRoles />
-          <App style={{ height: '100%' }}>
-            <LazyMotion features={domMax}>{children}</LazyMotion>
-            <ToastHost />
-          </App>
+          <ThemeRoles>
+            <div className="h-full">
+              <LazyMotion features={domMax}>{children}</LazyMotion>
+              <ToastHost />
+            </div>
+          </ThemeRoles>
         </ThemeProvider>
       </ConfigProvider>
     </AntdStyleLayer>

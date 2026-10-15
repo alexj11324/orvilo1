@@ -1,8 +1,8 @@
-import { type ColorSwatchesProps } from '@lobehub/ui';
-import { ColorSwatches, primaryColors } from '@lobehub/ui';
+import { primaryColors } from '@lobehub/ui';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ColorSwatches, type ColorSwatchesProps } from '@/components/ColorSwatches';
 import { DEFAULT_BACKGROUND_COLOR } from '@/const/meta';
 
 interface BackgroundSwatchesProps extends Omit<ColorSwatchesProps, 'colors'> {
@@ -84,6 +84,7 @@ const BackgroundSwatches = memo<BackgroundSwatchesProps>(
         enableColorPicker
         colors={colors}
         defaultValue={defaultValue}
+        disabled={disabled}
         value={value}
         style={{
           cursor: disabled ? 'not-allowed' : undefined,

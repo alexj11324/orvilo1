@@ -122,6 +122,34 @@ workspace member's own choice → `agentDeviceOverrides`; admin default → shar
 config; policy-pinned → members cannot override. Automations bind their own
 execution principal — never "whichever member last opened the page".
 
+## Reading a device's filesystem skills
+
+The slash menu, the skill chips in a message and the Skills panel all list the
+skills found on the machine the Agent runs on. They must agree, so they resolve
+that machine the same way: `useProjectSkillsDeviceId` (menu and chips) and the
+working sidebar both start from the caller's effective config
+(`useTopicAgencyConfig`), not from the shared Agent row.
+
+`resolveBoundExecutionDeviceId` turns that config into the device to scan. A run
+that goes through a device scans it over `device.listProjectSkills`; a run on
+this machine returns `undefined` and reads over Electron IPC. Reading the shared
+row instead treats a member's own "this device" pick as a workspace device, and
+the scan fails with `Workspace device not found.`
+
+## One gateway connection per install
+
+The desktop app holds one personal connection to the device gateway, identified
+by a connection id that is stable for the install. The gateway keeps one socket
+per connection id and closes the older one when a second arrives, which is how a
+reconnect replaces its own previous socket.
+
+Two clients must therefore never share an install's connection id. Sign-in and
+startup both ask the desktop to connect, so `GatewayConnectionService` runs
+those requests in turn: each one closes the client the previous one opened
+before opening its own. Run together, the earlier client was never closed, both
+kept auto-reconnecting, and the device went online and offline once a second
+and never appeared in Settings → Devices.
+
 ## Unified execution chain
 
 Agent config + execution principal → unified config/permission resolution →
@@ -229,8 +257,8 @@ new write. This does not bulk-migrate existing records.
 ## Settings page
 
 Compact single-page groups: `AgentGeneralSettings` / `AgentModelSettings` /
-`AgentDeviceSettings` / `AgentAccessSettings` /
-`ExternalAgentConnectionSettings` (external only). No Harness/Engine/Embedded
+`AgentDeviceSettings` / `AgentRuntimeSettings` /
+`ExternalAgentConnectionSettings` (external only) / `AgentUseSettings`. No Harness/Engine/Embedded
 rows. Zero-device / invalid-binding / offline states render as blocking
 notices, not configuration items. The diagnostics page may show the actual
 device / Prime version / run identity. External agents share the same device

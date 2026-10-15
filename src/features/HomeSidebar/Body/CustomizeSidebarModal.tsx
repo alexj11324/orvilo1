@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { t } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -64,19 +64,10 @@ export const getVisibleSidebarSections = (isWorkspaceMode: boolean): SidebarSect
 // Styles
 // ---------------------------------------------------------------------------
 
-const styles = createStaticStyles(({ css }) => ({
-  item: css`
-    height: 40px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-  `,
-  footer: css`
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    padding-block-start: 16px;
-  `,
-}));
+const styles = {
+  item: 'min-h-9 px-2 rounded-(--radius-button) text-sm',
+  footer: 'grid grid-cols-2 gap-2 pbs-4',
+};
 
 // ---------------------------------------------------------------------------
 // SectionRow
@@ -92,11 +83,11 @@ const SectionRow = memo<{
 
   return (
     <div
-      className={cx(styles.item, 'flex items-center gap-2 justify-between')}
+      className={cn(styles.item, 'flex items-center gap-2 justify-between')}
       style={{ opacity: isHidden ? 0.5 : undefined }}
     >
       <div className="flex items-center gap-2">
-        <config.icon size={18} />
+        <config.icon size={16} />
         <div>{t(config.labelKey as never)}</div>
       </div>
       {config.alwaysVisible ? (
@@ -104,12 +95,13 @@ const SectionRow = memo<{
           <Tooltip>
             <TooltipTrigger
               render={
-                <span className="inline-flex">
-                  <ActionIcon
-                    icon={PinIcon}
-                    size={'small'}
-                    style={{ cursor: 'default', opacity: 0.45 }}
-                  />
+                <span
+                  aria-label={t('navPanel.pinned' as never)}
+                  className="inline-flex size-8 items-center justify-center rounded-(--radius-button) opacity-45 focus-visible:outline-none focus-visible:inset-ring-3 focus-visible:inset-ring-ring/50"
+                  role="img"
+                  tabIndex={0}
+                >
+                  <PinIcon aria-hidden="true" className="size-4" size={16} />
                 </span>
               }
             />
@@ -121,13 +113,14 @@ const SectionRow = memo<{
           <Tooltip>
             <TooltipTrigger
               render={
-                <span className="inline-flex">
-                  <ActionIcon
-                    icon={isHidden ? EyeOff : Eye}
-                    size={'small'}
-                    onClick={() => onToggle(config.id)}
-                  />
-                </span>
+                <ActionIcon
+                  aria-label={t(config.labelKey as never)}
+                  aria-pressed={!isHidden}
+                  className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+                  icon={isHidden ? EyeOff : Eye}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                  onClick={() => onToggle(config.id)}
+                />
               }
             />
             <TooltipContent>
@@ -206,7 +199,7 @@ const CustomizeSidebarContent = memo(() => {
       </div>
       <div className={styles.footer}>
         <Button className="w-full" type="button" variant="outline" onClick={handleResetDefault}>
-          <RotateCcw data-icon="inline-start" size={14} />
+          <RotateCcw data-icon="inline-start" size={16} />
           {commonT('navPanel.resetDefault')}
         </Button>
         <Button className="w-full" type="button" variant="default" onClick={handleConfirm}>

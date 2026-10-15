@@ -44,7 +44,7 @@ const AcceptanceHeader = memo(() => {
       title={
         <div className="flex flex-row items-center gap-0.5" style={{ minWidth: 0 }}>
           <Title />
-          <DropdownMenu items={menuItems} placement={'bottomLeft'} popupClassName="min-w-[140px]">
+          <DropdownMenu items={menuItems} placement={'bottomLeft'} popupClassName="min-w-35">
             <ActionIcon
               icon={MoreHorizontal}
               size={'small'}

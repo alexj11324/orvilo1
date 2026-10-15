@@ -24,7 +24,7 @@ const BuiltinConsent = memo<BuiltinConsentProps>(({ uid }) => {
       <Empty>
         <EmptyHeader>
           <EmptyMedia variant="default">{<BrandLoading debugId={'ouidc'} />}</EmptyMedia>
-          <EmptyTitle>{<div className="text-[14px]">{t('consent.redirecting')}</div>}</EmptyTitle>
+          <EmptyTitle>{<div className="text-sm">{t('consent.redirecting')}</div>}</EmptyTitle>
         </EmptyHeader>
       </Empty>
       <form action="/oidc/consent" method="post" ref={formRef} style={{ display: 'none' }}>

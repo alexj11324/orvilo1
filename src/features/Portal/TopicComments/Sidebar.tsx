@@ -43,7 +43,7 @@ const TopicCommentsSidebar = memo(() => {
           size={DESKTOP_HEADER_ICON_SMALL_SIZE}
           onClick={isThread ? goBack : () => openTopicComments(view.topicId)}
         />
-        <div className="text-[13px] font-medium">
+        <div className="text-(length:--text-dense) font-medium">
           {t(isThread ? 'topicComment.thread' : 'topicComment.messageComments')}
         </div>
       </div>

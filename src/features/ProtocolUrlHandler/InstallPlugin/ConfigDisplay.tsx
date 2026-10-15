@@ -1,94 +1,26 @@
 'use client';
 
 import { type McpInstallSchema } from '@orvilo/electron-client-ipc';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { LinkIcon, Settings2Icon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import KeyValueEditor from '@/components/KeyValueEditor';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  configEditor: css`
-    margin-block-start: ${cssVar.marginSM};
-  `,
-  configSection: css`
-    margin-block-end: ${cssVar.marginLG};
-    padding: ${cssVar.paddingSM};
-    border-radius: ${cssVar.borderRadius};
-  `,
-  configTitle: css`
-    display: flex;
-    gap: ${cssVar.marginXS};
-    align-items: center;
-
-    height: 24px;
-
-    font-weight: 600;
-    color: ${cssVar.colorTextHeading};
-  `,
-
-  previewContainer: css`
-    padding-inline: ${cssVar.paddingXS};
-  `,
-
-  previewItem: css`
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: ${cssVar.paddingXS};
-    padding-inline: 0;
-
-    &:not(:last-child) {
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-
-  previewLabel: css`
-    display: flex;
-    gap: ${cssVar.marginXS};
-    align-items: center;
-
-    font-size: ${cssVar.fontSizeSM};
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-
-  previewValue: css`
-    padding-block: ${cssVar.paddingXXS};
-    padding-inline: ${cssVar.paddingXS};
-    border-radius: ${cssVar.borderRadiusSM};
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: ${cssVar.fontSizeSM};
-    font-weight: 600;
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-
-  typeValue: css`
-    display: flex;
-    gap: ${cssVar.marginXS};
-    align-items: center;
-  `,
-
-  urlValue: css`
-    max-width: 300px;
-    padding-block: ${cssVar.paddingXS};
-    padding-inline: ${cssVar.paddingSM};
-    border: 1px solid ${cssVar.colorBorder};
-    border-radius: ${cssVar.borderRadius};
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: ${cssVar.fontSizeSM};
-    font-weight: 500;
-    word-break: auto-phrase;
-
-    background: ${cssVar.colorBgElevated};
-  `,
-}));
+const styles = {
+  configEditor: 'mbs-3',
+  configSection: 'mbe-6 rounded-(--radius-card) p-4',
+  configTitle: 'flex h-6 items-center gap-2 text-sm font-semibold text-foreground',
+  previewContainer: 'px-2',
+  previewItem:
+    'flex items-center justify-between py-2 px-0 not-last:border-be not-last:border-divider',
+  previewLabel: 'flex items-center gap-2 text-xs font-medium text-muted-foreground',
+  previewValue:
+    'rounded-(--radius-chip) bg-fill-quaternary py-1 px-2 font-mono text-xs font-semibold text-foreground',
+  typeValue: 'flex items-center gap-2',
+  urlValue:
+    'max-w-75 rounded-(--radius-card) border border-border bg-popover py-2 px-3 font-mono text-xs font-medium [word-break:auto-phrase]',
+};
 
 interface ConfigDisplayProps {
   onConfigUpdate?: (updatedConfig: {
@@ -122,12 +54,9 @@ const ConfigDisplay = memo<ConfigDisplayProps>(({ schema, onConfigUpdate }) => {
   return (
     <div className="flex flex-col gap-4">
       {/* Installation info */}
-      <div
-        className={cx(styles.configSection, 'flex flex-col border')}
-        style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
-      >
+      <div className={`${styles.configSection} flex flex-col border border-divider bg-card`}>
         <div className={styles.configTitle}>
-          <LinkIcon size={14} />
+          <LinkIcon size={16} />
           {t('protocolInstall.install.title')}
         </div>
 
@@ -172,12 +101,9 @@ const ConfigDisplay = memo<ConfigDisplayProps>(({ schema, onConfigUpdate }) => {
       </div>
 
       {/* Config info - directly use KeyValueEditor */}
-      <div
-        className={cx(styles.configSection, 'flex flex-col border')}
-        style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
-      >
+      <div className={`${styles.configSection} flex flex-col border border-divider bg-card`}>
         <div className={styles.configTitle}>
-          <Settings2Icon size={14} />
+          <Settings2Icon size={16} />
           {schema.config.type === 'stdio'
             ? t('protocolInstall.config.env')
             : t('protocolInstall.config.headers')}

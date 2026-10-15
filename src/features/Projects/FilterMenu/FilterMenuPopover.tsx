@@ -123,6 +123,7 @@ const ListPane = ({
       aria-label={searchLabel}
       className={searchPlaceholder ? undefined : 'sr-only'}
       placeholder={searchPlaceholder}
+      size="compact"
     />
     <AutocompletePrimitive.List
       className="mt-1 flex max-h-72 flex-col gap-0.5 overflow-y-auto overscroll-contain"
@@ -254,6 +255,7 @@ const FilterMenuPopover = memo<FilterMenuPopoverProps>(
               aria-label={picker.placeholder}
               placeholder={picker.placeholder}
               value={textDraft}
+              visualSize="small"
               onChange={(event) => setTextDraft(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') apply();
@@ -348,6 +350,7 @@ const FilterMenuPopover = memo<FilterMenuPopoverProps>(
               aria-label={labels.aiPlaceholder}
               placeholder={labels.aiPlaceholder}
               value={aiText}
+              visualSize="normal"
               onChange={(event) => {
                 setAiText(event.target.value);
                 setAiError(false);

@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { CircleHelp } from 'lucide-react';
 import { type CSSProperties, type ReactNode } from 'react';
 import { memo } from 'react';
@@ -15,7 +14,10 @@ const InfoTooltip = memo<InfoTooltipProps>(({ size, iconStyle, title }) => {
   return (
     <Tooltip>
       <TooltipTrigger render={<span />}>
-        <CircleHelp size={size ?? 16} style={{ color: cssVar.colorTextTertiary, ...iconStyle }} />
+        <CircleHelp
+          size={size ?? 16}
+          style={{ color: 'var(--ant-color-text-tertiary)', ...iconStyle }}
+        />
       </TooltipTrigger>
       <TooltipContent>{title}</TooltipContent>
     </Tooltip>

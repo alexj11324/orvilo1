@@ -11,8 +11,7 @@ import type {
   VerifyVerdict,
 } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx, cn } from 'cn';
 import type { TFunction } from 'i18next';
 import {
   AlertTriangle,
@@ -80,628 +79,105 @@ import {
   markdownTextEvidenceTypes,
   rendersAsMarkdown,
 } from './MarkdownEvidence';
+import nativeStyles from './ReportViewer.module.css';
 import { readVisualizationManifest } from './visualization';
 import { VisualizationRenderer } from './VisualizationRenderer';
 
-const styles = createStaticStyles(({ css }) => ({
-  scroll: css`
-    overflow: auto;
-    width: 100%;
-    height: 100%;
-  `,
-  page: css`
-    width: 100%;
-    max-width: 880px;
-    margin-inline: auto;
-    padding-block: 32px 64px;
-
-    /* Start-aligned with the 46px gutter a check row's body sits at, so the hero
-       prose and the expanded check prose share one text edge. */
-    padding-inline: 46px 32px;
-
-    @media (width <= 767px) {
-      padding-block: 16px calc(24px + env(safe-area-inset-bottom));
-      padding-inline: 16px;
-      overflow-wrap: anywhere;
-    }
-  `,
-
-  /* hero */
-  heroLine: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-  `,
-  pill: css`
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 5px;
-    padding-inline: 13px;
-    border-radius: 999px;
-
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1;
-  `,
-  summary: css`
-    max-width: 100%;
-    line-height: 1.6;
-    color: ${cssVar.colorText};
-  `,
-  meta: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 16px;
-    margin-block-start: 4px;
-  `,
-  metaItem: css`
-    display: inline-flex;
-    gap: 6px;
-    align-items: baseline;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-
-    code {
-      font-family: ${cssVar.fontFamilyCode};
-      font-size: 12px;
-      color: ${cssVar.colorTextSecondary};
-      word-break: break-word;
-    }
-  `,
-  liveBanner: css`
-    display: inline-flex;
-    gap: 8px;
-    align-items: center;
-
-    width: fit-content;
-    margin-block-start: 4px;
-    padding-block: 6px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorInfoBorder};
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorInfoText};
-
-    background: ${cssVar.colorInfoBg};
-  `,
-  /* Provenance: where the code came from. Reference material the reader scans,
-     so it stays visually subordinate to the verdict + summary above it. */
-  codingScope: css`
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-
-    min-width: 0;
-    max-width: 100%;
-    margin-block-start: 4px;
-  `,
-  /* The PR gets its own line. It is the one outbound link a reader actually
-     follows, and its title is long enough that sharing a row with branch/commit
-     would either push them onto a second line anyway or truncate the title to
-     nothing. */
-  scopePullRequestLine: css`
-    display: flex;
-    min-width: 0;
-    max-width: 100%;
-  `,
-  scopeMetaLine: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 14px;
-    align-items: center;
-
-    min-width: 0;
-    max-width: 100%;
-  `,
-  branchChip: css`
-    display: inline-flex;
-    flex: 0 1 auto;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-    max-width: min(360px, 100%);
-
-    color: ${cssVar.colorTextTertiary};
-
-    code {
-      overflow: hidden;
-
-      min-width: 0;
-
-      font-family: ${cssVar.fontFamilyCode};
-      font-size: 12px;
-      color: ${cssVar.colorTextSecondary};
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    svg {
-      flex: 0 0 auto;
-      color: ${cssVar.colorTextQuaternary};
-    }
-  `,
-  commitChip: css`
-    display: inline-flex;
-    flex: 0 0 auto;
-    gap: 6px;
-    align-items: center;
-
-    color: ${cssVar.colorTextTertiary};
-
-    code {
-      font-family: ${cssVar.fontFamilyCode};
-      font-size: 12px;
-      color: ${cssVar.colorTextTertiary};
-    }
-
-    svg {
-      flex: 0 0 auto;
-      color: ${cssVar.colorTextQuaternary};
-    }
-  `,
-  prChip: css`
-    /* Resting: number secondary, title tertiary, icon quaternary — a quiet chip.
-       Hover lifts the WHOLE thing to the primary text color at once (a clearly
-       perceptible emphasis, not a one-gray-step nudge), and never the global
-       link-blue. Vars so number/title/icon rise together. */
-    --pr-number-color: ${cssVar.colorTextSecondary};
-    --pr-title-color: ${cssVar.colorTextTertiary};
-    --pr-icon-color: ${cssVar.colorTextQuaternary};
-
-    cursor: default;
-
-    display: inline-flex;
-    flex: 0 1 auto;
-    gap: 6px;
-    align-items: center;
-
-    /* Owns its own line, so the title gets the full column before ellipsizing. */
-    min-width: 0;
-    max-width: 100%;
-
-    font-size: 12px;
-    color: var(--pr-number-color);
-    text-decoration: none;
-
-    transition: color 0.15s;
-
-    &[data-link='true'] {
-      cursor: pointer;
-    }
-
-    &[data-link='true']:hover {
-      --pr-number-color: ${cssVar.colorText};
-      --pr-title-color: ${cssVar.colorText};
-      --pr-icon-color: ${cssVar.colorTextSecondary};
-
-      /* Re-assert over the global \`a:hover\` link-blue — the chip's hover is a
-         text-emphasis step, never a recolor. */
-      color: var(--pr-number-color);
-    }
-
-    > svg:first-child {
-      flex: 0 0 auto;
-      color: var(--pr-icon-color);
-      transition: color 0.15s;
-    }
-  `,
-  prNumber: css`
-    flex: 0 0 auto;
-    color: var(--pr-number-color);
-    transition: color 0.15s;
-  `,
-  prTitle: css`
-    overflow: hidden;
-    flex: 1 1 auto;
-
-    min-width: 0;
-
-    color: var(--pr-title-color);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    transition: color 0.15s;
-  `,
-  scopeMetaItem: css`
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-    max-width: 100%;
-
-    font-size: 12px;
-    line-height: 1.45;
-    color: ${cssVar.colorTextTertiary};
-
-    code {
-      overflow: hidden;
-
-      min-width: 0;
-
-      font-family: ${cssVar.fontFamilyCode};
-      font-size: 12px;
-      color: ${cssVar.colorTextSecondary};
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    svg {
-      flex: 0 0 auto;
-      color: ${cssVar.colorTextQuaternary};
-    }
-  `,
-  /* The command / URL under test. Can be long; it must never push the rest of
-     the provenance line onto a second row. */
-  scopeEntry: css`
-    max-width: 260px;
-  `,
-  originLink: css`
-    cursor: pointer;
-    color: ${cssVar.colorTextTertiary};
-    text-decoration: none;
-
-    &:hover {
-      color: ${cssVar.colorLink};
-    }
-
-    &:hover svg {
-      color: ${cssVar.colorLink};
-    }
-  `,
-  surfaceList: css`
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  `,
-  surfaceChip: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: ${cssVar.borderRadiusSM};
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-
-    svg {
-      color: ${cssVar.colorTextTertiary};
-    }
-  `,
-
-  /* checks */
-  checks: css`
-    /* The filter bar used to carry this gap in its own margin; without it the
-       hero and the first row collided. */
-    overflow: hidden;
-
-    margin-block-start: 24px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  row: css`
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    &:last-child {
-      border-block-end: none;
-    }
-  `,
-  rowHead: css`
-    cursor: pointer;
-
-    display: grid;
-    grid-template-columns: 20px minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: center;
-
-    width: 100%;
-    padding-block: 11px;
-    padding-inline: 16px;
-    border: none;
-
-    text-align: start;
-
-    background: none;
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-
-    @media (width <= 767px) {
-      grid-template-columns: 20px minmax(0, 1fr);
-      gap: 6px 8px;
-      padding: 12px;
-    }
-  `,
-  rowTitle: css`
-    overflow: hidden;
-
-    font-size: 14px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-
-    &[data-failed='true'] {
-      font-weight: 600;
-    }
-
-    @media (width <= 767px) {
-      overflow-wrap: anywhere;
-      white-space: normal;
-    }
-  `,
-  rowSide: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    @media (width <= 767px) {
-      grid-column: 2;
-      flex-wrap: wrap;
-    }
-  `,
-  softTag: css`
-    padding-block: 1px;
-    padding-inline: 7px;
-    border-radius: 4px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  chev: css`
-    color: ${cssVar.colorTextQuaternary};
-    transition: transform 0.15s ease;
-
-    &[data-open='true'] {
-      transform: rotate(90deg);
-    }
-  `,
-  rowBody: css`
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-
-    padding-block: 2px 16px;
-    padding-inline: 46px 16px;
-
-    @media (width <= 767px) {
-      padding-inline: 12px;
-    }
-  `,
-  reasoning: css`
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  suggestion: css`
-    padding-inline-start: 10px;
-    border-inline-start: 2px solid ${cssVar.colorBorder};
-
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  /* What the run said it would do, before it did it — read above the outcome so
-     intent and result sit together and a gap between them is visible. */
-  planDetail: css`
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 4px 8px;
-
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextTertiary};
-
-    @media (width <= 767px) {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 4px;
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-  planDetailLabel: css`
-    color: ${cssVar.colorTextQuaternary};
-    white-space: nowrap;
-  `,
-  notExecutedHint: css`
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextTertiary};
-  `,
-
-  /* narrative */
-  narrative: css`
-    margin-block-start: 24px;
-
-    &:not([open]) > :not(summary) {
-      display: none;
-    }
-  `,
-  narrativeSummary: css`
-    cursor: pointer;
-    user-select: none;
-
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    list-style: none;
-
-    &::-webkit-details-marker {
-      display: none;
-    }
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-  narrativeBody: css`
-    margin-block-start: 12px;
-    padding: 16px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  interactionCostBody: css`
-    margin-block-start: 12px;
-  `,
-
-  /* evidence */
-  evidenceList: css`
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: flex-start;
-
-    width: 100%;
-  `,
-  evidenceFile: css`
-    cursor: pointer;
-
-    display: grid;
-    grid-template-columns: 18px minmax(0, 1fr);
-    gap: 8px;
-    align-items: center;
-
-    width: min(100%, 520px);
-    padding-block: 7px;
-    padding-inline: 10px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    text-align: start;
-
-    background: ${cssVar.colorFillQuaternary};
-
-    &:hover {
-      border-color: ${cssVar.colorLink};
-      color: ${cssVar.colorLink};
-    }
-  `,
-  evidenceFileIcon: css`
-    display: flex;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  evidenceFileBody: css`
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  `,
-  evidenceFileName: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    line-height: 1.35;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  evidenceFileDesc: css`
-    overflow: hidden;
-
-    margin-block-start: 2px;
-
-    font-size: 12px;
-    line-height: 1.35;
-    color: ${cssVar.colorTextTertiary};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  evidenceText: css`
-    overflow: auto;
-
-    max-height: 200px;
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadius};
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    white-space: pre-wrap;
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  evidenceVideo: css`
-    align-self: flex-start;
-
-    width: auto;
-    max-width: 100%;
-    max-height: 360px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    object-fit: contain;
-  `,
-  evChip: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 999px;
-
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextTertiary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  evidenceDoc: css`
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-
-    width: 100%;
-    min-height: 0;
-  `,
-}));
+const styles = {
+  scroll: 'h-full w-full overflow-auto',
+  page: 'mx-auto w-full max-w-240 px-4 pbs-8 pbe-16 [@media(width<=767px)]:pbs-4 [@media(width<=767px)]:[padding-block-end:calc(24px+env(safe-area-inset-bottom))] [@media(width<=767px)]:[overflow-wrap:anywhere]',
+  heroLine: 'flex flex-wrap items-center gap-3',
+  pill: 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs leading-5 font-semibold',
+  summary: 'max-w-full text-sm leading-5.5 text-foreground',
+  meta: 'mbs-1 flex flex-wrap gap-x-4 gap-y-2',
+  metaItem:
+    'inline-flex items-baseline gap-1.5 text-xs leading-5 text-foreground-tertiary [&_code]:font-mono [&_code]:text-xs [&_code]:leading-5 [&_code]:text-muted-foreground [&_code]:[word-break:break-word]',
+  liveBanner:
+    'mbs-1 inline-flex w-fit items-center gap-2 rounded-full border border-info-border bg-info-wash px-3 py-1.5 text-xs leading-5 text-info-text',
+  codingScope: 'mbs-1 flex min-w-0 max-w-full flex-col gap-1.5',
+  scopePullRequestLine: 'flex min-w-0 max-w-full',
+  scopeMetaLine: 'flex min-w-0 max-w-full flex-wrap items-center gap-x-3.5 gap-y-1.5',
+  branchChip:
+    'inline-flex min-w-0 max-w-[min(360px,100%)] flex-[0_1_auto] items-center gap-1.5 text-foreground-tertiary [&_code]:min-w-0 [&_code]:truncate [&_code]:font-mono [&_code]:text-xs [&_code]:leading-5 [&_code]:text-muted-foreground [&_svg]:flex-none [&_svg]:text-foreground-quaternary',
+  commitChip:
+    'inline-flex flex-none items-center gap-1.5 text-foreground-tertiary [&_code]:font-mono [&_code]:text-xs [&_code]:leading-5 [&_code]:text-foreground-tertiary [&_svg]:flex-none [&_svg]:text-foreground-quaternary',
+  prChip: nativeStyles.prChip,
+  prNumber: nativeStyles.prNumber,
+  prTitle: nativeStyles.prTitle,
+  scopeMetaItem:
+    'inline-flex min-w-0 max-w-full items-center gap-1.5 text-xs leading-5 text-foreground-tertiary [&_code]:min-w-0 [&_code]:truncate [&_code]:font-mono [&_code]:text-xs [&_code]:leading-5 [&_code]:text-muted-foreground [&_svg]:flex-none [&_svg]:text-foreground-quaternary',
+  scopeEntry: 'max-w-65',
+  originLink: nativeStyles.originLink,
+  surfaceList: 'flex flex-wrap gap-1',
+  surfaceChip:
+    'inline-flex items-center gap-1 rounded-(--radius-chip) bg-muted px-1.5 py-0.5 text-xs leading-5 text-muted-foreground [&_svg]:text-foreground-tertiary',
+  checks: 'mbs-6 overflow-hidden rounded-(--radius-card) border border-divider bg-card',
+  row: 'border-be border-divider last:border-be-0',
+  rowHead:
+    'grid w-full cursor-pointer grid-cols-[16px_minmax(0,1fr)_auto] items-center gap-2 border-0 bg-transparent px-4 py-3 text-start hover:bg-fill-quaternary focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring/50 [@media(width<=767px)]:grid-cols-[16px_minmax(0,1fr)] [@media(width<=767px)]:gap-x-2 [@media(width<=767px)]:gap-y-1.5 [@media(width<=767px)]:p-3',
+  rowTitle:
+    'truncate text-sm leading-5.5 text-foreground data-[failed=true]:font-semibold [@media(width<=767px)]:whitespace-normal [@media(width<=767px)]:[overflow-wrap:anywhere]',
+  rowSide:
+    'flex items-center gap-2 [@media(width<=767px)]:col-start-2 [@media(width<=767px)]:flex-wrap',
+  softTag:
+    'rounded-(--radius-chip) bg-muted px-2 py-0.5 text-xs leading-5 text-foreground-tertiary',
+  chev: 'text-foreground-quaternary transition-transform duration-(--orvilo-motion-mid) ease-[ease] data-[open=true]:rotate-90 motion-reduce:transition-none',
+  rowBody: 'flex flex-col gap-3 ps-10 pe-4 pbs-0.5 pbe-4 [@media(width<=767px)]:px-3',
+  reasoning: 'text-sm leading-5.5 text-muted-foreground',
+  suggestion: 'border-s-2 border-border ps-2.5 text-sm leading-5.5 text-muted-foreground',
+  planDetail:
+    'grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1 text-sm leading-5.5 text-foreground-tertiary [@media(width<=767px)]:grid-cols-[minmax(0,1fr)] [@media(width<=767px)]:gap-1 [@media(width<=767px)]:text-muted-foreground',
+  planDetailLabel: 'text-xs leading-5 whitespace-nowrap text-foreground-quaternary',
+  notExecutedHint: 'text-sm leading-5.5 text-foreground-tertiary',
+  narrative: 'mbs-6 [&:not([open])>:not(summary)]:hidden',
+  narrativeSummary:
+    'inline-flex cursor-pointer list-none items-center gap-1.5 text-xs leading-5 select-none text-foreground-tertiary [&::-webkit-details-marker]:hidden hover:text-foreground',
+  narrativeBody: 'mbs-3 rounded-(--radius-card) border border-divider bg-card p-4',
+  interactionCostBody: 'mbs-3',
+  evidenceList: 'flex w-full flex-col items-start gap-1.5',
+  evidenceFile: nativeStyles.evidenceFile,
+  evidenceFileIcon: 'flex text-foreground-tertiary',
+  evidenceFileBody: 'flex min-w-0 flex-col',
+  evidenceFileName: 'truncate text-sm leading-5.5 text-foreground',
+  evidenceFileDesc: 'mbs-0.5 truncate text-xs leading-5 text-foreground-tertiary',
+  evidenceText:
+    'max-h-50 overflow-auto rounded-(--radius-card) bg-fill-quaternary px-3 py-2 font-mono text-sm leading-5.5 whitespace-pre-wrap',
+  evidenceVideo:
+    'max-h-90 w-auto max-w-full self-start rounded-(--radius-card) border border-divider object-contain',
+  evChip:
+    'inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-xs leading-5 text-foreground-tertiary tabular-nums',
+  evidenceDoc: 'flex min-h-0 w-full flex-1 overflow-hidden',
+} as const;
 
 const VERDICT_META: Record<
   CheckState,
   { bg: string; color: string; dot: string; icon: typeof Check; labelKey: string }
 > = {
   failed: {
-    bg: cssVar.colorErrorBg,
-    color: cssVar.colorErrorText,
-    dot: cssVar.colorError,
+    bg: 'bg-destructive-wash',
+    color: 'text-destructive-text',
+    dot: 'text-destructive',
     icon: X,
     labelKey: 'report.verdict.failed',
   },
   not_executed: {
-    bg: cssVar.colorFillTertiary,
-    color: cssVar.colorTextTertiary,
-    dot: cssVar.colorTextQuaternary,
+    bg: 'bg-muted',
+    color: 'text-foreground-tertiary',
+    dot: 'text-foreground-quaternary',
     icon: CircleDashed,
     labelKey: 'report.verdict.notExecuted',
   },
   passed: {
-    bg: cssVar.colorSuccessBg,
-    color: cssVar.colorSuccessText,
-    dot: cssVar.colorSuccess,
+    bg: 'bg-success-wash',
+    color: 'text-success-text',
+    dot: 'text-success',
     icon: Check,
     labelKey: 'report.verdict.passed',
   },
   uncertain: {
-    bg: cssVar.colorWarningBg,
-    color: cssVar.colorWarningText,
-    dot: cssVar.colorWarning,
+    bg: 'bg-warning-wash',
+    color: 'text-warning-text',
+    dot: 'text-warning',
     icon: CircleHelp,
     labelKey: 'report.verdict.uncertain',
   },
@@ -802,29 +278,21 @@ const EvidenceItem = memo<{
     isInlineProse;
 
   return (
-    <div
-      className="flex flex-col gap-1.5"
-      style={{ ...(isDocument ? { flex: 1, minHeight: 0 } : undefined) }}
-    >
-      {!hideLabel && <div className="font-semibold text-[13px]">{label}</div>}
+    <div className={cn('flex flex-col gap-1.5', isDocument && 'flex-1 min-h-0')}>
+      {!hideLabel && <div className="font-semibold text-sm">{label}</div>}
       {description && !flat && !isInlineProse && (
         // Inline prose is excluded: its authored description becomes the fold
         // row's title below, so a standalone line here would say it twice.
-        <div className="text-[13px] text-muted-foreground">{description}</div>
+        <div className="text-sm text-muted-foreground">{description}</div>
       )}
       {e.fileUrl && imageEvidenceTypes.has(e.type) ? (
-        <div
-          className="flex flex-col"
-          style={{ alignItems: flat ? undefined : 'flex-start', maxWidth: '100%' }}
-        >
+        <div className={cn('flex max-w-full flex-col', !flat && 'items-start')}>
           <Image
             preview
             alt={e.description ?? label}
+            className={clsx(nativeStyles.evidenceImage, flat && nativeStyles.evidenceImageFlat)}
             src={e.fileUrl}
             variant={flat ? 'borderless' : 'outlined'}
-            style={
-              flat ? { borderRadius: 0, maxWidth: '100%', width: '100%' } : { maxWidth: '100%' }
-            }
           />
         </div>
       ) : e.fileUrl && e.type === 'video' ? (
@@ -875,20 +343,22 @@ const EvidenceFileButton = memo<{
     evidence.description && evidence.description !== name ? evidence.description : null;
 
   return (
-    <button
-      className={styles.evidenceFile}
+    <Button
+      className={cn(styles.evidenceFile, 'h-auto min-h-9 whitespace-normal')}
+      size="normal"
       title={t('report.evidence.openDetail', { name })}
       type={'button'}
+      variant="ghost"
       onClick={onClick}
     >
       <span className={styles.evidenceFileIcon}>
-        {createElement(CATEGORY_ICON[evidenceCategory(evidence.type)], { size: 13 })}
+        {createElement(CATEGORY_ICON[evidenceCategory(evidence.type)], { size: 16 })}
       </span>
       <span className={styles.evidenceFileBody}>
         <span className={styles.evidenceFileName}>{name}</span>
         {description && <span className={styles.evidenceFileDesc}>{description}</span>}
       </span>
-    </button>
+    </Button>
   );
 });
 
@@ -902,25 +372,15 @@ const EvidenceDrawer = memo<{
   title: string;
 }>(({ evidence, onClose, open, title }) => (
   <AcceptanceDrawer
+    classNames={{ bodyContent: 'h-full min-h-0 overflow-hidden p-0' }}
     containerMaxWidth={'100%'}
     open={open}
     placement={'right'}
     title={title}
     width={'min(1120px, calc(100vw - 48px))'}
-    styles={{
-      bodyContent: {
-        height: '100%',
-        minHeight: 0,
-        overflow: 'hidden',
-        padding: 0,
-      },
-    }}
     onClose={onClose}
   >
-    <div
-      className="flex flex-col gap-5 h-full"
-      style={{ paddingBlock: 12, paddingInline: 16, overflow: 'auto' }}
-    >
+    <div className="flex h-full flex-col gap-5 overflow-auto py-3 px-4">
       {evidence.map((e, index) => (
         <EvidenceItem evidence={e} index={index + 1} key={e.id} />
       ))}
@@ -1018,7 +478,7 @@ const CheckRow = memo<{ defaultOpen: boolean; row: CheckRowData }>(({ defaultOpe
         type={'button'}
         onClick={() => hasBody && setOpen((o) => !o)}
       >
-        <span style={{ color: meta.dot, display: 'flex' }}>
+        <span className={clsx('flex', meta.dot)}>
           <meta.icon size={16} />
         </span>
         <span className={styles.rowTitle} data-failed={state === 'failed'}>
@@ -1032,7 +492,7 @@ const CheckRow = memo<{ defaultOpen: boolean; row: CheckRowData }>(({ defaultOpe
                 key={cat}
                 title={`${t(`report.evidence.category.${cat}`)} × ${categoryCounts[cat]}`}
               >
-                {createElement(CATEGORY_ICON[cat], { size: 12 })}
+                {createElement(CATEGORY_ICON[cat], { size: 16 })}
                 {categoryCounts[cat]}
               </span>
             ) : null,
@@ -1041,7 +501,7 @@ const CheckRow = memo<{ defaultOpen: boolean; row: CheckRowData }>(({ defaultOpe
             <span className={styles.softTag}>{t('report.verdict.notExecuted')}</span>
           )}
           {!required && <span className={styles.softTag}>{t('report.check.optional')}</span>}
-          {hasBody && <ChevronRight className={styles.chev} data-open={open} size={14} />}
+          {hasBody && <ChevronRight className={styles.chev} data-open={open} size={16} />}
         </span>
       </button>
       {open && hasBody && (
@@ -1071,7 +531,7 @@ const CheckRow = memo<{ defaultOpen: boolean; row: CheckRowData }>(({ defaultOpe
                   <span className={styles.surfaceList}>
                     {requiredEvidence.map((spec) => (
                       <span className={styles.surfaceChip} key={spec.type} title={spec.hint}>
-                        {createElement(CATEGORY_ICON[evidenceCategory(spec.type)], { size: 12 })}
+                        {createElement(CATEGORY_ICON[evidenceCategory(spec.type)], { size: 16 })}
                         {t(`report.evidence.medium.${spec.type}`)}
                       </span>
                     ))}
@@ -1133,10 +593,7 @@ const ReportPageState = memo<{
   icon: typeof AlertTriangle;
   title: string;
 }>(({ action, description, icon, title }) => (
-  <div
-    className="flex items-center justify-center flex-col gap-4 h-full w-full"
-    style={{ minHeight: '70vh' }}
-  >
+  <div className="flex h-full min-h-[70vh] w-full flex-col items-center justify-center gap-4">
     <Empty>
       <EmptyHeader>
         {icon ? (
@@ -1215,10 +672,16 @@ const CodingScopeCard = memo<{
   const pullRequestContent =
     hasPullRequest && pullRequest ? (
       <>
-        <GitPullRequest size={15} />
-        <span className={styles.prNumber}>{pullRequestLabel(pullRequest, t)}</span>
-        {pullRequest.title && <span className={styles.prTitle}>{pullRequest.title}</span>}
-        {pullRequestUrl && <ExternalLink size={13} />}
+        <GitPullRequest data-slot="report-pr-icon" size={16} />
+        <span className={styles.prNumber} data-slot="report-pr-number">
+          {pullRequestLabel(pullRequest, t)}
+        </span>
+        {pullRequest.title && (
+          <span className={styles.prTitle} data-slot="report-pr-title">
+            {pullRequest.title}
+          </span>
+        )}
+        {pullRequestUrl && <ExternalLink size={16} />}
       </>
     ) : null;
   const shortCommit = commit && commit.length > 12 ? commit.slice(0, 10) : commit;
@@ -1231,6 +694,7 @@ const CodingScopeCard = memo<{
             <a
               className={styles.prChip}
               data-link={true}
+              data-slot="report-pr-chip"
               href={pullRequestUrl}
               rel="noreferrer"
               target="_blank"
@@ -1239,7 +703,7 @@ const CodingScopeCard = memo<{
               {pullRequestContent}
             </a>
           ) : (
-            <span className={styles.prChip} title={pullRequest?.title}>
+            <span className={styles.prChip} data-slot="report-pr-chip" title={pullRequest?.title}>
               {pullRequestContent}
             </span>
           )}
@@ -1249,19 +713,19 @@ const CodingScopeCard = memo<{
       <div className={styles.scopeMetaLine}>
         {branch && (
           <span className={styles.branchChip} title={branch}>
-            <GitBranch size={15} />
+            <GitBranch size={16} />
             <code>{branch}</code>
           </span>
         )}
         {commit && (
           <span className={styles.commitChip} title={commit}>
-            <GitCommit size={14} />
+            <GitCommit size={16} />
             <code>{shortCommit}</code>
           </span>
         )}
         {date && (
           <span className={styles.scopeMetaItem}>
-            <CalendarClock size={13} />
+            <CalendarClock size={16} />
             <span>{date}</span>
           </span>
         )}
@@ -1269,15 +733,15 @@ const CodingScopeCard = memo<{
           <span className={styles.surfaceList}>
             {surfaces.map((surface) => (
               <span className={styles.surfaceChip} key={surface}>
-                {createElement(SURFACE_ICON[surface], { size: 12 })}
+                {createElement(SURFACE_ICON[surface], { size: 16 })}
                 {t(`report.surface.${surface}`)}
               </span>
             ))}
           </span>
         )}
         {entry && (
-          <span className={cx(styles.scopeMetaItem, styles.scopeEntry)} title={entry}>
-            <Terminal size={13} />
+          <span className={clsx(styles.scopeMetaItem, styles.scopeEntry)} title={entry}>
+            <Terminal size={16} />
             <code>{entry}</code>
           </span>
         )}
@@ -1285,14 +749,14 @@ const CodingScopeCard = memo<{
             from a bundle fetched by anyone else holding the shared link. */}
         {originTopicId && (
           <a
-            className={cx(styles.scopeMetaItem, styles.originLink)}
+            className={clsx(styles.scopeMetaItem, styles.originLink)}
             href={`/chat?topic=${originTopicId}`}
             rel="noreferrer"
             target="_blank"
             title={t('report.scope.origin')}
           >
-            <MessagesSquare size={13} />
-            <ExternalLink size={11} />
+            <MessagesSquare size={16} />
+            <ExternalLink size={16} />
           </a>
         )}
       </div>
@@ -1349,7 +813,7 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
         icon={X}
         title={t('report.error.title')}
         action={
-          <Button onClick={() => void mutate()}>
+          <Button size="lg" type="button" onClick={() => void mutate()}>
             <RefreshCw size={16} />
             {t('report.actions.retry')}
           </Button>
@@ -1394,22 +858,20 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
                 to its own line anyway, and then reads as an afterthought
                 rather than as the report's headline state. */}
             {verdict && (
-              <div className={styles.heroLine} style={{ marginBlockEnd: 2 }}>
+              <div className={cn(styles.heroLine, 'mbe-0.5')}>
                 <span
-                  className={styles.pill}
-                  style={{
-                    background: VERDICT_META[verdict].bg,
-                    color: VERDICT_META[verdict].color,
-                  }}
+                  className={clsx(
+                    styles.pill,
+                    VERDICT_META[verdict].bg,
+                    VERDICT_META[verdict].color,
+                  )}
                 >
-                  {createElement(VERDICT_META[verdict].icon, { size: 15 })}
+                  {createElement(VERDICT_META[verdict].icon, { size: 16 })}
                   {t(`report.verdict.${verdict}`)}
                 </span>
               </div>
             )}
-            <h1 style={{ fontSize: 24, lineHeight: 1.3, margin: 0 }}>
-              {run.title || t('report.titleFallback')}
-            </h1>
+            <h1 className="m-0 text-2xl font-semibold">{run.title || t('report.titleFallback')}</h1>
 
             {!isCodingReport && run.goal && <div className={cn(styles.summary)}>{run.goal}</div>}
             {report?.summary && <div className={cn(styles.summary)}>{report.summary}</div>}
@@ -1423,7 +885,7 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
 
             {liveStatus && (
               <div className={styles.liveBanner}>
-                <Clock3 size={14} />
+                <Clock3 size={16} />
                 {t(liveStatusLabelKey[liveStatus])}
               </div>
             )}
@@ -1439,7 +901,7 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center" style={{ padding: 24 }}>
+            <div className="flex flex-col items-center p-6">
               <div className="text-muted-foreground">{t('report.filterEmpty')}</div>
             </div>
           )}
@@ -1447,11 +909,13 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
           {report?.content && (
             <details className={styles.narrative}>
               <summary className={styles.narrativeSummary}>
-                <ChevronRight size={13} />
+                <ChevronRight size={16} />
                 {t('report.sections.details')}
               </summary>
               <div className={styles.narrativeBody}>
-                <Markdown>{report.content}</Markdown>
+                <Markdown fontSize={14} lineHeight={22 / 14}>
+                  {report.content}
+                </Markdown>
               </div>
             </details>
           )}
@@ -1459,7 +923,7 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
           {interactionCost && (
             <details className={styles.narrative}>
               <summary className={styles.narrativeSummary}>
-                <ChevronRight size={13} />
+                <ChevronRight size={16} />
                 {t('report.interaction.title')}
               </summary>
               <div className={styles.interactionCostBody}>

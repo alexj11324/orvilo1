@@ -30,7 +30,7 @@ const styles = {
   panel: 'overflow-hidden w-full h-full min-h-0 border-s border-sidebar-border bg-card',
   header: 'p-4 border-b border-sidebar-border',
   body: 'overflow-auto min-h-0 p-4',
-  plan: 'text-[12px] text-muted-foreground [&_summary]:cursor-pointer [&_summary]:py-1.5',
+  plan: 'text-xs text-muted-foreground [&_summary]:cursor-pointer [&_summary]:py-1.5',
   observation: 'leading-[1.7] wrap-anywhere whitespace-pre-wrap',
   review: 'pt-4 border-t border-sidebar-border',
 };
@@ -57,12 +57,13 @@ function AttemptReview({
         </div>
       )}
       {attempt.reviewDetail?.annotations?.map((annotation, index) => (
-        <div className="text-[12px]" key={`${annotation.evidenceId}:${index}`}>
+        <div className="text-xs" key={`${annotation.evidenceId}:${index}`}>
           {index + 1}. {annotation.comment}
         </div>
       ))}
       <AttachmentThumbs attachments={attempt.reviewAttachments} />
       <Button
+        size="lg"
         onClick={() =>
           openCheckRejectModal({
             checkTitle: t('flow.annotate'),
@@ -96,7 +97,7 @@ function AttemptReview({
         {t('flow.annotate')}
       </Button>
       {!editing ? (
-        <Button onClick={() => setEditing(true)}>
+        <Button size="lg" onClick={() => setEditing(true)}>
           {t(attempt.review ? 'flow.editReview' : 'flow.reviewResult')}
         </Button>
       ) : (
@@ -111,6 +112,7 @@ function AttemptReview({
               <Button
                 disabled={saving}
                 key={review}
+                size="lg"
                 onClick={async () => {
                   setSaving(true);
                   try {
@@ -181,11 +183,11 @@ export function FlowResults({
     <div className={`flex flex-col ${styles.panel}`}>
       <div className={`flex items-center gap-3 justify-between ${styles.header}`}>
         <div className="flex items-center gap-2.5" style={{ flexWrap: 'wrap' }}>
-          <div className="font-semibold text-[16px]">{node.title}</div>
+          <div className="font-semibold text-base">{node.title}</div>
           {attempt && (
             <div className="flex items-center gap-1" style={{ flex: 'none' }}>
               <ClipboardCheck color={flowStateColor(attempt.verdict)} size={14} />
-              <div className="text-[12px]" style={{ color: flowStateColor(attempt.verdict) }}>
+              <div className="text-xs" style={{ color: flowStateColor(attempt.verdict) }}>
                 {t(`flow.state.${attempt.verdict}`)}
               </div>
             </div>
@@ -210,7 +212,7 @@ export function FlowResults({
             <div className="flex flex-col gap-2.5">
               <div className="flex items-center gap-1.5">
                 <History size={14} />
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {t('flow.resultHistory', { count: attempts.length })}
                 </div>
               </div>
@@ -222,7 +224,7 @@ export function FlowResults({
                 }))}
                 onValueChange={(id) => setAttemptId(String(id))}
               >
-                <SelectTrigger>
+                <SelectTrigger size="compact">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -235,7 +237,7 @@ export function FlowResults({
               </Select>
             </div>
             <div className="flex flex-col gap-1">
-              <div className="text-[12px] text-muted-foreground">{t('flow.actual')}</div>
+              <div className="text-xs text-muted-foreground">{t('flow.actual')}</div>
               <div className={cn(styles.observation)}>{attempt.observation}</div>
             </div>
           </>
@@ -243,7 +245,7 @@ export function FlowResults({
           <div className="text-muted-foreground">{t('flow.unvisited')}</div>
         )}
         <div className="flex flex-col gap-1">
-          <div className="text-[12px] text-muted-foreground">{t('flow.expected')}</div>
+          <div className="text-xs text-muted-foreground">{t('flow.expected')}</div>
           <div>{node.expected}</div>
         </div>
         <details className={styles.plan} open={!attempt}>

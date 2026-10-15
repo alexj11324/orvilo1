@@ -9,7 +9,7 @@ import {
   Flexbox,
   menuSharedStyles,
 } from '@lobehub/ui';
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Check } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { memo, useState } from 'react';
@@ -43,11 +43,14 @@ const GenerationMultipleProvidersItem = memo<GenerationMultipleProvidersItemProp
     const isActive = !!activeProvider;
 
     return (
-      <Flexbox style={{ marginBlock: 1, marginInline: 4 }}>
+      <Flexbox className="my-px mx-1">
         <DropdownMenuSubmenuRoot open={subOpen} onOpenChange={setSubOpen}>
           <DropdownMenuSubmenuTrigger
-            className={cx(menuSharedStyles.item, isActive && modelSwitchPanelStyles.menuItemActive)}
-            style={{ paddingBlock: 8, paddingInline: 8 }}
+            className={cn(
+              menuSharedStyles.item,
+              modelSwitchPanelStyles.menuRow,
+              isActive && modelSwitchPanelStyles.menuItemActive,
+            )}
             onClick={() => {
               setSubOpen(false);
               onModelChange(item.data.model.id, (activeProvider ?? item.data.providers[0]).id);
@@ -63,7 +66,7 @@ const GenerationMultipleProvidersItem = memo<GenerationMultipleProvidersItemProp
           <DropdownMenuPortal>
             <DropdownMenuPositioner anchor={null} placement="right" sideOffset={12}>
               <DropdownMenuPopup
-                className={cx(
+                className={cn(
                   modelSwitchPanelStyles.detailPopup,
                   modelSwitchPanelStyles.dropdownMenu,
                 )}
@@ -75,7 +78,7 @@ const GenerationMultipleProvidersItem = memo<GenerationMultipleProvidersItemProp
                   provider={(activeProvider ?? item.data.providers[0]).id}
                 />
                 <Flexbox gap={4} paddingBlock={8} paddingInline={8}>
-                  <Flexbox style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>
+                  <Flexbox className={modelSwitchPanelStyles.caption}>
                     {t('ModelSwitchPanel.useModelFrom')}
                   </Flexbox>
                   {item.data.providers.map((p) => {

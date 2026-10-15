@@ -1,0 +1,11 @@
+/* Public editor/renderer className boundary; no vendor-private selector. */
+.mentionFilled :global(.editor_mention) {
+  border: none;
+}
+
+/* The installed editor gives non-final paragraphs a more specific margin rule.
+   The original merged reset only wins for the final paragraph. Preserve that
+   effective contract without competing with runtime stylesheet insertion order. */
+.paragraphEnd :global(p:last-child) {
+  margin-block-end: 0;
+}

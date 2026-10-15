@@ -12,6 +12,8 @@ import {
   type TopicCommentEditorValue,
 } from '@/features/Portal/TopicComments/editorUtils';
 import { useWorkspaceCommentMentionOption } from '@/features/Portal/TopicComments/useWorkspaceCommentMentionOption';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import { styles } from './styles';
 import { useFreezeHeightWhileResizingImage } from './useFreezeHeightWhileResizingImage';
@@ -55,6 +57,7 @@ const DocumentCommentEditor = memo<DocumentCommentEditorProps>(
     onPressEnter,
     placeholder,
   }) => {
+    const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
     const internalEditor = useEditor();
     const editor = externalEditor ?? internalEditor;
     const mentionOption = useWorkspaceCommentMentionOption();
@@ -87,7 +90,11 @@ const DocumentCommentEditor = memo<DocumentCommentEditorProps>(
     );
 
     return (
-      <div className={`${styles.commentEditor} ${mentionFilledClassName}`} ref={rootRef}>
+      <div
+        className={`${styles.commentEditor} ${mentionFilledClassName}`}
+        data-motion-disabled={animationMode === 'disabled' || undefined}
+        ref={rootRef}
+      >
         <EditorCanvas
           blockImageCaretGuard
           disabled={disabled}

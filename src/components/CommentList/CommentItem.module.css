@@ -1,0 +1,30 @@
+@reference '../../app/globals.css';
+
+/* Public Markdown merges our native class with its registered typography root.
+   The public typography scope adds its :not(:has(.ignore-markdown-style))
+   selector, and paragraph position adds another pseudo-class. Own four-class
+   specificity preserves the owned paragraph reset/strong roles regardless of
+   runtime order. Vendor renderer/provider/streaming and font metrics remain. */
+.content.content {
+  @apply text-sm text-muted-foreground;
+}
+
+.content.content.content.content p {
+  @apply my-0;
+}
+
+/* Adjacent paragraphs are grouped content inside one comment: the current
+   DESIGN within-group8 spacing role, not a rounded version of the old .72em. */
+.content.content.content.content p + p {
+  @apply mbs-2;
+}
+
+.content.content.content strong {
+  @apply font-semibold text-foreground;
+}
+
+/* Resting anchors take the exact link role; the real public Markdown hover
+   selector retains its original colorInfoHover and keyboard/link behavior. */
+.content.content a:not(:hover) {
+  @apply text-link;
+}

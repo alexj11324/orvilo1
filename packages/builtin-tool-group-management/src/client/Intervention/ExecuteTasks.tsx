@@ -25,11 +25,11 @@ import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import type { ExecuteTasksParams, TaskItem } from '../../types';
 
 const styles = {
-  assignee: 'flex shrink-0 items-center gap-1.5 text-[12px] text-muted-foreground',
-  container: 'rounded-[var(--ant-border-radius)] py-3',
+  assignee: 'flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground',
+  container: 'rounded-(--ant-border-radius) py-3',
   deleteButton:
-    'cursor-pointer text-[var(--ant-color-text-tertiary)] transition-[color] duration-200 ease-[ease] hover:text-destructive',
-  timeoutInput: 'w-[100px]',
+    'cursor-pointer text-foreground-tertiary transition-[color] duration-200 ease-[ease] hover:text-destructive',
+  timeoutInput: 'w-25',
 };
 
 const DEFAULT_TIMEOUT = 1_800_000; // 30 minutes

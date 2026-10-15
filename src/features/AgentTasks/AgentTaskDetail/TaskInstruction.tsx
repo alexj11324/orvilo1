@@ -1,6 +1,6 @@
 import { useEditor } from '@lobehub/editor/react';
 import { Paperclip } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
@@ -11,27 +11,36 @@ import { EditingIndicator, type EditLockClient, useEditLock } from '@/features/E
 import { EditorCanvas } from '@/features/EditorCanvas';
 import { seedAttachments } from '@/features/EditorCanvas/attachmentRegistry';
 import { usePermission } from '@/hooks/usePermission';
-import { lambdaClient } from '@/libs/trpc/client';
+import { taskService } from '@/services/task';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
-import { taskInstructionStyles } from './taskInstructionStyles';
+import { TASK_INSTRUCTION_EDITOR_PLUGINS, taskInstructionStyles } from './taskInstructionStyles';
 import { useAttachInstructionFiles } from './useAttachInstructionFiles';
 import { useTaskInstructionAutosave } from './useTaskInstructionAutosave';
 
 // Stable lock RPC binding for the task resource.
 const taskLockClient: EditLockClient = {
-  acquire: (id) => lambdaClient.task.acquireTaskLock.mutate({ id }),
-  peek: (id) => lambdaClient.task.getTaskLock.query({ id }),
+  acquire: (id) => taskService.acquireTaskLock({ id }),
+  peek: (id) => taskService.getTaskLock({ id }),
   release: async (id) => {
-    await lambdaClient.task.releaseTaskLock.mutate({ id });
+    await taskService.releaseTaskLock({ id });
   },
 };
 
 // Roomier than the chat-bubble default: the instruction is the primary content
 // of the page, so the preview should carry a paragraph or two before it clamps.
 const INSTRUCTION_MAX_HEIGHT = 320;
+
+// This is the task's primary prose document, including the automation instructions.
+// DESIGN.md assigns issue descriptions the 15px/450 prose role. The editor's
+// actual style API consumes the header factor; each heading supplies its role size.
+const INSTRUCTION_CONTENT_STYLE = {
+  '--common-header-multiple': 0,
+  'fontSize': 15,
+  'fontWeight': 450,
+} satisfies CSSProperties & { '--common-header-multiple': number };
 
 const TaskInstruction = memo(() => {
   const { t } = useTranslation('chat');
@@ -150,15 +159,13 @@ const TaskInstruction = memo(() => {
         <div className={taskInstructionStyles.content} onFocus={handleFocus}>
           <EditorCanvas
             contentRevision={instructionRevision}
-            // Linear's issue body runs 15px at a slightly darker weight than
-            // the editor's 16/400 default — the description reads as prose,
-            // not as a comment.
-            contentStyle={{ fontSize: 15, fontWeight: 450 }}
+            contentStyle={INSTRUCTION_CONTENT_STYLE}
             disabled={!canEditTask}
             editable={!lock.lockedByOther && !lock.pending}
             editor={editor}
             editorData={editorData}
             entityId={taskId}
+            extraPlugins={TASK_INSTRUCTION_EDITOR_PLUGINS}
             placeholder={t('taskDetail.instructionPlaceholder')}
             onContentChange={handleContentChange}
           />
@@ -177,7 +184,7 @@ const TaskInstruction = memo(() => {
                     aria-label={t('upload.action.tooltip')}
                     disabled={!editable}
                     icon={Paperclip}
-                    size={'small'}
+                    size={{ blockSize: 36, borderRadius: 'var(--radius-button)', size: 16 }}
                     onClick={handleAttach}
                   />
                 </span>

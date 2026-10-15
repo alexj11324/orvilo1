@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
@@ -23,36 +22,13 @@ import { shouldCoverAppForAgentSetup } from './gate';
 import { isFirstAgentSetupPath } from './setupPath';
 import { useAgentAvailability } from './useAgentAvailability';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  brand: css`
-    display: flex;
-    justify-content: center;
-  `,
-  footer: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    text-align: center;
-  `,
-  header: css`
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    align-items: center;
-
-    text-align: center;
-  `,
-  root: css`
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    width: 100%;
-  `,
-  title: css`
-    font-size: 20px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  brand: 'flex justify-center',
+  footer: 'text-xs text-muted-foreground text-center',
+  header: 'flex flex-col gap-2.5 items-center text-center',
+  root: 'flex flex-col gap-4 w-full',
+  title: 'text-xl font-semibold text-foreground',
+};
 
 /**
  * What the machine-side probe found is rendered inside the create panel — the
@@ -114,7 +90,7 @@ const OnboardingBody = ({ retry }: { retry: () => Promise<void> }) => {
         }
       />
       <div className={styles.footer}>{t('onboarding.footerHint')}</div>
-      <Button variant="ghost" onClick={() => navigate('/settings/profile')}>
+      <Button size="normal" variant="ghost" onClick={() => navigate('/settings/profile')}>
         {t('onboarding.account')}
       </Button>
     </div>

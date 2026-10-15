@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -30,7 +29,7 @@ export const FileUploading = memo<FileUploadingProps>(({ progress = 0, speed = 0
           </Progress>
           <div
             className="flex justify-between"
-            style={{ color: cssVar.colorTextDescription, fontSize: 12 }}
+            style={{ color: 'var(--ant-color-text-description)', fontSize: 12 }}
           >
             <span>
               {t('importModal.uploading.restTime')}: {restTime ? formatTime(restTime) : '-'}

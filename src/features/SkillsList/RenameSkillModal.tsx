@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -66,15 +65,16 @@ const RenameSkillContent = memo<RenameSkillContentProps>(({ currentName, onSubmi
             if (e.key === 'Enter') handleSubmit();
           }}
         />
-        {error ? <div style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</div> : null}
+        {error ? <div className="text-xs leading-5 text-destructive-text">{error}</div> : null}
       </div>
       <div className="flex gap-2 justify-end">
-        <Button disabled={loading} onClick={close}>
+        <Button disabled={loading} size="lg" onClick={close}>
           {tCommon('cancel')}
         </Button>
         <Button
           disabled={!trimmed || trimmed === currentName}
           loading={loading}
+          size="lg"
           onClick={handleSubmit}
         >
           {tChat('workingPanel.skills.rename.action')}

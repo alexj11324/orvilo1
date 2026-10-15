@@ -5,6 +5,6 @@ export const agentListStyles = {
 
 export const itemStyles = {
   container: 'relative overflow-hidden flex-1 min-w-0',
-  description: 'overflow-hidden text-[12px] text-muted-foreground text-ellipsis whitespace-nowrap',
-  title: 'overflow-hidden text-[14px] font-medium text-foreground text-ellipsis whitespace-nowrap',
+  description: 'overflow-hidden text-xs text-muted-foreground text-ellipsis whitespace-nowrap',
+  title: 'overflow-hidden text-sm font-medium text-foreground text-ellipsis whitespace-nowrap',
 };

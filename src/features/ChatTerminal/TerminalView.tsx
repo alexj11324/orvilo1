@@ -1,7 +1,7 @@
 'use client';
 
-import { useTheme } from 'antd-style';
-import { memo, useEffect, useRef } from 'react';
+import { ThemeContext } from '@emotion/react';
+import { memo, use, useEffect, useRef } from 'react';
 
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors } from '@/store/user/selectors';
@@ -16,7 +16,9 @@ import { xtermManager } from './xtermManager';
  */
 const TerminalView = memo<{ sessionId: string }>(({ sessionId }) => {
   const hostRef = useRef<HTMLDivElement>(null);
-  const theme = useTheme();
+  const theme = use(ThemeContext) as Parameters<typeof buildXtermTheme>[0] & {
+    fontFamilyCode: string;
+  };
   const terminalFontFamily = useUserStore(preferenceSelectors.terminalFontFamily);
 
   useEffect(() => {
@@ -49,12 +51,7 @@ const TerminalView = memo<{ sessionId: string }>(({ sessionId }) => {
     xtermManager.applyTheme(buildXtermTheme(theme), terminalFontFamily || theme.fontFamilyCode);
   }, [terminalFontFamily, theme, sessionId]);
 
-  return (
-    <div
-      ref={hostRef}
-      style={{ height: '100%', minHeight: 0, overflow: 'hidden', width: '100%' }}
-    />
-  );
+  return <div className="h-full min-h-0 w-full overflow-hidden" ref={hostRef} />;
 });
 
 export default TerminalView;

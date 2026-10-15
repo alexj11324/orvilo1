@@ -156,6 +156,8 @@ export default class GatewayConnectionService extends ServiceModule {
   private workspaceClients = new Map<string, GatewayClient>();
   /** Serializes enrollment restores so reconnect churn can't double-open sockets. */
   private workspaceRestoreInFlight = false;
+  /** Tail of the pending personal connects; see `doConnect`. */
+  private connectQueue: Promise<unknown> = Promise.resolve();
 
   // ─── Configuration ───
 
@@ -402,7 +404,20 @@ export default class GatewayConnectionService extends ServiceModule {
     return { success: true };
   }
 
-  private async doConnect(): Promise<{ error?: string; success: boolean }> {
+  /**
+   * Connects one at a time. Sign-in and startup both call this, and each waits
+   * on a token and the device registration before it owns `this.client`; run
+   * together, the later one cannot see the earlier client to close it. That
+   * orphan keeps reconnecting under the same connection id, and the gateway
+   * then evicts each socket for the other once a second.
+   */
+  private doConnect(): Promise<{ error?: string; success: boolean }> {
+    const run = this.connectQueue.then(() => this.openClient());
+    this.connectQueue = run.catch(() => {});
+    return run;
+  }
+
+  private async openClient(): Promise<{ error?: string; success: boolean }> {
     // Clean up any existing client
     if (this.client) {
       await this.client.disconnect();

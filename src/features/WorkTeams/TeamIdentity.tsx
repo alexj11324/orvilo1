@@ -32,7 +32,8 @@ export const teamAccentColor = (id: string, color?: string | null): string =>
   color ?? TEAM_PALETTE[hashCode(id) % TEAM_PALETTE.length]!;
 
 const styles = {
-  glyph: 'inline-flex flex-none items-center justify-center rounded-[4px] font-semibold uppercase',
+  glyph:
+    'inline-flex flex-none items-center justify-center rounded-(--radius-chip) font-semibold uppercase',
 };
 
 const TeamIdentity = memo<{ color?: string | null; id: string; letter?: string; size?: number }>(

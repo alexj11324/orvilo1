@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { AlertTriangle } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,18 +15,10 @@ import type { WorkspaceMemberSummary } from '../api/contract';
 import { useRemovalPreview, useTeammateActions } from '../api/hooks';
 import { removalArmed } from './removalArmed';
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    padding-block: 0 16px;
-    padding-inline: 20px;
-  `,
-  previewRow: css`
-    display: flex;
-    gap: 8px;
-    align-items: baseline;
-    font-size: 13px;
-  `,
-}));
+const styles = {
+  body: 'pbs-0 pbe-4 px-5',
+  previewRow: 'flex gap-2 items-baseline text-sm leading-5.5',
+};
 
 export interface RemoveMemberTarget {
   displayName: string;
@@ -76,52 +68,54 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
       preview.sharedDeviceCount > 0);
 
   return (
-    <div className={cx(styles.body, 'flex flex-col gap-4')}>
-      <Alert variant="warning">
+    <div className={cn(styles.body, 'flex flex-col gap-4')}>
+      <Alert className="rounded-(--radius-card) text-sm leading-5.5" variant="warning">
         <AlertTriangle size={16} />
-        <AlertTitle>
+        <AlertTitle className="line-clamp-none text-sm leading-5.5 tracking-normal">
           {t('workspaceSetting.members.removeWarning', { name: target.displayName })}
         </AlertTitle>
       </Alert>
 
       {isLoading && (
         <div className="flex flex-col gap-2.5">
-          <Skeleton className="h-3" style={{ marginBottom: 0, width: '70%' }} />
-          <Skeleton className="h-3" style={{ marginBottom: 0, width: '55%' }} />
-          <Skeleton className="h-3" style={{ marginBottom: 0, width: '60%' }} />
+          <Skeleton className="mb-0 h-3 w-7/10" />
+          <Skeleton className="mb-0 h-3 w-11/20" />
+          <Skeleton className="mb-0 h-3 w-3/5" />
         </div>
       )}
       {error && (
-        <Alert variant="destructive">
-          <AlertTitle>{t('workspaceSetting.members.previewFailed')}</AlertTitle>
+        <Alert className="rounded-(--radius-card) text-sm leading-5.5" variant="destructive">
+          <AlertTitle className="line-clamp-none text-sm leading-5.5 tracking-normal">
+            {t('workspaceSetting.members.previewFailed')}
+          </AlertTitle>
         </Alert>
       )}
       {preview && (
         <div className="flex flex-col gap-1">
-          <div className="text-[13px] font-medium">
+          <div className="text-sm leading-5.5 font-medium">
             {t('workspaceSetting.members.previewTitle')}
           </div>
           <div className={styles.previewRow}>
-            <div className="text-[13px] text-muted-foreground">
+            <div className="text-sm leading-5.5 text-muted-foreground">
               {t('workspaceSetting.members.previewTasks', { count: preview.assignedTaskCount })}
             </div>
           </div>
           <div className={styles.previewRow}>
-            <div className="text-[13px] text-muted-foreground">
+            <div className="text-sm leading-5.5 text-muted-foreground">
               {t('workspaceSetting.members.previewReviews', {
                 count: preview.reviewingTaskCount,
               })}
             </div>
           </div>
           <div className={styles.previewRow}>
-            <div className="text-[13px] text-muted-foreground">
+            <div className="text-sm leading-5.5 text-muted-foreground">
               {t('workspaceSetting.members.previewDelegations', {
                 count: preview.runningDelegationCount,
               })}
             </div>
           </div>
           <div className={styles.previewRow}>
-            <div className="text-[13px] text-muted-foreground">
+            <div className="text-sm leading-5.5 text-muted-foreground">
               {t('workspaceSetting.members.previewDevices', {
                 count: preview.sharedDeviceCount,
               })}
@@ -132,27 +126,32 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
 
       {preview && hasImpact && reassignOptions.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <div className="text-[13px] font-medium">
+          <div className="text-sm leading-5.5 font-medium">
             {t('workspaceSetting.members.reassignLabel')}
           </div>
           <Select
             allowClear
+            aria-label={t('workspaceSetting.members.reassignLabel')}
             options={reassignOptions}
             placeholder={t('workspaceSetting.members.reassignPlaceholder')}
+            size="normal"
             value={reassignTo}
             onChange={(value) => setReassignTo(value as string | undefined)}
           />
         </div>
       )}
 
-      <ModalFooter>
-        <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
+      <ModalFooter className="p-0">
+        <Button size="lg" onClick={close}>
+          {t('cancel', { ns: 'common' })}
+        </Button>
         {/* Remove stays armed only after the preview actually landed: a
             failed or in-flight preview means the impact numbers were never
             seen so the destructive action must not be clickable. */}
         <Button
           disabled={!removalArmed({ error, isLoading, mutating, preview })}
           loading={mutating}
+          size="lg"
           variant="destructive"
           onClick={handleRemove}
         >

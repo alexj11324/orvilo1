@@ -1,6 +1,5 @@
 import { isDesktop } from '@orvilo/const';
 import { getActivePluginIds, type OrviloAgentConfig } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import type { TFunction } from 'i18next';
 import {
@@ -335,7 +334,9 @@ const Header = memo(() => {
               icon: authorName ? <UserRound /> : undefined,
               key: 'agent-info',
               label: (
-                <span style={{ color: cssVar.colorTextTertiary, fontSize: 12, lineHeight: 1.6 }}>
+                <span
+                  style={{ color: 'var(--ant-color-text-tertiary)', fontSize: 12, lineHeight: 1.6 }}
+                >
                   {[
                     authorName,
                     createdAt

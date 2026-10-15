@@ -1,8 +1,7 @@
 'use client';
 
 import { EDITOR_DEBOUNCE_TIME, EDITOR_MAX_WAIT } from '@orvilo/const';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx, cn } from 'cn';
 import { debounce } from 'es-toolkit/compat';
 import { CheckIcon, PencilIcon, XIcon } from 'lucide-react';
 import type { ChangeEvent } from 'react';
@@ -36,50 +35,16 @@ import {
 import EditorCanvas from './EditorCanvas';
 import TodoList from './TodoList';
 
-const styles = createStaticStyles(({ css }) => ({
-  content: css`
-    overflow: auto;
-    flex: 1;
-    padding-inline: 16px;
-  `,
-  contentFull: css`
-    /* Width is handled by WideScreenContainer; keep only the scroll host. */
-    overflow: auto;
-    flex: 1;
-  `,
-  frontmatter: css`
-    margin-block: 16px 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-    background: ${cssVar.colorBgContainer};
-  `,
-  metadataKey: css`
-    flex-shrink: 0;
-    width: 112px;
-    font-family: ${cssVar.fontFamilyCode};
-    color: ${cssVar.colorTextSecondary};
-  `,
-  metadataRow: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-
-    &:not(:last-child) {
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  metadataValue: css`
-    min-width: 0;
-    white-space: pre-wrap;
-  `,
-  sectionHeader: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  textArea: css`
-    font-family: ${cssVar.fontFamilyCode};
-  `,
-}));
+const styles = {
+  content: 'flex-1 overflow-auto px-4',
+  contentFull: 'flex-1 overflow-auto',
+  frontmatter: 'mbs-4 mbe-3 rounded-(--radius-card) border border-divider bg-card',
+  metadataKey: 'w-28 shrink-0 font-mono text-sm text-muted-foreground',
+  metadataRow: 'px-3 py-2.5 [&:not(:last-child)]:border-be [&:not(:last-child)]:border-divider',
+  metadataValue: 'min-w-0 text-sm whitespace-pre-wrap',
+  sectionHeader: 'border-be border-divider px-3 py-2.5',
+  textArea: 'font-mono',
+} as const;
 
 interface SkillFrontmatterBlockProps {
   documentId: string;
@@ -154,16 +119,18 @@ const SkillFrontmatterBlock = memo<SkillFrontmatterBlockProps>(({ documentId, fr
   }, [currentName, documentId, draft, performSave, t, updateSkillFrontmatter]);
 
   return (
-    <div className={cx('flex flex-col', styles.frontmatter)}>
-      <div className={cx('flex flex-row items-center justify-between', styles.sectionHeader)}>
-        <div className="text-muted-foreground">{t('skillFrontmatter.title')}</div>
+    <div className={clsx('flex flex-col', styles.frontmatter)}>
+      <div className={clsx('flex flex-row items-center justify-between', styles.sectionHeader)}>
+        <div className="text-base font-semibold text-muted-foreground">
+          {t('skillFrontmatter.title')}
+        </div>
         {editing ? (
           <div className="flex flex-row gap-2">
-            <Button size="sm" variant="outline" onClick={handleCancel}>
+            <Button size="lg" type="button" variant="outline" onClick={handleCancel}>
               <XIcon data-icon="inline-start" />
               {t('cancel')}
             </Button>
-            <Button loading={saving} size="sm" variant="default" onClick={handleSave}>
+            <Button loading={saving} size="lg" type="button" variant="default" onClick={handleSave}>
               <CheckIcon data-icon="inline-start" />
               {t('confirm')}
             </Button>
@@ -171,7 +138,7 @@ const SkillFrontmatterBlock = memo<SkillFrontmatterBlockProps>(({ documentId, fr
         ) : (
           <ActionIcon
             icon={PencilIcon}
-            size="small"
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
             title={t('skillFrontmatter.edit')}
             onClick={handleEdit}
           />
@@ -184,7 +151,7 @@ const SkillFrontmatterBlock = memo<SkillFrontmatterBlockProps>(({ documentId, fr
             rows={4}
             style={{ maxHeight: '19em' }}
             value={draft}
-            className={cx(
+            className={clsx(
               'border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0',
               styles.textArea,
             )}
@@ -193,17 +160,17 @@ const SkillFrontmatterBlock = memo<SkillFrontmatterBlockProps>(({ documentId, fr
               setError(undefined);
             }}
           />
-          {error && <div className="text-destructive">{error}</div>}
+          {error && <div className="text-sm text-destructive-text">{error}</div>}
         </div>
       ) : metadata.length > 0 ? (
         metadata.map((item) => (
-          <div className={cx('flex flex-row items-start', styles.metadataRow)} key={item.key}>
+          <div className={clsx('flex flex-row items-start', styles.metadataRow)} key={item.key}>
             <div className={cn(styles.metadataKey)}>{item.key}</div>
             <div className={cn(styles.metadataValue)}>{item.value}</div>
           </div>
         ))
       ) : (
-        <div className={cx('flex flex-col', styles.metadataRow)}>
+        <div className={clsx('flex flex-col', styles.metadataRow)}>
           <div className="text-muted-foreground">{t('skillFrontmatter.empty')}</div>
         </div>
       )}
@@ -377,7 +344,7 @@ const DocumentBody = memo(() => {
   );
 
   return (
-    <div className="flex flex-col flex-1 h-[100%]" style={{ overflow: 'hidden' }}>
+    <div className="flex flex-col flex-1 h-full" style={{ overflow: 'hidden' }}>
       <div className={fullPage ? styles.contentFull : styles.content}>
         {fullPage ? <WideScreenContainer>{editorContent}</WideScreenContainer> : editorContent}
       </div>

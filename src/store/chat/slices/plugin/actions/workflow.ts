@@ -12,8 +12,6 @@ import { dbMessageSelectors } from '../../message/selectors';
  */
 
 type Setter = StoreSetter<ChatStore>;
-export const pluginWorkflow = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new PluginWorkflowActionImpl(set, get, _api);
 
 export class PluginWorkflowActionImpl {
   readonly #get: () => ChatStore;

@@ -1,6 +1,5 @@
 import { ArtifactType } from '@orvilo/types';
-import { cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { ArrowLeft, CodeIcon, EyeIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -44,7 +43,7 @@ const Title = () => {
   const showSwitch = isArtifactTagClosed && artifactType !== ArtifactType.Code;
 
   return (
-    <div className="flex flex-row items-center flex-1 gap-3 justify-between w-[100%]">
+    <div className="flex flex-row items-center flex-1 gap-3 justify-between w-full">
       <div className="flex flex-row items-center gap-1">
         <ActionIcon
           aria-label={t('back', { ns: 'common' })}

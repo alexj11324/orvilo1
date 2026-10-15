@@ -1,4 +1,5 @@
 import { PreviewGroup } from '@lobehub/ui';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
@@ -19,7 +20,7 @@ const FilePreview = memo(() => {
 
   return (
     <ScrollArea className={`${styles.container} [&_[data-slot=scroll-area-scrollbar]]:hidden`}>
-      <div className="flex flex-row gap-1.5 py-2" style={{ paddingInline: expand ? 0 : 12 }}>
+      <div className={cn('flex flex-row gap-1.5 py-2', expand ? 'px-0' : 'px-3')}>
         <PreviewGroup>
           {list.map((i) => (
             <FileItem {...i} key={i.id} loading={i.status === 'pending'} />

@@ -38,11 +38,9 @@ export const KIND_ICON: Record<GoalGraphNodeKind, LucideIcon> = {
 };
 
 const styles = {
-  dot: 'inline-block flex-none size-2 rounded-[2px]',
+  dot: 'inline-block flex-none size-2 rounded-full',
   mono: 'font-mono tabular-nums',
 };
-
-export const monoClass = styles.mono;
 
 export const KindDot = memo<{ kind: GoalGraphNodeKind }>(({ kind }) => (
   <span className={styles.dot} style={{ background: KIND_COLOR[kind].line }} />
@@ -52,7 +50,7 @@ KindDot.displayName = 'GoalKindDot';
 
 export const MonoText = memo<{ children: React.ReactNode; title?: string }>(
   ({ children, title }) => (
-    <div className={cn('text-[12px] text-muted-foreground', styles.mono)} title={title}>
+    <div className={cn('text-xs text-muted-foreground', styles.mono)} title={title}>
       {children}
     </div>
   ),

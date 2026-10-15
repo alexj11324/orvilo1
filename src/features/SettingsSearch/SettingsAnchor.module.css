@@ -1,0 +1,29 @@
+@layer components {
+  .anchor {
+    scroll-margin-block-start: calc(var(--spacing) * 20);
+  }
+
+  .highlight {
+    border-radius: var(--radius-button);
+    background-color: var(--highlight-primary);
+    /* The existing 2400ms removal timer owns cue residency. Appearance uses
+       the normal motion duration; either live motion gate keeps a steady cue. */
+    animation: anchorHighlight var(--orvilo-motion-mid) var(--orvilo-motion-ease-out);
+  }
+
+  @keyframes anchorHighlight {
+    from {
+      background-color: transparent;
+    }
+
+    to {
+      background-color: var(--highlight-primary);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .highlight {
+      animation: none;
+    }
+  }
+}

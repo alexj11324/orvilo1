@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { memo } from 'react';
 
@@ -45,7 +45,7 @@ const NavHeader = memo<NavHeaderProps>(
 
     return (
       <div
-        className="flex h-[44px] flex-none items-center justify-between gap-1 p-2"
+        className="flex h-11 flex-none items-center justify-between gap-1 p-2"
         style={{ minWidth: 0, ...style }}
         {...rest}
       >

@@ -1,7 +1,7 @@
 'use client';
 
 import { BRANDING_NAME } from '@orvilo/business-const';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -12,21 +12,11 @@ import { useIsDark } from '@/hooks/useIsDark';
 
 import type { MarketAuthScene } from './scenes';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    padding-block-start: 32px;
-
-    background-image: url('/app-images/community_header_light.webp');
-    background-repeat: no-repeat;
-    background-position: 400% 0;
-    background-size: 400px auto;
-    background-blend-mode: multiply;
-  `,
-  container_dark: css`
-    background-image: url('/app-images/community_header_dark.webp');
-    background-blend-mode: screen;
-  `,
-}));
+const styles = {
+  container:
+    'pbs-8 bg-[url(/app-images/community_header_light.webp)] bg-no-repeat [background-position:400%_0] [background-size:calc(var(--spacing)*100)_auto] bg-blend-multiply',
+  container_dark: 'bg-[url(/app-images/community_header_dark.webp)] bg-blend-screen',
+};
 
 interface MarketAuthConfirmModalProps {
   onCancel: () => void;
@@ -55,24 +45,18 @@ const MarketAuthConfirmModal = memo<MarketAuthConfirmModalProps>(
     };
 
     const footer = (
-      <div className="text-center text-[13px] text-muted-foreground">
+      <div className="text-center text-xs leading-5 text-muted-foreground">
         <Trans
           i18nKey={'authorize.footer.agreement'}
           ns={'marketAuth'}
           components={{
             privacy: (
-              <a
-                href={PRIVACY_URL}
-                style={{ color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
-              >
+              <a className="cursor-pointer text-inherit underline" href={PRIVACY_URL}>
                 {t('authorize.footer.terms')}
               </a>
             ),
             terms: (
-              <a
-                href={TERMS_URL}
-                style={{ color: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
-              >
+              <a className="cursor-pointer text-inherit underline" href={TERMS_URL}>
                 {t('authorize.footer.privacy')}
               </a>
             ),
@@ -89,7 +73,7 @@ const MarketAuthConfirmModal = memo<MarketAuthConfirmModalProps>(
         title={null}
         width={440}
         classNames={{
-          container: cx(styles.container, isDarkMode && styles.container_dark),
+          wrapper: cn(styles.container, isDarkMode && styles.container_dark),
         }}
         paddings={{
           desktop: 24,
@@ -98,19 +82,16 @@ const MarketAuthConfirmModal = memo<MarketAuthConfirmModalProps>(
         onOk={onConfirm}
       >
         <AuthCard
+          className="pbs-10 pbe-5"
           footer={footer}
-          style={{ paddingBlock: '40px 20px', width: '100%' }}
+          style={{ width: '100%' }}
           subtitle={ts('subtitle')}
           title={ts('title')}
         >
-          <div
-            style={{
-              background: cssVar.colorFillTertiary,
-              borderRadius: cssVar.borderRadius,
-              padding: 16,
-            }}
-          >
-            <div className="text-center">{ts('description', { appName: BRANDING_NAME })}</div>
+          <div className="rounded-(--radius-card) bg-accent p-4">
+            <div className="text-center text-sm leading-5.5">
+              {ts('description', { appName: BRANDING_NAME })}
+            </div>
           </div>
         </AuthCard>
       </ImperativeModal>

@@ -28,7 +28,7 @@ export function ThemeSegmentedToggle() {
   return (
     <div
       aria-label={t('settingCommon.themeMode.title')}
-      className="inline-flex items-center gap-0.5 rounded-lg bg-muted/60 p-0.5"
+      className="inline-flex items-center gap-0.5 rounded-(--radius-button) bg-muted/60 p-0.5"
       role="radiogroup"
     >
       {THEMES.map(({ value, labelKey, icon: ThemeIcon }) => {
@@ -39,17 +39,18 @@ export function ThemeSegmentedToggle() {
             aria-label={t(labelKey)}
             key={value}
             role="radio"
-            size="icon-xs"
+            size="icon"
             type="button"
             variant="ghost"
             className={cn(
+              'rounded-(--radius-button) [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11',
               isActive
-                ? 'bg-background text-foreground shadow-sm'
+                ? 'bg-background text-foreground'
                 : 'text-muted-foreground hover:text-foreground',
             )}
             onClick={() => setTheme(value)}
           >
-            <ThemeIcon aria-hidden className="size-3.5" />
+            <ThemeIcon aria-hidden className="size-4" />
           </Button>
         );
       })}

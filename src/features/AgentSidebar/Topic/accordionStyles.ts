@@ -1,39 +1,7 @@
-import { createStaticStyles } from 'antd-style';
-
 // Keep the Agent sidebar's section rows consistent without changing the shared accordion.
-export const accordionStyles = createStaticStyles(({ css }) => ({
-  item: css`
-    border-block-end: 0 !important;
-  `,
-  trigger: css`
-    gap: 8px;
-    align-items: center;
-    justify-content: flex-start;
-
-    &:hover {
-      text-decoration: none;
-    }
-
-    > div {
-      flex: 1;
-      min-width: 0;
-    }
-
-    > [data-slot='accordion-trigger-icon'] {
-      flex: none;
-      order: -1;
-
-      width: 14px;
-      height: 14px;
-      margin-inline-start: 0;
-
-      &:first-of-type {
-        transform: rotate(-90deg);
-      }
-
-      &:last-of-type {
-        transform: rotate(180deg);
-      }
-    }
-  `,
-}));
+export const accordionStyles = {
+  item: '[border-block-end-width:0] not-last:border-be-0',
+  trigger:
+    'gap-2 min-h-8 px-2 py-0.5 items-center justify-start rounded-(--radius-button) hover:no-underline',
+  triggerIcon: 'flex-none -order-1 size-4 ms-0 first-of-type:-rotate-90 last-of-type:rotate-180',
+};

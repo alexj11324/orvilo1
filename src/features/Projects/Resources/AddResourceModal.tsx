@@ -15,7 +15,7 @@ import { useKnowledgeBaseStore } from '@/store/library';
 import { getLibraryListAsyncState } from '@/utils/libraryListAsyncState';
 
 const styles = {
-  row: 'flex items-center gap-3 rounded-[10px] px-3 py-2.5 hover:bg-[var(--ant-color-fill-quaternary)]', // linear-token-override: preserve the existing resource surface radius during this style-only migration; geometry is not redesigned here.
+  row: 'flex flex-wrap items-center gap-3 rounded-(--radius-card) px-3 py-2.5 hover:bg-fill-quaternary',
 };
 
 interface AddResourceContentProps {
@@ -74,7 +74,7 @@ export const AddResourceContent = memo<AddResourceContentProps>(
 
     if (isEmpty)
       return (
-        <div className="flex flex-col items-center justify-center" style={{ padding: 32 }}>
+        <div className="flex flex-col items-center justify-center p-8">
           <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
             {createElement(BookOpen, { 'size': 40, 'aria-hidden': true })}
             <div>{t('resources.addModal.empty')}</div>
@@ -83,19 +83,17 @@ export const AddResourceContent = memo<AddResourceContentProps>(
       );
 
     return (
-      <div className="flex flex-col" style={{ gap: 2, maxHeight: 420, overflowY: 'auto' }}>
+      <div className="flex max-h-105 flex-col gap-0.5 overflow-y-auto">
         {(data ?? []).map((library) => {
           const linked = linkedIds.has(library.id) || justAdded.has(library.id);
 
           return (
             <div className={styles.row} key={library.id}>
-              <LibraryBigIcon size={18} />
-              <div className="flex flex-col" style={{ gap: 2, flex: 1, minWidth: 0 }}>
-                <span className="text-sm truncate" style={{ fontWeight: 500 }}>
-                  {library.name}
-                </span>
+              <LibraryBigIcon size={16} />
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="truncate text-sm font-medium">{library.name}</span>
                 {library.description && (
-                  <span className="text-sm text-muted-foreground truncate" style={{ fontSize: 12 }}>
+                  <span className="truncate text-xs text-muted-foreground">
                     {library.description}
                   </span>
                 )}
@@ -104,9 +102,11 @@ export const AddResourceContent = memo<AddResourceContentProps>(
                 <Badge variant="secondary">{t('resources.addModal.added')}</Badge>
               ) : (
                 <Button
+                  multiline
                   aria-busy={pendingId === library.id}
+                  className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 max-w-full [overflow-wrap:anywhere]"
                   disabled={pendingId === library.id}
-                  size="sm"
+                  size="compact"
                   variant="outline"
                   onClick={() => handleAdd(library.id)}
                 >

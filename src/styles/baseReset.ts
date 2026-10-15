@@ -1,33 +1,28 @@
-import { createGlobalStyle, css } from 'antd-style';
+import { createElement, memo } from 'react';
 
-/**
- * Repo-owned copy of the document-level reset that `@lobehub/ui` ThemeProvider
- * injects through `GlobalStyle` (ThemeProvider/GlobalStyle/global). The
- * ThemeProvider is rendered with `enableGlobalStyle={false}` and this takes its place.
- *
- * Only the universal `*` rule moved: it now sits in `@layer base`, so antd
- * (layer `antd`), Tailwind components and utilities can override it. An
- * unlayered `*` rule beats every layered rule regardless of specificity, which
- * is what forced per-component overrides (scrollbar-width, vertical-align).
- * `html`, `body`, `code` and `::selection` stay unlayered to keep today's
- * cascade against the `body` rule in `globals.css`.
- *
- * See docs/development/antd-global-style-layer.md.
- */
-export const BaseGlobalStyle = createGlobalStyle(
-  ({ theme: token }) => css`
+// Document defaults consume the same resolved roles as body portals. Keep them
+// in the reset layer so public component styles and the app's viewport rules win.
+const baseResetStyles = `
+  @layer base {
     :root {
       --font-settings: 'cv01', 'tnum', 'kern';
       --font-variations: 'opsz' auto, tabular-nums;
 
-      /* Real Geist italic for Latin; synthesize style for CJK fallback faces. */
       font-synthesis: style;
       text-autospace: normal;
     }
 
     html {
       overscroll-behavior: none;
-      color-scheme: ${token.isDarkMode ? 'dark' : 'light'};
+    }
+
+    html:not([data-theme='dark']):not(.dark) {
+      color-scheme: light;
+    }
+
+    html[data-theme='dark'],
+    html.dark {
+      color-scheme: dark;
     }
 
     body {
@@ -37,8 +32,8 @@ export const BaseGlobalStyle = createGlobalStyle(
       margin: 0;
       padding: 0;
 
-      font-family: ${token.fontFamily};
-      font-size: ${token.fontSize}px;
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
       font-feature-settings: var(--font-settings);
       font-variation-settings: var(--font-variations);
       font-optical-sizing: auto;
@@ -48,15 +43,15 @@ export const BaseGlobalStyle = createGlobalStyle(
       font-size-adjust: from-font;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      line-height: 1;
-      color: ${token.colorTextBase};
+      line-height: calc(22 / 14);
+      color: var(--foreground);
       text-wrap: pretty;
       text-size-adjust: 100%;
       text-rendering: optimizelegibility;
       overflow-wrap: anywhere;
       vertical-align: baseline;
 
-      background-color: ${token.colorBgLayout};
+      background-color: var(--background);
 
       font-synthesis: style;
 
@@ -68,31 +63,35 @@ export const BaseGlobalStyle = createGlobalStyle(
     kbd,
     samp,
     pre {
-      font-family: ${token.fontFamilyCode} !important;
-      font-feature-settings:
-        'liga' 0,
-        'calt' 0;
+      font-family: var(--font-mono);
+      font-feature-settings: 'liga' 0, 'calt' 0;
       font-variant-ligatures: none;
+    }
 
-      span {
-        font-family: ${token.fontFamilyCode} !important;
-      }
+    code span,
+    kbd span,
+    samp span,
+    pre span {
+      font-family: var(--font-mono);
     }
 
     ::selection {
-      color: #000;
-      background: ${token.yellow9};
-
-      -webkit-text-fill-color: unset !important;
+      color: var(--primary-foreground);
+      background: var(--primary);
+      -webkit-text-fill-color: currentColor;
     }
 
-    @layer base {
-      * {
-        scrollbar-color: ${token.colorFill} transparent;
-        scrollbar-width: thin;
-        box-sizing: border-box;
-        vertical-align: baseline;
-      }
+    * {
+      scrollbar-color: var(--scrollbar-fill) transparent;
+      scrollbar-width: thin;
+      box-sizing: border-box;
+      vertical-align: baseline;
     }
-  `,
+  }
+`;
+
+// Render the static sheet during SSR as well as the first client mount. Existing
+// ThemeRoles updates its variables; no duplicate theme subscription is needed.
+export const BaseGlobalStyle = memo(() =>
+  createElement('style', { 'data-orvilo-base-reset': '' }, baseResetStyles),
 );

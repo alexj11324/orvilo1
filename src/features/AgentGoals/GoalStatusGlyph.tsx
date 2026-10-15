@@ -12,7 +12,7 @@ import { goalStatusToTaskStatus } from './goalPresentation';
  * across the app — while every other state keeps its canonical static glyph
  * from `ExecutionStatus`.
  */
-const GoalStatusGlyph = memo<{ size?: number; status: GoalStatus }>(({ status, size = 13 }) => {
+const GoalStatusGlyph = memo<{ size?: number; status: GoalStatus }>(({ status, size = 16 }) => {
   if (status === 'running') return <RunningGlyph size={size} />;
 
   const visual = TASK_STATUS_VISUALS[goalStatusToTaskStatus(status)] ?? TASK_STATUS_VISUALS.backlog;

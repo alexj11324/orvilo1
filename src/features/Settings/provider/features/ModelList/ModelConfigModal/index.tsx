@@ -1,9 +1,10 @@
 'use client';
 
-import { createModal, type ModalInstance } from '@lobehub/ui/base-ui';
-import { type FormInstance } from 'antd';
 import { t } from 'i18next';
 
+import { createModal, type ModalInstance } from '@/components/Modal';
+
+import type { ModelConfigFormHandle } from '../CreateNewModelModal/Form';
 import ModelConfigContent from './Content';
 import ModelConfigFooter from './Footer';
 
@@ -13,7 +14,7 @@ interface ModelConfigModalOptions {
 }
 
 export const createModelConfigModal = (options: ModelConfigModalOptions): ModalInstance => {
-  const formRef: { current?: FormInstance } = {};
+  const formRef: { current?: ModelConfigFormHandle } = {};
 
   return createModal({
     content: (

@@ -1,4 +1,4 @@
-import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import type { LucideProps } from 'lucide-react';
 import { PinIcon, XIcon } from 'lucide-react';
 import { type ComponentType, createElement, memo, type ReactNode } from 'react';
@@ -6,112 +6,19 @@ import { type ComponentType, createElement, memo, type ReactNode } from 'react';
 import type { DropdownItem as ContextMenuItem } from '@/components/ItemsMenu';
 import { ContextMenuTrigger } from '@/components/ItemsMenu';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  close: css`
-    cursor: pointer;
-
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-end: 4px;
-    transform: translateY(-50%);
-
-    display: grid;
-    place-items: center;
-
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    border: none;
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    opacity: 0;
-    background: transparent;
-
-    transition: opacity 0.15s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  container: css`
-    position: relative;
-
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-
-    border-radius: 6px;
-
-    transition: background 0.15s;
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-
-    &:hover [data-tab-close],
-    &:focus-within [data-tab-close] {
-      opacity: 1;
-    }
-  `,
-  containerActive: css`
-    background: ${cssVar.colorFillTertiary};
-  `,
-  pinned: css`
-    pointer-events: none;
-
-    position: absolute;
-    inset-block-start: 50%;
-    inset-inline-end: 8px;
-    transform: translateY(-50%);
-
-    display: grid;
-    place-items: center;
-
-    color: ${cssVar.colorTextSecondary};
-  `,
-  label: css`
-    overflow: hidden;
-    max-width: 160px;
-    text-overflow: ellipsis;
-  `,
-  tab: css`
-    cursor: pointer;
-
-    padding-block: 4px;
-    padding-inline: 10px;
-    border: none;
-    border-radius: 6px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    white-space: nowrap;
-
-    background: transparent;
-
-    transition: color 0.15s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-
-    /* attribute selector outranks the base class so the active color can't lose
-       to stylesheet ordering */
-    &[aria-pressed='true'] {
-      color: ${cssVar.colorText};
-    }
-  `,
-  tabClosable: css`
-    padding-inline-end: 30px;
-  `,
-  trigger: css`
-    display: flex;
-    gap: 4px;
-    align-items: center;
-  `,
-}));
+const styles = {
+  close:
+    'cursor-pointer absolute inset-bs-1/2 end-1 -translate-y-1/2 grid place-items-center size-8 p-0 border-0 rounded-(--radius-button) text-foreground-tertiary opacity-0 bg-transparent transition-[opacity,color,background-color] duration-(--orvilo-motion-fast) hover:text-foreground hover:bg-accent focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring',
+  container:
+    'relative flex shrink-0 items-center rounded-(--radius-button) transition-colors duration-(--orvilo-motion-fast) hover:bg-accent hover:[&_[data-tab-close]]:opacity-100 focus-within:[&_[data-tab-close]]:opacity-100',
+  containerActive: 'bg-selected hover:bg-selected',
+  pinned:
+    'pointer-events-none absolute inset-bs-1/2 end-2 -translate-y-1/2 grid place-items-center text-muted-foreground',
+  label: 'overflow-hidden max-w-40 text-ellipsis',
+  tab: 'cursor-pointer min-h-8 py-1 px-2.5 border-0 rounded-(--radius-button) text-sm leading-5.5 text-foreground-tertiary whitespace-nowrap bg-transparent transition-colors duration-(--orvilo-motion-fast) hover:text-foreground aria-pressed:text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2',
+  tabClosable: 'pe-10',
+  trigger: 'flex gap-1 items-center',
+};
 
 interface WorkspaceTabProps {
   active: boolean;
@@ -143,18 +50,18 @@ const WorkspaceTab = memo<WorkspaceTabProps>(
   }) => {
     const content = (
       <div
-        className={`${styles.container} ${active ? styles.containerActive : ''}`}
+        className={cn(styles.container, active && styles.containerActive)}
         data-pinned={pinned ? 'true' : undefined}
       >
         <button
           aria-pressed={active}
-          className={`${styles.tab} ${onClose || pinned ? styles.tabClosable : ''}`}
+          className={cn(styles.tab, (onClose || pinned) && styles.tabClosable)}
           data-tab-key={tabKey}
           type="button"
           onClick={onSelect}
         >
           <span className={styles.trigger}>
-            {iconNode ?? createElement(icon, { size: 14 })}
+            {iconNode ?? createElement(icon, { size: 16 })}
             <span className={styles.label}>{label}</span>
           </span>
         </button>
@@ -170,7 +77,7 @@ const WorkspaceTab = memo<WorkspaceTabProps>(
             type="button"
             onClick={onClose}
           >
-            <XIcon size={12} />
+            <XIcon className="size-4" size={16} />
           </button>
         ) : null}
       </div>

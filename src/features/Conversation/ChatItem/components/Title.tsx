@@ -20,12 +20,12 @@ const Title = memo<TitleProps>(({ showTitle, time, avatar, titleAddon }) => {
 
   return (
     <>
-      {showTitle && <div className="text-[14px] font-medium">{title}</div>}
+      {showTitle && <div className="text-sm font-medium">{title}</div>}
       {showTitle ? titleAddon : undefined}
       {!timeText ? null : (
         <time
           aria-label="published-date"
-          className="text-[12px] text-muted-foreground"
+          className="text-xs text-muted-foreground"
           title={timeTitle}
         >
           {timeText}

@@ -1,4 +1,5 @@
 'use client';
+
 import type { TaskStatus, TaskWorkflowCategory, WorkQuerySortMode } from '@orvilo/types';
 import { cn } from 'cn';
 import { PlusIcon, UsersIcon, XIcon } from 'lucide-react';
@@ -50,9 +51,9 @@ import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { usePermission } from '@/hooks/usePermission';
 import { useSearchParams } from '@/libs/router/navigation';
 import { mutate, useClientDataSWR } from '@/libs/swr';
-import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
+import { useFetchWorkTeam } from '@/store/workTeam/hooks';
 
 import TeamIdentity from './TeamIdentity';
 import TeamIssuesControls from './TeamIssuesControls';
@@ -132,13 +133,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
     [searchParams, setSearchParams],
   );
 
-  const {
-    data: teamData,
-    error: teamError,
-    mutate: revalidateTeam,
-  } = useClientDataSWR(teamId && workspaceId ? ['team', workspaceId, teamId] : null, () =>
-    lambdaClient.team.team.query({ teamId }),
-  );
+  const { data: teamData, error: teamError, mutate: revalidateTeam } = useFetchWorkTeam(teamId);
   const team = teamData?.data.team;
   // Triage is a per-team capability — a triaging team's issues feed must keep
   // `untriaged` rows out until intake resolves them.
@@ -724,7 +719,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
               </Tabs>
               {/* "Add new view" opens the shared view builder scoped to this
                   team — same contract as the Projects tab's button. */}
-              <Button variant="ghost" onClick={() => setViewBuilderOpen(true)}>
+              <Button size="compact" variant="ghost" onClick={() => setViewBuilderOpen(true)}>
                 <PlusIcon aria-hidden className="size-4" />
                 {t('savedViews.newView')}
               </Button>

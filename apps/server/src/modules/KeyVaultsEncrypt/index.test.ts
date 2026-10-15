@@ -21,6 +21,7 @@ describe('KeyVaultsGateKeeper', () => {
   });
 
   it('should encrypt and decrypt data correctly', async () => {
+    expect(gateKeeper).toBeInstanceOf(KeyVaultsGateKeeper);
     const originalData = 'sensitive user data';
     const encryptedData = await gateKeeper.encrypt(originalData);
     const decryptionResult = await gateKeeper.decrypt(encryptedData);

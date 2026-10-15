@@ -11,7 +11,7 @@ import type { ActivateSkillParams, ActivateSkillState } from '../../../types';
 
 const styles = {
   container:
-    'overflow-hidden w-full border border-sidebar-border rounded-[var(--radius-overlay)] bg-card',
+    'overflow-hidden w-full border border-sidebar-border rounded-(--radius-overlay) bg-card',
   content: 'py-2 ps-4 pe-4 text-sm leading-[inherit]',
   description: 'text-xs leading-[inherit] text-muted-foreground',
   header: 'py-2 ps-3 pe-3 [border-block-end:1px_solid_var(--sidebar-border)]',

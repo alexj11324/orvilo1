@@ -35,7 +35,7 @@ const ProfileRow = ({
         {anchor ? <SettingsSearchAnchor id={anchor}>{labelNode}</SettingsSearchAnchor> : labelNode}
         {description && (
           <div>
-            <span className="text-[13px] text-muted-foreground">{description}</span>
+            <span className="text-(length:--text-dense) text-muted-foreground">{description}</span>
           </div>
         )}
       </div>

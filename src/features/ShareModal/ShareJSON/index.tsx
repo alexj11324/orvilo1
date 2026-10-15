@@ -1,14 +1,14 @@
-import { FORM_STYLE } from '@orvilo/const';
 import { type TopicExportMode } from '@orvilo/types';
 import { exportFile } from '@orvilo/utils/client';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { CopyIcon } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { memo, useId, useMemo } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import Form, { type FormItemProps } from '@/components/GroupForm';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -21,15 +21,6 @@ import { generateMessages } from './generateMessages';
 import Preview from './Preview';
 import { type FieldType } from './type';
 
-interface FieldSwitchProps {
-  checked?: boolean;
-  onChange?: (checked: boolean) => void;
-}
-
-const FieldSwitch = ({ checked, onChange }: FieldSwitchProps) => (
-  <Switch checked={checked} onCheckedChange={onChange} />
-);
-
 const DEFAULT_FIELD_VALUE: FieldType = {
   exportMode: 'full',
   includeTool: true,
@@ -37,7 +28,9 @@ const DEFAULT_FIELD_VALUE: FieldType = {
 };
 
 const ShareJSON = memo(() => {
-  const [fieldValue, setFieldValue] = useState(DEFAULT_FIELD_VALUE);
+  const { control, watch } = useForm<FieldType>({ defaultValues: DEFAULT_FIELD_VALUE });
+  const fieldValue = watch();
+  const formId = useId();
   const { t } = useTranslation(['chat', 'common']);
 
   const exportModeOptions = useMemo(
@@ -47,39 +40,6 @@ const ShareJSON = memo(() => {
     ],
     [t],
   );
-
-  const settings: FormItemProps[] = [
-    {
-      children: (
-        <Tabs
-          value={fieldValue.exportMode}
-          onValueChange={(key) =>
-            setFieldValue((prev) => ({ ...prev, exportMode: key as TopicExportMode }))
-          }
-        >
-          <TabsList className="flex w-full">
-            {exportModeOptions.map((item) => (
-              <TabsTrigger className="flex-1" key={item.key} value={item.key}>
-                {item.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      ),
-      label: t('shareModal.exportMode.label'),
-      layout: 'vertical',
-      minWidth: undefined,
-      name: 'exportMode',
-    },
-    {
-      children: <FieldSwitch />,
-      label: t('shareModal.withSystemRole'),
-      layout: 'horizontal',
-      minWidth: undefined,
-      name: 'withSystemRole',
-      valuePropName: 'checked',
-    },
-  ];
 
   const { dbMessages, systemRole, title, topic } = useShareData();
 
@@ -133,21 +93,57 @@ const ShareJSON = memo(() => {
 
   return (
     <>
-      <div className={cx('flex flex-row gap-4', styles.body)}>
+      <div className={cn('flex flex-row gap-4', styles.body)}>
         <Preview content={content} />
-        <div className={cx('flex flex-col gap-3', styles.sidebar)}>
-          <Form
-            initialValues={DEFAULT_FIELD_VALUE}
-            itemMinWidth={FORM_STYLE.itemMinWidth}
-            items={settings}
-            itemsType={'flat'}
-            style={FORM_STYLE.style}
-            onValuesChange={(_, v) => setFieldValue(v)}
-          />
+        <div className={cn('flex flex-col gap-3', styles.sidebar)}>
+          <FieldGroup className="max-w-256 gap-0">
+            <Controller
+              control={control}
+              name="exportMode"
+              render={({ field }) => (
+                <Field className="py-2" orientation="vertical">
+                  <FieldLabel className="text-sm leading-5.5" id={`${formId}-export-mode`}>
+                    {t('shareModal.exportMode.label')}
+                  </FieldLabel>
+                  <Tabs value={field.value} onBlur={field.onBlur} onValueChange={field.onChange}>
+                    <TabsList aria-labelledby={`${formId}-export-mode`} className="flex w-full">
+                      {exportModeOptions.map((item) => (
+                        <TabsTrigger className="flex-1" key={item.key} value={item.key}>
+                          {item.label}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </Tabs>
+                </Field>
+              )}
+            />
+            <Controller
+              control={control}
+              name="withSystemRole"
+              render={({ field }) => (
+                <Field className="min-h-11 gap-4 py-2" orientation="horizontal">
+                  <FieldLabel
+                    className="min-w-0 text-sm leading-5.5"
+                    htmlFor={`${formId}-with-system-role`}
+                  >
+                    {t('shareModal.withSystemRole')}
+                  </FieldLabel>
+                  <Switch
+                    checked={field.value}
+                    id={`${formId}-with-system-role`}
+                    inputRef={field.ref}
+                    name={field.name}
+                    onBlur={field.onBlur}
+                    onCheckedChange={field.onChange}
+                  />
+                </Field>
+              )}
+            />
+          </FieldGroup>
           {!isMobile && button}
         </div>
       </div>
-      {isMobile && <div className={cx('flex flex-row gap-2', styles.footer)}>{button}</div>}
+      {isMobile && <div className={cn('flex flex-row gap-2', styles.footer)}>{button}</div>}
     </>
   );
 });

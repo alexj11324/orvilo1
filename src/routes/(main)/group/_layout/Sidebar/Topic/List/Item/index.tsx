@@ -1,10 +1,9 @@
 import { GROUP_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ChatTopicStatus } from '@orvilo/types';
-import { createStaticStyles, cssVar, useTheme } from 'antd-style';
 import { HashIcon, MessageSquareDashed } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
-import { memo, Suspense, useCallback, useMemo } from 'react';
+import { memo, Suspense, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
@@ -27,47 +26,20 @@ import { operationSelectors } from '@/store/chat/selectors';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { useElectronStore } from '@/store/electron';
 import { useGlobalStore } from '@/store/global';
+import { useResolvedMotionValues } from '@/styles/themeRoles';
 
 import ThreadList from '../../TopicListContent/ThreadList';
 import Actions from './Actions';
 import Editing from './Editing';
 import { useTopicItemDropdownMenu } from './useDropdownMenu';
 
-const styles = createStaticStyles(({ css }) => ({
-  neonDotWrapper: css`
-    position: absolute;
-    inset: 0;
-
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-
-    width: 18px;
-    height: 18px;
-  `,
-  dotContainer: css`
-    will-change: width;
-
-    position: relative;
-
-    width: 18px;
-    height: 18px;
-    margin-inline-start: -6px;
-
-    transition: width 0.2s ${cssVar.motionEaseOut};
-  `,
-  neonDot: css`
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-
-    background: ${cssVar.colorInfo};
-    box-shadow:
-      0 0 3px ${cssVar.colorInfo},
-      0 0 6px ${cssVar.colorInfo};
-  `,
-}));
+const styles = {
+  dotContainer:
+    'relative size-4.5 -ms-1.5 will-change-[width] transition-[width] duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-out) motion-reduce:transition-none',
+  neonDot:
+    'size-1.5 rounded-full bg-info shadow-[0_0_calc(var(--spacing)*0.75)_var(--info),0_0_calc(var(--spacing)*1.5)_var(--info)] animate-[group-topic-unread-pulse_1.2s_ease-in-out_infinite] motion-reduce:animate-none',
+  neonDotWrapper: 'absolute inset-0 flex size-4.5 shrink-0 items-center justify-center',
+};
 
 // Module-scoped so a click on any topic cancels a pending click on another.
 // Per-item refs can't do that, which lets rapid clicks across items all
@@ -94,11 +66,22 @@ interface TopicItemProps {
 
 const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, userId }) => {
   const { t } = useTranslation('topic');
-  const { isDarkMode } = useTheme();
+  const { enabled: motionEnabled, durationMid: motionDurationMid } = useResolvedMotionValues();
+  const unreadTransitionDuration = motionDurationMid.endsWith('ms')
+    ? Number.parseFloat(motionDurationMid) / 1000
+    : Number.parseFloat(motionDurationMid);
+  const prefersReducedMotion = useSyncExternalStore(
+    useCallback((onChange: () => void) => {
+      const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+      query.addEventListener('change', onChange);
+      return () => query.removeEventListener('change', onChange);
+    }, []),
+    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    () => true,
+  );
+  const shouldAnimateUnread = motionEnabled && !prefersReducedMotion;
   // Same live-running ring as the agent sidebar topic rows (see List/Item there).
-  const loadingRingColor = isDarkMode
-    ? cssVar.colorWarningBorder
-    : `color-mix(in srgb, ${cssVar.colorWarning} 45%, transparent)`;
+  const loadingRingColor = 'var(--topic-running-ring)';
   const toggleMobileTopic = useGlobalStore((s) => s.toggleMobileTopic);
   const [activeGroupId, switchTopic] = useAgentGroupStore((s) => [s.activeGroupId, s.switchTopic]);
   const addTab = useElectronStore((s) => s.addTab);
@@ -191,44 +174,35 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
   const isWaitingForHuman = status === 'waitingForHuman';
 
   const hasUnread = id && isUnreadCompleted;
-  const infoColor = cssVar.colorInfo;
   const unreadNode = (
     <span className={styles.dotContainer} style={{ width: hasUnread ? 18 : 0 }}>
-      <AnimatePresence mode="popLayout">
-        {hasUnread && (
-          <m.div
-            className={styles.neonDotWrapper}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{
-              scale: 1,
-              opacity: 1,
-            }}
-            exit={{
-              scale: 0,
-              opacity: 0,
-            }}
-          >
-            <m.span
-              className={styles.neonDot}
-              initial={false}
+      {shouldAnimateUnread ? (
+        <AnimatePresence mode="popLayout">
+          {hasUnread && (
+            <m.div
+              className={styles.neonDotWrapper}
+              initial={{ scale: 0, opacity: 0 }}
+              transition={{ duration: unreadTransitionDuration, ease: 'easeOut' }}
               animate={{
-                scale: [1, 1.3, 1],
-                opacity: [1, 0.9, 1],
-                boxShadow: [
-                  `0 0 3px ${infoColor}, 0 0 6px ${infoColor}`,
-                  `0 0 5px ${infoColor}, 0 0 8px color-mix(in srgb, ${infoColor} 60%, transparent)`,
-                  `0 0 3px ${infoColor}, 0 0 6px ${infoColor}`,
-                ],
+                scale: 1,
+                opacity: 1,
               }}
-              transition={{
-                duration: 1.2,
-                repeat: Infinity,
-                ease: 'easeInOut',
+              exit={{
+                scale: 0,
+                opacity: 0,
               }}
-            />
-          </m.div>
-        )}
-      </AnimatePresence>
+            >
+              <span className={styles.neonDot} />
+            </m.div>
+          )}
+        </AnimatePresence>
+      ) : (
+        hasUnread && (
+          <div className={styles.neonDotWrapper}>
+            <span className={styles.neonDot} />
+          </div>
+        )
+      )}
     </span>
   );
 
@@ -244,9 +218,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
   );
   const hasDraft = useHasDraft(draftKey);
   const draftPrefix = hasDraft ? (
-    <div className="text-[12px]" style={{ color: cssVar.colorError, flex: 'none' }}>
-      {t('draft')}
-    </div>
+    <div className="flex-none text-xs leading-5 text-destructive-text">{t('draft')}</div>
   ) : undefined;
 
   // For default topic (no id)
@@ -255,24 +227,19 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
       <NavItem
         active={active}
         slots={{ titlePrefix: draftPrefix }}
-        titleColor={cssVar.colorText}
+        titleColor="var(--foreground)"
         icon={
           isLoading ? (
-            <RingLoadingIcon
-              ringColor={loadingRingColor}
-              size={14}
-              style={{ color: cssVar.colorWarning }}
-            />
+            <RingLoadingIcon className="text-warning-text" ringColor={loadingRingColor} size={16} />
           ) : (
-            <MessageSquareDashed color={cssVar.colorTextDescription} size="sm" />
+            <MessageSquareDashed className="size-4 text-foreground-description" size={16} />
           )
         }
         title={
           <div className="flex items-center flex-1 gap-1.5">
             {t('defaultTitle')}
             <Badge
-              size="sm"
-              style={{ color: cssVar.colorTextDescription, fontSize: 10 }}
+              className="text-xs leading-5 h-auto text-foreground-description"
               variant="primary-light"
             >
               {t('temp')}
@@ -289,15 +256,11 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
   const statusIconNode = (() => {
     if (isWaitingForHuman) {
       const visual = TOPIC_STATUS_VISUALS.waitingForHuman;
-      return <visual.icon size="sm" style={{ color: visual.color }} />;
+      return <visual.icon className="size-4" size={16} style={{ color: visual.color }} />;
     }
     if (isLoading || isRunning) {
       return (
-        <RingLoadingIcon
-          ringColor={loadingRingColor}
-          size={14}
-          style={{ color: cssVar.colorWarning }}
-        />
+        <RingLoadingIcon className="text-warning-text" ringColor={loadingRingColor} size={16} />
       );
     }
     if (isFailed) {
@@ -307,8 +270,8 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
           <Tooltip>
             <TooltipTrigger
               render={
-                <span style={{ display: 'inline-flex' }}>
-                  <visual.icon size="sm" style={{ color: visual.color }} />
+                <span className="inline-flex">
+                  <visual.icon className="size-4" size={16} style={{ color: visual.color }} />
                 </span>
               }
             />
@@ -319,13 +282,13 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
     }
     if (isCompleted) {
       const visual = TOPIC_STATUS_VISUALS.completed;
-      return <visual.icon size="sm" style={{ color: visual.color }} />;
+      return <visual.icon className="size-4" size={16} style={{ color: visual.color }} />;
     }
     return null;
   })();
 
   return (
-    <div className="flex flex-col" style={{ position: 'relative' }}>
+    <div className="relative flex flex-col">
       <NavItem
         actions={<Actions dropdownMenu={dropdownMenu} id={id} status={status} />}
         active={active && !threadId}
@@ -337,7 +300,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
         extra={<TopicMigrationIndicator groupId={activeGroupId} topicId={id} />}
         href={!editing ? href : undefined}
         title={title === '...' ? <DotsLoading gap={3} size={4} /> : title}
-        titleColor={cssVar.colorText}
+        titleColor="var(--foreground)"
         icon={
           // Workspace mode: the creator's round avatar is the primary visual;
           // the row's own status icon shrinks into a bottom-right corner
@@ -346,7 +309,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
             <TopicCreatorAvatar corner={statusIconNode} userId={userId} />
           ) : (
             (statusIconNode ?? (
-              <HashIcon size="sm" style={{ color: cssVar.colorTextDescription }} />
+              <HashIcon className="size-4 text-foreground-description" size={16} />
             ))
           )
         }
@@ -361,9 +324,9 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
       {active && (
         <Suspense
           fallback={
-            <div className="flex flex-col gap-2 py-2 px-6" style={{ width: '100%' }}>
-              <Skeleton style={{ height: 18, width: '100%' }} />
-              <Skeleton style={{ height: 18, width: '100%' }} />
+            <div className="flex w-full flex-col gap-2 py-2 px-6">
+              <Skeleton className="h-5.5 w-full" />
+              <Skeleton className="h-5.5 w-full" />
             </div>
           }
         >

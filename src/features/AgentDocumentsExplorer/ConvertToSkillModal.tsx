@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { Sparkles } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -216,7 +215,7 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
             }}
           />
           {nameInvalid ? (
-            <div style={{ color: cssVar.colorError, fontSize: 12 }}>
+            <div style={{ color: 'var(--ant-color-error)', fontSize: 12 }}>
               {tChat('workingPanel.skills.convert.nameInvalid')}
             </div>
           ) : (
@@ -254,14 +253,17 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
             }}
           />
         </div>
-        {error ? <div style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</div> : null}
+        {error ? (
+          <div style={{ color: 'var(--ant-color-error)', fontSize: 12 }}>{error}</div>
+        ) : null}
         <div className="flex gap-2 justify-end">
-          <Button disabled={busy} onClick={close}>
+          <Button disabled={busy} size="lg" onClick={close}>
             {tCommon('cancel')}
           </Button>
           <Button
             disabled={!canSubmit || generating}
             loading={loading}
+            size="lg"
             variant="default"
             onClick={handleSubmit}
           >

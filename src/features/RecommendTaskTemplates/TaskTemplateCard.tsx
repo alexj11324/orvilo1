@@ -1,5 +1,4 @@
 import type { TaskTemplate } from '@orvilo/const';
-import { cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { Clock, X } from 'lucide-react';
 import { memo, type MouseEvent, useCallback, useMemo } from 'react';
@@ -77,21 +76,20 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
 
     if (compact)
       return (
-        <div className={cx('flex flex-row items-center gap-1', styles.compactRow)}>
+        <div className={cn('flex flex-row items-center gap-1', styles.compactRow)}>
           <Button
+            multiline
             className={styles.compactMain}
             disabled={loading || pendingCreate}
+            size="normal"
             variant="ghost"
             onClick={handleOpenDetail}
           >
-            <div className="flex flex-row items-start gap-2.5" style={{ width: '100%' }}>
-              <div className="flex flex-col flex-none py-[2px]">
+            <div className="flex w-full flex-row items-start gap-2.5">
+              <div className="flex flex-col flex-none py-0.5">
                 <TemplateBriefIcon spec={iconSpec} tileSize={RECOMMENDATION_ICON_SIZE.compact} />
               </div>
-              <span
-                className={cx(homeType.itemTitleProse, styles.compactTitle)}
-                style={{ flex: 1 }}
-              >
+              <span className={cn(homeType.itemTitleProse, styles.compactTitle, 'flex-1')}>
                 {title}
               </span>
             </div>
@@ -99,7 +97,7 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
           <ActionIcon
             className={`${styles.dismissBtn} task-template-dismiss`}
             icon={X}
-            size={'small'}
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
             title={t('taskTemplate.action.dismiss.tooltip')}
             onClick={handleDismiss}
           />
@@ -108,7 +106,7 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
 
     const primaryButton = (
       <Button
-        className={cx(briefStyles.actionBtnPrimary, 'rounded-full')}
+        className={briefStyles.actionBtnPrimary}
         disabled={disabled}
         loading={loading || pendingCreate}
         variant="default"
@@ -121,27 +119,23 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
     return (
       <div
         {...clickableProps()}
-        style={{ borderRadius: cssVar.borderRadiusLG, cursor: 'pointer' }}
         className={cn(
-          cx(briefStyles.card, styles.card, 'rounded-md border bg-card flex flex-col gap-3 p-3'),
+          briefStyles.card,
+          styles.card,
+          'cursor-pointer rounded-(--radius-card) border bg-card flex flex-col gap-3 p-3',
           CLICKABLE_FOCUS_RING,
         )}
         onClick={handleOpenDetail}
       >
         <div className="flex flex-row items-center gap-4 justify-between">
-          <div
-            className="flex flex-row items-center gap-2"
-            style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
-          >
+          <div className="flex min-w-0 flex-1 flex-row items-center gap-2 overflow-hidden">
             <TemplateBriefIcon spec={iconSpec} tileSize={RECOMMENDATION_ICON_SIZE.regular} />
-            <div
-              className="flex flex-row items-center flex-1 gap-1.5"
-              style={{ minWidth: 0, overflow: 'hidden' }}
-            >
-              <span className="truncate text-[16px] font-medium">{title}</span>
+            <div className="flex min-w-0 flex-1 flex-row items-center gap-1.5 overflow-hidden">
+              <span className="truncate text-base font-medium">{title}</span>
               <ActionIcon
+                aria-label={scheduleText}
                 icon={Clock}
-                size={12}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={
                   <div className="flex flex-col items-center justify-center">
                     <span>{scheduleText}</span>
@@ -156,13 +150,13 @@ export const TaskTemplateCard = memo<TaskTemplateCardProps>(
             <ActionIcon
               className={`${styles.dismissBtn} task-template-dismiss`}
               icon={X}
-              size={'small'}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               title={t('taskTemplate.action.dismiss.tooltip')}
               onClick={handleDismiss}
             />
           </div>
         </div>
-        <Separator className="border-dashed" style={{ marginBlock: 0 }} />
+        <Separator className="my-0 border-dashed" />
         {description.trim().length > 0 ? <BriefCardSummary summary={description} /> : null}
         {visibleAuthSpecs.length > 0 && (
           <div className="flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>

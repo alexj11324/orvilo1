@@ -1,4 +1,4 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { LibraryBig } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
 import RepoIcon from '@/components/LibIcon';
+import { Button } from '@/components/ui/button';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 
@@ -18,44 +19,11 @@ import CheckboxItem from '../components/CheckboxWithLoading';
 // growing past it.
 const labelMaxWidth = 'min(210px, 45vw)';
 
-const styles = createStaticStyles(({ css }) => ({
-  viewMore: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    /* width 320 + margin-inline -12 anchors the submenu to 320px (matching the skill
-       submenu) and lets the row span full width; padding-inline 12 lines its icon/text
-       up with the menu items above. */
-    width: 320px;
-    min-height: 32px;
-
-    /* The footer wrapper adds padding-block: 8px top & bottom; the top keeps it separated
-       from the list, but the bottom leaves a dead gap against the popup edge — cancel it. */
-    margin-block-end: -8px;
-    margin-inline: -12px;
-    padding-inline: 12px;
-    border: 0;
-    border-radius: 6px;
-
-    font-size: 14px;
-    color: ${cssVar.colorText};
-
-    background: transparent;
-
-    transition: background 150ms ${cssVar.motionEaseOut};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  viewMoreLabel: css`
-    flex: 1;
-    text-align: start;
-  `,
-}));
+const styles = {
+  viewMore:
+    'cursor-pointer flex w-80 items-center gap-3 -mbe-2 -mx-3 px-3 border-0 rounded-(--radius-button) text-sm leading-5.5 font-normal text-foreground bg-transparent active:not-aria-[haspopup]:translate-y-0 transition-[background-color] [&:hover]:bg-accent duration-(--orvilo-motion-fast) ease-(--orvilo-motion-ease-out)',
+  viewMoreLabel: 'flex-1 text-start',
+};
 
 export interface KnowledgeControls {
   enabledCount: number;
@@ -130,9 +98,11 @@ export const useControls = ({
   // rendered when nothing is attached yet — otherwise the submenu shows "no related
   // files or libraries" with no way to attach the first one.
   const footer = (
-    <button
-      className={cx(styles.viewMore)}
+    <Button
+      className={cn(styles.viewMore)}
+      size="normal"
       type="button"
+      variant="ghost"
       onClick={(event) => {
         event.stopPropagation();
         openAttachKnowledgeModal();
@@ -140,17 +110,17 @@ export const useControls = ({
     >
       <span className="anticon" role="img">
         <LibraryBig
-          color={cssVar.colorTextSecondary}
+          className="size-4 text-muted-foreground"
           fill={'transparent'}
-          height={14}
-          size={14}
-          width={14}
+          height={16}
+          size={16}
+          width={16}
         />
       </span>
-      <span className={cx(styles.viewMoreLabel)}>
+      <span className={cn(styles.viewMoreLabel)}>
         {relatedGroups.length > 0 ? t('knowledgeBase.viewMore') : t('knowledgeBase.related.browse')}
       </span>
-    </button>
+    </Button>
   );
 
   return { enabledCount, footer, items: relatedGroups } satisfies KnowledgeControls;

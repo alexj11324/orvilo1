@@ -9,17 +9,17 @@ import type { RunTasksItemResult, RunTasksParams, RunTasksState } from '../../..
 
 const styles = {
   failedBadge:
-    'shrink-0 rounded-[999px] bg-[var(--ant-color-error-bg)] px-2 py-px text-[12px] text-destructive',
+    'shrink-0 rounded-(--radius-chip) bg-destructive-wash px-2 py-px text-xs text-destructive',
   header: 'flex items-center gap-2 px-3 py-2 [border-block-end:1px_solid_var(--sidebar-border)]',
-  headerCount: 'text-[13px] font-medium text-foreground',
+  headerCount: 'text-(length:--text-dense) font-medium text-foreground',
   identifier:
-    'shrink-0 rounded-[4px] bg-accent px-1.5 py-px font-mono text-[12px] text-muted-foreground',
-  index: 'w-[18px] shrink-0 text-[12px] text-[var(--ant-color-text-quaternary)] text-end',
+    'shrink-0 rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-xs text-muted-foreground',
+  index: 'w-4.5 shrink-0 text-xs text-foreground-quaternary text-end',
   row: 'flex min-w-0 items-center gap-2',
   taskBody: 'flex min-w-0 flex-1 flex-col gap-1',
   taskItem:
     'flex items-start gap-2 px-3 py-2.5 [border-block-end:1px_dashed_var(--sidebar-border)] last:[border-block-end:none]',
-  meta: 'truncate font-mono text-[11px] text-[var(--ant-color-text-tertiary)]',
+  meta: 'truncate font-mono text-xs text-foreground-tertiary',
 };
 
 export const RunTasksRender = memo<BuiltinRenderProps<RunTasksParams, RunTasksState>>(
@@ -67,12 +67,12 @@ export const RunTasksRender = memo<BuiltinRenderProps<RunTasksParams, RunTasksSt
               <div className={styles.taskBody}>
                 <div className={styles.row}>
                   <span className={styles.identifier}>{row.identifier}</span>
-                  {success && <Check size={14} style={{ color: 'var(--success)' }} />}
-                  {failedRow && <X size={14} style={{ color: 'var(--destructive)' }} />}
+                  {success && <Check size={16} style={{ color: 'var(--success)' }} />}
+                  {failedRow && <X size={16} style={{ color: 'var(--destructive)' }} />}
                 </div>
                 {result?.topicId && <span className={styles.meta}>topic {result.topicId}</span>}
                 {failedRow && (
-                  <span className="text-[11px] text-destructive">{result?.error || 'Failed'}</span>
+                  <span className="text-xs text-destructive">{result?.error || 'Failed'}</span>
                 )}
               </div>
             </div>

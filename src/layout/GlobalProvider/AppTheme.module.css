@@ -1,0 +1,61 @@
+/* This private class reaches the existing public Lobe ThemeProvider's Antd App.
+   Keep these rules unlayered: the former Emotion host rules were unlayered too.
+   No wrapper, selector widening, !important or global layer flag is introduced. */
+.app {
+  position: relative;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  height: 100%;
+  min-height: 100dvh;
+  max-height: 100dvh;
+
+  /* Standard Chromium scrollbar API; resolved html ThemeRoles owns the color.
+     The globals bootstrap is consume-only and may lack scoped --ant-* values. */
+  scrollbar-color: var(--scrollbar-fill) transparent;
+  scrollbar-width: thin;
+}
+
+/* Retain device-width rather than silently changing it to viewport width. */
+@media (device-width >= 576px) {
+  .app {
+    overflow: hidden;
+  }
+}
+
+.app :global(#orvilo-mobile-scroll-container) {
+  scrollbar-width: none;
+}
+
+/* The original nested pseudo rules target descendants, not the ID's own
+   scrollbar. Preserve that prefix contract along with standard width:none. */
+.app :global(#orvilo-mobile-scroll-container) ::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Keep the prefixed fallback for Chromium versions without the standard API.
+   em width scales with the actual scroll owner's font; it is not a control size. */
+.app ::-webkit-scrollbar {
+  width: 0.75em;
+  height: 0.75em;
+}
+
+.app ::-webkit-scrollbar-thumb {
+  /* Fresh DESIGN pill role; this is intentional, not a 10px equivalence claim. */
+  border-radius: 9999px;
+}
+
+.app :hover::-webkit-scrollbar-thumb {
+  /* Transparent content-box gutter paints a narrower hover thumb without
+     changing the native scrollbar track/hit width or scrolling ownership. */
+  border: 3px solid transparent;
+  background-color: var(--foreground);
+  background-clip: content-box;
+}
+
+.app ::-webkit-scrollbar-track {
+  background-color: transparent;
+}

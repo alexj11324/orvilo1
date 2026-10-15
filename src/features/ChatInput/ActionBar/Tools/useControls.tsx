@@ -1,7 +1,7 @@
 import { McpIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { getConnectorCatalog, RECOMMENDED_SKILLS, RecommendedSkillType } from '@orvilo/const';
 import { type AgentPluginMode, getDisabledPluginIds } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import {
   BadgeCheck,
@@ -24,6 +24,7 @@ import Avatar from '@/components/Avatar';
 import { confirmModal } from '@/components/Modal';
 import { Badge } from '@/components/reui/badge';
 import SearchBar from '@/components/SearchBar';
+import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { openConnectorEditDrawer } from '@/features/Connectors/CustomConnectorModal/imperative';
@@ -54,7 +55,7 @@ import { SimpleTooltip } from '../../SimpleTooltip';
 import { closeToolDetailPopovers } from '../components/useDetailPopoverState';
 import ComposioServerItem from './ComposioServerItem';
 import ComposioSkillIcon from './ComposioSkillIcon';
-import { SKILL_ICON_GAP, SKILL_ICON_SIZE, SKILL_TRAILING_CONTROL_SIZE } from './constants';
+import { SKILL_ICON_SIZE } from './constants';
 import OrviloSkillIcon from './OrviloSkillIcon';
 import OrviloSkillServerItem from './OrviloSkillServerItem';
 import SkillRow from './SkillRow';
@@ -88,353 +89,50 @@ type SkillMenuItem = NonNullable<ActionMenuItem> & {
   searchText?: string;
 };
 
-const styles = createStaticStyles(({ css }) => ({
-  activationGroupHeader: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    width: 100%;
-    min-width: 0;
-    padding-block: 4px;
-  `,
-  activationGroupChevron: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: ${SKILL_TRAILING_CONTROL_SIZE}px;
-    height: ${SKILL_TRAILING_CONTROL_SIZE}px;
-
-    color: ${cssVar.colorTextTertiary};
-  `,
-  activationGroupTitle: css`
-    display: flex;
-    gap: 7px;
-    align-items: center;
-
-    min-width: 0;
-    min-height: 18px;
-  `,
-  activationGroupTitleBlock: css`
-    display: flex;
-    gap: ${SKILL_ICON_GAP}px;
-    align-items: center;
-    min-width: 0;
-  `,
-  activationGroupIcon: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: ${SKILL_ICON_SIZE}px;
-  `,
-  activationGroupTitleBody: css`
-    display: flex;
-    flex: 0 1 auto;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  activationGroupTitleText: css`
-    overflow: hidden;
-
-    min-width: 0;
-
-    font-size: 14px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    text-transform: none;
-    white-space: nowrap;
-  `,
-  count: css`
-    flex: none;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  activationGroupActions: css`
-    display: flex;
-    flex: none;
-    gap: 8px;
-    align-items: center;
-  `,
-  switchWrap: css`
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-  `,
-  iconAuto: css`
-    color: ${cssVar.colorInfo};
-  `,
-  iconDefault: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  iconDisabled: css`
-    color: ${cssVar.colorError};
-  `,
-  iconPinned: css`
-    color: ${cssVar.colorInfo};
-  `,
-  policyButton: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    /* Connector rows hand this button to the menu's extra slot, a plain block
-       wrapper — without vertical-align its strut adds descender space below the
-       button and pushes those rows taller than the rest. */
-    width: ${SKILL_TRAILING_CONTROL_SIZE}px;
-    height: ${SKILL_TRAILING_CONTROL_SIZE}px;
-    padding: 0;
-    border: 0;
-    border-radius: 6px;
-
-    color: ${cssVar.colorTextTertiary};
-    vertical-align: top;
-
-    background: transparent;
-
-    transition:
-      color 0.2s,
-      background 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.45;
-      background: transparent;
-    }
-  `,
-  deleteButton: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 10px;
-    align-items: center;
-
-    width: 100%;
-    min-height: 36px;
-    padding-block: 8px;
-    padding-inline: 10px;
-    border: 0;
-    border-radius: 6px;
-
-    font-size: 14px;
-    line-height: 20px;
-    color: ${cssVar.colorError};
-
-    background: transparent;
-
-    transition: background 150ms ${cssVar.motionEaseOut};
-
-    &:hover {
-      background: ${cssVar.colorErrorBg};
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.45;
-      background: transparent;
-    }
-  `,
-  deleteDivider: css`
-    height: 1px;
-    margin-block: 2px;
-    margin-inline: 4px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  deleteIcon: css`
-    color: ${cssVar.colorError};
-  `,
-  policyCheck: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 16px;
-    height: 16px;
-
-    color: ${cssVar.colorInfo};
-  `,
-  policyItem: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 10px;
-    align-items: center;
-
-    width: 100%;
-    min-height: 36px;
-    padding-block: 8px;
-    padding-inline: 10px;
-    border: 0;
-    border-radius: 6px;
-
-    font-size: 14px;
-    line-height: 20px;
-    color: ${cssVar.colorText};
-
-    background: transparent;
-
-    transition: background 150ms ${cssVar.motionEaseOut};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-      opacity: 0.45;
-      background: transparent;
-    }
-  `,
-  policyItemIcon: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-
-    width: 16px;
-    height: 16px;
-  `,
-  policyPanel: css`
-    min-width: 132px;
-    padding: 4px;
-    border-radius: ${cssVar.borderRadius};
-
-    background: ${cssVar.colorBgElevated};
-    box-shadow:
-      0 0 15px 0 #00000008,
-      0 2px 30px 0 #00000014;
-  `,
-  policyText: css`
-    flex: 1;
-    text-align: start;
-  `,
-  toolLabel: css`
-    display: flex;
-    flex: 1;
-    gap: ${SKILL_ICON_GAP}px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  toolLabelBody: css`
-    overflow: hidden;
-    display: flex;
-    flex: 0 1 auto;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  toolLabelText: css`
-    overflow: hidden;
-    flex: 0 1 auto;
-
-    min-width: 0;
-
-    line-height: 1.4;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  toolRow: css`
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    justify-content: space-between;
-
-    width: 100%;
-    min-width: 0;
-
-    &:hover [data-tool-trailing],
-    &:focus-within [data-tool-trailing] {
-      pointer-events: auto;
-      opacity: 1;
-    }
-  `,
-  toolTrailing: css`
-    pointer-events: none;
-
-    display: inline-flex;
-    flex: none;
-    gap: 8px;
-    align-items: center;
-
-    opacity: 0;
-
-    transition: opacity 150ms ${cssVar.motionEaseOut};
-
-    @media (hover: none) {
-      pointer-events: auto;
-      opacity: 1;
-    }
-  `,
-  toolTrailingVisible: css`
-    pointer-events: auto;
-    opacity: 1;
-  `,
-  typeTag: css`
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-
-    padding-block: 1px;
-    padding-inline: 4px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 4px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  addSkillRow: css`
-    display: flex;
-    gap: ${SKILL_ICON_GAP}px;
-    align-items: center;
-
-    width: calc(100% + 24px);
-    min-height: 32px;
-    margin-inline: -12px;
-    padding-inline: 12px;
-    border: 0;
-    border-radius: 6px;
-
-    font-size: 14px;
-    color: ${cssVar.colorText};
-
-    background: transparent;
-
-    transition: background 150ms ${cssVar.motionEaseOut};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    /* The footer adds 8px block padding; cancel it on the last action row so the
-       bottom row sits flush against the popup edge instead of leaving a gap. */
-    &:last-child {
-      margin-block-end: -8px;
-    }
-  `,
-  addSkillLabel: css`
-    flex: 1;
-    text-align: start;
-  `,
-}));
+const styles = {
+  activationGroupHeader:
+    'flex w-full min-w-0 min-h-9 cursor-pointer items-center justify-between gap-3 py-1',
+  activationGroupChevron:
+    'flex flex-none items-center justify-center size-5 text-foreground-tertiary',
+  activationGroupTitle: 'flex min-w-0 min-h-5.5 items-center gap-2',
+  activationGroupTitleBlock: 'flex min-w-0 items-center gap-3.5',
+  activationGroupIcon: 'flex flex-none items-center justify-center w-4.5',
+  activationGroupTitleBody: 'flex flex-[0_1_auto] min-w-0 items-center gap-1.5',
+  activationGroupTitleText:
+    'min-w-0 truncate text-sm leading-5.5 font-medium text-foreground normal-case',
+  count: 'flex-none text-xs leading-5 text-foreground-tertiary',
+  activationGroupActions: 'flex flex-none items-center gap-2',
+  switchWrap: 'inline-flex flex-none items-center',
+  iconAuto: 'text-info-text',
+  iconDefault: 'text-foreground-tertiary',
+  iconDisabled: 'text-destructive-text',
+  iconPinned: 'text-info-text',
+  policyButton:
+    'inline-flex cursor-pointer items-center justify-center p-0 border-0 rounded-(--radius-button) text-foreground-tertiary align-top bg-transparent aria-expanded:bg-transparent aria-expanded:text-foreground-tertiary active:not-aria-[haspopup]:translate-y-0 transition-[color,background-color] duration-(--orvilo-motion-mid) ease-[ease] [&:hover]:text-muted-foreground [&[aria-expanded=true]:hover]:text-muted-foreground [&:hover]:bg-accent disabled:cursor-not-allowed disabled:opacity-[0.45] disabled:pointer-events-auto disabled:bg-transparent [&:disabled:hover]:bg-transparent',
+  deleteButton:
+    'flex w-full cursor-pointer items-center gap-2.5 px-2.5 border-0 rounded-(--radius-button) text-sm leading-5.5 font-normal text-destructive-text bg-transparent active:not-aria-[haspopup]:translate-y-0 transition-[background-color] [&:hover]:bg-destructive-wash disabled:cursor-not-allowed disabled:opacity-[0.45] disabled:pointer-events-auto disabled:bg-transparent [&:disabled:hover]:bg-transparent duration-(--orvilo-motion-fast) ease-(--orvilo-motion-ease-out)',
+  deleteDivider: 'h-px my-0.5 mx-1 bg-divider',
+  deleteIcon: 'text-destructive-text',
+  policyCheck: 'flex flex-none size-4 items-center justify-center text-info-text',
+  policyItem:
+    'flex w-full cursor-pointer items-center gap-2.5 px-2.5 border-0 rounded-(--radius-button) text-sm leading-5.5 font-normal text-foreground bg-transparent active:not-aria-[haspopup]:translate-y-0 transition-[background-color] [&:hover]:bg-accent disabled:cursor-not-allowed disabled:opacity-[0.45] disabled:pointer-events-auto disabled:bg-transparent [&:disabled:hover]:bg-transparent duration-(--orvilo-motion-fast) ease-(--orvilo-motion-ease-out)',
+  policyItemIcon: 'flex flex-none size-4 items-center justify-center',
+  policyPanel: 'min-w-33 p-1 rounded-(--radius-overlay) bg-popover shadow-(--shadow-popover)',
+  policyText: 'flex-1 text-start',
+  toolLabel: 'flex flex-1 min-w-0 items-center gap-3.5',
+  toolLabelBody: 'flex flex-[0_1_auto] min-w-0 items-center gap-1.5 overflow-hidden',
+  toolLabelText: 'flex-[0_1_auto] min-w-0 truncate text-sm leading-5.5',
+  toolRow:
+    'flex w-full min-w-0 items-center justify-between gap-4 [&:hover_[data-tool-trailing]]:pointer-events-auto [&:hover_[data-tool-trailing]]:opacity-100 [&:focus-within_[data-tool-trailing]]:pointer-events-auto [&:focus-within_[data-tool-trailing]]:opacity-100',
+  toolTrailing:
+    'pointer-events-none inline-flex flex-none items-center gap-2 opacity-0 transition-opacity [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100 duration-(--orvilo-motion-fast) ease-(--orvilo-motion-ease-out)',
+  toolTrailingVisible: 'pointer-events-auto opacity-100',
+  typeTag:
+    'inline-flex flex-none items-center py-0.25 px-1 border border-divider rounded-(--radius-chip) text-xs leading-5 text-foreground-tertiary bg-fill-quaternary',
+  addSkillRow:
+    'flex w-[calc(100%+24px)] items-center gap-3.5 -mx-3 px-3 border-0 rounded-(--radius-button) text-sm leading-5.5 font-normal text-foreground bg-transparent active:not-aria-[haspopup]:translate-y-0 transition-[background-color] [&:hover]:bg-accent last:-mbe-2 duration-(--orvilo-motion-fast) ease-(--orvilo-motion-ease-out)',
+  addSkillLabel: 'flex-1 text-start',
+};
 
 export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = {}) => {
   const { t } = useTranslation('setting');
@@ -543,13 +241,13 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
           : defaultMode;
       const renderCheck = (value: SkillPolicyMode) =>
         mode === value ? (
-          <span className={cx(styles.policyCheck)}>
+          <span className={cn(styles.policyCheck)}>
             <span className="anticon" role="img">
-              <Check fill={'transparent'} height={14} size={14} width={14} />
+              <Check className="size-4" fill={'transparent'} height={16} size={16} width={16} />
             </span>
           </span>
         ) : (
-          <span className={cx(styles.policyCheck)} />
+          <span className={cn(styles.policyCheck)} />
         );
 
       // Right-click / "..." menu is an action list (Pin / Auto / Disable), not a
@@ -562,10 +260,12 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
       } as const satisfies Record<SkillPolicyMode, string>;
 
       const renderPolicyItem = (value: SkillPolicyMode, icon: ReactNode) => (
-        <button
-          className={cx(styles.policyItem)}
+        <Button
+          className={cn(styles.policyItem)}
           disabled={!canEdit}
+          size="normal"
           type="button"
+          variant="ghost"
           onClick={async (event) => {
             event.stopPropagation();
             if (!canEdit) return;
@@ -573,15 +273,15 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
             await updateSkillPolicy(id, value);
           }}
         >
-          <span className={cx(styles.policyItemIcon)}>{icon}</span>
-          <span className={cx(styles.policyText)}>{t(policyActionKey[value])}</span>
+          <span className={cn(styles.policyItemIcon)}>{icon}</span>
+          <span className={cn(styles.policyText)}>{t(policyActionKey[value])}</span>
           {renderCheck(value)}
-        </button>
+        </Button>
       );
 
       const content = (
         <div
-          className={cx(styles.policyPanel)}
+          className={cn(styles.policyPanel)}
           onClick={(event) => event.stopPropagation()}
           onContextMenu={(event) => event.stopPropagation()}
         >
@@ -591,12 +291,12 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               'pinned',
               <span
                 role="img"
-                className={cx(
+                className={cn(
                   'anticon',
-                  cx(mode === 'pinned' ? styles.iconPinned : styles.iconDefault),
+                  cn(mode === 'pinned' ? styles.iconPinned : styles.iconDefault),
                 )}
               >
-                <Pin fill={'transparent'} height={15} size={15} width={15} />
+                <Pin className="size-4" fill={'transparent'} height={16} size={16} width={16} />
               </span>,
             )}
           {!deleteOnly &&
@@ -605,12 +305,12 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               'auto',
               <span
                 role="img"
-                className={cx(
+                className={cn(
                   'anticon',
-                  cx(mode === 'auto' ? styles.iconAuto : styles.iconDefault),
+                  cn(mode === 'auto' ? styles.iconAuto : styles.iconDefault),
                 )}
               >
-                <Zap fill={'transparent'} height={15} size={15} width={15} />
+                <Zap className="size-4" fill={'transparent'} height={16} size={16} width={16} />
               </span>,
             )}
           {!deleteOnly &&
@@ -619,22 +319,24 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               'disabled',
               <span
                 role="img"
-                className={cx(
+                className={cn(
                   'anticon',
-                  cx(mode === 'disabled' ? styles.iconDisabled : styles.iconDefault),
+                  cn(mode === 'disabled' ? styles.iconDisabled : styles.iconDefault),
                 )}
               >
-                <Ban fill={'transparent'} height={15} size={15} width={15} />
+                <Ban className="size-4" fill={'transparent'} height={16} size={16} width={16} />
               </span>,
             )}
           {!deleteOnly && (configureConfig || deleteConfig) && (
-            <div className={cx(styles.deleteDivider)} />
+            <div className={cn(styles.deleteDivider)} />
           )}
           {configureConfig && (
-            <button
-              className={cx(styles.policyItem)}
+            <Button
+              className={cn(styles.policyItem)}
               disabled={!canEdit}
+              size="normal"
               type="button"
+              variant="ghost"
               onClick={(event) => {
                 event.stopPropagation();
                 if (!canEdit) return;
@@ -642,19 +344,27 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                 configureConfig.onConfigure();
               }}
             >
-              <span className={cx(styles.policyItemIcon)}>
+              <span className={cn(styles.policyItemIcon)}>
                 <span className="anticon" role="img">
-                  <Wrench fill={'transparent'} height={15} size={15} width={15} />
+                  <Wrench
+                    className="size-4"
+                    fill={'transparent'}
+                    height={16}
+                    size={16}
+                    width={16}
+                  />
                 </span>
               </span>
-              <span className={cx(styles.policyText)}>{t('tools.builtins.configure')}</span>
-            </button>
+              <span className={cn(styles.policyText)}>{t('tools.builtins.configure')}</span>
+            </Button>
           )}
           {deleteConfig && (
-            <button
-              className={cx(styles.deleteButton)}
+            <Button
+              className={cn(styles.deleteButton)}
               disabled={!canEdit}
+              size="normal"
               type="button"
+              variant="ghost"
               onClick={(event) => {
                 event.stopPropagation();
                 if (!canEdit) return;
@@ -673,13 +383,19 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                 });
               }}
             >
-              <span className={cx(styles.policyItemIcon)}>
-                <span className={cx('anticon', cx(styles.deleteIcon))} role="img">
-                  <Trash2 fill={'transparent'} height={15} size={15} width={15} />
+              <span className={cn(styles.policyItemIcon)}>
+                <span className={cn('anticon', cn(styles.deleteIcon))} role="img">
+                  <Trash2
+                    className="size-4"
+                    fill={'transparent'}
+                    height={16}
+                    size={16}
+                    width={16}
+                  />
                 </span>
               </span>
-              <span className={cx(styles.policyText)}>{t('tools.builtins.uninstall')}</span>
-            </button>
+              <span className={cn(styles.policyText)}>{t('tools.builtins.uninstall')}</span>
+            </Button>
           )}
         </div>
       );
@@ -691,11 +407,13 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         >
           <PopoverTrigger
             render={
-              <button
+              <Button
                 aria-label={t('tools.skillActivateMode.title')}
-                className={cx(styles.policyButton)}
+                className={cn(styles.policyButton)}
                 disabled={!canEdit}
+                size="icon"
                 type="button"
+                variant="ghost"
                 onPointerEnter={closeToolDetailPopovers}
                 onClick={(event) => {
                   event.stopPropagation();
@@ -712,9 +430,15 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                 }}
               >
                 <span className="anticon" role="img">
-                  <MoreHorizontal fill={'transparent'} height={15} size={15} width={15} />
+                  <MoreHorizontal
+                    className="size-4"
+                    fill={'transparent'}
+                    height={16}
+                    size={16}
+                    width={16}
+                  />
                 </span>
-              </button>
+              </Button>
             }
           />
           <PopoverContent align={'start'} className={'w-auto p-0'} side={'right'} sideOffset={8}>
@@ -737,26 +461,26 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
       detailContent?: ReactNode,
     ) => (
       <SkillRow
-        className={cx(styles.toolRow)}
+        className={cn(styles.toolRow)}
         detailContent={detailContent}
         detailDisabled={policyOpenId !== null}
-        labelClassName={cx(styles.toolLabel)}
+        labelClassName={cn(styles.toolLabel)}
         label={
           <>
             {icon}
-            <span className={cx(styles.toolLabelBody)}>
-              <span className={cx(styles.toolLabelText)}>{label}</span>
+            <span className={cn(styles.toolLabelBody)}>
+              <span className={cn(styles.toolLabelText)}>{label}</span>
               {extraTag}
             </span>
           </>
         }
         trailing={
           <>
-            {badge && <span className={cx(styles.typeTag)}>{badge}</span>}
+            {badge && <span className={cn(styles.typeTag)}>{badge}</span>}
             {action}
           </>
         }
-        trailingClassName={cx(
+        trailingClassName={cn(
           styles.toolTrailing,
           policyOpenId === id && styles.toolTrailingVisible,
         )}
@@ -1179,9 +903,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               item.meta?.avatar ? (
                 <Avatar
                   avatar={item.meta.avatar}
+                  className="flex-none me-0"
                   shape={'square'}
                   size={36}
-                  style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
                 <span className="anticon" role="img">
@@ -1245,9 +969,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               item.meta?.avatar ? (
                 <Avatar
                   avatar={item.meta.avatar}
+                  className="flex-none me-0"
                   shape={'square'}
                   size={36}
-                  style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
                 <span className="anticon" role="img">
@@ -1308,9 +1032,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               skill.avatar ? (
                 <Avatar
                   avatar={skill.avatar}
+                  className="flex-none me-0"
                   shape={'square'}
                   size={36}
-                  style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
                 <span className="anticon" role="img">
@@ -1471,12 +1195,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         title={title}
         icon={
           hasRealAvatar ? (
-            <Avatar
-              avatar={item.avatar}
-              shape={'square'}
-              size={36}
-              style={{ flex: 'none', marginInlineEnd: 0 }}
-            />
+            <Avatar avatar={item.avatar} className="flex-none me-0" shape={'square'} size={36} />
           ) : (
             <span className="anticon" role="img">
               <McpIcon fill={'transparent'} height={36} size={36} width={36} />
@@ -1590,7 +1309,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   }) => (
     <div
       data-skill-activation-group
-      className={cx(styles.activationGroupHeader)}
+      className={cn(styles.activationGroupHeader)}
       role="button"
       tabIndex={0}
       onClick={(event) => {
@@ -1598,17 +1317,17 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         onToggle();
       }}
     >
-      <div className={cx(styles.activationGroupTitleBlock)}>
-        <span className={cx(styles.activationGroupIcon)}>{icon}</span>
-        <span className={cx(styles.activationGroupTitleBody)}>
-          <span className={cx(styles.activationGroupTitleText)}>{title}</span>
-          {typeof count === 'number' && <span className={cx(styles.count)}>{count}</span>}
+      <div className={cn(styles.activationGroupTitleBlock)}>
+        <span className={cn(styles.activationGroupIcon)}>{icon}</span>
+        <span className={cn(styles.activationGroupTitleBody)}>
+          <span className={cn(styles.activationGroupTitleText)}>{title}</span>
+          {typeof count === 'number' && <span className={cn(styles.count)}>{count}</span>}
         </span>
       </div>
-      <div className={cx(styles.activationGroupActions)}>
+      <div className={cn(styles.activationGroupActions)}>
         {autoSwitch && (
           <span
-            className={cx(styles.switchWrap)}
+            className={cn(styles.switchWrap)}
             onClick={(event) => {
               event.stopPropagation();
             }}
@@ -1632,12 +1351,12 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
             />
           </span>
         )}
-        <div className={cx(styles.activationGroupChevron)}>
+        <div className={cn(styles.activationGroupChevron)}>
           <span className="anticon" role="img">
             {createElement(open ? ChevronDown : ChevronRight, {
-              size: 13,
-              width: 13,
-              height: 13,
+              size: 16,
+              width: 16,
+              height: 16,
               fill: 'transparent',
             })}
           </span>
@@ -1647,11 +1366,10 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   );
 
   const marketHeader = (
-    <div style={{ width: '100%' }} onClick={(event) => event.stopPropagation()}>
+    <div className="w-full" onClick={(event) => event.stopPropagation()}>
       <SearchBar
-        className="orvilo-skill-submenu-search"
+        className="orvilo-skill-submenu-search w-full"
         placeholder={t('tools.search')}
-        style={{ width: '100%' }}
         value={searchKeyword}
         onChange={(event) => setSearchKeyword(event.target.value)}
         onKeyDown={(event) => {
@@ -1664,10 +1382,12 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   const marketFooter =
     allSkillItems.length > 0 || fixedItems.length > 0 ? (
       <>
-        <button
+        <Button
           aria-label={t('tools.plugins.management')}
-          className={cx(styles.addSkillRow)}
+          className={cn(styles.addSkillRow)}
+          size="normal"
           type="button"
+          variant="ghost"
           onClick={(event) => {
             event.stopPropagation();
             closeDropdown?.();
@@ -1675,15 +1395,10 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
           }}
         >
           <span className="anticon" role="img">
-            <Settings
-              fill={'transparent'}
-              height={SKILL_ICON_SIZE}
-              size={SKILL_ICON_SIZE}
-              width={SKILL_ICON_SIZE}
-            />
+            <Settings className="size-4" fill={'transparent'} height={16} size={16} width={16} />
           </span>
-          <span className={cx(styles.addSkillLabel)}>{t('tools.plugins.management')}</span>
-        </button>
+          <span className={cn(styles.addSkillLabel)}>{t('tools.plugins.management')}</span>
+        </Button>
       </>
     ) : undefined;
 
@@ -1697,7 +1412,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               count: fixedPinnedItems.length + allPinnedItems.length,
               icon: (
                 <span className="anticon" role="img">
-                  <Pin fill={'transparent'} height={14} size={14} width={14} />
+                  <Pin className="size-4" fill={'transparent'} height={16} size={16} width={16} />
                 </span>
               ),
               open: pinnedOpen,
@@ -1726,7 +1441,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               count: allAutoItems.length,
               icon: (
                 <span className="anticon" role="img">
-                  <Zap fill={'transparent'} height={14} size={14} width={14} />
+                  <Zap className="size-4" fill={'transparent'} height={16} size={16} width={16} />
                 </span>
               ),
               open: autoOpen,
@@ -1754,7 +1469,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               count: fixedDisabledItems.length + allDisabledItems.length,
               icon: (
                 <span className="anticon" role="img">
-                  <Ban fill={'transparent'} height={14} size={14} width={14} />
+                  <Ban className="size-4" fill={'transparent'} height={16} size={16} width={16} />
                 </span>
               ),
               open: disabledOpen,
@@ -1811,9 +1526,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               item.meta?.avatar ? (
                 <Avatar
                   avatar={item.meta.avatar}
+                  className="flex-none me-0"
                   shape={'square'}
                   size={36}
-                  style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
                 <span className="anticon" role="img">
@@ -1881,9 +1596,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               skill.avatar ? (
                 <Avatar
                   avatar={skill.avatar}
+                  className="flex-none me-0"
                   shape={'square'}
                   size={36}
-                  style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
                 <span className="anticon" role="img">
@@ -1962,9 +1677,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                 hasRealAvatar ? (
                   <Avatar
                     avatar={item.avatar}
+                    className="flex-none me-0"
                     shape={'square'}
                     size={36}
-                    style={{ flex: 'none', marginInlineEnd: 0 }}
                   />
                 ) : (
                   <span className="anticon" role="img">
@@ -2018,9 +1733,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                 hasRealAvatar ? (
                   <Avatar
                     avatar={item.avatar}
+                    className="flex-none me-0"
                     shape={'square'}
                     size={36}
-                    style={{ flex: 'none', marginInlineEnd: 0 }}
                   />
                 ) : (
                   <span className="anticon" role="img">

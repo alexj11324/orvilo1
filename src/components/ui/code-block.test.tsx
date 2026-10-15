@@ -77,6 +77,47 @@ describe.each([
     },
   );
 
+  it('uses the latest expansion callback after rerender', async () => {
+    const user = userEvent.setup();
+    const firstOnExpandedChange = vi.fn();
+    const latestOnExpandedChange = vi.fn();
+    const code = 'const first = 1;\nconst second = 2;';
+    const { CodeBlockExpandButton } = components;
+    const { rerender } = render(
+      <CodeBlock
+        code={code}
+        highlight={false}
+        maxLines={1}
+        onExpandedChange={firstOnExpandedChange}
+      >
+        <CodeBlockExpandButton />
+      </CodeBlock>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Show more' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    rerender(
+      <CodeBlock
+        code={code}
+        highlight={false}
+        maxLines={1}
+        onExpandedChange={latestOnExpandedChange}
+      >
+        <CodeBlockExpandButton />
+      </CodeBlock>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Show more' }));
+
+    expect(latestOnExpandedChange).toHaveBeenCalledExactlyOnceWith(true);
+    expect(firstOnExpandedChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Show less' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+  });
+
   it('keeps an explicit header and content from rendering twice', () => {
     const { container } = render(
       <CodeBlock code="const value = 1;" highlight={false} language="typescript">

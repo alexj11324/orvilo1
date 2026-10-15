@@ -1,41 +1,8 @@
-import { createStaticStyles } from 'antd-style';
-
-export const styles = createStaticStyles(({ css, cssVar }) => ({
-  actionBtn: css`
-    &:hover {
-      border-color: ${cssVar.colorBorder} !important;
-      background: ${cssVar.colorFillQuaternary} !important;
-    }
-  `,
-  actionBtnPrimary: css`
-    width: auto !important;
-    padding-inline: 12px !important;
-  `,
-  expandLink: css`
-    border: 1px solid ${cssVar.colorFillTertiary} !important;
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  resolvedTag: css`
-    font-size: 13px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  card: css`
-    .brief-comment-btn,
-    .brief-view-run-btn {
-      opacity: 0;
-    }
-
-    &:hover {
-      border-color: ${cssVar.colorBorder} !important;
-
-      .brief-comment-btn,
-      .brief-view-run-btn {
-        opacity: 1;
-      }
-    }
-  `,
-  clickableHeader: css`
-    cursor: pointer;
-  `,
-}));
+export const styles = {
+  actionBtn: 'hover:border-border hover:bg-accent hover:text-foreground',
+  actionBtnPrimary: 'w-auto px-3',
+  expandLink: 'border border-muted text-sm leading-5.5 text-muted-foreground',
+  card: 'hover:border-border [@media(hover:hover)_and_(pointer:fine)]:[&_.brief-comment-btn]:opacity-0 [@media(hover:hover)_and_(pointer:fine)]:[&_.brief-view-run-btn]:opacity-0 hover:[&_.brief-comment-btn]:opacity-100 hover:[&_.brief-view-run-btn]:opacity-100 focus-within:[&_.brief-comment-btn]:opacity-100 focus-within:[&_.brief-view-run-btn]:opacity-100',
+  resolvedTag: 'text-xs leading-5 text-foreground-quaternary',
+  clickableHeader: 'cursor-pointer',
+} as const;

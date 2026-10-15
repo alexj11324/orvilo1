@@ -17,8 +17,12 @@ const AuthContainer: FC<PropsWithChildren> = ({ children }) => {
       footer={<AuthFooterLinks />}
       actions={
         <>
-          <AuthLangButton />
-          <AuthThemeButton size={18} />
+          <div className="flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:p-1.5">
+            <AuthLangButton />
+          </div>
+          <div className="flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:p-1.5">
+            <AuthThemeButton />
+          </div>
         </>
       }
       brand={

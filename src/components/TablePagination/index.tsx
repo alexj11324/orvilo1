@@ -1,11 +1,11 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useFormControlContext } from '@/components/FormControlContext';
 import { Button } from '@/components/ui/button';
 import { formatIntergerNumber } from '@/utils/format';
 
@@ -15,23 +15,11 @@ const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 /** Pages either side of the current one that stay visible before an ellipsis. */
 const SIBLINGS = 1;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  ellipsis: css`
-    min-width: 24px;
-    color: ${cssVar.colorTextQuaternary};
-    text-align: center;
-  `,
-  root: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  total: css`
-    font-size: 13px;
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  ellipsis: 'min-w-6 text-center text-muted-foreground',
+  root: 'border-bs border-divider px-3 py-2.5',
+  total: 'text-xs leading-5 text-muted-foreground tabular-nums',
+};
 
 type PageItem = number | 'ellipsis-end' | 'ellipsis-start';
 
@@ -81,6 +69,7 @@ const TablePagination = memo<TablePaginationProps>(
     total,
   }) => {
     const { t } = useTranslation('spend');
+    const { disabled } = useFormControlContext();
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const page = Math.min(current, totalPages);
@@ -117,8 +106,8 @@ const TablePagination = memo<TablePaginationProps>(
           />
           <Button
             aria-label={t('table.pagination.prev')}
-            disabled={page <= 1}
-            size="icon-sm"
+            disabled={disabled || page <= 1}
+            size="icon"
             variant="ghost"
             onClick={() => goTo(page - 1)}
           >
@@ -129,7 +118,7 @@ const TablePagination = memo<TablePaginationProps>(
               <Button
                 aria-current={item === page ? 'page' : undefined}
                 key={item}
-                size="icon-sm"
+                size="icon"
                 variant={item === page ? 'secondary' : 'ghost'}
                 onClick={() => goTo(item)}
               >
@@ -143,8 +132,8 @@ const TablePagination = memo<TablePaginationProps>(
           )}
           <Button
             aria-label={t('table.pagination.next')}
-            disabled={page >= totalPages}
-            size="icon-sm"
+            disabled={disabled || page >= totalPages}
+            size="icon"
             variant="ghost"
             onClick={() => goTo(page + 1)}
           >

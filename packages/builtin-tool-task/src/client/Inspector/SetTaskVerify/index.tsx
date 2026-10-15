@@ -11,7 +11,7 @@ import type { SetTaskVerifyParams, SetTaskVerifyState } from '../../../types';
 
 const styles = {
   identifierChip:
-    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-[12px] text-muted-foreground',
+    'shrink-0 rounded-(--radius-chip) bg-accent px-2 py-0.5 font-mono text-xs text-muted-foreground',
 };
 
 export const SetTaskVerifyInspector = memo<
@@ -22,7 +22,7 @@ export const SetTaskVerifyInspector = memo<
   const identifier = args?.identifier || partialArgs?.identifier;
 
   return (
-    <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
+    <div className={cn(inspectorTextStyles.root, 'flex-wrap gap-1')}>
       <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-task.apiName.setTaskVerify')}
       </span>

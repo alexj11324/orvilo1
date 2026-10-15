@@ -6,10 +6,3 @@ export const mobileHeaderSticky: CSSProperties = {
   width: '100%',
   zIndex: 100,
 };
-
-export const mobileHeaderFixed: CSSProperties = {
-  position: 'absolute',
-  top: 0,
-  width: '100%',
-  zIndex: 100,
-};

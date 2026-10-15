@@ -33,7 +33,9 @@ export const GetAgentDetailRender = memo<
             <span className="text-sm leading-[inherit] font-semibold">
               {meta.title || 'Untitled'}
             </span>
-            {meta.description && <span className="text-[13px]">{meta.description}</span>}
+            {meta.description && (
+              <span className="text-(length:--text-dense)">{meta.description}</span>
+            )}
           </div>
         </div>
       )}
@@ -42,7 +44,7 @@ export const GetAgentDetailRender = memo<
           <div className="[margin-block-end:4px] text-xs leading-[inherit] font-medium text-muted-foreground">
             Model
           </div>
-          <div className="text-[13px]">
+          <div className="text-(length:--text-dense)">
             {config.provider && `${config.provider}/`}
             {config.model}
           </div>
@@ -78,7 +80,7 @@ export const GetAgentDetailRender = memo<
             System Prompt
           </div>
           <div
-            className="rounded-md border bg-card"
+            className="rounded-(--radius-card) border bg-card"
             style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}
           >
             <Markdown fontSize={13} variant={'chat'}>

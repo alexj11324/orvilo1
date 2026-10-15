@@ -130,7 +130,12 @@ const TaskPropertiesSetup = () => {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button aria-label={t('taskDetail.project')} disabled={disabled} variant="outline">
+              <Button
+                aria-label={t('taskDetail.project')}
+                disabled={disabled}
+                size="lg"
+                variant="outline"
+              >
                 {projectName ??
                   t(task.projectId ? 'taskDetail.menu.unavailable' : 'taskDetail.noProject')}
               </Button>
@@ -171,6 +176,7 @@ const TaskPropertiesSetup = () => {
               <Button
                 aria-label={t('taskList.groupBy.milestone')}
                 disabled={disabled || !canManageMilestone}
+                size="lg"
                 variant="outline"
               >
                 {milestone?.name ?? t('taskList.noMilestone')}
@@ -268,7 +274,7 @@ const TaskPropertiesSetup = () => {
         </p>
       ) : null}
       <div className="flex justify-end">
-        <Button disabled={pending || projectPending} variant="outline" onClick={close}>
+        <Button disabled={pending || projectPending} size="lg" variant="outline" onClick={close}>
           {t('close', { ns: 'common' })}
         </Button>
       </div>

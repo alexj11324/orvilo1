@@ -1,9 +1,8 @@
 'use client';
 
-import { createStaticStyles, useTheme } from 'antd-style';
 import { cn } from 'cn';
 import { TriangleAlert, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -12,109 +11,43 @@ import { CURRENT_VERSION } from '@/const/version';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { useGlobalStore } from '@/store/global';
-import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  closeButton: css`
-    cursor: pointer;
-
-    position: absolute;
-    inset-block-start: 20px;
-    inset-inline-end: 20px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 28px;
-    height: 28px;
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorTextSecondary};
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  container: css`
-    position: fixed;
-    z-index: 9999;
-    inset: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    background: ${cssVar.colorBgMask};
-  `,
-  content: css`
-    position: relative;
-
-    overflow: hidden;
-
-    max-width: 480px;
-    padding: 24px;
-    border: 1px solid ${cssVar.colorFillQuaternary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgContainer};
-    box-shadow: ${cssVar.boxShadowSecondary};
-  `,
-  desc: css`
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  title: css`
-    font-size: 16px;
-    font-weight: bold;
-    color: ${cssVar.colorWarningText};
-  `,
-  titleIcon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorWarning};
-  `,
-  warning: css`
-    padding: 12px;
-    border-radius: ${cssVar.borderRadius};
-    color: ${cssVar.colorWarningText};
-    background: var(--warning-yellow-bg, ${cssVar.colorWarningBg});
-  `,
-}));
+const styles = {
+  closeButton: 'absolute inset-bs-5 end-5',
+  container:
+    'fixed inset-0 z-9999 flex items-center justify-center overflow-y-auto bg-overlay-mask p-4',
+  content:
+    'relative max-h-[calc(100dvh-var(--spacing)*8)] w-full max-w-120 overflow-y-auto rounded-(--radius-overlay) border border-fill-quaternary bg-card p-6 shadow-(--shadow-popover)',
+  desc: 'text-sm text-muted-foreground',
+  title: 'text-base font-semibold text-warning-text',
+  titleIcon: 'size-4 shrink-0 text-warning-text',
+  warning:
+    'rounded-(--radius-card) bg-(--server-version-warning-bg) p-3 text-sm text-(color:--server-version-warning-text)',
+};
 
 const ServerVersionOutdatedAlert = () => {
-  const theme = useTheme();
   const { t } = useTranslation('common');
   const [dismissed, setDismissed] = useState(false);
   const isServerVersionOutdated = useGlobalStore((s) => s.isServerVersionOutdated);
   const isOfficialServer = useElectronStore(electronSyncSelectors.isOfficialServer);
 
-  const cssVariables = useMemo<Record<string, string>>(
-    () => ({
-      '--content-yellow-border': theme.yellowBorder,
-      '--warning-yellow-bg': theme.yellowBg,
-    }),
-    [theme.yellowBorder, theme.yellowBg],
-  );
-
   if (isOfficialServer || !isServerVersionOutdated || dismissed) return null;
 
   return (
     <div className={styles.container}>
-      <div className={styles.content} style={cssVariables}>
-        <div
-          {...clickableProps()}
+      <div className={styles.content}>
+        <Button
           aria-label={t('close')}
-          className={cn(styles.closeButton, CLICKABLE_FOCUS_RING)}
+          className={styles.closeButton}
+          size="icon"
+          variant="ghost"
           onClick={() => setDismissed(true)}
         >
-          <X />
-        </div>
+          <X className="size-4" />
+        </Button>
 
         <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pe-12">
             <TriangleAlert className={styles.titleIcon} />
             <div className={styles.title}>{t('serverVersionOutdated.title')}</div>
           </div>
@@ -125,16 +58,16 @@ const ServerVersionOutdatedAlert = () => {
 
           <div className={styles.warning}>{t('serverVersionOutdated.warning')}</div>
 
-          <div className="flex justify-end gap-2" style={{ marginTop: 8 }}>
+          <div className="mbs-2 flex flex-wrap justify-end gap-2">
             <a
-              className={cn(buttonVariants({ size: 'sm', variant: 'default' }))}
+              className={cn(buttonVariants({ size: 'default', variant: 'default' }))}
               href={MANUAL_UPGRADE_URL}
               rel="noreferrer"
               target="_blank"
             >
               {t('serverVersionOutdated.upgrade')}
             </a>
-            <Button size="sm" onClick={() => setDismissed(true)}>
+            <Button size="default" onClick={() => setDismissed(true)}>
               {t('serverVersionOutdated.dismiss')}
             </Button>
           </div>

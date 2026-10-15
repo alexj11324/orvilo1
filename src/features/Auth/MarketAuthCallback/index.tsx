@@ -175,9 +175,9 @@ const MarketAuthCallbackPage = () => {
     <Empty>
       <EmptyHeader>
         <EmptyMedia variant="default">{getStatusIcon()}</EmptyMedia>
-        <EmptyTitle>{<div className="text-[32px] font-bold">{getTitle()}</div>}</EmptyTitle>
+        <EmptyTitle>{<div className="text-3xl font-semibold">{getTitle()}</div>}</EmptyTitle>
         <EmptyDescription>
-          {<div className="text-[16px] text-muted-foreground">{getSubTitle()}</div>}
+          {<div className="text-sm text-muted-foreground">{getSubTitle()}</div>}
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>{getExtra()}</EmptyContent>

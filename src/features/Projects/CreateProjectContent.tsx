@@ -1,5 +1,4 @@
 import type { ProjectStatus } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import {
   ChevronRightIcon,
@@ -41,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
@@ -135,40 +135,14 @@ const parseDependencyValue = (
   return { projectId, type };
 };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  shell: css`
-    height: min(832px, calc(100dvh - 112px));
-    min-height: 380px;
-  `,
-  header: css`
-    padding-block: 20px 12px;
-    padding-inline: 24px;
-  `,
-  body: css`
-    overflow-y: auto;
-    flex: 1;
-
-    min-height: 0;
-    padding-block: 0 16px;
-    padding-inline: 24px;
-  `,
-
-  footer: css`
-    margin: 0;
-    padding-block: 12px 20px;
-    padding-inline: 20px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-
-  advanced: css`
-    color: ${cssVar.colorTextSecondary};
-
-    summary {
-      cursor: pointer;
-      font-size: 12px;
-    }
-  `,
-}));
+const styles = {
+  shell:
+    '[height:min(calc(var(--spacing)*208),calc(100dvh_-_var(--spacing)*28))] min-h-95 text-sm leading-5.5',
+  header: 'pbs-5 pbe-3 px-6',
+  body: 'overflow-y-auto flex-1 min-h-0 pbs-0 pbe-4 px-6',
+  footer: 'm-0 pbs-3 pbe-5 px-5 border-bs border-divider',
+  advanced: 'text-muted-foreground',
+};
 
 export const CreateProjectTitle = memo(() => {
   const { t } = useTranslation('project');
@@ -278,7 +252,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
       .map((team) => ({ label: team.name, value: team.id }));
     const statusPickerOptions = PROJECT_STATUS_OPTIONS.map((option) => ({
       label: (
-        <div className="flex flex-row" style={{ alignItems: 'center', gap: 6 }}>
+        <div className="flex flex-row items-center gap-1.5">
           <ProjectStatusIcon size={16} status={option.value} />
           {t(option.labelKey)}
         </div>
@@ -287,7 +261,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
     }));
     const priorityPickerOptions = PROJECT_PRIORITY_OPTIONS.map((option) => ({
       label: (
-        <div className="flex flex-row" style={{ alignItems: 'center', gap: 6 }}>
+        <div className="flex flex-row items-center gap-1.5">
           <PriorityIcon priority={option.value} size={16} />
           {t(option.labelKey)}
         </div>
@@ -334,10 +308,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
     ][0].options;
     return (
       <div className={cn('flex flex-col', styles.shell)}>
-        <div
-          className={cn('flex flex-row', styles.header)}
-          style={{ alignItems: 'center', gap: 6 }}
-        >
+        <div className={cn('flex flex-row items-center gap-1.5', styles.header)}>
           {workspaceId && (
             <Combobox
               disabled={teamsSWR.isLoading}
@@ -385,52 +356,40 @@ const CreateProjectContent = memo<CreateProjectOptions>(
               </>
             </Combobox>
           )}
-          {workspaceId && <ChevronRightIcon size={12} />}
-          <span className="text-sm" style={{ fontSize: 13 }}>
-            {t('create.title')}
-          </span>
-          <div className="flex flex-col" style={{ flex: 1 }} />
+          {workspaceId && <ChevronRightIcon size={16} />}
+          <span className="text-sm leading-5.5">{t('create.title')}</span>
+          <div className="flex flex-1 flex-col" />
           <Button
             aria-label={t('close', { ns: 'common' })}
-            size="icon-sm"
+            size="icon"
             variant="ghost"
             onClick={close}
           >
             {createElement(XIcon, { 'size': 16, 'aria-hidden': true })}
           </Button>
         </div>
-        <div className={cn('flex flex-col', styles.body)} style={{ gap: 12 }}>
+        <div className={cn('flex flex-col gap-3', styles.body)}>
           <EmojiPicker
             allowDelete
-            size={28}
+            fallback={<Skeleton className="size-9" />}
             title={t('create.icon')}
             value={form.avatar || '📦'}
             customRender={(avatar) => (
-              <span
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 28,
-                  height: 28,
-                  borderRadius: 4,
-                  background: cssVar.colorFillTertiary,
-                  color: cssVar.colorTextSecondary,
-                }}
-              >
-                {avatar === '📦' ? <ProjectIcon size={18} /> : avatar}
+              <span className="flex size-9 items-center justify-center rounded-(--radius-button) bg-accent text-muted-foreground">
+                {avatar === '📦' ? <ProjectIcon size={16} /> : avatar}
               </span>
             )}
             onChange={(avatar) => updateForm({ avatar: avatar || undefined })}
           />
-          <div className="flex flex-col" style={{ gap: 8 }}>
+          <div className="flex flex-col gap-2">
             <Input
               autoFocus
               aria-label={t('create.nameLabel')}
-
               maxLength={255}
+
               placeholder={t('create.nameLabel')}
               value={form.name}
+              visualSize="normal"
               onChange={(event) => updateName(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.nativeEvent.isComposing) void handleCreate();
@@ -438,14 +397,15 @@ const CreateProjectContent = memo<CreateProjectOptions>(
             />
             <Input
               aria-label={t('create.summary')}
-
               maxLength={280}
+
               placeholder={t('create.summaryPlaceholder')}
               value={form.summary ?? ''}
+              visualSize="normal"
               onChange={(event) => updateForm({ summary: event.target.value })}
             />
           </div>
-          <div className="flex flex-row" style={{ alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div className="flex flex-row flex-wrap items-center gap-2">
             <Select
               disabled={form.loading || !!workspaceId}
               value={form.visibility ?? 'public'}
@@ -748,7 +708,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
             </Combobox>
           </div>
           {form.startDate && form.targetDate && form.targetDate < form.startDate && (
-            <span className="text-sm text-destructive" role={'alert'}>
+            <span className="text-sm leading-5.5 text-destructive-text" role={'alert'}>
               {t('create.dateOrderInvalid')}
             </span>
           )}
@@ -783,8 +743,8 @@ const CreateProjectContent = memo<CreateProjectOptions>(
           <Textarea
             aria-label={t('create.description')}
 
+            className="flex-1 min-h-30 resize-none"
             placeholder={t('create.descriptionPlaceholder')}
-            style={{ flex: 1, minHeight: 120, resize: 'none' }}
             value={form.description ?? ''}
             onChange={(event) => updateForm({ description: event.target.value })}
           />
@@ -793,15 +753,17 @@ const CreateProjectContent = memo<CreateProjectOptions>(
             onChange={(milestones) => updateForm({ milestones })}
           />
           {(identifierInvalid || !slugValid) && (
-            <span className="text-sm text-destructive" role={'alert'}>
+            <span className="text-sm leading-5.5 text-destructive-text" role={'alert'}>
               {t(identifierInvalid ? 'create.identifierInvalid' : 'create.slugInvalid')}
             </span>
           )}
           <details className={styles.advanced}>
-            <summary>{t('create.advanced')}</summary>
-            <div className="flex flex-col" style={{ gap: 12, paddingBlock: 12 }}>
-              <div className="flex flex-col" style={{ gap: 4 }}>
-                <span className="text-sm" style={{ fontSize: 12, fontWeight: 500 }}>
+            <summary className="min-h-9 cursor-pointer py-1.75 text-sm leading-5.5">
+              {t('create.advanced')}
+            </summary>
+            <div className="flex flex-col gap-3 py-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm leading-5.5 font-medium">
                   {t('create.identifierLabel')}
                 </span>
                 <Input
@@ -809,6 +771,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                   maxLength={6}
                   placeholder={t('create.identifierPlaceholder')}
                   value={form.identifier}
+                  visualSize="normal"
                   onChange={(event) =>
                     updateForm({
                       identifier: event.target.value.toUpperCase(),
@@ -821,12 +784,11 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                   }}
                 />
                 <span
-                  className="text-sm"
+                  className="text-xs leading-5"
                   style={{
-                    fontSize: 12,
                     color:
                       (identifierInvalid ? 'danger' : 'secondary') === 'danger'
-                        ? 'var(--destructive)'
+                        ? 'var(--destructive-text)'
                         : (identifierInvalid ? 'danger' : 'secondary') === 'secondary'
                           ? 'var(--muted-foreground)'
                           : undefined,
@@ -837,15 +799,14 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                   )}
                 </span>
               </div>
-              <div className="flex flex-col" style={{ gap: 6 }}>
-                <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
-                  {t('create.slugLabel')}
-                </span>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm leading-5.5 font-medium">{t('create.slugLabel')}</span>
                 <Input
                   aria-invalid={(slugValid ? undefined : 'error') === 'error' || undefined}
                   maxLength={100}
                   placeholder={t('create.slugPlaceholder')}
                   value={form.slug}
+                  visualSize="normal"
                   onChange={(event) =>
                     updateForm({ slug: event.target.value.toLowerCase(), slugEdited: true })
                   }
@@ -855,12 +816,11 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                   }}
                 />
                 <span
-                  className="text-sm"
+                  className="text-xs leading-5"
                   style={{
-                    fontSize: 12,
                     color:
                       (slugValid ? 'secondary' : 'danger') === 'danger'
-                        ? 'var(--destructive)'
+                        ? 'var(--destructive-text)'
                         : (slugValid ? 'secondary' : 'danger') === 'secondary'
                           ? 'var(--muted-foreground)'
                           : undefined,

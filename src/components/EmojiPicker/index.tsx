@@ -1,5 +1,5 @@
 import { type EmojiPickerProps } from '@lobehub/ui';
-import { lazy, memo, Suspense } from 'react';
+import { lazy, memo, type ReactNode, Suspense } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGlobalStore } from '@/store/global';
@@ -9,15 +9,22 @@ import { globalGeneralSelectors } from '@/store/global/selectors';
 // on mount so the picker never sits inside a route's static closure.
 const OrviloEmojiPicker = lazy(() => import('@lobehub/ui/es/EmojiPicker/index'));
 
-export const EmojiPicker = memo<EmojiPickerProps>(({ shape = 'square', ...rest }) => {
-  const locale = useGlobalStore(globalGeneralSelectors.currentLanguage);
-  const size = rest.size ?? 40;
+interface OrviloEmojiPickerProps extends EmojiPickerProps {
+  /** Loading placeholder for a caller-owned custom trigger. */
+  fallback?: ReactNode;
+}
 
-  return (
-    <Suspense fallback={<Skeleton style={{ height: size, width: size }} />}>
-      <OrviloEmojiPicker shape={shape} {...rest} defaultAvatar={null as any} locale={locale} />
-    </Suspense>
-  );
-});
+export const EmojiPicker = memo<OrviloEmojiPickerProps>(
+  ({ fallback, shape = 'square', ...rest }) => {
+    const locale = useGlobalStore(globalGeneralSelectors.currentLanguage);
+    const size = rest.size ?? 40;
+
+    return (
+      <Suspense fallback={fallback ?? <Skeleton style={{ height: size, width: size }} />}>
+        <OrviloEmojiPicker shape={shape} {...rest} defaultAvatar={null as any} locale={locale} />
+      </Suspense>
+    );
+  },
+);
 
 export default EmojiPicker;

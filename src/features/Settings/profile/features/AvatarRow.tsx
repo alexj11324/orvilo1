@@ -54,16 +54,16 @@ const AvatarRow = () => {
 
   const avatarContent = canUpload ? (
     <Upload beforeUpload={handleUploadAvatar} maxCount={1}>
-      <div className="group relative cursor-pointer overflow-hidden rounded-lg">
+      <div className="group relative cursor-pointer overflow-hidden rounded-(--radius-card)">
         <UserAvatar size={40} />
         <div
-          className={`${'absolute inset-0 z-10 flex cursor-pointer items-center justify-center rounded-lg bg-black/50 opacity-0 transition-opacity group-hover:opacity-100'} avatar-edit-overlay`}
+          className={`${'absolute inset-0 z-10 flex cursor-pointer items-center justify-center rounded-(--radius-card) bg-overlay-mask opacity-0 transition-opacity group-hover:opacity-100'} avatar-edit-overlay`}
           style={uploading ? { opacity: 1 } : undefined}
         >
           {uploading ? (
-            <Spinner className="size-4 text-white" />
+            <Spinner className="size-4 text-overlay-mask-foreground" />
           ) : (
-            <PencilIcon className="size-4 text-white" />
+            <PencilIcon className="size-4 text-overlay-mask-foreground" />
           )}
         </div>
       </div>

@@ -11,11 +11,11 @@ import { inspectorTextStyles, shinyTextStyles } from '../../styles';
 import { getRunCommandDisplayCommand } from '../../utils/runCommand';
 
 const styles = {
-  chip: 'inline-flex min-w-0 shrink items-center gap-1.5 overflow-hidden rounded-[999px] bg-accent px-2.5 py-0.5 ms-1.5',
-  command: 'min-w-0 truncate font-mono text-[12px] text-foreground',
-  leadingIcon: 'shrink-0 text-[var(--ant-color-text-description)] me-1.5',
+  chip: 'inline-flex min-w-0 shrink items-center gap-1.5 overflow-hidden rounded-(--radius-chip) bg-accent px-2.5 py-0.5 ms-1.5',
+  command: 'min-w-0 truncate font-mono text-xs text-foreground',
+  leadingIcon: 'shrink-0 text-foreground-description me-1.5',
   statusIcon: 'shrink-0 ms-1',
-  terminalIcon: 'shrink-0 text-[var(--ant-color-text-description)]',
+  terminalIcon: 'shrink-0 text-foreground-description',
 };
 
 interface RunCommandArgs {
@@ -55,9 +55,9 @@ export const RunCommandInspector = memo<RunCommandInspectorProps>(
     const description = args?.description || partialArgs?.description || command;
 
     // Brand icon leads the row (before the label); otherwise the terminal glyph sits in the chip.
-    const leading = BrandIcon ? <BrandIcon className={styles.leadingIcon} size={14} /> : null;
+    const leading = BrandIcon ? <BrandIcon className={styles.leadingIcon} size={16} /> : null;
     const chipIcon = BrandIcon ? null : (
-      <SquareChevronRight className={styles.terminalIcon} size={14} />
+      <SquareChevronRight className={styles.terminalIcon} size={16} />
     );
 
     if (isArgumentsStreaming) {
@@ -97,9 +97,9 @@ export const RunCommandInspector = memo<RunCommandInspectorProps>(
         )}
         {isLoading ? null : pluginState?.success !== undefined ? (
           isSuccess ? (
-            <Check className={styles.statusIcon} color={'var(--success)'} size={14} />
+            <Check className={styles.statusIcon} color={'var(--success)'} size={16} />
           ) : (
-            <X className={styles.statusIcon} color={'var(--destructive)'} size={14} />
+            <X className={styles.statusIcon} color={'var(--destructive)'} size={16} />
           )
         ) : null}
       </div>

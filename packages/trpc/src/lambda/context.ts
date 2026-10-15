@@ -15,6 +15,7 @@ import { authEnv, ORVILO_OIDC_AUTH_HEADER } from '@/envs/auth';
 import { extractTraceContext } from '@/libs/observability/traceparent';
 import { assertOIDCUserActive, isOIDCUserInactiveError } from '@/libs/oidc-provider/access-control';
 import { validateOIDCJWT } from '@/libs/oidc-provider/jwt';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { resolveAuthSessionFromHeaders } from '@/server/services/auth';
 import { isApiKeyExpired, validateApiKeyFormat } from '@/utils/apiKey';
 
@@ -57,6 +58,7 @@ const validateApiKey = async (apiKey: string): Promise<ValidatedApiKey | null> =
 
     const userApiKeyModel = new ApiKeyModel(
       db,
+      KeyVaultsGateKeeper.initWithEnvKey,
       apiKeyRecord.userId,
       apiKeyRecord.workspaceId ?? undefined,
     );

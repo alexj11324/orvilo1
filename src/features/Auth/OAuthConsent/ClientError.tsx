@@ -36,9 +36,9 @@ const ConsentClientError = memo<ClientProps>(({ error }) => {
     <Empty>
       <EmptyHeader>
         <EmptyMedia variant="default">{<FrownIcon size={96} />}</EmptyMedia>
-        <EmptyTitle>{<div className="text-[32px] font-bold">{title}</div>}</EmptyTitle>
+        <EmptyTitle>{<div className="text-3xl font-semibold">{title}</div>}</EmptyTitle>
         <EmptyDescription>
-          {<div className="text-[16px] text-muted-foreground">{message}</div>}
+          {<div className="text-sm text-muted-foreground">{message}</div>}
         </EmptyDescription>
       </EmptyHeader>
     </Empty>

@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { Bot } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,60 +16,19 @@ import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import type { WorkspaceAgentSummary } from '../api/contract';
 import { useWorkspaceAgentsQuery } from '../api/hooks';
 
-const styles = createStaticStyles(({ css }) => ({
-  cell: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
+const styles = {
+  cell: 'flex gap-1.5 items-center min-w-0 text-sm leading-5.5 text-muted-foreground',
+  headerCell: 'text-xs leading-5 font-medium text-foreground-tertiary uppercase tracking-normal',
+  name: 'overflow-hidden text-sm leading-5.5 font-medium text-foreground text-ellipsis whitespace-nowrap',
+  projects: 'overflow-hidden text-ellipsis whitespace-nowrap',
+  row: 'grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)_90px] gap-3 items-center py-2.5 px-1 border-be border-divider',
+  table: 'min-w-140',
+  tableScroll: 'overflow-x-auto',
+};
 
-    min-width: 0;
-
-    font-size: 13px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  headerCell: css`
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  `,
-  name: css`
-    overflow: hidden;
-
-    font-size: 14px;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  projects: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  row: css`
-    display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) 90px;
-    gap: 12px;
-    align-items: center;
-
-    padding-block: 10px;
-    padding-inline: 4px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  table: css`
-    /* Four columns floor at ~560px; below that the wrapper scrolls
-       horizontally instead of crushing cells or overflowing the page. */
-    min-width: 560px;
-  `,
-  tableScroll: css`
-    overflow-x: auto;
-  `,
-}));
-
-const STATUS_COLOR = {
-  active: 'green',
-  disabled: 'default',
+const STATUS_CLASSES = {
+  active: 'border-success-border bg-success-wash text-success-text',
+  disabled: 'border-divider bg-fill-quaternary text-muted-foreground',
 } as const satisfies Record<NonNullable<WorkspaceAgentSummary['status']>, string>;
 
 interface AgentRowProps {
@@ -89,9 +48,9 @@ const AgentRow = memo<AgentRowProps>(({ agent }) => {
     <div className={styles.row}>
       <div className={styles.cell}>
         <AssigneeAvatar agentId={agent.id} size={32} />
-        <div className="flex flex-col flex-1 gap-[0px]" style={{ minWidth: 0 }}>
+        <div className="flex min-w-0 flex-1 flex-col gap-0">
           <span className={styles.name}>
-            <Bot size={12} style={{ marginInlineEnd: 6 }} />
+            <Bot className="me-1.5" size={16} />
             {agent.name}
           </span>
         </div>
@@ -114,7 +73,11 @@ const AgentRow = memo<AgentRowProps>(({ agent }) => {
         </TooltipProvider>
       </div>
       <div>
-        <Tag style={{ color: STATUS_COLOR[status] }}>
+        <Tag
+          className={cn('py-0 text-xs leading-5', STATUS_CLASSES[status])}
+          size="xl"
+          variant="secondary"
+        >
           {t(`workspaceSetting.agents.status.${status}`, { defaultValue: status })}
         </Tag>
       </div>
@@ -135,12 +98,12 @@ export const AgentsPanel = memo(() => {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-4" style={{ paddingBlock: 8 }}>
+      <div className="flex flex-col gap-4 py-2">
         {Array.from({ length: 3 }).map((_, i) => (
           <div className="flex items-center gap-2.5" key={i}>
-            <Skeleton className="h-3" style={{ marginBottom: 0, width: '30%' }} />
-            <Skeleton className="h-3" style={{ marginBottom: 0, width: '25%' }} />
-            <Skeleton className="h-3" style={{ marginBottom: 0, width: '25%' }} />
+            <Skeleton className="mb-0 h-3 w-3/10" />
+            <Skeleton className="mb-0 h-3 w-1/4" />
+            <Skeleton className="mb-0 h-3 w-1/4" />
           </div>
         ))}
       </div>
@@ -148,11 +111,13 @@ export const AgentsPanel = memo(() => {
   }
   if (error) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>{t('workspaceSetting.agents.loadFailed')}</AlertTitle>
+      <Alert className="rounded-(--radius-card) text-sm leading-5.5" variant="destructive">
+        <AlertTitle className="line-clamp-none text-sm leading-5.5 tracking-normal">
+          {t('workspaceSetting.agents.loadFailed')}
+        </AlertTitle>
         <AlertAction>
           {
-            <Button size="sm" onClick={() => void mutate()}>
+            <Button size="lg" onClick={() => void mutate()}>
               {t('retry', { ns: 'common' })}
             </Button>
           }
@@ -181,9 +146,11 @@ export const AgentsPanel = memo(() => {
         </div>
       </div>
       {agents.length === 0 && (
-        <Empty style={{ paddingBlock: 32 }}>
+        <Empty className="py-8">
           <EmptyHeader>
-            <EmptyDescription>{t('workspaceSetting.agents.empty')}</EmptyDescription>
+            <EmptyDescription className="text-sm leading-5.5">
+              {t('workspaceSetting.agents.empty')}
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       )}

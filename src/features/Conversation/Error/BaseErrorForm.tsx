@@ -9,12 +9,12 @@ interface BaseErrorFormProps {
 }
 const BaseErrorForm = memo<BaseErrorFormProps>(({ title, desc, action, avatar }) => {
   return (
-    <div className="relative flex w-full items-center justify-between gap-2 overflow-hidden rounded-(--ant-border-radius-lg) border border-border p-4">
-      <div className="flex items-center gap-3">
+    <div className="relative flex w-full flex-wrap items-center justify-between gap-4 overflow-hidden rounded-(--radius-card) border border-border p-4 text-sm leading-5.5 text-foreground">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         {avatar}
-        <div className="flex flex-col gap-0.5">
-          <div className="font-medium">{title}</div>
-          <div className="text-[12px] text-muted-foreground">{desc}</div>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="text-sm leading-5.5 font-semibold break-words">{title}</div>
+          <div className="text-sm leading-5.5 break-words text-muted-foreground">{desc}</div>
         </div>
       </div>
       {action}

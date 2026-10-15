@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
@@ -12,23 +11,12 @@ import Time from '../Time';
 
 const ACTION_CLASSNAME = 'memory-actions';
 
-const styles = createStaticStyles(({ css }) => ({
-  actions: css`
-    transition: opacity 0.15s ease;
-  `,
-  timelineCard: css`
-    position: relative;
-    .${ACTION_CLASSNAME} {
-      opacity: 0;
-    }
-
-    &:hover {
-      .${ACTION_CLASSNAME} {
-        opacity: 1;
-      }
-    }
-  `,
-}));
+const styles = {
+  actions:
+    'transition-opacity duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-out) motion-reduce:transition-none',
+  timelineCard:
+    'relative rounded-(--radius-card) [&_.memory-actions]:opacity-0 [&:hover_.memory-actions]:opacity-100 [&:focus-within_.memory-actions]:opacity-100',
+};
 
 interface TimeLineCardProps {
   actions?: ReactNode;
@@ -46,23 +34,16 @@ const TimeLineCard = memo<TimeLineCardProps>(
     return (
       <div
         {...clickableProps()}
-        className={cn(cn('flex flex-col gap-3 p-4', styles.timelineCard), CLICKABLE_FOCUS_RING)}
-        style={{ cursor: 'pointer' }}
+        className={cn(
+          cn('flex flex-col gap-3 p-4 cursor-pointer', styles.timelineCard),
+          CLICKABLE_FOCUS_RING,
+        )}
         onClick={onClick}
       >
         {(title || titleAddon) && (
-          <div
-            className="flex items-center gap-1 flex-wrap"
-            style={{
-              width: '100%',
-
-              overflow: 'hidden',
-            }}
-          >
+          <div className="flex items-center gap-1 flex-wrap w-full overflow-hidden">
             {title && typeof title === 'string' ? (
-              <h2 className="text-[16px] font-medium" style={{ lineHeight: 1.5, margin: 0 }}>
-                {title}
-              </h2>
+              <h2 className="text-base font-semibold leading-6 m-0">{title}</h2>
             ) : (
               title
             )}
@@ -70,9 +51,7 @@ const TimeLineCard = memo<TimeLineCardProps>(
           </div>
         )}
         {typeof children === 'string' ? (
-          <p className="line-clamp-3" style={{ color: cssVar.colorTextSecondary }}>
-            {children}
-          </p>
+          <p className="line-clamp-3 text-sm text-muted-foreground">{children}</p>
         ) : (
           children
         )}
@@ -83,7 +62,7 @@ const TimeLineCard = memo<TimeLineCardProps>(
             <Time capturedAt={capturedAt} />
           </div>
           <div
-            className={cn('flex items-center gap-1', cx(ACTION_CLASSNAME, styles.actions))}
+            className={cn('flex items-center gap-1', cn(ACTION_CLASSNAME, styles.actions))}
             onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();

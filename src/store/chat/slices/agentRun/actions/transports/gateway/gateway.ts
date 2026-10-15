@@ -5,7 +5,7 @@ import {
   type AgentStreamSessionCompletion,
   type ConnectionStatus,
 } from '@orvilo/agent-gateway-client';
-import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
+import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents/config';
 import type {
   ChatTopicMetadata,
   ChatTopicStatus,
@@ -16,6 +16,7 @@ import type {
   RuntimeMentionedAgent,
 } from '@orvilo/types';
 import { resolveAgentAgencyConfig } from '@orvilo/types';
+import { t } from 'i18next';
 
 import { isDesktop } from '@/const/version';
 import {
@@ -661,8 +662,11 @@ export class GatewayActionImpl {
       tempMessageIds,
     } = params;
 
+    // Run events reach this client only through the Agent Gateway. Without one
+    // the server would still run the Agent, and this page would wait on it forever.
     const agentGatewayUrl =
-      window.global_serverConfigStore!.getState().serverConfig.agentGatewayUrl!;
+      window.global_serverConfigStore?.getState()?.serverConfig?.agentGatewayUrl;
+    if (!agentGatewayUrl) throw new Error(t('agentGatewayRequired', { ns: 'chat' }));
 
     // The EXECUTION context decides whether the server creates a topic. The
     // message context can already carry the client-minted topic id (the send

@@ -24,7 +24,7 @@ export {
   QODER_CLI_AUTH_DOCS_URL,
   QODER_CLI_INSTALL_COMMANDS,
   QODER_CLI_INSTALL_DOCS_URL,
-} from '@orvilo/heterogeneous-agents';
+} from '@orvilo/heterogeneous-agents/config';
 
 export const HeterogeneousAgentSessionErrorCode = {
   AuthRequired: 'auth_required',

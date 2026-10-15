@@ -1,11 +1,5 @@
-import { CLASSNAMES } from '@lobehub/ui';
-import type { Theme } from 'antd-style';
-import { css } from 'antd-style';
-
-// fix ios input keyboard
-// overflow: hidden;
-// ref: https://zhuanlan.zhihu.com/p/113855026
-const genGlobalStyle = ({ token }: { prefixCls: string; token: Theme }) => css`
+/** App document policy. Trigger classes are the installed SDK's published CLASSNAMES contract. */
+const global = `
   html,
   body,
   #__next {
@@ -34,7 +28,7 @@ const genGlobalStyle = ({ token }: { prefixCls: string; token: Theme }) => css`
   /* Resets live in @layer base so Tailwind/ReUI utilities and antd (layer antd) can override them. */
   @layer base {
     * {
-      scrollbar-color: ${token.colorFill} transparent;
+      scrollbar-color: var(--scrollbar-fill) transparent;
       scrollbar-width: thin;
 
       ::-webkit-scrollbar {
@@ -43,12 +37,12 @@ const genGlobalStyle = ({ token }: { prefixCls: string; token: Theme }) => css`
       }
 
       ::-webkit-scrollbar-thumb {
-        border-radius: 10px;
+        border-radius: 9999px;
       }
 
       :hover::-webkit-scrollbar-thumb {
         border: 3px solid transparent;
-        background-color: ${token.colorText};
+        background-color: var(--foreground);
         background-clip: content-box;
       }
 
@@ -59,26 +53,26 @@ const genGlobalStyle = ({ token }: { prefixCls: string; token: Theme }) => css`
   }
 
   html.desktop[data-theme='dark'] body {
-    background-color: color-mix(in srgb, ${token.colorBgLayout} 50%, transparent);
+    background-color: color-mix(in srgb, var(--background) 50%, transparent);
   }
 
   html.desktop[data-theme='light'] body {
-    background-color: color-mix(in srgb, ${token.colorBgLayout} 70%, transparent);
+    background-color: color-mix(in srgb, var(--background) 70%, transparent);
   }
 
   button {
     -webkit-app-region: no-drag;
   }
 
-  .${CLASSNAMES.ContextTrigger}[data-popup-open]:not([data-no-highlight]),
-  .${CLASSNAMES.DropdownMenuTrigger}[data-popup-open]:not([data-no-highlight]) {
-    background: ${token.colorFillTertiary};
+  .lobe-context-trigger[data-popup-open]:not([data-no-highlight]),
+  .lobe-dropdown-menu-trigger[data-popup-open]:not([data-no-highlight]) {
+    background: var(--accent);
   }
   .accordion-action:has(
-    .${CLASSNAMES.DropdownMenuTrigger}[data-popup-open]:not([data-no-highlight])
+    .lobe-dropdown-menu-trigger[data-popup-open]:not([data-no-highlight])
   ) {
     opacity: 1;
   }
 `;
 
-export default genGlobalStyle;
+export default global;

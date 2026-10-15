@@ -189,8 +189,6 @@ interface OptimisticTopicPlaceholder {
  */
 
 type Setter = StoreSetter<ChatStore>;
-export const conversationLifecycle = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new ConversationLifecycleActionImpl(set, get, _api);
 
 const isAbortError = (error: unknown, abortController?: AbortController) =>
   !!abortController?.signal.aborted ||
@@ -1557,10 +1555,14 @@ export class ConversationLifecycleActionImpl {
         }
 
         console.error('[Gateway] Failed to start server-side agent:', e);
-        this.#get().failOperation(operationId, {
-          message: e instanceof Error ? e.message : 'Unknown error',
-          type: 'GatewayError',
-        });
+        const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+        this.#get().failOperation(operationId, { message: errorMessage, type: 'GatewayError' });
+        // The composer alert is keyed to this send's topic. A first message's
+        // minted topic never comes to exist, so say it here or nothing explains
+        // the failure.
+        if (mintedTopicId && !hasNotifiedMessageAccepted) {
+          toast.error(t('input.errorMsg', { errorMsg: errorMessage, ns: 'chat' }));
+        }
         restoreComposerAfterFailedSend(e);
         cleanupTempMessages({
           preserveOptimisticUser: Boolean(optimisticUserMessageId && !hasNotifiedMessageAccepted),

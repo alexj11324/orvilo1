@@ -6,8 +6,8 @@
 # gateway that trusts the local key no device can connect, and every Issue run
 # ends in "No bound device".
 #
-# What it does: checks out the Orvilo gateway (private repository, the same changes
-# production builds from) at a pinned commit, builds the device gateway for this
+# What it does: checks out the Orvilo gateway (public repository, the same commit
+# production builds from), builds the device gateway for this
 # machine, and runs it on localhost with the PUBLIC half of the local key.
 #
 # Usage (from the repository root):
@@ -19,7 +19,7 @@
 #   GATEWAY_PORT       (default 8787)        localhost port to listen on
 #   ORVILO_GATEWAY_DIR (default ~/.orvilo/agent-testing/gateway)  checkout and build cache
 #
-# Needs: go, git, and read access to github.com/alexj11324/orvilo-gateway.
+# Needs: go, git, and network access to github.com/alexj11324/orvilo-gateway.
 # The service token is generated once into .records/env/device-gateway.token
 # (git-ignored, mode 600). It is never printed: pass it by variable.
 
@@ -27,8 +27,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 GATEWAY_REPO='https://github.com/alexj11324/orvilo-gateway.git'
-# Upstream fed50da plus the Orvilo patches production applies, under the Orvilo name.
-GATEWAY_REF='e7b28b5c89989bea344dde9e95a7724990cf6dae'
+# The commit production builds from.
+GATEWAY_REF='81f26f8af942484da644921eae08371f834bfd72'
 GATEWAY_DIR="${ORVILO_GATEWAY_DIR:-$HOME/.orvilo/agent-testing/gateway}"
 PORT="${GATEWAY_PORT:-8787}"
 TOKEN_FILE="$REPO_ROOT/.records/env/device-gateway.token"
@@ -51,7 +51,7 @@ build() {
   if [ ! -d "$GATEWAY_DIR/src/.git" ]; then
     mkdir -p "$GATEWAY_DIR"
     git clone --quiet "$GATEWAY_REPO" "$GATEWAY_DIR/src" \
-      || die "cannot clone $GATEWAY_REPO — it is private; check your GitHub access"
+      || die "cannot clone $GATEWAY_REPO"
   fi
   git -C "$GATEWAY_DIR/src" fetch --quiet origin
   git -C "$GATEWAY_DIR/src" checkout --quiet --detach "$GATEWAY_REF" \

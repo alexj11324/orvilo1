@@ -38,7 +38,7 @@ export const createMoveLocalFilesInspector = (translationKey: string) => {
             {t(translationKey as any)}
           </span>
           {totalCount > 0 && (
-            <span className="font-mono rounded bg-muted px-1 text-[12px]">
+            <span className="font-mono rounded-(--radius-chip) bg-muted px-1 text-xs">
               {successCount === undefined ? totalCount : `${successCount}/${totalCount}`}
             </span>
           )}

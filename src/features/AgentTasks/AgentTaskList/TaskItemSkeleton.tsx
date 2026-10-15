@@ -16,8 +16,8 @@ const TaskItemSkeleton = memo<TaskItemSkeletonProps>(({ variant = 'default' }) =
         </div>
         <div className="flex items-start gap-1.5">
           <Skeleton
-            className="rounded-md shrink-0"
-            style={{ borderRadius: 4, flex: 'none', width: 14, height: 14 }}
+            className="rounded-(--radius-chip) shrink-0"
+            style={{ flex: 'none', width: 14, height: 14 }}
           />
           <div className="flex flex-1 flex-col gap-1" style={{ minWidth: 0 }}>
             <Skeleton style={{ height: 14 }} />
@@ -26,8 +26,8 @@ const TaskItemSkeleton = memo<TaskItemSkeletonProps>(({ variant = 'default' }) =
         </div>
         <div className="flex items-center gap-1.5">
           <Skeleton
-            className="rounded-md shrink-0"
-            style={{ borderRadius: 4, flex: 'none', width: 16, height: 16 }}
+            className="rounded-(--radius-chip) shrink-0"
+            style={{ flex: 'none', width: 16, height: 16 }}
           />
           <Skeleton style={{ minWidth: 40, height: 12, width: 40 }} />
         </div>
@@ -44,12 +44,12 @@ const TaskItemSkeleton = memo<TaskItemSkeletonProps>(({ variant = 'default' }) =
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2" style={{ flex: 1, minWidth: 0 }}>
           <Skeleton
-            className="rounded-md shrink-0"
-            style={{ borderRadius: 4, flex: 'none', width: 16, height: 16 }}
+            className="rounded-(--radius-chip) shrink-0"
+            style={{ flex: 'none', width: 16, height: 16 }}
           />
           <Skeleton
-            className="rounded-md shrink-0"
-            style={{ borderRadius: 4, flex: 'none', width: 16, height: 16 }}
+            className="rounded-(--radius-chip) shrink-0"
+            style={{ flex: 'none', width: 16, height: 16 }}
           />
           <Skeleton style={{ minWidth: 64, height: 14, width: 64 }} />
           <Skeleton style={{ minWidth: 200, height: 16, width: 200 }} />

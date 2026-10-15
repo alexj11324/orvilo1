@@ -33,7 +33,7 @@ Electron 桌面客户端，以及 CLI。
 
 ## 本地开发
 
-需要 **Node.js >= 22** 与 **pnpm**。仓库通过 `packageManager` 锁定 `pnpm@12.4.1`。
+需要 **Node.js >= 22**、**pnpm** 和 **Bun**（用于仓库脚本）。仓库通过 `packageManager` 锁定 `pnpm@12.4.1`。
 
 ```bash
 pnpm install
@@ -71,7 +71,7 @@ bun run check [changed-files...]
 
 ## 自托管
 
-Orvilo 依赖 PostgreSQL。完整配置项见 [`.env.example`](./.env.example)，
+Orvilo 依赖 PostgreSQL。常用配置示例见 [`.env.example`](./.env.example)，
 部署方案见 [`docker-compose/`](./docker-compose)。
 
 ```bash

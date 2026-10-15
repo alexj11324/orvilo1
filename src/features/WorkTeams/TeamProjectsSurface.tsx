@@ -57,13 +57,13 @@ import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/featur
 import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { useSearchParams } from '@/libs/router/navigation';
 import { useClientDataSWR } from '@/libs/swr';
-import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+import { useFetchWorkTeam } from '@/store/workTeam/hooks';
 
 import TeamIdentity from './TeamIdentity';
 import { enrichTeamProjects, summarizeTeamProjects, teamProjectsWorkQuery } from './teamProjects';
@@ -73,12 +73,12 @@ const styles = {
   separator: 'flex-none',
   sidebar: 'overflow-y-auto flex-none box-border w-66 p-4 border-s border-sidebar-border bg-card',
   sidebarRow:
-    'cursor-pointer flex gap-2 items-center w-full py-1.25 px-2 border-none rounded-[6px] text-foreground text-start bg-transparent hover:bg-accent',
+    'cursor-pointer flex gap-2 items-center justify-start w-full px-2 border-none rounded-(--radius-button) text-sm leading-5.5 text-foreground text-start bg-transparent hover:bg-accent [@media(pointer:coarse)]:min-h-11',
   sidebarRowActive: 'text-primary bg-selected',
-  sidebarRowCount: 'ms-auto text-[12px] text-muted-foreground',
+  sidebarRowCount: 'ms-auto text-xs text-muted-foreground',
   sidebarSection: 'flex flex-col gap-0.5',
   viewChip:
-    'cursor-pointer inline-flex items-center h-7 px-3 border border-transparent rounded-[999px] text-muted-foreground bg-transparent hover:bg-accent',
+    'inline-flex items-center min-h-7 px-3 border border-transparent rounded-(--radius-chip) text-sm leading-5.5 text-muted-foreground bg-transparent',
   viewChipActive: 'text-foreground bg-selected',
 };
 
@@ -111,13 +111,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
 
   // Same SWR keys as TeamPage — mounting the surface reuses the in-flight
   // cache instead of issuing a second request.
-  const {
-    data: teamData,
-    error: teamError,
-    mutate: revalidateTeam,
-  } = useClientDataSWR(teamId && workspaceId ? ['team', workspaceId, teamId] : null, () =>
-    lambdaClient.team.team.query({ teamId }),
-  );
+  const { data: teamData, error: teamError, mutate: revalidateTeam } = useFetchWorkTeam(teamId);
   const {
     data: projectsData,
     error: projectsError,
@@ -311,19 +305,21 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
             {t('list.sidebar.health', { ns: 'project' })}
           </span>
           {summary.health.map(({ count, state }) => (
-            <button
+            <Button
               aria-pressed={activeHealth.has(state)}
               className={cn(styles.sidebarRow, activeHealth.has(state) && styles.sidebarRowActive)}
               key={state}
+              size="compact"
               type="button"
+              variant="ghost"
               onClick={() => toggleHealth(state)}
             >
-              <ProjectHealthIcon health={state} size={14} />
+              <ProjectHealthIcon health={state} size={16} />
               <span className="text-sm">
                 {t(`list.health.${state}`, { defaultValue: state, ns: 'project' })}
               </span>
               <span className={styles.sidebarRowCount}>{count}</span>
-            </button>
+            </Button>
           ))}
         </div>
         <div className={styles.sidebarSection}>
@@ -331,11 +327,13 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
             {t('list.sidebar.leads', { ns: 'project' })}
           </span>
           {summary.leads.map(({ count, userId }) => (
-            <button
+            <Button
               aria-pressed={activeLeads.has(userId)}
               className={cn(styles.sidebarRow, activeLeads.has(userId) && styles.sidebarRowActive)}
               key={userId ?? 'none'}
+              size="compact"
               type="button"
+              variant="ghost"
               onClick={() => toggleLead(userId)}
             >
               {userId ? (
@@ -352,23 +350,25 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                 {userId ? memberName(userId) : t('properties.noLead', { ns: 'project' })}
               </span>
               <span className={styles.sidebarRowCount}>{count}</span>
-            </button>
+            </Button>
           ))}
         </div>
         <div className={styles.sidebarSection}>
           <span className="text-sm text-muted-foreground font-medium">
             {t('list.sidebar.updateMissing', { ns: 'project' })}
           </span>
-          <button
+          <Button
             aria-pressed={activeHealth.has(null)}
             className={cn(styles.sidebarRow, activeHealth.has(null) && styles.sidebarRowActive)}
+            size="compact"
             type="button"
+            variant="ghost"
             onClick={() => toggleHealth(null)}
           >
-            <ProjectHealthIcon health={null} size={14} />
+            <ProjectHealthIcon health={null} size={16} />
             <span className="text-sm">{t('list.health.noUpdates', { ns: 'project' })}</span>
             <span className={styles.sidebarRowCount}>{summary.updateMissing}</span>
-          </button>
+          </Button>
         </div>
       </div>
     </aside>
@@ -395,7 +395,12 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
           </div>
         }
         right={
-          <Button size="sm" variant="ghost" onClick={() => openCreateProjectModal({ teamId })}>
+          <Button
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+            size="compact"
+            variant="ghost"
+            onClick={() => openCreateProjectModal({ teamId })}
+          >
             <PlusIcon aria-hidden className="size-4" />
             {t('create.title', { ns: 'project' })}
           </Button>
@@ -428,14 +433,17 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                     />
                     <Button
                       aria-pressed={sidebarOpen}
-                      className={cn('rounded-full', sidebarOpen && 'bg-muted')}
-                      size="icon-sm"
+                      size="icon"
                       variant="outline"
                       aria-label={
                         sidebarOpen
                           ? t('list.sidebar.close', { ns: 'project' })
                           : t('list.sidebar.open', { ns: 'project' })
                       }
+                      className={cn(
+                        'rounded-(--radius-button) [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11',
+                        sidebarOpen && 'bg-muted',
+                      )}
                       title={
                         sidebarOpen
                           ? t('list.sidebar.close', { ns: 'project' })
@@ -453,8 +461,8 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                 </span>
                 <Button
                   aria-label={t('savedViews.newView', { ns: 'common' })}
-                  className="rounded-full"
-                  size="icon-sm"
+                  className="rounded-(--radius-button) [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+                  size="icon"
                   title={t('savedViews.newView', { ns: 'common' })}
                   variant="outline"
                   onClick={() => setViewBuilderOpen(true)}
@@ -493,7 +501,11 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                 }
               >
                 {filters.length === 0 ? (
-                  <Button variant="outline" onClick={() => openCreateProjectModal({ teamId })}>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => openCreateProjectModal({ teamId })}
+                  >
                     <PlusIcon aria-hidden className="size-4" />
                     {t('create.title', { ns: 'project' })}
                   </Button>
@@ -564,6 +576,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                     <Button
                       aria-busy={loadingMore}
                       disabled={loadingMore}
+                      size="compact"
                       variant="outline"
                       onClick={() => runLoadMore(loadMore)}
                     >

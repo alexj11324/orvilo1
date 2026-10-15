@@ -165,6 +165,7 @@ const TaskIssueRelationPicker = ({
         disabled={pending}
         placeholder={t('taskDetail.menu.searchIssues')}
         value={query}
+        visualSize="compact"
         onChange={(event) => setQuery(event.target.value)}
       />
       {eligibility ? (
@@ -184,10 +185,12 @@ const TaskIssueRelationPicker = ({
           const picked = selected.some((item) => item.id === hit.id);
           return (
             <Button
+              multiline
               aria-pressed={multiple ? picked : undefined}
-              className="h-auto justify-start gap-2 py-2 text-left"
+              className="justify-start gap-2 py-2 text-start"
               disabled={pending}
               key={hit.id}
+              size="normal"
               type="button"
               variant="ghost"
               onClick={() =>
@@ -205,13 +208,13 @@ const TaskIssueRelationPicker = ({
                       : 'flex size-4 shrink-0 items-center justify-center rounded-(--radius-chip) border border-border'
                   }
                 >
-                  {picked ? <CheckIcon className="size-3" /> : null}
+                  {picked ? <CheckIcon className="size-3.5" /> : null}
                 </span>
               ) : null}
               <span className="shrink-0 font-mono text-xs text-muted-foreground">
                 {hit.identifier}
               </span>
-              <span className="min-w-0 flex-1 truncate">{hit.title}</span>
+              <span className="min-w-0 flex-1 whitespace-normal break-words">{hit.title}</span>
               {kind === 'parentOf' && hit.parentIdentifier ? (
                 <span className="shrink-0 text-xs text-muted-foreground">
                   {t('taskDetail.picker.movesFrom', { identifier: hit.parentIdentifier })}
@@ -230,17 +233,18 @@ const TaskIssueRelationPicker = ({
       ) : null}
       <div className="flex items-center justify-end gap-2">
         {multiple && selected.length > 0 ? (
-          <span className="mr-auto text-xs text-muted-foreground">
+          <span className="me-auto text-xs text-muted-foreground">
             {t('taskDetail.picker.selected', { count: selected.length })}
           </span>
         ) : null}
-        <Button disabled={pending} type="button" variant="outline" onClick={close}>
+        <Button disabled={pending} size="normal" type="button" variant="outline" onClick={close}>
           {t('cancel', { ns: 'common' })}
         </Button>
         {multiple ? (
           <Button
             disabled={pending || selected.length === 0}
             loading={pending}
+            size="normal"
             type="button"
             onClick={() => void submitSelection()}
           >
@@ -259,5 +263,5 @@ export const openTaskIssueRelationModal = (props: RelationModalProps) =>
     content: <TaskIssueRelationPicker {...props} />,
     footer: null,
     title: props.title ?? translate(`taskDetail.menu.mark.${props.kind}`, { ns: 'chat' }),
-    width: 480,
+    width: 640,
   });

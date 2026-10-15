@@ -89,7 +89,12 @@ const Body = memo(() => {
         ) : (
           hasMore && (
             <div className="flex flex-col items-center justify-center py-3">
-              <Button loading={isLoadingMore} variant="ghost" onClick={() => void loadMore()}>
+              <Button
+                loading={isLoadingMore}
+                size="compact"
+                variant="ghost"
+                onClick={() => void loadMore()}
+              >
                 {t('topicComment.loadMore')}
               </Button>
             </div>

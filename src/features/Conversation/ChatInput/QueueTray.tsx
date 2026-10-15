@@ -1,6 +1,5 @@
 'use client';
 import { Image } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ArrowUp, ListEnd, Pencil, Trash2 } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
@@ -38,44 +37,11 @@ import { createQueueSendNowGate } from './utils';
 
 const PREVIEW_SIZE = 28;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  fileChip: css`
-    overflow: hidden;
-    flex-shrink: 0;
-
-    max-width: 160px;
-    height: 28px;
-    padding-block: 0;
-    padding-inline: 6px;
-    border: 1px solid ${cssVar.colorFillTertiary};
-    border-radius: 6px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-  `,
-  fileChipName: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-  `,
-  imageThumb: css`
-    flex-shrink: 0;
-
-    width: 28px !important;
-    height: 28px !important;
-    margin-block: 0 !important;
-    border: 1px solid ${cssVar.colorFillTertiary};
-    border-radius: 6px;
-
-    box-shadow: none;
-
-    img {
-      width: 28px !important;
-      height: 28px !important;
-      object-fit: cover;
-    }
-  `,
-}));
+const styles = {
+  fileChip:
+    'overflow-hidden shrink-0 max-w-40 h-7 py-0 px-1.5 border border-divider rounded-(--radius-chip) text-xs text-muted-foreground whitespace-nowrap',
+  fileChipName: 'overflow-hidden text-ellipsis',
+};
 
 const isImageFile = (f: QueuedFile) => f.mimeType.startsWith('image') && !!f.url;
 
@@ -88,18 +54,19 @@ const QueuedFilePreview = memo<QueuedFilePreviewProps>(({ file }) => {
     // Use @lobehub/ui Image so click-to-zoom preview works. Lock both wrapper
     // and inner <img> to PREVIEW_SIZE — `size` alone doesn't constrain the
     // intrinsic image dimensions inside a flex row.
+    // Public Image has unlayered root width/radius and wrapper height rules.
+    // Its lobe-base flex/height layer is unordered here; priority is limited to those conflicts.
     return (
       <Image
         alt={file.name}
-        classNames={{ wrapper: styles.imageThumb }}
+        className="size-7! shrink-0! my-0 rounded-(--radius-input)! shadow-none"
         objectFit={'cover'}
         size={PREVIEW_SIZE}
         src={file.url}
         title={file.name}
         variant={'borderless'}
-        styles={{
-          image: { height: PREVIEW_SIZE, width: PREVIEW_SIZE },
-          wrapper: { height: PREVIEW_SIZE, width: PREVIEW_SIZE },
+        classNames={{
+          wrapper: 'h-7! w-7 my-0 border border-divider rounded-(--radius-input) shadow-none',
         }}
       />
     );
@@ -251,21 +218,21 @@ const QueueTray = memo(() => {
                       title={t('inputQueue.edit')}
                       onClick={() => handleEdit(msg)}
                     >
-                      <Pencil className="size-3.5" />
+                      <Pencil className="size-4" />
                     </QueueItemAction>
                     <QueueItemAction
                       aria-label={t('inputQueue.sendNow')}
                       title={t('inputQueue.sendNow')}
                       onClick={() => handleSendNow(msg)}
                     >
-                      <ArrowUp className="size-3.5" />
+                      <ArrowUp className="size-4" />
                     </QueueItemAction>
                     <QueueItemAction
                       aria-label={t('inputQueue.delete')}
                       title={t('inputQueue.delete')}
                       onClick={() => removeQueuedMessage(contextKey, msg.id)}
                     >
-                      <Trash2 className="size-3.5" />
+                      <Trash2 className="size-4" />
                     </QueueItemAction>
                   </QueueItemActions>
                 </div>

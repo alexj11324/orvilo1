@@ -2,39 +2,18 @@
 
 import type { IEditor } from '@lobehub/editor';
 import { DiffAction, LITEXML_DIFFNODE_ALL_COMMAND } from '@lobehub/editor';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
 import { Check, X } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import { useIsDark } from '@/hooks/useIsDark';
 import { useDocumentStore } from '@/store/document';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    position: absolute;
-    z-index: 1000;
-    inset-block-end: 24px;
-    inset-inline-start: 50%;
-    transform: translateX(-50%);
-  `,
-  toolbar: css`
-    border-color: ${cssVar.colorFillSecondary};
-    background: ${cssVar.colorBgElevated};
-  `,
-  toolbarDark: css`
-    box-shadow:
-      0 14px 28px -6px #0003,
-      0 2px 4px -1px #0000001f;
-  `,
-  toolbarLight: css`
-    box-shadow:
-      0 14px 28px -6px #0000001a,
-      0 2px 4px -1px #0000000f;
-  `,
-}));
+const styles = {
+  container: 'absolute z-1000 inset-be-6 inset-x-0 mx-auto [inline-size:fit-content]',
+  toolbar:
+    'flex gap-2 p-1 border border-border rounded-(--radius-overlay) bg-popover shadow-(--shadow-popover)',
+};
 
 const useIsEditorInit = (editor?: IEditor) => {
   const [isEditInit, setEditInit] = useState<boolean>(!!editor?.getLexicalEditor());
@@ -110,7 +89,6 @@ interface DiffAllToolbarProps {
 }
 const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
   const { t } = useTranslation('editor');
-  const isDarkMode = useIsDark();
   const [performSave, markDirty] = useDocumentStore((s) => [s.performSave, s.markDirty]);
 
   const hasPendingDiffs = useEditorHasPendingDiffs(editor);
@@ -124,16 +102,10 @@ const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
 
   return (
     <div className={styles.container}>
-      <div
-        style={{ border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG }}
-        className={cn(
-          'flex gap-2 p-1 shadow-md',
-          cx(styles.toolbar, isDarkMode ? styles.toolbarDark : styles.toolbarLight),
-        )}
-      >
+      <div className={styles.toolbar}>
         <div className="flex items-center gap-2">
           <Button
-            size="sm"
+            size="compact"
             variant="ghost"
             onClick={async () => {
               editor.dispatchCommand(LITEXML_DIFFNODE_ALL_COMMAND, {
@@ -142,11 +114,11 @@ const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
               await handleSave();
             }}
           >
-            <X size={16} />
+            <X className="size-4" size={16} />
             {t('modifier.rejectAll')}
           </Button>
           <Button
-            size="sm"
+            size="compact"
             variant="secondary"
             onClick={async () => {
               editor.dispatchCommand(LITEXML_DIFFNODE_ALL_COMMAND, {
@@ -155,7 +127,7 @@ const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
               await handleSave();
             }}
           >
-            <Check color={'green'} size={16} />
+            <Check className="size-4 text-success-text" size={16} />
             {t('modifier.acceptAll')}
           </Button>
         </div>

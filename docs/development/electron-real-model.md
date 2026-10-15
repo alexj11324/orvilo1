@@ -32,13 +32,12 @@ key. Health responses alone do not prove that the keys and tokens agree.
 
 Use the repository's workspace-capable device gateway from a successful
 [CI build](../../docker-compose/deploy/device-gateway/README.md), and verify its
-SHA256 manifest before running it. The unpatched upstream 0.4.0 device gateway
+SHA256 manifest before running it. LobeHub's upstream 0.4.0 device gateway
 does not implement Orvilo's workspace pools. Use an artifact matching the host
 architecture, or user-mode emulation for an isolated local test. Do not run the
 production activation script or bypass the CI-only build guard.
 
-Point the device gateway's `ORVILO_API_BASE_URL` and the agent gateway's
-`LOBE_API_BASE_URL` at the local Next server. `APP_URL` must match that server's
+Point both gateways' `ORVILO_API_BASE_URL` at the local Next server. `APP_URL` must match that server's
 origin, including its port. Start the web authorization SPA as well as Electron:
 the `/oauth/consent/*` and `/oauth/callback/*` pages use the web SPA. The backend's
 `VITE_DEV_PORT` must match that SPA's port; Electron's renderer is a separate
@@ -47,16 +46,25 @@ platform branches.
 
 ## Authorize and connect
 
-Build the embedded CLI in each new worktree before testing device execution:
+The desktop dev launcher (`apps/desktop/scripts/dev.mjs`, which `electron-dev.sh`
+and `bun run dev:desktop` both use) builds the embedded CLI on every start and
+holds Electron until that build finishes. The build produces `apps/cli/dist/index.js`
+and stages the Prime runner; a local Agent run fails with `Embedded CLI not found`
+without them. If the launcher prints `embedded CLI build failed`, Electron still
+starts but device execution will not work: the launcher removes the previous CLI so
+a run cannot use an older revision. Fix the build, or run it by hand to see the error.
+
+Dev instances of one checkout share that output. The first instance to start
+builds it and keeps the claim until it stops; later ones reuse its CLI and print
+`another dev instance of this checkout owns the embedded CLI`. Restart the owning
+instance to pick up CLI changes:
 
 ```sh
-cd apps/cli
-bun run build
+cd apps/desktop
+bun run build:cli
 ```
 
-This produces `dist/index.js` and stages the Prime runner. Starting the Electron
-renderer alone does not produce these artifacts. Verify the complete build
-succeeds, then launch Electron from an environment where `opencode --version`
+Check that the launcher reported no CLI build failure, then launch Electron from an environment where `opencode --version`
 works. In a disposable integration environment, install the CLI under a private
 tools directory and put its `bin` directory on the desktop process's PATH.
 

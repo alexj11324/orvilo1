@@ -1,70 +1,33 @@
 'use client';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
-import { createStaticStyles, useTheme } from 'antd-style';
 import { cn } from 'cn';
 import { PlusIcon, SmilePlus } from 'lucide-react';
 import { type FC, isValidElement, memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useIsDark } from '@/hooks/useIsDark';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
 import { globalGeneralSelectors } from '@/store/global/selectors';
-import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
+import { CLICKABLE_FOCUS_RING } from '@/utils/clickableProps';
 
 import { useConversationResourceAccess } from '../../hooks/useConversationResourceAccess';
 import { useConversationStore } from '../../store';
 
 const QUICK_REACTIONS = ['👍', '👎', '❤️', '😄', '😂', '😅', '🎉', '😢', '🤔', '🚀'];
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  emojiButton: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 32px;
-    height: 32px;
-    border-radius: ${cssVar.borderRadius};
-
-    font-size: 18px;
-
-    transition: all 0.2s;
-
-    &:hover {
-      transform: scale(1.1);
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  moreButton: css`
-    cursor: pointer;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 32px;
-    height: 32px;
-    border-radius: ${cssVar.borderRadius};
-
-    color: ${cssVar.colorTextTertiary};
-
-    transition: all 0.2s;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  pickerContainer: css`
-    padding: 4px;
-  `,
-}));
+const styles = {
+  emojiButton:
+    "relative cursor-pointer flex items-center justify-center rounded-(--radius-button) text-base leading-6 transition-[background-color] duration-(--orvilo-motion-fast) hover:bg-accent motion-reduce:transition-none coarse:after:absolute coarse:after:-inset-[calc(var(--spacing)*1.75)] coarse:after:content-['']",
+  moreButton:
+    "relative cursor-pointer flex items-center justify-center rounded-(--radius-button) text-foreground-tertiary transition-[color,background-color] duration-(--orvilo-motion-fast) hover:text-foreground hover:bg-accent motion-reduce:transition-none coarse:after:absolute coarse:after:-inset-[calc(var(--spacing)*1.75)] coarse:after:content-['']",
+  pickerContainer: 'p-1',
+};
 
 interface ReactionPickerProps {
   messageId: string;
@@ -73,7 +36,7 @@ interface ReactionPickerProps {
 
 const ReactionPicker: FC<ReactionPickerProps> = memo(({ messageId, trigger }) => {
   const { t } = useTranslation('chat');
-  const theme = useTheme();
+  const isDark = useIsDark();
   const { allowed: canEdit } = usePermission('edit_own_content');
   const { canUseResource } = useConversationResourceAccess();
   const locale = useGlobalStore(globalGeneralSelectors.currentLanguage);
@@ -102,28 +65,37 @@ const ReactionPicker: FC<ReactionPickerProps> = memo(({ messageId, trigger }) =>
       locale={locale?.split('-')[0] || 'en'}
       previewPosition="none"
       skinTonePosition="none"
-      theme={theme.appearance === 'dark' ? 'dark' : 'light'}
+      theme={isDark ? 'dark' : 'light'}
       onEmojiSelect={(emoji: any) => handleSelect(emoji.native)}
     />
   ) : (
     <div className={cn('flex gap-1 flex-wrap', styles.pickerContainer)}>
       {QUICK_REACTIONS.map((emoji) => (
-        <div
-          {...clickableProps()}
-          className={cn(styles.emojiButton, CLICKABLE_FOCUS_RING)}
-          key={emoji}
-          onClick={() => handleSelect(emoji)}
-        >
-          {emoji}
-        </div>
+        <span className="inline-flex flex-none coarse:p-1.5" key={emoji}>
+          <Button
+            aria-label={emoji}
+            className={cn(styles.emojiButton, CLICKABLE_FOCUS_RING)}
+            size="icon"
+            type="button"
+            variant="ghost"
+            onClick={() => handleSelect(emoji)}
+          >
+            {emoji}
+          </Button>
+        </span>
       ))}
-      <div
-        {...clickableProps()}
-        className={cn(styles.moreButton, CLICKABLE_FOCUS_RING)}
-        onClick={() => setShowFullPicker(true)}
-      >
-        <PlusIcon size={16} />
-      </div>
+      <span className="inline-flex flex-none coarse:p-1.5">
+        <Button
+          aria-label={t('messageAction.reaction')}
+          className={cn(styles.moreButton, CLICKABLE_FOCUS_RING)}
+          size="icon"
+          type="button"
+          variant="ghost"
+          onClick={() => setShowFullPicker(true)}
+        >
+          <PlusIcon size={16} />
+        </Button>
+      </span>
     </div>
   );
 
@@ -139,11 +111,12 @@ const ReactionPicker: FC<ReactionPickerProps> = memo(({ messageId, trigger }) =>
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <span style={{ display: 'inline-flex' }}>
+                      <span className="inline-flex flex-none coarse:p-1.5">
                         <ActionIcon
                           aria-label={t('messageAction.reaction')}
+                          className="relative coarse:after:absolute coarse:after:-inset-[calc(var(--spacing)*1.75)] coarse:after:content-['']"
                           icon={SmilePlus}
-                          size="small"
+                          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                         />
                       </span>
                     }

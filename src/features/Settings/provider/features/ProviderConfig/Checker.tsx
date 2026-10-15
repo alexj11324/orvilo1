@@ -32,7 +32,7 @@ const Error = memo<{ error: ChatMessageError }>(({ error }) => {
     pickTrimmedString(error.message) ?? bodyMessage ?? t('response.UnknownChatFetchError');
 
   return (
-    <Alert className="w-full max-w-[600px]" variant="destructive">
+    <Alert className="w-full max-w-150" variant="destructive">
       <CircleAlertIcon />
       <AlertTitle className="line-clamp-none">
         {getRuntimeErrorMessage(t, error.type, { provider: providerName }, fallbackMessage)}
@@ -175,7 +175,7 @@ const Checker = memo<ConnectionCheckerProps>(
     const defaultError = error ? <Error error={error as ChatMessageError} /> : null;
 
     const missingCredentialsContent = (
-      <Alert className="w-full max-w-[600px]" variant="destructive">
+      <Alert className="w-full max-w-150" variant="destructive">
         <CircleAlertIcon />
         <AlertTitle className="line-clamp-none">
           {tProvider('providerModels.config.checker.missingCredentials')}
@@ -207,7 +207,7 @@ const Checker = memo<ConnectionCheckerProps>(
         <Select
           showSearch
           aria-label={tProvider('providerModels.config.checker.title')}
-          className="w-[180px] min-w-0"
+          className="w-45 min-w-0"
           disabled={!canManageProvider}
           loading={isProviderConfigUpdating}
           options={sortedModels.map((id) => ({ label: id, value: id }))}

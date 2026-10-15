@@ -9,8 +9,8 @@ import { useTranslation } from 'react-i18next';
 import { ClaudeCodeApiName, type ScheduleWakeupArgs } from '../../types';
 
 const styles = {
-  chip: 'overflow-hidden inline-flex shrink items-center min-w-0 ms-1.5 py-px px-2 rounded-[999px] text-[12px] text-foreground text-ellipsis whitespace-nowrap bg-accent',
-  delay: 'shrink-0 ms-2 text-[var(--ant-color-text-description)]',
+  chip: 'overflow-hidden inline-flex shrink items-center min-w-0 ms-1.5 py-px px-2 rounded-(--radius-chip) text-xs text-foreground text-ellipsis whitespace-nowrap bg-accent',
+  delay: 'shrink-0 ms-2 text-foreground-description',
 };
 
 const formatDelay = (seconds: number): string => {

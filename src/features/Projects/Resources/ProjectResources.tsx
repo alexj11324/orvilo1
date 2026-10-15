@@ -17,8 +17,8 @@ import type { ProjectDetail } from '@/store/project';
 import { openAddResourceModal } from './AddResourceModal';
 
 const styles = {
-  card: 'rounded-[12px] border border-sidebar-border bg-[color-mix(in_srgb,var(--card)_82%,var(--ant-color-fill-quaternary))] px-3.5 py-3 hover:border-border', // linear-token-override: preserve the existing resource surface radius during this style-only migration; geometry is not redesigned here.
-  icon: 'flex size-9 flex-none items-center justify-center rounded-[10px] bg-[var(--ant-color-fill-quaternary)] text-primary', // linear-token-override: preserve the existing resource surface radius during this style-only migration; geometry is not redesigned here.
+  card: 'rounded-(--radius-card) border border-sidebar-border bg-[color-mix(in_srgb,var(--card)_82%,var(--ant-color-fill-quaternary))] p-4 hover:border-border',
+  icon: 'flex size-9 flex-none items-center justify-center rounded-(--radius-card) bg-fill-quaternary text-primary',
   list: 'grid gap-2.5',
 };
 
@@ -81,34 +81,32 @@ const ProjectResources = memo<ProjectResourcesProps>(({ detail, onRefresh, proje
   );
 
   return (
-    <div
-      className="flex flex-col"
-      style={{ gap: 20, padding: 24, marginInline: 'auto', maxWidth: 840, width: '100%' }}
-    >
-      <div
-        className="flex flex-row"
-        style={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}
-      >
-        <div className="flex flex-col" style={{ gap: 4 }}>
-          <span className="text-sm" style={{ fontSize: 18, fontWeight: 600 }}>
-            {t('resources.title')}
-          </span>
+    <div className="flex w-full flex-col gap-5 p-6">
+      <div className="flex flex-row flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <span className="text-xl font-semibold">{t('resources.title')}</span>
           <span className="text-sm text-muted-foreground">{t('resources.description')}</span>
         </div>
-        <Button variant="default" onClick={handleAdd}>
+        <Button
+          multiline
+          className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 max-w-full [overflow-wrap:anywhere]"
+          size="compact"
+          variant="default"
+          onClick={handleAdd}
+        >
           {createElement(Plus, { 'size': 16, 'aria-hidden': true })}
           {t('resources.add')}
         </Button>
       </div>
       {links.length === 0 ? (
-        <div className="flex flex-col items-center justify-center" style={{ padding: 40 }}>
+        <div className="flex flex-col items-center justify-center p-10">
           <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
             {createElement(BookOpen, { 'size': 40, 'aria-hidden': true })}
             <div>
               {
-                <div className="flex flex-col" style={{ gap: 4 }}>
+                <div className="flex flex-col gap-1">
                   <span className="text-sm">{t('resources.empty.title')}</span>
-                  <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
+                  <span className="text-xs text-muted-foreground">
                     {t('resources.empty.description')}
                   </span>
                 </div>
@@ -124,38 +122,40 @@ const ProjectResources = memo<ProjectResourcesProps>(({ detail, onRefresh, proje
 
             return (
               <div
-                className={cn('flex flex-row', styles.card)}
+                className={cn('flex flex-row flex-wrap items-center gap-3', styles.card)}
                 key={binding.id}
-                style={{ alignItems: 'center', gap: 12 }}
               >
                 <span className={styles.icon}>
-                  <LibraryBigIcon size={18} />
+                  <LibraryBigIcon size={16} />
                 </span>
-                <div className="flex flex-col" style={{ gap: 2, flex: 1, minWidth: 0 }}>
-                  <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
-                    <span className="text-sm truncate" style={{ fontWeight: 500 }}>
-                      {knowledgeBase.name}
-                    </span>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <div className="flex flex-row items-center gap-2">
+                    <span className="truncate text-sm font-medium">{knowledgeBase.name}</span>
                     {!binding.enabled && (
                       <Badge variant="secondary">{t('resources.disabled')}</Badge>
                     )}
                   </div>
                   {knowledgeBase.description && (
-                    <span
-                      className="text-sm text-muted-foreground truncate"
-                      style={{ fontSize: 12 }}
-                    >
+                    <span className="truncate text-xs text-muted-foreground">
                       {knowledgeBase.description}
                     </span>
                   )}
                 </div>
-                <Button size="sm" variant="ghost" onClick={() => handleOpen(knowledgeBase.id)}>
+                <Button
+                  multiline
+                  className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 max-w-full [overflow-wrap:anywhere]"
+                  size="compact"
+                  variant="ghost"
+                  onClick={() => handleOpen(knowledgeBase.id)}
+                >
                   {t('resources.open')}
                 </Button>
                 <Button
+                  multiline
                   aria-busy={busy}
+                  className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 max-w-full [overflow-wrap:anywhere]"
                   disabled={busy || busy}
-                  size="sm"
+                  size="compact"
                   variant="destructive"
                   onClick={() => handleRemove(knowledgeBase.id, knowledgeBase.name)}
                 >

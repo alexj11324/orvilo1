@@ -1,9 +1,12 @@
 import { spawn as nodeSpawn } from 'node:child_process';
 import {
   existsSync as nodeExistsSync,
+  mkdirSync as nodeMkdirSync,
+  readFileSync as nodeReadFileSync,
   rmSync as nodeRmSync,
   statSync as nodeStatSync,
   watch as nodeWatch,
+  writeFileSync as nodeWriteFileSync,
 } from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
@@ -17,12 +20,38 @@ const defaultCheckPort = (port) =>
     socket.on('error', () => resolve(false));
   });
 
+const defaultIsProcessAlive = (pid) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    // EPERM: the process exists but belongs to someone else.
+    return error.code === 'EPERM';
+  }
+};
+
+// The CLI build runs nested commands (`npm ci`, the harness build). Killing only
+// the direct child would leave them writing build output after the orchestrator exits.
+const defaultKillTree = (child) => {
+  if (!child.pid) return child.kill();
+  if (process.platform === 'win32') {
+    nodeSpawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+    return;
+  }
+  try {
+    process.kill(-child.pid, 'SIGTERM');
+  } catch {
+    child.kill();
+  }
+};
+
 export function createDevOrchestrator({
   desktopRoot,
   electronBin,
   viteBin,
   vitePort,
   electronArgs = [],
+  cliBuildCommand,
   nodeBin = process.execPath,
   pollIntervalMs = 200,
   bundleQuietMs = 1000,
@@ -33,7 +62,13 @@ export function createDevOrchestrator({
   rmSync = nodeRmSync,
   statSync = nodeStatSync,
   watch = nodeWatch,
+  mkdirSync = nodeMkdirSync,
+  readFileSync = nodeReadFileSync,
+  writeFileSync = nodeWriteFileSync,
   checkPort = defaultCheckPort,
+  isProcessAlive = defaultIsProcessAlive,
+  killTree = defaultKillTree,
+  pid = process.pid,
   exit = (code) => process.exit(code),
   log = console.log,
   logError = console.error,
@@ -47,6 +82,9 @@ export function createDevOrchestrator({
   let shuttingDown = false;
   let poll = null;
   let debounce = null;
+  let cliBuild = null;
+  let cliBuildSettled = !cliBuildCommand;
+  let ownsCliBuild = false;
 
   // Spawn vite through the current node binary instead of a `pnpm` shim:
   // on Windows the shim is `pnpm.cmd`, which a shell-less spawn cannot start.
@@ -59,6 +97,11 @@ export function createDevOrchestrator({
     clearInterval(poll);
     clearTimeout(debounce);
     electron?.kill();
+    if (cliBuild) killTree(cliBuild);
+    if (ownsCliBuild && cliBuildCommand.lockFile) {
+      rmSync(`${cliBuildCommand.lockFile}.settled`, { force: true });
+      rmSync(cliBuildCommand.lockFile, { force: true });
+    }
     for (const child of children) child.kill();
     exit(code);
   }
@@ -114,8 +157,112 @@ export function createDevOrchestrator({
     }
   }
 
+  // Every dev instance of one checkout runs the CLI from the same output
+  // directory, and the build empties it first. The instance that builds keeps the
+  // claim until it stops, so a later instance cannot pull the CLI out from under it.
+  function claimCliBuild() {
+    const { lockFile } = cliBuildCommand;
+    if (!lockFile) return true;
+    mkdirSync(path.dirname(lockFile), { recursive: true });
+    try {
+      writeFileSync(lockFile, String(pid), { flag: 'wx' });
+      return true;
+    } catch {
+      // Another instance wrote the claim first; see whether it is still running.
+    }
+    let owner = Number.NaN;
+    try {
+      owner = Number(readFileSync(lockFile, 'utf8'));
+    } catch {
+      // The owner released the claim between the two calls.
+    }
+    if (Number.isInteger(owner) && owner !== pid && isProcessAlive(owner)) return false;
+    writeFileSync(lockFile, String(pid));
+    return true;
+  }
+
+  // A local Agent run spawns the CLI from `apps/cli/dist`, which nothing else in
+  // the dev flow produces. Building it on every start also keeps it from going stale.
+  function buildCli() {
+    if (!cliBuildCommand) return;
+    if (!claimCliBuild()) {
+      log(
+        '[desktop-dev] another dev instance of this checkout owns the embedded CLI; waiting to reuse it',
+      );
+      return;
+    }
+    ownsCliBuild = true;
+    if (cliBuildCommand.lockFile) rmSync(`${cliBuildCommand.lockFile}.settled`, { force: true });
+    log('[desktop-dev] building the embedded CLI');
+    const settle = (problem) => {
+      if (shuttingDown || cliBuildSettled) return;
+      cliBuildSettled = true;
+      cliBuild = null;
+      if (problem) {
+        // A build that failed before emptying the output leaves the previous CLI
+        // in place, and Agent runs would silently execute that older revision.
+        if (cliBuildCommand.output) rmSync(cliBuildCommand.output, { force: true });
+        logError(
+          `[desktop-dev] embedded CLI build failed (${problem}); local Agent runs will fail until it builds`,
+        );
+      }
+      if (cliBuildCommand.lockFile) {
+        // Keep the PID claim until shutdown; a separate result distinguishes
+        // a live owner still building from one whose build actually settled.
+        writeFileSync(
+          `${cliBuildCommand.lockFile}.settled`,
+          JSON.stringify({
+            owner: pid,
+            lockMtimeMs: statSync(cliBuildCommand.lockFile).mtimeMs,
+            problem: problem ?? null,
+          }),
+        );
+      }
+    };
+    cliBuild = spawn(cliBuildCommand.bin, cliBuildCommand.args, {
+      cwd: cliBuildCommand.cwd,
+      // Its own process group, so shutdown can stop the commands it starts too.
+      detached: process.platform !== 'win32',
+      stdio: 'inherit',
+    });
+    cliBuild.on('error', (error) => settle(error.message));
+    cliBuild.on('exit', (code) => settle(code === 0 ? undefined : `exit code ${code}`));
+  }
+
+  function checkSharedCliBuild() {
+    if (shuttingDown || cliBuildSettled || ownsCliBuild || !cliBuildCommand?.lockFile) return;
+    const { lockFile } = cliBuildCommand;
+    let owner;
+    try {
+      owner = Number(readFileSync(lockFile, 'utf8'));
+    } catch {
+      // The owner released its claim. Reuse the same stale-claim takeover path.
+      buildCli();
+      return;
+    }
+    if (!Number.isInteger(owner) || !isProcessAlive(owner)) {
+      buildCli();
+      return;
+    }
+    try {
+      const result = JSON.parse(readFileSync(`${lockFile}.settled`, 'utf8'));
+      // A previous run's result (including a reused PID) cannot make this
+      // owner's initial build ready. A partially written result waits a poll.
+      if (result.owner !== owner || result.lockMtimeMs !== statSync(lockFile).mtimeMs) return;
+      if (result.problem !== null && typeof result.problem !== 'string') return;
+      cliBuildSettled = true;
+      if (result.problem)
+        logError(
+          `[desktop-dev] embedded CLI build failed (${result.problem}); local Agent runs will fail until it builds`,
+        );
+    } catch {
+      // No result yet, or the owner is currently publishing it: keep waiting.
+    }
+  }
+
   function start() {
     rmSync(path.join(desktopRoot, 'dist'), { force: true, recursive: true });
+    buildCli();
     children.push(
       spawnVite(['--config', 'vite.renderer.config.ts']),
       spawnVite(['build', '--watch', '--mode', 'development', '--config', 'vite.main.config.ts']),
@@ -145,11 +292,14 @@ export function createDevOrchestrator({
     let lastChange = Date.now();
     let lastSignature = '';
     let checking = false;
+    let bundlesReady = false;
     poll = setInterval(async () => {
       if (checking) return;
       checking = true;
       try {
-        if (Date.now() - started > initialBuildTimeoutMs) {
+        // The deadline covers the bundles only: a first CLI build installs and
+        // builds the harness, which can legitimately outlast it.
+        if (!bundlesReady && Date.now() - started > initialBuildTimeoutMs) {
           logError(
             `[desktop-dev] initial build did not produce bundles within ${Math.round(initialBuildTimeoutMs / 1000)}s`,
           );
@@ -167,6 +317,10 @@ export function createDevOrchestrator({
         }
         if (Date.now() - lastChange < bundleQuietMs) return;
         if (!(await checkPort(vitePort))) return;
+        bundlesReady = true;
+        // A failed CLI build is reported and does not hold the app back; a running one does.
+        checkSharedCliBuild();
+        if (!cliBuildSettled) return;
         clearInterval(poll);
         watchBundles();
         startElectron();

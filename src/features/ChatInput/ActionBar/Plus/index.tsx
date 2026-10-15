@@ -3,7 +3,6 @@
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { validateVideoFileSize } from '@orvilo/utils/client';
-import { css, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import {
   Brain,
@@ -58,140 +57,27 @@ import { useControls as useKnowledgeControls } from '../Knowledge/useControls';
 import { useMemoryEnabled } from '../Memory/useMemoryEnabled';
 import { useControls as useToolsControls } from '../Tools/useControls';
 
-const hotArea = css`
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-color: transparent;
-  }
-`;
+const hotArea = "before:content-[''] before:absolute before:inset-0 before:bg-transparent";
 
-const activeLabel = css`
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  justify-content: space-between;
+const activeLabel =
+  'flex items-center justify-between gap-4 w-full text-inherit [&_span]:overflow-hidden [&_span]:min-w-0 [&_span]:text-ellipsis [&_span]:whitespace-nowrap';
 
-  width: 100%;
+const searchOptionRow =
+  'flex items-center gap-2.5 w-full min-w-55 max-w-80 [&_.title]:text-sm [&_.title]:leading-5.5 [&_.desc]:mbs-1 [&_.desc]:text-xs [&_.desc]:leading-5 [&_.desc]:text-foreground-description [&_.desc]:whitespace-normal';
 
-  color: inherit;
+const searchIconBox =
+  'flex flex-none items-center justify-center size-9 border border-divider rounded-(--radius-card) bg-card';
 
-  span {
-    overflow: hidden;
-    min-width: 0;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-`;
+const labelWithChip = 'inline-flex items-center gap-2';
 
-const searchOptionRow = css`
-  display: flex;
-  gap: 10px;
-  align-items: center;
+const countChip =
+  'inline-flex items-center justify-center min-w-5 h-5 py-0 px-1.5 rounded-(--radius-chip) text-xs leading-5 text-muted-foreground bg-selected';
 
-  width: 100%;
-  min-width: 220px;
-  max-width: 320px;
+const gatewayModeLabel =
+  'inline-flex items-center gap-2 min-w-0 [&_.title]:overflow-hidden [&_.title]:min-w-0 [&_.title]:text-ellipsis [&_.title]:whitespace-nowrap';
 
-  .title {
-    line-height: 1.25;
-  }
-
-  .desc {
-    margin-block-start: 3px;
-
-    font-size: 12px;
-    line-height: 1.35;
-    color: ${cssVar.colorTextDescription};
-    white-space: normal;
-  }
-`;
-
-const searchIconBox = css`
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-
-  width: 36px;
-  height: 36px;
-  border: 1px solid ${cssVar.colorBorderSecondary};
-  border-radius: 8px;
-
-  background: ${cssVar.colorBgContainer};
-`;
-
-const labelWithChip = css`
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-`;
-
-const countChip = css`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  min-width: 18px;
-  height: 18px;
-  padding-block: 0;
-  padding-inline: 6px;
-  border-radius: 9px;
-
-  font-size: 11px;
-  line-height: 18px;
-  color: ${cssVar.colorTextSecondary};
-
-  background: ${cssVar.colorFillSecondary};
-`;
-
-const gatewayModeLabel = css`
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-  min-width: 0;
-
-  .title {
-    overflow: hidden;
-    min-width: 0;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-`;
-
-const gatewayModeInfoCard = css`
-  overflow: hidden;
-  width: 280px;
-  border-radius: 8px;
-
-  .cover {
-    display: block;
-
-    width: 100%;
-    height: 148px;
-
-    object-fit: cover;
-    background: ${cssVar.colorFillTertiary};
-  }
-
-  .body {
-    padding: 12px;
-  }
-
-  .title {
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.35;
-  }
-
-  .desc {
-    margin-block-start: 6px;
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-  }
-`;
+const gatewayModeInfoCard =
+  'overflow-hidden w-70 rounded-(--radius-card) [&_.cover]:block [&_.cover]:w-full [&_.cover]:h-37 [&_.cover]:object-cover [&_.cover]:bg-muted [&_.body]:p-3 [&_.title]:text-sm [&_.title]:font-semibold [&_.title]:leading-5.5 [&_.desc]:mbs-1.5 [&_.desc]:text-xs [&_.desc]:leading-5 [&_.desc]:text-muted-foreground';
 
 const activeIcon = (
   icon: ComponentType<{
@@ -209,7 +95,7 @@ const activeIcon = (
         size: 16,
         width: 16,
         height: 16,
-        color: cssVar.colorInfo,
+        color: 'var(--info-text)',
         fill: 'transparent',
       })}
     </span>
@@ -286,7 +172,7 @@ const PopoverLabel = memo<PopoverLabelProps>(({ disabled, label, popoverContent 
           <PopoverPrimitive.Popup
             className={cn(
               POPUP_Z_CLASS,
-              'flex origin-(--transform-origin) flex-col gap-2.5 rounded-lg bg-popover p-0 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden',
+              'flex origin-(--transform-origin) flex-col gap-2.5 rounded-(--radius-overlay) bg-popover p-0 text-sm text-popover-foreground shadow-(--shadow-popover) ring-1 ring-divider outline-hidden',
             )}
           >
             {popoverContent}
@@ -453,10 +339,10 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
   const items = useMemo<ActionDropdownMenuItems>(() => {
     const renderActive = (label: string, active: boolean) =>
       active ? (
-        <div className={cx(activeLabel)}>
+        <div className={activeLabel}>
           <span>{label}</span>
           <span className="anticon" role="img">
-            <CheckIcon fill={'transparent'} height={14} size={14} width={14} />
+            <CheckIcon fill={'transparent'} height={16} size={16} width={16} />
           </span>
         </div>
       ) : (
@@ -469,15 +355,15 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
       description: string,
       active: boolean,
     ) => (
-      <div className={cx(searchOptionRow)}>
-        <div className={cx(searchIconBox)}>{icon}</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+      <div className={searchOptionRow}>
+        <div className={searchIconBox}>{icon}</div>
+        <div className="flex-1 min-w-0">
           <div className="title">{title}</div>
           {description && <div className="desc">{description}</div>}
         </div>
         {active && (
           <span className="anticon" role="img">
-            <CheckIcon fill={'transparent'} height={14} size={14} width={14} />
+            <CheckIcon fill={'transparent'} height={16} size={16} width={16} />
           </span>
         )}
       </div>
@@ -485,26 +371,24 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
 
     const renderLabelWithCount = (label: string, count: number, prefix?: string) =>
       count > 0 || prefix ? (
-        <span className={cx(labelWithChip)}>
+        <span className={labelWithChip}>
           <span>{label}</span>
-          <span className={cx(countChip)}>{prefix ? `${prefix} | ${count}` : count}</span>
+          <span className={countChip}>{prefix ? `${prefix} | ${count}` : count}</span>
         </span>
       ) : (
         label
       );
 
     const renderGatewayModeLabel = () => (
-      <span className={cx(gatewayModeLabel)}>
+      <span className={gatewayModeLabel}>
         {/* Brand name — same in every language, so no i18n. */}
         <span className="title">Agent Gateway</span>
-        <Badge size="sm" variant="info">
-          {t('gatewayMode.beta')}
-        </Badge>
+        <Badge variant="info">{t('gatewayMode.beta')}</Badge>
       </span>
     );
 
     const gatewayModeInfo = (
-      <div className={cx(gatewayModeInfoCard)}>
+      <div className={gatewayModeInfoCard}>
         <img
           alt=""
           className="cover"
@@ -533,7 +417,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
         // Match the 20px file/library icons below so the label lines up with those rows.
         icon: (
           <span className="anticon" role="img">
-            <FileUp fill={'transparent'} height={20} size={20} width={20} />
+            <FileUp fill={'transparent'} height={16} size={16} width={16} />
           </span>
         ),
         key: 'upload-file-or-image',
@@ -561,7 +445,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
               return false;
             }}
           >
-            <div className={cx(hotArea)}>{t('upload.action.fileOrImageUpload')}</div>
+            <div className={hotArea}>{t('upload.action.fileOrImageUpload')}</div>
           </Upload>
         ),
       },
@@ -581,7 +465,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
               // which is hidden via the .orvilo-submenu-chevron rule in ActionDropdown).
               extra: (
                 <span
-                  className={cx('anticon orvilo-submenu-chevron', 'orvilo-submenu-chevron')}
+                  className={cn('anticon orvilo-submenu-chevron', 'orvilo-submenu-chevron')}
                   role="img"
                 >
                   <ChevronRight fill={'transparent'} height={16} size={16} width={16} />
@@ -591,7 +475,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
               header: skillMarketHeader,
               icon: (
                 <span className="anticon" role="img">
-                  <SkillsIcon fill={'transparent'} height={20} size={20} width={20} />
+                  <SkillsIcon fill={'transparent'} height={16} size={16} width={16} />
                 </span>
               ),
               key: 'tools',
@@ -617,7 +501,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
               checked: isGatewayModeEnabled,
               icon: (
                 <span className="anticon" role="img">
-                  <Cloud fill={'transparent'} height={20} size={20} width={20} />
+                  <Cloud fill={'transparent'} height={16} size={16} width={16} />
                 </span>
               ),
               key: 'gateway-mode',
@@ -639,7 +523,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
             checked: Boolean(isMemoryEnabled),
             icon: (
               <span className="anticon" role="img">
-                <Brain fill={'transparent'} height={20} size={20} width={20} />
+                <Brain fill={'transparent'} height={16} size={16} width={16} />
               </span>
             ),
             key: 'memory',
@@ -656,7 +540,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                       key: 'search-off',
                       label: renderSearchOption(
                         <span className="anticon" role="img">
-                          <GlobeOff size={18} />
+                          <GlobeOff size={16} />
                         </span>,
                         t('plus.search.off'),
                         t('plus.search.offDesc'),
@@ -669,11 +553,11 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                       label: renderSearchOption(
                         <span className="anticon" role="img">
                           <SearchCheck
-                            color={activeSearchOption === 'app' ? cssVar.colorInfo : undefined}
+                            color={activeSearchOption === 'app' ? 'var(--info-text)' : undefined}
                             fill={'transparent'}
-                            height={18}
-                            size={18}
-                            width={18}
+                            height={16}
+                            size={16}
+                            width={16}
                           />
                         </span>,
                         t('plus.search.appSearch'),
@@ -687,11 +571,13 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                       label: renderSearchOption(
                         <span className="anticon" role="img">
                           <CloudCog
-                            color={activeSearchOption === 'provider' ? cssVar.colorInfo : undefined}
                             fill={'transparent'}
-                            height={18}
-                            size={18}
-                            width={18}
+                            height={16}
+                            size={16}
+                            width={16}
+                            color={
+                              activeSearchOption === 'provider' ? 'var(--info-text)' : undefined
+                            }
                           />
                         </span>,
                         t('plus.search.modelSearch'),
@@ -703,7 +589,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                   ],
                   extra: (
                     <span
-                      className={cx('anticon orvilo-submenu-chevron', 'orvilo-submenu-chevron')}
+                      className={cn('anticon orvilo-submenu-chevron', 'orvilo-submenu-chevron')}
                       role="img"
                     >
                       <ChevronRight fill={'transparent'} height={16} size={16} width={16} />
@@ -723,7 +609,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                   checked: activeSearchOption !== 'off',
                   icon: (
                     <span className="anticon" role="img">
-                      <Globe fill={'transparent'} height={20} size={20} width={20} />
+                      <Globe fill={'transparent'} height={16} size={16} width={16} />
                     </span>
                   ),
                   key: 'search-toggle',
@@ -746,7 +632,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
         checked: Boolean(showTypoBar),
         icon: (
           <span className="anticon" role="img">
-            <TypeIcon fill={'transparent'} height={20} size={20} width={20} />
+            <TypeIcon fill={'transparent'} height={16} size={16} width={16} />
           </span>
         ),
         key: 'typo',
@@ -762,7 +648,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
             {
               icon: (
                 <span className="anticon" role="img">
-                  <Settings2Icon fill={'transparent'} height={20} size={20} width={20} />
+                  <Settings2Icon fill={'transparent'} height={16} size={16} width={16} />
                 </span>
               ),
               key: 'params',
@@ -796,7 +682,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
             // which is hidden via the .orvilo-submenu-chevron rule in ActionDropdown).
             extra: (
               <span
-                className={cx('anticon orvilo-submenu-chevron', 'orvilo-submenu-chevron')}
+                className={cn('anticon orvilo-submenu-chevron', 'orvilo-submenu-chevron')}
                 role="img"
               >
                 <ChevronRight fill={'transparent'} height={16} size={16} width={16} />
@@ -805,7 +691,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
             footer: canConfigureResource ? knowledgeFooter : undefined,
             icon: (
               <span className="anticon" role="img">
-                <LibraryBig fill={'transparent'} height={20} size={20} width={20} />
+                <LibraryBig fill={'transparent'} height={16} size={16} width={16} />
               </span>
             ),
             key: 'attachments',
@@ -877,7 +763,7 @@ const PlusAction = memo(() => {
   return (
     <ChatInputAction
       icon={PlusIcon}
-      size={{ blockSize: 32, borderRadius: 16, size: 18 }}
+      size={{ blockSize: 32, borderRadius: '50%', size: 16 }}
       title={t('plus.tooltip')}
       tooltipProps={{ placement: 'top' }}
       dropdown={{
@@ -897,7 +783,7 @@ const PlusFallback = () => {
     <ChatInputAction
       disabled
       icon={PlusIcon}
-      size={{ blockSize: 32, borderRadius: 16, size: 18 }}
+      size={{ blockSize: 32, borderRadius: '50%', size: 16 }}
       title={t('plus.tooltip')}
     />
   );

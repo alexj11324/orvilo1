@@ -67,7 +67,7 @@ export const FileTree = ({
   return (
     <FileTreeContext value={contextValue}>
       <div
-        className={cn('rounded-lg border bg-card font-mono text-sm', className)}
+        className={cn('rounded-(--radius-card) border bg-card font-mono text-sm', className)}
         role="tree"
         {...props}
       >

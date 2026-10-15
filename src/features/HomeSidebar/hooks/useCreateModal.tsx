@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { Lightbulb, PencilLineIcon, RefreshCw, X } from 'lucide-react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -32,19 +31,19 @@ interface ExampleItemProps {
 const ExampleItem = memo<ExampleItemProps>(({ title, description, onClick, prompt }) => {
   return (
     <div
-      className="flex cursor-pointer flex-col border hover:bg-[var(--ant-color-fill-tertiary)]"
+      className="flex cursor-pointer flex-col border hover:bg-muted"
       style={{
-        borderColor: cssVar.colorBorderSecondary,
-        background: cssVar.colorBgContainer,
-        borderRadius: cssVar.borderRadiusLG,
+        borderColor: 'var(--ant-color-border-secondary)',
+        background: 'var(--ant-color-bg-container)',
+        borderRadius: 'var(--ant-border-radius-lg)',
       }}
       onClick={() => onClick(prompt)}
     >
-      <div className="flex flex-col gap-1 py-3 px-[14px]">
-        <div className="truncate text-[14px]" style={{ fontWeight: 500 }}>
+      <div className="flex flex-col gap-1 py-3 px-3.5">
+        <div className="truncate text-sm" style={{ fontWeight: 500 }}>
           {title}
         </div>
-        <div className="line-clamp-2 text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
+        <div className="line-clamp-2 text-xs" style={{ color: 'var(--ant-color-text-tertiary)' }}>
           {description}
         </div>
       </div>
@@ -68,12 +67,14 @@ const Examples = memo<ExamplesProps>(({ suggestMode, onExampleClick }) => {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Lightbulb color={cssVar.colorTextDescription} size={18} />
-          <div style={{ color: cssVar.colorTextSecondary }}>{tCommon('home.suggestQuestions')}</div>
+          <Lightbulb color={'var(--ant-color-text-description)'} size={18} />
+          <div style={{ color: 'var(--ant-color-text-secondary)' }}>
+            {tCommon('home.suggestQuestions')}
+          </div>
         </div>
         <div className="flex items-center gap-1" style={{ cursor: 'pointer' }} onClick={refresh}>
           <ActionIcon icon={RefreshCw} size={'small'} />
-          <div className="text-[12px]" style={{ color: cssVar.colorTextSecondary }}>
+          <div className="text-xs" style={{ color: 'var(--ant-color-text-secondary)' }}>
             {tCommon('switch')}
           </div>
         </div>
@@ -206,7 +207,7 @@ export const CreateAgentModal = memo<CreateAgentModalProps>(
       <div className="flex flex-col gap-6 px-6" style={{ paddingBlock: '16px 24px' }}>
         {/* Header: Start Blank + Close */}
         <div className="flex items-center gap-1 justify-end">
-          <Button variant="ghost" onClick={handleCreateBlank}>
+          <Button size="compact" variant="ghost" onClick={handleCreateBlank}>
             <PencilLineIcon data-icon="inline-start" size={14} />
             {t('createModal.createBlank')}
           </Button>

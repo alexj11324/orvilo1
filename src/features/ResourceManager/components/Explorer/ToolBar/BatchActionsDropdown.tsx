@@ -263,6 +263,7 @@ const BatchActionsDropdown = memo<BatchActionsDropdownProps>(({ selectCount, onA
         <ActionIconWithChevron
           disabled={!canEditResources}
           icon={CircleEllipsisIcon}
+          size="compact"
           title={t('FileManager.actions.batchActions', 'Batch actions')}
         />
       </DropdownMenu>

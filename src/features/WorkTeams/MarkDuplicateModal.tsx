@@ -79,10 +79,10 @@ const MarkDuplicateModal = memo<MarkDuplicateModalProps>(({ onClose, onConfirm, 
       width={480}
       footer={
         <div className="flex flex-row justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button size="lg" variant="outline" onClick={onClose}>
             {t('cancel')}
           </Button>
-          <Button disabled={!selected} onClick={confirm}>
+          <Button disabled={!selected} size="lg" onClick={confirm}>
             {t('teams.markDuplicateConfirm')}
           </Button>
         </div>

@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { CalendarClock, HeartPulse } from 'lucide-react';
 import { createElement, memo } from 'react';
 
@@ -46,7 +45,7 @@ const TaskGroupPrefix = ({ group }: { group: TaskGroupMeta }) => {
 
   if (group.groupBy === 'automationMode') {
     return createElement(group.automationMode === 'heartbeat' ? HeartPulse : CalendarClock, {
-      color: cssVar.colorTextDescription,
+      color: 'var(--ant-color-text-description)',
       size: 16,
     });
   }

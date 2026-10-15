@@ -12,7 +12,7 @@ const Time = memo<TimeProps>(({ capturedAt }) => {
 
   return (
     <time
-      className="text-[12px] text-muted-foreground"
+      className="text-xs text-muted-foreground"
       style={{ display: 'block', flex: 'none' }}
       title={title}
     >

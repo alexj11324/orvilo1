@@ -40,12 +40,12 @@ const REMOVE_LABEL_KEYS = {
 } as const;
 
 const styles = {
-  chip: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 max-w-[min(420px,60vw)] ms-1.5 py-0.5 px-2.5 rounded-[999px] bg-accent',
-  icon: 'shrink-0 text-[var(--ant-color-text-description)]',
+  chip: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 max-w-[min(420px,60vw)] ms-1.5 py-0.5 px-2.5 rounded-(--radius-chip) bg-accent',
+  icon: 'shrink-0 text-foreground-description',
   leadingIcon: 'me-1.5',
-  risk: 'shrink-0 ms-1.5 py-px px-1.5 rounded-[999px] text-[12px] text-destructive bg-[var(--ant-color-error-bg)]',
+  risk: 'shrink-0 ms-1.5 py-px px-1.5 rounded-(--radius-chip) text-xs text-destructive-text bg-destructive-wash',
   target:
-    'overflow-hidden min-w-0 font-mono text-[12px] text-foreground text-ellipsis whitespace-nowrap',
+    'overflow-hidden min-w-0 font-mono text-xs text-foreground text-ellipsis whitespace-nowrap',
 };
 
 const resolvePhase = (

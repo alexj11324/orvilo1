@@ -17,7 +17,7 @@ afterEach(() => {
 
 describe('Flex layout padding with a late reset', () => {
   it('preserves declared padding when the universal reset loads after the UI theme', () => {
-    mountStyle(flexLayout.styles);
+    mountStyle(flexLayout);
     mountStyle('* { padding: 0; }');
     const element = document.createElement('div');
     element.className = 'lobe-flex';
@@ -29,7 +29,7 @@ describe('Flex layout padding with a late reset', () => {
 
   it('allows an explicit surface class to own its padding', () => {
     mountStyle('.surface { padding: 12px 24px; }');
-    mountStyle(flexLayout.styles);
+    mountStyle(flexLayout);
     const element = document.createElement('div');
     element.className = 'lobe-flex surface';
     document.body.append(element);

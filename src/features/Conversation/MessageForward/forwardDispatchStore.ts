@@ -18,5 +18,3 @@ export const useForwardDispatchStore = createWithEqualityFn<ForwardDispatchStore
   pendingForward: null,
   setPendingForward: (pendingForward) => set({ pendingForward }),
 }));
-
-export const getForwardDispatchStoreState = () => useForwardDispatchStore.getState();

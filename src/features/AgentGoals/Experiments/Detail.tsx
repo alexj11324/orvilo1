@@ -51,7 +51,7 @@ export const ExperimentDetail = ({
             )}
           </Badge>
         </div>
-        <h2 className="text-[18px] font-semibold">{view.node.title}</h2>
+        <h2 className="text-lg font-semibold">{view.node.title}</h2>
         <div className="flex gap-2 flex-wrap">
           {view.node.taskId && (
             <Button size="sm" onClick={() => openTask(view.node.taskId!)}>
@@ -129,14 +129,14 @@ export const ExperimentDetail = ({
             {
               children: (
                 <div className="flex flex-col gap-2">
-                  <div className="text-[12px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {t('goalExperiment.inputHint')}
                   </div>
                   {inputs.map((input) => (
                     <div className="flex flex-col gap-1" key={input.workVersionId}>
                       <div>{input.work?.title ?? t('goalExperiment.unavailableInput')}</div>
                       <div
-                        className="text-[12px] text-muted-foreground"
+                        className="text-xs text-muted-foreground"
                         style={{ overflowWrap: 'anywhere' }}
                       >
                         {input.workVersionId}

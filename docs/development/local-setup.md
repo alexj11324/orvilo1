@@ -121,6 +121,11 @@ The stub (`clerk-stub.mjs`) listens on loopback only, vouches for seed sessions
 and forwards every other Clerk Backend call unchanged, so a normal sign-in on
 the same server still works. It refuses to start with `NODE_ENV=production`.
 
+This path needs no Clerk keys, so a fork without access to a Clerk instance can
+still develop: when the publishable key is unset, `dev-up.sh` fills in a
+placeholder with its matching `CLERK_ISSUER`, and an unset secret key gets one too. Only seed sessions can sign in then; the
+sign-in page needs a real development instance.
+
 `bun run dev:desktop:skip-login` does all of this in one command: it starts the
 stub, the Next.js server and Electron on a temporary profile, then signs the
 seed user in, main process included. It preserves `CLERK_SECRET_KEY` from the
@@ -150,7 +155,7 @@ connected execution device. A packaged build ignores the variable. For real loca
 
 An Issue run reaches your computer through the device gateway. The desktop app connects to the hosted one (`device-gateway.aspectlylabs.com`) by default, which trusts only tokens signed by production. A local dev server signs with its own `JWKS_KEY`, so against it no device can connect and every run ends in "No bound device" until a gateway that trusts the local key is running.
 
-The gateway is a separate Go service kept in the private repository `alexj11324/orvilo-gateway` (LobeHub's gateway plus the Orvilo workspace protocol; the same changes production builds from). One script builds and runs it locally at a pinned commit:
+The gateway is a separate Go service kept in the public repository [`alexj11324/orvilo-gateway`](https://github.com/alexj11324/orvilo-gateway) (the same commit production builds from). One script builds and runs it locally at a pinned commit:
 
 ```bash
 # 1. Gateway, in its own terminal. JWKS_KEY is the value the dev server runs with.
@@ -163,7 +168,7 @@ eval "$(.agents/acceptance/scripts/agent-gateway/local-device-gateway-setup.sh e
 DEVICE_GATEWAY_URL=http://localhost:8787 .agents/acceptance/scripts/electron-dev.sh start <id>
 ```
 
-It needs `go` and read access to the private repository. The service token is generated once into `.records/env/device-gateway.token` and is never printed. The desktop app still has to be signed in through its own sign-in before the device connects; a seeded web session is not enough.
+It needs `go` and `git`. The service token is generated once into `.records/env/device-gateway.token` and is never printed. The desktop app still has to be signed in through its own sign-in before the device connects; a seeded web session is not enough.
 
 ## Ports
 

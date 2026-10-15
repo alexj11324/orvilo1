@@ -1,0 +1,9 @@
+@reference "../../app/globals.css";
+
+/* Only the three original default geometry declarations: all actual className
+   callers and public caller style last-override remain separately bound. */
+.modelRoot.modelRoot {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}

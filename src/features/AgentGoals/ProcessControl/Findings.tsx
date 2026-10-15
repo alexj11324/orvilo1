@@ -18,13 +18,12 @@ import { KindDot } from './shared';
  */
 
 const styles = {
-  arrow:
-    'flex-none text-[var(--ant-color-text-quaternary)] transition-[transform] duration-200 ease-[ease]',
+  arrow: 'flex-none text-foreground-quaternary transition-[transform] duration-200 ease-[ease]',
   arrowOpen: '[transform:rotate(90deg)]',
   body: 'pt-0 pb-2.5 ps-7.5 pe-2',
   source: 'flex-none max-w-[40%] text-end',
   time: 'flex-none min-w-15 text-end',
-  row: 'cursor-pointer p-2 rounded-(--ant-border-radius-sm) hover:bg-[var(--ant-color-fill-quaternary)]',
+  row: 'cursor-pointer p-2 rounded-(--ant-border-radius-sm) hover:bg-fill-quaternary',
 };
 
 const FindingRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeView }>(
@@ -46,14 +45,14 @@ const FindingRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeView
           <div className="truncate min-w-0 font-medium" style={{ flex: 1, minWidth: 0 }}>
             {view.node.title}
           </div>
-          <div className={cn('truncate min-w-0 text-[12px] text-muted-foreground', styles.source)}>
+          <div className={cn('truncate min-w-0 text-xs text-muted-foreground', styles.source)}>
             {answered
               ? t('goalProcess.findings.answers', { title: answered.title })
               : view.producedBy
                 ? t('goalProcess.findings.from', { title: view.producedBy.title })
                 : ''}
           </div>
-          <div className={cn('text-[12px] text-muted-foreground', styles.time)} title={title}>
+          <div className={cn('text-xs text-muted-foreground', styles.time)} title={title}>
             {text}
           </div>
         </div>
@@ -67,7 +66,7 @@ const FindingRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeView
                 onClick={() => onSelect(problem.id)}
               >
                 <KindDot kind={'problem'} />
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {t('goalProcess.findings.answers', { title: problem.title })}
                 </div>
               </div>
@@ -86,7 +85,7 @@ const FindingRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeView
                 onClick={() => onSelect(view.producedBy!.id)}
               >
                 <KindDot kind={'task'} />
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {t('goalProcess.findings.from', { title: view.producedBy.title })}
                 </div>
               </div>
@@ -111,7 +110,9 @@ const Findings = memo<{ graph: GoalGraphView; onSelect: (nodeId: string) => void
 
     if (findings.length === 0)
       return (
-        <div className="text-[13px] text-muted-foreground">{t('goalProcess.findings.empty')}</div>
+        <div className="text-(length:--text-dense) text-muted-foreground">
+          {t('goalProcess.findings.empty')}
+        </div>
       );
 
     return (

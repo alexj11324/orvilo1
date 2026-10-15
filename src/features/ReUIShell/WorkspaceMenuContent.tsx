@@ -90,13 +90,13 @@ export function WorkspaceMenuContent() {
               )}
             </span>
             {workspace.id === activeWorkspaceId && (
-              <CheckIcon aria-hidden className="ml-auto size-3.5 shrink-0 opacity-60" />
+              <CheckIcon aria-hidden className="ml-auto size-4 shrink-0 opacity-60" />
             )}
           </DropdownMenuItem>
         ))}
         <DropdownMenuItem onClick={() => navigate('/onboarding', { escape: true })}>
-          <span className="flex size-5 shrink-0 items-center justify-center rounded-md border border-dashed border-border">
-            <PlusIcon aria-hidden className="size-3.5" />
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-(--radius-chip) border border-dashed border-border">
+            <PlusIcon aria-hidden className="size-4" />
           </span>
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-sm">

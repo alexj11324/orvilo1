@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -13,11 +12,9 @@ import { isModifierClick } from '@/utils/navigation';
 import { useSettingsSearchAnalytics } from './analytics';
 import type { SettingsSearchResult } from './useSettingsSearch';
 
-const styles = createStaticStyles(({ css }) => ({
-  match: css`
-    color: var(--sidebar-primary);
-  `,
-}));
+const styles = {
+  match: 'text-sidebar-primary',
+};
 
 const HighlightMatch = memo<{ query: string; text: string }>(({ text, query }) => {
   const index = text.toLowerCase().indexOf(query.toLowerCase());
@@ -53,13 +50,13 @@ const SearchResults = memo<SearchResultsProps>(({ isIndexing, query, results }) 
 
   if (results.length === 0)
     return (
-      <div className="flex flex-col items-center" style={{ paddingBlock: 24, paddingInline: 8 }}>
+      <div className="flex flex-col items-center px-2 py-6">
         {isIndexing ? (
           // A zero-result answer is not authoritative while the pinyin dict is
           // still loading — show a spinner instead of a false empty state.
-          <Spinner className="text-[var(--sidebar-muted)]" />
+          <Spinner className="text-(--sidebar-muted)" />
         ) : (
-          <span className="text-xs text-[var(--sidebar-muted)]">
+          <span className="text-xs text-(--sidebar-muted)">
             {t('settingsSearch.empty', { keyword })}
           </span>
         )}
@@ -75,9 +72,7 @@ const SearchResults = memo<SearchResultsProps>(({ isIndexing, query, results }) 
           key={result.key}
           title={<HighlightMatch query={keyword} text={result.label} />}
           description={
-            <span className="truncate text-xs text-[var(--sidebar-muted)]">
-              {result.breadcrumb}
-            </span>
+            <span className="truncate text-xs text-(--sidebar-muted)">{result.breadcrumb}</span>
           }
           onClick={(e) => {
             trackResultClick(result, index + 1);

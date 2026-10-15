@@ -1,5 +1,4 @@
 import { isFullHtmlDocument, type MarkdownProps, Mermaid } from '@lobehub/ui';
-import { createStaticStyles, cx } from 'antd-style';
 import { type ComponentProps, createContext, use } from 'react';
 
 import { ChatHtmlPreview } from '@/components/HtmlPreview/ChatPreview';
@@ -14,18 +13,7 @@ import {
   markdownCodeProps,
 } from '@/components/ui/code-block';
 
-const styles = createStaticStyles(({ css }) => ({
-  surface: css`
-    /* ReUI's viewport owns scrolling. A second scrollport on pre moves the
-       sticky gutter over the text; Markdown's pre typography also leaks here. */
-    pre {
-      overflow: visible;
-      margin: 0;
-      font-size: var(--code-block-font-size);
-      line-height: var(--code-block-line-height);
-    }
-  `,
-}));
+import styles from './CodeBlock.module.css';
 
 interface CodeBlockOptions {
   animated?: boolean;
@@ -72,7 +60,7 @@ export default function ChatCodeBlock(props: ComponentProps<'pre'>) {
   return (
     <CodeBlock
       showLineNumbers
-      className={cx('my-3 min-w-0', styles.surface)}
+      className={`my-3 min-w-0 ${styles.surface}`}
       code={code}
       language={language ?? 'text'}
       maxLines={16}

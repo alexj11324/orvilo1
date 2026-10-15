@@ -8,14 +8,13 @@ import type { ProjectDetail } from '@/store/project';
 import { ProjectIcon } from '../ProjectIcon';
 
 /**
- * Compact inline row matching the activity feed's measured reference spec:
- * 16px glyph without a circular backing, 12px/450 text, 12px icon-text gap.
+ * Creation audit metadata uses the DESIGN 12px/20px line box and normal weight,
+ * with a 16px glyph, no circular backing, and a 12px icon-text gap.
  */
 const styles = {
-  event: 'text-xs font-[450] leading-4.25 text-muted-foreground', // linear-token-override: preserve the existing creation metadata weight (450) during the style-only migration.
-  glyph:
-    'flex h-4.25 w-4 flex-none items-center justify-center text-[var(--ant-color-text-tertiary)]', // linear-token-override: existing tertiary theme role has no exact local semantic alias yet.
-  row: 'flex items-start gap-3 py-0.75',
+  event: 'text-xs font-normal text-muted-foreground',
+  glyph: 'flex h-5 w-4 flex-none items-center justify-center text-foreground-tertiary',
+  row: 'flex items-start gap-3 py-0.5',
 };
 
 /** Creation is an immutable audit fact, not the project's current owner or current viewer. */

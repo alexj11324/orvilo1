@@ -1,7 +1,5 @@
 'use client';
-
 import type { LinearIssueLinkSyncState } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { CircleCheck, CircleDashed, CircleMinus, CircleX, TriangleAlert } from 'lucide-react';
 import { createContext, createElement, memo, type PropsWithChildren, use, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +8,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { Badge as Tag } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useClientDataSWR } from '@/libs/swr';
-import { lambdaClient } from '@/libs/trpc/client';
+import { linearSyncService } from '@/services/linearSync';
 import { useTaskStore } from '@/store/task';
 import { taskListSelectors } from '@/store/task/selectors';
 
@@ -21,32 +19,32 @@ const STATE_META: Record<
   { color: string; icon: typeof CircleCheck; labelKey: string }
 > = {
   conflict: {
-    color: cssVar.colorWarning,
+    color: 'var(--ant-color-warning)',
     icon: TriangleAlert,
     labelKey: 'taskDetail.linearSync.state.conflict',
   },
   outcome_unknown: {
-    color: cssVar.colorError,
+    color: 'var(--ant-color-error)',
     icon: CircleX,
     labelKey: 'taskDetail.linearSync.state.outcomeUnknown',
   },
   pending: {
-    color: cssVar.colorWarning,
+    color: 'var(--ant-color-warning)',
     icon: CircleDashed,
     labelKey: 'taskDetail.linearSync.state.pending',
   },
   removed: {
-    color: cssVar.colorTextTertiary,
+    color: 'var(--ant-color-text-tertiary)',
     icon: CircleMinus,
     labelKey: 'taskDetail.linearSync.state.removed',
   },
   synced: {
-    color: cssVar.colorSuccess,
+    color: 'var(--ant-color-success)',
     icon: CircleCheck,
     labelKey: 'taskDetail.linearSync.state.synced',
   },
   unlinked: {
-    color: cssVar.colorTextTertiary,
+    color: 'var(--ant-color-text-tertiary)',
     icon: CircleMinus,
     labelKey: 'taskDetail.linearSync.state.unlinked',
   },
@@ -90,7 +88,7 @@ export const LinearTaskSyncProvider = ({
       ? `linear-sync/issue-links/${workspaceId}/${taskIdsKey}`
       : null,
     async () => {
-      const response = await lambdaClient.linearSync.issueLinks.query({ taskIds });
+      const response = await linearSyncService.issueLinks({ taskIds });
       return (response?.data ?? []) as LinearIssueLinkView[];
     },
     { dedupingInterval: 30_000, refreshInterval: 30_000 },
@@ -128,18 +126,16 @@ const LinearTaskSyncStatus = memo<LinearTaskSyncStatusProps>(({ taskId }) => {
   const conflictFields = link.conflict?.fields.join(', ');
   const tooltip = (
     <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
-      <div className="text-[12px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         {t('taskDetail.linearSync.source')}: {link.linearIdentifier}
       </div>
-      <div className="text-[12px] text-muted-foreground">{t(meta.labelKey as never)}</div>
+      <div className="text-xs text-muted-foreground">{t(meta.labelKey as never)}</div>
       {conflictFields && (
-        <div className="text-[12px] text-warning" style={{ wordBreak: 'break-word' }}>
+        <div className="text-xs text-warning" style={{ wordBreak: 'break-word' }}>
           {t('taskDetail.linearSync.conflictFields', { fields: conflictFields })}
         </div>
       )}
-      {issueUrl && (
-        <div className="text-[12px] text-info">{t('taskDetail.linearSync.openIssue')}</div>
-      )}
+      {issueUrl && <div className="text-xs text-info">{t('taskDetail.linearSync.openIssue')}</div>}
     </div>
   );
 

@@ -16,7 +16,7 @@ export const Placeholder = memo(() => (
         </div>
       </div>
     </div>
-    <Skeleton className="h-[18px] w-8 rounded-full" />
+    <Skeleton className="h-4.5 w-8 rounded-full" />
   </div>
 ));
 

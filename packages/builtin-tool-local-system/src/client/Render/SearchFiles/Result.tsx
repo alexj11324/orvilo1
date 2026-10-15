@@ -33,7 +33,7 @@ const SearchFiles = memo<SearchFilesProps>(({ searchResults = [], messageId }) =
 
   if (searchResults.length === 0) {
     return (
-      <div className="rounded-md border bg-card">
+      <div className="rounded-(--radius-card) border bg-card">
         <SimpleEmpty description={t('search.emptyResult')} icon={SearchIcon} />
       </div>
     );

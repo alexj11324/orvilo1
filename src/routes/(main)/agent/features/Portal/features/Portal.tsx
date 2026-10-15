@@ -1,35 +1,19 @@
 'use client';
 
 import { DraggablePanel, type DraggablePanelProps } from '@lobehub/ui/base-ui';
-import { createStaticStyles, useResponsive } from 'antd-style';
 import { type PropsWithChildren } from 'react';
 import { Activity, memo, useState } from 'react';
 
 import { usePortalPanelWidth } from '@/features/Portal/usePortalPanelWidth';
+import { useIsLargeViewport } from '@/hooks/useIsMobile';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors, portalThreadSelectors } from '@/store/chat/selectors';
 import { PortalViewType } from '@/store/chat/slices/portal/initialState';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  content: css`
-    position: relative;
-
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-
-    height: 100%;
-    min-height: 100%;
-    max-height: 100%;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  drawer: css`
-    z-index: 10;
-    height: 100%;
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  content: 'relative flex h-full max-h-full min-h-full flex-col overflow-hidden bg-card',
+  drawer: 'z-10 h-full bg-card',
+};
 
 const PortalPanel = memo(({ children }: PropsWithChildren) => {
   const [showPortal, currentViewType, showThread] = useChatStore((s) => [
@@ -46,7 +30,7 @@ const PortalPanel = memo(({ children }: PropsWithChildren) => {
   const [tmpWidth, setWidth] = useState(portalWidth);
   if (tmpWidth !== portalWidth) setWidth(portalWidth);
 
-  const { lg } = useResponsive();
+  const lg = useIsLargeViewport(false);
 
   const handleSizeChange: DraggablePanelProps['onSizeChange'] = (_, size) => {
     if (!size) return;

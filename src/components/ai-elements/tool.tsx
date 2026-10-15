@@ -22,7 +22,7 @@ export type ToolProps = ComponentProps<typeof Collapsible>;
 
 export const Tool = ({ className, ...props }: ToolProps) => (
   <Collapsible
-    className={cn('group not-prose mb-4 w-full rounded-md border', className)}
+    className={cn('group not-prose mb-4 w-full rounded-(--radius-card) border', className)}
     data-ai-element="tool"
     {...props}
   />
@@ -95,7 +95,7 @@ export const ToolHeader = ({
   return (
     <CollapsibleTrigger
       className={cn(
-        'flex w-full items-center justify-between gap-4 p-3 text-left rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'flex w-full items-center justify-between gap-4 p-3 text-left rounded-(--radius-button) outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
       {...props}
@@ -141,7 +141,7 @@ export const ToolInput = ({ className, input, children, ...props }: ToolInputPro
       <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
         {t('components.aiElements.tool.parameters')}
       </h4>
-      <div className="rounded-md bg-muted/50">
+      <div className="rounded-(--radius-card) bg-muted/50">
         {children ?? <CodeBlock code={JSON.stringify(input, null, 2) ?? ''} language="json" />}
       </div>
     </div>
@@ -174,7 +174,7 @@ export const ToolOutput = ({ className, output, errorText, ...props }: ToolOutpu
       </h4>
       <div
         className={cn(
-          'overflow-x-auto rounded-md text-xs [&_table]:w-full',
+          'overflow-x-auto rounded-(--radius-card) text-xs [&_table]:w-full',
           errorText ? 'bg-destructive/10 text-destructive' : 'bg-muted/50 text-foreground',
         )}
       >

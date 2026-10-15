@@ -1,7 +1,6 @@
 import { Markdown } from '@lobehub/ui';
 import type { UpdateInfo } from '@orvilo/electron-client-ipc';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { X } from 'lucide-react';
 import React, { memo, useState } from 'react';
@@ -17,66 +16,12 @@ import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import { selectUpdateInfo } from './selectUpdateInfo';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  installLaterCloseButton: css`
-    all: unset;
-
-    cursor: pointer;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    inline-size: 24px;
-    block-size: 24px;
-    border-radius: 6px;
-
-    color: ${cssVar.colorTextTertiary};
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: 2px;
-    }
-  `,
-
-  installLaterToast: css`
-    position: fixed;
-    z-index: 1000;
-    inset-block-end: 20px;
-    inset-inline-start: 16px;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    max-inline-size: calc(100vw - 32px);
-    padding-block: 8px;
-    padding-inline: 12px 8px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    font-size: ${cssVar.fontSizeSM};
-    line-height: 1.25;
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorBgElevated};
-    box-shadow: ${cssVar.boxShadow};
-  `,
-
-  releaseNote: css`
-    overflow: scroll;
-
-    max-height: 300px;
-    padding: 8px;
-    border-radius: 8px;
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-}));
+const styles = {
+  installLaterCloseButton: 'text-foreground-tertiary hover:text-foreground',
+  installLaterToast:
+    'fixed z-1000 inset-be-5 start-4 flex gap-2 items-center [max-inline-size:calc(100vw-32px)] py-2 ps-3 pe-2 rounded-(--radius-overlay) text-sm leading-5.5 text-foreground bg-popover shadow-(--shadow-popover)',
+  releaseNote: 'overflow-scroll max-h-75 p-2 rounded-(--radius-card) bg-fill-quaternary',
+};
 
 interface UpdateDetailContentProps {
   updateInfo: UpdateInfo;
@@ -88,8 +33,8 @@ const UpdateDetailContent = memo<UpdateDetailContentProps>(({ updateInfo }) => {
   const [isInstalling, setIsInstalling] = useState(false);
 
   return (
-    <div className="flex flex-col gap-3" style={{ maxWidth: 480 }}>
-      <div style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>{updateInfo.version}</div>
+    <div className="flex flex-col gap-3 max-w-120">
+      <div className="text-xs leading-5 text-muted-foreground">{updateInfo.version}</div>
       {updateInfo.releaseNotes &&
         (typeof updateInfo.releaseNotes === 'string' ? (
           <div className={styles.releaseNote}>
@@ -104,6 +49,8 @@ const UpdateDetailContent = memo<UpdateDetailContentProps>(({ updateInfo }) => {
         ))}
       <div className="flex gap-2 justify-end">
         <BaseButton
+          className="leading-5.5"
+          size="lg"
           onClick={() => {
             void getHostPort().updater.installUpdateLater();
             close();
@@ -112,7 +59,9 @@ const UpdateDetailContent = memo<UpdateDetailContentProps>(({ updateInfo }) => {
           {tElectron('updater.installLater')}
         </BaseButton>
         <BaseButton
+          className="leading-5.5"
           loading={isInstalling}
+          size="lg"
           variant={'default'}
           onClick={() => {
             setIsInstalling(true);
@@ -161,12 +110,18 @@ export const UpdateNotification: React.FC = () => {
     return (
       <div className={styles.installLaterToast}>
         <span>{tElectron('updater.rendererReady', { version: updateInfo.version })}</span>
-        <BaseButton size={'sm'} variant={'ghost'} onClick={() => setUpdateInfo(null)}>
+        <BaseButton
+          className="leading-5.5"
+          size="lg"
+          variant={'ghost'}
+          onClick={() => setUpdateInfo(null)}
+        >
           {tElectron('updater.ignore')}
         </BaseButton>
         <BaseButton
+          className="leading-5.5"
           loading={isInstalling}
-          size={'sm'}
+          size="lg"
           variant={'default'}
           onClick={async () => {
             setIsInstalling(true);
@@ -194,14 +149,16 @@ export const UpdateNotification: React.FC = () => {
     return (
       <div className={styles.installLaterToast}>
         {tElectron('updater.willInstallLater')}
-        <button
+        <BaseButton
           aria-label="Close"
           className={styles.installLaterCloseButton}
+          size="icon"
           type="button"
+          variant="ghost"
           onClick={() => setInstallConfirmMode(null)}
         >
-          <X style={{ fontSize: 14 }} />
-        </button>
+          <X className="size-4" size={16} />
+        </BaseButton>
       </div>
     );
   }
@@ -210,7 +167,7 @@ export const UpdateNotification: React.FC = () => {
     return (
       <div className={styles.installLaterToast}>
         <span
-          style={{ cursor: 'pointer' }}
+          className="cursor-pointer"
           onClick={() => {
             if (updateInfo) openUpdateDetailModal(updateInfo);
           }}
@@ -219,7 +176,8 @@ export const UpdateNotification: React.FC = () => {
           {isDevMode && updateInfo?.version ? ` · ${updateInfo.version}` : ''}
         </span>
         <BaseButton
-          size={'sm'}
+          className="leading-5.5"
+          size="lg"
           variant={'ghost'}
           onClick={() => {
             void getHostPort().updater.installUpdateLater();
@@ -228,8 +186,9 @@ export const UpdateNotification: React.FC = () => {
           {tElectron('updater.later')}
         </BaseButton>
         <BaseButton
+          className="leading-5.5"
           loading={isInstalling}
-          size={'sm'}
+          size="lg"
           variant={'default'}
           onClick={() => {
             setIsInstalling(true);

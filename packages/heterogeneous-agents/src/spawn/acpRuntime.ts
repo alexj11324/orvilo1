@@ -311,14 +311,18 @@ export const detectAcpBridgeRunner = async (
 };
 
 /** User-facing error when the ACP bridge binary cannot be located. */
+export const ACP_BRIDGE_NOT_FOUND_ERROR_NAME = 'AcpBridgeNotFoundError';
+
 export const buildAcpBridgeNotFoundError = (agentType: string): Error => {
   const spec = getAcpAgentRuntime(agentType);
   const bridge = spec?.bridge;
   if (!bridge) return new Error(`No ACP runtime is registered for agent type "${agentType}"`);
 
-  return new Error(
+  const error = new Error(
     `${spec.label} requires the \`${bridge.command}\` ACP bridge. ` +
       `Install it with \`${bridge.installCommand}\`, or point ${bridge.overrideEnv} ` +
       'at the bridge executable.',
   );
+  error.name = ACP_BRIDGE_NOT_FOUND_ERROR_NAME;
+  return error;
 };

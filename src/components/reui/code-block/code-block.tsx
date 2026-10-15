@@ -166,8 +166,8 @@ const ROOT_TOKEN_CLASS = [
   'data-[gutter-channel]:[--code-block-number-pad:calc(var(--code-block-gutter-gap)+var(--code-block-fold-width))]',
   /* A diff column breathes: the +/- glyph gets a wider channel. */
   'data-[has-diff]:[--code-block-gutter-gap:--spacing(4)]',
-  '[--code-block-line-height:1.5rem]',
-  '[--code-block-font-size:0.8125rem]',
+  '[--code-block-line-height:calc(var(--text-sm)*22/14)]',
+  '[--code-block-font-size:var(--text-sm)]',
   '[--code-block-copy-inset:--spacing(2)]',
   /* Where a PINNED control starts. With a header composed in, the root's top
      edge is the header, so an unadjusted inset drops the copy button onto the
@@ -551,9 +551,9 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
                an 18px channel. Hover feedback only; folded state reads
                through color. */
             /* Square, centred in the line box: height matches the width and
-               the translate makes up the difference to the 24px line. Open
+               the translate makes up the difference to the 22px line. Open
                regions read darker than folded ones. */
-            'text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 sticky z-20 inline-flex size-(--code-block-fold-width) shrink-0 translate-y-[calc((var(--code-block-line-height)-var(--code-block-fold-width))/2)] cursor-pointer items-center justify-center rounded-[4px] align-top outline-none focus-visible:ring-2',
+            'text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/50 sticky z-20 inline-flex size-(--code-block-fold-width) shrink-0 translate-y-[calc((var(--code-block-line-height)-var(--code-block-fold-width))/2)] cursor-pointer items-center justify-center rounded-(--radius-button) align-top outline-none focus-visible:ring-2',
             /* Margins cancel: -(4px + width) then +4px, so the toggle paints
                in the channel, sits 4px from the code, and the code still
                starts where a row without a toggle does. An uncancelled
@@ -575,7 +575,7 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
         >
           <svg
             aria-hidden="true"
-            className="size-3"
+            className="size-4"
             fill="none"
             stroke="currentColor"
             strokeLinecap="round"
@@ -631,7 +631,7 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
              the source. The copy button reads the raw code and never sees it. */
           <button
             aria-label={`Unfold ${hiddenCount} hidden lines`}
-            className="bg-muted/80 text-muted-foreground hover:bg-accent ml-2 inline-flex h-(--code-block-fold-width) translate-y-[calc((var(--code-block-line-height)-var(--code-block-fold-width))/2)] cursor-pointer items-center rounded-sm px-1.5 align-top text-[0.8em] leading-none select-none"
+            className="bg-muted/80 text-muted-foreground hover:bg-accent ml-2 inline-flex h-(--code-block-fold-width) translate-y-[calc((var(--code-block-line-height)-var(--code-block-fold-width))/2)] cursor-pointer items-center rounded-(--radius-button) px-1.5 align-top text-[0.8em] leading-none select-none"
             data-slot="code-block-fold-marker"
             tabIndex={selectable ? -1 : undefined}
             type="button"
@@ -649,7 +649,7 @@ const CodeBlockLineRow = memo(function CodeBlockLineRow({
             /* An underline caret: a thin strip on the baseline, the shape a
                terminal uses, instead of a bold block that outweighs the text
                it follows. */
-            className="ml-0.5 inline-block h-[0.12em] w-[0.55em] translate-y-[0.02em] animate-pulse rounded-[1px] bg-(--code-block-caret-color) motion-reduce:animate-none"
+            className="ml-0.5 inline-block h-[0.12em] w-[0.55em] translate-y-[0.02em] animate-pulse rounded-full bg-(--code-block-caret-color) motion-reduce:animate-none"
             data-slot="code-block-caret"
           />
         ) : null}
@@ -858,7 +858,7 @@ function CodeBlock({
     return () => {
       active = false;
     };
-  }, [shouldHighlight, deferredSource, language, transformers, specKey]);
+  }, [shouldHighlight, deferredSource, language, transformers, specKey, contentId]);
 
   /* Plain text is the floor, never a blank frame: the highlighter runs a
      chunk behind a stream, so its lines show as-is and the remainder appends
@@ -1047,6 +1047,7 @@ function CodeBlock({
       setWrap,
       wrapProp,
       isExpanded,
+      setExpanded,
       collapsible,
       streaming,
       contentId,
@@ -1539,7 +1540,7 @@ function CodeBlockSurface({
           selectable && activeLine !== null ? `${contentId}-L${activeLine}` : undefined
         }
         className={cn(
-          'focus-visible:ring-ring/50 relative min-w-0 rounded-[inherit] outline-none focus-visible:ring-[3px]',
+          'focus-visible:ring-ring/50 relative min-w-0 rounded-[inherit] outline-none focus-visible:ring-3',
           /* Composed under an ancestor scroller the surface scrolls NOTHING
              itself: both axes belong to the ancestor, whose viewport picks up
              the pre's overflowing width, and the sticky number cell anchors
@@ -1675,7 +1676,7 @@ function CodeBlockLanguage({ className, children, ...props }: ComponentProps<'sp
       data-slot="code-block-language"
       data-unsupported={!resolvedLanguage || undefined}
       className={cn(
-        'border-border bg-muted/60 text-muted-foreground inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 font-mono text-[0.6875rem] leading-none uppercase',
+        'border-border bg-muted/60 text-muted-foreground inline-flex shrink-0 items-center rounded-(--radius-chip) border px-1.5 py-0.5 font-mono text-xs uppercase',
         className,
       )}
       {...props}
@@ -1751,7 +1752,6 @@ function CodeBlockCopyButton({
   ...props
 }: CodeBlockCopyButtonProps) {
   const { t } = useTranslation('common');
-  const context = use(CodeBlockConfigContext);
   const inHeader = use(CodeBlockHeaderContext);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
@@ -1801,7 +1801,7 @@ function CodeBlockCopyButton({
         onCopyError?.(error);
       },
     );
-  }, [value, context, document_, onCopy, onCopyError]);
+  }, [value, document_, onCopy, onCopyError]);
 
   return (
     <Button
@@ -1814,7 +1814,7 @@ function CodeBlockCopyButton({
       type="button"
       variant={variant}
       className={cn(
-        'shrink-0 [&_svg]:size-3.5',
+        'shrink-0 [&_svg]:size-4',
         resolvedPosition === 'pinned' &&
           /* Physical `right`, not logical `end`: the code surface is forced
              dir="ltr", so in an RTL app the logical inset landed the button
@@ -2036,7 +2036,7 @@ function CodeBlockDownloadButton({
       type="button"
       variant={variant}
       className={cn(
-        'shrink-0 [&_svg]:size-3.5',
+        'shrink-0 [&_svg]:size-4',
         resolvedPosition === 'pinned' &&
           'absolute top-(--code-block-copy-top) right-(--code-block-copy-inset) z-20',
         resolvedPosition === 'pinned' &&

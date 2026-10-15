@@ -1,6 +1,5 @@
 import { type IconAvatarProps } from '@lobehub/icons';
 import { type ChatModelCard } from '@orvilo/types';
-import { createStaticStyles, useResponsive } from 'antd-style';
 import { cn } from 'cn';
 import {
   AudioLines,
@@ -17,6 +16,7 @@ import numeral from 'numeral';
 import { createElement, type CSSProperties, type FC, type HTMLAttributes } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import Avatar from '@/components/Avatar';
 import { ProductLogo } from '@/components/Branding';
@@ -26,34 +26,16 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { type AiProviderSourceType } from '@/types/aiProvider';
 import { formatTokenNumber } from '@/utils/format';
 
+import nativeStyles from './ModelSelect.module.css';
 import NewModelBadgeI18n, { NewModelBadge as NewModelBadgeCore } from './NewModelBadge';
 
 export const TAG_CLASSNAME = 'orvilo-model-info-tags';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  tag: css`
-    cursor: default;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px !important;
-    height: 20px;
-    border-radius: 4px;
-  `,
-  token: css`
-    width: 36px !important;
-    height: 20px;
-    border-radius: 4px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  tag: 'flex size-5 cursor-default items-center justify-center rounded-(--radius-chip) p-0',
+  token:
+    'h-auto min-h-5 min-w-9 rounded-(--radius-chip) bg-muted font-mono text-xs leading-5 text-muted-foreground',
+};
 
 type TooltipStyles = typeof styles;
 
@@ -207,7 +189,7 @@ const Context = memo(
 
     const tag = (
       <Badge className={styles.token} size="sm" variant="secondary">
-        {contextWindowTokens === 0 ? <InfinityIcon size={17} strokeWidth={1.6} /> : tokensText}
+        {contextWindowTokens === 0 ? <InfinityIcon size={16} strokeWidth={1.6} /> : tokensText}
       </Badge>
     );
 
@@ -230,10 +212,8 @@ export const ModelInfoTags = memo<ModelInfoTagsProps>(
   ({ directionReverse, disableTooltip, placement = 'top', style, ...model }) => {
     return (
       <div
-        className={cn('flex', TAG_CLASSNAME)}
+        className={cn('flex gap-0.5 ms-auto', TAG_CLASSNAME)}
         style={{
-          gap: 2,
-          marginLeft: 'auto',
           ...style,
           flexDirection: directionReverse ? 'row-reverse' : 'row',
           width: 'fit-content',
@@ -290,25 +270,21 @@ export const ModelItemRender = memo<ModelItemRenderProps>(
     className,
     style,
   }) => {
-    const { mobile } = useResponsive();
+    const mobile = useMediaQuery({ query: '(max-width: 575px)' });
     const displayNameOrId = displayName || id;
 
     return (
       <div
-        className={cn('flex gap-8 items-center justify-between', className)}
-        style={{ overflow: 'hidden', position: 'relative', width: '100%', ...style }}
+        className={cn(nativeStyles.modelRoot, 'flex gap-8 items-center justify-between', className)}
+        style={style}
       >
-        <div
-          className={'flex gap-2 items-center'}
-          style={{ flexShrink: 1, minWidth: 0, overflow: 'hidden' }}
-        >
+        <div className={'flex min-w-0 shrink items-center gap-2 overflow-hidden'}>
           <ModelIcon model={id} size={20} />
           <Tooltip>
             <TooltipTrigger
               render={
                 <div
-                  className="truncate min-w-0"
-                  style={mobile ? { maxWidth: '60vw' } : { minWidth: 0, overflow: 'hidden' }}
+                  className={cn('min-w-0 truncate text-sm leading-5.5', mobile && 'max-w-[60vw]')}
                 >
                   {displayNameOrId}
                 </div>
@@ -322,7 +298,7 @@ export const ModelItemRender = memo<ModelItemRenderProps>(
             <NewModelBadgeI18n releasedAt={releasedAt} />
           )}
           {proBadgeLabel && (
-            <Badge size="sm" variant="warning">
+            <Badge className="h-auto min-h-5 text-xs leading-5" size="sm" variant="warning">
               {proBadgeLabel}
             </Badge>
           )}
@@ -334,7 +310,6 @@ export const ModelItemRender = memo<ModelItemRenderProps>(
             files={files ?? abilities?.files}
             functionCall={functionCall ?? abilities?.functionCall}
             imageOutput={imageOutput ?? abilities?.imageOutput}
-            style={{ zoom: 0.9 }}
             video={video ?? abilities?.video}
             vision={vision ?? abilities?.vision}
           />
@@ -357,7 +332,7 @@ export const ProviderItemRender = memo<ProviderItemRenderProps>(
   ({ provider, name, source, logo, type = 'mono', size = 16 }) => {
     const isMono = type === 'mono';
     return (
-      <div className={'flex items-center'} style={{ gap: 6, overflow: 'hidden' }}>
+      <div className={'flex items-center gap-1.5 overflow-hidden'}>
         {source === 'custom' && !!logo ? (
           <Avatar
             avatar={logo}
@@ -371,9 +346,7 @@ export const ProviderItemRender = memo<ProviderItemRenderProps>(
         ) : (
           <ProviderIcon provider={provider} size={size} type={type} />
         )}
-        <div className="truncate min-w-0" style={{ color: 'inherit' }}>
-          {name}
-        </div>
+        <div className="min-w-0 truncate text-sm leading-5.5 text-inherit">{name}</div>
       </div>
     );
   },
@@ -387,6 +360,6 @@ interface LabelRendererProps {
 export const LabelRenderer = memo<LabelRendererProps>(({ Icon, label }) => (
   <div className={'flex gap-2 items-center'}>
     {createElement(Icon, { size: 20 })}
-    <span>{label}</span>
+    <span className="text-sm leading-5.5">{label}</span>
   </div>
 ));

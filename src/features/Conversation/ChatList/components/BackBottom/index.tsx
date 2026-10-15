@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowDownIcon } from 'lucide-react';
 import { lazy, memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -39,15 +39,21 @@ const BackBottom = memo<BackBottomProps>(
         )}
 
         <ActionIcon
-          className={cx(styles.container, visible && styles.visible)}
+          disabled={!visible}
           icon={ArrowDownIcon}
           style={bottomOffset ? { insetBlockEnd: 16 + bottomOffset } : undefined}
           title={t('backToBottom')}
           variant={'outlined'}
+          className={cn(
+            styles.container,
+            visible
+              ? '[pointer-events:all] opacity-100 [transform:translateY(0)]'
+              : 'pointer-events-none opacity-0 disabled:opacity-0 [transform:translateY(calc(var(--spacing)*4))]',
+          )}
           size={{
-            blockSize: 36,
-            borderRadius: 36,
-            size: 18,
+            blockSize: 32,
+            borderRadius: '50%',
+            size: 16,
           }}
           onClick={onScrollToBottom}
         />

@@ -1,7 +1,6 @@
 import { Ollama } from '@lobehub/icons';
 import { Center, Flexbox } from '@lobehub/ui';
 import { Alert, Button, Input, Progress } from '@lobehub/ui/base-ui';
-import { cssVar } from 'antd-style';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -61,7 +60,7 @@ const OllamaModelDownloader = memo<OllamaModelDownloaderProps>(
     return (
       <Center gap={16} paddingBlock={32} style={{ width: '100%' }}>
         <FormAction
-          avatar={<Ollama color={cssVar.colorPrimary} size={64} />}
+          avatar={<Ollama color={'var(--ant-color-primary)'} size={64} />}
           description={isDownloading ? t('ollama.download.desc') : t('ollama.unlock.description')}
           title={
             isDownloading
@@ -80,11 +79,11 @@ const OllamaModelDownloader = memo<OllamaModelDownloaderProps>(
         </FormAction>
         {isDownloading && (
           <Flexbox flex={1} gap={8} style={{ maxWidth: 300 }} width={'100%'}>
-            <Progress showInfo percent={percent} strokeColor={cssVar.colorSuccess} />
+            <Progress showInfo percent={percent} strokeColor={'var(--ant-color-success)'} />
             <Flexbox
               horizontal
               distribution={'space-between'}
-              style={{ color: cssVar.colorTextDescription, fontSize: 12 }}
+              style={{ color: 'var(--ant-color-text-description)', fontSize: 12 }}
             >
               <span>
                 {t('ollama.download.remainingTime')}: {remainingTime}

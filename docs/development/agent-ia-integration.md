@@ -11,3 +11,15 @@ Working-directory and worktree changes use the active conversation identity and 
 First-login setup creates a real Agent before the workspace wizard, verifies a provider/model and execution device, and persists that Agent through workspace completion. Release acquisition and failed-send recovery are separate dependent layers; integration must preserve their regressions and later corrections.
 
 Verify these connected behaviors in the same fixed Electron candidate before release. Shared component geometry CI, focused tests and remote Typecheck are supporting evidence; development and mock-provider runs do not prove public installer or model-provider acceptance.
+
+## Agent settings: create entry and active Agent on desktop
+
+`/settings/agents` carries a "New Agent" button that opens the shared create dialog and lands on the new Agent's settings. On desktop, the conversation bridge treats `/settings/agents/:id` as that Agent's route, so the page keeps its active Agent instead of waiting on a config that was cleared.
+
+## Device gateway indicator
+
+The title-bar indicator (`src/features/Electron/connection/DeviceGateway.tsx`) shows its green dot when this device is connected to the gateway, inside a workspace as well as outside one. An Agent can run on a private device that the workspace device list does not include, so the dot follows the device, not that list. The popover states this device's status first; inside a workspace a second line reports the workspace devices.
+
+## Composer settings popover
+
+The settings button beside the Agent picker opens the per-conversation controls (working directory, permission mode). The Agent picker is the one place that names the selected Agent. The popover adds an Agent block (`src/features/AIChatbot/AgentInfo.tsx`) only when that Agent has a description or instructions to show (`hasAgentInfo.ts`; the file name must not differ from `AgentInfo.tsx` by letter case alone, or macOS and Windows resolve the import to the wrong file — `scripts/ci/checkCaseOnlyFilenames.mjs` enforces this for all of `src`, `apps` and `packages` on commit and in CI); an Agent with neither gets no block, so its name is not repeated.

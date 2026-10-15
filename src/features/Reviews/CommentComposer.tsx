@@ -28,7 +28,7 @@ const CommentComposer = memo<{
         onChange={(e) => setBody(e.target.value)}
       />
       {unconfirmed && unknownHint ? (
-        <div className="text-[12px] text-warning">{unknownHint}</div>
+        <div className="text-xs text-warning">{unknownHint}</div>
       ) : null}
       <div className="flex justify-end">
         <Button

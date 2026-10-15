@@ -12,11 +12,11 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 import type { CreateTaskParams, CreateTaskState } from '../../../types';
 
 const styles = {
-  chip: 'inline-flex min-w-0 max-w-[240px] shrink items-center truncate rounded-[999px] bg-accent px-2 py-0.5 text-[12px] text-foreground ms-1.5',
+  chip: 'inline-flex min-w-0 max-w-60 shrink items-center truncate rounded-(--radius-chip) bg-accent px-2 py-0.5 text-xs text-foreground ms-1.5',
   identifierChip:
-    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-[12px] text-muted-foreground',
+    'shrink-0 rounded-(--radius-chip) bg-accent px-2 py-0.5 font-mono text-xs text-muted-foreground',
   subtaskTag:
-    'inline-flex shrink-0 items-center gap-1 rounded-[999px] border border-sidebar-border bg-transparent px-1.5 py-px font-mono text-[11px] text-[var(--ant-color-text-tertiary)]',
+    'inline-flex shrink-0 items-center gap-1 rounded-(--radius-chip) border border-sidebar-border bg-transparent px-1.5 py-px font-mono text-xs text-foreground-tertiary',
 };
 
 export const CreateTaskInspector = memo<BuiltinInspectorProps<CreateTaskParams, CreateTaskState>>(
@@ -38,20 +38,12 @@ export const CreateTaskInspector = memo<BuiltinInspectorProps<CreateTaskParams, 
     }
 
     return (
-      <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
+      <div className={cn(inspectorTextStyles.root, 'flex-wrap gap-1')}>
         <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-task.apiName.createTask')}
         </span>
-        {identifier && (
-          <span className={styles.identifierChip} style={{ marginInlineStart: 6 }}>
-            {identifier}
-          </span>
-        )}
-        {name && (
-          <span className={styles.chip} style={{ color: 'var(--foreground)' }}>
-            {name}
-          </span>
-        )}
+        {identifier && <span className={cn(styles.identifierChip, 'ms-1.5')}>{identifier}</span>}
+        {name && <span className={styles.chip}>{name}</span>}
         {parentIdentifier && (
           <Tooltip>
             <TooltipTrigger

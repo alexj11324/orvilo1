@@ -20,10 +20,8 @@ import { Textarea } from '@/components/ui/textarea';
 import type { CreatePlanParams } from '../../types';
 
 const styles = {
-  description:
-    'text-[14px] leading-(--text-base--line-height) text-muted-foreground md:text-[14px] md:leading-(--text-sm--line-height)',
-  title:
-    'text-[28px] leading-(--text-base--line-height) font-semibold md:text-[28px] md:leading-(--text-sm--line-height)',
+  description: 'text-sm leading-5.5 text-muted-foreground',
+  title: 'text-xl leading-7 font-semibold',
 };
 
 const CreatePlanIntervention = memo<BuiltinInterventionProps<CreatePlanParams>>(

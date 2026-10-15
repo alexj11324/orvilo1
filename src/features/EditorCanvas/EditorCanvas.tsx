@@ -54,6 +54,9 @@ export interface EditorCanvasProps {
    */
   className?: string;
 
+  /** Native public class slot on the actual editor content root; wrapper className stays unchanged. */
+  contentClassName?: string;
+
   /**
    * Reload an already-mounted editor when an authoritative external content
    * revision changes. Keep this stable for local autosave echoes and unchanged
@@ -138,6 +141,9 @@ export interface EditorCanvasProps {
    * Use this when you need complete control over plugins.
    */
   plugins?: EditorPlugins;
+
+  /** Reserve the document footer space. Omitted/true retains the existing default. */
+  reserveDocumentFooter?: boolean;
 
   /**
    * Slash menu items

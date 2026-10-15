@@ -11,7 +11,7 @@ GATEWAY_REF="$(sed -n "s/^GATEWAY_REF='\(.*\)'/\1/p" "$SCRIPT_DIR/local-gateway-
 cat > "$TEST_DIR/gateway/bin/agent-gateway-$GATEWAY_REF" <<'GATEWAY'
 #!/usr/bin/env bash
 set -euo pipefail
-[ "${LOBE_API_BASE_URL:-}" = 'http://localhost:3999' ] || { echo 'pinned gateway requires LOBE_API_BASE_URL' >&2; exit 1; }
+[ "${ORVILO_API_BASE_URL:-}" = 'http://localhost:3999' ] || { echo 'pinned gateway requires ORVILO_API_BASE_URL' >&2; exit 1; }
 [ "$SERVICE_TOKEN" = 'fixture-token' ]
 [ -z "${JWKS_KEY:-}" ]
 node -e 'const { keys } = JSON.parse(process.env.JWKS_PUBLIC_KEY); if (keys[0].d || keys[0].n !== "fixture") process.exit(1)'

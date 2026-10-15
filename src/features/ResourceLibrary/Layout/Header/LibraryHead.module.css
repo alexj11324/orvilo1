@@ -1,0 +1,26 @@
+@reference "../../../../app/globals.css";
+
+.dropZoneActive {
+  @apply bg-invert text-invert-foreground;
+
+  /* The current identity icons receive this color through their public prop,
+     so no priority escalation is needed to override their inline default. */
+  * {
+    color: var(--invert-foreground);
+  }
+}
+
+
+.compactAction {
+  position: relative;
+
+  @media (pointer: coarse) {
+    margin: calc(var(--spacing) * 1.5);
+
+    &::after {
+      position: absolute;
+      inset: calc(var(--spacing) * -1.5);
+      content: '';
+    }
+  }
+}

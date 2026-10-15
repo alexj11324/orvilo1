@@ -17,18 +17,18 @@ import type { EditTaskParams, EditTaskState } from '../../../types';
 
 const styles = {
   addChip:
-    'shrink-0 rounded-[999px] bg-[var(--ant-color-success-bg)] px-2 py-px font-mono text-[12px] text-success',
+    'shrink-0 rounded-(--radius-chip) bg-success-wash px-2 py-px font-mono text-xs text-success-text',
   assigneeAvatar: 'shrink-0',
   assigneeChip:
-    'inline-flex min-w-0 max-w-[220px] shrink items-center gap-1.5 overflow-hidden rounded-[999px] bg-accent py-px ps-1 pe-2 text-[12px] text-foreground',
+    'inline-flex min-w-0 max-w-55 shrink items-center gap-1.5 overflow-hidden rounded-(--radius-chip) bg-accent py-px ps-1 pe-2 text-xs text-foreground',
   assigneeName: 'truncate',
-  chip: 'inline-flex min-w-0 max-w-[200px] shrink items-center truncate rounded-[999px] bg-accent px-2 py-px text-[12px] text-foreground',
+  chip: 'inline-flex min-w-0 max-w-50 shrink items-center truncate rounded-(--radius-chip) bg-accent px-2 py-px text-xs text-foreground',
   group: 'inline-flex flex-wrap items-center gap-1',
   identifierChip:
-    'shrink-0 rounded-[999px] bg-accent px-2 py-px font-mono text-[12px] text-muted-foreground',
-  label: 'shrink-0 text-[12px] text-[var(--ant-color-text-tertiary)]',
+    'shrink-0 rounded-(--radius-chip) bg-accent px-2 py-px font-mono text-xs text-muted-foreground',
+  label: 'shrink-0 text-xs text-foreground-tertiary',
   removeChip:
-    'shrink-0 rounded-[999px] border border-dashed border-[var(--ant-color-error-border)] bg-transparent px-2 py-px font-mono text-[12px] text-destructive line-through',
+    'shrink-0 rounded-(--radius-chip) border border-dashed border-destructive-border bg-transparent px-2 py-px font-mono text-xs text-destructive-text line-through',
 };
 
 const AssigneeChip = memo<{ agentId: string }>(({ agentId }) => {
@@ -177,14 +177,14 @@ export const EditTaskInspector = memo<BuiltinInspectorProps<EditTaskParams, Edit
     }
 
     return (
-      <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 6 }}>
+      <div className={cn(inspectorTextStyles.root, 'flex-wrap gap-1.5')}>
         <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-task.apiName.editTask')}
         </span>
         {identifier && <span className={styles.identifierChip}>{identifier}</span>}
         {segments.map((segment, index) => (
           <span className={styles.group} key={segment.key}>
-            {index > 0 && <span style={{ color: 'var(--ant-color-text-quaternary)' }}>·</span>}
+            {index > 0 && <span className="text-foreground-quaternary">·</span>}
             {segment.content}
           </span>
         ))}

@@ -1,8 +1,9 @@
 'use client';
 
 import { BRANDING_NAME } from '@orvilo/business-const';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { useMemo } from 'react';
+import { useMediaQuery } from 'react-responsive';
 
 import type { AvatarProps } from '@/components/Avatar';
 import Avatar from '@/components/Avatar';
@@ -12,39 +13,20 @@ import { isDesktop } from '@/const/version';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { useUserStore } from '@/store/user';
-import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
+import {
+  authSelectors,
+  userGeneralSettingsSelectors,
+  userProfileSelectors,
+} from '@/store/user/selectors';
 
-const styles = createStaticStyles(({ css }) => ({
-  clickable: css`
-    position: relative;
-    transition: all 200ms ease-out 0s;
-
-    &::before {
-      content: '';
-
-      position: absolute;
-      transform: skewX(-45deg) translateX(-400%);
-
-      overflow: hidden;
-
-      box-sizing: border-box;
-      width: 25%;
-      height: 100%;
-
-      background: rgb(255 255 255 / 50%);
-
-      transition: all 200ms ease-out 0s;
-    }
-
-    &:hover {
-      box-shadow: 0 0 0 2px ${cssVar.colorPrimary};
-
-      &::before {
-        transform: skewX(-45deg) translateX(400%);
-      }
-    }
-  `,
-}));
+const styles = {
+  avatar: 'flex-none border border-divider font-sans text-foreground',
+  // Identity artwork stays still; the ring describes the clickable UI frame.
+  clickable:
+    'relative hover:ring-2 hover:ring-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+  transition:
+    'transition-[box-shadow] duration-(--orvilo-motion-mid) ease-out motion-reduce:transition-none',
+} as const;
 
 export interface UserAvatarProps extends AvatarProps {
   /**
@@ -78,6 +60,10 @@ const UserAvatar = ({
   const isSignedIn = useUserStore(authSelectors.isLogin);
   const remoteServerUrl = useElectronStore(electronSyncSelectors.remoteServerUrl);
 
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+  const reducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+  const motionEnabled = animationMode !== 'disabled' && !reducedMotion;
+
   // Process avatar URL for desktop environment
   const userAvatarUrl = useMemo(() => {
     if (!isSignedIn) return DEFAULT_USER_AVATAR_URL;
@@ -100,17 +86,27 @@ const UserAvatar = ({
     : avatarOverride || userAvatarUrl || nickName || username;
   const altText = nameOverride || (isSignedIn ? nickName || username || 'User' : BRANDING_NAME);
 
+  // The original rest spread owns shape, including an explicit undefined circle.
+  const square = !('shape' in rest) || rest.shape === 'square';
+  // The public square shape is an entity picture tile, independent of action/control size.
+  const borderRadius = square ? 'var(--radius-card)' : size / 2;
+
   return (
     <Avatar
       alt={altText}
       avatar={remoteAvatarSrc(avatarValue) ? (avatarValue ?? undefined) : undefined}
       background={background}
-      className={clickable ? styles.clickable : className}
       name={avatarValue ?? undefined}
       ref={ref}
       shape={'square'}
       size={size}
-      style={{ color: cssVar.colorText, flex: 'none', ...style }}
+      style={{ borderRadius, ...style }}
+      className={cn(
+        styles.avatar,
+        clickable && styles.clickable,
+        clickable && motionEnabled && styles.transition,
+        className,
+      )}
       {...rest}
     />
   );

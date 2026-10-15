@@ -86,8 +86,8 @@ export const ActivityMemoryCard = memo<ActivityMemoryCardProps>(({ data, loading
               style={{ paddingBlock: 12, paddingInline: 12 }}
             >
               <span>🕒</span>
-              <div className="text-[13px]">{schedule}</div>
-              {timezone && <div className="text-[12px] text-muted-foreground">{timezone}</div>}
+              <div className="text-(length:--text-dense)">{schedule}</div>
+              {timezone && <div className="text-xs text-muted-foreground">{timezone}</div>}
             </div>
           )}
 

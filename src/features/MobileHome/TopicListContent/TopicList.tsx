@@ -41,7 +41,7 @@ const TopicList = memo(() => {
           page; a skeleton row keeps the rhythm while it loads. */}
       {hasMore ? (
         <LazyLoad key="feed-tail" onContentVisible={() => loadMore()}>
-          {isLoadingMore ? <SkeletonList count={2} /> : <div style={{ height: 1 }} />}
+          {isLoadingMore ? <SkeletonList count={2} /> : <div className="h-px" />}
         </LazyLoad>
       ) : null}
     </div>

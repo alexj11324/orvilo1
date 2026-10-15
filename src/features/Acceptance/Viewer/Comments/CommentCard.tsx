@@ -148,7 +148,7 @@ const CommentCard = memo<CommentCardProps>(
           {variant === 'plain' && <CommentAvatar comment={comment} size={18} />}
           <div
             className={cn(
-              'text-[13px] font-semibold',
+              'text-(length:--text-dense) font-semibold',
               nameOverride ? styles.headline : styles.authorName,
             )}
           >

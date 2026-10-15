@@ -10,14 +10,13 @@ import { useTranslation } from 'react-i18next';
 import { ClaudeCodeApiName, type MonitorArgs } from '../../types';
 
 const styles = {
-  chip: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 ms-1.5 py-0.5 px-2.5 rounded-[999px] bg-accent',
+  chip: 'overflow-hidden inline-flex shrink gap-1.5 items-center min-w-0 ms-1.5 py-0.5 px-2.5 rounded-(--radius-chip) bg-accent',
   command:
-    'overflow-hidden min-w-0 font-mono text-[12px] text-foreground text-ellipsis whitespace-nowrap',
-  description:
-    'overflow-hidden min-w-0 text-[12px] text-foreground text-ellipsis whitespace-nowrap',
-  monitorIcon: 'shrink-0 text-[var(--ant-color-text-description)]',
+    'overflow-hidden min-w-0 font-mono text-xs text-foreground text-ellipsis whitespace-nowrap',
+  description: 'overflow-hidden min-w-0 text-xs text-foreground text-ellipsis whitespace-nowrap',
+  monitorIcon: 'shrink-0 text-foreground-description',
   statusIcon: 'ms-1',
-  timeout: "shrink-0 ms-2 [font-feature-settings:'tnum'] text-[var(--ant-color-text-description)]",
+  timeout: "shrink-0 ms-2 [font-feature-settings:'tnum'] text-foreground-description",
 };
 
 const formatTimeout = (ms: number | undefined): string | undefined => {
@@ -82,9 +81,9 @@ export const MonitorInspector = memo<BuiltinInspectorProps<MonitorArgs>>(
         )}
         {timeoutLabel && <span className={styles.timeout}>· {timeoutLabel}</span>}
         {isLoading ? null : isSuccess ? (
-          <Check className={styles.statusIcon} color={'var(--success)'} size={14} />
+          <Check className={styles.statusIcon} color={'var(--success-text)'} size={14} />
         ) : isError ? (
-          <X className={styles.statusIcon} color={'var(--destructive)'} size={14} />
+          <X className={styles.statusIcon} color={'var(--destructive-text)'} size={14} />
         ) : null}
       </div>
     );

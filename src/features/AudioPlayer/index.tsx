@@ -92,7 +92,7 @@ const AudioPlayer = ({
     <div
       data-ai-element="audio-player"
       className={cn(
-        'max-w-full space-y-2 rounded-lg border bg-card p-2',
+        'max-w-full space-y-2 rounded-(--radius-card) border bg-card p-2',
         fullWidth ? 'w-full' : 'w-96',
       )}
     >

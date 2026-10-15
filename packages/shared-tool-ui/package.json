@@ -11,7 +11,8 @@
     "./inspectors/linear-labels": "./src/Inspector/Linear/labels.ts",
     "./pending-hotkeys": "./src/pendingHotkeys.ts",
     "./renders": "./src/Render/index.ts",
-    "./styles": "./src/styles.ts"
+    "./styles": "./src/styles.ts",
+    "./ask-user/types": "./src/AskUserQuestion/types.ts"
   },
   "dependencies": {
     "@orvilo/tool-runtime": "workspace:*",

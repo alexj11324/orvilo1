@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { EllipsisIcon, Link2Icon, PlusIcon } from 'lucide-react';
 import { createElement } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,32 +11,9 @@ import { useCurrentProjectDetail, useProjectStore } from '@/store/project';
 
 import { openProjectLinkModal } from './ProjectLinkModal';
 
-const styles = createStaticStyles(({ css }) => ({
-  link: css`
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-
-    max-width: 240px;
-    height: 28px;
-    padding-inline: 6px;
-    border-radius: 6px;
-
-    font-size: 13px;
-    color: ${cssVar.colorText};
-    text-decoration: none;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    span {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-  `,
-}));
+const styles = {
+  link: 'inline-flex h-8 max-w-60 items-center gap-1.5 rounded-(--radius-button) px-1.5 text-sm leading-5.5 text-foreground no-underline hover:bg-accent group-focus-visible/project-resource:bg-accent [&_span]:truncate [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11',
+};
 
 export function ProjectLinks({ projectId }: { projectId: string; ownerId: string | null }) {
   const { t } = useTranslation('project');
@@ -46,8 +22,8 @@ export function ProjectLinks({ projectId }: { projectId: string; ownerId: string
   const canEdit = useCurrentProjectDetail(projectId)?.capabilities?.canEdit === true;
   const links = query.data?.data ?? [];
   return (
-    <div className="flex flex-row" style={{ alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-      {query.isLoading && !query.data && <Skeleton style={{ height: 28, width: 120 }} />}
+    <div className="flex flex-row items-center gap-1 flex-wrap">
+      {query.isLoading && !query.data && <Skeleton className="h-7 w-30" />}
       {query.error && (
         <AsyncError
           error={query.error}
@@ -57,16 +33,18 @@ export function ProjectLinks({ projectId }: { projectId: string; ownerId: string
         />
       )}
       {links.map((link) => (
-        <div className="flex flex-row" key={link.id} style={{ alignItems: 'center', gap: 0 }}>
+        <div className="flex flex-row items-center gap-0" key={link.id}>
           <a
-            className={styles.link}
+            className="group/project-resource inline-flex min-w-0 rounded-(--radius-button) focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
             href={link.url}
             rel="noopener noreferrer"
             target="_blank"
             title={link.title || link.url}
           >
-            <Link2Icon size={14} />
-            <span>{link.title || link.url}</span>
+            <span className={styles.link}>
+              <Link2Icon size={16} />
+              <span>{link.title || link.url}</span>
+            </span>
           </a>
           {canEdit && (
             <DropdownMenu
@@ -93,7 +71,8 @@ export function ProjectLinks({ projectId }: { projectId: string; ownerId: string
             >
               <Button
                 aria-label={t('resources.link.actions', { title: link.title || link.url })}
-                size="icon-sm"
+                className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+                size="icon"
                 variant="ghost"
               >
                 {createElement(EllipsisIcon, { 'size': 16, 'aria-hidden': true })}
@@ -113,7 +92,13 @@ export function ProjectLinks({ projectId }: { projectId: string; ownerId: string
             },
           ]}
         >
-          <Button aria-label={t('overview.resourcesAdd')} size="sm" variant="ghost">
+          <Button
+            multiline
+            aria-label={t('overview.resourcesAdd')}
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 max-w-full [overflow-wrap:anywhere]"
+            size="compact"
+            variant="ghost"
+          >
             {createElement(links.length ? PlusIcon : Link2Icon, {
               'size': 16,
               'aria-hidden': true,

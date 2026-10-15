@@ -110,7 +110,7 @@ export const TaskBlockedNotice = () => {
     <div
       role="status"
       className={cn(
-        'rounded-md px-3 py-1.5 text-xs',
+        'rounded-(--radius-card) px-3 py-1.5 text-xs',
         statusKey === 'blocked'
           ? 'bg-destructive/10 text-destructive'
           : 'bg-muted text-muted-foreground',
@@ -352,7 +352,7 @@ const TaskRelationFields = ({ openKind, revealedKinds, taskId }: RelationFieldsP
               )}
             </div>
             {picker === kind && allowed && (
-              <div className="overflow-hidden rounded-md border">
+              <div className="overflow-hidden rounded-(--radius-card) border">
                 <div className="flex items-center gap-2 border-b px-2">
                   <Search aria-hidden className="text-muted-foreground" size={14} />
                   <Input
@@ -361,6 +361,7 @@ const TaskRelationFields = ({ openKind, revealedKinds, taskId }: RelationFieldsP
                     className="border-0 shadow-none focus-visible:ring-0"
                     placeholder={t('taskDetail.relations.search')}
                     value={query}
+                    visualSize="compact"
                     onChange={(event) => setQuery(event.target.value)}
                   />
                 </div>
@@ -442,6 +443,7 @@ const TaskRelationFields = ({ openKind, revealedKinds, taskId }: RelationFieldsP
                       <Button
                         className="min-w-0 flex-1 justify-start gap-2 border-0 px-1 font-normal"
                         disabled={unavailable}
+                        size="compact"
                         variant="ghost"
                         onClick={() =>
                           navigate(taskDetailPath(edge.dependsOn, undefined, edge.name))

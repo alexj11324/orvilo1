@@ -1,6 +1,5 @@
 import { type ChatFileChunk } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { BookOpenTextIcon, ChevronDown, ChevronRight } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,39 +9,12 @@ import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import ChunkItem from './ChunkItem';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    cursor: pointer;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    padding-inline-end: 12px;
-    border-radius: 8px;
-
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  containerDark: css`
-    &:hover {
-      background: '';
-    }
-  `,
-  containerLight: css`
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  title: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-
-    font-size: 12px;
-    text-overflow: ellipsis;
-  `,
-}));
+const styles = {
+  container: 'cursor-pointer py-2 px-3 pe-3 rounded-(--radius-card) text-foreground bg-muted',
+  containerDark: '',
+  containerLight: 'hover:bg-selected',
+  title: 'line-clamp-1 text-xs text-ellipsis',
+};
 
 interface FileChunksProps {
   data: ChatFileChunk[];
@@ -57,10 +29,9 @@ const FileChunks = memo<FileChunksProps>(({ data }) => {
   return (
     <div
       {...clickableProps()}
-      style={{ width: '100%' }}
       className={cn(
         cn(
-          'flex flex-col gap-4',
+          'flex flex-col gap-4 w-full',
           cx(styles.container, isDarkMode ? styles.containerDark : styles.containerLight),
         ),
         CLICKABLE_FOCUS_RING,
@@ -71,9 +42,10 @@ const FileChunks = memo<FileChunksProps>(({ data }) => {
     >
       <div className="flex justify-between flex-1">
         <div className="flex gap-2">
-          <BookOpenTextIcon color={cssVar.geekblue} /> {t('rag.referenceChunks')}
+          <BookOpenTextIcon className="size-4 text-foreground-tertiary" size={16} />{' '}
+          {t('rag.referenceChunks')}
         </div>
-        {createElement(showDetail ? ChevronDown : ChevronRight, {})}
+        {createElement(showDetail ? ChevronDown : ChevronRight, { className: 'size-4', size: 16 })}
       </div>
       {showDetail && (
         <div className="flex gap-2 flex-wrap">

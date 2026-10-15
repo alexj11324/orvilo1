@@ -5,7 +5,7 @@ import { isDesktop } from '@orvilo/const';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
 import { escapeXml } from '@orvilo/prompts';
 import { isCommandPressed } from '@orvilo/utils';
-import { css, cx } from 'antd-style';
+import { cn } from 'cn';
 import Fuse from 'fuse.js';
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -38,26 +38,15 @@ import { mentionFilledClassName } from './mentionStyle';
 import Placeholder, { type PlaceholderVariant } from './Placeholder';
 import { createChatInputRichPlugins } from './plugins';
 import { INSERT_REFER_TOPIC_COMMAND } from './ReferTopic';
+import styles from './style.module.css';
 import { useLocalFileTag } from './useLocalFileTag';
 import { useMentionCategories } from './useMentionCategories';
 
-const className = cx(
-  css`
-    p {
-      margin-block-end: 0;
-    }
-  `,
-  mentionFilledClassName,
-);
+const className = cn(styles.paragraphEnd, mentionFilledClassName);
 
 // Single-line dimmed preview of the highlighted history entry, shown through the
 // editor's placeholder slot while the input is empty (history popup open).
-const ghostClassName = cx(css`
-  overflow: hidden;
-  display: block;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-`);
+const ghostClassName = 'block overflow-hidden text-ellipsis whitespace-nowrap';
 
 type MentionOption = ISlashMenuOption | ISlashSectionOption;
 

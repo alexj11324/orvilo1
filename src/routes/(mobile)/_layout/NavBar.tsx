@@ -1,30 +1,25 @@
 'use client';
 
 import { type TabBarProps } from '@lobehub/ui/mobile';
-import { TabBar } from '@lobehub/ui/mobile';
-import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { Inbox, MessageSquare, SquareUser, User } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { MOBILE_TABBAR_HEIGHT } from '@/const/layoutTokens';
+import { Button } from '@/components/ui/button';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import { SidebarTabKey } from '@/store/global/initialState';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  active: css`
-    svg {
-      fill: color-mix(in srgb, ${cssVar.colorPrimary} 33%, transparent);
-    }
-  `,
-  container: css`
-    position: fixed;
-    z-index: 100;
-    inset-block-end: 0;
-    inset-inline: 0;
-  `,
-}));
+import navGeometry from './NavBar.module.css';
+
+const styles = {
+  active: '[&_svg]:fill-[color-mix(in_srgb,var(--primary)_33%,transparent)]',
+  container: cn(
+    'fixed z-100 inset-be-0 inset-x-0 box-border w-full select-none overflow-hidden border-t border-divider bg-background h-(--mobile-nav-height) pbe-(--mobile-nav-safe-area-bottom)',
+    navGeometry.container,
+  ),
+};
 
 const NavBar = memo(() => {
   const { t } = useTranslation('common');
@@ -38,7 +33,7 @@ const NavBar = memo(() => {
       [
         {
           icon: (active: boolean) => (
-            <MessageSquare className={active ? styles.active : undefined} />
+            <MessageSquare className={cn('size-4', active && styles.active)} />
           ),
           key: SidebarTabKey.Chat,
           onClick: () => {
@@ -47,7 +42,7 @@ const NavBar = memo(() => {
           title: t('tab.chat'),
         },
         {
-          icon: (active: boolean) => <Inbox className={active ? styles.active : undefined} />,
+          icon: (active: boolean) => <Inbox className={cn('size-4', active && styles.active)} />,
           key: SidebarTabKey.Inbox,
           onClick: () => {
             navigate('/inbox');
@@ -55,7 +50,9 @@ const NavBar = memo(() => {
           title: t('tab.inbox'),
         },
         {
-          icon: (active: boolean) => <SquareUser className={active ? styles.active : undefined} />,
+          icon: (active: boolean) => (
+            <SquareUser className={cn('size-4', active && styles.active)} />
+          ),
           key: SidebarTabKey.MyWork,
           onClick: () => {
             navigate('/my-issues');
@@ -63,7 +60,7 @@ const NavBar = memo(() => {
           title: t('tab.myWork'),
         },
         {
-          icon: (active: boolean) => <User className={active ? styles.active : undefined} />,
+          icon: (active: boolean) => <User className={cn('size-4', active && styles.active)} />,
           key: SidebarTabKey.Me,
           onClick: () => {
             navigate('/me', { escape: true });
@@ -75,13 +72,32 @@ const NavBar = memo(() => {
   );
 
   return (
-    <TabBar
-      safeArea
-      activeKey={activeKey}
-      className={styles.container}
-      height={MOBILE_TABBAR_HEIGHT}
-      items={items}
-    />
+    <footer className={styles.container}>
+      <div className="flex h-full items-center justify-around">
+        {items.map((item) => {
+          const active = item.key === activeKey;
+          return (
+            <Button
+              aria-current={active ? 'page' : undefined}
+              key={item.key}
+              size="large"
+              type="button"
+              variant="ghost"
+              className={cn(
+                'min-w-0 flex-1 flex-col gap-0 px-1 pointer-coarse:min-h-11 font-normal text-foreground-description hover:text-foreground',
+                active && 'bg-selected text-primary-text hover:bg-selected hover:text-primary-text',
+              )}
+              onClick={item.onClick}
+            >
+              {typeof item.icon === 'function' ? item.icon(active) : item.icon}
+              <span className="w-full truncate text-sm leading-5.5">
+                {typeof item.title === 'function' ? item.title(active) : item.title}
+              </span>
+            </Button>
+          );
+        })}
+      </div>
+    </footer>
   );
 });
 

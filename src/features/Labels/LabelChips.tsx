@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,16 +8,9 @@ import IssueRowChip from '@/components/IssueRowChip';
 import LabelChip from './LabelChip';
 import { type LabelLike, partitionLabelChips } from './labelColor';
 
-const styles = createStaticStyles(({ css }) => ({
-  group: css`
-    display: inline-flex;
-    flex: none;
-    gap: 3px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-}));
+const styles = {
+  group: 'inline-flex flex-none gap-1 items-center min-w-0',
+} as const;
 
 export interface LabelChipsProps {
   className?: string;

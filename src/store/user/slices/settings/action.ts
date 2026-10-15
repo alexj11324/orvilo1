@@ -107,9 +107,18 @@ export class UserSettingsActionImpl {
 
     const nextSettings = merge(prevSetting, settings);
 
-    if (isEqual(prevSetting, nextSettings)) return;
+    // An optimistic failed write already has the requested value locally.
+    // Retrying it must resend the pending columns rather than report a no-op save.
+    if (isEqual(prevSetting, nextSettings) && this.#pendingSettingKeys.size === 0) return;
 
     const diffs = difference(nextSettings, defaultSettings);
+    // The optimistic settings hold the last pending column payload, including
+    // explicit resets to defaults that another difference() would omit.
+    // Reuse its current value so retries and newer edits retain those resets.
+    for (const key of this.#pendingSettingKeys) {
+      if (Object.hasOwn(nextSettings, key))
+        (diffs as Record<string, unknown>)[key] = (nextSettings as Record<string, unknown>)[key];
+    }
     const isEmptyObjectDiff = (value: unknown): boolean =>
       !!value &&
       typeof value === 'object' &&
@@ -224,6 +233,10 @@ export class UserSettingsActionImpl {
 
     const abortController = this.#get().internal_createSignal();
     await userService.updateUserSettings(payload, abortController.signal);
+    // An aborted transport can still settle successfully. It no longer owns
+    // pending columns or a refresh while a newer settings write is in flight.
+    if (abortController.signal.aborted || this.#get().updateSettingsSignal !== abortController)
+      return;
     for (const key of payloadKeys) this.#pendingSettingKeys.delete(key);
     await this.#get().refreshUserState();
   };

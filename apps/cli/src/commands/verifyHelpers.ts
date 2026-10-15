@@ -1,5 +1,4 @@
-import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import type {
@@ -10,7 +9,6 @@ import type {
 } from '@orvilo/const/verify';
 import {
   acceptanceSubjectTypes,
-  GOMS_KLM_TRACE_FILE,
   isProgrammaticTestCheck,
   normalizeVerifySurface,
   PROGRAMMATIC_TEST_CHECK_HINT,
@@ -20,7 +18,6 @@ import {
 } from '@orvilo/const/verify';
 import type {
   VerifyCheckResultMetadata,
-  VerifyInteractionCost,
   VerifyVisualizationDataset,
   VerifyVisualizationField,
   VerifyVisualizationManifest,
@@ -28,7 +25,6 @@ import type {
   VerifyVisualizationView,
 } from '@orvilo/types';
 import { verifyCheckDefinitionSchema } from '@orvilo/types';
-import { parseKlmTrace, summarizeKlmTrace } from '@orvilo/utils/verify/interactionCost';
 import pc from 'picocolors';
 
 import { printTable, truncate } from '../utils/format';
@@ -40,7 +36,6 @@ export type Decision = 'accepted' | 'overridden' | 'rejected';
 
 export const VERIFIER_TYPES: VerifierType[] = ['program', 'agent', 'llm'];
 export const ON_FAIL: OnFail[] = ['manual', 'auto_repair'];
-export const DECISIONS: Decision[] = ['accepted', 'rejected', 'overridden'];
 /** The evidence media a plan item may require — the same closed set the executor gates on. */
 export const EVIDENCE_TYPES = verifyEvidenceTypes;
 
@@ -457,56 +452,6 @@ export function safeWebUrl(value: string | undefined): string | undefined {
   }
 }
 
-/** Normalize common agent-testing PR shapes into the verify coding scope. */
-export function pullRequestFromResult(result: Record<string, unknown>) {
-  const pr = objectValue(result.pullRequest) ?? objectValue(result.pr);
-  const url = safeWebUrl(
-    firstString(
-      pr?.url,
-      pr?.htmlUrl,
-      pr?.html_url,
-      result.pullRequestUrl,
-      result.prUrl,
-      typeof result.pr === 'string' ? result.pr : undefined,
-    ),
-  );
-  const number = firstStringOrNumber(pr?.number, result.pullRequestNumber, result.prNumber);
-  const title = firstString(pr?.title, result.pullRequestTitle, result.prTitle);
-  const entries = Object.entries({ number, title, url }).filter(([, v]) => v !== undefined);
-
-  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
-}
-
-/**
- * The PR for a branch, asked of `gh`. A report almost always verifies a branch
- * that already has one, but the author has to remember to write it down — and
- * mostly doesn't, so the report loses its single most useful outbound link.
- * Best-effort by design: no `gh`, not a repo, not authenticated, or no PR for
- * the branch all mean "no PR", never a failed publish.
- */
-export function pullRequestFromBranch(branch: string | undefined) {
-  if (!branch) return undefined;
-
-  try {
-    const raw = execFileSync(
-      'gh',
-      ['pr', 'view', branch, '--json', 'number,title,url'],
-      // `gh` writes its "no pull requests found" diagnostics to stderr; keep them
-      // off the CLI's own output.
-      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 10_000 },
-    );
-    const parsed = objectValue(JSON.parse(raw));
-    const url = safeWebUrl(firstString(parsed?.url));
-    const number = firstStringOrNumber(parsed?.number);
-    const title = firstString(parsed?.title);
-    const entries = Object.entries({ number, title, url }).filter(([, v]) => v !== undefined);
-
-    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 /**
  * The surfaces the report says it exercised, as canonical values.
  *
@@ -804,76 +749,6 @@ export function originFromEnv(): VerifyRunOrigin | undefined {
   };
 
   return Object.values(origin).some(Boolean) ? origin : undefined;
-}
-
-/**
- * Derive the round's GOMS-KLM interaction cost from a trace dropped in the
- * report directory, so the number the page shows is always the platform's own
- * counting of the recorded actions.
- *
- * Interaction cost is an optional overlay. A round with no UI driver — a CLI
- * verification, or a machine without agent-browser — simply has no trace, and
- * that is silently skipped, never a warning and never a failure. A driver that
- * computed its own summary still wins.
- *
- * "Its own summary" means an actual object. A scaffolded `result.json` carries
- * `"interactionCost": null` to document the field, and a null is the absence of
- * a measurement, not an assertion that this round cost nothing — treating mere
- * key presence as an override let the report scaffolder silently suppress
- * pricing on every traced run it created.
- */
-export function interactionCostFromReportDir(
-  dir: string,
-  result: Record<string, unknown>,
-): VerifyInteractionCost | undefined {
-  if (objectValue(result.interactionCost)) return undefined;
-
-  const tracePath = path.join(dir, GOMS_KLM_TRACE_FILE);
-  if (!existsSync(tracePath)) return undefined;
-
-  let raw: string;
-  try {
-    raw = readFileSync(tracePath, 'utf8');
-  } catch {
-    log.warn(`${GOMS_KLM_TRACE_FILE} could not be read — publishing without interaction cost`);
-    return undefined;
-  }
-
-  const cost = summarizeKlmTrace(parseKlmTrace(raw), { sourceTrace: GOMS_KLM_TRACE_FILE });
-  if (!cost) {
-    log.warn(
-      `${GOMS_KLM_TRACE_FILE} recorded no priceable action (driver missing, or every action blocked) — skipping interaction cost`,
-    );
-    return undefined;
-  }
-
-  return cost;
-}
-
-export function metadataForReport(
-  result: Record<string, unknown>,
-  existingMetadata?: unknown,
-  origin?: VerifyRunOrigin,
-): Record<string, unknown> | undefined {
-  const hasInteractionCost = Object.prototype.hasOwnProperty.call(result, 'interactionCost');
-  // Nothing to write is not the same as writing an empty metadata bag.
-  if (!hasInteractionCost && !origin) return undefined;
-
-  const metadata = { ...objectValue(existingMetadata) };
-
-  if (hasInteractionCost) {
-    const interactionCost = objectValue(result.interactionCost);
-
-    if (interactionCost) {
-      metadata.interactionCost = interactionCost;
-    } else {
-      delete metadata.interactionCost;
-    }
-  }
-
-  if (origin) metadata.origin = origin;
-
-  return metadata;
 }
 
 /** A parsed acceptance subject reference (`task:<id>` / `topic:<id>` / `document:<id>`). */

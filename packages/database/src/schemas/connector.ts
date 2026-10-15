@@ -273,14 +273,7 @@ export const ToolCRUDType = {
 
 export type ToolCRUDType = (typeof ToolCRUDType)[keyof typeof ToolCRUDType];
 
-export const ConnectorToolPermission = {
-  auto: 'auto',
-  disabled: 'disabled',
-  needs_approval: 'needs_approval',
-} as const;
-
-export type ConnectorToolPermission =
-  (typeof ConnectorToolPermission)[keyof typeof ConnectorToolPermission];
+export { ConnectorToolPermission } from '../connectorPermission';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // user_connector_tools

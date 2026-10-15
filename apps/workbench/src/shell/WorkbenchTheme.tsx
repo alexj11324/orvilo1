@@ -2,9 +2,7 @@
 
 import '@/app/globals.css';
 
-import ConfigProvider from '@lobehub/ui/es/ConfigProvider/index';
-import ThemeProvider from '@lobehub/ui/es/ThemeProvider/index';
-import { App } from 'antd';
+import { ConfigProvider, ThemeProvider } from '@lobehub/ui';
 import { domMax, LazyMotion } from 'motion/react';
 import * as m from 'motion/react-m';
 import { memo, type PropsWithChildren } from 'react';
@@ -37,10 +35,11 @@ const WorkbenchTheme = memo<PropsWithChildren>(({ children }) => {
           },
         }}
       >
-        <ThemeRoles />
-        <App style={{ height: '100%' }}>
-          <LazyMotion features={domMax}>{children}</LazyMotion>
-        </App>
+        <ThemeRoles>
+          <div className="h-full">
+            <LazyMotion features={domMax}>{children}</LazyMotion>
+          </div>
+        </ThemeRoles>
       </ThemeProvider>
     </ConfigProvider>
   );

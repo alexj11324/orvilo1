@@ -10,7 +10,7 @@ import dynamic from '@/libs/next/dynamic';
 
 const Content = dynamic(() => import('./Content'), {
   loading: () => (
-    <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1, paddingInline: 4 }}>
+    <div className="flex flex-col gap-px" style={{ paddingBlock: 1, paddingInline: 4 }}>
       <SkeletonList rows={3} />
     </div>
   ),

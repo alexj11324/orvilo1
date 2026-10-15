@@ -22,7 +22,16 @@ if (
   electronArgs.push(`--remote-debugging-port=${cdpPort}`);
 }
 
+const cliRoot = path.join(desktopRoot, '..', 'cli');
+
 const orchestrator = createDevOrchestrator({
+  cliBuildCommand: {
+    args: ['run', 'build'],
+    bin: 'bun',
+    cwd: cliRoot,
+    lockFile: path.join(cliRoot, 'node_modules/.cache/orvilo-desktop-dev-cli.lock'),
+    output: path.join(cliRoot, 'dist/index.js'),
+  },
   desktopRoot,
   electronArgs,
   electronBin: require('electron'),

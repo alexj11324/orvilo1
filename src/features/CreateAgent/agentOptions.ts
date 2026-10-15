@@ -35,9 +35,6 @@ export const selectorCapabilityFor = (type: string | undefined): HeteroSelectorC
 export const hasModelStep = (type: string | undefined): boolean =>
   !!selectorCapabilityFor(type).model;
 
-export const hasEffortStep = (type: string | undefined): boolean =>
-  !!selectorCapabilityFor(type).effort;
-
 /**
  * Effort choices for a harness+model pair, `Default` first: omitted effort
  * leaves the CLI's own setting in control (agencyConfig doc), so it is always

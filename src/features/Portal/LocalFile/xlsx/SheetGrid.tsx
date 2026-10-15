@@ -1,88 +1,23 @@
-import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useLayoutEffect, useRef } from 'react';
 
 import type { CellModel, CellStyle, SheetModel } from './model';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    overflow: auto;
-    flex: 1;
-
-    /* The grid replays the workbook's own colors, which were authored against
-       white paper — theme-following surfaces would put the file's font colors
-       on a dark ground. */
-    color: #1a1a1a;
-    background: #fff;
-
-    table {
-      table-layout: fixed;
-      border-spacing: 0;
-      border-collapse: separate;
-    }
-
-    td {
-      overflow: hidden;
-
-      /* Frozen rows are sticky; an unfilled cell must still paint over the
-         rows scrolling underneath it. Cell fills override this inline. */
-      padding-block: 1px;
-      padding-inline: 4px;
-      border-block-end: 1px solid #e0e2e6;
-      border-inline-end: 1px solid #e0e2e6;
-
-      font-size: 13px;
-      line-height: 1.35;
-      vertical-align: bottom;
-
-      background: #fff;
-    }
-  `,
-  corner: css`
-    z-index: 5;
-    inset-block-start: 0;
-    inset-inline-start: 0;
-  `,
-  frozen: css`
-    td,
-    th {
-      position: sticky;
-      z-index: 3;
-    }
-  `,
-  frozenLast: css`
-    td,
-    th {
-      box-shadow: 0 1px 0 0 #9aa4b2;
-    }
-  `,
-  frozenColumnLast: css`
-    box-shadow: 1px 0 0 0 #9aa4b2;
-  `,
-  gutter: css`
-    position: sticky;
-
-    border-block-end: 1px solid #e0e2e6;
-    border-inline-end: 1px solid #e0e2e6;
-
-    font-size: 11px;
-    font-weight: 400;
-    color: #6a7280;
-    text-align: center;
-    white-space: nowrap;
-
-    background: #f2f3f5;
-  `,
-  headCell: css`
-    z-index: 3;
-    inset-block-start: 0;
-    height: 22px;
-  `,
-  rowHead: css`
-    z-index: 2;
-    inset-inline-start: 0;
-    width: 46px;
-  `,
-}));
+const styles = {
+  // Unformatted cells are document body on white paper. Authored workbook
+  // ink, fonts, fills and borders continue to override this readable fallback.
+  container:
+    'flex-1 overflow-auto bg-white text-black [&_table]:table-fixed [&_table]:border-separate [&_table]:border-spacing-0 [&_td]:overflow-hidden [&_td]:border-e [&_td]:border-be [&_td]:border-neutral-200 [&_td]:bg-white [&_td]:px-1 [&_td]:py-px [&_td]:text-sm [&_td]:align-bottom',
+  corner: 'inset-bs-0 start-0 z-5',
+  frozen: '[&_td]:sticky [&_td]:z-3 [&_th]:sticky [&_th]:z-3',
+  frozenLast: '[&_td]:shadow-[0_1px_0_0_var(--border)] [&_th]:shadow-[0_1px_0_0_var(--border)]',
+  frozenColumnLast: 'shadow-[1px_0_0_0_var(--border)]',
+  // Coordinates are application chrome; the sheet cells retain authored colors.
+  gutter:
+    'sticky border-e border-be border-divider bg-card text-center text-xs font-normal whitespace-nowrap text-muted-foreground',
+  headCell: 'inset-bs-0 z-3 h-5.5',
+  rowHead: 'start-0 z-2 w-11.5',
+} as const;
 
 const GUTTER_WIDTH = 46;
 
@@ -111,7 +46,12 @@ const toCssStyle = (style: CellStyle): Record<string, string> => {
   if (style.fc) css.color = style.fc;
   if (style.b) css.fontWeight = '600';
   if (style.i) css.fontStyle = 'italic';
-  if (style.fs) css.fontSize = `${pointToPixel(style.fs)}px`;
+  if (style.fs) {
+    css.fontSize = `${pointToPixel(style.fs)}px`;
+    // Document-authored sizes need a proportional line box: a 30pt font is
+    // 40px, so the UI's fixed 22px body line would clip automatic/multiline rows.
+    css.lineHeight = '1.35';
+  }
   if (style.ff) css.fontFamily = `"${style.ff}", var(--font-family, sans-serif)`;
   for (const [key, side] of Object.entries(style.bd ?? {})) {
     const edge = BORDER_EDGE[key as keyof typeof BORDER_EDGE];
@@ -190,7 +130,7 @@ const SheetGrid = memo<SheetGridProps>(({ sheet }) => {
         </colgroup>
         <thead>
           <tr>
-            <th className={`${styles.gutter} ${styles.corner} ${styles.headCell}`} />
+            <th className={cn(styles.gutter, styles.headCell, styles.corner)} />
             {sheet.cols.map((_, index) => (
               <th
                 key={index}

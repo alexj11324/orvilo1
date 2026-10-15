@@ -1,6 +1,6 @@
 import { type ImageProps } from '@lobehub/ui';
 import { Image } from '@lobehub/ui';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { Trash } from 'lucide-react';
 import { type CSSProperties } from 'react';
 import { memo } from 'react';
@@ -11,23 +11,12 @@ import { usePlatform } from '@/hooks/usePlatform';
 
 import { MIN_IMAGE_SIZE } from './style';
 
-const styles = createStaticStyles(({ css }) => ({
-  deleteButton: css`
-    color: #fff;
-    background: ${cssVar.colorBgMask};
-
-    &:hover {
-      background: ${cssVar.colorError};
-    }
-  `,
-  editableImage: css`
-    background: ${cssVar.colorBgContainer};
-    box-shadow: 0 0 0 1px ${cssVar.colorFill} inset;
-  `,
-  image: css`
-    margin-block: 0 !important;
-  `,
-}));
+const styles = {
+  deleteButton:
+    'bg-invert text-invert-foreground hover:bg-destructive hover:text-destructive-on-fill',
+  editableImage: 'bg-card inset-ring-1 inset-ring-border',
+  image: 'my-0',
+};
 
 interface ImageItemProps {
   alt?: string;
@@ -86,7 +75,7 @@ const ImageItem = memo<ImageItemProps>(
               aria-label={tCommon('delete')}
               className={styles.deleteButton}
               icon={Trash}
-              size={'small'}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               onClick={(e) => {
                 e.stopPropagation();
                 onRemove?.();

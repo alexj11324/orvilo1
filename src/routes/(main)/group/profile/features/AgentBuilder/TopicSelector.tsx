@@ -1,4 +1,3 @@
-import { createStaticStyles } from 'antd-style';
 import { Clock3Icon, PlusIcon } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,26 +10,16 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import NavHeader from '@/features/NavHeader';
 import { useFetchAgentChatTopics } from '@/hooks/useFetchChatTopics';
 import { useQueryState } from '@/hooks/useQueryParam';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/slices/topic/selectors';
 
-const styles = createStaticStyles(({ css }) => ({
-  // The tag is a flex item of the header's left slot: without these it keeps its
-  // full text width and overlaps the action icons on the right.
-  tag: css`
-    overflow: hidden;
-    min-width: 0;
-  `,
-  title: css`
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+const styles = {
+  tag: 'overflow-hidden min-w-0 text-xs leading-5 h-auto',
+  title: 'overflow-hidden text-ellipsis whitespace-nowrap',
+};
 
 interface TopicSelectorProps {
   agentId: string;
@@ -76,13 +65,13 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
           }
         },
       })),
-    [topics, handleSwitchTopic, activeTopicId],
+    [topics, handleSwitchTopic, activeTopicId, disabled],
   );
   const isEmpty = !topics || topics.length === 0;
 
   return (
     <NavHeader
-      styles={{ right: { flex: 'none' } }}
+      slotClassNames={{ right: 'flex-none' }}
       left={
         activeTopic?.title ? (
           <Badge className={styles.tag} variant="primary-light">
@@ -97,7 +86,7 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
           <ActionIcon
             disabled={disabled}
             icon={PlusIcon}
-            size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
             title={t('actions.addNewTopic')}
             onClick={() => {
               if (disabled) return;
@@ -113,14 +102,14 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
                   aria-label={t('actions.recentTopics')}
                   disabled={disabled || isEmpty}
                   icon={Clock3Icon}
-                  size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 />
               }
             />
             <DropdownMenuContent
               align="end"
+              className="max-h-150 min-w-50 overflow-y-auto"
               side="bottom"
-              style={{ maxHeight: 600, minWidth: 200, overflowY: 'auto' }}
             >
               {items.map((item) => (
                 <DropdownMenuCheckboxItem

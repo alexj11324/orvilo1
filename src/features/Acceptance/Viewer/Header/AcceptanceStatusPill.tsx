@@ -9,9 +9,16 @@ import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 import { resolveAcceptanceVerdictMeta } from '../verdict';
 
 const styles = {
-  pill: 'inline-flex items-center gap-[5px] py-0.5 px-2.5 rounded-[99px] text-[12px] font-medium',
+  pill: 'inline-flex items-center gap-1.25 py-0.5 px-2.5 rounded-full text-xs font-medium',
   interactive:
-    'cursor-pointer transition-[filter] duration-(--ant-motion-duration-mid) ease-[ease] hover:brightness-[1.08]',
+    'min-h-7 [@media(pointer:coarse)]:min-h-11 cursor-pointer transition-[filter] duration-(--ant-motion-duration-mid) ease-[ease] hover:brightness-[1.08]',
+};
+
+const verdictTextColors: Record<string, string> = {
+  'var(--destructive)': 'var(--destructive-text)',
+  'var(--info)': 'var(--info-text)',
+  'var(--success)': 'var(--success-text)',
+  'var(--warning)': 'var(--warning-text)',
 };
 
 interface AcceptanceStatusPillProps {
@@ -21,7 +28,7 @@ interface AcceptanceStatusPillProps {
   status: string;
 }
 
-const AcceptanceStatusPill = ({ menu, pending, size = 13, status }: AcceptanceStatusPillProps) => {
+const AcceptanceStatusPill = ({ menu, pending, size = 16, status }: AcceptanceStatusPillProps) => {
   const { t } = useTranslation('verify');
   const verdictMeta = resolveAcceptanceVerdictMeta(status, t);
   const pill = (
@@ -30,13 +37,13 @@ const AcceptanceStatusPill = ({ menu, pending, size = 13, status }: AcceptanceSt
       title={menu ? t('acceptance.workspace.actions.status') : undefined}
       style={{
         background: verdictMeta.bg,
-        color: verdictMeta.color,
+        color: verdictTextColors[verdictMeta.color] ?? verdictMeta.color,
         pointerEvents: pending ? 'none' : undefined,
       }}
     >
       <verdictMeta.icon className="animate-spin" size={size} />
       {verdictMeta.label}
-      {menu ? <ChevronDown size={11} /> : null}
+      {menu ? <ChevronDown size={16} /> : null}
     </span>
   );
 

@@ -54,13 +54,15 @@ interface ActionIconTooltipProps {
   placement?: TooltipPlacement;
 }
 
+const DEFAULT_BORDER_RADIUS = 'var(--radius-button)';
+
 const NAMED_SIZE: Record<
   ActionIconSizeType,
-  { blockSize: number; borderRadius: number; iconSize: number; outdent: number }
+  { blockSize: number; borderRadius: number | string; iconSize: number; outdent: number }
 > = {
-  large: { blockSize: 44, borderRadius: 8, iconSize: 24, outdent: 10 },
-  middle: { blockSize: 36, borderRadius: 6, iconSize: 20, outdent: 8 },
-  small: { blockSize: 24, borderRadius: 4, iconSize: 14, outdent: 5 },
+  large: { blockSize: 44, borderRadius: DEFAULT_BORDER_RADIUS, iconSize: 24, outdent: 10 },
+  middle: { blockSize: 36, borderRadius: DEFAULT_BORDER_RADIUS, iconSize: 20, outdent: 8 },
+  small: { blockSize: 24, borderRadius: DEFAULT_BORDER_RADIUS, iconSize: 14, outdent: 5 },
 };
 
 const toCss = (value: number | string): string =>
@@ -74,7 +76,7 @@ function calcSize(iconSize: ActionIconSize | undefined): {
 } {
   if (typeof iconSize === 'number') {
     const blockSize = iconSize * 1.8;
-    return { blockSize, borderRadius: Math.floor(blockSize / 6), iconSize, strokeWidth: 2 };
+    return { blockSize, borderRadius: DEFAULT_BORDER_RADIUS, iconSize, strokeWidth: 2 };
   }
   if (iconSize === 'small' || iconSize === 'middle' || iconSize === 'large') {
     const { blockSize, borderRadius, iconSize: glyph } = NAMED_SIZE[iconSize];
@@ -83,12 +85,12 @@ function calcSize(iconSize: ActionIconSize | undefined): {
   if (iconSize) {
     return {
       blockSize: iconSize.blockSize ?? 36,
-      borderRadius: iconSize.borderRadius ?? 6,
+      borderRadius: iconSize.borderRadius ?? DEFAULT_BORDER_RADIUS,
       iconSize: iconSize.size ?? 24,
       strokeWidth: iconSize.strokeWidth ?? 2,
     };
   }
-  return { blockSize: '1.8em', borderRadius: '0.3em', iconSize: 24, strokeWidth: 2 };
+  return { blockSize: '1.8em', borderRadius: DEFAULT_BORDER_RADIUS, iconSize: 24, strokeWidth: 2 };
 }
 
 function calcOutdent(iconSize: ActionIconSize | undefined): string {

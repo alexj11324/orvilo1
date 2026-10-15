@@ -13,7 +13,7 @@ import { oneLineEllipsis, shinyTextStyles } from '@/styles';
 import type { ModifyNodesState } from '../../../types';
 
 const styles = {
-  separator: 'mx-0.5 text-[var(--ant-color-text-quaternary)]',
+  separator: 'mx-0.5 text-foreground-quaternary',
   title: 'me-2 text-foreground',
 };
 
@@ -70,7 +70,7 @@ export const ModifyNodesInspector = memo<BuiltinInspectorProps<ModifyNodesArgs, 
     if (counts.insert > 0) {
       statsParts.push(
         <span
-          className="font-mono rounded bg-muted px-1 text-[12px]"
+          className="font-mono rounded bg-muted px-1 text-xs"
           key="insert"
           style={{ color: 'var(--success)' }}
         >
@@ -82,7 +82,7 @@ export const ModifyNodesInspector = memo<BuiltinInspectorProps<ModifyNodesArgs, 
     if (counts.modify > 0) {
       statsParts.push(
         <span
-          className="font-mono rounded bg-muted px-1 text-[12px]"
+          className="font-mono rounded bg-muted px-1 text-xs"
           key="modify"
           style={{ color: 'var(--warning)' }}
         >
@@ -94,7 +94,7 @@ export const ModifyNodesInspector = memo<BuiltinInspectorProps<ModifyNodesArgs, 
     if (counts.remove > 0) {
       statsParts.push(
         <span
-          className="font-mono rounded bg-muted px-1 text-[12px]"
+          className="font-mono rounded bg-muted px-1 text-xs"
           key="remove"
           style={{ color: 'var(--destructive)' }}
         >

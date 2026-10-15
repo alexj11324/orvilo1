@@ -18,12 +18,12 @@ import ModelBuiltinSearch from './ModelBuiltinSearch';
 
 const styles = {
   active: 'bg-accent',
-  description: 'text-[12px] text-(--ant-color-text-description)',
+  description: 'text-xs text-foreground-description',
   icon: 'border border-accent rounded-(--ant-border-radius) bg-popover',
   option:
     'cursor-pointer w-full p-2 rounded-(--ant-border-radius) transition-[background-color] duration-200 ease-[ease] hover:bg-accent',
-  title: 'text-[14px] font-medium text-foreground',
-  check: 'ms-3 text-[16px] text-primary',
+  title: 'text-sm font-medium text-foreground',
+  check: 'ms-3 text-base text-primary',
 };
 
 interface NetworkOption {
@@ -58,10 +58,7 @@ const Item = memo<NetworkOption>(({ value, description, icon, label }) => {
       }}
     >
       <div
-        className={cn(
-          'flex flex-col items-center justify-center flex-none h-[32px] w-[32px]',
-          styles.icon,
-        )}
+        className={cn('flex flex-col items-center justify-center flex-none h-8 w-8', styles.icon)}
       >
         <span className="anticon" role="img">
           {createElement(icon, { size: '1em', width: '1em', height: '1em', fill: 'transparent' })}

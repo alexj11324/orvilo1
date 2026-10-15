@@ -32,21 +32,20 @@ export const SSOProvidersList = memo(() => {
     <div className="flex flex-col gap-2">
       {providers.map((item) => (
         <div
-          className="flex flex-row gap-[6px] items-center"
+          className="flex flex-row gap-1.5 items-center"
           key={[item.provider, item.providerAccountId].join('-')}
           style={{ fontSize: 12 }}
         >
           {AuthIcons(item.provider, 16)}
           <span style={providerNameStyle}>{item.provider}</span>
-          {item.email && <span className="text-[11px] text-muted-foreground">· {item.email}</span>}
+          {item.email && <span className="text-xs text-muted-foreground">· {item.email}</span>}
         </div>
       ))}
 
       {providers.length === 0 && <span>--</span>}
 
       <Button
-        className="text-[12px] text-muted-foreground"
-        style={{ cursor: 'pointer' }}
+        className="cursor-pointer text-sm leading-5.5 text-muted-foreground"
         type="button"
         variant="link"
         onClick={() => window.open(accountsUrl, '_blank', 'noopener,noreferrer')}

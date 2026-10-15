@@ -1,89 +1,54 @@
 'use client';
 
-import type { FormGroupItemType, FormItemProps } from '@lobehub/ui';
-import { Flexbox, Form, Tooltip } from '@lobehub/ui';
-import { InputNumber } from '@lobehub/ui/base-ui';
-import isEqual from 'fast-deep-equal';
-import { memo, useEffect, useState } from 'react';
+import { Tooltip } from '@lobehub/ui';
+import { memo } from 'react';
+import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import Form, { type FormGroupItemType, type FormItemProps } from '@/components/GroupForm';
+import {
+  NumberField,
+  NumberFieldDecrement,
+  NumberFieldGroup,
+  NumberFieldIncrement,
+  NumberFieldInput,
+} from '@/components/reui/number-field';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
+import { FieldError } from '@/components/ui/field';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import ModelSelect from '@/features/ModelSelect';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
-import { usePermission } from '@/hooks/usePermission';
-import { useSaveState } from '@/hooks/useSaveState';
-import { useUserStore } from '@/store/user';
-import { settingsSelectors } from '@/store/user/selectors';
-import type { SystemAgentItem, UserServiceModelConfigKey } from '@/types/user/settings';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
-import { serviceModelFormStyles as styles } from './styles';
-
-// Only the rows this form renders. Listed positively so the locale keys
-// templated from them (`systemAgent.${key}.title`) all exist.
-type ModelAssignmentItemKey = Extract<
-  UserServiceModelConfigKey,
-  | 'expertise'
-  | 'goal'
-  | 'memoryAnalysisAgentConfig'
-  | 'userMemoryEmbedding'
-  | 'userMemoryPersonaWriter'
->;
-
-interface SystemAgentModelItem {
-  contextLimit?: boolean;
-  key: ModelAssignmentItemKey;
-  modelType?: 'chat' | 'embedding';
-}
-
-type LoadingKey = 'defaultAgent' | UserServiceModelConfigKey;
-
-type SavingGroup = 'assignments' | 'memory';
-
-const SYSTEM_AGENT_MODEL_ITEMS: SystemAgentModelItem[] = [{ key: 'expertise' }, { key: 'goal' }];
-
-const MEMORY_MODEL_ITEMS: SystemAgentModelItem[] = [
-  { contextLimit: true, key: 'memoryAnalysisAgentConfig' },
-  { contextLimit: true, key: 'userMemoryPersonaWriter' },
-  { contextLimit: true, key: 'userMemoryEmbedding', modelType: 'embedding' },
-];
+import {
+  MEMORY_MODEL_ITEMS,
+  type SavingGroup,
+  SYSTEM_AGENT_MODEL_ITEMS,
+  useModelAssignmentsForm,
+} from './useModelAssignmentsForm';
 
 const ModelAssignmentsForm = memo(() => {
   const { t } = useTranslation('setting');
-  const { allowed: canManageServiceModel, reason } = usePermission('manage_settings');
-  const [defaultAgent, systemAgentSettings] = useUserStore(
-    (s) => [settingsSelectors.defaultAgent(s), settingsSelectors.currentSystemAgent(s)],
-    isEqual,
-  );
-  const [
-    updateDefaultAgent,
-    updateSystemAgent,
+  const isMobile = useIsMobile();
+  const {
+    canManageServiceModel,
+    changeContextLimit,
+    changeDefaultAgentModel,
+    changeSystemAgentModel,
+    contextLimitRules,
+    control,
     isUserStateInit,
     isUserStateInitError,
+    lastSavedAt,
+    reason,
     refreshUserState,
-  ] = useUserStore((s) => [
-    s.updateDefaultAgent,
-    s.updateSystemAgent,
-    s.isUserStateInit,
-    s.isUserStateInitError,
-    s.refreshUserState,
-  ]);
-  const [loadingKey, setLoadingKey] = useState<LoadingKey>();
-  // Track which group last saved so its AutoSaveHint (and only its) reflects the
-  // shared save-state — the write-side counterpart to the read-side AsyncError above.
-  const [savingGroup, setSavingGroup] = useState<SavingGroup>();
-  const { status: saveStatus, lastSavedAt, save, retry } = useSaveState();
-
-  useEffect(() => {
-    if (loadingKey === 'defaultAgent') setLoadingKey(undefined);
-  }, [defaultAgent.config.model, defaultAgent.config.provider, loadingKey]);
-
-  const groupOfKey = (key: UserServiceModelConfigKey): SavingGroup => {
-    if (MEMORY_MODEL_ITEMS.some((item) => item.key === key)) return 'memory';
-    return 'assignments';
-  };
+    retrySave,
+    saveStatus,
+    savingGroup,
+    trigger,
+  } = useModelAssignmentsForm();
 
   if (!isUserStateInit) {
     // A failed user-state init must show error + Retry, not a permanent skeleton
@@ -98,140 +63,137 @@ const ModelAssignmentsForm = memo(() => {
     return <RouteLoading />;
   }
 
-  const updateDefaultAgentModel = async ({
-    model,
-    provider,
-  }: {
-    model: string;
-    provider: string;
-  }) => {
-    if (!canManageServiceModel) return;
-
-    setSavingGroup('assignments');
-    setLoadingKey('defaultAgent');
-    try {
-      await save(() => updateDefaultAgent({ config: { model, provider } }));
-    } finally {
-      setLoadingKey(undefined);
-    }
-  };
-
-  const updateSystemAgentModel = async (
-    key: UserServiceModelConfigKey,
-    value: Partial<SystemAgentItem>,
-  ) => {
-    if (!canManageServiceModel) return;
-
-    setSavingGroup(groupOfKey(key));
-    setLoadingKey(key);
-    try {
-      await save(() => updateSystemAgent(key, value));
-    } finally {
-      setLoadingKey(undefined);
-    }
-  };
-
   const defaultAgentItem: FormItemProps = {
-    className: styles.centeredLabel,
     children: (
       <Tooltip title={reason}>
-        <Flexbox
-          align="center"
-          direction="horizontal"
-          gap={12}
-          style={{ width: 'min(100%, 448px)' }}
-        >
-          <ModelSelect
-            disabled={!canManageServiceModel}
-            showAbility={false}
-            style={{ minWidth: 0, width: '100%' }}
-            value={defaultAgent.config}
-            onChange={updateDefaultAgentModel}
+        <div className="flex w-[min(100%,448px)] flex-row items-center gap-3">
+          <Controller
+            control={control}
+            name="defaultAgent.config"
+            render={({ field }) => (
+              <ModelSelect
+                disabled={!canManageServiceModel}
+                showAbility={false}
+                style={{ minWidth: 0, width: '100%' }}
+                value={field.value}
+                onChange={(next) => {
+                  void changeDefaultAgentModel(next, field.onChange);
+                }}
+              />
+            )}
           />
-        </Flexbox>
+        </div>
       </Tooltip>
     ),
     // Only this row carries a `desc`: "Default" is a model value an Agent can
     // pick, and the row is the only place that says what it resolves to. The
     // rows below stay description-free — label plus picker already say it.
     desc: t('defaultAgent.desc'),
-    label: t('defaultAgent.title'),
+    label: <span className="flex min-h-9 items-center">{t('defaultAgent.title')}</span>,
   };
 
   const systemModelItems: FormItemProps[] = SYSTEM_AGENT_MODEL_ITEMS.map(({ key }) => {
-    const value = systemAgentSettings[key];
-
     return {
-      className: styles.centeredLabel,
       children: (
         <Tooltip title={reason}>
-          <Flexbox
-            align="center"
-            direction="horizontal"
-            gap={12}
-            style={{ width: 'min(100%, 448px)' }}
-          >
-            <ModelSelect
-              disabled={!canManageServiceModel}
-              showAbility={false}
-              style={{ minWidth: 0, width: '100%' }}
-              value={value}
-              onChange={(props) => updateSystemAgentModel(key, props)}
+          <div className="flex w-[min(100%,448px)] flex-row items-center gap-3">
+            <Controller
+              control={control}
+              name={`systemAgent.${key}`}
+              render={({ field }) => (
+                <ModelSelect
+                  disabled={!canManageServiceModel}
+                  showAbility={false}
+                  style={{ minWidth: 0, width: '100%' }}
+                  value={field.value}
+                  onChange={(next) => {
+                    void changeSystemAgentModel(key, next, field.onChange);
+                  }}
+                />
+              )}
             />
-          </Flexbox>
+          </div>
         </Tooltip>
       ),
       // Only the planning row says more than its label: it also drives acceptance.
       desc: key === 'goal' ? t('systemAgent.goal.modelDesc') : undefined,
-      label: t(`systemAgent.${key}.title`),
+      label: <span className="flex min-h-9 items-center">{t(`systemAgent.${key}.title`)}</span>,
     } satisfies FormItemProps;
   });
 
   const memoryModelItems: FormItemProps[] = MEMORY_MODEL_ITEMS.map(
     ({ contextLimit, key, modelType }) => {
-      const value = systemAgentSettings[key];
-
       return {
         children: (
-          <Flexbox
-            align="center"
-            direction="horizontal"
-            gap={12}
-            style={{ width: 'min(100%, 448px)' }}
-          >
-            <ModelSelect
-              modelType={modelType}
-              showAbility={false}
-              style={{ minWidth: 0, width: '100%' }}
-              value={value}
-              onChange={(props) => updateSystemAgentModel(key, props)}
+          <div className="flex w-[min(100%,448px)] flex-row items-center gap-3">
+            <Controller
+              control={control}
+              name={`systemAgent.${key}`}
+              render={({ field }) => (
+                <ModelSelect
+                  disabled={!canManageServiceModel}
+                  modelType={modelType}
+                  showAbility={false}
+                  style={{ minWidth: 0, width: '100%' }}
+                  value={field.value}
+                  onChange={(next) => {
+                    void changeSystemAgentModel(key, next, field.onChange);
+                  }}
+                />
+              )}
             />
             {contextLimit && (
-              <InputNumber
-                min={1}
-                placeholder={t('serviceModel.contextLimit.placeholder')}
-                // Sits beside the picker, so it keeps the picker's height and
-                // holds its width while the picker takes the slack.
-                style={{ flex: 'none', width: 140 }}
-                value={value.contextLimit}
-                onChange={(contextLimit) =>
-                  updateSystemAgentModel(key, {
-                    contextLimit: typeof contextLimit === 'number' ? contextLimit : undefined,
-                  })
-                }
+              <Controller
+                control={control}
+                name={`systemAgent.${key}.contextLimit`}
+                rules={contextLimitRules}
+                render={({ field, fieldState }) => (
+                  <NumberField
+                    className="w-35 flex-none"
+                    disabled={!canManageServiceModel}
+                    min={1}
+                    name={field.name}
+                    size="normal"
+                    value={field.value}
+                    onValueChange={(next) => {
+                      void changeContextLimit(key, next, field.onChange);
+                    }}
+                  >
+                    <NumberFieldGroup>
+                      <NumberFieldDecrement
+                        aria-label={`${t('serviceModel.contextLimit.placeholder')} −1`}
+                      />
+                      <NumberFieldInput
+                        aria-invalid={!!fieldState.error || undefined}
+                        aria-label={t('serviceModel.contextLimit.placeholder')}
+                        placeholder={t('serviceModel.contextLimit.placeholder')}
+                        ref={field.ref}
+                        onBlur={field.onBlur}
+                      />
+                      <NumberFieldIncrement
+                        aria-label={`${t('serviceModel.contextLimit.placeholder')} +1`}
+                      />
+                    </NumberFieldGroup>
+                    <FieldError errors={[fieldState.error]} />
+                  </NumberField>
+                )}
               />
             )}
-          </Flexbox>
+          </div>
         ),
         desc: t(`systemAgent.${key}.modelDesc`),
-        label: t(`systemAgent.${key}.title`),
+        label: <span className="flex min-h-9 items-center">{t(`systemAgent.${key}.title`)}</span>,
       } satisfies FormItemProps;
     },
   );
 
   const renderSaveHint = (group: SavingGroup) =>
     savingGroup === group && (
-      <AutoSaveHint lastUpdatedTime={lastSavedAt} saveStatus={saveStatus} onRetry={retry} />
+      <AutoSaveHint
+        lastUpdatedTime={lastSavedAt}
+        saveStatus={saveStatus}
+        onRetry={canManageServiceModel ? () => void retrySave() : undefined}
+      />
     );
 
   const modelAssignments: FormGroupItemType = {
@@ -259,9 +221,15 @@ const ModelAssignmentsForm = memo(() => {
       collapsible={false}
       items={[modelAssignments, memoryModels]}
       itemsType={'group'}
+      layout={isMobile ? 'vertical' : 'horizontal'}
       variant={'filled'}
       {...FORM_STYLE}
       itemMinWidth={undefined}
+      onSubmit={(event) => {
+        event.preventDefault();
+        // This is the existing autosave surface: Enter never submits a settings payload.
+        void trigger();
+      }}
     />
   );
 });

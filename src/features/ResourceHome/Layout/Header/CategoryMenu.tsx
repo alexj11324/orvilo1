@@ -117,7 +117,7 @@ const CategoryMenu = memo(() => {
   return (
     <div className="flex flex-col gap-3 px-1">
       {groups.map((group, groupIndex) => (
-        <div className="flex flex-col gap-[1px]" key={groupIndex}>
+        <div className="flex flex-col gap-px" key={groupIndex}>
           {group.map((item) => {
             const isActive =
               item.key === 'works'

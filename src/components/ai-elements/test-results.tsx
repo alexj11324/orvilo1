@@ -119,7 +119,7 @@ export const TestResults = ({ summary, className, children, ...props }: TestResu
 
   return (
     <TestResultsContext value={contextValue}>
-      <div className={cn('rounded-lg border bg-card', className)} {...props}>
+      <div className={cn('rounded-(--radius-card) border bg-card', className)} {...props}>
         {children ??
           (summary && (
             <TestResultsHeader>
@@ -217,7 +217,7 @@ export const TestSuite = ({ name, status, className, children, ...props }: TestS
 
   return (
     <TestSuiteContext value={contextValue}>
-      <Collapsible className={cn('rounded-lg border', className)} {...props}>
+      <Collapsible className={cn('rounded-(--radius-card) border', className)} {...props}>
         {children}
       </Collapsible>
     </TestSuiteContext>
@@ -368,7 +368,10 @@ export type TestErrorProps = HTMLAttributes<HTMLDivElement>;
 
 export const TestError = ({ className, children, ...props }: TestErrorProps) => (
   <div
-    className={cn('mt-2 rounded-md bg-destructive/10 p-3 dark:bg-destructive/10', className)}
+    className={cn(
+      'mt-2 rounded-(--radius-card) bg-destructive/10 p-3 dark:bg-destructive/10',
+      className,
+    )}
     {...props}
   >
     {children}

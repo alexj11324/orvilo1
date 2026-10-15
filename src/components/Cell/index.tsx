@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { type LucideIcon } from 'lucide-react';
 import { ChevronRight } from 'lucide-react';
@@ -7,17 +6,9 @@ import { memo } from 'react';
 
 import Divider from './Divider';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    position: relative;
-    border-radius: 0;
-    font-size: 15px;
-
-    &:active {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  container: 'relative rounded-none text-sm [&:active]:[background:var(--accent)]',
+};
 
 export interface CellProps {
   icon?: LucideIcon;
@@ -32,14 +23,15 @@ const Cell = memo<CellProps>(({ label, icon, onClick, type }) => {
 
   return (
     <div
-      className={cn('flex gap-3 items-center justify-between p-4', cx(styles.container))}
+      className={cn('flex gap-3 items-center justify-between p-4', styles.container)}
       onClick={onClick}
     >
       <div className={'flex gap-3 items-center'}>
-        {icon && createElement(icon, { size: 20, style: { color: cssVar.colorPrimaryBorder } })}
+        {icon &&
+          createElement(icon, { size: 20, style: { color: 'var(--ant-color-primary-border)' } })}
         {label}
       </div>
-      {createElement(ChevronRight, { size: 16, style: { color: cssVar.colorBorder } })}
+      {createElement(ChevronRight, { size: 16, style: { color: 'var(--ant-color-border)' } })}
     </div>
   );
 });

@@ -115,7 +115,7 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
           <p className="ant-upload-hint">{t('creds.form.uploadDesc')}</p>
         </UploadDragger>
         {fileName && (
-          <div className="flex flex-row gap-[4px] items-center" style={{ marginTop: 8 }}>
+          <div className="flex flex-row gap-1 items-center" style={{ marginTop: 8 }}>
             <span>
               {t('creds.form.selectedFile')}: {fileName}
             </span>
@@ -143,7 +143,7 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
           { pattern: /^[\w-]+$/, message: t('creds.form.keyPattern') },
         ]}
       >
-        <Input disabled={disabled} placeholder="e.g., gcp-service-account" />
+        <Input disabled={disabled} placeholder="e.g., gcp-service-account" visualSize="normal" />
       </Form.Item>
 
       <Form.Item
@@ -151,7 +151,7 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
         name="name"
         rules={[{ required: true, message: t('creds.form.nameRequired') }]}
       >
-        <Input disabled={disabled} placeholder="e.g., GCP Service Account" />
+        <Input disabled={disabled} placeholder="e.g., GCP Service Account" visualSize="normal" />
       </Form.Item>
 
       <Form.Item label={t('creds.form.description')} name="description">
@@ -163,12 +163,13 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
       </Form.Item>
 
       <div className="mt-6 flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onBack}>
+        <Button size="lg" type="button" variant="outline" onClick={onBack}>
           {t('creds.form.back')}
         </Button>
         <Button
           disabled={createMutation.isPending || !fileHashId || disabled}
           loading={createMutation.isPending}
+          size="lg"
           type="submit"
           variant="default"
         >

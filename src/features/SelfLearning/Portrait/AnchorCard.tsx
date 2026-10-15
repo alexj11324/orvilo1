@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { AnchorIcon, CircleCheckIcon, CircleXIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -14,69 +13,19 @@ import {
 } from '@/components/ui/accordion';
 import type { ExpertiseDomainItem } from '@/services/expertise';
 
-const styles = createStaticStyles(({ css }) => ({
-  anchorCard: css`
-    overflow: hidden;
-  `,
-  anchorContent: css`
-    padding-block: 8px 16px;
-    padding-inline: 16px;
-  `,
-  anchorHeader: css`
-    &:hover {
-      background: transparent;
-    }
-  `,
-  canonCard: css`
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-
-    min-width: 0;
-    padding-block: 12px;
-    padding-inline: 14px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  definition: css`
-    display: grid;
-    grid-template-columns: 110px minmax(0, 1fr);
-    gap: 10px 24px;
-    align-items: baseline;
-  `,
-  definitionLabel: css`
-    display: inline-flex;
-    gap: 6px;
-    align-items: center;
-  `,
-  grid: css`
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 10px;
-  `,
-  layerCell: css`
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-
-    min-width: 0;
-    padding-inline-start: 12px;
-    border-inline-start: 2px solid ${cssVar.colorBorderSecondary};
-  `,
-  layerIndex: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    color: ${cssVar.colorTextQuaternary};
-    letter-spacing: 0.04em;
-  `,
-  sectionLabel: css`
-    font-size: 12px;
-    font-weight: 600;
-    color: ${cssVar.colorTextSecondary};
-    letter-spacing: 0.02em;
-  `,
-}));
+const styles = {
+  anchorCard: 'overflow-hidden rounded-(--radius-card) border-divider bg-card',
+  anchorContent: 'pt-2 pb-4 px-4',
+  anchorHeader:
+    'rounded-(--radius-button) text-start text-sm leading-5.5 transition-[color,background-color,border-color,box-shadow]',
+  canonCard: 'flex flex-col gap-1.5 min-w-0 py-3 px-3.5 rounded-(--radius-card) bg-fill-quaternary',
+  definition: 'grid grid-cols-[110px_minmax(0,1fr)] gap-y-2.5 gap-x-6 items-baseline',
+  definitionLabel: 'inline-flex gap-1.5 items-center text-xs leading-5',
+  grid: 'grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-2.5',
+  layerCell: 'flex flex-col gap-1 min-w-0 ps-3 border-s-2 border-divider',
+  layerIndex: 'font-mono text-xs leading-5 text-muted-foreground tracking-[0.04em]',
+  sectionLabel: 'text-xs leading-5 font-semibold text-muted-foreground tracking-[0.02em]',
+};
 
 /**
  * 它的锚 —— 这个方向拿什么标准在学：什么算实践、对照哪些经典原则、分成哪几层。
@@ -93,53 +42,39 @@ const AnchorCard = memo<{ domain: ExpertiseDomainItem }>(({ domain }) => {
   const outOfScope = domain.outOfScope?.trim();
   const title = (
     <div className="flex items-center gap-2">
-      <AnchorIcon color={cssVar.colorTextTertiary} size={15} />
-      <div className="font-semibold">{t('anchor.title')}</div>
-      <div className="text-[12px] text-muted-foreground">{t('anchor.subtitle')}</div>
+      <AnchorIcon className="size-4 text-foreground-tertiary" size={16} />
+      <div className="text-sm leading-5.5 font-semibold">{t('anchor.title')}</div>
+      <div className="text-xs text-muted-foreground">{t('anchor.subtitle')}</div>
     </div>
   );
 
   return (
-    <div
-      className={cx(styles.anchorCard, 'flex flex-col border')}
-      style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
-    >
+    <div className={cn(styles.anchorCard, 'flex flex-col border')}>
       <Accordion defaultValue={['anchor']}>
         {[
           {
             key: 'anchor',
             title,
             children: (
-              <div className={cx(styles.anchorContent, 'flex flex-col gap-6')}>
+              <div className={cn(styles.anchorContent, 'flex flex-col gap-6')}>
                 {(domainFilter || outOfScope) && (
                   <div className={styles.definition}>
                     {domainFilter && (
                       <>
-                        <div
-                          className={cn('text-muted-foreground', styles.definitionLabel)}
-                          style={{ fontSize: 12.5 }}
-                        >
-                          <CircleCheckIcon color={cssVar.colorSuccess} size={13} />
+                        <div className={cn('text-muted-foreground', styles.definitionLabel)}>
+                          <CircleCheckIcon className="size-4 text-success-text" size={16} />
                           {t('anchor.filter')}
                         </div>
-                        <div className="text-[13px]" style={{ lineHeight: 1.7 }}>
-                          {domainFilter}
-                        </div>
+                        <div className="text-sm leading-5.5">{domainFilter}</div>
                       </>
                     )}
                     {outOfScope && (
                       <>
-                        <div
-                          className={cn('text-muted-foreground', styles.definitionLabel)}
-                          style={{ fontSize: 12.5 }}
-                        >
-                          <CircleXIcon color={cssVar.colorTextTertiary} size={13} />
+                        <div className={cn('text-muted-foreground', styles.definitionLabel)}>
+                          <CircleXIcon className="size-4 text-foreground-tertiary" size={16} />
                           {t('anchor.outOfScope')}
                         </div>
-                        <div
-                          className="text-[13px] text-muted-foreground"
-                          style={{ lineHeight: 1.7 }}
-                        >
+                        <div className="text-sm leading-5.5 text-muted-foreground">
                           {outOfScope}
                         </div>
                       </>
@@ -150,7 +85,7 @@ const AnchorCard = memo<{ domain: ExpertiseDomainItem }>(({ domain }) => {
                 <div className="flex flex-col gap-2.5">
                   <div className="flex items-baseline gap-2">
                     <span className={styles.sectionLabel}>{t('create.anchor.canon')}</span>
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {domain.canonEntries.length > 0
                         ? t('create.anchor.canonHint')
                         : t('anchor.noCanon')}
@@ -160,19 +95,11 @@ const AnchorCard = memo<{ domain: ExpertiseDomainItem }>(({ domain }) => {
                     <div className={styles.grid}>
                       {domain.canonEntries.map((c) => (
                         <div className={styles.canonCard} key={c.key}>
-                          <div className="font-semibold" style={{ fontSize: 13.5 }}>
-                            {c.title}
-                          </div>
-                          <div
-                            className="text-muted-foreground"
-                            style={{ fontSize: 12.5, lineHeight: 1.65 }}
-                          >
+                          <div className="text-sm leading-5.5 font-semibold">{c.title}</div>
+                          <div className="text-sm leading-5.5 text-muted-foreground">
                             {c.statement}
                           </div>
-                          <div
-                            className="truncate min-w-0 text-muted-foreground"
-                            style={{ fontSize: 11.5, opacity: 0.75 }}
-                          >
+                          <div className="truncate min-w-0 text-xs leading-5 text-muted-foreground">
                             — {c.source}
                           </div>
                         </div>
@@ -184,7 +111,7 @@ const AnchorCard = memo<{ domain: ExpertiseDomainItem }>(({ domain }) => {
                 <div className="flex flex-col gap-2.5">
                   <div className="flex items-baseline gap-2">
                     <span className={styles.sectionLabel}>{t('create.anchor.layers')}</span>
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {domain.layers.length === 0
                         ? t('anchor.noLayers')
                         : canonRef
@@ -197,14 +124,9 @@ const AnchorCard = memo<{ domain: ExpertiseDomainItem }>(({ domain }) => {
                       {domain.layers.map((l, i) => (
                         <div className={styles.layerCell} key={l.key}>
                           <span className={styles.layerIndex}>L{i + 1}</span>
-                          <div className="font-semibold" style={{ fontSize: 13.5 }}>
-                            {l.title}
-                          </div>
+                          <div className="text-sm leading-5.5 font-semibold">{l.title}</div>
                           {l.description && (
-                            <div
-                              className="text-muted-foreground"
-                              style={{ fontSize: 12.5, lineHeight: 1.6 }}
-                            >
+                            <div className="text-sm leading-5.5 text-muted-foreground">
                               {l.description}
                             </div>
                           )}
@@ -220,7 +142,7 @@ const AnchorCard = memo<{ domain: ExpertiseDomainItem }>(({ domain }) => {
           .filter(Boolean)
           .map((item) => (
             <AccordionItem key={item.key} value={item.key}>
-              <AccordionTrigger>{item.title}</AccordionTrigger>
+              <AccordionTrigger className={styles.anchorHeader}>{item.title}</AccordionTrigger>
               <AccordionContent>{item.children}</AccordionContent>
             </AccordionItem>
           ))}

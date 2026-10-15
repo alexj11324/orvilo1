@@ -7,14 +7,14 @@ import { useVerifyResults, useVerifyState } from '../hooks';
 import { countResults, type DockPhase, phaseFromStatus } from '../utils';
 
 const styles = {
-  body: 'px-4 py-3 text-[13px] leading-[1.7] text-muted-foreground',
-  card: 'overflow-hidden rounded-[16px] border border-sidebar-border bg-card',
-  cardFailed: 'border-(--ant-color-error-border)',
-  foot: 'flex items-center gap-2 border-t border-sidebar-border px-4 py-2.5 text-[12px] text-(--ant-color-text-tertiary)',
+  body: 'px-4 py-3 text-sm leading-5.5 text-muted-foreground',
+  card: 'overflow-hidden rounded-(--radius-card) border border-sidebar-border bg-card',
+  cardFailed: 'border-destructive-border',
+  foot: 'flex items-center gap-2 border-t border-sidebar-border px-4 py-2.5 text-xs text-foreground-tertiary',
   head: 'flex items-start gap-3.5 border-b border-sidebar-border px-4 py-3.5',
-  status: 'text-[13px] font-semibold',
-  sub: 'mt-1 text-[12px] leading-normal text-(--ant-color-text-tertiary)',
-  title: 'text-[15px] font-bold text-foreground',
+  status: 'text-sm font-semibold',
+  sub: 'mt-1 text-xs leading-5 text-foreground-tertiary',
+  title: 'text-sm font-semibold text-foreground',
 };
 
 interface BadgeMeta {
@@ -82,16 +82,16 @@ const RunResult = memo<RunResultProps>(({ operationId, round = 1, embedded }) =>
   const counts = countResults(results ?? []);
   const badgeColorMap = {
     default: 'var(--ant-color-text-tertiary)',
-    error: 'var(--destructive)',
-    success: 'var(--success)',
-    warning: 'var(--warning)',
+    error: 'var(--destructive-text)',
+    success: 'var(--success-text)',
+    warning: 'var(--warning-text)',
   } as const;
   // Deeper, more readable text color over the tinted badge fill.
   const badgeTextMap = {
     default: 'var(--muted-foreground)',
-    error: 'var(--ant-color-error-text-active)',
-    success: 'var(--ant-color-success-text-active)',
-    warning: 'var(--ant-color-warning-text-active)',
+    error: 'var(--destructive-text)',
+    success: 'var(--success-text)',
+    warning: 'var(--warning-text)',
   } as const;
 
   // The verdict lives IN the title: the shield changes form and colour with the
@@ -101,7 +101,7 @@ const RunResult = memo<RunResultProps>(({ operationId, round = 1, embedded }) =>
   const header = (
     <div className={styles.head}>
       <div className="flex flex-col">
-        <div className="flex items-center gap-[7px]">
+        <div className="flex items-center gap-1.75">
           <meta.badge.icon
             color={meta.badge.color === 'default' ? undefined : badgeColorMap[meta.badge.color]}
             size={16}
@@ -146,7 +146,7 @@ const RunResult = memo<RunResultProps>(({ operationId, round = 1, embedded }) =>
         </div>
       </div>
       <div className={styles.foot}>
-        <Info size={14} />
+        <Info size={16} />
         <span>{t('result.foot')}</span>
       </div>
     </div>

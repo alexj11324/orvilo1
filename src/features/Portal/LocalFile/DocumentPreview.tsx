@@ -3,7 +3,7 @@
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx } from 'cn';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -24,61 +24,13 @@ const pdfOptions = {
 
 const maxPageWidth = 1200;
 
-const styles = createStaticStyles(({ css }) => ({
-  docxContainer: css`
-    overflow: auto;
-    height: 100%;
-    background: ${cssVar.colorBgLayout};
-
-    /* docx-preview renders fixed-size "pages"; keep them centered with a gap.
-       "safe center" falls back to flex-start when the page is wider than the
-       pane, so the left edge stays reachable by horizontal scroll. */
-    .docx-wrapper {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      align-items: safe center;
-
-      padding: 10px;
-
-      background: transparent;
-    }
-
-    .docx-wrapper > section.docx {
-      margin-block-end: 0;
-      border-radius: 4px;
-      box-shadow: ${cssVar.boxShadowTertiary};
-    }
-  `,
-  fallbackIcon: css`
-    width: 64px;
-    height: 64px;
-    border-radius: 14px;
-    background: ${cssVar.colorFillTertiary};
-  `,
-  officeContainer: css`
-    overflow: auto;
-    height: 100%;
-    background: ${cssVar.colorBgLayout};
-  `,
-  page: css`
-    overflow: hidden;
-    margin-block-end: 12px;
-    border-radius: 4px;
-    box-shadow: ${cssVar.boxShadowTertiary};
-  `,
-  pdfContainer: css`
-    overflow: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-
-    height: 100%;
-    padding-block: 10px;
-
-    background: ${cssVar.colorBgLayout};
-  `,
-}));
+const flatStyles = {
+  docxContainer: 'overflow-auto h-full bg-background',
+  page: 'overflow-hidden mbe-3 rounded-(--radius-card) shadow-(--shadow-raised)',
+  fallbackIcon: 'size-16 rounded-(--radius-card) bg-muted',
+  officeContainer: 'overflow-auto h-full bg-background',
+  pdfContainer: 'overflow-auto flex flex-col items-center h-full py-4 bg-background',
+};
 
 const PdfPane = memo<{ blob: Blob }>(({ blob }) => {
   const [numPages, setNumPages] = useState(0);
@@ -98,7 +50,7 @@ const PdfPane = memo<{ blob: Blob }>(({ blob }) => {
   const width = containerWidth ? Math.min(containerWidth - 32, maxPageWidth) : undefined;
 
   return (
-    <div className={styles.pdfContainer} ref={setContainer}>
+    <div className={flatStyles.pdfContainer} ref={setContainer}>
       <Document
         file={blob}
         loading={<Loading />}
@@ -107,7 +59,7 @@ const PdfPane = memo<{ blob: Blob }>(({ blob }) => {
       >
         {Array.from({ length: numPages }, (_, index) => (
           <Page
-            className={styles.page}
+            className={flatStyles.page}
             key={`page_${index + 1}`}
             pageNumber={index + 1}
             width={width}
@@ -163,7 +115,7 @@ const PptxPane = memo<OfficePaneProps>(({ blob, onError }) => {
   }, [blob, container, scrollEl, onError]);
 
   return (
-    <div className={styles.officeContainer} ref={setScrollEl}>
+    <div className={flatStyles.officeContainer} ref={setScrollEl}>
       {loading && <Loading />}
       {/* The viewer owns this node's children — React must never render into it,
           or its bookkeeping breaks when the library replaces the content. */}
@@ -185,9 +137,35 @@ const DocxPane = memo<OfficePaneProps>(({ blob, onError }) => {
 
     (async () => {
       try {
-        const { renderAsync } = await import('docx-preview');
+        const { defaultOptions, renderAsync } = await import('docx-preview');
         if (disposed) return;
-        await renderAsync(blob, container);
+        await renderAsync(blob, container, undefined, {
+          // Keep the renderer's wrapper and numbering scope. Its unlayered
+          // defaults require the public native renderer styling interface.
+          h: (element) => {
+            const node = defaultOptions.h(element);
+            if (
+              typeof element !== 'string' &&
+              !(element instanceof Node) &&
+              node instanceof HTMLElement
+            ) {
+              let frameStyle: string | undefined;
+              if (element.tagName === 'div' && element.className === 'docx-wrapper') {
+                frameStyle =
+                  'display:flex;flex-direction:column;gap:12px;align-items:safe center;padding:calc(var(--spacing) * 4);background:transparent;';
+              } else if (element.tagName === 'section' && element.className === 'docx') {
+                frameStyle =
+                  'margin-block-end:0;border-radius:var(--radius-card);box-shadow:var(--shadow-raised);';
+              }
+              if (frameStyle) {
+                // The file's own style comes last, retaining its dimensions,
+                // margins, fonts, colors and all native renderer properties.
+                node.style.cssText = frameStyle + node.style.cssText;
+              }
+            }
+            return node;
+          },
+        });
         if (!disposed) setLoading(false);
       } catch (error) {
         if (!disposed) onError(error);
@@ -203,7 +181,7 @@ const DocxPane = memo<OfficePaneProps>(({ blob, onError }) => {
   }, [blob, container, onError]);
 
   return (
-    <div className={styles.docxContainer}>
+    <div className={flatStyles.docxContainer}>
       {loading && <Loading />}
       <div ref={setContainer} />
     </div>
@@ -272,25 +250,26 @@ const DocumentPreview = memo<DocumentPreviewProps>(
     }
 
     return (
-      <div className="flex flex-col items-center justify-center gap-4 h-[100%] w-[100%]">
-        <div className={cx('flex flex-col items-center justify-center', styles.fallbackIcon)}>
+      <div className="flex flex-col items-center justify-center gap-4 h-full w-full p-4 text-sm leading-5.5 text-foreground">
+        <div className={clsx('flex flex-col items-center justify-center', flatStyles.fallbackIcon)}>
           <FileIcon fileName={filename} size={40} />
         </div>
         <div className="flex flex-col items-center gap-1">
-          <div style={{ fontWeight: 500 }}>{filename}</div>
+          <div className="font-medium">{filename}</div>
           <div className="text-muted-foreground">
             {t('workingPanel.localFile.document.unsupported')}
           </div>
         </div>
         {isLocalFile ? (
           <Button
+            size="lg"
             variant="outline"
             onClick={() => localFileService.openLocalFile({ path: filePath })}
           >
             {t('workingPanel.localFile.document.openWithDefaultApp')}
           </Button>
         ) : (
-          <Button variant="outline" onClick={handleDownload}>
+          <Button size="lg" variant="outline" onClick={handleDownload}>
             {t('workingPanel.localFile.document.download')}
           </Button>
         )}

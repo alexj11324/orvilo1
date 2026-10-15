@@ -1,5 +1,4 @@
 import { ChatHeader } from '@lobehub/ui/mobile';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown } from 'lucide-react';
 import { memo } from 'react';
@@ -54,8 +53,8 @@ const ChatHeaderTitle = memo(() => {
             icon={ChevronDown}
             size={{ blockSize: 14, borderRadius: '50%', size: 12 }}
             style={{
-              background: cssVar.colorFillSecondary,
-              color: cssVar.colorTextDescription,
+              background: 'var(--ant-color-fill-secondary)',
+              color: 'var(--ant-color-text-description)',
             }}
           />
         </div>

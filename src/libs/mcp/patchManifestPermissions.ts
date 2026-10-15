@@ -1,4 +1,4 @@
-import { ConnectorToolPermission } from '@/database/schemas';
+import { ConnectorToolPermission } from '@orvilo/database/connector-permission';
 
 /**
  * Patch a tool manifest's `api[]` with connector tool permissions.

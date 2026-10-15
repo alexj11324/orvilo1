@@ -24,11 +24,11 @@ const Title = memo(() => {
     return (
       <div className="flex flex-row items-center flex-1 gap-2" style={{ minWidth: 0 }}>
         <AssigneeAvatar agentId={liveRun.agentId} size={20} />
-        <div className="text-[14px] font-medium" style={{ flexShrink: 0 }}>
+        <div className="text-sm font-medium" style={{ flexShrink: 0 }}>
           {agentMeta?.title ?? liveRun.activity.author?.name}
         </div>
         <div
-          className={cn('text-[13px]', oneLineEllipsis)}
+          className={cn('text-(length:--text-dense)', oneLineEllipsis)}
           style={{ color: 'var(--muted-foreground)', flex: 1, minWidth: 0 }}
         >
           {liveRun.activity.title}
@@ -38,10 +38,10 @@ const Title = memo(() => {
 
   return (
     <div className="flex flex-row items-center flex-1 gap-2" style={{ minWidth: 0 }}>
-      <div className="text-[14px] font-medium">{t('goalDetail.taskResult')}</div>
+      <div className="text-sm font-medium">{t('goalDetail.taskResult')}</div>
       {(detail?.identifier || detail?.name) && (
         <div
-          className={cn('text-[13px]', oneLineEllipsis)}
+          className={cn('text-(length:--text-dense)', oneLineEllipsis)}
           style={{ color: 'var(--muted-foreground)', flex: 1, minWidth: 0 }}
         >
           {[detail.identifier, detail.name].filter(Boolean).join(' · ')}

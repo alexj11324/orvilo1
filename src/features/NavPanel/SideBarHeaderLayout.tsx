@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
 import { ChevronRightIcon, HomeIcon } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
 import { Fragment, memo } from 'react';
@@ -14,38 +13,10 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { isModifierClick } from '@/utils/navigation';
 
 import BackButton from './components/BackButton';
-
-const prefixCls = 'ant';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  breadcrumb: css`
-    ol {
-      align-items: center;
-    }
-    .${prefixCls}-breadcrumb-separator {
-      margin-inline: 4px;
-    }
-    .${prefixCls}-breadcrumb-link {
-      display: flex !important;
-      align-items: center !important;
-      font-size: 12px;
-      color: ${cssVar.colorTextDescription};
-    }
-    a.${prefixCls}-breadcrumb-link {
-      &:hover {
-        color: ${cssVar.colorText};
-      }
-    }
-  `,
-  container: css`
-    overflow: hidden;
-  `,
-}));
 
 interface BreadcrumbItem {
   href?: string;
@@ -70,33 +41,34 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
       href: '/',
       title: (
         <span className="anticon" role="img">
-          <HomeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          <HomeIcon fill="transparent" size={16} />
         </span>
       ),
     };
     const leftContent = left ? (
-      <div
-        className="flex flex-row items-center flex-1 gap-0.5"
-        style={{
-          overflow: 'hidden',
-        }}
-      >
-        {showBack && <BackButton size={DESKTOP_HEADER_ICON_SMALL_SIZE} to={backTo} />}
+      <div className="flex flex-1 flex-row items-center gap-0.5 overflow-hidden">
+        {showBack && (
+          <BackButton
+            size={{ blockSize: 24, borderRadius: 'var(--radius-button)', size: 16 }}
+            to={backTo}
+          />
+        )}
         {left && typeof left === 'string' ? (
-          <div className="truncate text-[16px] font-medium">{left}</div>
+          <div className="truncate text-base font-medium">{left}</div>
         ) : (
           left
         )}
       </div>
     ) : (
-      <div className="flex flex-col flex-1 px-[6px]">
-        <Breadcrumb className={styles.breadcrumb}>
-          <BreadcrumbList>
+      <div className="flex flex-col flex-1 px-1.5">
+        <Breadcrumb>
+          <BreadcrumbList className="text-sm text-foreground-description">
             {[homeCrumb, ...breadcrumb].map((item, index, all) => (
               <Fragment key={index}>
                 <BreadcrumbItem>
                   {item.href ? (
                     <BreadcrumbLink
+                      className="flex items-center text-foreground-description hover:text-foreground"
                       href={item.href}
                       onClick={(event) => {
                         item.onClick?.(event);
@@ -119,12 +91,7 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
                 {index < all.length - 1 && (
                   <BreadcrumbSeparator>
                     <span className="anticon" role="img">
-                      <ChevronRightIcon
-                        fill={'transparent'}
-                        height={'1em'}
-                        size={'1em'}
-                        width={'1em'}
-                      />
+                      <ChevronRightIcon fill="transparent" size={16} />
                     </span>
                   </BreadcrumbSeparator>
                 )}
@@ -136,10 +103,7 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
     );
 
     return (
-      <div
-        className={cx('flex flex-row items-center flex-none justify-between', styles.container)}
-        style={{ padding: '8px 6px' }}
-      >
+      <div className="flex flex-none flex-row items-center justify-between overflow-hidden px-1.5 py-2">
         {leftContent}
         <div className="flex flex-row items-center gap-0.5 justify-end">{right}</div>
       </div>

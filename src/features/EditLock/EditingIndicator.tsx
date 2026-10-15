@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { PencilIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -33,7 +32,7 @@ const EditingIndicator = memo<EditingIndicatorProps>(({ holderId, pending }) => 
 
     const checkingLabel = t('pageEditor.editMode.checking');
     return (
-      <div className="flex items-center gap-1" style={{ color: cssVar.colorTextTertiary }}>
+      <div className="flex items-center gap-1" style={{ color: 'var(--ant-color-text-tertiary)' }}>
         <Spinner className="size-3.5" />
         <div className="truncate block" style={{ color: 'inherit', fontSize: 12, maxWidth: 200 }}>
           {checkingLabel}
@@ -52,7 +51,10 @@ const EditingIndicator = memo<EditingIndicatorProps>(({ holderId, pending }) => 
         <TooltipTrigger
           render={
             <span style={{ display: 'inline-flex' }}>
-              <div className="flex items-center gap-1" style={{ color: cssVar.colorTextTertiary }}>
+              <div
+                className="flex items-center gap-1"
+                style={{ color: 'var(--ant-color-text-tertiary)' }}
+              >
                 <PencilIcon size={14} />
                 <div
                   className="truncate block"

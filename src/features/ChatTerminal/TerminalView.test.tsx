@@ -1,3 +1,4 @@
+import { ThemeProvider } from '@emotion/react';
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -14,10 +15,11 @@ const { manager, preference } = vi.hoisted(() => ({
   preference: { terminalFontFamily: '"JetBrains Mono"' },
 }));
 
-vi.mock('antd-style', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useTheme: () => ({ fontFamilyCode: 'Application Mono' }),
-}));
+const terminalUnderTheme = (sessionId: string, fontFamilyCode = 'Application Mono') => (
+  <ThemeProvider theme={{ fontFamilyCode }}>
+    <TerminalView sessionId={sessionId} />
+  </ThemeProvider>
+);
 
 vi.mock('@/store/user', () => ({
   useUserStore: (selector: (state: unknown) => unknown) =>
@@ -52,7 +54,7 @@ afterEach(() => {
 
 describe('TerminalView font family', () => {
   it('applies the configured terminal font family', () => {
-    render(<TerminalView sessionId={'custom-font'} />);
+    render(terminalUnderTheme('custom-font'));
 
     expect(manager.applyTheme).toHaveBeenLastCalledWith({ background: '#000' }, '"JetBrains Mono"');
   });
@@ -60,15 +62,29 @@ describe('TerminalView font family', () => {
   it('falls back to the application code font for an empty preference', () => {
     preference.terminalFontFamily = '   ';
 
-    render(<TerminalView sessionId={'default-font'} />);
+    render(terminalUnderTheme('default-font'));
 
     expect(manager.applyTheme).toHaveBeenLastCalledWith({ background: '#000' }, 'Application Mono');
   });
 });
 
+describe('TerminalView live code font', () => {
+  it('applies an updated public theme code font when no terminal override is set', () => {
+    preference.terminalFontFamily = '';
+    const view = render(terminalUnderTheme('live-font'));
+    expect(manager.applyTheme).toHaveBeenLastCalledWith({ background: '#000' }, 'Application Mono');
+
+    view.rerender(terminalUnderTheme('live-font', 'Live Application Mono'));
+    expect(manager.applyTheme).toHaveBeenLastCalledWith(
+      { background: '#000' },
+      'Live Application Mono',
+    );
+  });
+});
+
 describe('TerminalView refit', () => {
   it('debounces refit across the open/close animation so the PTY resizes once, not per frame', () => {
-    render(<TerminalView sessionId={'refit'} />);
+    render(terminalUnderTheme('refit'));
 
     // Mount does one immediate fit so the terminal is sized when it appears.
     expect(manager.fit).toHaveBeenCalledTimes(1);

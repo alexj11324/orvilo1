@@ -1,5 +1,4 @@
 import { type IThreadType, ThreadType } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { GitBranch } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,7 +23,7 @@ const ThreadDivider = memo<ThreadDividerProps>(({ threadType }) => {
       <Separator className="flex-1" />
       <div
         className="flex shrink-0 items-center gap-1.5"
-        style={{ color: cssVar.colorTextDescription, fontSize: 12 }}
+        style={{ color: 'var(--ant-color-text-description)', fontSize: 12 }}
       >
         <span className="anticon" role="img">
           <GitBranch fill={'transparent'} height={12} size={12} width={12} />

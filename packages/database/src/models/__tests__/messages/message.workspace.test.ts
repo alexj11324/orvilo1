@@ -11,8 +11,11 @@ import {
   messages,
   messagesFiles,
   sessions,
+  tasks,
+  taskTopics,
   topics,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
@@ -88,6 +91,27 @@ describe('MessageModel workspace scope', () => {
 
     beforeEach(async () => {
       await serverDB.insert(users).values({ id: memberId });
+      await serverDB.insert(workspaceMembers).values([
+        { workspaceId, userId, role: 'owner' },
+        { workspaceId, userId: memberId, role: 'member' },
+      ]);
+      const [issue] = await serverDB
+        .insert(tasks)
+        .values({
+          identifier: 'ATTACH-1',
+          seq: 1,
+          instruction: 'Shared Issue attachment',
+          createdByUserId: userId,
+          workspaceId,
+        })
+        .returning();
+      await serverDB.insert(taskTopics).values({
+        taskId: issue.id,
+        topicId: 'workspace-topic',
+        seq: 1,
+        userId,
+        workspaceId,
+      });
       await serverDB.insert(messages).values({
         content: 'shared message with attachment',
         id: 'shared-message',

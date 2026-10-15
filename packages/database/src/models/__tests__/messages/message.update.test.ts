@@ -14,8 +14,11 @@ import {
   messageTranslates,
   messageTTS,
   sessions,
+  tasks,
+  taskTopics,
   topics,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
@@ -1455,9 +1458,32 @@ describe('MessageModel Update Tests', () => {
       expect(dbResult[0].metadata).toEqual({ originalKey: 'originalValue' });
     });
 
-    it('should update workspace messages even when created by another user', async () => {
+    it('should update readable Issue messages even when created by another user', async () => {
+      await serverDB.insert(workspaceMembers).values([
+        { workspaceId, userId, role: 'owner' },
+        { workspaceId, userId: otherUserId, role: 'member' },
+      ]);
+      await serverDB.insert(topics).values({ id: 'metadata-issue-topic', userId, workspaceId });
+      const [issue] = await serverDB
+        .insert(tasks)
+        .values({
+          identifier: 'META-1',
+          seq: 1,
+          instruction: 'Shared Issue metadata',
+          createdByUserId: userId,
+          workspaceId,
+        })
+        .returning();
+      await serverDB.insert(taskTopics).values({
+        taskId: issue.id,
+        topicId: 'metadata-issue-topic',
+        seq: 1,
+        userId,
+        workspaceId,
+      });
       await serverDB.insert(messages).values({
         id: 'msg-workspace-metadata',
+        topicId: 'metadata-issue-topic',
         userId,
         workspaceId,
         role: 'user',

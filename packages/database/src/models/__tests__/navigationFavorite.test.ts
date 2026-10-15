@@ -32,7 +32,6 @@ beforeEach(async () => {
   ]);
   // Project creation provisions a coordinator through Prime inheritance.
   await seedPrimeRuntime(serverDB, { userId, workspaceId });
-  await seedPrimeRuntime(serverDB, { userId: otherUserId, workspaceId });
 });
 
 afterEach(async () => {
@@ -97,7 +96,6 @@ describe('NavigationFavoriteModel', () => {
     const visitorTasks = new TaskModel(serverDB, otherUserId, workspaceId);
     const teams = new TeamModel(serverDB, userId, workspaceId);
     const ownerProjects = new ProjectModel(serverDB, userId, workspaceId);
-    const visitorProjects = new ProjectModel(serverDB, otherUserId, workspaceId);
     const visitor = new NavigationFavoriteModel(serverDB, otherUserId, workspaceId);
 
     const readableTask = await visitorTasks.create({
@@ -128,10 +126,16 @@ describe('NavigationFavoriteModel', () => {
       .update(tasks)
       .set({ visibility: 'private' })
       .where(eq(tasks.id, legacyShared.id));
-    const readableProject = await visitorProjects.create({
-      identifier: 'FAV01',
-      name: 'Roadmap',
-    });
+    // The favorite resolves a persisted Project; it does not exercise coordinator creation.
+    const [readableProject] = await serverDB
+      .insert(projects)
+      .values({
+        identifier: 'FAV01',
+        name: 'Roadmap',
+        userId: otherUserId,
+        workspaceId,
+      })
+      .returning();
     const hiddenProject = await ownerProjects.create({
       identifier: 'HID01',
       name: 'Hidden Project',

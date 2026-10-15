@@ -164,8 +164,8 @@ describe('MessageModel.queryTopicTranscript', () => {
         topicId,
       }),
     ).resolves.toEqual({
-      items: [expect.objectContaining({ id: 'topic-transcript-other-owner-message' })],
-      total: 1,
+      items: [],
+      total: 0,
     });
   });
 

@@ -22,9 +22,9 @@
 import type { APIRequestContext } from 'playwright';
 
 import { E2E_PRIME_MODEL } from './seedOrviloProviderBinding';
-import { TEST_USER } from './seedTestUser';
+import { getTestDeviceId, TEST_USER } from './seedTestUser';
 
-export const E2E_DEVICE_ID = 'e2e-mock-device';
+export const E2E_DEVICE_ID = getTestDeviceId(TEST_USER.id);
 export const E2E_PRIME_AGENT_TITLE = 'Orvilo AI (E2E Prime)';
 let primeAgentId: string | undefined;
 
@@ -76,7 +76,7 @@ export const ensureTestUserPrimeAgent = async (request: APIRequestContext): Prom
         provider: 'deepseek',
         title: E2E_PRIME_AGENT_TITLE,
       },
-      visibility: 'private',
+      visibility: 'public',
     },
     workspaceId,
   );
@@ -137,7 +137,7 @@ export const bindTestUserExecutionDevice = async (request: APIRequestContext): P
     await client.query(
       `insert into devices (user_id, device_id, identity_source, hostname, platform, friendly_name, first_seen_at, last_seen_at, created_at, updated_at)
        values ($1, $2, 'machine-id', 'e2e-ci', 'linux', 'E2E Mock Device', now(), now(), now(), now())
-       on conflict (user_id, device_id) where workspace_id is null do nothing`,
+       on conflict (user_id, device_id) do nothing`,
       [TEST_USER.id, E2E_DEVICE_ID],
     );
     await client.query(

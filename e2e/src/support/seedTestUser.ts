@@ -19,6 +19,9 @@ export const TEST_USER = {
   username: isParallelWorker ? `e2e_test_user_${workerSuffix}` : 'e2e_test_user',
 };
 
+export const getTestDeviceId = (userId: string) =>
+  `e2e-mock-${createHash('sha256').update(userId).digest('hex').slice(0, 32)}`;
+
 /**
  * Seed test user into the database for e2e testing
  * This function connects directly to PostgreSQL and creates the necessary records

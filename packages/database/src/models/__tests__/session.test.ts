@@ -374,6 +374,15 @@ describe('SessionModel', () => {
       const result = await sessionModel.queryByKeyword('keyword');
       expect(result).toHaveLength(2);
       expect(result.map((s) => s.id)).toEqual(['1', '2']);
+      await expect(
+        sessionModel.findSessionsByKeywords({ current: 0, keyword: 'keyword', pageSize: 1 }),
+      ).resolves.toMatchObject([{ id: '1' }]);
+      await expect(
+        sessionModel.findSessionsByKeywords({ current: 1, keyword: 'keyword', pageSize: 1 }),
+      ).resolves.toMatchObject([{ id: '2' }]);
+      await expect(
+        sessionModel.findSessionsByKeywords({ current: 2, keyword: 'keyword', pageSize: 1 }),
+      ).resolves.toEqual([]);
     });
   });
 
@@ -1557,6 +1566,23 @@ describe('SessionModel', () => {
   });
 
   describe('findSessionsByKeywords', () => {
+    it('supports unpaginated searches when BM25 rejects oversized limits', async () => {
+      const searchSpy = vi.spyOn(serverDB.query.agents, 'findMany').mockResolvedValue([]);
+      const emptySearch = searchSpy.getMockImplementation()!;
+      searchSpy.mockImplementation((query) => {
+        if (typeof query?.limit === 'number' && query.limit > 8192) {
+          throw new Error(`min > max. min = ${query.limit}, max = 8192`);
+        }
+        return emptySearch(query);
+      });
+
+      try {
+        await expect(sessionModel.queryByKeyword('test')).resolves.toEqual([]);
+      } finally {
+        searchSpy.mockRestore();
+      }
+    });
+
     it('should propagate database search failures instead of returning no matches', async () => {
       const databaseError = new Error('BM25 backend unavailable');
       const searchSpy = vi

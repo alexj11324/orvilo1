@@ -625,8 +625,8 @@ export class SessionModel {
     keyword: string;
     pageSize?: number;
   }) => {
-    const { keyword, pageSize = 9999, current = 0 } = params;
-    const offset = current * pageSize;
+    const { keyword, pageSize, current = 0 } = params;
+    const offset = current * (pageSize ?? 0);
 
     if (this.ftsSearchCandidateSource?.ftsSearchCandidateEnabled) {
       const { candidates } = await this.ftsSearchCandidateSource.ftsSearchCandidates({
@@ -638,13 +638,15 @@ export class SessionModel {
       const candidateIds = candidates.map(({ id }) => id);
       if (candidateIds.length === 0) return [];
 
-      const matchingAgents = await this.db
+      const matchingAgentsQuery = this.db
         .select({ id: agents.id })
         .from(agents)
         .where(and(this.agentsOwnership(), inJsonStringArray(agents.id, candidateIds)))
         .orderBy(asc(agents.id))
-        .limit(pageSize)
         .offset(offset);
+      const matchingAgents = await (pageSize === undefined
+        ? matchingAgentsQuery
+        : matchingAgentsQuery.limit(pageSize));
       const matchingAgentIds = matchingAgents.map(({ id }) => id);
       if (matchingAgentIds.length === 0) return [];
 

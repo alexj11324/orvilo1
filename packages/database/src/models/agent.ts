@@ -4,12 +4,10 @@ import type { AgentRankItem, AgentTopicShareSubject, OrviloAgentAgencyConfig } f
 import {
   AGENT_PERMISSION_POLICY_KEYS,
   BUILTIN_HETEROGENEOUS_AGENT_CONFIGS,
-  DEFAULT_WORKSPACE_AGENT_SELECTION_POLICIES,
   HETEROGENEOUS_AGENT_CONFIGS,
   normalizeAgencyConfigForWrite,
   pruneWorkingDirByDeviceDeletes,
   REMOTE_HETEROGENEOUS_AGENT_CONFIGS,
-  resolveAgentAgencyConfig,
   TERMINAL_AGENT_OPERATION_STATUSES,
 } from '@orvilo/types';
 import { resolveAgentRuntimeType } from '@orvilo/utils/agentRuntimeIdentity';
@@ -31,7 +29,6 @@ import {
   or,
   sql,
 } from 'drizzle-orm';
-import { isEqual } from 'es-toolkit';
 import type { PartialDeep } from 'type-fest';
 
 import { merge } from '@/utils/merge';
@@ -74,10 +71,7 @@ import {
 } from '../schemas';
 import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase, Transaction } from '../type';
-import {
-  collectBoundDeviceIds,
-  sanitizeAgencyConfigsForWorkspace,
-} from '../utils/agencyConfigDevices';
+import { collectBoundDeviceIds } from '../utils/agencyConfigDevices';
 import {
   rehomeAgentConnectorsForRecipient,
   rehomeAgentConnectorsForScopeTransfer,
@@ -178,9 +172,7 @@ const IMMUTABLE_AGENT_FIELDS = [
   'slug',
   'userId',
   'virtual',
-  // Workspace visibility is public for new Agents. Only the dedicated
-  // managed publication path may promote legacy private records, so config
-  // patches cannot change this boundary.
+  // Visibility changes use the dedicated managed publication path.
   'visibility',
   'workspaceId',
 ] as const;
@@ -272,21 +264,6 @@ export class AgentModel {
   }
 
   /**
-   * New workspace agents persist both selection policies instead of relying
-   * on the intentionally different legacy fallbacks for missing values.
-   */
-  private withWorkspaceSelectionPolicyDefaults = (
-    agencyConfig: OrviloAgentAgencyConfig | null | undefined,
-  ): OrviloAgentAgencyConfig | null | undefined => {
-    if (!this.workspaceId) return agencyConfig;
-
-    return {
-      ...DEFAULT_WORKSPACE_AGENT_SELECTION_POLICIES,
-      ...agencyConfig,
-    };
-  };
-
-  /**
    * Rank the user's agents by topic count (agent usage ranking). Counts topics
    * directly via `topics.agentId`, so it is agent-native — no sessionId. Mirrors
    * the recents filter: real agents plus the inbox, excluding other virtual agents.
@@ -338,13 +315,8 @@ export class AgentModel {
       },
     );
 
-  // Internal execution reads run only after server Agent Use authorization.
-  // Keep exact workspace/personal ownership while allowing selected private Agents.
-  private executionScope = () =>
-    buildWorkspaceWhere(
-      { userId: this.userId, workspaceId: this.workspaceId },
-      { userId: agents.userId, workspaceId: agents.workspaceId },
-    );
+  // Agent Use cannot make another member's private Agent visible.
+  private executionScope = () => this.ownership();
 
   /** Same predicate but for the `sessions` table (used in delete cascade). */
   private sessionsOwnership = () =>
@@ -389,126 +361,21 @@ export class AgentModel {
     agencyConfig: PartialDeep<OrviloAgentAgencyConfig> | null | undefined,
   ): string[] => collectBoundDeviceIds(agencyConfig);
 
-  /**
-   * Shared ownership-rehoming device sanitation — see
-   * `sanitizeAgencyConfigsForWorkspace` in `utils/agencyConfigDevices`.
-   */
-  private sanitizeAgencyConfigForWorkspace = (
-    db: OrviloDatabase | Transaction,
-    targetWorkspaceId: string,
-    agencyConfigs: Array<OrviloAgentAgencyConfig | null | undefined>,
-    options?: { viewerUserId?: string },
-  ): Promise<Array<OrviloAgentAgencyConfig | null>> =>
-    sanitizeAgencyConfigsForWorkspace(db, targetWorkspaceId, agencyConfigs, options);
-
-  /**
-   * Enforce: a workspace-scoped agent may only bind devices enrolled in the
-   * same workspace. Personal devices (workspace_id IS NULL) are reachable only
-   * by their owning user, so a workspace member who isn't that owner would get
-   * a broken agent. Rejects at write time rather than at execution time.
-   *
-   * Only device ids INTRODUCED by this patch are checked — ids already present
-   * in `storedConfig` are grandfathered. Client patches spread the whole stored
-   * `agencyConfig` (device picker, working-dir writes), so a legacy
-   * personal-device reference left from before the agent joined the workspace
-   * (or before this guard existed) would otherwise poison every future save,
-   * including binding a perfectly valid workspace device.
-   *
-   * No-op when `agentWorkspaceId` is null (personal agent — any device OK) or
-   * when the patch carries no new device ids.
-   */
-  private assertWorkspaceDeviceBinding = async (
-    agentWorkspaceId: string | null,
+  /** Newly selected hosts belong to the configuring member; existing saved bindings survive edits. */
+  private assertNewDeviceBindingsOwned = async (
     agencyConfig: PartialDeep<OrviloAgentAgencyConfig> | null | undefined,
     storedConfig?: OrviloAgentAgencyConfig | null,
-    visibility?: 'private' | 'public',
   ): Promise<void> => {
-    if (!agentWorkspaceId) return;
     const existing = new Set(this.collectBoundDeviceIds(storedConfig));
     const candidates = this.collectBoundDeviceIds(agencyConfig).filter((id) => !existing.has(id));
-    if (candidates.length === 0) return;
-
+    if (!candidates.length) return;
     const rows = await this.db
       .select({ deviceId: devices.deviceId })
       .from(devices)
-      .where(
-        and(
-          visibility === 'private'
-            ? buildWorkspaceWhere({ userId: this.userId, workspaceId: agentWorkspaceId }, devices)
-            : buildStrictWorkspaceWhere(
-                {
-                  userId: this.userId,
-                  workspaceId: agentWorkspaceId,
-                  callerAgentVisibility: 'public',
-                },
-                devices,
-              ),
-          inArray(devices.deviceId, candidates),
-        ),
-      );
-    const allowed = new Set(rows.map((r) => r.deviceId));
-    const invalid = candidates.find((id) => !allowed.has(id));
-    if (invalid) {
-      throw new TRPCError({
-        cause: { data: { code: 'WorkspaceAgentRequiresWorkspaceDevice', deviceId: invalid } },
-        code: 'FORBIDDEN',
-        message:
-          'Workspace agent can only bind devices enrolled in the same workspace. ' +
-          'Enroll the device to the workspace, or pick a workspace device.',
-      });
-    }
-  };
-
-  /**
-   * A fixed workspace agent is a shared execution contract. It may use any
-   * server-resolvable shared target; a concrete device additionally has to be
-   * public in the same workspace. Use one generic device error for
-   * missing/private/cross-workspace rows so the write path never reveals a
-   * device the caller cannot otherwise see.
-   */
-  private assertFixedExecutionTarget = async (
-    agentWorkspaceId: string | null,
-    agencyConfig: OrviloAgentAgencyConfig | null | undefined,
-  ): Promise<void> => {
-    if (!agentWorkspaceId || agencyConfig?.executionTargetSelectionPolicy !== 'fixed') return;
-
-    if (
-      !agencyConfig.executionTarget ||
-      !['auto', 'device', 'none', 'sandbox'].includes(agencyConfig.executionTarget)
-    ) {
-      throw new TRPCError({
-        cause: { data: { code: 'FixedAgentRequiresSharedExecutionTarget' } },
-        code: 'BAD_REQUEST',
-        message: 'A fixed workspace agent requires a shared execution target.',
-      });
-    }
-
-    if (agencyConfig.executionTarget !== 'device') return;
-
-    if (!agencyConfig.boundDeviceId) {
-      throw new TRPCError({
-        cause: { data: { code: 'FixedAgentRequiresDeviceTarget' } },
-        code: 'BAD_REQUEST',
-        message: 'A fixed device target requires a bound device.',
-      });
-    }
-
-    const row = await this.db.query.devices.findFirst({
-      columns: { deviceId: true },
-      where: and(
-        eq(devices.workspaceId, agentWorkspaceId),
-        eq(devices.deviceId, agencyConfig.boundDeviceId),
-        eq(devices.visibility, 'public'),
-      ),
-    });
-
-    if (!row) {
-      throw new TRPCError({
-        cause: { data: { code: 'FixedAgentRequiresPublicWorkspaceDevice' } },
-        code: 'PRECONDITION_FAILED',
-        message: 'A fixed workspace agent requires a public device from the same workspace.',
-      });
-    }
+      .where(and(eq(devices.userId, this.userId), inArray(devices.deviceId, candidates)));
+    const allowed = new Set(rows.map((row) => row.deviceId));
+    if (candidates.some((id) => !allowed.has(id)))
+      throw new TRPCError({ code: 'FORBIDDEN', message: 'AGENT_HOST_UNAVAILABLE' });
   };
 
   /** Resolve identity without returning executable configuration. */
@@ -1374,25 +1241,20 @@ export class AgentModel {
     if (!replaceRuntime && previousType && previousType !== nextType) {
       throw new TRPCError({ code: 'BAD_REQUEST', message: 'AGENT_RUNTIME_IDENTITY_FIXED' });
     }
-    const contract = (
-      config: Partial<AgentItem>,
-      agency: OrviloAgentAgencyConfig | null | undefined,
-    ) => ({
-      host: agency?.boundDeviceId,
-      target: agency?.executionTarget,
-      type: agency?.heterogeneousProvider?.type,
-      runtimeModel: agency?.heterogeneousProvider?.model,
-      apiConfig: agency?.heterogeneousProvider?.apiConfig,
-      command: agency?.heterogeneousProvider?.command,
-      model: config.model,
-      provider: config.provider,
-    });
-    if (!replaceRuntime && isEqual(contract(stored, before), contract(next, after))) return;
     next.agencyConfig = await assertAgentRuntimeCreation(
       this.db,
       { userId: this.userId, workspaceId: stored.workspaceId ?? undefined },
       { ...next, agencyConfig: after },
-      replaceRuntime ? { purpose: 'orchestrator' } : {},
+      {
+        ...(replaceRuntime ? { purpose: 'orchestrator' as const } : {}),
+        savedDeviceId: before?.boundDeviceId,
+        providerOwnerUserId:
+          stored.model === next.model &&
+          stored.provider === next.provider &&
+          before?.heterogeneousProvider?.model === after?.heterogeneousProvider?.model
+            ? stored.userId
+            : undefined,
+      },
     );
   };
 
@@ -1427,20 +1289,7 @@ export class AgentModel {
       if (this.workspaceId && options.visibility !== 'private' && source.visibility === 'private')
         throw new TRPCError({ code: 'FORBIDDEN', message: 'ORCHESTRATOR_SOURCE_PRIVATE' });
     }
-    // Device/model overrides live on the workspace member preference only —
-    // a personal agent has exactly one member, so there is nothing to override.
-    const preference = this.workspaceId
-      ? await new WorkspaceUserSettingsModel(this.db, this.userId, this.workspaceId).getPreference()
-      : undefined;
-    const agency = resolveAgentAgencyConfig(
-      source.agencyConfig,
-      preference?.agentDeviceOverrides?.[agentId],
-      {
-        canManage: source.userId === this.userId,
-        visibility: source.visibility ?? undefined,
-        workspaceId: source.workspaceId,
-      },
-    );
+    const agency = normalizeAgencyConfigForWrite(source.agencyConfig);
     const provider = agency?.heterogeneousProvider;
     if (!provider)
       throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AGENT_RUNTIME_REQUIRED' });
@@ -1460,8 +1309,7 @@ export class AgentModel {
             type: provider.type,
           }
         : withoutEnv;
-    const override = preference?.agentModelOverrides?.[agentId];
-    const selectedModel = options.model ?? override?.model ?? safeProvider.model ?? source.model;
+    const selectedModel = options.model ?? safeProvider.model ?? source.model;
     const config = {
       agencyConfig: {
         ...(options.purpose === 'orchestrator'
@@ -1473,15 +1321,6 @@ export class AgentModel {
               workingDirByDevice: agency?.workingDirByDevice,
             }
           : agency),
-        // `resolveAgentAgencyConfig` strips the stored selection policy on the
-        // owner path — it is a read-time view of the shared row, not the shape
-        // to persist. A copied/inherited runtime must carry the agent's stored
-        // workspace policy, so restore it from the source row.
-        ...(source.agencyConfig?.executionTargetSelectionPolicy
-          ? {
-              executionTargetSelectionPolicy: source.agencyConfig.executionTargetSelectionPolicy,
-            }
-          : {}),
         ...(options.deviceId
           ? { boundDeviceId: options.deviceId, executionTarget: 'device' as const }
           : {}),
@@ -1491,7 +1330,7 @@ export class AgentModel {
         },
       },
       model: selectedModel ?? null,
-      provider: options.provider ?? override?.provider ?? source.provider,
+      provider: options.provider ?? source.provider,
       visibility: options.visibility,
     };
     await assertAgentRuntimeCreation(
@@ -1571,43 +1410,26 @@ export class AgentModel {
 
   /** Existing Group factories supply authoritative parent visibility after Group authorization. */
   batchCreateGroupAgents = (configs: Partial<AgentItem>[]): Promise<AgentItem[]> =>
-    this.createBatch(configs, true);
+    this.createBatch(configs);
 
-  private createBatch = async (
-    configs: Partial<AgentItem>[],
-    groupOwned = false,
-  ): Promise<AgentItem[]> => {
+  private createBatch = async (configs: Partial<AgentItem>[]): Promise<AgentItem[]> => {
     if (configs.length === 0) return [];
-    if (
-      this.workspaceId &&
-      !groupOwned &&
-      configs.some((config) => config.visibility === 'private')
-    )
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'New workspace Agents must be public' });
 
     const normalizedConfigs = await Promise.all(
       configs.map(async (config) => ({
         ...this.stripReservedSlug(config),
         avatar: this.runtimeAvatar(config),
-        agencyConfig: this.withWorkspaceSelectionPolicyDefaults(
-          await assertAgentRuntimeCreation(
-            this.db,
-            { userId: this.userId, workspaceId: this.workspaceId },
-            config,
-          ),
+        agencyConfig: await assertAgentRuntimeCreation(
+          this.db,
+          { userId: this.userId, workspaceId: this.workspaceId },
+          config,
         ),
       })),
     );
 
     await Promise.all(
       normalizedConfigs.flatMap((config) => [
-        this.assertWorkspaceDeviceBinding(
-          this.workspaceId ?? null,
-          config.agencyConfig,
-          undefined,
-          config.visibility ?? undefined,
-        ),
-        this.assertFixedExecutionTarget(this.workspaceId ?? null, config.agencyConfig),
+        this.assertNewDeviceBindingsOwned(config.agencyConfig),
       ]),
     );
 
@@ -1702,9 +1524,11 @@ export class AgentModel {
           },
         };
       }
-      await this.assertRuntimeUpdate(agent, next);
       sanitizedData.agencyConfig = next.agencyConfig;
     }
+    const nextConfig = { ...agent, ...sanitizedData };
+    await this.assertRuntimeUpdate(agent, nextConfig);
+    sanitizedData.agencyConfig = nextConfig.agencyConfig;
     const avatar =
       agent.slug === BUILTIN_AGENT_SLUGS.agentBuilder
         ? agent.avatar
@@ -1752,7 +1576,13 @@ export class AgentModel {
    */
   publishToWorkspace = async (agentId: string) => {
     const agent = await this.db.query.agents.findFirst({
-      columns: { agencyConfig: true, sessionGroupId: true, workspaceId: true },
+      columns: {
+        agencyConfig: true,
+        sessionGroupId: true,
+        workspaceId: true,
+        model: true,
+        provider: true,
+      },
       where: and(
         eq(agents.id, agentId),
         this.ownership(),
@@ -1765,10 +1595,11 @@ export class AgentModel {
       throw new Error('Agent not found, already published, or access denied');
     }
 
-    // Re-check at the publication boundary. A legacy/stale fixed target may
-    // predate the config-write guard; a concrete device must never be exposed
-    // when workspace members cannot resolve it.
-    await this.assertFixedExecutionTarget(agent.workspaceId, agent.agencyConfig);
+    await assertAgentRuntimeCreation(
+      this.db,
+      { userId: this.userId, workspaceId: agent.workspaceId ?? undefined },
+      { ...agent, visibility: 'public' },
+    );
 
     // Rehome exactly as `setVisibility` does: a folder cannot mix
     // visibilities, so publishing out of a private Category releases the
@@ -1855,10 +1686,8 @@ export class AgentModel {
     };
   };
 
-  /** Promote a legacy private Agent; workspace Agents cannot become private. */
+  /** Visibility changes keep the configured host and model. */
   setVisibility = async (agentId: string, visibility: 'private' | 'public') => {
-    if (this.workspaceId && visibility === 'private')
-      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Workspace Agents must be public' });
     // A sidebar folder cannot mix visibilities (HomeRepository.processAgentList
     // buckets grouped items by item visibility under same-visibility groups),
     // so an agent crossing scopes while keyed to a group of the OLD scope
@@ -1867,6 +1696,8 @@ export class AgentModel {
     const [current] = await this.db
       .select({
         agencyConfig: agents.agencyConfig,
+        model: agents.model,
+        provider: agents.provider,
         groupVisibility: sessionGroups.visibility,
         workspaceId: agents.workspaceId,
       })
@@ -1878,7 +1709,12 @@ export class AgentModel {
     // `publishAgentToWorkspace` is the normal client path, but keep the
     // visibility mutation equally safe for direct API callers.
     if (visibility === 'public' && current) {
-      await this.assertFixedExecutionTarget(current.workspaceId, current.agencyConfig);
+      await assertAgentRuntimeCreation(
+        this.db,
+        { userId: this.userId, workspaceId: current.workspaceId ?? undefined },
+        { ...current, visibility },
+        { savedDeviceId: current.agencyConfig?.boundDeviceId },
+      );
     }
 
     const groupVisibility = current?.groupVisibility as 'private' | 'public' | null | undefined;
@@ -1983,12 +1819,7 @@ export class AgentModel {
     // that source before validating; normalizing input alone invents a runtime.
     agent.agencyConfig = normalizeAgencyConfigForWrite(agent.agencyConfig);
 
-    await this.assertWorkspaceDeviceBinding(
-      agent.workspaceId,
-      data.agencyConfig,
-      agent.agencyConfig,
-      agent.visibility ?? undefined,
-    );
+    await this.assertNewDeviceBindingsOwned(data.agencyConfig, agent.agencyConfig);
 
     // First process the params field: undefined means delete, null means disable flag
     const existingParams = agent.params ?? {};
@@ -2128,16 +1959,9 @@ export class AgentModel {
     // `undefined`, which merge() skips — prune those keys so the delete persists.
     pruneWorkingDirByDeviceDeletes(mergedValue.agencyConfig, data.agencyConfig);
 
-    if (
-      Object.hasOwn(data, 'agencyConfig') ||
-      Object.hasOwn(data, 'model') ||
-      Object.hasOwn(data, 'provider')
-    ) {
-      await this.assertRuntimeUpdate(agent, mergedValue, replaceRuntime);
-    }
+    await this.assertRuntimeUpdate(agent, mergedValue, replaceRuntime);
     if (agent.slug !== BUILTIN_AGENT_SLUGS.agentBuilder)
       mergedValue.avatar = this.runtimeAvatar(mergedValue);
-    await this.assertFixedExecutionTarget(agent.workspaceId, mergedValue.agencyConfig);
 
     // Final cleanup: ensure no undefined or null values enter the database
     if (mergedValue.params) {
@@ -2258,14 +2082,7 @@ export class AgentModel {
     // Copying the full configuration requires the same authority as editing it.
     await this.assertAgentManageable(sourceAgent);
 
-    // The copy is owned by the caller, so device references must be resolvable
-    // by the caller too. A public workspace agent may still carry a legacy
-    // personal-device `boundDeviceId` / `workingDirByDevice` that `updateConfig`
-    // grandfathers; duplicating it verbatim would point the new agent at a
-    // device outside the workspace instead of defaulting to the caller's own
-    // device. Sanitize exactly like `transferAgents` does when moving into a
-    // workspace. Personal-scope copies keep existing bindings (any device is
-    // reachable there).
+    // Copies inherit the saved runtime and pass the same host/model admission as new Agents.
     sourceAgent.agencyConfig = normalizeAgencyConfigForWrite(sourceAgent.agencyConfig);
     const runtime = await this.inheritRuntimeForCreation(agentId, {
       visibility: sourceAgent.visibility ?? undefined,
@@ -2416,9 +2233,7 @@ export class AgentModel {
           .update(agents)
           .set({
             ...(persistConfig?.chatConfig ? { chatConfig: persistConfig.chatConfig } : {}),
-            ...(healAgency
-              ? { agencyConfig: this.withWorkspaceSelectionPolicyDefaults(healAgency) }
-              : {}),
+            ...(healAgency ? { agencyConfig: healAgency } : {}),
           })
           .where(eq(agents.id, existing.id))
           .returning();
@@ -2490,7 +2305,7 @@ export class AgentModel {
           buildWorkspacePayload(
             { userId: this.userId, workspaceId: this.workspaceId },
             {
-              agencyConfig: this.withWorkspaceSelectionPolicyDefaults(persistConfig.agencyConfig),
+              agencyConfig: persistConfig.agencyConfig,
               chatConfig: persistConfig.chatConfig,
               model: persistConfig.model,
               provider: persistConfig.provider,
@@ -2870,24 +2685,6 @@ export class AgentModel {
         workspaceId: targetWorkspaceId,
       };
 
-      // 3a. Strip stale device bindings when moving INTO a workspace: any
-      // boundDeviceId / workingDirByDevice entry that isn't enrolled in the
-      // target workspace is silently dropped. Otherwise the moved agent would
-      // reference a device only the previous owner can reach. Moving to a
-      // personal scope (`targetWorkspaceId === null`) keeps existing bindings.
-      // Device rows for the whole batch are fetched with one query.
-      const resolvedAgencyConfigs = new Map<string, OrviloAgentAgencyConfig | null>();
-      if (targetWorkspaceId) {
-        const cleanedConfigs = await this.sanitizeAgencyConfigForWorkspace(
-          trx,
-          targetWorkspaceId,
-          foundAgents.map((agent) => agent.agencyConfig),
-        );
-        foundAgents.forEach((agent, index) =>
-          resolvedAgencyConfigs.set(agent.id, cleanedConfigs[index]),
-        );
-      }
-
       // 4. Update the agent records. slug / agencyConfig differ per agent, so
       //    these are per-row PK updates (cheap); the large cascaded tables
       //    below are still one bulk UPDATE each.
@@ -2904,9 +2701,7 @@ export class AgentModel {
           .set({
             ...ownershipUpdate,
             ...visibilityUpdate,
-            agencyConfig: targetWorkspaceId
-              ? (resolvedAgencyConfigs.get(agent.id) ?? null)
-              : (agent.agencyConfig ?? null),
+            agencyConfig: agent.agencyConfig ?? null,
             // Pins are shared state now, exactly like the folder above: a pin
             // the previous owner set for themselves would arrive as a pin for
             // every member of the target workspace. Both belong to the source
@@ -3359,19 +3154,6 @@ export class AgentModel {
       }
     }
 
-    // Re-home device bindings: a boundDeviceId / workingDirByDevice entry (or
-    // a fixed device policy) pointing at the previous owner's personal device
-    // would leave the recipient's runs unroutable. Same sanitation as moving
-    // an agent into a workspace.
-    const [cleanedAgencyConfig] = await this.sanitizeAgencyConfigForWorkspace(
-      trx,
-      this.workspaceId,
-      [agent.agencyConfig],
-      // The recipient is the new author: bindings to another member's PRIVATE
-      // workspace device are as unreachable for them as a personal device.
-      { viewerUserId: toUserId },
-    );
-
     // An ownership flip does not make the agent's content newer. `clientId`
     // is cleared: it identifies the row to the CREATOR's client-side sync and
     // is unique per (clientId, userId) — if the recipient already owns an
@@ -3379,7 +3161,7 @@ export class AgentModel {
     await trx
       .update(agents)
       .set({
-        agencyConfig: cleanedAgencyConfig,
+        agencyConfig: agent.agencyConfig,
         clientId: null,
         updatedAt: agents.updatedAt,
         userId: toUserId,

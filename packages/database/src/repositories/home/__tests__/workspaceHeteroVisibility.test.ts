@@ -1,6 +1,5 @@
 // Legacy workspace-private heterogeneous Agents remain visible only to
 // their creator across the sidebar; current workspace Agents cannot become private.
-import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
@@ -33,8 +32,6 @@ beforeEach(async () => {
     deviceId: `creation-host-${ws}`,
     identitySource: 'installation',
     userId: creator,
-    visibility: 'public',
-    workspaceId: ws,
   });
 });
 
@@ -44,7 +41,7 @@ afterEach(async () => {
 });
 
 describe('legacy workspace hetero agent visibility', () => {
-  it('rejects a private flip while keeping a legacy private hetero agent visible only to its creator', async () => {
+  it('allows a private flip and keeps the hetero Agent visible only to its creator', async () => {
     const agentModel = new AgentModel(clientDB, creator, ws);
 
     // mirrors useCreateHeteroAgent -> lambda createAgent (public default)
@@ -52,7 +49,7 @@ describe('legacy workspace hetero agent visibility', () => {
       agencyConfig: {
         boundDeviceId: `creation-host-${ws}`,
         executionTarget: 'device',
-        heterogeneousProvider: { command: 'claude', type: 'claude-code' },
+        heterogeneousProvider: { command: 'claude', model: 'default', type: 'claude-code' },
       } as any,
       provider: 'claude-code',
       systemRole: '',
@@ -63,16 +60,7 @@ describe('legacy workspace hetero agent visibility', () => {
     const before = await new HomeRepository(clientDB, creator, ws).getSidebarAgentList();
     expect(before.ungrouped.map((a) => a.id)).toContain(agent.id);
 
-    await expect(agentModel.setVisibility(agent.id, 'private')).rejects.toMatchObject({
-      code: 'BAD_REQUEST',
-      message: 'Workspace Agents must be public',
-    });
-
-    // Seed a historical private row; the current API cannot create this state.
-    await clientDB
-      .update(Schema.agents)
-      .set({ visibility: 'private' })
-      .where(eq(Schema.agents.id, agent.id));
+    await agentModel.setVisibility(agent.id, 'private');
 
     // creator should still see it in the Private bucket
     const after = await new HomeRepository(clientDB, creator, ws).getSidebarAgentList();

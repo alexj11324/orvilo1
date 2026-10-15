@@ -146,14 +146,13 @@ const runParams = {
 };
 
 describe('TaskRunnerService delegated runs', () => {
-  it('admits a private workspace Agent granted Use without requiring public visibility', async () => {
+  it('admits a shared workspace Agent with Use permission', async () => {
     const task = baseTask({ visibility: 'public' });
     const { execAgent } = setupHappyPath(task, {
       operationId: 'op-1',
       success: true,
       topicId: 'tpc_1',
     });
-    vi.mocked(assertAgentVisibleTo).mockRejectedValueOnce(new TRPCError({ code: 'NOT_FOUND' }));
     const { service } = newRunner();
     await expect(service.runTask({ ...runParams, delegation: undefined })).resolves.toMatchObject({
       success: true,

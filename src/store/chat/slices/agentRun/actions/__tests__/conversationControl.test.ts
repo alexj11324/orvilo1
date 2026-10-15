@@ -2969,7 +2969,7 @@ describe('ConversationControl actions', () => {
       expect(persistAnswersSpy).not.toHaveBeenCalled();
     });
 
-    it('fails closed after an unavailable durable source when operation memory is empty', async () => {
+    it('submits a cold-loaded remote card under its persisted operation after the durable source is unavailable', async () => {
       const { result } = renderHook(() => useChatStore());
       const agentId = 'remote-agent';
       const topicId = 'remote-topic';
@@ -3008,17 +3008,27 @@ describe('ConversationControl actions', () => {
         .spyOn(heterogeneousAgentService, 'submitIntervention')
         .mockResolvedValue(undefined as any);
 
-      await expect(
-        captureActError(() =>
-          result.current.submitHeteroIntervention('tool-msg-source-unavailable', 'submit', {
-            Question: 'Answer',
-          }),
-        ),
-      ).resolves.toMatchObject({ message: expect.stringContaining('no longer pending') });
+      await act(async () => {
+        await result.current.submitHeteroIntervention('tool-msg-source-unavailable', 'submit', {
+          Question: 'Answer',
+        });
+      });
 
       expect(sourceMutation).toHaveBeenCalledOnce();
-      expect(pluginSpy).not.toHaveBeenCalled();
-      expect(legacyRemoteSubmit).not.toHaveBeenCalled();
+      expect(pluginSpy).toHaveBeenCalledWith(
+        toolMessage.id,
+        { intervention: { ...toolMessage.pluginIntervention, resolving: true } },
+        { context: { agentId, topicId } },
+      );
+      expect(legacyRemoteSubmit).toHaveBeenCalledWith({
+        operationId: 'server-operation-source-unavailable',
+        resolutionRequestId: expect.any(String),
+        result: { Question: 'Answer' },
+        toolCallId: 'call-source-unavailable',
+        toolMessageId: toolMessage.id,
+        windowId: undefined,
+      });
+      expect(result.current.operations).toEqual({});
       expect(localSubmit).not.toHaveBeenCalled();
     });
 
@@ -3159,6 +3169,8 @@ describe('ConversationControl actions', () => {
         resolutionRequestId: expect.any(String),
         result: { Question: 'Answer' },
         toolCallId: 'call-remote-fallback',
+        toolMessageId: toolMessage.id,
+        windowId: undefined,
       });
     });
 
@@ -3391,13 +3403,9 @@ describe('ConversationControl actions', () => {
       );
     });
 
-    it("falls back to global-state optimistic context and routes a GC'd op to the remote tRPC transport", async () => {
-      // When the resolved op has already been garbage-collected (not present in
-      // `operations`), the optimistic context is the empty object `{}`
-      // (global-state fallback) rather than carrying the stale operationId. With
-      // no live op to prove local-desktop provenance, the answer routes to the
-      // universal remote transport (tRPC) — the run has already ended, so this is
-      // a harmless no-op either way — and the call does NOT throw.
+    it("uses explicit conversation context and routes a GC'd op to the remote tRPC transport", async () => {
+      // Missing renderer memory routes through remote authorization while
+      // optimistic writes remain bound to the clicked conversation.
       const { result } = renderHook(() => useChatStore());
 
       const agentId = 'hetero-agent';
@@ -3452,11 +3460,11 @@ describe('ConversationControl actions', () => {
       });
 
       // Remote publish is only transport acceptance: keep the form pending,
-      // mark it resolving, and use the empty global-state fallback context.
+      // mark it resolving, and retain the current conversation context.
       expect(pluginSpy).toHaveBeenCalledWith(
         'tool-msg-1',
         { intervention: { resolving: true, status: 'pending' } },
-        {},
+        { context: { agentId, topicId, threadId: undefined } },
       );
       expect(updateTopicStatusSpy).not.toHaveBeenCalled();
 
@@ -3501,7 +3509,7 @@ describe('ConversationControl actions', () => {
       expect(pluginSpy).toHaveBeenLastCalledWith(
         'tool-msg-1',
         { intervention: { status: 'pending' } },
-        {},
+        { context: { agentId, topicId, threadId: undefined } },
       );
     });
 

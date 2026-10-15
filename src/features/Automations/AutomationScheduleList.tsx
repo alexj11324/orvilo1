@@ -44,6 +44,7 @@ import { AutomationScheduleSkeleton } from './AutomationSkeleton';
 import AutomationStatusBadge from './AutomationStatusBadge';
 import {
   automationDetailPath,
+  automationMutationErrorMessage,
   automationNextRun,
   automationStatusOf,
   automationTriggerSummary,
@@ -159,7 +160,15 @@ const AutomationRow = memo<AutomationRowProps>(({ checked, onCheckedChange, onOp
                 (status === 'paused' || (task.automationMode === 'event' && status !== 'active')
                   ? resume(task)
                   : pause(task)
-                ).catch(() => toast.error(t('actions.update_failed'))),
+                ).catch((error) =>
+                  toast.error(
+                    automationMutationErrorMessage(
+                      error,
+                      t('actions.update_failed'),
+                      t('events.reason.NATIVE_FULL_ACCESS_UNAVAILABLE'),
+                    ),
+                  ),
+                ),
             },
             { type: 'divider' },
             {
@@ -277,8 +286,14 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
           toast.success(
             t(action === 'delete' ? 'batch.deleted' : 'batch.updated', { count: targets.length }),
           );
-        } catch {
-          toast.error(t(action === 'delete' ? 'batch.delete_failed' : 'batch.update_failed'));
+        } catch (error) {
+          toast.error(
+            automationMutationErrorMessage(
+              error,
+              t(action === 'delete' ? 'batch.delete_failed' : 'batch.update_failed'),
+              t('events.reason.NATIVE_FULL_ACCESS_UNAVAILABLE'),
+            ),
+          );
         }
         setSelected(new Set());
         // The ordinary task list shows automated tasks too, so it is stale after

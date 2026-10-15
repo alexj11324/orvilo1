@@ -1,10 +1,11 @@
 import { isDesktop } from '@orvilo/const';
-import type { HeterogeneousTopicPin } from '@orvilo/types';
 import { getWorkingDirEffectivePath } from '@orvilo/types';
 import { t } from 'i18next';
 import type { AiModelReasoningConfig } from 'model-bank';
 
 import { MAIN_SIDEBAR_EXCLUDE_TRIGGERS } from '@/const/topic';
+import { getAgentStoreState } from '@/store/agent';
+import { agentSelectors } from '@/store/agent/selectors';
 import {
   type ChatTopic,
   type ChatTopicSummary,
@@ -155,97 +156,17 @@ const currentActiveTopicSummary = (s: ChatStoreState): ChatTopicSummary | undefi
 
 const currentTopicMetadata = (s: ChatStoreState) => currentActiveTopic(s)?.metadata;
 
-/**
- * Get the model/provider pinned to a specific topic (snapshotted on creation,
- * updated when the user switches model while the topic is active).
- * Returns undefined when the topic has no model recorded (e.g. legacy topics),
- * in which case callers should fall back to the agent default.
- */
-const getTopicModelById =
-  (id: string) =>
-  (s: ChatStoreState): { model: string; provider: string } | undefined => {
-    const topic = getTopicById(id)(s);
-    if (!topic?.model) return undefined;
-
-    return { model: topic.model, provider: topic.provider || '' };
-  };
-
-/**
- * The model/provider pinned to the active topic, or undefined when there is no
- * active topic or it has no model recorded.
- */
-const activeTopicModel = (s: ChatStoreState): { model: string; provider: string } | undefined => {
-  if (!s.activeTopicId) return undefined;
-  return getTopicModelById(s.activeTopicId)(s);
-};
-
-export interface TopicReasoningPin {
-  model: string;
-  provider: string;
-  /** Absent on legacy topics and topics created before the config was loaded. */
-  reasoningConfig?: AiModelReasoningConfig;
-}
-
-/**
- * The reasoning effort pinned to a topic together with the model it was pinned
- * for (`ChatTopicMetadata.reasoningConfig` + `ChatTopic.model`). Consumers must
- * only honor `reasoningConfig` when the pinned model matches the model they are
- * about to run — a sub-agent `modelOverride` or a stale snapshot must not leak
- * another model's effort — and fall back to the user-level model-instance
- * config otherwise. Undefined when the topic has no model pinned at all.
- */
-const getTopicReasoningPinById =
-  (id: string) =>
-  (s: ChatStoreState): TopicReasoningPin | undefined => {
-    const topic = getTopicById(id)(s);
-    if (!topic?.model) return undefined;
-
-    return {
-      model: topic.model,
-      provider: topic.provider || '',
-      reasoningConfig: topic.metadata?.reasoningConfig,
-    };
-  };
-
-/**
- * The reasoning config pinned to `id` for exactly `model`/`provider`, else
- * undefined (no pin, legacy topic, or pinned for another model).
- */
+/** Apply topic reasoning only to its selected Agent's saved model. */
 const getTopicReasoningConfigForModel =
   (id: string, model: string, provider: string) =>
   (s: ChatStoreState): AiModelReasoningConfig | undefined => {
-    const pin = getTopicReasoningPinById(id)(s);
-    if (!pin || pin.model !== model || pin.provider !== provider) return undefined;
-    return pin.reasoningConfig;
+    const topic = getTopicById(id)(s);
+    const config = agentSelectors.getAgentConfigById(topic?.agentId ?? s.activeAgentId)(
+      getAgentStoreState(),
+    );
+    if (config?.model !== model || config?.provider !== provider) return undefined;
+    return topic?.metadata?.reasoningConfig;
   };
-
-/**
- * Everything a topic pins for a heterogeneous run — the model/provider columns
- * plus `metadata.heteroEffort`. Undefined when nothing is pinned, so callers
- * can pass it straight to `applyTopicModelToHeterogeneousProvider`.
- */
-export const resolveTopicHeteroPin = (
-  topic: Pick<ChatTopic, 'metadata' | 'model' | 'provider'> | undefined,
-): HeterogeneousTopicPin | undefined => {
-  if (!topic) return undefined;
-  const effort = topic.metadata?.heteroEffort;
-  if (!topic.model && effort === undefined) return undefined;
-
-  return {
-    ...(topic.model ? { model: topic.model, provider: topic.provider || '' } : {}),
-    ...(effort === undefined ? {} : { effort }),
-  };
-};
-
-const getTopicHeteroPinById =
-  (id: string) =>
-  (s: ChatStoreState): HeterogeneousTopicPin | undefined =>
-    resolveTopicHeteroPin(getTopicById(id)(s));
-
-const activeTopicHeteroPin = (s: ChatStoreState): HeterogeneousTopicPin | undefined => {
-  if (!s.activeTopicId) return undefined;
-  return getTopicHeteroPinById(s.activeTopicId)(s);
-};
 
 /**
  * Extract a topic's working directory from its metadata.
@@ -465,8 +386,6 @@ const isTopicNotFoundById =
 
 export const topicSelectors = {
   activeTopicIdForAgent,
-  activeTopicHeteroPin,
-  activeTopicModel,
   currentActiveTopic,
   currentActiveTopicSummary,
   currentTopicCount,
@@ -481,10 +400,7 @@ export const topicSelectors = {
   displayTopicsForSidebar,
   getTopicById,
   getTopicContainerKeyById,
-  getTopicHeteroPinById,
-  getTopicModelById,
   getTopicReasoningConfigForModel,
-  getTopicReasoningPinById,
   getTopicWorkingDirectory,
   getTopicsByAgentId,
   groupedTopicsForSidebar,

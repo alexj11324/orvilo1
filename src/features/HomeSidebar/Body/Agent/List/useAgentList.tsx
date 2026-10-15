@@ -1,5 +1,6 @@
 'use client';
 
+import { isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import isEqual from 'fast-deep-equal';
 import { useMemo } from 'react';
 
@@ -13,18 +14,18 @@ import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 
 /**
- * Drop agents whose runtime is not offered. Chat groups carry no runtime stamp
- * and are kept.
+ * Drop paused built-in identities and agents whose runtime is not offered.
+ * Chat groups remain available.
  */
 export const keepOfferedAgents = <T,>(items: T[], builtinOffered: boolean): T[] =>
-  builtinOffered
-    ? items
-    : items.filter((item) => {
-        const row = item as { heterogeneousType?: string | null; type?: string };
-        return (
-          (row.type ?? 'agent') !== 'agent' || isAgentRuntimeOffered(row.heterogeneousType, false)
-        );
-      });
+  items.filter((item) => {
+    const row = item as { heterogeneousType?: string | null; slug?: string | null; type?: string };
+    return (
+      (row.type ?? 'agent') !== 'agent' ||
+      (isBuiltinAgentAvailable(row.slug) &&
+        isAgentRuntimeOffered(row.heterogeneousType, builtinOffered))
+    );
+  });
 
 /**
  * The one seam every agent list is shaped through. Per-item sidebar membership

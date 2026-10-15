@@ -13,6 +13,8 @@ import { randomBytes } from 'node:crypto';
 import { Given, Then, When } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 
+import { E2E_DEVICE_ID } from '../../support/bindExecutionDevice';
+import { E2E_PRIME_MODEL } from '../../support/seedOrviloProviderBinding';
 import { TEST_USER } from '../../support/seedTestUser';
 import { type CustomWorld, WAIT_TIMEOUT } from '../../support/world';
 
@@ -139,11 +141,25 @@ async function createTestAgent(title: string = 'Test Agent'): Promise<string> {
     const slug = `test-agent-${suffix}`;
     const workspaceId = await getTestWorkspaceId(client);
 
+    // Rename validates the saved runtime too; private Agents may use the test user's personal device.
     await client.query(
-      `INSERT INTO agents (id, slug, title, user_id, workspace_id, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $6)
+      `INSERT INTO agents (id, slug, title, user_id, workspace_id, created_at, updated_at, visibility, model, provider, agency_config)
+       VALUES ($1, $2, $3, $4, $5, $6, $6, 'private', $7, 'deepseek', $8::jsonb)
        ON CONFLICT DO NOTHING`,
-      [agentId, slug, title, TEST_USER.id, workspaceId, now],
+      [
+        agentId,
+        slug,
+        title,
+        TEST_USER.id,
+        workspaceId,
+        now,
+        E2E_PRIME_MODEL,
+        JSON.stringify({
+          boundDeviceId: E2E_DEVICE_ID,
+          executionTarget: 'device',
+          heterogeneousProvider: { model: E2E_PRIME_MODEL, type: 'orvilo' },
+        }),
+      ],
     );
 
     console.log(`   📍 Created test agent in DB: ${agentId}`);
@@ -185,7 +201,7 @@ Given('用户在 Agents 页面有一个 Agent', { timeout: 30_000 }, async funct
   this.testContext.createdAgentId = agentId;
 
   console.log('   📍 Step: 导航到 Agents 页面...');
-  await this.page.goto('/agents');
+  await this.page.goto('/agents?tab=private');
   await this.page.waitForLoadState('domcontentloaded', { timeout: 15_000 });
   await this.page.waitForTimeout(1000);
 

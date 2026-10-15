@@ -45,14 +45,12 @@ beforeEach(async () => {
     { role: 'member', userId: recipientId, workspaceId: wsId },
     { role: 'member', userId: teammateId, workspaceId: wsId },
   ]);
-  // Creation admission requires a resolvable bound host; a codex-typed runtime
-  // needs no provider bindings.
+  // Creation admission requires a saved host and an explicit Codex model;
+  // this runtime needs no provider bindings.
   await serverDB.insert(devices).values({
     deviceId: `creation-host-${wsId}`,
     identitySource: 'installation',
     userId: ownerId,
-    visibility: 'public',
-    workspaceId: wsId,
   });
 });
 
@@ -61,7 +59,7 @@ const withRuntime = (config: Parameters<typeof ownerModel.create>[0] = {}) => ({
   agencyConfig: {
     boundDeviceId: `creation-host-${wsId}`,
     executionTarget: 'device' as const,
-    heterogeneousProvider: { type: 'codex' as const },
+    heterogeneousProvider: { model: 'default', type: 'codex' as const },
     ...config.agencyConfig,
   },
 });
@@ -71,7 +69,7 @@ afterEach(async () => {
 });
 
 describe('buildMemberTransferManifest', () => {
-  it('reports the owner’s cron, device binding, and detachable tasks for a private agent', async () => {
+  it('reports the owner’s cron and detachable tasks for a private agent', async () => {
     const agent = await ownerModel.create(withRuntime({ title: 'Agent', visibility: 'public' }));
     await serverDB
       .update(agents)
@@ -114,10 +112,7 @@ describe('buildMemberTransferManifest', () => {
 
     expect(manifest).toEqual({
       cronJobs: 1,
-      // dev-1 is not enrolled anywhere the recipient can reach → sanitation
-      // would strip it, so the reset warning is real.
       connectorsAffected: 0,
-      deviceBindingAffected: true,
       expertiseAffected: 0,
       groupsToLeave: 0,
       hiddenReferencedMember: false,
@@ -128,15 +123,13 @@ describe('buildMemberTransferManifest', () => {
     });
   });
 
-  it('does not warn about device bindings the recipient can actually reach', async () => {
+  it('keeps devices owned independently of Agent handover', async () => {
     const agent = await ownerModel.create(withRuntime({ title: 'Agent' }));
     await serverDB.insert(devices).values([
       {
         deviceId: 'public-dev',
         identitySource: 'machine-id',
         userId: ownerId,
-        visibility: 'public',
-        workspaceId: wsId,
       },
     ]);
     await serverDB
@@ -151,8 +144,7 @@ describe('buildMemberTransferManifest', () => {
       workspaceId: wsId,
     });
 
-    // The binding survives recipient-aware sanitation → no false reset warning.
-    expect(manifest?.deviceBindingAffected).toBe(false);
+    expect(manifest).not.toHaveProperty('deviceBindingAffected');
   });
 
   it('counts only knowledge mounts the recipient cannot access', async () => {

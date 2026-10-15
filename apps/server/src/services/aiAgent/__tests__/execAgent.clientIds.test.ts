@@ -249,13 +249,8 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
     mockTopicCreate.mockClear();
   });
 
-  // Precreated topics pin the run's ACP execution binding (CLI family +
-  // selector model), not the member's chat model — the Lobe model loop that
-  // consumed chat-model pins is retired. `reasoningConfig`/`heteroEffort` are
-  // stamped only when the binding carries an effort; the default 'orvilo'
-  // binding has none.
   it.each(['scheduled', 'group'] as const)(
-    'pins the ACP execution binding for a precreated %s topic',
+    'precreates a %s topic without model routing fields',
     async (kind) => {
       const runSpy = vi
         .spyOn(service, 'execAgent')
@@ -269,10 +264,8 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
       } else {
         await service.execGroupAgent({ agentId: 'agent-1', groupId: 'group-1', message: 'Group' });
       }
-      expect(mockTopicCreate.mock.calls[0][0]).toMatchObject({
-        model: 'default',
-        provider: 'claude-code',
-      });
+      expect(mockTopicCreate.mock.calls[0][0]).not.toHaveProperty('model');
+      expect(mockTopicCreate.mock.calls[0][0]).not.toHaveProperty('provider');
       runSpy.mockRestore();
     },
   );
@@ -311,22 +304,6 @@ describe('AiAgentService.execAgent - client-minted ids', () => {
       runSpy.mockRestore();
     },
   );
-
-  it('keeps the execution-binding pin when a chat-model override is scheduled', async () => {
-    // 'override-model' is not a heterogeneous model id, so the run falls back
-    // to the deployment's default 'orvilo' binding.
-    await service.scheduleAgentRun({
-      agentId: 'agent-1',
-      model: 'override-model',
-      provider: 'override-provider',
-      prompt: 'Scheduled',
-      runAt: new Date(Date.now() + 60000).toISOString(),
-    });
-    expect(mockTopicCreate.mock.calls[0][0]).toMatchObject({
-      model: 'default',
-      provider: 'claude-code',
-    });
-  });
 
   it('admits real group tools and ACP role context for the verified supervisor', async () => {
     await service.execAgent({

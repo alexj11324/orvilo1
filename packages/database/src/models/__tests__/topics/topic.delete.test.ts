@@ -464,12 +464,12 @@ describe('TopicModel - Delete', () => {
       expect(remaining[0].userId).toBe(userId2);
     });
 
-    it('batchDeleteByAgentId should keep workspace-wide scope by default', async () => {
+    it('batchDeleteByAgentId should preserve another member standalone conversations', async () => {
       await workspaceTopicModel.batchDeleteByAgentId('ws-agent');
 
       expect(
         await serverDB.select().from(topics).where(eq(topics.workspaceId, workspaceId)),
-      ).toHaveLength(0);
+      ).toEqual([expect.objectContaining({ id: 'ws-topic-other', userId: userId2 })]);
     });
 
     it('batchDeleteBySessionId should scope to the caller when restrictToCreator is set', async () => {

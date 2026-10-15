@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   permissionResourceId: undefined as string | undefined,
   policiesAgentId: undefined as string | undefined,
   setAccessLevel: vi.fn(),
-  setModelPolicy: vi.fn(),
   setTopicSharePolicy: vi.fn(),
 }));
 
@@ -21,16 +20,11 @@ vi.mock('@/hooks/usePermission', () => ({
 
 // The Editable-settings half is the shared agent hook; assert which agent the
 // group page points it at rather than re-testing its internals.
-vi.mock('@/features/ResourcePermission/useAgentSelectionPolicies', () => ({
-  useAgentSelectionPolicies: (agentId: string) => {
+vi.mock('@/features/ResourcePermission/useAgentTopicSharing', () => ({
+  useAgentTopicSharing: (agentId: string) => {
     mocks.policiesAgentId = agentId;
 
     return {
-      canFixExecutionTarget: true,
-      executionTargetPolicy: 'member',
-      modelPolicy: 'member',
-      setExecutionTargetPolicy: vi.fn(),
-      setModelPolicy: mocks.setModelPolicy,
       setTopicSharePolicy: mocks.setTopicSharePolicy,
       topicSharePolicy: 'member',
     };
@@ -138,20 +132,6 @@ describe('useGroupPermission', () => {
   });
 
   describe('editable settings', () => {
-    it('reads and writes the policies on the supervisor agent', () => {
-      // A group conversation IS a conversation with the supervisor
-      // (`useGroupContext` resolves the chat agentId to supervisorAgentId), so
-      // the group chat's model switcher reads exactly that row.
-      const { result } = setup();
-
-      expect(mocks.policiesAgentId).toBe('agt-supervisor');
-      expect(result.current.modelPolicy).toBe('member');
-      expect(result.current.executionTargetPolicy).toBe('member');
-
-      result.current.setModelPolicy('fixed');
-      expect(mocks.setModelPolicy).toHaveBeenCalledWith('fixed');
-    });
-
     it('routes the topic-share policy to the supervisor too', () => {
       // A group conversation is a conversation with its supervisor, so the
       // policy the group page writes is the one its topics are gated on.

@@ -8,11 +8,7 @@ import type {
   UsageData,
 } from '../types';
 import type { AcpAgentSessionOptions } from './acpAgentSession';
-import {
-  ACP_PROTOCOL_VERSION,
-  AcpAgentSession,
-  selectAcpPermissionOption,
-} from './acpAgentSession';
+import { ACP_PROTOCOL_VERSION, AcpAgentSession } from './acpAgentSession';
 import type { AcpAgentRuntimeSpec } from './acpRuntime';
 import type { AcpRpcMessage } from './acpStdioClient';
 import { AcpRpcResponseError, AcpServerRequestError } from './acpStdioClient';
@@ -22,7 +18,11 @@ import {
   type ResolvedCacheKeepalive,
 } from './cachePolicy';
 import type { AgentPromptInput, BuildAgentInputOptions } from './input';
-import { parseStandardAcpPermissionCatalogs } from './standardAcpPermissions';
+import {
+  answerNativePermissionRequest,
+  parseStandardAcpPermissionCatalogs,
+  resolveNativeFullAccessPermission,
+} from './standardAcpPermissions';
 import {
   buildTraeAcpPrompt,
   parseTraeAcpModelCatalog,
@@ -110,13 +110,15 @@ export interface StandardAcpSessionOptions extends AcpAgentSessionOptions {
   inputOptions?: BuildAgentInputOptions;
   /** `session/new` `mcpServers` entries (ACP shape). */
   mcpServers?: Record<string, unknown>[];
+  /** Automation requires the session to advertise a native full-access option. */
+  nativeFullAccess?: boolean;
   onModel?: (model: string) => void;
   /**
    * Localized strings for the interactive permission card. English defaults
    * apply when the host (CLI/server ingest) has no locale; the desktop shell
    * passes its i18n renderings here.
    */
-  permissionCardStrings?: { fallbackTitle: string; header: string };
+  permissionCardStrings?: { effectiveMode?: string; fallbackTitle: string; header: string };
   /** Structured prompt, or an already-normalized ACP block array. */
   prompt: AgentPromptInput | StandardAcpPromptBlock[];
   uploadImage?: UploadHeterogeneousImage;
@@ -142,12 +144,6 @@ export interface StandardAcpSessionConfig {
   spec: AcpAgentRuntimeSpec;
 }
 
-interface ParsedPermissionRequest {
-  options: { kind?: string; name: string; optionId: string }[];
-  title: string;
-  toolCallId: string;
-}
-
 interface ElicitationQuestion {
   fieldKey: string;
   header: string;
@@ -161,24 +157,6 @@ const ELICITATION_CUSTOM_SUFFIX = '_custom';
 
 const FREEFORM_KEY = '__freeform__';
 const SUPPLEMENT_KEY = '__supplement__';
-
-/**
- * `session/request_permission` auto-answer preference when no AskUser bridge
- * is attached: durable allow first, then once, then reject as the least
- * surprising non-allowable fallback.
- */
-const AUTO_PERMISSION_PREFERENCES = [
-  (option: { kind?: unknown; optionId?: unknown }) =>
-    option.kind === 'allow_always' ||
-    option.optionId === 'allow_always' ||
-    option.optionId === 'approve_always',
-  (option: { kind?: unknown; optionId?: unknown }) =>
-    option.optionId === 'allow_session' ||
-    option.optionId === 'approve_for_session' ||
-    option.kind === 'allow_once' ||
-    option.optionId === 'allow_once',
-  (option: { kind?: unknown }) => option.kind === 'reject_once',
-];
 
 /**
  * Parse the `configOptions` list carried by `session/new` / `session/load` /
@@ -246,6 +224,7 @@ export class StandardAcpSession extends AcpAgentSession<
   private advertisedConfigOptions = new Map<string, Set<string> | undefined>();
   private modelDiscovery?: StandardAcpSession;
   private permissionCatalogs: HeterogeneousAgentPermissionCatalog[] = [];
+  private automationPermissionConfigId?: string;
   private permissionUsesSessionMode = false;
   private resolvedPrompt: StandardAcpPromptBlock[] = [];
 
@@ -446,12 +425,39 @@ export class StandardAcpSession extends AcpAgentSession<
   protected async handleAgentMessage(message: AcpRpcMessage): Promise<void> {
     // Inert keep-alive turns must not leak updates into the run's event stream.
     if (this.inInertTurn) return;
-    if (message.method !== 'session/update' || !this.acceptUpdates) return;
+    if (message.method !== 'session/update') return;
     const params = isRecord(message.params) ? message.params : undefined;
     if (!isRecord(params?.update)) return;
 
     const update = params.update;
+    if (
+      !this.acceptUpdates &&
+      update.sessionUpdate !== 'current_mode_update' &&
+      update.sessionUpdate !== 'config_option_update'
+    )
+      return;
+    if (
+      update.sessionUpdate === 'current_mode_update' &&
+      typeof update.currentModeId === 'string'
+    ) {
+      const catalog = this.permissionCatalogs.find(({ configId }) => configId === 'mode');
+      if (catalog && catalog.currentValue !== update.currentModeId) {
+        catalog.currentValue = update.currentModeId;
+        await this.noteEffectivePermission(catalog);
+      }
+    }
     if (update.sessionUpdate === 'config_option_update') {
+      const previous = this.permissionCatalogs;
+      this.mergeAdvertisedConfigOptions(update.configOptions);
+      for (const catalog of this.permissionCatalogs) {
+        if (
+          previous.some(
+            (entry) =>
+              entry.configId === catalog.configId && entry.currentValue !== catalog.currentValue,
+          )
+        )
+          await this.noteEffectivePermission(catalog);
+      }
       const model = parseTraeAcpModelCatalog({
         configOptions: update.configOptions,
       })?.currentModelId;
@@ -538,8 +544,13 @@ export class StandardAcpSession extends AcpAgentSession<
   }
 
   private async applyInitialPermission(sessionId: string): Promise<void> {
-    const selected = this.options.initialPermission;
+    const selected = this.options.nativeFullAccess
+      ? resolveNativeFullAccessPermission(this.permissionCatalogs)
+      : this.options.initialPermission;
+    if (this.options.nativeFullAccess && !selected)
+      throw new Error(`${this.sessionConfig.spec.label} has no advertised native full-access mode`);
     if (!selected) return;
+    if (this.options.nativeFullAccess) this.automationPermissionConfigId = selected.configId;
     const catalog = this.permissionCatalogs.find(({ configId }) => configId === selected.configId);
     if (!catalog?.options.some(({ value }) => value === selected.value)) {
       throw new Error(
@@ -547,14 +558,61 @@ export class StandardAcpSession extends AcpAgentSession<
       );
     }
     if (this.permissionUsesSessionMode) {
+      catalog.currentValue = selected.value;
       await this.client.request('session/set_mode', { modeId: selected.value, sessionId });
+      await this.client.drain();
+      if (
+        this.options.nativeFullAccess &&
+        !resolveNativeFullAccessPermission([
+          {
+            ...catalog,
+            options: catalog.options.filter(({ value }) => value === catalog.currentValue),
+          },
+        ])
+      )
+        throw new Error(`${this.sessionConfig.spec.label} did not enable native full access`);
     } else {
       const response = await this.client.request<StandardAcpSetConfigOptionResult>(
         'session/set_config_option',
         { configId: selected.configId, sessionId, value: selected.value },
       );
       this.mergeAdvertisedConfigOptions(response?.configOptions);
+      const effective = this.permissionCatalogs.find(
+        ({ configId }) => configId === selected.configId,
+      );
+      const reported = parseStandardAcpPermissionCatalogs({
+        configOptions: response?.configOptions,
+      }).find(({ configId }) => configId === selected.configId);
+      if (reported && reported.currentValue !== selected.value) {
+        if (this.options.nativeFullAccess)
+          throw new Error(`${this.sessionConfig.spec.label} did not enable native full access`);
+        if (effective) await this.noteEffectivePermission(effective);
+      } else if (effective) effective.currentValue = selected.value;
     }
+  }
+
+  private async noteEffectivePermission(
+    catalog: HeterogeneousAgentPermissionCatalog,
+  ): Promise<void> {
+    const option = catalog.options.find(({ value }) => value === catalog.currentValue);
+    await this.pushToPipeline({
+      sessionUpdate: 'agent_message_chunk',
+      content: {
+        type: 'text',
+        text: `\n${(this.options.permissionCardStrings?.effectiveMode ?? 'Native permission mode: {name} ({value}).').replace('{name}', option?.name ?? catalog.currentValue).replace('{value}', catalog.currentValue)}\n`,
+      },
+    });
+    if (
+      this.acceptUpdates &&
+      catalog.configId === this.automationPermissionConfigId &&
+      !resolveNativeFullAccessPermission([
+        {
+          ...catalog,
+          options: catalog.options.filter(({ value }) => value === catalog.currentValue),
+        },
+      ])
+    )
+      throw new Error(`${this.sessionConfig.spec.label} native full access is no longer active`);
   }
 
   /**
@@ -637,8 +695,7 @@ export class StandardAcpSession extends AcpAgentSession<
     if (parsed.size > 0) this.advertisedConfigOptions = parsed;
     if (Array.isArray(value)) {
       const permissions = parseStandardAcpPermissionCatalogs({ configOptions: value });
-      if (permissions.length > 0 || !this.permissionUsesSessionMode)
-        this.permissionCatalogs = permissions;
+      if (permissions.length > 0) this.permissionCatalogs = permissions;
     }
   }
 
@@ -694,115 +751,14 @@ export class StandardAcpSession extends AcpAgentSession<
 
   // ------------------------------------------------------------- permission
 
-  private async respondToPermissionRequest(message: AcpRpcMessage): Promise<unknown> {
-    if (this.options.initialPermission && !this.options.askUserBridge) {
-      return { outcome: { outcome: 'cancelled' } };
-    }
-    const request = this.parsePermissionRequest(message.params, String(message.id));
-    if (!request) {
-      const optionId = selectAcpPermissionOption(message.params, AUTO_PERMISSION_PREFERENCES);
-      return {
-        outcome: optionId ? { optionId, outcome: 'selected' } : { outcome: 'cancelled' },
-      };
-    }
-
-    const selected = this.options.askUserBridge
-      ? await this.askPermissionInteractively(message, request)
-      : this.selectPermissionOption(request);
-    return {
-      outcome: selected
-        ? { optionId: selected.optionId, outcome: 'selected' }
-        : { outcome: 'cancelled' },
-    };
-  }
-
-  private parsePermissionRequest(
-    value: unknown,
-    requestId: string,
-  ): ParsedPermissionRequest | undefined {
-    if (!isRecord(value)) return;
-    const toolCall = isRecord(value.toolCall) ? value.toolCall : undefined;
-    const options = Array.isArray(value.options)
-      ? value.options.flatMap((option) => {
-          if (!isRecord(option) || typeof option.optionId !== 'string' || !option.optionId) {
-            return [];
-          }
-          return [
-            {
-              ...(typeof option.kind === 'string' ? { kind: option.kind } : {}),
-              name: typeof option.name === 'string' && option.name ? option.name : option.optionId,
-              optionId: option.optionId,
-            },
-          ];
-        })
-      : [];
-    if (options.length === 0) return;
-
-    return {
-      options,
-      toolCallId:
-        typeof toolCall?.toolCallId === 'string' ? toolCall.toolCallId : `perm-${requestId}`,
-      title:
-        typeof toolCall?.title === 'string' && toolCall.title
-          ? toolCall.title
-          : (this.options.permissionCardStrings?.fallbackTitle ??
-            `Allow ${this.sessionConfig.spec.label} to continue?`),
-    };
-  }
-
-  private selectPermissionOption(
-    request: ParsedPermissionRequest,
-  ): ParsedPermissionRequest['options'][number] | undefined {
-    const byId = selectAcpPermissionOption(
-      { options: request.options },
-      AUTO_PERMISSION_PREFERENCES,
+  private respondToPermissionRequest(message: AcpRpcMessage): Promise<unknown> {
+    return answerNativePermissionRequest(
+      message,
+      this.options.askUserBridge,
+      (update) => this.pushToPipeline(update),
+      this.sessionConfig.spec.provider,
+      this.options.permissionCardStrings,
     );
-    return request.options.find((option) => option.optionId === byId);
-  }
-
-  /**
-   * Interactive permission: emit a synthetic `askUserQuestion` tool call so
-   * the card lands in the normal tool timeline, then await the user's pick.
-   * Option `id`s are provider-owned values (the renderer submits `id`, not
-   * `label`, when present) — matching `DevinAcpSession`'s convention.
-   */
-  private async askPermissionInteractively(
-    message: AcpRpcMessage,
-    request: ParsedPermissionRequest,
-  ): Promise<ParsedPermissionRequest['options'][number] | undefined> {
-    const bridge = this.options.askUserBridge!;
-    const toolCallId = `${this.sessionConfig.spec.eventPrefix}-permission-${String(message.id)}-${request.toolCallId}`;
-    const arguments_ = {
-      questions: [
-        {
-          header: this.options.permissionCardStrings?.header ?? 'Permission required',
-          multiSelect: false as const,
-          options: request.options.map(({ name, optionId }) => ({ id: optionId, label: name })),
-          question: request.title,
-        },
-      ],
-    };
-    await this.pushToPipeline({
-      identifier: this.sessionConfig.spec.provider,
-      rawInput: arguments_,
-      sessionUpdate: 'tool_call',
-      title: 'askUserQuestion',
-      toolCallId,
-    });
-    const answer = await bridge.pending({
-      arguments: arguments_,
-      interactionKind: 'permission',
-      toolCallId,
-    });
-    await this.pushToPipeline({
-      rawOutput: answer,
-      sessionUpdate: 'tool_call_update',
-      status: 'completed',
-      toolCallId,
-    });
-
-    const selections = this.getAnswerSelections(answer, request.title);
-    return request.options.find(({ optionId }) => selections.includes(optionId));
   }
 
   private getAnswerSelections(answer: InterventionAnswer, question: string): string[] {

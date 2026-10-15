@@ -2,7 +2,7 @@ import { TaskIdentifier } from '@orvilo/builtin-skills';
 import { BriefIdentifier } from '@orvilo/builtin-tool-brief';
 import { TaskIdentifier as TaskToolIdentifier } from '@orvilo/builtin-tool-task';
 import { canMountBuiltinToolSurface } from '@orvilo/heterogeneous-agents';
-import { automationReadinessResultSchema } from '@orvilo/heterogeneous-agents/automationReadiness';
+import type { AutomationReadinessResult } from '@orvilo/heterogeneous-agents/automationReadiness';
 import type { McpEventBinding, TaskItem } from '@orvilo/types';
 import { getActivePluginIds, TERMINAL_AGENT_OPERATION_STATUSES } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
@@ -29,6 +29,7 @@ import { deviceGateway } from '@/server/services/deviceGateway';
 import { createProviderBindingComposition } from '@/server/services/providerBinding/controlPlane';
 import { resolveOrviloProviderBinding } from '@/server/services/providerBinding/execution';
 
+import { observeNativeAutomationReadiness } from '../task/nativeAutomationReadiness';
 import { getMcpEventWorkerHealth } from './workerHealth';
 import type { McpEventTrigger } from './workerRepository';
 
@@ -42,6 +43,7 @@ export type AutomationReadinessCode =
   | 'DEVICE_SELECTION_REQUIRED'
   | 'EXECUTOR_UNSUPPORTED'
   | 'EXECUTOR_UNVERIFIED'
+  | 'NATIVE_FULL_ACCESS_UNAVAILABLE'
   | 'REQUIRED_TOOLS_UNSUPPORTED'
   | 'REPOSITORY_UNAVAILABLE'
   | 'WORKER_UNHEALTHY';
@@ -61,7 +63,6 @@ export async function checkMcpAutomationReadiness(input: {
   task: TaskItem;
   trigger: McpEventTrigger;
   binding?: McpEventBinding;
-  deviceId?: string;
 }): Promise<AutomationReadiness> {
   const { db, task, trigger, binding } = input;
   const reasons: AutomationReadinessCode[] = [];
@@ -115,29 +116,12 @@ export async function checkMcpAutomationReadiness(input: {
   }
 
   const deviceModel = new DeviceModel(db, trigger.userId, trigger.workspaceId);
-  const [workspaceRows, personalRows, workspaceOnline, personalOnline] = await Promise.all([
-    deviceModel.queryWorkspaceDevices(),
-    deviceModel.queryPersonal(),
-    deviceGateway.queryDeviceList(trigger.userId, trigger.workspaceId),
-    deviceGateway.queryDeviceList(trigger.userId),
-  ]);
-  const workspaceOnlineIds = new Set(workspaceOnline.map((device) => device.deviceId));
-  const personalOnlineIds = new Set(personalOnline.map((device) => device.deviceId));
-  const rows = [
-    ...workspaceRows,
-    ...personalRows.filter(
-      (row) => !workspaceRows.some((workspace) => workspace.deviceId === row.deviceId),
-    ),
-  ];
-  const onlineIds = new Set(
-    rows
-      .filter((row) =>
-        workspaceRows.includes(row)
-          ? workspaceOnlineIds.has(row.deviceId)
-          : personalOnlineIds.has(row.deviceId),
-      )
-      .map((row) => row.deviceId),
-  );
+  const rows = await deviceModel.queryForExecution();
+  const owners = [...new Set(rows.map((row) => row.userId))];
+  const online = (
+    await Promise.all(owners.map((owner) => deviceGateway.queryDeviceList(owner)))
+  ).flat();
+  const onlineIds = new Set(online.map((device) => device.deviceId));
   const devices = rows
     .filter((row) => onlineIds.has(row.deviceId))
     .map((row) => ({ id: row.deviceId, name: row.hostname ?? row.deviceId }));
@@ -146,26 +130,15 @@ export async function checkMcpAutomationReadiness(input: {
     : null;
   const agent =
     agentBinding && task.assigneeAgentId
-      ? await new AgentModel(db, trigger.userId, trigger.workspaceId).getAgentConfig(
+      ? await new AgentModel(db, trigger.userId, trigger.workspaceId).getAgentConfigForExecution(
           task.assigneeAgentId,
         )
       : null;
   if (!agent) reasons.push('AUTH_REQUIRED');
   const agency = agent?.agencyConfig;
-  const pinned =
-    typeof config.automationDeviceId === 'string'
-      ? config.automationDeviceId
-      : typeof workspace.deviceId === 'string'
-        ? workspace.deviceId
-        : agency?.boundDeviceId;
-  // A pinned target is never replaced by another available machine.
-  const deviceId = pinned ?? input.deviceId ?? (devices.length === 1 ? devices[0].id : undefined);
-  if (pinned && input.deviceId && pinned !== input.deviceId) reasons.push('CONFIGURATION_INVALID');
-  if (!deviceId)
-    reasons.push(devices.length > 1 ? 'DEVICE_SELECTION_REQUIRED' : 'DEVICE_UNAVAILABLE');
-  else if (!devices.some((device) => device.id === deviceId)) reasons.push('DEVICE_UNAVAILABLE');
-  if (agency?.executionTargetSelectionPolicy === 'fixed' && agency.boundDeviceId !== deviceId)
-    reasons.push('CONFIGURATION_INVALID');
+  const deviceId = agency?.boundDeviceId;
+  if (!deviceId || !devices.some((device) => device.id === deviceId))
+    reasons.push('DEVICE_UNAVAILABLE');
 
   if (
     agent &&
@@ -213,37 +186,18 @@ export async function checkMcpAutomationReadiness(input: {
             deviceDefaultCwd: deviceRow?.defaultCwd,
             workingDirByDevice: agency?.workingDirByDevice,
           });
-    const deviceWorkspaceId = workspaceRows.some((row) => row.deviceId === deviceId)
-      ? trigger.workspaceId
-      : undefined;
-    const response = await deviceGateway.executeToolCall(
-      { userId: trigger.userId, workspaceId: deviceWorkspaceId, deviceId },
-      {
-        identifier: 'local',
-        apiName: 'checkAutomationReadiness',
-        arguments: JSON.stringify({
-          agentType: type,
-          engine: provider.engine,
-          model: provider.model,
-          cwd,
-          requiredTools: [],
-        }),
-      },
-      10_000,
-    );
-    let observed: Record<string, unknown> = {};
-    try {
-      if (response.success) {
-        const parsed = automationReadinessResultSchema.safeParse(JSON.parse(response.content));
-        if (parsed.success) observed = parsed.data;
-      }
-    } catch {
-      /* Malformed or older hosts remain unverified. */
-    }
+    const observed: Partial<AutomationReadinessResult> =
+      (await observeNativeAutomationReadiness({
+        cwd,
+        deviceId,
+        deviceOwnerId: deviceRow?.userId ?? trigger.userId,
+        provider,
+      })) ?? {};
     if (Array.isArray(observed.blockers) && observed.blockers.includes('EXECUTOR_UNSUPPORTED'))
       reasons.push('EXECUTOR_UNSUPPORTED');
-    if (observed.installed !== true || observed.unattended !== true)
-      reasons.push('EXECUTOR_UNVERIFIED');
+    if (observed.installed !== true) reasons.push('EXECUTOR_UNVERIFIED');
+    if (observed.unattended !== true || !observed.nativePermission)
+      reasons.push('NATIVE_FULL_ACCESS_UNAVAILABLE');
     if (observed.requiredToolsSupported !== true) reasons.push('REQUIRED_TOOLS_UNSUPPORTED');
     if (cwd && observed.repositoryAccessible !== true) reasons.push('REPOSITORY_UNAVAILABLE');
     let authenticated = observed.authenticated === true;

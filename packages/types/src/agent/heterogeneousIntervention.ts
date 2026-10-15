@@ -4,11 +4,19 @@ export type HeterogeneousAgentInterventionKind =
   (typeof HETEROGENEOUS_AGENT_INTERVENTION_KINDS)[number];
 
 export const HETEROGENEOUS_AGENT_INTERVENTION_PROVIDERS = [
+  'amp',
   'claude-code',
+  'codebuddy',
+  'codex',
   'cursor',
   'devin',
   'droid',
+  'grok-build',
+  'kimi-code',
+  'opencode',
+  'pi',
   'qoder',
+  'trae',
 ] as const;
 
 export type HeterogeneousAgentInterventionProvider =

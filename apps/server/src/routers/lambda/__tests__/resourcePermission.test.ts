@@ -15,6 +15,9 @@ import { resourcePermissionRouter } from '../resourcePermission';
 // `vi.mock` is hoisted above the imports at runtime, so the mocks are active
 // when the router module is evaluated. Kept below the imports to satisfy
 // `import-x/first`.
+vi.mock('@/server/services/resourcePermission/revocation', () => ({
+  stopRevokedCallerOperations: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('@/database/models/resourcePermission', () => ({ ResourcePermissionModel: vi.fn() }));
 vi.mock('../_helpers/workspaceIssueRead', () => ({
   isWorkspaceIssueAgentReadable: vi.fn().mockResolvedValue(false),

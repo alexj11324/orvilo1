@@ -5,6 +5,8 @@ import {
   agents,
   messagePlugins,
   messages,
+  tasks,
+  taskTopics,
   topics,
   workspaceMembers,
   workspaces,
@@ -209,7 +211,7 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     await serverDB.insert(agentOperations).values({ id, status: 'running', userId: ownerId });
   };
 
-  it('does not let another workspace member answer the owner operation', async () => {
+  it('keeps private Chat owner scoped while current Issue assignees may answer the original Run', async () => {
     const otherId = await createTestUser(serverDB);
     const workspaceId = `operation-owner-${userId}`;
     await serverDB.insert(workspaces).values({
@@ -258,6 +260,111 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
       });
       expect(store.events).toHaveLength(0);
       expect(business.resolveHeteroIntervention).not.toHaveBeenCalled();
+      await serverDB.insert(topics).values({
+        id: 'issue-response-topic',
+        userId,
+        workspaceId,
+        agentId: 'shared-operation-agent',
+      });
+      await serverDB.insert(tasks).values({
+        id: 'issue-response-task',
+        createdByUserId: userId,
+        workspaceId,
+        name: 'Issue response',
+        identifier: 'ISSUE-1',
+        seq: 1,
+        instruction: 'Continue the Issue',
+        assigneeAgentId: 'shared-operation-agent',
+        assigneeUserId: otherId,
+        currentTopicId: 'issue-response-topic',
+      });
+      await serverDB.insert(taskTopics).values({
+        taskId: 'issue-response-task',
+        seq: 1,
+        topicId: 'issue-response-topic',
+        operationId: 'owned-workspace-operation',
+        userId,
+        workspaceId,
+        status: 'running',
+      });
+      await serverDB
+        .update(agentOperations)
+        .set({ topicId: 'issue-response-topic' })
+        .where(eq(agentOperations.id, 'owned-workspace-operation'));
+      await serverDB.insert(messages).values({
+        id: 'issue-native-card',
+        userId,
+        workspaceId,
+        topicId: 'issue-response-topic',
+        role: 'tool',
+        content: '',
+      });
+      await serverDB.insert(messagePlugins).values({
+        id: 'issue-native-card',
+        userId,
+        toolCallId: 'issue-question',
+        apiName: 'askUserQuestion',
+        identifier: 'orvilo-native',
+        type: 'default',
+        intervention: { operationId: 'owned-workspace-operation', status: 'pending' },
+      });
+      await expect(
+        caller.submitHeteroIntervention({
+          operationId: 'owned-workspace-operation',
+          toolCallId: 'issue-question',
+          toolMessageId: 'issue-native-card',
+          result: { answer: 'continue' },
+        }),
+      ).resolves.toMatchObject({ success: true });
+      expect(store.events).toHaveLength(1);
+      expect(store.events[0]).toMatchObject({
+        operationId: 'owned-workspace-operation',
+        data: { actorUserId: otherId },
+      });
+      const [run] = await serverDB
+        .select()
+        .from(agentOperations)
+        .where(eq(agentOperations.id, 'owned-workspace-operation'));
+      expect(run.userId).toBe(userId);
+      await new ResourcePermissionModel(serverDB, workspaceId).upsertCollaborators({
+        accessLevel: 'view',
+        createdBy: userId,
+        resourceId: 'shared-operation-agent',
+        resourceType: 'agent',
+        userIds: [otherId],
+      });
+      await expect(
+        caller.submitHeteroIntervention({
+          operationId: 'owned-workspace-operation',
+          toolCallId: 'issue-question',
+          toolMessageId: 'issue-native-card',
+          result: {},
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await new ResourcePermissionModel(serverDB, workspaceId).upsertCollaborators({
+        accessLevel: 'use',
+        createdBy: userId,
+        resourceId: 'shared-operation-agent',
+        resourceType: 'agent',
+        userIds: [otherId],
+      });
+
+      await serverDB
+        .update(tasks)
+        .set({ assigneeUserId: userId })
+        .where(eq(tasks.id, 'issue-response-task'));
+      await expect(
+        caller.submitHeteroIntervention({
+          operationId: 'owned-workspace-operation',
+          toolCallId: 'issue-question',
+          result: {},
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await serverDB
+        .update(agentOperations)
+        .set({ topicId: null })
+        .where(eq(agentOperations.id, 'owned-workspace-operation'));
+      store.events.length = 0;
       const owner = aiAgentRouter.createCaller({
         userId,
         workspaceId,
@@ -307,6 +414,69 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
       userId: ownerUserId,
     });
   };
+
+  it.each(['wrong-card', 'wrong-call', 'wrong-operation', 'resolved-card', 'terminal-operation'])(
+    'rejects a persisted native reply with %s before publishing',
+    async (mismatch) => {
+      const operationId = `native-operation-${userId}`;
+      await insertPendingTool({
+        batchId: 'native-batch',
+        messageId: 'native-card',
+        operationId,
+        toolCallId: 'native-call',
+      });
+      if (mismatch === 'wrong-operation' || mismatch === 'resolved-card') {
+        await serverDB
+          .update(messagePlugins)
+          .set({
+            intervention: {
+              operationId: mismatch === 'wrong-operation' ? 'other-operation' : operationId,
+              status: mismatch === 'resolved-card' ? 'approved' : 'pending',
+            },
+          })
+          .where(eq(messagePlugins.id, 'native-card'));
+      }
+      if (mismatch === 'terminal-operation') {
+        await serverDB
+          .update(agentOperations)
+          .set({ status: 'done' })
+          .where(eq(agentOperations.id, operationId));
+      }
+      await expect(
+        userCaller().submitHeteroIntervention({
+          operationId,
+          toolCallId: mismatch === 'wrong-call' ? 'other-call' : 'native-call',
+          toolMessageId: mismatch === 'wrong-card' ? 'other-card' : 'native-card',
+          result: { permission: 'allow_once' },
+        }),
+      ).rejects.toMatchObject({ code: 'CONFLICT' });
+      expect(store.events).toHaveLength(0);
+      expect(business.resolveHeteroIntervention).not.toHaveBeenCalled();
+    },
+  );
+
+  it('publishes a pending persisted native card on the original operation', async () => {
+    const operationId = `native-operation-${userId}`;
+    await insertPendingTool({
+      batchId: 'native-batch',
+      messageId: 'native-card',
+      operationId,
+      toolCallId: 'native-call',
+    });
+    await expect(
+      userCaller().submitHeteroIntervention({
+        operationId,
+        toolCallId: 'native-call',
+        toolMessageId: 'native-card',
+        result: { permission: 'allow_once' },
+      }),
+    ).resolves.toMatchObject({ success: true, status: 'resolving' });
+    expect(store.events).toHaveLength(1);
+    expect(store.events[0]).toMatchObject({
+      operationId,
+      data: { toolCallId: 'native-call', result: { permission: 'allow_once' } },
+    });
+  });
 
   it('submit → wait round-trips a structured answer, filtered to the response', async () => {
     const operationId = 'op-roundtrip';

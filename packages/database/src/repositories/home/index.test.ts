@@ -476,14 +476,12 @@ describe('HomeRepository', () => {
         deviceId: `creation-host-${workspaceId}`,
         identitySource: 'installation',
         userId,
-        visibility: 'public',
-        workspaceId,
       });
       const agent = await workspaceAgentModel.create({
         agencyConfig: {
           boundDeviceId: `creation-host-${workspaceId}`,
           executionTarget: 'device',
-          heterogeneousProvider: { type: 'codex' },
+          heterogeneousProvider: { model: 'default', type: 'codex' },
         },
         title: 'Transferred Private Agent',
         virtual: false,

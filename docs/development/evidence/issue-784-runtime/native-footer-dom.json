@@ -1,0 +1,22 @@
+{
+  "footer": "跳过\nEsc\n提交\nEnter",
+  "options": [
+    {
+      "label": "1\nAllow Once",
+      "selected": "false"
+    },
+    {
+      "label": "2\nAllow for Session",
+      "selected": "false"
+    },
+    {
+      "label": "3\nAllow Commands Starting With `/bin/zsh -lc printf %s ISSUE784_NO_AUTO_GRANT > /private/tmp/orvilo-issue784-acceptance/followup/native-no-grant.txt`",
+      "selected": "false"
+    },
+    {
+      "label": "4\nReject",
+      "selected": "false"
+    }
+  ],
+  "submitDisabled": true
+}

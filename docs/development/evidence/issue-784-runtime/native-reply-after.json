@@ -1,0 +1,13 @@
+{
+  "callerId": "user_issue784_member_001",
+  "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+  "deviceOwnerId": "user_agent_testing_001",
+  "model": "gpt-6.1-sol",
+  "nativeStatus": "approved",
+  "operationId": "op_1792002951763_agt_44B3tqt5bkS5_tpc_sAHO4DFXuj3q_uSDXMJa5",
+  "proofFileExists": true,
+  "proofFileMatches": true,
+  "sourceSha": "0caf355dcc65cc2284573a74362d4fc0e57aa474",
+  "status": "done",
+  "toolMessageOwnerId": "user_issue784_member_001"
+}

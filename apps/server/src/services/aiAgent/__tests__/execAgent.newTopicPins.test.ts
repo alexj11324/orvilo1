@@ -192,15 +192,7 @@ vi.mock('model-bank', async (importOriginal) => {
   };
 });
 
-/**
- * A blank composer's picks (`composerModelSelection` / `composerHeteroEffort`)
- * reach the server on `newTopicPins` — the gateway path is the one route where
- * the SERVER creates the topic, so the client has no row of its own to stamp.
- * They are a TOPIC pin (spec docs/development/chat-agent-model-ia.md §5.2): the
- * `topics.model`/`topics.provider` columns plus `metadata.heteroEffort`, never
- * an agent-row write.
- */
-describe('AiAgentService.execAgent - blank-composer new-topic pins', () => {
+describe('AiAgentService.execAgent - saved Agent runtime and conversation controls', () => {
   let service: AiAgentService;
   const mockDb = {} as any;
   const userId = 'test-user-id';
@@ -227,125 +219,103 @@ describe('AiAgentService.execAgent - blank-composer new-topic pins', () => {
     vi.clearAllMocks();
   });
 
-  it('writes the picks onto the topic this run creates and runs on them', async () => {
-    await service.execAgent({
-      agentId: 'agent-1',
-      newTopicPins: { effort: 'high', model: 'opus', provider: 'claude-code' },
-      prompt: 'Fresh send',
-    });
-
-    // The topic is born with the pick, not with the agent's selector model.
-    expect(mockTopicCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        metadata: expect.objectContaining({ heteroEffort: 'high' }),
-        model: 'opus',
-        provider: 'claude-code',
-      }),
-      undefined,
-    );
-
-    // …and the FIRST turn executes what the row now says. Without this the
-    // conversation would be labelled `opus` while running the agent default.
-    const [, runContext, dispatchOptions] = mockDispatchHeteroAgent.mock.calls[0];
-    expect(runContext).toMatchObject({ model: 'opus', provider: 'claude-code' });
-    expect(dispatchOptions.pinnedHeterogeneousTopicModel).toEqual({
-      effort: 'high',
-      model: 'opus',
-      provider: 'claude-code',
-    });
+  it('does not persist model or device snapshots on new topics', async () => {
+    await service.execAgent({ agentId: 'agent-1', prompt: 'Fresh send' });
+    const topic = mockTopicCreate.mock.calls[0][0];
+    expect(topic).not.toHaveProperty('model');
+    expect(topic).not.toHaveProperty('provider');
+    expect(topic.metadata).not.toHaveProperty('boundDeviceId');
+    expect(topic.metadata).not.toHaveProperty('executionConfig');
   });
 
-  it.each([null, 'legacy-default-model'])(
-    'runs the first Prime turn on its pinned inference model with legacy model %s',
-    async (legacyModel) => {
-      mockAgentConfig.mockResolvedValue({
-        ...agentRow,
-        model: legacyModel,
-        provider: null,
-        agencyConfig: {
-          executionTarget: 'device',
-          boundDeviceId: 'device-1',
-          heterogeneousProvider: { type: 'orvilo', model: 'fixture-prime-model' },
-        },
-      });
-      await service.execAgent({ agentId: 'agent-1', prompt: 'First Prime turn' });
-      const topic = mockTopicCreate.mock.calls[0][0];
-      const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
-      expect(topic.model).toBe('fixture-prime-model');
-      expect(runContext.model).toBe(topic.model);
-      expect(runContext.provider).toBe('orvilo');
-    },
-  );
-
-  it('keeps an explicit Prime run model override ahead of the Agent inference default', async () => {
+  it('ignores legacy request and topic routing while retaining conversation effort', async () => {
     mockAgentConfig.mockResolvedValue({
       ...agentRow,
-      agencyConfig: { heterogeneousProvider: { type: 'orvilo', model: 'fixture-prime-model' } },
+      agencyConfig: {
+        boundDeviceId: 'saved-device',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'claude-code', model: 'saved-model', effort: 'low' },
+      },
     });
-    await service.execAgent({
+    mockTopicFind.mockResolvedValue({
+      id: 'topic-1',
+      model: 'legacy-topic-model',
+      provider: 'codex',
+      metadata: {
+        heteroEffort: 'high',
+        executionConfig: { executionTarget: 'sandbox', boundDeviceId: 'legacy-device' },
+      },
+    });
+    const legacyRequest = {
       agentId: 'agent-1',
-      model: 'explicit-prime-model',
-      provider: 'orvilo',
-      prompt: 'Explicit Prime turn',
+      appContext: { topicId: 'topic-1' },
+      deviceId: 'request-device',
+      model: 'request-model',
+      provider: 'codex',
+      newTopicPins: { model: 'new-topic-model' },
+      prompt: 'Continue',
+    };
+    await service.execAgent(legacyRequest);
+    const [, run, options] = mockDispatchHeteroAgent.mock.calls[0];
+    expect(run.model).toBe('saved-model');
+    expect(run.agentConfig.agencyConfig).toMatchObject({
+      boundDeviceId: 'saved-device',
+      executionTarget: 'device',
     });
-    expect(mockDispatchHeteroAgent.mock.calls[0][1].model).toBe('explicit-prime-model');
+    expect(options.heterogeneousProvider).toMatchObject({ model: 'saved-model', effort: 'high' });
   });
 
-  it('leaves the agent-config snapshot untouched when the composer made no pick', async () => {
-    await service.execAgent({ agentId: 'agent-1', prompt: 'Fresh send' });
-
-    // `claude-code`'s static selector table resolves to the `default` alias —
-    // the exact pre-existing value this change must not disturb.
-    expect(mockTopicCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'default', provider: 'claude-code' }),
-      undefined,
-    );
-    expect(mockTopicCreate.mock.calls[0][0].metadata?.heteroEffort).toBeUndefined();
-    expect(mockDispatchHeteroAgent.mock.calls[0][2].pinnedHeterogeneousTopicModel).toBeUndefined();
-  });
-
-  it('pins an effort-only pick without moving the model', async () => {
+  it('keeps reasoning effort and working directory selected before first send', async () => {
     await service.execAgent({
       agentId: 'agent-1',
-      newTopicPins: { effort: 'low' },
+      appContext: { initialTopicMetadata: { heteroEffort: 'high', workingDirectory: '/project' } },
       prompt: 'Fresh send',
     });
-
-    expect(mockTopicCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        metadata: expect.objectContaining({ heteroEffort: 'low' }),
-        model: 'default',
-        provider: 'claude-code',
-      }),
-      undefined,
-    );
-    expect(mockDispatchHeteroAgent.mock.calls[0][2].pinnedHeterogeneousTopicModel).toEqual({
-      effort: 'low',
+    expect(mockTopicCreate.mock.calls[0][0].metadata).toMatchObject({
+      heteroEffort: 'high',
+      workingDirectory: '/project',
     });
+    expect(mockDispatchHeteroAgent.mock.calls[0][2].heterogeneousProvider.effort).toBe('high');
   });
 
-  it('ignores the picks when the run reuses an existing topic', async () => {
+  it('keeps a group member on its own reasoning effort', async () => {
+    mockAgentConfig.mockResolvedValue({
+      ...agentRow,
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code', effort: 'low' } },
+    });
+    mockTopicFind.mockResolvedValue({
+      id: 'topic-1',
+      groupId: 'group-1',
+      agentId: 'supervisor',
+      metadata: { heteroEffort: 'high' },
+    });
     await service.execAgent({
       agentId: 'agent-1',
       appContext: { topicId: 'topic-1' },
-      newTopicPins: { effort: 'high', model: 'opus', provider: 'claude-code' },
       prompt: 'Continue',
     });
-
-    // Nothing to create, and an open conversation keeps its own pins — the
-    // composer pick only ever describes the topic this send starts.
-    expect(mockTopicCreate).not.toHaveBeenCalled();
-    expect(mockDispatchHeteroAgent.mock.calls[0][2].pinnedHeterogeneousTopicModel).toBeUndefined();
+    expect(mockDispatchHeteroAgent.mock.calls[0][2].heterogeneousProvider.effort).toBe('low');
   });
 
-  it('dispatches the existing conversation ACP permission instead of the Agent default', async () => {
+  it('dispatches the saved Agent ACP permission despite a legacy topic override', async () => {
+    mockAgentConfig.mockResolvedValue({
+      ...agentRow,
+      agencyConfig: {
+        heterogeneousProvider: {
+          type: 'claude-code',
+          permission: { configId: 'permission_mode', value: 'plan' },
+        },
+      },
+    });
     mockTopicFind.mockResolvedValue({
       id: 'topic-1',
       metadata: {
         executionConfig: {
-          executionTarget: 'device',
-          boundDeviceId: 'device-1',
-          permission: { provider: 'claude-code', configId: 'permission_mode', value: 'plan' },
+          permission: {
+            provider: 'claude-code',
+            configId: 'permission_mode',
+            value: 'bypassPermissions',
+          },
         },
       },
     });
@@ -364,19 +334,5 @@ describe('AiAgentService.execAgent - blank-composer new-topic pins', () => {
         'plan',
       ]),
     );
-  });
-
-  it('drops the picks on a resume-like replay', async () => {
-    await service.execAgent({
-      agentId: 'agent-1',
-      appContext: { topicId: 'topic-1' },
-      newTopicPins: { effort: 'high', model: 'opus', provider: 'claude-code' },
-      parentMessageId: 'msg_parent00001',
-      prompt: 'Regenerate',
-      resume: true,
-    });
-
-    expect(mockTopicCreate).not.toHaveBeenCalled();
-    expect(mockDispatchHeteroAgent.mock.calls[0][2].pinnedHeterogeneousTopicModel).toBeUndefined();
   });
 });

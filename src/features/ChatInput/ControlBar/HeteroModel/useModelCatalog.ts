@@ -23,6 +23,7 @@ export const fingerprintConfig = (provider: HeterogeneousProviderConfig | undefi
 };
 
 interface UseHeterogeneousAgentModelCatalogParams {
+  agentId?: string;
   cwd?: string;
   deviceId?: string;
   /** Skip the probe entirely for harnesses whose model source is not a catalog. */
@@ -41,6 +42,7 @@ interface UseHeterogeneousAgentModelCatalogParams {
  * becomes available.
  */
 export const useModelCatalog = ({
+  agentId,
   cwd,
   deviceId,
   enabled = true,
@@ -56,6 +58,7 @@ export const useModelCatalog = ({
     enabled && targetReady && !isDeviceListLoading && !isPreferenceLoading
       ? [
           'heterogeneous-agent-model-catalog',
+          agentId ?? '',
           type,
           deviceId ?? 'local',
           cwd ?? '',
@@ -65,6 +68,7 @@ export const useModelCatalog = ({
       : null,
     async () => {
       const result = await heterogeneousAgentCatalogService.listModels({
+        agentId,
         args: provider?.args,
         command: provider?.command,
         cwd,

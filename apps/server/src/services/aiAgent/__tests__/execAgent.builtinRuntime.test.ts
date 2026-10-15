@@ -266,6 +266,24 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
     expect(ctx.resolvedAgentId).toBe('agent-self-reflection');
   });
 
+  it('keeps a configured Agent using the Orvilo harness executable', async () => {
+    mockGetAgentConfig.mockResolvedValue({
+      agencyConfig: { heterogeneousProvider: { deviceId: 'device-prime', type: 'orvilo' } },
+      chatConfig: {},
+      id: 'agent-prime',
+      model: 'gpt-4',
+      plugins: [],
+      provider: 'openai',
+      slug: 'configured-prime',
+      systemRole: 'Configured Agent',
+    });
+
+    await expect(service.execAgent({ agentId: 'agent-prime', prompt: 'Hello' })).resolves.toEqual(
+      expect.objectContaining({ success: true }),
+    );
+    expect(mockDispatchHeteroAgent).toHaveBeenCalledTimes(1);
+  });
+
   it('throws for an unknown non-builtin identifier without materializing a row', async () => {
     mockGetAgentConfig.mockResolvedValue(null);
 
@@ -276,29 +294,17 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
     expect(mockDispatchHeteroAgent).not.toHaveBeenCalled();
   });
 
-  it('should merge runtime systemRole for inbox agent when DB systemRole is empty', async () => {
-    // Inbox agent with no user-customized systemRole in DB
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-inbox',
-      model: 'gpt-4',
-      plugins: [],
-      provider: 'openai',
-      slug: 'inbox',
-      systemRole: '', // empty in DB
-    });
-
-    await service.execAgent({
-      agentId: 'agent-inbox',
-      prompt: 'Hello',
-    });
-
-    const { ctx } = lastDispatchCall();
-    expect(ctx.agentConfig.systemRole).toContain('You are Orvilo');
-    // Model identity is injected by ModelInfoProvider now, not the `{{model}}`
-    // template placeholder; `{{date}}` still proves the runtime template merged.
-    expect(ctx.agentConfig.systemRole).toContain('{{date}}');
-  });
+  it.each(['inbox', 'page-agent', 'agent-builder'])(
+    'refuses paused builtin %s by slug before provisioning or dispatch',
+    async (slug) => {
+      await expect(service.execAgent({ prompt: 'Hello', slug })).rejects.toThrow(
+        'Built-in Agents are unavailable.',
+      );
+      expect(mockGetBuiltinAgent).not.toHaveBeenCalled();
+      expect(mockDispatchHeteroAgent).not.toHaveBeenCalled();
+      expect(mockMessageCreate).not.toHaveBeenCalled();
+    },
+  );
 
   it('should pass user response language into web onboarding runtime systemRole', async () => {
     mockGetInfoForAIGeneration.mockResolvedValue({
@@ -328,26 +334,17 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
     );
   });
 
-  it('should NOT override user-customized systemRole for inbox agent', async () => {
-    const customSystemRole = 'You are a custom assistant.';
-    mockGetAgentConfig.mockResolvedValue({
-      chatConfig: {},
-      id: 'agent-inbox',
-      model: 'gpt-4',
-      plugins: [],
-      provider: 'openai',
-      slug: 'inbox',
-      systemRole: customSystemRole, // user has customized
-    });
-
-    await service.execAgent({
-      agentId: 'agent-inbox',
-      prompt: 'Hello',
-    });
-
-    const { ctx } = lastDispatchCall();
-    expect(ctx.agentConfig.systemRole).toBe(customSystemRole);
-  });
+  it.each(['inbox', 'page-agent', 'agent-builder'])(
+    'refuses existing paused builtin %s by database id',
+    async (slug) => {
+      mockGetAgentConfig.mockResolvedValue({ id: 'agent-existing', slug });
+      await expect(
+        service.execAgent({ agentId: 'agent-existing', prompt: 'Hello' }),
+      ).rejects.toThrow('Built-in Agents are unavailable.');
+      expect(mockDispatchHeteroAgent).not.toHaveBeenCalled();
+      expect(mockMessageCreate).not.toHaveBeenCalled();
+    },
+  );
 
   // Regular agents get no builtin runtime prompt. They do get the user's reply
   // language appended — the same rule the client runtime applies, now shared
@@ -432,16 +429,16 @@ describe('AiAgentService.execAgent - builtin agent runtime config', () => {
       // no-tools Prime adapter and mounts no tool surface.
       agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
       chatConfig: {},
-      id: 'agent-inbox',
+      id: 'agent-configured',
       model: 'gpt-4',
       plugins: [SELF_FEEDBACK_INTENT_IDENTIFIER],
       provider: 'openai',
-      slug: 'inbox',
+      slug: 'configured-agent',
       systemRole: '',
     });
 
     await service.execAgent({
-      agentId: 'agent-inbox',
+      agentId: 'agent-configured',
       prompt: 'Hello',
     });
 

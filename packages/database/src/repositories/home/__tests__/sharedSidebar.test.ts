@@ -36,14 +36,11 @@ beforeEach(async () => {
       deviceId: `creation-host-${memberA}`,
       identitySource: 'installation',
       userId: memberA,
-      visibility: 'private',
     },
     {
       deviceId: `creation-host-${ws}`,
       identitySource: 'installation',
       userId: memberA,
-      visibility: 'public',
-      workspaceId: ws,
     },
   ]);
 });
@@ -53,7 +50,7 @@ const withRuntime = (config: any = {}, workspaceId?: string) => ({
   agencyConfig: {
     boundDeviceId: `creation-host-${workspaceId ?? memberA}`,
     executionTarget: 'device' as const,
-    heterogeneousProvider: { type: 'codex' as const },
+    heterogeneousProvider: { model: 'default', type: 'codex' as const },
     ...config.agencyConfig,
   },
 });

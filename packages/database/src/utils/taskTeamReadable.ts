@@ -1,9 +1,11 @@
 import { and, eq, exists, isNull, or, type SQL, sql } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 
+import { projects } from '../schemas/project';
 import { tasks } from '../schemas/task';
 import { workspaceMembers } from '../schemas/workspace';
 import type { OrviloDatabase } from '../type';
+import { buildProjectReadableWhere } from './projectReadable';
 import { buildWorkspaceWhere } from './workspace';
 
 type TaskReadColumns = {
@@ -11,6 +13,7 @@ type TaskReadColumns = {
   createdByUserId: AnyPgColumn;
   reviewerUserId: AnyPgColumn;
   teamId: AnyPgColumn;
+  projectId: AnyPgColumn;
   workspaceId: AnyPgColumn;
 };
 
@@ -24,7 +27,19 @@ export const buildTaskReadableWhere = (
     userId: target.createdByUserId,
     workspaceId: target.workspaceId,
   });
-  return ctx.workspaceId ? and(scope, buildTaskTeamReadableWhere(db, ctx.userId, target))! : scope;
+  return and(
+    scope,
+    ctx.workspaceId ? buildTaskTeamReadableWhere(db, ctx.userId, target) : undefined,
+    or(
+      isNull(target.projectId),
+      exists(
+        db
+          .select({ one: sql`1` })
+          .from(projects)
+          .where(and(eq(projects.id, target.projectId), buildProjectReadableWhere(db, ctx))),
+      ),
+    ),
+  )!;
 };
 
 /** Interpret legacy private flags without rewriting historical rows or execution topics. */

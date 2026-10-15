@@ -7,8 +7,11 @@ import {
   messagePlugins,
   messages,
   sessions,
+  tasks,
+  taskTopics,
   topics,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
@@ -116,8 +119,6 @@ describe('TopicModel - Create', () => {
         totalTokens: null,
         cost: null,
         usage: null,
-        model: null,
-        provider: null,
         senderId: null,
         createdAt: expect.any(Date),
         updatedAt: expect.any(Date),
@@ -222,8 +223,6 @@ describe('TopicModel - Create', () => {
         totalTokens: null,
         cost: null,
         usage: null,
-        model: null,
-        provider: null,
         senderId: null,
         sessionId,
         userId,
@@ -530,7 +529,7 @@ describe('TopicModel - Create', () => {
       );
     });
 
-    it('should duplicate workspace messages created by other members', async () => {
+    it('should duplicate readable Issue messages created by other members', async () => {
       const workspaceId = 'topic-duplicate-workspace';
       const topicId = 'workspace-topic-duplicate';
       const workspaceTopicModel = new TopicModel(serverDB, userId, workspaceId);
@@ -548,6 +547,23 @@ describe('TopicModel - Create', () => {
           userId: userId2,
           workspaceId,
         });
+        await tx.insert(workspaceMembers).values([
+          { workspaceId, userId, role: 'owner' },
+          { workspaceId, userId: userId2, role: 'member' },
+        ]);
+        const [issue] = await tx
+          .insert(tasks)
+          .values({
+            identifier: 'DUP-1',
+            seq: 1,
+            instruction: 'Shared Issue transcript',
+            createdByUserId: userId2,
+            workspaceId,
+          })
+          .returning();
+        await tx
+          .insert(taskTopics)
+          .values({ taskId: issue.id, topicId, seq: 1, userId: userId2, workspaceId });
         await tx.insert(messages).values([
           {
             content: 'Other member user message',

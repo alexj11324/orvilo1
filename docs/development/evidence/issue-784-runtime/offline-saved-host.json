@@ -1,0 +1,9 @@
+{
+  "callerId": "user_issue784_member_001",
+  "errorType": "ServerAgentRuntimeError",
+  "model": null,
+  "operationId": "op_1792003529812_agt_44B3tqt5bkS5_tpc_B9xzuO9v88uY_vJKsEtQj",
+  "proofFileExists": false,
+  "sourceSha": "0caf355dcc65cc2284573a74362d4fc0e57aa474",
+  "status": "error"
+}

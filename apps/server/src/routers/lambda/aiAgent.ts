@@ -18,6 +18,7 @@ import {
   RequestTrigger,
   ThreadStatus,
   ThreadType,
+  topicExecutionConfigSchema,
   UserInterventionConfigSchema,
   workingDirConfigSchema,
 } from '@orvilo/types';
@@ -59,7 +60,16 @@ import { HumanApprovalAlreadyResolvedError, MessageModel } from '@/database/mode
 import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
-import { agentInterventions, agentOperations, topics, workspaceMembers } from '@/database/schemas';
+import {
+  agentInterventions,
+  agentOperations,
+  messagePlugins,
+  messages,
+  tasks,
+  taskTopics,
+  topics,
+  workspaceMembers,
+} from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { assertAgentRuntimeCreation } from '@/database/utils/agentRuntimeCreation';
 import { notShareVisitorTopicRef } from '@/database/utils/shareVisitor';
@@ -119,6 +129,8 @@ import {
   HeteroOperationPrincipalError,
   resolveActiveHeteroOperationPrincipal,
 } from '@/server/services/heterogeneousAgent/operationPrincipal';
+
+import { assertIssueExecutionInput } from './_helpers/issueExecutionInput';
 
 const log = debug('orvilo-server:ai-agent-router');
 
@@ -498,6 +510,14 @@ const dispatchClaimedAgentIntervention = async (
   resolution: ClaimedAgentInterventionResolution,
   ctx: AgentInterventionDispatchContext,
 ): Promise<{ execution?: ExecAgentResult; status: AgentInterventionReviewStatus }> => {
+  if (resolution.ownerUserId !== ctx.userId) {
+    ctx = {
+      ...ctx,
+      aiAgentService: new AiAgentService(ctx.serverDB, resolution.ownerUserId, {
+        workspaceId: resolution.workspaceId ?? ctx.workspaceId ?? undefined,
+      }),
+    };
+  }
   const { runtimeAction } = resolution;
   let execution: ExecAgentResult | undefined;
   let durableCustomSideEffect = false;
@@ -764,7 +784,7 @@ const resolveHeteroTopicWorkspace = async (params: {
   return topic.workspaceId;
 };
 
-/** Operation mutations require the author and matching scope, then Agent Use in workspaces. */
+/** Issue input follows the current assignee; private Chat input stays owner-scoped. */
 const assertCanUseOperationAgent = async (params: {
   db: OrviloDatabase;
   operationId: string;
@@ -777,6 +797,7 @@ const assertCanUseOperationAgent = async (params: {
     .select({
       agentId: agentOperations.agentId,
       groupId: agentOperations.chatGroupId,
+      status: agentOperations.status,
       topicId: agentOperations.topicId,
       userId: agentOperations.userId,
       workspaceId: agentOperations.workspaceId,
@@ -785,11 +806,33 @@ const assertCanUseOperationAgent = async (params: {
     .where(eq(agentOperations.id, operationId))
     .limit(1);
   if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'Operation not found' });
-  if (row.workspaceId !== (workspaceId ?? null) || row.userId !== userId) {
+  if (row.workspaceId !== (workspaceId ?? null)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation is outside the caller scope' });
   }
   if (topicId && row.topicId !== topicId) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation does not belong to this topic' });
+  }
+  const [issue] =
+    row.topicId && row.workspaceId
+      ? await db
+          .select({ assigneeAgentId: tasks.assigneeAgentId, assigneeUserId: tasks.assigneeUserId })
+          .from(taskTopics)
+          .innerJoin(tasks, eq(tasks.id, taskTopics.taskId))
+          .where(
+            and(
+              eq(taskTopics.topicId, row.topicId),
+              eq(taskTopics.workspaceId, row.workspaceId),
+              eq(tasks.workspaceId, row.workspaceId),
+              eq(tasks.currentTopicId, row.topicId),
+              eq(taskTopics.operationId, operationId),
+            ),
+          )
+          .limit(1)
+      : [];
+  if (issue) {
+    await assertIssueExecutionInput({ serverDB: db, userId, workspaceId }, issue, row.agentId);
+  } else if (row.userId !== userId) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation is outside the caller scope' });
   }
   if (row.workspaceId) {
     if (!row.agentId)
@@ -1020,6 +1063,10 @@ const ExecAgentSchema = z
         groupId: z.string().nullish(),
         initialTopicMetadata: z
           .object({
+            executionConfig: topicExecutionConfigSchema.optional(),
+            heteroEffort: z
+              .custom<HeterogeneousReasoningEffort>((value) => typeof value === 'string')
+              .optional(),
             repos: z.array(z.string()).optional(),
             workingDirectory: z.string().optional(),
             workingDirectoryConfig: workingDirConfigSchema.optional(),
@@ -1066,32 +1113,12 @@ const ExecAgentSchema = z
         userMessageId: z.string().regex(entityIdPattern('messages')).optional(),
       })
       .optional(),
-    /** Explicit device ID to bind to the topic and activate for this run */
-    deviceId: z.string().optional(),
     /** Current desktop device hint, honored only for an effective local target */
     localDeviceId: z.string().optional(),
     /** Optional existing message IDs to include in context */
     existingMessageIds: z.array(z.string()).optional().default([]),
     /** File IDs of already-uploaded attachments to attach to the new user message */
     fileIds: z.array(z.string()).optional(),
-    /**
-     * Model / provider / reasoning effort picked in a blank composer before the
-     * conversation existed (`composerModelSelection` / `composerHeteroEffort`
-     * client-side). Written onto the topic THIS run creates and never onto the
-     * agent row — a chat-side pick is conversation-scoped
-     * (docs/development/chat-agent-model-ia.md §5.2). Ignored when the run reuses
-     * an existing topic; absent for every non-composer caller, which leaves the
-     * agent-config topic snapshot exactly as before.
-     */
-    newTopicPins: z
-      .object({
-        effort: z
-          .custom<HeterogeneousReasoningEffort>((value) => typeof value === 'string')
-          .optional(),
-        model: z.string().optional(),
-        provider: z.string().optional(),
-      })
-      .optional(),
     /** Parent message ID for regeneration/continue (skip user message creation, branch from this message) */
     parentMessageId: z.string().optional(),
     /** Existing gateway operation this fresh turn atomically supersedes. */
@@ -1323,12 +1350,8 @@ const ScheduleAgentRunSchema = z
     fileIds: z.array(z.string()).optional(),
     /** Group to file the topic under, when scheduling from a group conversation */
     groupId: z.string().nullish(),
-    /** Override the agent's default model */
-    model: z.string().optional(),
     /** The user input/prompt, replayed verbatim when the run comes due */
     prompt: z.string().min(1),
-    /** Override the agent's default provider */
-    provider: z.string().optional(),
     /**
      * When to run. UTC ISO-8601 (`…Z`) — the dispatcher's due query compares it
      * as text, so a zoned offset would break the ordering.
@@ -1364,14 +1387,10 @@ const ExecSubAgentTaskSchema = z.object({
   isSubAgent: z.boolean().optional(),
   /** Task instruction/prompt for the SubAgent */
   instruction: z.string(),
-  /** Sub-agent model override resolved at the spawn site */
-  model: z.string().optional(),
   /** The parent message ID (Supervisor's tool call message or task message) */
   parentMessageId: z.string(),
   /** Parent operation ID for dispatching callAgent hooks */
   parentOperationId: z.string().optional(),
-  /** Provider for {@link model} */
-  provider: z.string().optional(),
   /** Timeout in milliseconds (optional) */
   timeout: z.number().optional(),
   /** Task title (shown in UI, used as thread title) */
@@ -1672,6 +1691,8 @@ const SubmitHeteroInterventionSchema = z.object({
   /** Producer step index; harmless placeholder — correlation is by toolCallId. */
   stepIndex: z.number().int().nonnegative().default(0),
   toolCallId: z.string().min(1),
+  /** Persisted conversation card; server verifies its original Run binding. */
+  toolMessageId: z.string().min(1).optional(),
   /**
    * The approval window the answered card was minted for — CAS-matched
    * against the receipt's current `windowId` so a stale card can never
@@ -2174,12 +2195,10 @@ export const aiAgentRouter = router({
       prompt,
       appContext,
       autoStart = true,
-      deviceId,
       localDeviceId,
       existingMessageIds = [],
       fileIds,
       mentionedAgents,
-      newTopicPins,
       parentMessageId,
       resumeApproval,
       resumeApprovals,
@@ -2378,12 +2397,10 @@ export const aiAgentRouter = router({
         // attribution. These are server-derived from the tRPC context and are
         // intentionally not part of the client-passable input schema.
         clientIp: ctx.clientIp ?? undefined,
-        deviceId,
         localDeviceId,
         existingMessageIds,
         fileIds,
         mentionedAgents,
-        newTopicPins,
         parentMessageId,
         prompt,
         // When parentMessageId is provided, this is a regeneration/continue or a
@@ -2501,7 +2518,6 @@ export const aiAgentRouter = router({
         prompt,
         appContext,
         autoStart = true,
-        deviceId,
         existingMessageIds = [],
         parentMessageId,
         trigger,
@@ -2532,7 +2548,6 @@ export const aiAgentRouter = router({
           agentId,
           appContext,
           autoStart,
-          deviceId,
           existingMessageIds,
           parentMessageId,
           prompt,
@@ -2669,10 +2684,8 @@ export const aiAgentRouter = router({
         inheritMessages,
         instruction,
         isSubAgent,
-        model,
         parentMessageId,
         parentOperationId,
-        provider,
         title,
         topicId,
         timeout,
@@ -2704,10 +2717,8 @@ export const aiAgentRouter = router({
           inheritMessages,
           instruction,
           isSubAgent,
-          model,
           parentMessageId,
           ...(parentOperationId && { parentOperationId }),
-          provider,
           timeout,
           title,
           topicId,
@@ -3963,12 +3974,48 @@ export const aiAgentRouter = router({
         cancelled ?? false,
       );
 
-      await assertCanUseOperationAgent({
+      const operation = await assertCanUseOperationAgent({
         db: ctx.serverDB,
         operationId,
         userId: ctx.userId,
         workspaceId: ctx.workspaceId,
       });
+
+      if (input.toolMessageId) {
+        const [source] = await ctx.serverDB
+          .select({ intervention: messagePlugins.intervention })
+          .from(messagePlugins)
+          .innerJoin(messages, eq(messages.id, messagePlugins.id))
+          .where(
+            and(
+              eq(messagePlugins.id, input.toolMessageId),
+              eq(messagePlugins.userId, operation.userId),
+              eq(messages.userId, operation.userId),
+              eq(messages.role, 'tool'),
+              operation.topicId
+                ? eq(messages.topicId, operation.topicId)
+                : isNull(messages.topicId),
+              eq(messagePlugins.toolCallId, toolCallId),
+            ),
+          )
+          .limit(1);
+        if (
+          !['running', 'waiting_for_human'].includes(operation.status) ||
+          source?.intervention?.operationId !== operationId ||
+          source.intervention.status !== 'pending'
+        ) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'This Agent question is no longer pending.',
+          });
+        }
+        await assertCanUseAgentRunConversation({
+          db: ctx.serverDB,
+          messageIds: [input.toolMessageId],
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
+        });
+      }
 
       // SA02/F04 + SC-SB03: when this submit answers a `needs_approval` tool
       // card, the exec-time gate's durable receipt records the decision
@@ -4018,7 +4065,7 @@ export const aiAgentRouter = router({
         result: effectiveResult,
         resolutionRequestId: effectiveRequestId,
         target: { operationId, toolCallId },
-        userId: ctx.userId,
+        userId: operation.userId,
         workspaceId: ctx.workspaceId ?? undefined,
       });
       if (businessResolution.handled) {
@@ -4027,7 +4074,7 @@ export const aiAgentRouter = router({
         }
         const published = await publishClaimedHeteroIntervention({
           claim: businessResolution,
-          userId: ctx.userId,
+          userId: operation.userId,
           workspaceId: ctx.workspaceId,
         });
         return { ...published, approval };
@@ -4036,6 +4083,7 @@ export const aiAgentRouter = router({
       const streamEventManager = createStreamEventManager();
       await streamEventManager.publishStreamEvent(operationId, {
         data: {
+          actorUserId: ctx.userId,
           // Client-driven cancellation cannot impersonate producer timeout or
           // session teardown; those terminal reasons originate from bridge ACKs.
           cancelReason: effectiveCancelled ? 'user_cancelled' : undefined,

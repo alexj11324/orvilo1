@@ -179,6 +179,8 @@ const HETERO_CUSTOM_INTERACTION_IDENTIFIERS = new Set<string>([
   // bridge rather than a synthetic user turn).
   'amp',
   'codebuddy',
+  'grok-build',
+  'trae',
   'codex',
   'kimi-code',
   'opencode',

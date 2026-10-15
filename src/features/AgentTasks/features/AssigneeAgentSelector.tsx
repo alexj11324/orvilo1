@@ -1,3 +1,4 @@
+import { BUILTIN_AGENT_SLUGS, isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import { DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -97,7 +98,12 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
       );
       const hasInbox = available.some((agent) => agent.id === inboxAgentId);
 
-      if (builtinOffered && inboxAgentId && !hasInbox) {
+      if (
+        builtinOffered &&
+        isBuiltinAgentAvailable(BUILTIN_AGENT_SLUGS.inbox) &&
+        inboxAgentId &&
+        !hasInbox
+      ) {
         return [
           {
             avatar: inboxMeta?.avatar || DEFAULT_INBOX_AVATAR,

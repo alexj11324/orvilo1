@@ -16,11 +16,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { fingerprintConfig } from '@/features/ChatInput/ControlBar/HeteroModel/useModelCatalog';
+import { useAgentManagementAccess } from '@/features/ResourcePermission/useAgentManagementAccess';
 import { resolveTargetDeviceId } from '@/helpers/agentWorkingDirectory';
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
 import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
 import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirectory';
-import { usePermission } from '@/hooks/usePermission';
 import { useSaveState } from '@/hooks/useSaveState';
 import { getHostContext } from '@/platform';
 import { heterogeneousAgentCatalogService } from '@/services/heterogeneousAgent';
@@ -32,7 +32,7 @@ import { SettingsGroup, SettingsRow, settingsStyles } from './SettingsGroup';
 export const AgentRuntimeSettings = ({ agentId }: { agentId: string }) => {
   const desktop = getHostContext().kind === 'desktop';
   const { t } = useTranslation(['setting', 'chat']);
-  const { allowed: canEdit } = usePermission('edit_own_content');
+  const { canManageAgent: canEdit } = useAgentManagementAccess(agentId);
   const { agencyConfig, workspaceScoped, isPreferenceLoading } = useEffectiveAgencyConfig(agentId);
   const provider = agencyConfig?.heterogeneousProvider;
   const update = useAgentStore((s) => s.updateAgentConfigById);
@@ -66,6 +66,7 @@ export const AgentRuntimeSettings = ({ agentId }: { agentId: string }) => {
       : null,
     () =>
       heterogeneousAgentCatalogService.listPermissions({
+        agentId,
         type: provider!.type,
         args: provider?.args,
         command: provider?.command,
@@ -148,7 +149,10 @@ export const AgentRuntimeSettings = ({ agentId }: { agentId: string }) => {
             <SelectContent>
               {catalog.options.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
-                  {option.name}
+                  <span>{option.name}</span>
+                  {option.description && (
+                    <span className={settingsStyles.hint}>{option.description}</span>
+                  )}
                 </SelectItem>
               ))}
             </SelectContent>

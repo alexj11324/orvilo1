@@ -2,18 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import type { HeterogeneousProviderConfig } from './agencyConfig';
 import {
-  applyTopicModelToHeterogeneousProvider,
   buildHeteroExecArgs,
   buildHeteroSpawnArgs,
   canPublishAgentTopicLink,
+  normalizeAgencyConfigHeterogeneousProvider,
   normalizeHeterogeneousProviderConfig,
   pruneWorkingDirByDeviceDeletes,
-  resolveAgencyConfig,
-  resolveAgentAgencyConfig,
   resolveAgentTopicSharePolicy,
   resolveHeteroAgentSystemContext,
   resolveHeteroCliAgentType,
-  resolveHeterogeneousProviderTopicModel,
 } from './agencyConfig';
 import {
   AMP_AGENT_MODES,
@@ -27,6 +24,28 @@ import {
   resolveCodexReasoningEffort,
   resolveCodexSpeedMode,
 } from './heteroSelectorCapabilities';
+
+describe('saved Agent model authority', () => {
+  it.each(['subscription', 'api'] as const)(
+    'uses the saved %s model over stale native arguments',
+    (authMode) => {
+      const normalized = normalizeAgencyConfigHeterogeneousProvider({
+        heterogeneousProvider: {
+          apiConfig: { model: 'api-model', providerId: 'anthropic' },
+          args: ['--verbose', '--model', 'stale-model'],
+          authMode,
+          model: 'saved-model',
+          type: 'claude-code',
+        },
+      });
+      expect(buildHeteroSpawnArgs(normalized!.heterogeneousProvider!)).toEqual([
+        '--verbose',
+        '--model',
+        authMode === 'api' ? 'api-model' : 'saved-model',
+      ]);
+    },
+  );
+});
 
 describe('normalizeHeterogeneousProviderConfig', () => {
   it('recovers a legacy adapterType before considering the command', () => {
@@ -88,86 +107,6 @@ describe('pruneWorkingDirByDeviceDeletes', () => {
     expect(() =>
       pruneWorkingDirByDeviceDeletes(undefined, { workingDirByDevice: { 'device-a': undefined } }),
     ).not.toThrow();
-  });
-});
-
-describe('heterogeneous topic models', () => {
-  it('snapshots the persisted selector and Default', () => {
-    expect(
-      resolveHeterogeneousProviderTopicModel({
-        args: ['--model', 'cursor-arg-model'],
-        model: 'stale-structured-model',
-        type: 'cursor',
-      }),
-    ).toEqual({ model: 'stale-structured-model', provider: 'cursor' });
-    expect(resolveHeterogeneousProviderTopicModel({ type: 'cursor' })).toEqual({
-      model: HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
-      provider: 'cursor',
-    });
-  });
-
-  it('snapshots an Orvilo model with the builtin provider identity', () => {
-    // The builtin Orvilo agent has no engine family: its topic pin carries
-    // the declared type and the stored Prime model route verbatim.
-    expect(
-      resolveHeterogeneousProviderTopicModel({
-        model: 'claude-sonnet',
-        type: 'orvilo',
-      }),
-    ).toEqual({ model: 'claude-sonnet', provider: 'orvilo' });
-    expect(resolveHeterogeneousProviderTopicModel({ type: 'orvilo' })).toBeUndefined();
-  });
-
-  it('overrides a CLI model without retaining a conflicting global flag', () => {
-    const effective = applyTopicModelToHeterogeneousProvider(
-      {
-        args: ['--model', 'global-model', '--mode', 'plan'],
-        model: 'global-model',
-        type: 'cursor',
-      },
-      { model: 'topic-model', provider: 'cursor' },
-    );
-
-    expect(effective).toEqual({
-      args: ['--mode', 'plan'],
-      model: 'topic-model',
-      type: 'cursor',
-    });
-    expect(buildHeteroSpawnArgs(effective)).toEqual(['--mode', 'plan', '--model', 'topic-model']);
-  });
-
-  it('ignores a topic model pinned for another heterogeneous runtime', () => {
-    const config = { model: 'global-model', type: 'cursor' } as const;
-
-    expect(
-      applyTopicModelToHeterogeneousProvider(config, {
-        model: 'codex-topic-model',
-        provider: 'codex',
-      }),
-    ).toBe(config);
-  });
-
-  it('applies a pin when its provider matches the builtin Orvilo type', () => {
-    const config = { model: 'agent-model', type: 'orvilo' } as const;
-
-    expect(
-      applyTopicModelToHeterogeneousProvider(config, {
-        model: 'gpt-5.5',
-        provider: 'orvilo',
-      }),
-    ).toMatchObject({ model: 'gpt-5.5', type: 'orvilo' });
-  });
-
-  it('rejects a model and effort pin minted under another provider type', () => {
-    const config = { effort: 'high', model: 'agent-model', type: 'orvilo' } as const;
-
-    expect(
-      applyTopicModelToHeterogeneousProvider(config, {
-        effort: 'ultra',
-        model: 'claude-sonnet',
-        provider: 'claude-code',
-      }),
-    ).toBe(config);
   });
 });
 
@@ -819,197 +758,6 @@ describe('codex speed mode', () => {
   });
 });
 
-describe('resolveAgencyConfig', () => {
-  it('normalizes a legacy persisted heterogeneous provider before applying overrides', () => {
-    const shared = {
-      executionTarget: 'device',
-      heterogeneousProvider: { command: 'codex' },
-    } as unknown as Parameters<typeof resolveAgencyConfig>[0];
-
-    expect(resolveAgencyConfig(shared, { executionTarget: 'local' })).toEqual({
-      executionTarget: 'local',
-      heterogeneousProvider: { command: 'codex', type: 'codex' },
-    });
-  });
-
-  it('ignores a member override when the shared execution target is fixed', () => {
-    const shared = {
-      boundDeviceId: 'fixed-device',
-      executionTargetSelectionPolicy: 'fixed' as const,
-      executionTarget: 'device' as const,
-    };
-
-    expect(
-      resolveAgencyConfig(shared, {
-        boundDeviceId: 'member-device',
-        executionTarget: 'sandbox',
-      }),
-    ).toEqual(shared);
-  });
-
-  it('keeps a fixed non-device target when a member requests a device', () => {
-    const shared = {
-      executionTarget: 'sandbox' as const,
-      executionTargetSelectionPolicy: 'fixed' as const,
-    };
-
-    expect(
-      resolveAgencyConfig(shared, {
-        boundDeviceId: 'member-device',
-        executionTarget: 'device',
-      }),
-    ).toEqual(shared);
-  });
-
-  it('returns the shared config unchanged when override is null / undefined', () => {
-    const shared = { boundDeviceId: 'ws-device', executionTarget: 'device' as const };
-    expect(resolveAgencyConfig(shared, undefined)).toEqual(shared);
-    expect(resolveAgencyConfig(shared, null)).toEqual(shared);
-  });
-
-  it('returns the shared config unchanged when override has neither field set', () => {
-    const shared = { boundDeviceId: 'ws-device', executionTarget: 'device' as const };
-    expect(resolveAgencyConfig(shared, {})).toEqual(shared);
-  });
-
-  it("override's executionTarget wins over the shared value", () => {
-    const shared = { boundDeviceId: 'ws-device', executionTarget: 'device' as const };
-    expect(resolveAgencyConfig(shared, { executionTarget: 'sandbox' })).toEqual({
-      boundDeviceId: 'ws-device',
-      executionTarget: 'sandbox',
-    });
-  });
-
-  it("override's boundDeviceId wins over the shared value", () => {
-    const shared = { boundDeviceId: 'ws-device', executionTarget: 'device' as const };
-    expect(resolveAgencyConfig(shared, { boundDeviceId: 'my-mac' })).toEqual({
-      boundDeviceId: 'my-mac',
-      executionTarget: 'device',
-    });
-  });
-
-  it("override's local + boundDeviceId sets both together (workspace-mode `local` case)", () => {
-    const shared = { boundDeviceId: 'ws-device', executionTarget: 'device' as const };
-    expect(
-      resolveAgencyConfig(shared, { boundDeviceId: 'my-mac', executionTarget: 'local' }),
-    ).toEqual({ boundDeviceId: 'my-mac', executionTarget: 'local' });
-  });
-
-  it('does NOT touch heterogeneousProvider / workingDirByDevice — those are shared', () => {
-    const shared = {
-      boundDeviceId: 'ws-device',
-      executionTarget: 'device' as const,
-      heterogeneousProvider: { type: 'claude-code' as const },
-      workingDirByDevice: { 'ws-device': '/workspace' },
-    };
-    const merged = resolveAgencyConfig(shared, {
-      boundDeviceId: 'my-mac',
-      executionTarget: 'local',
-    });
-    expect(merged?.heterogeneousProvider).toEqual({ type: 'claude-code' });
-    expect(merged?.workingDirByDevice).toEqual({ 'ws-device': '/workspace' });
-    expect(merged?.boundDeviceId).toBe('my-mac');
-    expect(merged?.executionTarget).toBe('local');
-  });
-
-  it('coerces null shared config to undefined', () => {
-    expect(resolveAgencyConfig(null, undefined)).toBeUndefined();
-    expect(resolveAgencyConfig(undefined, undefined)).toBeUndefined();
-  });
-
-  it('an override with only executionTarget leaves the shared boundDeviceId in place', () => {
-    const shared = { boundDeviceId: 'ws-device', executionTarget: 'device' as const };
-    expect(resolveAgencyConfig(shared, { executionTarget: 'sandbox' })).toEqual({
-      boundDeviceId: 'ws-device',
-      executionTarget: 'sandbox',
-    });
-  });
-
-  it('an override that unsets executionTarget by setting it to a defined value replaces the shared', () => {
-    // Merge semantics: `undefined` in the override is treated as "not overriding".
-    // Only *defined* values in the override win. Test both branches.
-    const shared = { executionTarget: 'device' as const };
-    expect(resolveAgencyConfig(shared, { executionTarget: undefined })).toEqual(shared);
-    expect(resolveAgencyConfig(shared, { executionTarget: 'none' })).toEqual({
-      executionTarget: 'none',
-    });
-  });
-});
-
-describe('resolveAgentAgencyConfig', () => {
-  it('applies the fixed member policy to a public Workspace Agent', () => {
-    const shared = {
-      boundDeviceId: 'shared-device',
-      executionTarget: 'device' as const,
-      executionTargetSelectionPolicy: 'fixed' as const,
-    };
-
-    expect(
-      resolveAgentAgencyConfig(
-        shared,
-        { boundDeviceId: 'member-device', executionTarget: 'local' },
-        { visibility: 'public', workspaceId: 'workspace-1' },
-      ),
-    ).toEqual(shared);
-  });
-
-  // A `local` / this-machine pick is per-user even for the owner: the shared
-  // row must never reference a personal device (the server rejects it), so the
-  // owner's pick lives in the same override slot members use and must merge
-  // back at read time — bypassing `fixed`, which constrains members only.
-  it("applies the owner's own override on a private Workspace Agent, stripping the member policy", () => {
-    expect(
-      resolveAgentAgencyConfig(
-        {
-          boundDeviceId: 'shared-device',
-          executionTarget: 'device',
-          executionTargetSelectionPolicy: 'fixed',
-        },
-        { boundDeviceId: 'owner-desktop', executionTarget: 'local' },
-        { visibility: 'private', workspaceId: 'workspace-1' },
-      ),
-    ).toEqual({ boundDeviceId: 'owner-desktop', executionTarget: 'local' });
-  });
-
-  it("applies an author's or Workspace admin's own override on a public Workspace Agent", () => {
-    expect(
-      resolveAgentAgencyConfig(
-        {
-          boundDeviceId: 'shared-device',
-          executionTarget: 'device',
-          executionTargetSelectionPolicy: 'fixed',
-        },
-        { boundDeviceId: 'manager-desktop', executionTarget: 'local' },
-        { canManage: true, visibility: 'public', workspaceId: 'workspace-1' },
-      ),
-    ).toEqual({ boundDeviceId: 'manager-desktop', executionTarget: 'local' });
-  });
-
-  it('keeps the shared config (policy stripped) for an owner without an override', () => {
-    expect(
-      resolveAgentAgencyConfig(
-        {
-          boundDeviceId: 'shared-device',
-          executionTarget: 'device',
-          executionTargetSelectionPolicy: 'fixed',
-        },
-        undefined,
-        { canManage: true, visibility: 'public', workspaceId: 'workspace-1' },
-      ),
-    ).toEqual({ boundDeviceId: 'shared-device', executionTarget: 'device' });
-  });
-
-  it('never applies an override on a personal agent', () => {
-    expect(
-      resolveAgentAgencyConfig(
-        { executionTarget: 'sandbox' },
-        { boundDeviceId: 'stale-device', executionTarget: 'local' },
-        { workspaceId: null },
-      ),
-    ).toEqual({ executionTarget: 'sandbox' });
-  });
-});
-
 describe('resolveAgentTopicSharePolicy', () => {
   it('never restricts a personal agent — there is nobody to restrict', () => {
     expect(
@@ -1066,69 +814,6 @@ describe('canPublishAgentTopicLink', () => {
     expect(canPublishAgentTopicLink({ ...restricted, userId: null }, { userId: undefined })).toBe(
       false,
     );
-  });
-});
-
-describe('applyTopicModelToHeterogeneousProvider - effort pin', () => {
-  it('validates effort after applying a supported model pin', () => {
-    const effective = applyTopicModelToHeterogeneousProvider(
-      { type: 'codex', model: 'gpt-5.4' },
-      { model: 'gpt-5.6-sol', provider: 'codex', effort: 'ultra' },
-    );
-    expect(effective.effort).toBe('ultra');
-    expect(buildHeteroExecArgs(effective)?.join(' ')).toContain('ultra');
-  });
-
-  it('applies a topic effort pin without a model pin', () => {
-    const effective = applyTopicModelToHeterogeneousProvider(
-      { command: 'claude', effort: 'low', type: 'claude-code' },
-      { effort: 'high' },
-    );
-
-    expect(effective).toEqual({ command: 'claude', effort: 'high', type: 'claude-code' });
-    expect(buildHeteroSpawnArgs(effective)).toEqual(['--effort', 'high']);
-  });
-
-  it('applies the model pin and the effort pin together', () => {
-    const effective = applyTopicModelToHeterogeneousProvider(
-      { args: ['--effort', 'low'], model: 'global-model', type: 'claude-code' },
-      { effort: 'max', model: 'topic-model', provider: 'claude-code' },
-    );
-
-    expect(effective).toEqual({
-      args: [],
-      effort: 'max',
-      model: 'topic-model',
-      type: 'claude-code',
-    });
-  });
-
-  it("treats 'default' as a real pin that drops the agent effort flag", () => {
-    const effective = applyTopicModelToHeterogeneousProvider(
-      { command: 'claude', effort: 'high', type: 'claude-code' },
-      { effort: 'default' },
-    );
-
-    expect(effective.effort).toBe('default');
-    // no extra args and the agent declared none, so `provider.args` (undefined) comes back
-    expect(buildHeteroSpawnArgs(effective)).toBeUndefined();
-  });
-
-  it('keeps the agent effort when the topic pins none', () => {
-    const config = { command: 'claude', effort: 'high', type: 'claude-code' } as const;
-
-    expect(applyTopicModelToHeterogeneousProvider(config, undefined)).toBe(config);
-    expect(
-      applyTopicModelToHeterogeneousProvider(config, { model: 'default', provider: 'claude-code' }),
-    ).toMatchObject({
-      effort: 'high',
-    });
-  });
-
-  it('ignores an effort pin for runtimes without an effort selector', () => {
-    const config = { model: 'global-model', type: 'cursor' } as const;
-
-    expect(applyTopicModelToHeterogeneousProvider(config, { effort: 'high' })).toBe(config);
   });
 });
 

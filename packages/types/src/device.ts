@@ -393,37 +393,6 @@ export const sortDevicesByActivity = <T extends DeviceActivityOrder>(devices: T[
   [...devices].sort(compareDeviceByActivity);
 
 /**
- * Where a device sits relative to the caller:
- * - `personal`  — the caller's own machine (`devices.workspace_id IS NULL`).
- * - `workspace` — a machine enrolled into the caller's current workspace, shared
- *   across its members. Drives the run-device picker's Personal/Workspace groups.
- */
-export type DeviceScope = 'personal' | 'workspace';
-
-/**
- * Visibility of a WORKSPACE-scoped device (same contract as agents/docs/files):
- * - `public`  — shared with every workspace member (the default pool).
- * - `private` — enrolled for the enrolling member only; other members never
- *   see it in lists, pickers, or agent runs.
- * Personal-scope devices have no visibility dimension (`null` on the list item).
- */
-export type DeviceVisibility = 'private' | 'public';
-
-/**
- * One workspace a PERSONAL device was shared into from the personal device
- * list. `deviceId` is the workspace-scoped twin (a different hash from the
- * personal deviceId, linked back via `devices.shared_from_device_id`), which
- * the revoke path passes to `device.removeWorkspaceDevice` under that
- * workspace's scope.
- */
-export interface DeviceWorkspaceShare {
-  deviceId: string;
-  visibility: DeviceVisibility;
-  workspaceId: string;
-  workspaceName: string | null;
-}
-
-/**
  * A device row as returned by the `device.listDevices` query — either a
  * registered device or an online-only "ghost" (connected but not yet persisted).
  * The server query is annotated to return `DeviceListItem[]`, so this type is the
@@ -479,26 +448,6 @@ export interface DeviceListItem {
   online: boolean;
   platform: string | null;
   registered: boolean;
-  /** Personal (own) vs. workspace-enrolled device — drives picker grouping. */
-  scope: DeviceScope;
-  /**
-   * Workspace rows only: true when this enrollment was shared from a member's
-   * personal device (`shared_from_device_id` set) rather than enrolled directly
-   * on the machine — drives the "Shared by {name}" tag in the workspace list.
-   */
-  sharedFromPersonal?: boolean;
-  /**
-   * Personal rows only: the workspaces this machine was shared into from the
-   * personal device list. `undefined` for workspace rows, ghosts, and
-   * never-shared machines.
-   */
-  sharedWorkspaces?: DeviceWorkspaceShare[];
-  /**
-   * Workspace-scope rows only: private (enroller-only) vs public (shared pool).
-   * `null` for personal rows and ghost rows. Rows another member enrolled as
-   * private are filtered out server-side and never reach this list.
-   */
-  visibility: DeviceVisibility | null;
   workingDirs: WorkingDirEntry[];
 }
 

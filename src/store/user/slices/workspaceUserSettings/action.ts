@@ -83,22 +83,6 @@ export class WorkspaceUserSettingsActionImpl {
     const optimistic: WorkspaceUserPreference = {
       ...previous,
       ...patch,
-      ...(patch.agentDeviceOverrides
-        ? {
-            agentDeviceOverrides: {
-              ...previous.agentDeviceOverrides,
-              ...patch.agentDeviceOverrides,
-            },
-          }
-        : {}),
-      ...(patch.agentModelOverrides
-        ? {
-            agentModelOverrides: {
-              ...previous.agentModelOverrides,
-              ...patch.agentModelOverrides,
-            },
-          }
-        : {}),
       ...(patch.agentModeOverrides
         ? {
             agentModeOverrides: {

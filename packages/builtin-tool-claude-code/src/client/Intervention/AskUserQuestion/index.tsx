@@ -4,7 +4,6 @@ import {
   type AskUserDraft,
   type AskUserQuestionArgs,
   AskUserQuestionView,
-  DEFAULT_COUNTDOWN_MS,
   DRAFT_PLUGIN_STATE_KEY,
   useAskUserForm,
 } from '@orvilo/shared-tool-ui/ask-user';
@@ -48,7 +47,6 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
 
   const form = useAskUserForm({
     args,
-    countdownMs: DEFAULT_COUNTDOWN_MS,
     disabled,
     onInteractionAction,
     persistedDraft,
@@ -71,12 +69,7 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
   };
 
   return (
-    <AskUserQuestionView
-      {...form}
-      showCountdown
-      actionsPortalTarget={actionsPortalTarget}
-      labels={labels}
-    />
+    <AskUserQuestionView {...form} actionsPortalTarget={actionsPortalTarget} labels={labels} />
   );
 });
 

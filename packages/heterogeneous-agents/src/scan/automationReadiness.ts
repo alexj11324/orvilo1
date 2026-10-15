@@ -7,13 +7,18 @@ import { probePrimeArtifactInstallation } from '@orvilo/prime-harness/readiness'
 import { z } from 'zod';
 
 import { getHeterogeneousAgentConfig } from '../config';
+import { listHeterogeneousAgentPermissions } from '../models/listHeterogeneousAgentPermissions';
 import { resolveCliSpawnPlan } from '../spawn/cliSpawn';
 import { detectHeterogeneousCliCommand } from '../spawn/resolveCliCommand';
+import { resolveNativeFullAccessPermission } from '../spawn/standardAcpPermissions';
 import { isSpawnableDirectory } from '../spawn/workingDirectory';
 import { resolveRemotePlatformCommand } from './scanHost';
 
 export const automationReadinessRequestSchema = z.object({
   agentType: z.string().min(1).max(80),
+  args: z.array(z.string().max(4096)).max(100).optional(),
+  command: z.string().min(1).max(4096).optional(),
+  env: z.record(z.string().max(200), z.string().max(16384)).optional(),
   cwd: z.string().min(1).max(4096).optional(),
   engine: z.string().max(80).optional(),
   model: z.string().min(1).max(200).optional(),
@@ -30,6 +35,7 @@ export const automationReadinessResultSchema = z.object({
   credentialRequired: capabilitySchema.optional(),
   executor: z.string().min(1),
   installed: capabilitySchema,
+  nativePermission: z.object({ configId: z.string(), value: z.string() }).optional(),
   repositoryAccessible: capabilitySchema,
   requiredToolsSupported: capabilitySchema,
   unattended: capabilitySchema,
@@ -125,31 +131,43 @@ export async function checkAutomationReadinessOnHost(
       primeArtifact === null
         ? false
         : (await probePrimeArtifactInstallation(primeArtifact)).installed;
-    result.unattended = true;
+    result.unattended = false;
     return result;
   }
 
   const config = getHeterogeneousAgentConfig(executor);
+  const savedEnv = { ...process.env, ...params.env };
   const status = config
-    ? await detectHeterogeneousCliCommand(config.type, config.defaultCommand)
+    ? await detectHeterogeneousCliCommand(
+        config.type,
+        params.command ?? config.defaultCommand,
+        savedEnv,
+      )
     : await resolveRemotePlatformCommand(executor);
   result.installed = status.available;
   if (!status.available || !status.path) return result;
 
-  const env = { ...process.env, ...(status.resolvedPathEnv && { PATH: status.resolvedPathEnv }) };
+  const env = { ...savedEnv, ...(status.resolvedPathEnv && { PATH: status.resolvedPathEnv }) };
+  try {
+    result.nativePermission = resolveNativeFullAccessPermission(
+      await listHeterogeneousAgentPermissions({
+        type: executor,
+        args: params.args,
+        command: status.path,
+        cwd: params.cwd,
+        env,
+      }),
+    );
+    result.unattended = !!result.nativePermission;
+  } catch (error) {
+    console.error(
+      'Native ACP automation permission discovery failed:',
+      error instanceof Error ? error.name : typeof error,
+    );
+  }
   if (executor === 'opencode') {
     try {
-      const [acp, run, catalog] = await Promise.all([
-        runProbe(status.path, ['acp', '--help'], env),
-        runProbe(status.path, ['run', '--help'], env),
-        runProbe(status.path, ['models', 'opencode', '--verbose'], env, 5000),
-      ]);
-      if (!acp.failed && !run.failed) {
-        result.unattended =
-          /Agent Client Protocol/.test(acp.output) &&
-          /--format\b/.test(run.output) &&
-          /--model\b/.test(run.output);
-      }
+      const catalog = await runProbe(status.path, ['models', 'opencode', '--verbose'], env, 5000);
       // Keyless model configuration is distinct from permission to use it
       // through Orvilo ACP. Real OpenCode 1.18.34 calls reject external ACP
       // clients on the public tier, despite listing those models here. Keep
@@ -165,14 +183,11 @@ export async function checkAutomationReadinessOnHost(
   // Other adapters have no read-only authentication contract yet.
   if (executor !== 'codex' && executor !== 'claude-code') return result;
   try {
-    const [auth, help] = await Promise.all([
-      runProbe(
-        status.path,
-        executor === 'codex' ? ['login', 'status'] : ['auth', 'status', '--json'],
-        env,
-      ),
-      runProbe(status.path, executor === 'codex' ? ['exec', '--help'] : ['--help'], env),
-    ]);
+    const auth = await runProbe(
+      status.path,
+      executor === 'codex' ? ['login', 'status'] : ['auth', 'status', '--json'],
+      env,
+    );
     if (executor === 'claude-code') {
       try {
         const parsed = JSON.parse(auth.output.trim()) as { loggedIn?: unknown };
@@ -185,13 +200,6 @@ export async function checkAutomationReadinessOnHost(
       result.authenticated = false;
     } else if (!auth.failed && /\blogged in\b/i.test(auth.output)) {
       result.authenticated = true;
-    }
-    if (!help.failed) {
-      const headlessSupported =
-        executor === 'codex'
-          ? /\b(?:Usage:.*exec|Run Codex non-interactively)\b/i.test(help.output)
-          : /--print\b/.test(help.output) && /--permission-mode\b/.test(help.output);
-      result.unattended = headlessSupported;
     }
   } catch {
     // Shell-free spawn plan or probe failed: preserve unknown evidence.

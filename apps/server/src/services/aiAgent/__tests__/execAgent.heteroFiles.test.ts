@@ -168,11 +168,11 @@ vi.mock('@/database/models/device', () => ({
   DeviceModel: vi.fn().mockImplementation(function () {
     return {
       findByDeviceId: mockDeviceFindByDeviceId,
-      findWorkspaceDeviceById: mockDeviceFindWorkspaceDeviceById,
+      findExecutionDeviceById: mockDeviceFindWorkspaceDeviceById,
       // Unified admission's authorized candidate set — `device-1` is the
       // registered personal device this suite routes to.
-      queryPersonal: mockQueryPersonalDevices,
-      queryWorkspaceDevices: vi.fn().mockResolvedValue([]),
+      query: mockQueryPersonalDevices,
+      queryForExecution: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -290,7 +290,7 @@ vi.mock('@/server/services/deviceGateway', () => ({
     dispatchAgentRun: mockDispatchAgentRun,
     executeToolCall: mockExecuteToolCall,
     isConfigured: false,
-    queryDeviceList: vi.fn().mockResolvedValue([]),
+    queryDeviceList: vi.fn().mockImplementation(async () => mockQueryPersonalDevices()),
     resolveDeviceWorkspaceId: vi.fn().mockResolvedValue(undefined),
   },
 }));
@@ -380,6 +380,9 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
     vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(undefined as any);
     vi.spyOn(AgentOperationModel.prototype, 'settleRunning').mockResolvedValue(true);
+    vi.spyOn(AgentOperationModel.prototype, 'recordCompletion').mockResolvedValue(
+      undefined as never,
+    );
     recordStartSpy = vi.spyOn(CompletionLifecycle.prototype, 'recordStart').mockResolvedValue(true);
     topicMock.appendRunningOperationChild.mockResolvedValue(true);
     topicMock.create.mockResolvedValue({ id: 'topic-1', metadata: undefined });
@@ -399,8 +402,12 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     mockBuildRemoteDeviceHeteroContext.mockImplementation(function ({ conversationHistory }) {
       return conversationHistory ? 'device recovery context' : 'device context';
     });
-    mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'device-1' }]);
-    mockDeviceFindByDeviceId.mockResolvedValue({ defaultCwd: '/Users/alice/repo' });
+    mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'device-1', userId }]);
+    mockDeviceFindByDeviceId.mockImplementation(async (deviceId) => {
+      const rows = await mockQueryPersonalDevices();
+      const row = rows.find((item: { deviceId: string }) => item.deviceId === deviceId);
+      return row && { ...row, defaultCwd: '/Users/alice/repo' };
+    });
     mockDeviceFindWorkspaceDeviceById.mockResolvedValue(undefined);
     mockCreateOperationMetadata.mockResolvedValue(undefined);
     mockIngestAttachment.mockReset();
@@ -583,16 +590,14 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     expect(userCall![0].files).toEqual(['file-1', 'file-2']);
   });
 
-  it('should pin the CLI default selection and runtime type on a server-created topic', async () => {
+  it('creates a server topic without model or provider snapshots', async () => {
     await service.execAgent({ agentId: 'agent-1', prompt: 'Run the build' });
 
-    expect(topicMock.create).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'default', provider: 'claude-code' }),
-      undefined,
-    );
+    expect(topicMock.create.mock.calls[0][0]).not.toHaveProperty('model');
+    expect(topicMock.create.mock.calls[0][0]).not.toHaveProperty('provider');
   });
 
-  it('should snapshot and execute a selected heterogeneous model on a server-created topic', async () => {
+  it('executes the saved heterogeneous model on a new topic', async () => {
     heteroAgentConfig.agencyConfig.heterogeneousProvider = {
       model: 'opus',
       type: 'claude-code',
@@ -601,7 +606,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Run with Opus' });
 
     expect(topicMock.create).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'opus', provider: 'claude-code' }),
+      expect.objectContaining({ agentId: 'agent-1' }),
       undefined,
     );
     expect(mockSpawnHeteroSandbox).toHaveBeenCalledWith(
@@ -609,7 +614,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     );
   });
 
-  it('should execute an existing topic with its pinned heterogeneous model', async () => {
+  it('executes an existing topic with the saved Agent model', async () => {
     heteroAgentConfig.agencyConfig.heterogeneousProvider = {
       args: ['--model', 'stale-arg-model'],
       model: 'agent-model',
@@ -630,7 +635,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
     expect(topicMock.create).not.toHaveBeenCalled();
     expect(mockSpawnHeteroSandbox).toHaveBeenCalledWith(
-      expect.objectContaining({ args: ['--model', 'topic-model'] }),
+      expect.objectContaining({ args: ['--model', 'agent-model'] }),
     );
   });
 
@@ -665,7 +670,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       expect.objectContaining({ userId }),
       expect.objectContaining({
         agentId: 'agent-1',
-        model: 'topic-model',
+        model: 'agent-model',
         topicId: 'topic-existing',
       }),
     );
@@ -713,14 +718,14 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     expect(mockDispatchAgentRun).not.toHaveBeenCalled();
   });
 
-  it('should pin the runtime type of a remote platform agent on a server-created topic', async () => {
+  it('creates a topic for a remote platform Agent without routing snapshots', async () => {
     heteroAgentConfig.agencyConfig = { heterogeneousProvider: { type: 'openclaw' } } as any;
     heteroAgentConfig.provider = 'orvilo';
 
     await service.execAgent({ agentId: 'agent-1', prompt: 'Run the build' });
 
     expect(topicMock.create).toHaveBeenCalledWith(
-      expect.objectContaining({ model: undefined, provider: 'openclaw' }),
+      expect.objectContaining({ agentId: 'agent-1' }),
       undefined,
     );
   });
@@ -957,7 +962,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     expect(resumeFallbackSystemContext).not.toContain('Continue in cloud');
   });
 
-  it('should encode native Codex args before forwarding them to sandbox orvilo hetero exec', async () => {
+  it('uses the saved Codex model over a conflicting native model argument', async () => {
     heteroAgentConfig.model = 'codex';
     heteroAgentConfig.provider = 'codex';
     heteroAgentConfig.agencyConfig.heterogeneousProvider = {
@@ -974,7 +979,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
     expect(mockSpawnHeteroSandbox).toHaveBeenCalledWith(
       expect.objectContaining({
-        args: ['--agent-arg=-c', '--agent-arg=model = "gpt-5.4"', '--effort', 'xhigh'],
+        args: ['--model', 'gpt-5.5', '--effort', 'xhigh'],
       }),
     );
   });
@@ -1001,6 +1006,41 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     );
     expect(dispatchParams.args).toEqual(['--model', 'opus', '--effort', 'high']);
   });
+
+  it.each(['device', 'sandbox'] as const)(
+    'forwards saved native provider env to %s without accepting caller overrides',
+    async (executionTarget) => {
+      const nativeConfig = JSON.stringify({
+        agent: { 'full-access': { permission: { '*': 'allow' } } },
+      });
+      heteroAgentConfig.agencyConfig = {
+        ...(executionTarget === 'device' ? { boundDeviceId: 'device-1' } : {}),
+        executionTarget,
+        heterogeneousProvider: {
+          env: {
+            OPENCODE_CONFIG_CONTENT: nativeConfig,
+            ORVILO_AGENT_ID: 'forged-agent',
+            ORVILO_AEGIS_PACK: 'forged-pack',
+          },
+          methodPacks: { aegis: true },
+          type: executionTarget === 'device' ? 'opencode' : 'claude-code',
+        },
+      } as any;
+
+      await service.execAgent({
+        agentId: 'agent-1',
+        env: { OPENCODE_CONFIG_CONTENT: 'caller-override', CALLER_ENV: 'forged' },
+        prompt: 'Use the saved native provider configuration',
+      } as any);
+
+      const dispatch = executionTarget === 'device' ? mockDispatchAgentRun : mockSpawnHeteroSandbox;
+      const { env } = dispatch.mock.calls[0][0];
+      expect(env.OPENCODE_CONFIG_CONTENT).toBe(nativeConfig);
+      expect(env.ORVILO_AGENT_ID).toBe('agent-1');
+      expect(env.ORVILO_AEGIS_PACK).toBe('1');
+      expect(env).not.toHaveProperty('CALLER_ENV');
+    },
+  );
 
   it('persists CLI-device routing so a stop request reaches the dispatched writer', async () => {
     heteroAgentConfig.agencyConfig = {
@@ -1490,7 +1530,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
   describe('terminal hook seeding onto runningOperation (regression guard)', () => {
     beforeAll(async () => {
       await getTestDB();
-    });
+    }, 120_000);
 
     const taskHook = {
       handler: async () => {},
@@ -1552,7 +1592,9 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     });
 
     it('threads the parent operation through remote member dispatch', async () => {
+      mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'personal-desktop', userId }]);
       heteroAgentConfig.agencyConfig = {
+        boundDeviceId: 'personal-desktop',
         executionTarget: 'local',
         heterogeneousProvider: { type: 'openclaw' },
       } as any;
@@ -1760,6 +1802,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
     it('keeps the conversation workspace separate from a personal platform device scope', async () => {
       heteroAgentConfig.agencyConfig = {
+        boundDeviceId: 'personal-desktop',
         executionTarget: 'local',
         heterogeneousProvider: { platformAgentId: 'researcher', type: 'openclaw' },
       } as any;
@@ -1767,7 +1810,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       (heteroAgentConfig as any).visibility = 'public';
       (heteroAgentConfig as any).workspaceId = 'workspace-a';
       service = await createWorkspaceService();
-      mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'personal-desktop' }]);
+      mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'personal-desktop', userId }]);
 
       const result = await service.execAgent({
         agentId: 'agent-1',
@@ -1835,11 +1878,12 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       heteroAgentConfig.agencyConfig = {
         boundDeviceId: 'author-desktop',
         executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
         heterogeneousProvider: { type: 'openclaw' },
       } as any;
       service = await createWorkspaceService('member-user', 'author-user');
-      mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'member-desktop' }]);
+      mockQueryPersonalDevices.mockResolvedValue([
+        { deviceId: 'member-desktop', userId: 'member-user' },
+      ]);
       mockDeviceFindByDeviceId.mockResolvedValue(undefined);
 
       const result = await service.execAgent({
@@ -1857,8 +1901,9 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
     });
 
-    it('routes an authorized Member Device through the actual caller personal principal', async () => {
+    it('routes the saved authorized device through the actual caller personal principal', async () => {
       heteroAgentConfig.agencyConfig = {
+        boundDeviceId: 'member-desktop',
         executionTarget: 'local',
         heterogeneousProvider: { platformAgentId: 'researcher', type: 'openclaw' },
       } as any;
@@ -1866,9 +1911,11 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       await workspaceDb!.insert(workspaceUserSettings).values({
         userId: 'member-user',
         workspaceId: 'workspace-a',
-        preference: { agentDeviceOverrides: { 'agent-1': { executionTarget: 'local' } } },
+        preference: { agentDeviceOverrides: { 'agent-1': { executionTarget: 'local' } } } as never,
       });
-      mockQueryPersonalDevices.mockResolvedValue([{ deviceId: 'member-desktop' }]);
+      mockQueryPersonalDevices.mockResolvedValue([
+        { deviceId: 'member-desktop', userId: 'member-user' },
+      ]);
 
       const result = await service.execAgent({
         agentId: 'agent-1',
@@ -1971,6 +2018,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
         metadata: {
           runningOperation: {
             deviceId: 'author-desktop',
+            deviceUserId: userId,
             heteroType: 'kimi-code',
             operationId: 'operation-local',
           },
@@ -1981,9 +2029,9 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
         topicId: 'topic-1',
       });
       expect(result).toMatchObject({ success: true, deviceCancellationConfirmed: true });
-      expect(AgentOperationModel.prototype.settleRunning).toHaveBeenCalledWith(
+      expect(AgentOperationModel.prototype.recordCompletion).toHaveBeenCalledWith(
         'operation-local',
-        'interrupted',
+        expect.objectContaining({ completionReason: 'interrupted', status: 'interrupted' }),
       );
       expect(topicMock.settleRunningOperation).toHaveBeenCalledWith(
         'topic-1',

@@ -181,6 +181,29 @@ describe('aiAgentRouter.interruptTask', () => {
       expect(updatedThread.metadata?.completedAt).toBeDefined();
     });
 
+    it('leaves a remote Thread processing until the host confirms terminal exit', async () => {
+      await serverDB
+        .update(agentOperations)
+        .set({
+          metadata: {
+            remoteAdmission: {
+              channel: 'remote-gateway',
+              idempotencyKey: 'op-interrupt-test',
+              state: 'running',
+            },
+          },
+        })
+        .where(eq(agentOperations.id, 'op-interrupt-test'));
+      mockInterruptOperation.mockResolvedValue(true);
+      const result = await aiAgentRouter
+        .createCaller(createTestContext())
+        .interruptTask({ threadId: testThreadId });
+      expect(result.cancelState).toBe('requested');
+      const [thread] = await serverDB.select().from(threads).where(eq(threads.id, testThreadId));
+      expect(thread.status).toBe(ThreadStatus.Processing);
+      expect(thread.metadata?.completedAt).toBeUndefined();
+    });
+
     it('should throw NOT_FOUND when thread does not exist', async () => {
       const caller = aiAgentRouter.createCaller(createTestContext());
 
@@ -323,6 +346,23 @@ describe('aiAgentRouter.interruptTask', () => {
   });
 
   describe('already cancelled thread', () => {
+    it('does not treat a stale cancelled Thread label as a host acknowledgement', async () => {
+      await serverDB
+        .update(threads)
+        .set({ status: ThreadStatus.Cancel })
+        .where(eq(threads.id, testThreadId));
+      mockInterruptOperation.mockResolvedValue(false);
+      const result = await aiAgentRouter
+        .createCaller(createTestContext())
+        .interruptTask({ threadId: testThreadId });
+      expect(result).toMatchObject({ success: false, cancelState: 'unknown' });
+      const [operation] = await serverDB
+        .select()
+        .from(agentOperations)
+        .where(eq(agentOperations.id, 'op-interrupt-test'));
+      expect(operation.status).toBe('running');
+    });
+
     it('should handle re-interrupting an already cancelled thread', async () => {
       // Update thread to cancelled status
       await serverDB
@@ -336,6 +376,10 @@ describe('aiAgentRouter.interruptTask', () => {
         })
         .where(eq(threads.id, testThreadId));
 
+      await serverDB
+        .update(agentOperations)
+        .set({ status: 'interrupted' })
+        .where(eq(agentOperations.id, 'op-interrupt-test'));
       const caller = aiAgentRouter.createCaller(createTestContext());
 
       // Should still succeed (idempotent operation)
@@ -357,6 +401,11 @@ describe('aiAgentRouter.interruptTask', () => {
     it.each(['devin', 'claude-code', 'codex', 'trae', 'qoder', 'openclaw', 'hermes'] as const)(
       'dispatches cancelHeteroTask for %s running on a device',
       async (heteroType) => {
+        mockExecuteToolCall.mockResolvedValueOnce({
+          content: '{}',
+          state: { exited: true },
+          success: true,
+        });
         // Seed topic.metadata.runningOperation with a device + heteroType so
         // interruptTask can resolve the target without a separate device lookup.
         await serverDB
@@ -375,6 +424,12 @@ describe('aiAgentRouter.interruptTask', () => {
           .where(eq(topics.id, testTopicId));
 
         await insertOperation('op-device-cancel');
+        if (heteroType === 'devin') {
+          await serverDB
+            .update(agentOperations)
+            .set({ status: 'waiting_for_human' })
+            .where(eq(agentOperations.id, 'op-device-cancel'));
+        }
 
         // Keep the thread and durable operation bound to the same topic.
         await serverDB
@@ -404,6 +459,11 @@ describe('aiAgentRouter.interruptTask', () => {
         const args = JSON.parse(toolCall.arguments);
         expect(args.signal).toBe('SIGINT');
         expect(args.taskId).toBe('op-device-cancel');
+        const [stopped] = await serverDB
+          .select()
+          .from(agentOperations)
+          .where(eq(agentOperations.id, 'op-device-cancel'));
+        expect(stopped.status).toBe('interrupted');
       },
     );
 

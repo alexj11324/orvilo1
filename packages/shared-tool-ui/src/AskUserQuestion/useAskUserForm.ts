@@ -62,6 +62,7 @@ export interface AskUserFormApi {
   setEscapeMode: (next: boolean) => void;
   setQuestionMode: (key: string) => void;
   setSupplementMode: (next: boolean) => void;
+  showCountdown: boolean;
   submitting: boolean;
   supplementActive: boolean;
   supplementText: string;
@@ -104,8 +105,10 @@ export const useAskUserForm = ({
     return String(idx >= 0 ? idx : 0);
   });
 
-  // Countdown is opt-in: only surfaces with a bridge timeout pass `countdownMs`.
-  const countdownEnabled = countdownMs != null;
+  const hasProviderOwnedOptionIds = questions.some((question) =>
+    question.options.some((option) => !!option.id),
+  );
+  const countdownEnabled = countdownMs != null && !hasProviderOwnedOptionIds;
 
   // Mounted-time deadline; server has its own clock and will return isError if
   // it expires first. Drift of a few seconds is fine.
@@ -117,9 +120,6 @@ export const useAskUserForm = ({
     return () => clearInterval(id);
   }, [countdownEnabled]);
   const expired = countdownEnabled ? now >= deadline : false;
-  const hasProviderOwnedOptionIds = questions.some((question) =>
-    question.options.some((option) => !!option.id),
-  );
 
   /**
    * Submit `payload` exactly as given. Used by the Submit button (with the
@@ -457,6 +457,7 @@ export const useAskUserForm = ({
     setEscapeMode,
     setQuestionMode,
     setSupplementMode,
+    showCountdown: countdownEnabled,
     submitting: submitting || disabled,
     supplementActive: inSupplement,
     supplementText,

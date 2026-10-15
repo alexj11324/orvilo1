@@ -1,0 +1,39 @@
+{
+  "backendSha": "6de41fbbda6d03b338e050b51be1a021b0eef4e9",
+  "checks": [
+    {
+      "actor": "owner",
+      "listPrivate": true,
+      "listPublic": true,
+      "groupPrivate": true,
+      "groupPublic": true,
+      "searchPrivate": false,
+      "searchPublic": false,
+      "count": 2,
+      "countDelta": 2
+    },
+    {
+      "actor": "member",
+      "listPrivate": false,
+      "listPublic": true,
+      "groupPrivate": false,
+      "groupPublic": true,
+      "searchPrivate": false,
+      "searchPublic": false,
+      "count": 1,
+      "countDelta": 1
+    }
+  ],
+  "cleaned": true,
+  "createdSessionIds": {
+    "private": "ssn_JNGee2yccOuZ",
+    "public": "ssn_wgGUhxl1spUJ"
+  },
+  "initialCounts": {
+    "owner": 0,
+    "member": 0
+  },
+  "pass": true,
+  "rendererSha": "6de41fbbda6d03b338e050b51be1a021b0eef4e9",
+  "searchStatus": "unknown: both public and private searches returned empty; local BM25 path logged an error"
+}

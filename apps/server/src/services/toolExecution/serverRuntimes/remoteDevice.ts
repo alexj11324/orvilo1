@@ -2,11 +2,6 @@ import { type DeviceAttachment, RemoteDeviceIdentifier } from '@orvilo/builtin-t
 import { RemoteDeviceExecutionRuntime } from '@orvilo/builtin-tool-remote-device/executionRuntime';
 import debug from 'debug';
 
-import { deviceGateway } from '@/server/services/deviceGateway';
-import {
-  filterAuthorizedDevicePresence,
-  isGatewayOnlyDevicePresenceAllowed,
-} from '@/server/services/deviceGateway/scopedDevicePresence';
 import { getScopedOnlineDevices } from '@/server/services/deviceGateway/scopedDevices';
 
 import { resolveRunWorkspaceId } from './resolveWorkspaceScope';
@@ -44,11 +39,7 @@ export const remoteDeviceRuntime: ServerRuntimeRegistration = {
     const serverDB = context.serverDB;
 
     return new RemoteDeviceExecutionRuntime({
-      // Personal pool (user principal) ∪ the current workspace's shared pool
-      // (workspace principal), surfaced the same way the device-settings page
-      // (`device.ts` listDevices) does — DB rows merged with the live gateway
-      // pool, tagged with `scope` and the user-set `friendlyName` alias so the
-      // model can tell the workspace device apart from the personal one.
+      // Registered hosts available through the caller's Agent permissions.
       queryDeviceList: async (): Promise<DeviceAttachment[]> => {
         // Resolve the workspace scope used to decide which workspace device pool
         // to include. Recovers from the running agent when the run-scoped
@@ -57,19 +48,8 @@ export const remoteDeviceRuntime: ServerRuntimeRegistration = {
         // degrade to the personal-only pool.
         const workspaceId = await resolveRunWorkspaceId(context);
 
-        // Without a DB handle, personal scope may retain the auto-registration
-        // transient fallback. Workspace scope cannot: its registry row is the
-        // authorization boundary, and a raw Gateway socket may be a stale
-        // process that missed Unshare.
-        if (!serverDB) {
-          const scope = workspaceId ? ('workspace' as const) : ('personal' as const);
-          if (!isGatewayOnlyDevicePresenceAllowed(scope)) return [];
-          const online = await deviceGateway.queryDeviceList(userId, workspaceId);
-          return filterAuthorizedDevicePresence(new Set(), online, scope).map((d) => ({
-            ...d,
-            scope,
-          }));
-        }
+        // Gateway presence alone cannot prove a registered execution host.
+        if (!serverDB) return [];
 
         const devices = await getScopedOnlineDevices(serverDB, userId, workspaceId);
         log(

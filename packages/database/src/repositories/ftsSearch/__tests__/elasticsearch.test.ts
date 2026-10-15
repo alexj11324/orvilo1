@@ -85,6 +85,91 @@ afterEach(async () => {
 });
 
 describe('ElasticsearchFtsSearchBackend', () => {
+  it('keeps shared Agent standalone chats private while preserving group and owner messages', async () => {
+    await db.insert(agents).values({
+      id: 'privacy-agent',
+      userId: otherUserId,
+      visibility: 'public',
+      workspaceId,
+    });
+    await db.insert(chatGroups).values({
+      id: 'privacy-group',
+      userId: otherUserId,
+      visibility: 'public',
+      workspaceId,
+    });
+    await db.insert(topics).values([
+      { id: 'privacy-own', agentId: 'privacy-agent', userId, workspaceId },
+      { id: 'privacy-foreign', agentId: 'privacy-agent', userId: otherUserId, workspaceId },
+      { id: 'privacy-group-topic', groupId: 'privacy-group', userId: otherUserId, workspaceId },
+    ]);
+    await db.insert(messages).values([
+      {
+        id: 'privacy-own-message',
+        topicId: 'privacy-own',
+        userId,
+        workspaceId,
+        role: 'user',
+        content: 'Own chat',
+      },
+      {
+        id: 'privacy-foreign-message',
+        topicId: 'privacy-foreign',
+        userId: otherUserId,
+        workspaceId,
+        role: 'user',
+        content: 'Private teammate chat',
+      },
+      {
+        id: 'privacy-group-message',
+        topicId: 'privacy-group-topic',
+        userId: otherUserId,
+        workspaceId,
+        role: 'user',
+        content: 'Shared group chat',
+      },
+      {
+        id: 'privacy-own-unfiled',
+        userId,
+        workspaceId,
+        role: 'user',
+        content: 'Own topicless chat',
+      },
+      {
+        id: 'privacy-foreign-unfiled',
+        userId: otherUserId,
+        workspaceId,
+        role: 'user',
+        content: 'Private teammate topicless chat',
+      },
+    ]);
+    const topicIds = ['privacy-own', 'privacy-foreign', 'privacy-group-topic'];
+    const messageIds = [
+      'privacy-own-message',
+      'privacy-foreign-message',
+      'privacy-group-message',
+      'privacy-own-unfiled',
+      'privacy-foreign-unfiled',
+    ];
+    for (const [entity, ids, expected] of [
+      ['topics', topicIds, ['privacy-own', 'privacy-group-topic']],
+      [
+        'messages',
+        messageIds,
+        ['privacy-own-message', 'privacy-group-message', 'privacy-own-unfiled'],
+      ],
+    ] as const) {
+      const backend = new ElasticsearchFtsSearchBackend(db, {
+        client: createClient(ids.map((_id) => ({ _id, _score: 1 }))),
+        indexNamespace,
+      });
+      const result = await backend.search(request(entity, { limit: 10 }));
+      expect(result.items.map((item) => ('id' in item ? item.id : undefined)).sort()).toEqual(
+        [...expected].sort(),
+      );
+    }
+  });
+
   it('backs up to a word boundary when the clause budget cuts a Latin word', async () => {
     const client = createClient([]);
     const backend = new ElasticsearchFtsSearchBackend(db, { client, indexNamespace });

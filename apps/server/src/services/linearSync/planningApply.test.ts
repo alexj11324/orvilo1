@@ -153,13 +153,18 @@ const createRevision = async (name: string, requiresApproval: boolean, projectSc
 };
 
 describe('LinearPlanningWorker.applyProposal', () => {
-  const privateResume = async (selected: boolean) => {
+  const resumeAgent = async (selected: boolean, visibility: 'private' | 'public' = 'private') => {
     const { project, revision, task } = await createRevision('Private resume', false, true);
     await db.insert(users).values({ id: memberId });
     await db.insert(workspaceMembers).values({ workspaceId, userId: memberId, role: 'member' });
-    const agentId = 'private-planning-agent';
-    await db.insert(agents).values({ id: agentId, userId, workspaceId, visibility: 'private' });
-    if (selected)
+    const agentId = 'planning-resume-agent';
+    await db.insert(agents).values({
+      id: agentId,
+      userId: selected && visibility === 'private' ? memberId : userId,
+      workspaceId,
+      visibility,
+    });
+    if (selected && visibility === 'public')
       await db.insert(resourcePermissions).values({
         resourceType: 'agent',
         resourceId: agentId,
@@ -215,7 +220,7 @@ describe('LinearPlanningWorker.applyProposal', () => {
 
   it('persists the actual noncreator planner actor and wakes its private Agent through the durable sweep', async () => {
     caidAdmission.allowed.mockResolvedValue(false);
-    const { revision, task, agentId } = await privateResume(true);
+    const { revision, task, agentId } = await resumeAgent(true);
     await new LinearPlanningWorker(db, workspaceId).applyProposal(revision.id, memberId, true);
     const [dispatch] = await db
       .select()
@@ -232,8 +237,17 @@ describe('LinearPlanningWorker.applyProposal', () => {
     });
     expect(TaskRunnerService).toHaveBeenCalledWith(db, memberId, workspaceId);
     expect(runTask).toHaveBeenCalledTimes(1);
-    runTask.mockClear();
+  });
+
+  it('rechecks the actual planner after a public Agent Use grant is revoked', async () => {
+    caidAdmission.allowed.mockResolvedValue(false);
+    const { revision, task, agentId } = await resumeAgent(true, 'public');
+    await new LinearPlanningWorker(db, workspaceId).applyProposal(revision.id, memberId, true);
+    const candidate = (await TaskDispatchModel.findPlanningStartCandidates(db)).find(
+      (row) => row.taskId === task.id,
+    )!;
     await db.delete(resourcePermissions).where(eq(resourcePermissions.resourceId, agentId));
+    caidAdmission.allowed.mockResolvedValue(true);
     await expect(processPlanningTaskDispatchStart({ db, candidate })).resolves.toMatchObject({
       outcome: 'waiting',
       reason: 'agent_use_denied',
@@ -242,7 +256,7 @@ describe('LinearPlanningWorker.applyProposal', () => {
   });
 
   it('denies a planner without Use before reserving a dispatch or advancing generation', async () => {
-    const { revision, task } = await privateResume(false);
+    const { revision, task } = await resumeAgent(false);
     await expect(
       new LinearPlanningWorker(db, workspaceId).applyProposal(revision.id, memberId, true),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });

@@ -13,7 +13,7 @@ import {
 } from '../../models/topicComment';
 import { UserModel } from '../../models/user';
 import { WorkspaceUserSettingsModel } from '../../models/workspaceUserSettings';
-import { credentials, devices } from '../../schemas';
+import { credentials, devices, workspaceMembers } from '../../schemas';
 import { agents } from '../../schemas/agent';
 import { agentHistoryJobAgents, agentHistoryJobs } from '../../schemas/agentHistoryJob';
 import { chatGroups, chatGroupsAgents } from '../../schemas/chatGroup';
@@ -35,7 +35,7 @@ const isServerDB = process.env.TEST_SERVER_DB === '1';
 
 const runtimeFixture = {
   agencyConfig: {
-    boundDeviceId: 'resource-fixture-host',
+    boundDeviceId: `resource-fixture-host-${userId}`,
     executionTarget: 'device' as const,
     heterogeneousProvider: { type: 'orvilo' as const, model: 'gpt-4o' },
   },
@@ -98,17 +98,19 @@ const seedRuntimeFixtures = async () => {
       await serverDB
         .insert(devices)
         .values({
-          deviceId: 'resource-fixture-host',
+          deviceId: `resource-fixture-host-${actor.id}`,
           identitySource: 'fallback',
           userId: actor.id,
-          workspaceId: scope,
-          visibility: 'public',
         })
         .onConflictDoNothing();
       await serverDB
         .insert(agents)
         .values({
           ...runtimeFixture,
+          agencyConfig: {
+            ...runtimeFixture.agencyConfig,
+            boundDeviceId: `resource-fixture-host-${actor.id}`,
+          },
           id: `runtime-fixture-${actor.id}-${scope ?? 'personal'}`,
           userId: actor.id,
           workspaceId: scope,
@@ -1611,6 +1613,9 @@ describe('AgentGroupRepository', () => {
         primaryOwnerId: userId,
         slug: 'agent-group-target-ws',
       });
+      await serverDB
+        .insert(workspaceMembers)
+        .values({ userId, workspaceId: targetWorkspaceId, role: 'owner' });
       await seedRuntimeFixtures();
 
       await serverDB.insert(chatGroups).values({

@@ -23,13 +23,6 @@ const testState = vi.hoisted(() => ({
     model: 'gpt-4o',
     provider: 'openai',
   },
-  /** Effective (override-resolved) selection, as `useAgentModelSelection` returns it. */
-  agentModelSelection: {
-    isPreferenceLoading: false,
-    model: undefined as string | undefined,
-    provider: undefined as string | undefined,
-    selectionPolicy: 'fixed' as 'fixed' | 'member',
-  },
   aiInfra: {
     enabledChatModelList: [] as TestProviderWithModels[],
     isInitAiProviderRuntimeState: false,
@@ -57,17 +50,6 @@ vi.mock('@/features/ChatInput/hooks/useAgentId', () => ({
   useAgentId: () => 'agent-id',
 }));
 
-vi.mock('@/features/ChatInput/hooks/useAgentModelSelection', () => ({
-  useAgentModelSelection: () => ({
-    isPreferenceLoading: testState.agentModelSelection.isPreferenceLoading,
-    // Default to the shared agent config, matching `resolveAgentModelConfig`
-    // when there is no member override.
-    model: testState.agentModelSelection.model ?? testState.agent.model,
-    provider: testState.agentModelSelection.provider ?? testState.agent.provider,
-    selectionPolicy: testState.agentModelSelection.selectionPolicy,
-  }),
-}));
-
 vi.mock('@/features/ChatInput/hooks/useChatInputResourceAccess', () => ({
   useChatInputResourceAccess: () => testState.resourceAccess,
 }));
@@ -83,6 +65,8 @@ vi.mock('@/store/agent', () => ({
 
 vi.mock('@/store/agent/selectors', () => ({
   agentByIdSelectors: {
+    getAgentModelById: () => (s: typeof testState.agent) => s.model,
+    getAgentModelProviderById: () => (s: typeof testState.agent) => s.provider,
     isAgentConfigLoadingById: () => (s: typeof testState.agent) => s.isConfigLoading,
     isAgentHeterogeneousById: () => (s: typeof testState.agent) =>
       Boolean(s.agencyConfig?.heterogeneousProvider),
@@ -101,12 +85,6 @@ describe('useChatInputNotice', () => {
   beforeEach(() => {
     testState.agent.agencyConfig = undefined;
     testState.agent.isConfigLoading = false;
-    testState.agentModelSelection = {
-      isPreferenceLoading: false,
-      model: undefined,
-      provider: undefined,
-      selectionPolicy: 'fixed',
-    };
     testState.agent.model = 'gpt-4o';
     testState.agent.provider = 'openai';
     testState.aiInfra.enabledChatModelList = [];
@@ -265,50 +243,6 @@ describe('useChatInputNotice', () => {
     const { result } = renderHook(() => useChatInputNotice());
 
     expect(result.current).toBeUndefined();
-  });
-
-  it('judges the member override rather than the shared model on a workspace agent', () => {
-    testState.aiInfra.isInitAiProviderRuntimeState = true;
-    // Shared model is retired, but this member overrode it with a live one —
-    // the trigger shows the override, so the notice must judge the override.
-    testState.agent.model = 'gpt-4-32k';
-    testState.agentModelSelection.selectionPolicy = 'member';
-    testState.agentModelSelection.model = 'gpt-4o';
-    testState.agentModelSelection.provider = 'openai';
-    testState.aiInfra.enabledChatModelList = [
-      { children: [{ abilities: { functionCall: true }, id: 'gpt-4o' }], id: 'openai' },
-    ];
-
-    const { result } = renderHook(() => useChatInputNotice());
-
-    expect(result.current).toBeUndefined();
-  });
-
-  it('does not return unavailable model copy while a member-policy preference is still loading', () => {
-    testState.aiInfra.isInitAiProviderRuntimeState = true;
-    testState.agentModelSelection.selectionPolicy = 'member';
-    testState.agentModelSelection.isPreferenceLoading = true;
-    testState.agent.model = 'gpt-4-32k';
-
-    const { result } = renderHook(() => useChatInputNotice());
-
-    expect(result.current).toBeUndefined();
-  });
-
-  it('still warns on a fixed-policy workspace agent while the preference request is in flight', () => {
-    // `fixed` ignores the member override, so the effective model is already
-    // settled — the unrelated preferences fetch must not swallow the warning.
-    testState.aiInfra.isInitAiProviderRuntimeState = true;
-    testState.agentModelSelection.selectionPolicy = 'fixed';
-    testState.agentModelSelection.isPreferenceLoading = true;
-    testState.agent.model = 'gpt-4-32k';
-
-    const { result } = renderHook(() => useChatInputNotice());
-
-    expect(result.current).toEqual({
-      key: 'input.modelUnavailable',
-      type: 'warning',
-    });
   });
 
   it('does not return unsupported tool-use copy when the selected model exists but lacks tool calls', () => {

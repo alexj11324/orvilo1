@@ -228,3 +228,12 @@ export const automationDetailNextRun = (detail: TaskDetailData): Dayjs | null =>
   }
   return null;
 };
+
+export const automationMutationErrorMessage = (
+  error: unknown,
+  fallback: string,
+  nativeFullAccessMessage: string,
+) =>
+  error instanceof Error && error.message.includes('NATIVE_FULL_ACCESS_UNAVAILABLE')
+    ? nativeFullAccessMessage
+    : fallback;

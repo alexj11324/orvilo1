@@ -2,6 +2,7 @@
 
 import { ReactBlockPlugin } from '@lobehub/editor';
 import { Editor } from '@lobehub/editor/react';
+import { BUILTIN_AGENT_SLUGS, isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import { type CSSProperties, useMemo } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -49,7 +50,11 @@ const EditorCanvas = memo<EditorCanvasProps>(({ askCopilotTarget, placeholder, s
       placeholder={placeholder || t('pageEditor.editorPlaceholder')}
       slashItems={slashItems}
       style={style}
-      toolbarExtraItems={editable ? askCopilotItem : undefined}
+      toolbarExtraItems={
+        editable && isBuiltinAgentAvailable(BUILTIN_AGENT_SLUGS.pageAgent)
+          ? askCopilotItem
+          : undefined
+      }
       unsavedChangesGuard={{
         enabled: true,
         message: t('form.unsavedWarning', { ns: 'ui' }),

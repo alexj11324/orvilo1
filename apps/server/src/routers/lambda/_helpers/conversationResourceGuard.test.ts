@@ -36,7 +36,7 @@ const assertActionMock = vi.mocked(assertCanPerformResourceAction);
 const canPerformActionMock = vi.mocked(canPerformResourceAction);
 const getParentGroupIdsMock = vi.mocked(getWorkspaceAgentParentGroupIds);
 
-/** Minimal drizzle stub: every select().from().where() resolves `rows`. */
+/** Consume rows only for awaited queries, not nested ACL SQL subqueries. */
 const createDb = (rowsPerCall: any[][]) => {
   let call = 0;
   return {
@@ -45,7 +45,10 @@ const createDb = (rowsPerCall: any[][]) => {
         from: () => {
           const chain = {
             innerJoin: () => chain,
-            where: async () => rowsPerCall[call++] ?? [],
+            where: () => chain,
+            // eslint-disable-next-line unicorn/no-thenable -- Drizzle query builders are awaitable before execution.
+            then: (resolve: (rows: any[]) => unknown) =>
+              Promise.resolve(rowsPerCall[call++] ?? []).then(resolve),
           };
           return chain;
         },
@@ -191,6 +194,7 @@ describe('assertCanUseMessageTargets', () => {
   it('falls back to the topic linkage when the row has no agent/group', async () => {
     const db = createDb([
       [{ agentId: null, groupId: null, topicId: 't-1' }],
+      [{ id: 't-1' }],
       [{ agentId: 'agent-2', groupId: null }],
     ]);
 
@@ -211,7 +215,7 @@ describe('assertCanUseMessageTargets', () => {
 
 describe('assertCanUseTopicTargets', () => {
   it('resolves the owning group from the topic rows', async () => {
-    const db = createDb([[{ agentId: null, groupId: 'group-1' }]]);
+    const db = createDb([[{ id: 't-1' }], [{ agentId: null, groupId: 'group-1' }]]);
 
     await assertCanUseTopicTargets(baseCtx(db), ['t-1']);
 
@@ -225,21 +229,25 @@ describe('assertCanUseTopicTargets', () => {
   });
 
   it('reads an Issue topic assigned to a private Agent without granting Agent Use', async () => {
-    const db = createDb([[{ topicId: 'issue-topic', agentId: 'private-agent' }]]);
+    const db = createDb([
+      [{ id: 'issue-topic' }],
+      [{ topicId: 'issue-topic', agentId: 'private-agent' }],
+    ]);
     getResourceMetaMock.mockResolvedValue({ ...wsMeta, visibility: 'private' } as any);
     assertActionMock.mockRejectedValue(new TRPCError({ code: 'FORBIDDEN' }));
 
     await expect(assertCanViewTopicTargets(baseCtx(db), ['issue-topic'])).resolves.toEqual([]);
     expect(assertActionMock).not.toHaveBeenCalled();
     await expect(
-      assertCanUseTopicTargets(baseCtx(createDb([[{ agentId: 'private-agent' }]])), [
-        'issue-topic',
-      ]),
+      assertCanUseTopicTargets(
+        baseCtx(createDb([[{ id: 'issue-topic' }], [{ agentId: 'private-agent' }]])),
+        ['issue-topic'],
+      ),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
   it('can require read-only view access to the owning resource', async () => {
-    const db = createDb([[], [{ agentId: 'agent-1', groupId: null }]]);
+    const db = createDb([[{ id: 't-1' }], [], [{ agentId: 'agent-1', groupId: null }]]);
 
     await assertCanViewTopicTargets(baseCtx(db), ['t-1']);
 
@@ -254,6 +262,8 @@ describe('assertCanViewMessageTargets', () => {
     const db = createDb([
       [{ agentId: 'private-agent', topicId: 'issue-topic', workspaceId: 'ws-1' }],
       [{ topicId: 'issue-topic' }],
+      [{ id: 'issue-topic' }],
+      [{ topicId: 'issue-topic' }],
     ]);
     getResourceMetaMock.mockResolvedValue({ ...wsMeta, visibility: 'private' } as any);
     assertActionMock.mockRejectedValue(new TRPCError({ code: 'FORBIDDEN' }));
@@ -266,7 +276,11 @@ describe('assertCanViewMessageTargets', () => {
 
 describe('filterUserIdsByTopicViewAccess', () => {
   it('resolves topic metadata and recipient grants once before evaluating users', async () => {
-    const db = createDb([[{ agentId: 'agent-1', groupId: null, sessionId: null }]]);
+    const db = createDb([
+      [{ agentId: 'agent-1', groupId: null, sessionId: null }],
+      [{ id: 'topic-1' }],
+      [{ id: 'topic-1' }],
+    ]);
     const grants = new Map([
       ['user-1', ['agent:read:all']],
       ['user-2', ['agent:read:all']],
@@ -284,7 +298,6 @@ describe('filterUserIdsByTopicViewAccess', () => {
       ),
     ).resolves.toEqual(['user-1']);
 
-    expect(db.select).toHaveBeenCalledTimes(1);
     expect(getResourceMetaMock).toHaveBeenCalledTimes(1);
     expect(permissionsSpy).toHaveBeenCalledTimes(1);
     expect(permissionsSpy).toHaveBeenCalledWith({
@@ -322,8 +335,9 @@ describe('assertCanUseSessionTargets', () => {
 describe('assertCanUseCreateMessageTargets', () => {
   it('guards topic and existing parent rows even when explicit context is omitted', async () => {
     const db = createDb([
-      [{ agentId: null, groupId: 'group-1', sessionId: null }],
+      [{ id: 'topic-1' }],
       [{ agentId: 'agent-2', groupId: null, topicId: 'topic-1' }],
+      [{ agentId: null, groupId: 'group-1', sessionId: null }],
     ]);
 
     await assertCanUseCreateMessageTargets(baseCtx(db), [
@@ -341,9 +355,11 @@ describe('assertCanUseCreateMessageTargets', () => {
   it('also guards the explicit target so forged context cannot replace row authority', async () => {
     const db = createDb([[], []]);
 
-    await assertCanUseCreateMessageTargets(baseCtx(db), [
-      { agentId: 'agent-1', parentId: 'parent-1', topicId: 'topic-1' },
-    ]);
+    await expect(
+      assertCanUseCreateMessageTargets(baseCtx(db), [
+        { agentId: 'agent-1', parentId: 'parent-1', topicId: 'topic-1' },
+      ]),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 
     expect(assertActionMock).toHaveBeenCalledWith(
       expect.objectContaining({ resourceId: 'agent-1', resourceType: 'agent' }),

@@ -5,6 +5,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import {
   automationDetailNextRun,
   automationDetailTriggerSummary,
+  automationMutationErrorMessage,
   automationNextRun,
   automationStatusesFor,
   automationStatusOf,
@@ -159,4 +160,21 @@ describe('event automation presentation', () => {
     expect(eventAutomationStatusOf()).toBe('inactive');
     expect(automationNextRun({ ...scheduledTask, automationMode: 'event' })).toBeNull();
   });
+});
+
+it('preserves native full-access configuration errors instead of hiding them behind a generic failure', () => {
+  expect(
+    automationMutationErrorMessage(
+      new Error('NATIVE_FULL_ACCESS_UNAVAILABLE: native mode unavailable'),
+      'Save failed',
+      'Native full access unavailable',
+    ),
+  ).toBe('Native full access unavailable');
+  expect(
+    automationMutationErrorMessage(
+      new Error('offline'),
+      'Save failed',
+      'Native full access unavailable',
+    ),
+  ).toBe('Save failed');
 });

@@ -11,19 +11,14 @@ import type {
   ChatTopicStatus,
   ConversationContext,
   ExecAgentResult,
-  HeterogeneousTopicPin,
   MessageMetadata,
   RuntimeMentionedAgent,
 } from '@orvilo/types';
-import { resolveAgentAgencyConfig } from '@orvilo/types';
+import { normalizeAgencyConfigHeterogeneousProvider } from '@orvilo/types';
 import { t } from 'i18next';
 
 import { isDesktop } from '@/const/version';
-import {
-  ensureAgentManagementAccess,
-  getRuntimeCanManageAgent,
-} from '@/helpers/agentManagementAccess';
-import { resolveExecutionTarget, resolveWorkspaceScoped } from '@/helpers/executionTarget';
+import { resolveExecutionTarget } from '@/helpers/executionTarget';
 import { getTopicAgencyConfig, getTopicWorkspaceScoped } from '@/helpers/topicExecutionConfig';
 import {
   aiAgentService,
@@ -45,11 +40,7 @@ import { topicMapKey } from '@/store/chat/utils/topicMapKey';
 import { getFileStoreState } from '@/store/file/store';
 import type { StoreSetter } from '@/store/types';
 import { useUserStore } from '@/store/user';
-import {
-  settingsSelectors,
-  toolInterventionSelectors,
-  userProfileSelectors,
-} from '@/store/user/selectors';
+import { settingsSelectors, toolInterventionSelectors } from '@/store/user/selectors';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import { resolveNewThreadIntent } from '../../dispatch/newThreadIntent';
@@ -91,33 +82,7 @@ const interruptGatewayTaskOrThrow = async (
   }
 };
 
-/**
- * When the agent may run against the local machine, resolve this desktop's
- * own gateway deviceId and pass it as the `localDeviceId` capability hint —
- * "which registered device IS the requester's own machine". Unified
- * admission on the server consumes it to resolve a stored `local` target
- * (or a member's own `local` override) onto this desktop; it then presets
- * `activeDeviceId`, injects `orvilo-local-system` into the first LLM payload,
- * and advertises direct image reads only when the routed device still
- * matches this desktop.
- *
- * The routing `deviceId` override is deliberately NOT sent: under unified
- * admission a per-request id is an *explicit request* — an authorization-
- * gated input distinct from the stored `local` intent — so a fixed-policy or
- * workspace-scoped run would reject the hint it previously accepted, and an
- * admitted run would wrongly outrank the session pin. The server's
- * `resolveExecutionDevice` answer (session pin → explicit → preference →
- * default) owns the pick.
- *
- * Gated on the effective runtime mode (`isLocalSystemEnabledById`), which
- * derives from `agencyConfig.executionTarget` — only a `local` target sends
- * the hint for local CLI agents; platform tasks always send it as a
- * capability claim for the server's plan to accept or ignore.
- *
- * Desktop-only and best-effort: any failure falls back to the server-side
- * device-resolution heuristics. We don't pre-check online status here — an
- * offline id simply fails the server's `onlineDevices` guard and stays unrouted.
- */
+/** Report the desktop's capabilities without changing the Agent's saved device. */
 const resolveDesktopDeviceHints = async (
   agentId?: string,
   topicId?: string | null,
@@ -132,43 +97,9 @@ const resolveDesktopDeviceHints = async (
   if (chatConfigByIdSelectors.isChatModeById(agentId)(agentState)) return {};
 
   const agent = agentByIdSelectors.getAgentById(agentId)(agentState);
-  const userState = useUserStore.getState();
-  const currentUserId = userProfileSelectors.userId(userState);
-  // Author-or-admin, mirroring the picker (`useAgentManagementAccess`) and the
-  // server (`isResourceAuthorOrAdmin`) — an admin's own override must survive
-  // a `fixed` selection policy just like the author's does. Resolve from the
-  // server first when the picker's hook never primed the cache (cold load /
-  // direct mention); no-op for authors and cached answers.
-  await ensureAgentManagementAccess({
-    agentId,
-    agentUserId: agent?.userId,
-    currentUserId,
-    visibility: agent?.visibility,
-    workspaceId: agent?.workspaceId,
-  });
-  const canManage = getRuntimeCanManageAgent({
-    agentId,
-    agentUserId: agent?.userId,
-    currentUserId,
-  });
-  const usesWorkspaceMemberSelection =
-    !!agent?.workspaceId && agent.visibility !== 'private' && !canManage;
-  // Every workspace caller's override matters — a manager's / private owner's
-  // `local` pick also lives in `agentDeviceOverrides` (the shared row must
-  // never reference a personal device); `resolveAgentAgencyConfig` decides how
-  // it applies per role.
-  const deviceOverride = agent?.workspaceId
-    ? userState.workspaceUserPreference.agentDeviceOverrides?.[agentId]
-    : undefined;
   const agencyConfig = getTopicAgencyConfig(
-    resolveAgentAgencyConfig(
+    normalizeAgencyConfigHeterogeneousProvider(
       agentByIdSelectors.getAgencyConfigById(agentId)(agentState),
-      deviceOverride,
-      {
-        canManage,
-        visibility: agent?.visibility,
-        workspaceId: agent?.workspaceId,
-      },
     ),
     topicId,
   );
@@ -176,11 +107,7 @@ const resolveDesktopDeviceHints = async (
   const executionTarget = resolveExecutionTarget(agencyConfig, {
     clientExecutionAvailable: true,
     isHetero: !!agencyConfig?.heterogeneousProvider,
-    workspaceScoped: getTopicWorkspaceScoped(
-      agencyConfig,
-      topicId,
-      resolveWorkspaceScoped(usesWorkspaceMemberSelection, deviceOverride),
-    ),
+    workspaceScoped: getTopicWorkspaceScoped(agencyConfig, topicId, !!agent?.workspaceId),
   });
   // Platform hints are capability claims, not routing overrides. Always send
   // this desktop best-effort and let the server's authoritative execution plan
@@ -630,7 +557,6 @@ export class GatewayActionImpl {
      * and never to the agent row (docs/development/chat-agent-model-ia.md §5.2).
      * Ignored when the send reuses an existing topic.
      */
-    newTopicPins?: HeterogeneousTopicPin;
     /**
      * Temporary message IDs created during the initial sendMessage phase.
      * These are associated with the new gateway operation so the UI doesn't
@@ -658,7 +584,6 @@ export class GatewayActionImpl {
       resumeToolResult,
       selectedToolIds,
       mentionedAgents,
-      newTopicPins,
       tempMessageIds,
     } = params;
 
@@ -697,7 +622,7 @@ export class GatewayActionImpl {
     // it — the server can't read client-local state, and without this a
     // workspace hetero run's first send would fall back to the device default
     // cwd instead of the member's pick.
-    const initialTopicMetadata =
+    const initialDirectoryMetadata =
       pendingRepos.length > 0
         ? {
             repos: pendingRepos,
@@ -711,6 +636,16 @@ export class GatewayActionImpl {
               workingDirectoryConfig: optimisticTopic.metadata.workingDirectoryConfig,
             }
           : undefined;
+    const initialTopicMetadata =
+      isCreateNewTopic &&
+      (initialDirectoryMetadata || optimisticTopic?.metadata?.heteroEffort !== undefined)
+        ? {
+            ...initialDirectoryMetadata,
+            ...(optimisticTopic?.metadata?.heteroEffort !== undefined
+              ? { heteroEffort: optimisticTopic.metadata.heteroEffort }
+              : {}),
+          }
+        : undefined;
 
     // Honour user-initiated cancel during phase-1 init: while we await the
     // execAgentTask round-trip the caller's loading state (e.g. `sendMessage`)
@@ -808,7 +743,6 @@ export class GatewayActionImpl {
               fileIds,
               replacesOperationId,
               mentionedAgents,
-              newTopicPins,
               parentMessageId,
               prompt: message,
               resumeApproval,
@@ -979,6 +913,14 @@ export class GatewayActionImpl {
     // It has already ended server-side: retain the error row, not a phantom
     // runtime waiting for a terminal event published before we subscribed.
     if (!result.success || result.status === 'error') {
+      if (!isCreateNewTopic && !result.createdThreadId) {
+        try {
+          const messages = await messageService.getMessages(resolvedMessageContext);
+          this.#get().replaceMessages(messages, { context: resolvedMessageContext });
+        } catch (error) {
+          console.error('[gateway:admissionError] failed to load persisted error', error);
+        }
+      }
       if (parentOperationId)
         this.#get().failOperation(parentOperationId, {
           message: result.error || result.message,

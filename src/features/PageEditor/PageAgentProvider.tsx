@@ -1,4 +1,4 @@
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
+import { BUILTIN_AGENT_SLUGS, isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import { isChatGroupSessionId } from '@orvilo/types';
 import type { ReactNode } from 'react';
 import { memo, useEffect, useMemo, useRef } from 'react';
@@ -30,7 +30,7 @@ interface PageAgentProviderProps {
   syncActiveAgent?: boolean;
 }
 
-export const PageAgentProvider = memo<PageAgentProviderProps>(
+const ActivePageAgentProvider = memo<PageAgentProviderProps>(
   ({ children, pageId, syncActiveAgent = true }) => {
     const useInitBuiltinAgent = useAgentStore((s) => s.useInitBuiltinAgent);
     const pageAgentId = useAgentStore(builtinAgentSelectors.pageAgentId);
@@ -119,3 +119,19 @@ export const PageAgentProvider = memo<PageAgentProviderProps>(
     );
   },
 );
+
+export const PageAgentProvider = (props: PageAgentProviderProps) => {
+  if (!isBuiltinAgentAvailable(BUILTIN_AGENT_SLUGS.pageAgent)) {
+    return (
+      <ConversationProvider
+        skipFetch
+        composerTarget={{ reason: 'no-composer', writable: false }}
+        context={{ agentId: '', documentId: props.pageId, scope: 'page' }}
+      >
+        {props.children}
+      </ConversationProvider>
+    );
+  }
+
+  return <ActivePageAgentProvider {...props} />;
+};

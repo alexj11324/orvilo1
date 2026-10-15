@@ -75,9 +75,7 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
       { role: 'owner', userId: ownerId, workspaceId },
     ]);
 
-    // Share management follows the topic's conversation, so the topics must be
-    // bound to one: a shared agent with explicit Use for these collaborators
-    // and a private one with only its creator granted Use.
+    // Co-editing requires a shared discussion; Agent Use alone never shares a standalone chat.
     const [sharedAgent] = await serverDB
       .insert(agents)
       .values({
@@ -93,6 +91,15 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
         slug: `share-perm-private-${creatorId.slice(0, 8)}`,
         userId: creatorId,
         visibility: 'private',
+        workspaceId,
+      })
+      .returning();
+    const [sharedGroup] = await serverDB
+      .insert(chatGroups)
+      .values({
+        title: 'Shared discussion',
+        userId: creatorId,
+        visibility: 'public',
         workspaceId,
       })
       .returning();
@@ -118,7 +125,13 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
 
     const [topic] = await serverDB
       .insert(topics)
-      .values({ agentId: sharedAgent.id, title: 'WS Perm Topic', userId: creatorId, workspaceId })
+      .values({
+        agentId: sharedAgent.id,
+        groupId: sharedGroup.id,
+        title: 'WS Perm Topic',
+        userId: creatorId,
+        workspaceId,
+      })
       .returning();
     topicId = topic.id;
 
@@ -193,34 +206,33 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
 
       await expect(
         memberCaller.updateShareVisibility({ topicId: privateTopicId, visibility: 'link' }),
-      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
       await expect(memberCaller.disableSharing({ topicId: privateTopicId })).rejects.toMatchObject({
-        code: 'FORBIDDEN',
+        code: 'NOT_FOUND',
       });
       await expect(
         memberCaller.enableSharing({ topicId: privateTopicId, visibility: 'link' }),
-      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
 
     it('a member cannot share a topic that backs no conversation', async () => {
-      // The co-editing guard resolves zero resources here, and a share link
-      // reaches further than an edit — so it falls back to creator-or-owner
-      // instead of letting every member publish the conversation.
+      // A parentless standalone row remains creator-private before publish policy checks.
       const memberCaller = topicRouter.createCaller(createWorkspaceContext(memberId, workspaceId));
 
       await expect(
         memberCaller.enableSharing({ topicId: unboundTopicId, visibility: 'link' }),
-      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
 
-    it('workspace owner can still share a topic that backs no conversation', async () => {
+    it('workspace owner cannot publish another member standalone topic', async () => {
       const ownerCaller = topicRouter.createCaller(createWorkspaceContext(ownerId, workspaceId));
 
-      const created = await ownerCaller.enableSharing({
-        topicId: unboundTopicId,
-        visibility: 'private',
-      });
-      expect(created?.topicId).toBe(unboundTopicId);
+      await expect(
+        ownerCaller.enableSharing({
+          topicId: unboundTopicId,
+          visibility: 'private',
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
 
     it("workspace owner can manage a member's share", async () => {
@@ -408,7 +420,7 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
       await expect(memberCaller.disableSharing({ topicId: seeded.topicId })).resolves.toBeDefined();
     });
 
-    it('lets the agent creator and the workspace owner publish under a restricted agent', async () => {
+    it('allows the creator policy override without exposing a member chat to the workspace owner', async () => {
       const creatorOwned = await seedAgentTopic({
         agentUserId: creatorId,
         topicSharePolicy: 'restricted',
@@ -429,16 +441,15 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
         topicUserId: memberId,
       });
       const ownerCaller = topicRouter.createCaller(createWorkspaceContext(ownerId, workspaceId));
-      const ownerPublished = await ownerCaller.enableSharing({
-        topicId: memberOwned.topicId,
-        visibility: 'link',
-      });
-      expect(ownerPublished?.visibility).toBe('link');
+      await expect(
+        ownerCaller.enableSharing({
+          topicId: memberOwned.topicId,
+          visibility: 'link',
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
 
-    it("lets a member publish another member's topic under the member policy", async () => {
-      // The permission is about the AGENT's topics, not just one's own: under
-      // `member` a member may publish a topic someone else created.
+    it("keeps another member's standalone topic private under the member policy", async () => {
       const ownerOwned = await seedAgentTopic({
         agentUserId: creatorId,
         topicSharePolicy: 'member',
@@ -449,16 +460,14 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
 
       await expect(
         memberCaller.enableSharing({ topicId: ownerOwned.topicId, visibility: 'link' }),
-      ).resolves.toMatchObject({ visibility: 'link' });
-      // ...and take it back out of circulation.
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
       await expect(
         memberCaller.updateShareVisibility({ topicId: ownerOwned.topicId, visibility: 'private' }),
-      ).resolves.toMatchObject({ visibility: 'private' });
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
 
     it("keeps another member's topic off-limits when the topic has no agent", async () => {
-      // Legacy rule survives for agent-less rows: the member policy is granted
-      // BY an agent, so a topic that answers to none keeps creator+owner only.
+      // Agent-less standalone conversations remain private to their creator.
       const creatorCaller = topicRouter.createCaller(
         createWorkspaceContext(creatorId, workspaceId),
       );
@@ -467,7 +476,7 @@ describe('Topic Share Router Integration Tests (workspace permission matrix)', (
       const memberCaller = topicRouter.createCaller(createWorkspaceContext(memberId, workspaceId));
       await expect(
         memberCaller.updateShareVisibility({ topicId: unboundTopicId, visibility: 'link' }),
-      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
 
     it('leaves members publishing under the default and legacy policies', async () => {

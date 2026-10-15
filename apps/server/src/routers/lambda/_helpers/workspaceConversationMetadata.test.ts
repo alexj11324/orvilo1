@@ -46,7 +46,7 @@ const runtimeMetadata = {
   heteroSessionIdByWorkingDirectory: { fixture: 'fixture-native-session' },
   heteroSessionBindingKey: 'fixture-binding-key',
   heteroSessionBindingKeyByWorkingDirectory: { fixture: 'fixture-binding-key' },
-  executionConfig: { boundDeviceId: 'fixture-device', executionTarget: 'device' },
+  executionConfig: { inheritWorkspaceScope: true },
   boundDeviceId: 'fixture-device',
   bindingRevision: 2,
   model: 'codex',

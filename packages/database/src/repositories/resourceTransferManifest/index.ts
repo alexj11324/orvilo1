@@ -11,10 +11,6 @@ import {
   tasks,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
-import {
-  collectBoundDeviceIds,
-  sanitizeAgencyConfigsForWorkspace,
-} from '../../utils/agencyConfigDevices';
 import { countAgentConnectorsAffected } from '../../utils/agentConnectors';
 import { countAssociatedAgentDocumentsToDetach } from '../../utils/agentDocumentsOwnership';
 import { countAgentExpertiseAffected } from '../../utils/agentExpertise';
@@ -33,8 +29,6 @@ export interface MemberTransferManifest {
   connectorsAffected: number;
   /** Owner's scheduled jobs that transfer DISABLED. */
   cronJobs: number;
-  /** Any device binding exists that recipient-aware sanitation may reset. */
-  deviceBindingAffected: boolean;
   /** Private expertise domains adjusted: agent-exclusive ones re-home, shared ones unbind. */
   expertiseAffected: number;
   /** Agent only: groups (not the recipient's) that reference this PRIVATE agent and will drop it on handover. */
@@ -71,7 +65,6 @@ export const buildMemberTransferManifest = async (
   /** Agents whose owner-attributed rows ride along (the agent itself, or a group's owned members). */
   let agentIds: string[] = [];
   let privateAgentIds: string[] = [];
-  let agencyConfigs: Array<unknown> = [];
   let hiddenReferencedMember = false;
   let groupsToLeave = 0;
 
@@ -79,7 +72,6 @@ export const buildMemberTransferManifest = async (
     case 'agent': {
       const [agent] = await db
         .select({
-          agencyConfig: agents.agencyConfig,
           id: agents.id,
           userId: agents.userId,
           visibility: agents.visibility,
@@ -90,7 +82,6 @@ export const buildMemberTransferManifest = async (
       ownerId = agent.userId;
       agentIds = [agent.id];
       privateAgentIds = agent.visibility === 'private' ? [agent.id] : [];
-      agencyConfigs = [agent.agencyConfig];
       if (agent.visibility === 'private') {
         const groupLinks = await db
           .select({ groupOwnerId: chatGroups.userId })
@@ -112,7 +103,6 @@ export const buildMemberTransferManifest = async (
       // Raw roster read, same split as `transferGroupOwnership`.
       const memberRows = await db
         .select({
-          agencyConfig: agents.agencyConfig,
           agentId: chatGroupsAgents.agentId,
           agentUserId: agents.userId,
           role: chatGroupsAgents.role,
@@ -128,7 +118,6 @@ export const buildMemberTransferManifest = async (
         if (resolveGroupMembershipType(row) === 'owned') {
           agentIds.push(row.agentId);
           if (row.visibility === 'private') privateAgentIds.push(row.agentId);
-          agencyConfigs.push(row.agencyConfig);
         } else if (row.visibility === 'private' && row.agentUserId !== recipientId) {
           hiddenReferencedMember = true;
         }
@@ -176,25 +165,6 @@ export const buildMemberTransferManifest = async (
     }),
   ]);
 
-  // "Affected" means the recipient-aware sanitation would actually CHANGE the
-  // config — bindings to devices the recipient can reach survive and must not
-  // produce a false reset warning.
-  let deviceBindingAffected = false;
-  const boundConfigs = agencyConfigs.filter(
-    (config) => collectBoundDeviceIds(config as never).length > 0,
-  );
-  if (boundConfigs.length > 0) {
-    const sanitized = await sanitizeAgencyConfigsForWorkspace(
-      db,
-      workspaceId,
-      boundConfigs as never,
-      { viewerUserId: recipientId },
-    );
-    deviceBindingAffected = sanitized.some(
-      (config, index) => JSON.stringify(config) !== JSON.stringify(boundConfigs[index]),
-    );
-  }
-
   const knowledgeToDetach = knowledgeMountsToDetach + associatedDocsToDetach;
 
   // Mirror of the handover's explicit project-leave for PRIVATE agents.
@@ -213,7 +183,6 @@ export const buildMemberTransferManifest = async (
     expertiseAffected,
     groupsToLeave,
     cronJobs: cronRow.value,
-    deviceBindingAffected,
     hiddenReferencedMember,
     knowledgeToDetach,
     ownerId,

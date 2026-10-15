@@ -4,8 +4,13 @@ import { PassThrough } from 'node:stream';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { AskUserBridge } from '../askUser/AskUserBridge';
 import { createStandardAcpSession, listStandardAcpPermissions } from './standardAcpAgents';
-import { parseStandardAcpPermissionCatalogs } from './standardAcpPermissions';
+import {
+  answerNativePermissionRequest,
+  parseStandardAcpPermissionCatalogs,
+  resolveNativeFullAccessPermission,
+} from './standardAcpPermissions';
 import type { StandardAcpSessionOptions } from './standardAcpSession';
 
 const { spawnMock } = vi.hoisted(() => ({ spawnMock: vi.fn() }));
@@ -326,18 +331,236 @@ describe('standard ACP permissions', () => {
     ).rejects.toThrow('Permission rejected');
     expect(fake.requests.some(({ method }) => method === 'session/prompt')).toBe(false);
   });
-  it('cancels tool permission requests with a selected mode and no interactive bridge', async () => {
+  it('refuses tool permission requests without an interactive bridge', async () => {
     spawnWithCatalog({ configOptions: [permission] });
     const session = createStandardAcpSession(
       'codex',
       createSessionOptions({ args: [], initialPermission: { configId: 'approval', value: 'ask' } }),
     );
-    const response = await Reflect.get(session, 'handleServerRequest').call(session, {
-      id: 1,
-      method: 'session/request_permission',
-      params: { options: [{ optionId: 'approve', kind: 'allow_always' }] },
-    });
-    expect(response).toEqual({ outcome: { outcome: 'cancelled' } });
+    await expect(
+      Reflect.get(session, 'handleServerRequest').call(session, {
+        id: 1,
+        method: 'session/request_permission',
+        params: { options: [{ optionId: 'approve', kind: 'allow_always' }] },
+      }),
+    ).rejects.toThrow('requires an interactive bridge');
     session.close();
   });
+});
+
+it('requires an explicitly advertised native full-access option', () => {
+  const catalog = parseStandardAcpPermissionCatalogs({ modes });
+  expect(resolveNativeFullAccessPermission(catalog)).toBeUndefined();
+  const full = {
+    configId: 'native-mode',
+    name: 'Native mode',
+    currentValue: 'auto',
+    options: [{ value: 'opaque-mode', name: 'Full access' }],
+  };
+  expect(resolveNativeFullAccessPermission([full])).toEqual({
+    configId: 'native-mode',
+    value: 'opaque-mode',
+  });
+});
+
+it('automation refuses before prompt when full access is unadvertised', async () => {
+  const fake = spawnWithCatalog({ configOptions: [permission] });
+  await expect(
+    createStandardAcpSession(
+      'codex',
+      createSessionOptions({ args: [], nativeFullAccess: true }),
+    ).run(),
+  ).rejects.toThrow('no advertised native full-access');
+  expect(fake.requests.some(({ method }) => method === 'session/prompt')).toBe(false);
+});
+
+it.each(['codex', 'grok-build', 'trae'])(
+  '%s waits for an explicit native permission answer',
+  async (provider) => {
+    const bridge = new AskUserBridge('permission-test');
+    const updates: Record<string, unknown>[] = [];
+    let settled = false;
+    const response = answerNativePermissionRequest(
+      {
+        id: 9,
+        method: 'session/request_permission',
+        params: {
+          toolCall: { toolCallId: 'native-tool', title: 'Write file?' },
+          options: [{ optionId: 'native-allow', name: 'Allow', kind: 'allow_always' }],
+        },
+      },
+      bridge,
+      async (update) => {
+        updates.push(update);
+      },
+      provider,
+    ).then((result) => {
+      settled = true;
+      return result;
+    });
+    await vi.waitFor(() => expect(updates).toHaveLength(1));
+    expect(settled).toBe(false);
+    bridge.resolve(`${provider}-permission-9-native-tool`, {
+      result: { 'Write file?': ['native-allow'] },
+    });
+    expect(await response).toEqual({ outcome: { outcome: 'selected', optionId: 'native-allow' } });
+    expect(updates).toHaveLength(2);
+    bridge.cancelAll();
+  },
+);
+
+it('automation overrides the saved interactive permission with the advertised native choice', async () => {
+  const fake = spawnWithCatalog({
+    modes: {
+      currentModeId: 'ask',
+      availableModes: [
+        { id: 'ask', name: 'Ask' },
+        { id: 'native-full', name: 'Full access' },
+      ],
+    },
+  });
+  await createStandardAcpSession(
+    'codex',
+    createSessionOptions({
+      args: [],
+      nativeFullAccess: true,
+      initialPermission: { configId: 'mode', value: 'ask' },
+    }),
+  ).run();
+  expect(fake.requests.find(({ method }) => method === 'session/set_mode')?.params).toEqual({
+    sessionId: 'native-session',
+    modeId: 'native-full',
+  });
+});
+
+it('recognizes the installed Codex ACP full-access option verbatim', () => {
+  expect(
+    resolveNativeFullAccessPermission([
+      {
+        configId: 'mode',
+        currentValue: 'agent',
+        name: 'Mode',
+        options: [{ value: 'agent-full-access', name: 'Agent (full access)' }],
+      },
+    ]),
+  ).toEqual({ configId: 'mode', value: 'agent-full-access' });
+});
+
+it('reports the actual native fallback and continues the ordinary prompt', async () => {
+  const onEvents = vi.fn();
+  const fake = createAcpProcess({
+    onMessage(message, { send }) {
+      if (message.method === 'session/new') {
+        send({
+          id: message.id,
+          result: { sessionId: 'native-session', configOptions: [permission] },
+        });
+        return true;
+      }
+      if (message.method === 'session/prompt') {
+        send({
+          method: 'session/update',
+          params: {
+            sessionId: 'native-session',
+            update: {
+              sessionUpdate: 'config_option_update',
+              configOptions: [{ ...permission, currentValue: 'auto' }],
+            },
+          },
+        });
+      }
+    },
+  });
+  spawnMock.mockReturnValue(fake.child);
+  await createStandardAcpSession(
+    'codex',
+    createSessionOptions({
+      args: [],
+      onEvents,
+      initialPermission: { configId: 'approval', value: 'ask' },
+    }),
+  ).run();
+  expect(JSON.stringify(onEvents.mock.calls)).toContain(
+    'Native permission mode: Agent decides (auto).',
+  );
+  expect(fake.requests.some(({ method }) => method === 'session/prompt')).toBe(true);
+});
+
+it('refuses an automation mode downgraded by the native set-mode notification before prompt', async () => {
+  const fake = createAcpProcess({
+    onMessage(message, { send }) {
+      if (message.method === 'session/new') {
+        send({
+          id: message.id,
+          result: {
+            sessionId: 'native-session',
+            modes: {
+              currentModeId: 'ask',
+              availableModes: [
+                { id: 'ask', name: 'Ask' },
+                { id: 'full-access', name: 'Full access' },
+              ],
+            },
+          },
+        });
+        return true;
+      }
+      if (message.method === 'session/set_mode') {
+        send({
+          method: 'session/update',
+          params: {
+            sessionId: 'native-session',
+            update: { sessionUpdate: 'current_mode_update', currentModeId: 'ask' },
+          },
+        });
+      }
+    },
+  });
+  spawnMock.mockReturnValue(fake.child);
+  await expect(
+    createStandardAcpSession(
+      'codex',
+      createSessionOptions({ args: [], nativeFullAccess: true }),
+    ).run(),
+  ).rejects.toThrow('did not enable native full access');
+  expect(fake.requests.some(({ method }) => method === 'session/prompt')).toBe(false);
+});
+
+it('fails automation when native full access is withdrawn during the prompt', async () => {
+  const fake = createAcpProcess({
+    onMessage(message, { send }) {
+      if (message.method === 'session/new') {
+        send({
+          id: message.id,
+          result: {
+            sessionId: 'native-session',
+            modes: {
+              currentModeId: 'ask',
+              availableModes: [
+                { id: 'ask', name: 'Ask' },
+                { id: 'full-access', name: 'Full access' },
+              ],
+            },
+          },
+        });
+        return true;
+      }
+      if (message.method === 'session/prompt') {
+        send({
+          method: 'session/update',
+          params: {
+            sessionId: 'native-session',
+            update: { sessionUpdate: 'current_mode_update', currentModeId: 'ask' },
+          },
+        });
+      }
+    },
+  });
+  spawnMock.mockReturnValue(fake.child);
+  await expect(
+    createStandardAcpSession(
+      'codex',
+      createSessionOptions({ args: [], nativeFullAccess: true }),
+    ).run(),
+  ).rejects.toThrow('native full access is no longer active');
 });

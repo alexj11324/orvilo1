@@ -1,6 +1,7 @@
 'use client';
 
 import { Freeze } from '@lobehub/ui';
+import { BUILTIN_AGENT_SLUGS, isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
 import { cn } from 'cn';
 import { AnimatePresence, useIsPresent } from 'motion/react';
 import * as m from 'motion/react-m';
@@ -55,7 +56,12 @@ const PageEditorRightPanelContent = memo(() => {
   const activeContent = useMemo(
     () => ({
       key: rightPanelMode,
-      node: rightPanelMode === 'history' ? <HistoryPanel /> : <Conversation />,
+      node:
+        rightPanelMode === 'history' ? (
+          <HistoryPanel />
+        ) : isBuiltinAgentAvailable(BUILTIN_AGENT_SLUGS.pageAgent) ? (
+          <Conversation />
+        ) : null,
     }),
     [rightPanelMode],
   );
@@ -101,7 +107,10 @@ const PageEditorRightPanel = memo(() => {
   // than clobbering their edits, so there's no reason to hide it on a locked /
   // read-only page. We only hide it from members without edit permission (a
   // document-editing agent is useless to them); History stays available.
-  const effectiveExpand = expand && (rightPanelMode === 'history' || hasEditPermission);
+  const effectiveExpand =
+    expand &&
+    (rightPanelMode === 'history' ||
+      (hasEditPermission && isBuiltinAgentAvailable(BUILTIN_AGENT_SLUGS.pageAgent)));
 
   return (
     <RightPanel

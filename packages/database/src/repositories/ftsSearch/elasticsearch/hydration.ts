@@ -31,6 +31,7 @@ import { buildDocumentReadableWhere } from '../../../utils/documentAccess';
 import { normalizeInboxAgentMeta, normalizeInboxAgentTitle } from '../../../utils/inboxAgent';
 import { searchableMessage } from '../../../utils/searchableMessage';
 import { notShareVisitorMessage, notShareVisitorTopic } from '../../../utils/shareVisitor';
+import { buildMessageReadableWhere, buildTopicReadableWhere } from '../../../utils/topicReadable';
 import { buildWorkspaceWhere } from '../../../utils/workspace';
 import type {
   FtsSearchAgentResult,
@@ -272,7 +273,7 @@ export const hydrateTopics = async (
           topics.id,
           hits.map(({ id }) => id),
         ),
-        buildWorkspaceWhere(scope, topics),
+        buildTopicReadableWhere(db, scope),
         // The ES index carries no `senderId`, but hydration is the only path
         // from a candidate id to real content, so filtering agent-share visitor
         // topics here is enough to keep them out of the creator's results.
@@ -379,6 +380,7 @@ export const hydrateMessages = async (
           hits.map(({ id }) => id),
         ),
         buildWorkspaceWhere(scope, messages),
+        buildMessageReadableWhere(db, scope),
         searchableMessage(),
         // Twin of the topics guard in `hydrateTopics`.
         notShareVisitorMessage(),

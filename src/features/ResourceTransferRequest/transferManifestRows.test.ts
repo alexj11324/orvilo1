@@ -7,7 +7,6 @@ import { buildTransferManifestRows } from './transferManifestRows';
 const emptyManifest: TransferManifest = {
   connectorsAffected: 0,
   cronJobs: 0,
-  deviceBindingAffected: false,
   expertiseAffected: 0,
   groupsToLeave: 0,
   hiddenReferencedMember: false,
@@ -30,13 +29,12 @@ describe('buildTransferManifestRows', () => {
         ...emptyManifest,
         connectorsAffected: 1,
         cronJobs: 1,
-        deviceBindingAffected: true,
         knowledgeToDetach: 1,
       },
       'initiator',
     );
 
-    expect(rows.map((row) => row.impact)).toEqual(['carried', 'reset', 'reset', 'detached']);
+    expect(rows.map((row) => row.impact)).toEqual(['carried', 'reset', 'detached']);
   });
 
   it('leads with the blocker, which is a refusal rather than an impact', () => {
@@ -89,14 +87,5 @@ describe('buildTransferManifestRows', () => {
     expect(buildTransferManifestRows(manifest, 'recipient')[0].key).toBe(
       'transferRequest.manifest.cronJobs',
     );
-  });
-
-  it('reports a device reset from the flag alone, with no count to interpolate', () => {
-    const [row] = buildTransferManifestRows(
-      { ...emptyManifest, deviceBindingAffected: true },
-      'initiator',
-    );
-
-    expect(row).toMatchObject({ id: 'deviceBindingAffected', impact: 'reset', options: {} });
   });
 });

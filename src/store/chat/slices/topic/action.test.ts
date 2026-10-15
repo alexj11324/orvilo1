@@ -1,4 +1,3 @@
-import { DEFAULT_MODEL, DEFAULT_PROVIDER } from '@orvilo/business-const';
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import { TOPIC_TITLE_JSON_SCHEMA } from '@orvilo/prompts';
 import type { OrviloUser, UIChatMessage } from '@orvilo/types';
@@ -57,7 +56,6 @@ vi.mock('@/services/topic', () => ({
     createTopic: vi.fn(),
     updateTopicFavorite: vi.fn(),
     updateTopicMetadata: vi.fn(),
-    updateTopicModel: vi.fn(),
     updateTopicTitle: vi.fn(),
     updateTopic: vi.fn(),
     batchRemoveTopics: vi.fn(),
@@ -3655,11 +3653,7 @@ describe('topic action', () => {
       });
 
       expect(createTopicSpy).toHaveBeenCalledWith({
-        // The test never seeds agentMap, so snapshotAgentModel falls back to the
-        // defaults — assert the constants so default-model bumps can't break this.
         agentId: activeAgentId,
-        model: DEFAULT_MODEL,
-        provider: DEFAULT_PROVIDER,
         messages: messages.map((m) => m.id),
         title: 'defaultTitle',
       });
@@ -3765,12 +3759,16 @@ describe('topic action', () => {
   });
 });
 
-describe('Topic execution save failures', () => {
+describe('Topic metadata save failures', () => {
   const key = topicMapKey({ agentId: 'agent-execution' });
   const previous = {
-    executionConfig: { executionTarget: 'device' as const, boundDeviceId: 'device-a' },
+    executionConfig: { inheritWorkspaceScope: false },
   };
-  const selected = { executionConfig: { executionTarget: 'sandbox' as const } };
+  const selected = {
+    executionConfig: {
+      inheritWorkspaceScope: true,
+    },
+  };
   const setup = () => {
     useChatStore.setState({
       activeAgentId: 'agent-execution',
@@ -3795,7 +3793,7 @@ describe('Topic execution save failures', () => {
     });
     vi.spyOn(useChatStore.getState(), 'refreshTopic').mockRejectedValue(new Error('offline'));
   };
-  it('restores the saved target if the mutation fails while offline', async () => {
+  it('restores the saved metadata if the mutation fails while offline', async () => {
     setup();
     vi.spyOn(topicService, 'updateTopicMetadata').mockRejectedValueOnce(new Error('offline'));
     await expect(
@@ -4003,69 +4001,22 @@ describe('lastUsedAgentId contract', () => {
     expect(useGlobalStore.getState().status.lastUsedAgentId).toBe('agent-user-picked');
   });
 
-  describe('composer model pick binding', () => {
-    const seedBlankComposer = (agentId: string, selection: { model: string; provider: string }) => {
-      const messages = [{ id: 'message1' }] as UIChatMessage[];
-      act(() => {
-        useChatStore.setState({
-          messagesMap: { [messageMapKey({ agentId })]: messages },
-          activeAgentId: agentId,
-          composerModelSelection: selection,
-        });
-      });
-    };
-
-    it('binds the composer pick to the new topic instead of the agent snapshot', async () => {
-      const { result } = renderHook(() => useChatStore());
-      seedBlankComposer('agt_codex', { model: 'gpt-5.6-sol', provider: 'codex' });
-
-      const createTopicSpy = vi
-        .spyOn(topicService, 'createTopic')
-        .mockResolvedValue('new-topic-id');
-
-      await result.current.saveToTopic();
-
-      const payload = createTopicSpy.mock.calls[0][0];
-      // The agent row carries the default model; the composer pick must win for
-      // this conversation without the agent ever being written.
-      expect(payload.model).toBe('gpt-5.6-sol');
-      expect(payload.provider).toBe('codex');
-    });
-
-    it('consumes the pending pick so it cannot leak into the next conversation', async () => {
-      const { result } = renderHook(() => useChatStore());
-      seedBlankComposer('agt_codex', { model: 'gpt-5.6-sol', provider: 'codex' });
-
-      vi.spyOn(topicService, 'createTopic').mockResolvedValue('new-topic-id');
-
-      await result.current.saveToTopic();
-
-      expect(useChatStore.getState().composerModelSelection).toBeUndefined();
-    });
-
-    it('prefers both composer picks over the agent snapshot and clears them', async () => {
-      const createTopicSpy = vi
-        .spyOn(topicService, 'createTopic')
-        .mockResolvedValue('new-topic-id');
-
+  describe('composer reasoning binding', () => {
+    it('persists effort without creating a conversation model or device choice', async () => {
+      const create = vi.spyOn(topicService, 'createTopic').mockResolvedValue('new-topic-id');
       act(() => {
         useChatStore.setState({
           activeAgentId: 'agt_codex',
           composerHeteroEffort: 'high',
-          composerModelSelection: { model: 'gpt-5.6-sol', provider: 'codex' },
         });
       });
-
       await useChatStore.getState().createTopic();
-
-      expect(createTopicSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          metadata: { heteroEffort: 'high' },
-          model: 'gpt-5.6-sol',
-          provider: 'codex',
-        }),
-      );
-      expect(useChatStore.getState().composerModelSelection).toBeUndefined();
+      expect(create.mock.calls[0][0]).toMatchObject({
+        agentId: 'agt_codex',
+        metadata: { heteroEffort: 'high' },
+      });
+      expect(create.mock.calls[0][0]).not.toHaveProperty('model');
+      expect(create.mock.calls[0][0]).not.toHaveProperty('provider');
       expect(useChatStore.getState().composerHeteroEffort).toBeUndefined();
     });
   });

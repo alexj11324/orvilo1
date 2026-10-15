@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
@@ -97,7 +98,20 @@ const USER_ROW = {
 const createDb = () => {
   const findFirst = vi.fn().mockResolvedValueOnce(ASSISTANT_ROW).mockResolvedValueOnce(USER_ROW);
   const findMany = vi.fn().mockResolvedValue(trajectoryRows);
-  return { db: { query: { messages: { findFirst, findMany } } } as never, findFirst, findMany };
+  // findById builds the ownership scope eagerly, so its exists() subqueries only
+  // need a chainable select boundary returning a real SQL predicate; the row
+  // itself still comes from findFirst.
+  const select = vi.fn(() => ({
+    from: () => ({
+      innerJoin: () => ({ where: () => sql`1` }),
+      where: () => sql`1`,
+    }),
+  }));
+  return {
+    db: { query: { messages: { findFirst, findMany } }, select } as never,
+    findFirst,
+    findMany,
+  };
 };
 
 const createContext = (applied = false): RuntimeProcessorContext =>

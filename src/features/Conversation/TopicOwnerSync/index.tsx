@@ -3,14 +3,12 @@
 import { memo, useEffect, useLayoutEffect } from 'react';
 import { useParams } from 'react-router';
 
-import { useOfferedAgentId } from '@/features/DefaultAgent/useDefaultAgent';
+import { useDefaultAgent, useOfferedAgentId } from '@/features/DefaultAgent/useDefaultAgent';
 import { useInitAgentConfig } from '@/hooks/useInitAgentConfig';
 import { topicService } from '@/services/topic';
 import { useAgentStore } from '@/store/agent';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
-import { useGlobalStore } from '@/store/global';
-import { systemStatusSelectors } from '@/store/global/selectors';
 
 import { resolveOwnerBinding } from './resolveOwnerBinding';
 
@@ -25,7 +23,7 @@ import { resolveOwnerBinding } from './resolveOwnerBinding';
  *   handoff (which flips `topic.agentId` on the same row) re-binds execution
  *   to the new agent without any navigation. History never moves.
  * - `/chat/new` — `activeAgentId` clears so the composer falls back to the
- *   explicit pick / `lastUsedAgentId` chain, exactly like a fresh room; the
+ *   explicit pick / configured Orchestrator chain, exactly like a fresh room; the
  *   resolved fallback still hydrates its agent config.
  * - Deep links to a topic the store hasn't loaded yet resolve the owner via
  *   `topicService.getTopicDetail` once; when the topics fetch later lands the
@@ -37,18 +35,11 @@ const TopicOwnerSync = memo(() => {
   const topicAgentId = useChatStore((s) =>
     routeTopicId ? topicSelectors.getTopicById(routeTopicId)(s)?.agentId : undefined,
   );
-  // The agent whose config the blank composer should hydrate — the explicit
-  // pick first, then the last-used default, mirroring `useAgentContext`'s
-  // composer chain.
-  const [composerAgentId, lastUsedAgentId] = [
-    useChatStore((s) => (routeTopicId ? undefined : s.composerAgentId)),
-    useGlobalStore(systemStatusSelectors.lastUsedAgentId),
-  ];
-  // The same hand-over `useAgentContext` applies to a remembered Agent.
-  const rememberedAgentId = useOfferedAgentId(composerAgentId ?? lastUsedAgentId);
+  const composerAgentId = useChatStore((s) => (routeTopicId ? undefined : s.composerAgentId));
+  const defaultAgentId = useDefaultAgent()?.agentId;
+  const offeredAgentId = useOfferedAgentId(composerAgentId ?? defaultAgentId);
   const { activeAgentId: boundAgentId, configAgentId } = resolveOwnerBinding({
-    composerAgentId: rememberedAgentId,
-    lastUsedAgentId: undefined,
+    composerAgentId: offeredAgentId,
     routeTopicId,
     topicAgentId,
   });

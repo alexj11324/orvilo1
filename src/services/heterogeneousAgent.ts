@@ -11,42 +11,48 @@ import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity
 import { requireLocalExecutionTransport } from '@/services/targetRequiredError';
 
 interface ListModelsParams extends ListHeterogeneousAgentModelsParams {
+  agentId?: string;
   deviceId?: string;
 }
 
 interface ListPermissionsParams extends ListHeterogeneousAgentPermissionsParams {
+  agentId?: string;
   deviceId?: string;
 }
 
 /**
- * Model-catalog transport boundary. A bound target goes through the device
- * gateway; an unbound target is the current Desktop and uses Electron IPC.
+ * Model-catalog transport boundary. This Desktop's proven device uses Electron
+ * IPC, including an explicit binding to it; other bound devices use the gateway.
  * Without either (Web, no bound device) the call fails with a typed
  * `TargetRequiredError` — the IPC fallback never runs on a client that has no
  * local runtime.
  */
 class HeterogeneousAgentCatalogService {
   async listPermissions({
+    agentId,
     deviceId,
     ...params
   }: ListPermissionsParams): Promise<HeterogeneousAgentPermissionCatalog[]> {
-    requireLocalExecutionTransport(
-      deviceId,
-      'listPermissions',
-      await resolveLocalExecutionIdentity(),
-    );
-    return deviceId
-      ? lambdaClient.device.listHeterogeneousAgentPermissions.query({ deviceId, ...params })
+    const identity = await resolveLocalExecutionIdentity();
+    requireLocalExecutionTransport(deviceId, 'listPermissions', identity);
+    return deviceId && deviceId !== identity.localDeviceId
+      ? lambdaClient.device.listHeterogeneousAgentPermissions.query({
+          agentId,
+          deviceId,
+          ...params,
+        })
       : electronHeterogeneousAgentService.listPermissions(params);
   }
 
   async listModels({
+    agentId,
     deviceId,
     ...params
   }: ListModelsParams): Promise<HeterogeneousAgentModelCatalog> {
-    requireLocalExecutionTransport(deviceId, 'listModels', await resolveLocalExecutionIdentity());
-    return deviceId
-      ? lambdaClient.device.listHeterogeneousAgentModels.query({ deviceId, ...params })
+    const identity = await resolveLocalExecutionIdentity();
+    requireLocalExecutionTransport(deviceId, 'listModels', identity);
+    return deviceId && deviceId !== identity.localDeviceId
+      ? lambdaClient.device.listHeterogeneousAgentModels.query({ agentId, deviceId, ...params })
       : electronHeterogeneousAgentService.listModels(params);
   }
 }

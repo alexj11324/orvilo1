@@ -1,68 +1,12 @@
 import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents/config';
 import type {
-  AgentDeviceOverride,
   DeviceExecutionTarget,
-  DeviceListItem,
   ExecutionPlan,
   OrviloAgentAgencyConfig,
   OrviloAgentChatConfig,
   RuntimeEnvMode,
 } from '@orvilo/types';
 import { RequestTrigger } from '@orvilo/types';
-
-/**
- * Whether a workspace config still needs the shared-row safety coercion.
- * A member opts out only by explicitly choosing an execution target; a missing
- * or bound-device-only override still inherits the raw shared target.
- */
-export const resolveWorkspaceScoped = (
-  isWorkspaceAgent: boolean,
-  deviceOverride: AgentDeviceOverride | null | undefined,
-): boolean => isWorkspaceAgent && deviceOverride?.executionTarget === undefined;
-
-/**
- * Group the device inventory into the display buckets the execution-target
- * UI renders. Grouping is a DISPLAY concern only — surfaces may split rows
- * into Private/Workspace sections, but the candidate set a binding is judged
- * against comes from {@link executionTargetDeviceCandidates}, never from
- * picking one of these buckets.
- */
-export const groupExecutionTargetDevices = (devices: DeviceListItem[] | undefined) => ({
-  personal: (devices ?? []).filter((device) => device.scope === 'personal'),
-  privateWorkspace: (devices ?? []).filter(
-    (device) => device.scope === 'workspace' && device.visibility === 'private',
-  ),
-  publicWorkspace: (devices ?? []).filter(
-    (device) => device.scope === 'workspace' && device.visibility === 'public',
-  ),
-  workspace: (devices ?? []).filter(
-    (device) => device.scope === 'workspace' && device.visibility !== 'private',
-  ),
-});
-
-/**
- * The ONE execution-device candidate set for a scope — the pool every
- * surface (chat switcher, agent settings, connect flow, blocked-run repair)
- * must judge a binding against, identical to the server-side admission
- * resolution (`resolveExecutionDevice`).
- *
- * `workspace` scope includes BOTH the shared-pool devices and the caller's
- * own private enrollments (`visibility === 'private'`): a private device is
- * legal for its enroller, so any surface that excluded it computed a
- * different candidate set than the run would — a private-enrolled device
- * appeared bindable in chat but invalid/missing in settings (and vice versa
- * for binding validity). Membership is the contract; section labels are not.
- *
- * Offline devices STAY in the set (offline ≠ removed) — they gate launch,
- * never membership.
- */
-export const executionTargetDeviceCandidates = (
-  devices: DeviceListItem[] | undefined,
-  scope: 'personal' | 'workspace',
-): DeviceListItem[] => {
-  const { personal, privateWorkspace, workspace } = groupExecutionTargetDevices(devices);
-  return scope === 'workspace' ? [...privateWorkspace, ...workspace] : personal;
-};
 
 /**
  * The agent's tool mode — explicit `chatConfig.toolMode` wins; otherwise derive
@@ -145,18 +89,7 @@ export interface ResolveExecutionTargetOptions {
    * and are left untouched.
    */
   trigger?: RequestTrigger;
-  /**
-   * The supplied config is the raw workspace-shared fallback and has NOT been
-   * merged with the current member's `agentDeviceOverrides`. Such a config
-   * must not run `local` on whichever member happened to open it, so this
-   * treats client execution as unavailable and coerces legacy local values to
-   * sandbox/device as appropriate.
-   *
-   * Set this to `false` only when the current member has an explicit
-   * `executionTarget` override. Calling `resolveAgencyConfig` alone is not
-   * sufficient: without an override it returns the raw shared config unchanged.
-   * `useEffectiveAgencyConfig` exposes this distinction as `workspaceScoped`.
-   */
+  /** Workspace runs cannot execute on the viewer's machine implicitly. */
   workspaceScoped?: boolean;
 }
 
@@ -440,7 +373,7 @@ export interface ResolveExecutionPlanParams {
   /** See {@link ResolveExecutionTargetOptions.clientExecutionAvailable}. */
   clientExecutionAvailable: boolean;
   isHetero?: boolean;
-  /** This desktop's device ID. Used only when the resolved target is `local`. */
+  /** Desktop capability hint; never overrides the saved binding. */
   localDeviceId?: string;
   /**
    * Online device ids from the device gateway. Pass `undefined` to skip
@@ -449,12 +382,6 @@ export interface ResolveExecutionPlanParams {
    * dispatch semantics).
    */
   onlineDeviceIds?: string[];
-  /**
-   * Explicit per-request device override (e.g. the desktop preset, or a
-   * batch-task `deviceId`). It forces device routing regardless of the stored
-   * target unless the shared workspace policy is `fixed`.
-   */
-  requestedDeviceId?: string;
   /** See {@link ResolveExecutionTargetOptions.sandboxExecutionAvailable}. */
   sandboxExecutionAvailable?: boolean;
   /**
@@ -483,9 +410,7 @@ export interface ResolveExecutionPlanParams {
  * Resolve the execution plan for a run. This is THE device decision — every
  * rule about which device (if any) a run touches lives here:
  *
- * 1. `requestedDeviceId` forces device routing unless the shared policy is
- *    `fixed`; otherwise the resolved `executionTarget` decides (`auto` /
- *    `local` route to a device too — the local machine is just a device).
+ * 1. The Agent's saved `executionTarget` and `boundDeviceId` decide routing.
  * 2. `none` / `sandbox` NEVER route to a device — no auto-activation, no
  *    step-level re-injection, no exceptions.
  * 3. `canUseDevice === false` degrades any device-capable target to `none`
@@ -508,9 +433,7 @@ export const resolveExecutionPlan = (params: ResolveExecutionPlanParams): Execut
     chatConfig,
     clientExecutionAvailable,
     isHetero,
-    localDeviceId,
     onlineDeviceIds,
-    requestedDeviceId,
     sandboxExecutionAvailable,
     sandboxFallback,
     trigger,
@@ -537,11 +460,7 @@ export const resolveExecutionPlan = (params: ResolveExecutionPlanParams): Execut
   // A fixed workspace execution target is an author-controlled contract. A
   // stale member preference or an explicit task/request override must never
   // route the run somewhere else.
-  const effectiveRequestedDeviceId =
-    agencyConfig?.executionTargetSelectionPolicy === 'fixed' ? undefined : requestedDeviceId;
-  const isFixedSelection = agencyConfig?.executionTargetSelectionPolicy === 'fixed';
-  const wantsDevice =
-    !!effectiveRequestedDeviceId || target === 'device' || target === 'local' || target === 'auto';
+  const wantsDevice = target === 'device' || target === 'local' || target === 'auto';
 
   if (!wantsDevice || !canUseDevice) {
     if (target === 'sandbox') return { kind: 'sandbox', target: 'sandbox' };
@@ -565,26 +484,8 @@ export const resolveExecutionPlan = (params: ResolveExecutionPlanParams): Execut
   // In `auto` mode a stored `boundDeviceId` is NOT an explicit selection (that
   // is what `device` mode is for) — ignore it so `auto` always picks fresh and
   // a stale binding left over from a previous `device` selection can't pin the
-  // run. An explicit `requestedDeviceId` still wins everywhere.
-  const isPlatformTask = isRemoteHeterogeneousType(agencyConfig?.heterogeneousProvider?.type ?? '');
-  // A `local` target binds only the device identity the row explicitly stored —
-  // never the machine running this resolution. A migrated row without a stored
-  // `boundDeviceId` is unresolved: binding `localDeviceId` would silently
-  // execute on whatever host happens to render it, which the contract forbids
-  // (§migration — no guessing the current machine). Platform-task `local` keeps
-  // its own semantic — the locally registered runtime IS the provable node.
-  const boundDeviceId =
-    effectiveRequestedDeviceId ||
-    (target === 'local'
-      ? isFixedSelection
-        ? agencyConfig?.boundDeviceId
-        : isPlatformTask
-          ? localDeviceId
-          : agencyConfig?.boundDeviceId
-      : target === 'auto'
-        ? undefined
-        : agencyConfig?.boundDeviceId);
-  // requestedDeviceId may force device routing over a non-device stored target;
+  // run. The saved Agent is the only device selection source.
+  const boundDeviceId = target === 'auto' ? undefined : agencyConfig?.boundDeviceId;
   // keep `auto` / `local` distinct, everything else collapses to `device`.
   const effectiveTarget = target === 'local' ? 'local' : target === 'auto' ? 'auto' : 'device';
 

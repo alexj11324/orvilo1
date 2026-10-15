@@ -2,7 +2,6 @@ import { INVITATION_EXPIRY_DAYS } from '@orvilo/const';
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
 import { and, asc, count, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 
-import { devices } from '../schemas/device';
 import { users } from '../schemas/user';
 import { workspaceInvitations, workspaceMembers } from '../schemas/workspace';
 import type { OrviloDatabase } from '../type';
@@ -150,24 +149,6 @@ export class WorkspaceMemberModel {
   };
 
   removeMember = async (workspaceId: string, userId: string) => {
-    // Departed-member device cleanup: drop the enrollments that only make sense
-    // while they belong to the workspace — their private enrollments and any
-    // device shared from their personal device list (the machine stays under
-    // their exclusive control, so keeping the row would leave a permanently
-    // dead — and security-ambiguous — entry). Devices they enrolled directly on
-    // the machine as 'public' are shared infra and stay; their `userId` merely
-    // records the first enroller.
-    const removedDevices = await this.db
-      .delete(devices)
-      .where(
-        and(
-          eq(devices.workspaceId, workspaceId),
-          eq(devices.userId, userId),
-          or(eq(devices.visibility, 'private'), isNotNull(devices.sharedFromDeviceId)),
-        ),
-      )
-      .returning({ deviceId: devices.deviceId });
-
     // Same reasoning one level up: a per-member resource grant only means
     // anything while they belong to the workspace, and the soft delete is
     // reactivated by `addMember`, so a grant left behind would silently restore
@@ -212,11 +193,8 @@ export class WorkspaceMemberModel {
       });
     });
 
-    // Surfaced so callers can best-effort unenroll any still-connected gateway
-    // socket for these devices: deleting the row alone also removes it from the
-    // workspace hidden set, so a live socket would resurface to remaining
-    // members as an online transient until its connect token expires.
-    return { removedDeviceIds: removedDevices.map((d) => d.deviceId) };
+    // Membership revocation does not unenroll the member's owned execution hosts.
+    return { removedDeviceIds: [] as string[] };
   };
 
   updateMemberRole = async (workspaceId: string, userId: string, role: MemberRole) => {

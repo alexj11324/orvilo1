@@ -199,17 +199,6 @@ export class TopicService {
     });
   };
 
-  updateTopicModel = (
-    id: string,
-    value: {
-      metadata?: Pick<ChatTopicMetadata, 'heteroEffort' | 'reasoningConfig'>;
-      model: string;
-      provider: string;
-    },
-  ) => {
-    return lambdaClient.topic.updateTopicModel.mutate({ id, ...value });
-  };
-
   updateTopicMetadata = (id: string, metadata: UpdateTopicMetadataInput) => {
     return lambdaClient.topic.updateTopicMetadata.mutate({ id, metadata });
   };

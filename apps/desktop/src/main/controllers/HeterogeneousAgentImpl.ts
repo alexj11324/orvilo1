@@ -1353,8 +1353,14 @@ export default class HeterogeneousAgentCtr {
       return;
     }
 
+    const intervention = this.setupAcpInterventionForOp(
+      params.operationId,
+      session.sessionId,
+      'grok-build',
+    );
     const acpSession = new GrokAcpSession({
       args: session.args,
+      askUserBridge: intervention.bridge,
       clientVersion: electronApp.getVersion(),
       commandPath,
       cwd,
@@ -1421,6 +1427,7 @@ export default class HeterogeneousAgentCtr {
         cause: error,
       });
     } finally {
+      await intervention.cleanup();
       this.trackLingeringAcpSession(session, acpSession);
       if (session.grokAcpSession === acpSession) session.grokAcpSession = undefined;
     }
@@ -1820,8 +1827,14 @@ export default class HeterogeneousAgentCtr {
 
     const stderrChunks: string[] = [];
 
+    const intervention = this.setupAcpInterventionForOp(
+      params.operationId,
+      session.sessionId,
+      'trae',
+    );
     const traeAcpSession = new TraeAcpSession({
       args: session.args,
+      askUserBridge: intervention.bridge,
       clientVersion: electronApp.getVersion(),
       commandPath,
       cwd,
@@ -1857,6 +1870,7 @@ export default class HeterogeneousAgentCtr {
     await this.runInteractiveAcpSession({
       acpSession: traeAcpSession,
       activeSessionKey: 'traeAcpSession',
+      cleanup: intervention.cleanup,
       session,
       stderrChunks,
       traceSession,
@@ -1871,10 +1885,15 @@ export default class HeterogeneousAgentCtr {
    */
   private getAcpPermissionCardStrings(
     spec: AcpAgentRuntimeSpec | undefined,
-  ): { fallbackTitle: string; header: string } | undefined {
+  ): { effectiveMode: string; fallbackTitle: string; header: string } | undefined {
     try {
       const label = spec?.label ?? 'the agent';
       return {
+        effectiveMode: this.app.i18n.t('heteroAgent.permission.effectiveMode', {
+          ns: 'common',
+          name: '{name}',
+          value: '{value}',
+        }),
         fallbackTitle: this.app.i18n.t('heteroAgent.permission.allowToContinue', {
           label,
           ns: 'common',

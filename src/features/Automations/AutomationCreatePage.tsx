@@ -28,7 +28,7 @@ import AssigneeAvatar from '../AgentTasks/features/AssigneeAvatar';
 import { useAgentDisplayMeta } from '../AgentTasks/shared/useAgentDisplayMeta';
 import { AUTOMATION_TEMPLATES, type AutomationTemplateId } from './automationTemplates';
 import AutomationTriggerDraft, { type TriggerDraft } from './AutomationTriggerDraft';
-import { automationDetailPath } from './shared';
+import { automationDetailPath, automationMutationErrorMessage } from './shared';
 
 const AutomationCreatePage = memo(() => {
   const { t } = useTranslation('automation');
@@ -90,7 +90,7 @@ const AutomationCreatePage = memo(() => {
           assigneeAgentId: assigneeAgentId ?? undefined,
           automationMode: draft!.kind,
           config: { schedule: { maxExecutions: draft!.maxExecutions ?? null } },
-          ...(draft!.kind === 'event' ? { status: 'paused' } : {}),
+          status: 'paused',
           heartbeatInterval:
             draft!.kind === 'heartbeat' ? (draft!.heartbeatInterval ?? 3600) : undefined,
           instruction: instructions.trim() || trimmedName,
@@ -132,8 +132,14 @@ const AutomationCreatePage = memo(() => {
       } else {
         navigate('/automations', { replace: true });
       }
-    } catch {
-      toast.error(t(taskCreated ? 'create.enable_failed' : 'create.submit_failed'));
+    } catch (error) {
+      toast.error(
+        automationMutationErrorMessage(
+          error,
+          t(taskCreated ? 'create.enable_failed' : 'create.submit_failed'),
+          t('events.reason.NATIVE_FULL_ACCESS_UNAVAILABLE'),
+        ),
+      );
       setSubmitting(false);
     }
   }, [

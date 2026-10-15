@@ -70,6 +70,7 @@ export interface SpawnAgentOptions {
    * AskUserQuestion/browser-tools HTTP server). Standard-ACP agents only.
    */
   mcpServers?: Record<string, unknown>[];
+  nativeFullAccess?: boolean;
   /**
    * Optional tee for the ACP wire traffic — every raw JSON-RPC line the agent
    * writes, BEFORE the adapter sees it. `orvilo hetero exec --raw-dump` wires it
@@ -295,6 +296,7 @@ const spawnGrokAcpAgent = async (
   const prompt = await buildGrokAcpPrompt(options.prompt, options.inputOptions);
   const bridge = createAcpSpawnBridge(options.operationId);
   const session = new GrokAcpSession({
+    askUserBridge: options.askUserBridge,
     args: options.extraArgs ?? [],
     clientVersion: 'orvilo-cli',
     commandPath: command,
@@ -452,6 +454,7 @@ const spawnStandardAcpAgent = async (
     initialCumulativeUsage,
     initialModel: options.initialModel ?? selectors.initialModel,
     initialPermission: options.initialPermission,
+    nativeFullAccess: options.nativeFullAccess,
     inputOptions: options.inputOptions,
     mcpServers: options.mcpServers,
     onEvents: bridge.onEvents,
@@ -485,7 +488,10 @@ const spawnStandardAcpAgent = async (
  * failed image fetch surfaces before the child starts.
  */
 export const spawnAgent = async (options: SpawnAgentOptions): Promise<SpawnAgentHandle> => {
-  if (options.initialPermission && !ACP_RUNTIME_AGENT_TYPES.has(options.agentType)) {
+  if (
+    (options.initialPermission || options.nativeFullAccess) &&
+    !ACP_RUNTIME_AGENT_TYPES.has(options.agentType)
+  ) {
     throw new Error(
       `spawnAgent: permission selection is unsupported for agent type "${options.agentType}"`,
     );
@@ -534,6 +540,7 @@ export const spawnTraeAcpAgent = async (options: SpawnAgentOptions): Promise<Spa
 
   const bridge = createAcpSpawnBridge(options.operationId);
   const session = new TraeAcpSession({
+    askUserBridge: options.askUserBridge,
     args: options.extraArgs ?? [],
     clientVersion: '1.0.0',
     commandPath: commandStatus.path,

@@ -366,6 +366,7 @@
   "globalSearch.placeholder": "Search issues, projects, views…",
   "goToTarget": "Go to target",
   "gotIt": "Got it",
+  "heteroAgent.permission.effectiveMode": "Native permission mode: {{name}} ({{value}}).",
   "history": "History",
   "historyRange": "History Range",
   "home.suggestQuestions": "Try these examples",

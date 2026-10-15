@@ -8,6 +8,7 @@ import type {
   TaskWorkflowCategory,
 } from '@orvilo/types';
 import { TASK_ATTENTION_REASONS } from '@orvilo/types';
+import { isRecord } from '@orvilo/utils/object';
 import { TRPCError } from '@trpc/server';
 import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
@@ -47,7 +48,6 @@ import {
   ActionApprovalService,
   AgentDelegationService,
   DELEGATION_ACTIONS,
-  ProjectMemberModel,
   TASK_INPUT_INTENT_TYPES,
   TASK_INPUT_STATUSES,
   TaskInputService,
@@ -83,6 +83,7 @@ import { after } from '@/server/utils/scheduleAfterResponse';
 import { TransferErrorCode } from '@/types/transferError';
 
 import { assertWorkspaceRowManageable } from './_helpers/assertWorkspaceRowManageable';
+import { assertIssueExecutionInput } from './_helpers/issueExecutionInput';
 import { assertCanUseWorkspaceAgent } from './_helpers/workspaceAgentGuard';
 import { projectWorkspaceConversationMetadata } from './_helpers/workspaceConversationMetadata';
 
@@ -361,53 +362,6 @@ async function withDerivedStatus<T extends { id: string; status?: unknown }>(
   if (rows.length === 0) return rows;
   const statusById = await model.derivedStatusByIds(rows.map((row) => row.id));
   return rows.map((row) => ({ ...row, status: statusById[row.id] ?? 'backlog' }));
-}
-
-/**
- * Task-steering capability for `instruction` inputs: the assignee or reviewer
- * steers by role on the task, a project manager steers inside their project,
- * and a workspace owner/admin steers anywhere in the workspace. Members
- * without steering rights may still submit comments, proposals and decisions
- * (the procedure's `agent:update` gate already admits them); workspace
- * viewers are read-only and submit nothing.
- */
-async function assertTaskSteeringCapability(
-  ctx: {
-    serverDB: OrviloDatabase;
-    userId: string;
-    workspaceId?: string;
-  },
-  task: {
-    assigneeUserId: string | null;
-    projectId: string | null;
-    reviewerUserId: string | null;
-    workspaceId: string | null;
-  },
-) {
-  if (task.assigneeUserId === ctx.userId || task.reviewerUserId === ctx.userId) return;
-
-  const workspaceId = task.workspaceId ?? ctx.workspaceId;
-  if (workspaceId) {
-    const role = await getActiveWorkspaceMembershipRole(ctx.serverDB, {
-      userId: ctx.userId,
-      workspaceId,
-    });
-    if (role === 'owner' || role === 'admin') return;
-
-    if (task.projectId) {
-      const projectRole = await new ProjectMemberModel(ctx.serverDB, ctx.userId).getRole(
-        task.projectId,
-        ctx.userId,
-      );
-      if (projectRole === 'manager') return;
-    }
-  }
-
-  throw new TRPCError({
-    code: 'FORBIDDEN',
-    message:
-      'Instruction inputs require assignee, reviewer, project-manager or workspace-admin steering capability',
-  });
 }
 
 /**
@@ -2317,6 +2271,13 @@ export const taskRouter = router({
       try {
         const model = ctx.taskModel;
         const resolved = await resolveOrThrow(model, id);
+        const status =
+          (await model.derivedStatusByIds([resolved.id]))[resolved.id] ?? resolved.status;
+        await ctx.taskService.assertNativeAutomationConfiguration({
+          ...resolved,
+          config: { ...(isRecord(resolved.config) ? resolved.config : {}), ...config },
+          status,
+        });
         const task = await model.updateTaskConfig(resolved.id, config, { invalidateRun: true });
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         return { data: task, message: 'Config updated', success: true };
@@ -2589,7 +2550,7 @@ export const taskRouter = router({
       const task = await resolveOrThrow(ctx.taskModel, input.taskId);
 
       if (input.intentType === 'instruction') {
-        await assertTaskSteeringCapability(
+        await assertIssueExecutionInput(
           { serverDB: ctx.serverDB, userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
           task,
         );

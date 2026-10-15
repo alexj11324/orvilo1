@@ -1,0 +1,15 @@
+{
+  "admissionState": "running",
+  "callerId": "user_issue784_member_001",
+  "cancelState": "confirmed",
+  "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+  "deviceOwnerId": "user_agent_testing_001",
+  "errorType": null,
+  "model": null,
+  "operationId": "op_1792003459752_agt_44B3tqt5bkS5_tpc_1LYpLsXpDUE8_hqu1JLpx",
+  "proofFileExists": false,
+  "requestedAt": "2026-10-14T18:49:16.373Z",
+  "resolvedAt": "2026-10-14T18:49:17.536Z",
+  "sourceSha": "0caf355dcc65cc2284573a74362d4fc0e57aa474",
+  "status": "interrupted"
+}

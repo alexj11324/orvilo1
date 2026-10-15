@@ -10,6 +10,21 @@ const { resolveRuntimeAccess } = await import('./resolveRuntimeAccess');
 const base = { builtinOffered: false, isBuiltinAgent: false, ready: true };
 
 describe('resolveRuntimeAccess', () => {
+  it.each(['inbox', 'page-agent', 'agent-builder'])(
+    'keeps paused %s history open while the composer is unavailable',
+    (builtinAgentSlug) => {
+      expect(
+        resolveRuntimeAccess({
+          ...base,
+          builtinAgentSlug,
+          defaultAgentId: 'agt_codex',
+          isBuiltinAgent: true,
+          ready: false,
+        }),
+      ).toEqual({ kind: 'open' });
+    },
+  );
+
   it('opens an ACP agent', () => {
     expect(resolveRuntimeAccess({ ...base, listed: { heterogeneousType: 'codex' } })).toEqual({
       kind: 'open',

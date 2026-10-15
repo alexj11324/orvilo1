@@ -688,10 +688,7 @@ describe('TopicModel', () => {
       expect(topic.runStartedAt).toBeNull();
     });
 
-    // This feed is not scoped by agent, so in a workspace `ownership()` matches
-    // every member's rows. Without a parent check a teammate's PRIVATE agent
-    // conversation — title and last assistant reply included — lands in the
-    // home inbox of everyone in the workspace.
+    // Standalone topics remain creator-private even when their Agent is shared.
     describe('workspace parent scope', () => {
       const workspaceId = 'topic-model-test-workspace';
       const workspaceModel = new TopicModel(serverDB, userId, workspaceId);
@@ -750,17 +747,14 @@ describe('TopicModel', () => {
         ]);
       });
 
-      it('excludes topics whose owning agent is a teammate private or out-of-scope agent', async () => {
+      it('excludes teammate standalone topics even under a shared Agent', async () => {
         const result = await workspaceModel.queryTopics({ statuses: ['unread'] });
 
-        expect(result.map((t) => t.id).sort()).toEqual([
-          'ws-parentless',
-          'ws-private-mine',
-          'ws-shared',
-        ]);
+        expect(result.map((t) => t.id).sort()).toEqual(['ws-parentless', 'ws-private-mine']);
       });
 
       it('reports the parent visibility so a team view can drop private conversations', async () => {
+        await serverDB.update(topics).set({ userId }).where(eq(topics.id, 'ws-shared'));
         const result = await workspaceModel.queryTopics({ statuses: ['unread'] });
         const byId = new Map(result.map((t) => [t.id, t.parentVisibility]));
 
@@ -813,41 +807,6 @@ describe('TopicModel', () => {
   });
 
   describe('update', () => {
-    it.each([{ model: 'b' }, { provider: 'other' }, { model: null }])(
-      'clears stale reasoning on a legacy model update %j',
-      async (patch) => {
-        const topic = await topicModel.create({
-          metadata: {
-            reasoningConfig: { reasoningEffort: 'high' },
-            heteroEffort: 'low',
-            workingDirectory: '/w',
-          },
-          model: 'a',
-          provider: 'openai',
-          title: 'legacy',
-        });
-        const [updated] = await topicModel.update(topic.id, { ...patch, title: 'changed' });
-        expect(updated.metadata).toEqual({ heteroEffort: 'low', workingDirectory: '/w' });
-        expect(updated.title).toBe('changed');
-        expect(updated).toMatchObject(patch);
-      },
-    );
-
-    it.each([{ title: 'renamed' }, { model: 'a', provider: 'openai' }])(
-      'preserves reasoning when the model does not change %j',
-      async (patch) => {
-        const metadata = { reasoningConfig: { reasoningEffort: 'high' as const } };
-        const topic = await topicModel.create({
-          metadata,
-          model: 'a',
-          provider: 'openai',
-          title: 'pin',
-        });
-        const [updated] = await topicModel.update(topic.id, patch);
-        expect(updated.metadata).toEqual(metadata);
-      },
-    );
-
     it('updates status and bumps updatedAt', async () => {
       const topic = await topicModel.create({ title: 'to update' });
       const before = topic.updatedAt.getTime();
@@ -1098,61 +1057,23 @@ describe('TopicModel', () => {
     });
   });
 
-  describe('updateModelPin', () => {
-    it('switches model and replaces the reasoning pin in one write', async () => {
-      const topic = await topicModel.create({
-        metadata: { reasoningConfig: { glm5_2ReasoningEffort: 'max' }, workingDirectory: '/w' },
-        model: 'glm-5.2',
-        provider: 'orvilo',
-        title: 'pin',
-      });
-
-      const [updated] = await topicModel.updateModelPin(topic.id, {
-        metadata: { reasoningConfig: { deepseekV4GAReasoningEffort: 'low' } },
-        model: 'deepseek-v4-flash',
-        provider: 'orvilo',
-      });
-
-      expect(updated.model).toBe('deepseek-v4-flash');
-      expect(updated.metadata).toEqual({
-        reasoningConfig: { deepseekV4GAReasoningEffort: 'low' },
-        workingDirectory: '/w',
-      });
-    });
-
-    it('drops a stale reasoning pin and keeps heteroEffort when not given', async () => {
-      const topic = await topicModel.create({
-        metadata: { heteroEffort: 'high', reasoningConfig: { effort: 'max' } },
-        model: 'a',
-        provider: 'claude-code',
-        title: 'pin',
-      });
-
-      const [updated] = await topicModel.updateModelPin(topic.id, {
-        model: 'b',
-        provider: 'claude-code',
-      });
-
-      expect(updated.metadata).toEqual({ heteroEffort: 'high' });
-    });
-  });
-
   describe('updateMetadata', () => {
     it('does not overwrite a user selection when initializing a legacy topic', async () => {
       const topic = await topicModel.create({ title: 'execution' });
       await topicModel.updateMetadata(topic.id, {
-        executionConfig: { executionTarget: 'device', boundDeviceId: 'chosen' },
+        executionConfig: { inheritWorkspaceScope: true },
       });
       const [updated] = await topicModel.updateMetadata(
         topic.id,
         {
-          executionConfig: { executionTarget: 'sandbox' },
+          executionConfig: {
+            inheritWorkspaceScope: false,
+          },
         },
         { executionConfigIfAbsent: true },
       );
       expect(updated.metadata?.executionConfig).toEqual({
-        executionTarget: 'device',
-        boundDeviceId: 'chosen',
+        inheritWorkspaceScope: true,
       });
     });
 

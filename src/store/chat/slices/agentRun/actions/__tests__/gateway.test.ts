@@ -699,8 +699,10 @@ describe('GatewayActionImpl', () => {
     });
 
     it.each([
-      { status: 'error', success: false },
-      { status: 'error', success: true },
+      { status: 'error', success: false, topicId: null },
+      { status: 'error', success: true, topicId: null },
+      { status: 'error', success: false, topicId: 'topic-1' },
+      { status: 'error', success: true, topicId: 'topic-1' },
     ] as const)('settles a rejected dispatch without starting a runtime (%j)', async (terminal) => {
       const {
         action,
@@ -721,7 +723,8 @@ describe('GatewayActionImpl', () => {
         timestamp: new Date().toISOString(),
         topicId: 'topic-1',
         userMessageId: 'usr-1',
-        ...terminal,
+        status: terminal.status,
+        success: terminal.success,
       };
       const failedMessage = {
         id: 'ast-1',
@@ -733,7 +736,7 @@ describe('GatewayActionImpl', () => {
 
       await expect(
         action.executeGatewayAgent({
-          context: { agentId: 'agent-1', scope: 'main', topicId: null },
+          context: { agentId: 'agent-1', scope: 'main', topicId: terminal.topicId },
           message: 'Hello',
           parentOperationId: 'parent-send',
         }),
@@ -2178,54 +2181,25 @@ describe('GatewayActionImpl', () => {
         );
       });
 
-      // The topic pin lives in server-side topic metadata — the client only
-      // sends its local capability hint; the server's session-bound slot
-      // resolves 'topic-device' ahead of every other input.
-      it('forwards the local hint while the server resolves the Topic device', async () => {
+      it('ignores stale topic and member device selections', async () => {
         mockEnv.isDesktop = true;
-        mockGateway.getDeviceInfo.mockResolvedValue({ deviceId: 'this-desktop' });
+        mockAgentStore.state.agentMap['agent-1'] = {
+          agencyConfig: { boundDeviceId: 'saved-device', executionTarget: 'device' },
+          userId: 'owner',
+          visibility: 'public',
+          workspaceId: 'workspace-1',
+        };
         mockChatState.topicDetailMap['topic-1'] = {
           id: 'topic-1',
           metadata: {
             executionConfig: { executionTarget: 'local', boundDeviceId: 'topic-device' },
           },
-        } as ChatTopic;
-
+        } as unknown as ChatTopic;
+        mockUserState.workspaceUserPreference.agentDeviceOverrides['agent-1'] = {
+          executionTarget: 'local',
+          boundDeviceId: 'member-device',
+        };
         await send();
-
-        expect(aiAgentService.execAgentTask).toHaveBeenCalledWith(
-          expect.objectContaining({ localDeviceId: 'this-desktop' }),
-          expect.anything(),
-        );
-        expect(vi.mocked(aiAgentService.execAgentTask).mock.calls.at(-1)?.[0]).not.toHaveProperty(
-          'deviceId',
-        );
-      });
-
-      it('does not activate this desktop when the Topic selects sandbox', async () => {
-        mockEnv.isDesktop = true;
-        mockRuntime.isLocal = true;
-        mockChatState.topicDetailMap['topic-1'] = {
-          id: 'topic-1',
-          metadata: { executionConfig: { executionTarget: 'sandbox' } },
-        } as ChatTopic;
-
-        await send();
-
-        expect(mockGateway.getDeviceInfo).not.toHaveBeenCalled();
-        expect(vi.mocked(aiAgentService.execAgentTask).mock.calls.at(-1)?.[0]).not.toHaveProperty(
-          'deviceId',
-        );
-      });
-
-      // Regression guard: an explicit sandbox/none/device target must not
-      // preset this machine's deviceId — only a `local` target does.
-      it('does not resolve a deviceId when a non-local runtime mode is selected', async () => {
-        mockEnv.isDesktop = true;
-        mockRuntime.isLocal = false;
-
-        await send();
-
         expect(mockGateway.getDeviceInfo).not.toHaveBeenCalled();
         expect(vi.mocked(aiAgentService.execAgentTask).mock.calls.at(-1)?.[0]).not.toHaveProperty(
           'deviceId',
@@ -2251,55 +2225,6 @@ describe('GatewayActionImpl', () => {
       it('never resolves a deviceId off desktop, even when local mode is set', async () => {
         mockEnv.isDesktop = false;
         mockRuntime.isLocal = true;
-
-        await send();
-
-        expect(mockGateway.getDeviceInfo).not.toHaveBeenCalled();
-        expect(vi.mocked(aiAgentService.execAgentTask).mock.calls.at(-1)?.[0]).not.toHaveProperty(
-          'deviceId',
-        );
-      });
-
-      // A member's `local` override lives in server-side agentDeviceOverrides —
-      // the server resolves it to the caller's own machine via localDeviceId;
-      // sending deviceId would request the shared 'workspace-device' instead.
-      it('forwards this desktop for a workspace member local override', async () => {
-        mockEnv.isDesktop = true;
-        mockGateway.getDeviceInfo.mockResolvedValue({ deviceId: 'device-local-member' });
-        mockAgentStore.state.agentMap['agent-1'] = {
-          agencyConfig: { boundDeviceId: 'workspace-device', executionTarget: 'device' },
-          userId: 'workspace-owner',
-          visibility: 'public',
-          workspaceId: 'workspace-1',
-        };
-        mockUserState.workspaceUserPreference.agentDeviceOverrides['agent-1'] = {
-          boundDeviceId: 'device-local-member',
-          executionTarget: 'local',
-        };
-
-        await send();
-
-        expect(aiAgentService.execAgentTask).toHaveBeenCalledWith(
-          expect.objectContaining({ localDeviceId: 'device-local-member' }),
-          expect.anything(),
-        );
-        expect(vi.mocked(aiAgentService.execAgentTask).mock.calls.at(-1)?.[0]).not.toHaveProperty(
-          'deviceId',
-        );
-      });
-
-      it('does not preset this desktop for a workspace member remote override', async () => {
-        mockEnv.isDesktop = true;
-        mockAgentStore.state.agentMap['agent-1'] = {
-          agencyConfig: { executionTarget: 'local' },
-          userId: 'workspace-owner',
-          visibility: 'public',
-          workspaceId: 'workspace-1',
-        };
-        mockUserState.workspaceUserPreference.agentDeviceOverrides['agent-1'] = {
-          boundDeviceId: 'remote-device',
-          executionTarget: 'device',
-        };
 
         await send();
 

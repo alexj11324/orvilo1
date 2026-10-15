@@ -254,7 +254,6 @@ export const mcpEventsRouter = router({
           task,
           trigger,
           binding,
-          deviceId: input.deviceId,
         }),
         success: true as const,
       };
@@ -297,7 +296,6 @@ export const mcpEventsRouter = router({
         task,
         trigger,
         binding,
-        deviceId: input.deviceId,
       });
       if (!readiness.canEnable)
         return { data: { enabled: false, ...readiness }, success: true as const };

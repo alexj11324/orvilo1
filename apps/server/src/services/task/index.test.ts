@@ -9,8 +9,26 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import { UserModel } from '@/database/models/user';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import type { OrviloDatabase } from '@/database/type';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 
 import { TaskService } from './index';
+
+const nativeReadiness = vi.hoisted(() => ({
+  usable: vi.fn(),
+  probe: vi.fn(),
+  devices: vi.fn(),
+}));
+vi.mock('@/database/utils/agent-access', () => ({
+  findUsableAgentExecutionBinding: nativeReadiness.usable,
+}));
+vi.mock('@/database/models/device', () => ({
+  DeviceModel: class {
+    queryForExecution = nativeReadiness.devices;
+  },
+}));
+vi.mock('@/server/services/deviceGateway', () => ({
+  deviceGateway: { executeToolCall: nativeReadiness.probe },
+}));
 
 const admissionFlags = vi.hoisted(() => ({ read: vi.fn(async () => ({})) }));
 vi.mock('@/server/featureFlags', () => ({
@@ -182,6 +200,7 @@ describe('TaskService', () => {
     getAgentAvatarsByIds: vi.fn().mockResolvedValue([]),
     getAgentModelConfig: vi.fn().mockResolvedValue(null),
     getAgentModelConfigForExecution: vi.fn().mockResolvedValue(null),
+    getAgentConfigForExecution: vi.fn(),
     getAgentSnapshotForTaskCreate: vi
       .fn()
       .mockResolvedValue({ snapshot: null, visibility: 'public' }),
@@ -255,6 +274,32 @@ describe('TaskService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    nativeReadiness.usable.mockResolvedValue({ id: 'agent-1' });
+    nativeReadiness.devices.mockResolvedValue([
+      { deviceId: 'device-1', userId, defaultCwd: '/repository' },
+    ]);
+    nativeReadiness.probe.mockResolvedValue({
+      success: true,
+      content: JSON.stringify({
+        authenticated: true,
+        checkedAt: new Date().toISOString(),
+        executor: 'codex',
+        installed: true,
+        nativePermission: { configId: 'mode', value: 'agent-full-access' },
+        repositoryAccessible: true,
+        requiredToolsSupported: true,
+        unattended: true,
+      }),
+    });
+    mockAgentModel.getAgentConfigForExecution.mockResolvedValue({
+      id: 'agent-1',
+      agencyConfig: {
+        boundDeviceId: 'device-1',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'codex' },
+      },
+    });
+    mockTaskModel.findById.mockResolvedValue(undefined);
     admissionFlags.read.mockResolvedValue({});
     findActiveDispatchMock.mockResolvedValue(undefined);
     mockTaskModel.areAllDependenciesCompleted.mockResolvedValue(true);
@@ -1993,7 +2038,11 @@ describe('TaskService', () => {
   });
 
   describe('confirmed execution stop', () => {
-    it.each([{ success: true, deviceCancellationConfirmed: false }, { success: false }])(
+    it.each([
+      { success: true, deviceCancellationConfirmed: false },
+      { success: false },
+      { success: true, cancelState: 'requested' },
+    ])(
       'keeps a live Task and topic unchanged when cancellation is unconfirmed: %j',
       async (result) => {
         mockTaskModel.resolve.mockResolvedValue({ id: 'task-live', status: 'running' });
@@ -2083,12 +2132,87 @@ describe('TaskService', () => {
   describe('updateStatus / scheduleStartedAt', () => {
     const baseTask = (overrides: Partial<Record<string, unknown>> = {}) => ({
       automationMode: 'schedule',
+      assigneeAgentId: 'agent-1',
       context: {},
       id: 'task-1',
       identifier: 'T-1',
       parentTaskId: null,
       status: 'backlog',
       ...overrides,
+    });
+
+    it.each(['schedule', 'heartbeat'] as const)(
+      'refuses enabling %s before any mutation or tick when no native full access is advertised',
+      async (automationMode) => {
+        mockTaskModel.resolve.mockResolvedValue(baseTask({ automationMode }));
+        nativeReadiness.probe.mockResolvedValue({
+          success: true,
+          content: JSON.stringify({
+            authenticated: true,
+            checkedAt: new Date().toISOString(),
+            executor: 'codex',
+            installed: true,
+            repositoryAccessible: true,
+            requiredToolsSupported: true,
+            unattended: false,
+          }),
+        });
+        await expect(
+          new TaskService(db, userId).updateStatus({ id: 'T-1', status: 'scheduled' }),
+        ).rejects.toThrow('NATIVE_FULL_ACCESS_UNAVAILABLE');
+        expect(mockTaskModel.updateStatus).not.toHaveBeenCalled();
+        expect(scheduleNextTopic).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(['schedule', 'heartbeat'] as const)(
+      'does not probe or arm %s for a manager without Agent Use even on their own host',
+      async (automationMode) => {
+        mockTaskModel.resolve.mockResolvedValue(baseTask({ automationMode, status: 'paused' }));
+        vi.mocked(assertCanUseWorkspaceAgent).mockRejectedValueOnce(
+          Object.assign(new Error('Agent Use required'), { code: 'FORBIDDEN' }),
+        );
+
+        await expect(
+          new TaskService(db, userId, 'workspace-1').updateStatus({
+            id: 'T-1',
+            status: 'scheduled',
+          }),
+        ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+        expect(nativeReadiness.probe).not.toHaveBeenCalled();
+        expect(mockTaskModel.updateStatus).not.toHaveBeenCalled();
+        expect(scheduleNextTopic).not.toHaveBeenCalled();
+      },
+    );
+
+    it('also refuses a backlog transition that would unpark a scheduled automation', async () => {
+      mockTaskModel.resolve.mockResolvedValue(
+        baseTask({ automationMode: 'schedule', status: 'paused' }),
+      );
+      nativeReadiness.probe.mockResolvedValue({ success: false, content: '' });
+      await expect(
+        new TaskService(db, userId).updateStatus({ id: 'T-1', status: 'backlog' }),
+      ).rejects.toThrow('NATIVE_FULL_ACCESS_UNAVAILABLE');
+      expect(mockTaskModel.updateStatus).not.toHaveBeenCalled();
+    });
+
+    it('allows disabled automation drafts and ordinary Agent configuration without native attestation', async () => {
+      const service = new TaskService(db, userId);
+      await service.assertNativeAutomationConfiguration({
+        automationMode: 'schedule',
+        status: 'paused',
+        assigneeAgentId: 'agent-1',
+      });
+      await service.assertNativeAutomationConfiguration({
+        status: 'running',
+        assigneeAgentId: 'agent-1',
+      });
+      await service.assertNativeAutomationConfiguration({
+        automationMode: 'schedule',
+        context: { execution: { parked: { at: new Date().toISOString() } } },
+        assigneeAgentId: 'agent-1',
+      });
+      expect(nativeReadiness.probe).not.toHaveBeenCalled();
     });
 
     it('stamps scheduleStartedAt when a user starts a schedule (backlog → scheduled)', async () => {
@@ -2462,6 +2586,31 @@ describe('TaskService', () => {
         identifier: 'T-1',
         seq: 1,
       }));
+    });
+
+    it('refuses an enabled schedule at creation before inserting a row', async () => {
+      nativeReadiness.probe.mockResolvedValue({ success: false, content: '' });
+      await expect(
+        new TaskService(db, userId).createTask({
+          automationMode: 'schedule',
+          assigneeAgentId: 'agent-1',
+          schedulePattern: '* * * * *',
+          instruction: 'automate',
+        }),
+      ).rejects.toThrow('NATIVE_FULL_ACCESS_UNAVAILABLE');
+      expect(mockTaskModel.create).not.toHaveBeenCalled();
+    });
+
+    it('keeps a disabled recurring draft editable without probing native capabilities', async () => {
+      await new TaskService(db, userId).createTask({
+        automationMode: 'schedule',
+        assigneeAgentId: 'agent-1',
+        schedulePattern: '* * * * *',
+        instruction: 'draft',
+        status: 'paused',
+      });
+      expect(mockTaskModel.create).toHaveBeenCalled();
+      expect(nativeReadiness.probe).not.toHaveBeenCalled();
     });
 
     it('allows creating a public task with the caller own private agent', async () => {
@@ -3085,6 +3234,38 @@ describe('TaskService', () => {
         { agentId: 'agt_actor', userId: 'user_actor' },
         expect.anything(),
       );
+    });
+
+    it('rejects a context replacement that would silently enable a paused recurring task', async () => {
+      mockTaskModel.findById.mockResolvedValue({
+        id: 'task-1',
+        assigneeAgentId: 'agent-1',
+        automationMode: 'schedule',
+        status: 'paused',
+        context: { execution: { parked: { at: new Date().toISOString() } } },
+      });
+      nativeReadiness.probe.mockResolvedValue({ success: false, content: '' });
+      await expect(
+        new TaskService(db, userId).updateTaskWithAssigneeLock('task-1', { context: {} }),
+      ).rejects.toThrow('NATIVE_FULL_ACCESS_UNAVAILABLE');
+      expect(mockTaskModel.updateWithLog).not.toHaveBeenCalled();
+    });
+
+    it('refuses an active recurring configuration edit before writing when full access is unavailable', async () => {
+      mockTaskModel.findById.mockResolvedValue({
+        id: 'task-1',
+        assigneeAgentId: 'agent-1',
+        automationMode: 'heartbeat',
+        status: 'scheduled',
+      });
+      mockTaskModel.derivedStatusByIds.mockResolvedValue({ 'task-1': 'scheduled' });
+      nativeReadiness.probe.mockResolvedValue({ success: false, content: '' });
+      await expect(
+        new TaskService(db, userId).updateTaskWithAssigneeLock('task-1', {
+          heartbeatInterval: 3600,
+        }),
+      ).rejects.toThrow('NATIVE_FULL_ACCESS_UNAVAILABLE');
+      expect(mockTaskModel.updateWithLog).not.toHaveBeenCalled();
     });
 
     it('invalidates the active run when automation configuration changes', async () => {

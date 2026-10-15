@@ -7,7 +7,6 @@ import { isTransferManifestActionable } from './manifestState';
 const manifest = {
   connectorsAffected: 0,
   cronJobs: 0,
-  deviceBindingAffected: false,
   expertiseAffected: 0,
   groupsToLeave: 0,
   hiddenReferencedMember: false,

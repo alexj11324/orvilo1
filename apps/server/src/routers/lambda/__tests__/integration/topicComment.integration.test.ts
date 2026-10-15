@@ -3,6 +3,9 @@ import type { OrviloDatabase } from '@orvilo/database';
 import {
   agents,
   messages,
+  projects,
+  tasks,
+  taskTopics,
   topicComments,
   topics,
   workspaceAuditLogs,
@@ -61,6 +64,26 @@ describe('topicCommentRouter integration', () => {
   let viewerId: string;
   let workspaceId: string;
 
+  const linkIssueTopic = async (id: string) => {
+    const [issue] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: ownerId,
+        identifier: `COMMENT-${id}`,
+        instruction: 'Shared Issue discussion',
+        seq: 1,
+        workspaceId,
+      })
+      .returning({ id: tasks.id });
+    await db.insert(taskTopics).values({
+      seq: 1,
+      taskId: issue.id,
+      topicId: id,
+      userId: ownerId,
+      workspaceId,
+    });
+  };
+
   beforeEach(async () => {
     notifyTopicCommentActivity.mockReset();
     notifyTopicCommentActivity.mockResolvedValue(undefined);
@@ -92,6 +115,7 @@ describe('topicCommentRouter integration', () => {
       .values({ title: 'Comments', userId: ownerId, workspaceId })
       .returning();
     topicId = topic.id;
+    await linkIssueTopic(topicId);
   });
 
   afterEach(async () => {
@@ -205,6 +229,7 @@ describe('topicCommentRouter integration', () => {
       userId: adminId,
       workspaceId,
     });
+    await linkIssueTopic(agentTopicId);
 
     const permissions = new ResourcePermissionModel(db, workspaceId);
     await permissions.upsertCollaborators({
@@ -310,7 +335,7 @@ describe('topicCommentRouter integration', () => {
 
     await expect(
       admin.create({ clientId: 'private-topic', content: 'denied', topicId: privateTopicId }),
-    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     await expect(
       admin.create({
         clientId: 'private-message',
@@ -347,19 +372,19 @@ describe('topicCommentRouter integration', () => {
     });
 
     await expect(admin.get({ id: privateRoot.comment.id })).rejects.toMatchObject({
-      code: 'FORBIDDEN',
+      code: 'NOT_FOUND',
     });
     await expect(
       admin.listReplies({ rootCommentId: privateRoot.comment.id }),
-    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     await expect(admin.listThreads({ topicId: privateTopicId })).rejects.toMatchObject({
-      code: 'FORBIDDEN',
+      code: 'NOT_FOUND',
     });
     await expect(admin.summary({ topicId: privateTopicId })).rejects.toMatchObject({
-      code: 'FORBIDDEN',
+      code: 'NOT_FOUND',
     });
     await expect(owner.delete({ id: privateRoot.comment.id })).rejects.toMatchObject({
-      code: 'FORBIDDEN',
+      code: 'NOT_FOUND',
     });
     const [storedPrivateRoot] = await db
       .select({ moderatedAt: topicComments.moderatedAt })
@@ -507,6 +532,67 @@ describe('topicCommentRouter integration', () => {
         },
       },
       id: topLevel.comment.id,
+    });
+    await flushAfterResponse();
+    expect(notifyTopicCommentActivity).not.toHaveBeenCalled();
+  });
+
+  it('notifies an Issue reader without granting private Agent Use', async () => {
+    const [agent] = await db
+      .insert(agents)
+      .values({
+        title: 'Private Issue executor',
+        userId: ownerId,
+        visibility: 'private',
+        workspaceId,
+      })
+      .returning({ id: agents.id });
+    await db.update(topics).set({ agentId: agent.id }).where(eq(topics.id, topicId));
+    const owner = topicCommentRouter.createCaller(context(ownerId, workspaceId));
+    const member = topicCommentRouter.createCaller(context(memberId, workspaceId));
+    const created = await owner.create({
+      clientId: 'issue-reader-mention',
+      content: 'Issue progress',
+      editorData: {
+        root: { children: [{ metadata: { id: memberId, type: 'member' }, type: 'mention' }] },
+      },
+      topicId,
+    });
+    expect(await member.get({ id: created.comment.id })).toMatchObject({
+      content: 'Issue progress',
+    });
+    await expect(
+      member.create({ clientId: 'no-agent-use', content: 'denied', topicId }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await flushAfterResponse();
+    expect(notifyTopicCommentActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipients: [{ kind: 'mentioned', userId: memberId }],
+        topicId,
+      }),
+    );
+    const [project] = await db
+      .insert(projects)
+      .values({
+        identifier: 'PRIV',
+        name: 'Private Project',
+        userId: ownerId,
+        visibility: 'private',
+        workspaceId,
+      })
+      .returning({ id: projects.id });
+    await db.update(topics).set({ projectId: project.id }).where(eq(topics.id, topicId));
+    notifyTopicCommentActivity.mockClear();
+    const privateComment = await owner.create({
+      clientId: 'private-issue-mention',
+      content: 'Private progress',
+      topicId,
+      editorData: {
+        root: { children: [{ metadata: { id: memberId, type: 'member' }, type: 'mention' }] },
+      },
+    });
+    await expect(member.get({ id: privateComment.comment.id })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
     });
     await flushAfterResponse();
     expect(notifyTopicCommentActivity).not.toHaveBeenCalled();

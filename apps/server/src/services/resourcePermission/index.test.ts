@@ -81,7 +81,7 @@ describe('canPerformResourceAction', () => {
     teamAdminMock.mockResolvedValue(false);
   });
 
-  it.each(['public', 'private'])(
+  it.each(['public'])(
     'requires an explicit Agent Use member grant for a %s Agent',
     async (visibility) => {
       permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
@@ -104,25 +104,47 @@ describe('canPerformResourceAction', () => {
     },
   );
 
+  it.each(['use', 'view', 'edit', 'manage'] as const)(
+    'keeps another member’s private Agent inaccessible for %s despite a stray Use row',
+    async (action) => {
+      permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
+      grantedLevelMock.mockResolvedValue('use');
+      await expect(
+        canPerformResourceAction({
+          action,
+          db,
+          meta: { ...meta, visibility: 'private' },
+          resourceId: 'agent-1',
+          resourceType: 'agent',
+          userId: 'member',
+          workspaceId: 'ws-1',
+        }),
+      ).resolves.toBe(false);
+    },
+  );
+
   // The creator owns the Agent: running it never depends on a roster row, so
   // an Agent created before rosters existed, imported or seeded still runs.
-  it('lets the creator use their own Agent with or without a Use row', async () => {
-    permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
-    const params = {
-      action: 'use' as const,
-      db,
-      meta,
-      resourceId: 'agent-1',
-      resourceType: 'agent' as const,
-      userId: 'creator',
-      workspaceId: 'ws-1',
-    };
-    await expect(canPerformResourceAction(params)).resolves.toBe(true);
-    grantedLevelMock.mockResolvedValue('use');
-    await expect(canPerformResourceAction(params)).resolves.toBe(true);
-    grantedLevelMock.mockResolvedValue(null);
-    await expect(canPerformResourceAction(params)).resolves.toBe(true);
-  });
+  it.each(['public', 'private'])(
+    'lets the creator use their own %s Agent with or without a Use row',
+    async (visibility) => {
+      permissionMatchesMock.mockResolvedValue({ hasAllScope: true, hasOwnerScope: false });
+      const params = {
+        action: 'use' as const,
+        db,
+        meta: { ...meta, visibility },
+        resourceId: 'agent-1',
+        resourceType: 'agent' as const,
+        userId: 'creator',
+        workspaceId: 'ws-1',
+      };
+      await expect(canPerformResourceAction(params)).resolves.toBe(true);
+      grantedLevelMock.mockResolvedValue('use');
+      await expect(canPerformResourceAction(params)).resolves.toBe(true);
+      grantedLevelMock.mockResolvedValue(null);
+      await expect(canPerformResourceAction(params)).resolves.toBe(true);
+    },
+  );
 
   // A shared builtin's row is created by whoever reaches the feature first, so
   // its `userId` is an accident of timing rather than authorship.

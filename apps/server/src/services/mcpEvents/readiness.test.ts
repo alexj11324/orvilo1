@@ -30,6 +30,7 @@ vi.mock('@/server/featureFlags', () => ({
 vi.mock('@/database/models/agent', () => ({
   AgentModel: class {
     getAgentConfig = mocks.agent;
+    getAgentConfigForExecution = mocks.agent;
   },
 }));
 vi.mock('@/database/models/connector', () => ({
@@ -45,8 +46,7 @@ vi.mock('@/database/models/connector', () => ({
 }));
 vi.mock('@/database/models/device', () => ({
   DeviceModel: class {
-    queryWorkspaceDevices = mocks.devices;
-    queryPersonal = async () => [];
+    queryForExecution = mocks.devices;
   },
 }));
 vi.mock('@/database/utils/agent-access', () => ({ findUsableAgentExecutionBinding: mocks.usable }));
@@ -139,7 +139,11 @@ describe('OpenCode ACP execution evidence', () => {
       id: 'agent',
       updatedAt: new Date('2026-10-06T09:59:00Z'),
       plugins: [],
-      agencyConfig: { heterogeneousProvider: { type: 'opencode', model } },
+      agencyConfig: {
+        boundDeviceId: 'one',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'opencode', model },
+      },
     });
     mocks.probe.mockResolvedValue({
       success: true,
@@ -244,6 +248,7 @@ const verified = () => ({
   installed: true,
   authenticated: true,
   unattended: true,
+  nativePermission: { configId: 'mode', value: 'agent-full-access' },
   requiredToolsSupported: true,
   repositoryAccessible: true,
   checkedAt: new Date().toISOString(),
@@ -255,10 +260,14 @@ beforeEach(() => {
   mocks.agent.mockResolvedValue({
     id: 'agent',
     plugins: [],
-    agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+    agencyConfig: {
+      boundDeviceId: 'one',
+      executionTarget: 'device',
+      heterogeneousProvider: { type: 'codex' },
+    },
   });
   mocks.source.mockResolvedValue({ isEnabled: true, status: 'connected' });
-  mocks.devices.mockResolvedValue([{ deviceId: 'one', name: 'Device one' }]);
+  mocks.devices.mockResolvedValue([{ deviceId: 'one', userId: 'user', hostname: 'Device one' }]);
   mocks.online.mockResolvedValue([{ deviceId: 'one' }]);
   mocks.probe.mockResolvedValue({ success: true, content: JSON.stringify(verified()) });
   mocks.health.mockResolvedValue({ status: 'ready', observedAt: Date.now() });
@@ -300,36 +309,33 @@ describe('MCP automation readiness', () => {
     mocks.flags.mockResolvedValue({ mcp_event_automations: ['user'] });
     expect((await checkMcpAutomationReadiness(input())).canEnable).toBe(true);
   });
-  it('auto binds one authorized online device only after a real host probe', async () => {
+  it('validates the saved Agent device through a real host probe', async () => {
     const result = await checkMcpAutomationReadiness(input());
     expect(result).toMatchObject({ canEnable: true, deviceId: 'one', reasons: [] });
     expect(mocks.probe).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'user', workspaceId: 'workspace', deviceId: 'one' }),
+      expect.objectContaining({ userId: 'user', deviceId: 'one' }),
       expect.objectContaining({ apiName: 'checkAutomationReadiness' }),
       10000,
     );
   });
-  it('requires explicit selection for multiple devices', async () => {
+  it('uses the saved Agent device despite a legacy task device choice', async () => {
     mocks.devices.mockResolvedValue([{ deviceId: 'one' }, { deviceId: 'two' }]);
     mocks.online.mockResolvedValue([{ deviceId: 'one' }, { deviceId: 'two' }]);
-    const result = await checkMcpAutomationReadiness(input());
-    expect(result.reasons).toContain('DEVICE_SELECTION_REQUIRED');
-    expect(mocks.probe).not.toHaveBeenCalled();
-    expect((await checkMcpAutomationReadiness({ ...input(), deviceId: 'two' })).deviceId).toBe(
-      'two',
-    );
-  });
-  it('preserves an offline binding instead of switching to the only online device', async () => {
     const request = input();
-    request.task.config.automationDeviceId = 'offline';
-    const result = await checkMcpAutomationReadiness(request);
+    request.task.config.automationDeviceId = 'two';
+    expect((await checkMcpAutomationReadiness(request)).deviceId).toBe('one');
+  });
+  it('preserves an offline saved Agent device instead of switching to the online device', async () => {
+    const agent = await mocks.agent();
+    agent.agencyConfig.boundDeviceId = 'offline';
+    const result = await checkMcpAutomationReadiness(input());
     expect(result).toMatchObject({ canEnable: false, deviceId: 'offline' });
     expect(result.reasons).toContain('DEVICE_UNAVAILABLE');
     expect(mocks.probe).not.toHaveBeenCalled();
   });
   it('does not authorize gateway-only workspace devices', async () => {
     mocks.devices.mockResolvedValue([]);
-    const result = await checkMcpAutomationReadiness({ ...input(), deviceId: 'one' });
+    const result = await checkMcpAutomationReadiness(input());
     expect(result.reasons).toContain('DEVICE_UNAVAILABLE');
     expect(mocks.probe).not.toHaveBeenCalled();
   });
@@ -343,8 +349,18 @@ describe('MCP automation readiness', () => {
       content: JSON.stringify({ ...verified(), authenticated: 'unknown', unattended: 'unknown' }),
     });
     expect((await checkMcpAutomationReadiness(input())).reasons).toEqual(
-      expect.arrayContaining(['AUTH_REQUIRED', 'EXECUTOR_UNVERIFIED']),
+      expect.arrayContaining(['AUTH_REQUIRED', 'NATIVE_FULL_ACCESS_UNAVAILABLE']),
     );
+  });
+  it('requires an advertised native full-access mode before enabling automation', async () => {
+    mocks.probe.mockResolvedValue({
+      success: true,
+      content: JSON.stringify({ ...verified(), nativePermission: undefined }),
+    });
+    expect(await checkMcpAutomationReadiness(input())).toMatchObject({
+      canEnable: false,
+      reasons: ['NATIVE_FULL_ACCESS_UNAVAILABLE'],
+    });
   });
   it('checks the event input tool and explicitly configured agent brief tool', async () => {
     const request = input();

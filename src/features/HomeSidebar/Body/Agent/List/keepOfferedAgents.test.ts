@@ -17,8 +17,19 @@ const rows = [
 const ids = (items: { id: string }[]) => items.map((item) => item.id);
 
 describe('keepOfferedAgents', () => {
+  it('hides paused builtin identities while preserving configured Prime and groups', () => {
+    const paused = ['inbox', 'page-agent', 'agent-builder'].map((slug) => ({
+      id: slug,
+      slug,
+      type: 'agent',
+    }));
+    const configured = { heterogeneousType: 'orvilo', id: 'agt_configured', type: 'agent' };
+    const group = { id: 'group', type: 'group' };
+    expect(keepOfferedAgents([...paused, configured, group], true)).toEqual([configured, group]);
+  });
+
   it('keeps every row while the built-in harness is offered', () => {
-    expect(keepOfferedAgents(rows, true)).toBe(rows);
+    expect(keepOfferedAgents(rows, true)).toEqual(rows);
   });
 
   // An unstamped agent predates harness selection and runs on the built-in

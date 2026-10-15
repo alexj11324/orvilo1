@@ -21,49 +21,6 @@ describe('WorkspaceUserSettingsActionImpl', () => {
     vi.clearAllMocks();
   });
 
-  it('optimistically deep-merges one Agent model choice without dropping other choices', async () => {
-    const state = {
-      workspaceUserPreference: {
-        agentDeviceOverrides: {
-          deviceAgent: { executionTarget: 'sandbox' as const },
-        },
-        agentModelOverrides: {
-          existing: { model: 'existing-model', provider: 'existing-provider' },
-        },
-        agentModeOverrides: {
-          existing: true,
-        },
-      },
-    };
-    const set = vi.fn((patch: Partial<typeof state>) => Object.assign(state, patch));
-    const action = new WorkspaceUserSettingsActionImpl(set as never, () => state as never);
-    vi.spyOn(workspaceUserSettingsService, 'updatePreference').mockResolvedValue();
-
-    await action.updateWorkspaceUserPreference({
-      agentModelOverrides: {
-        selected: { model: 'selected-model', provider: 'selected-provider' },
-      },
-    });
-
-    expect(state.workspaceUserPreference).toEqual({
-      agentDeviceOverrides: {
-        deviceAgent: { executionTarget: 'sandbox' },
-      },
-      agentModelOverrides: {
-        existing: { model: 'existing-model', provider: 'existing-provider' },
-        selected: { model: 'selected-model', provider: 'selected-provider' },
-      },
-      agentModeOverrides: {
-        existing: true,
-      },
-    });
-    expect(mockMutate).toHaveBeenCalledWith(
-      ['FETCH_WORKSPACE_USER_SETTINGS', 'workspace-1'],
-      state.workspaceUserPreference,
-      { revalidate: false },
-    );
-  });
-
   it('optimistically deep-merges one Agent mode without dropping other modes', async () => {
     const state = {
       workspaceUserPreference: {

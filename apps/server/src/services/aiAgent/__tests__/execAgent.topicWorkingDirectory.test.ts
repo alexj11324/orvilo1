@@ -86,9 +86,9 @@ vi.mock('@/database/models/device', () => ({
   DeviceModel: vi.fn().mockImplementation(function () {
     return {
       findByDeviceId: mockFindByDeviceId,
-      findWorkspaceDeviceById: vi.fn().mockResolvedValue(undefined),
-      queryPersonal: vi.fn().mockResolvedValue([]),
-      queryWorkspaceDevices: vi.fn().mockResolvedValue([]),
+      findExecutionDeviceById: vi.fn().mockResolvedValue(undefined),
+      query: vi.fn().mockResolvedValue([]),
+      queryForExecution: vi.fn().mockResolvedValue([]),
       queryWorkspaceHiddenDeviceIds: vi.fn().mockResolvedValue([]),
       update: mockUpdateDevice,
     };

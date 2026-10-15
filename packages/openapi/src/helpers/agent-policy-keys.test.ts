@@ -12,14 +12,10 @@ describe('retainAgentPermissionPolicies', () => {
     expect(
       retainAgentPermissionPolicies({
         boundDeviceId: 'device-1',
-        executionTargetSelectionPolicy: 'fixed',
         graph: { nodes: [] },
-        modelSelectionPolicy: 'fixed',
         topicSharePolicy: 'restricted',
       }),
     ).toEqual({
-      executionTargetSelectionPolicy: 'fixed',
-      modelSelectionPolicy: 'fixed',
       topicSharePolicy: 'restricted',
     });
   });

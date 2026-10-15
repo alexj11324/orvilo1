@@ -1,0 +1,5 @@
+{
+  "errorCode": "FORBIDDEN",
+  "errorMessage": "You do not have permission to use this resource",
+  "status": 403
+}

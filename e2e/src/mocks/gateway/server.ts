@@ -33,6 +33,7 @@
  * Runs under Bun (`bun e2e/scripts/mockServices.ts`) for the built-in WS.
  */
 
+import { getTestDeviceId } from '../../support/seedTestUser';
 import { type DeviceAgentRunRequest, runSyntheticHeteroTurn } from './fakeDevice';
 
 interface BufferedEvent {
@@ -97,7 +98,6 @@ export const startFakeGateway = (
   const operations = new Map<string, OperationState>();
   const subscribers = new Map<string, Set<WsLike>>();
   let nextEventId = 1;
-  let lastDispatchedDeviceId = '';
 
   const pushToSubscribers = (operationId: string, message: Record<string, unknown>) => {
     const subs = subscribers.get(operationId);
@@ -182,27 +182,29 @@ export const startFakeGateway = (
       }
 
       // Device presence reads: the runtime bar / device pool queries the
-      // gateway for online devices. Report the last dispatched device (falling
-      // back to the seeded e2e device) as online so bound-device surfaces read
-      // truthfully — a 404 here used to read as "all devices offline".
+      // gateway for online devices. Report this user's seeded device before
+      // its first dispatch, preserving the personal device identity boundary.
       if (req.method === 'POST' && path === '/api/device/status') {
         return json({ deviceCount: 1, online: true });
       }
 
       if (req.method === 'POST' && path === '/api/device/devices') {
-        const deviceId = lastDispatchedDeviceId || 'e2e-mock-device';
-        const connectedAt = new Date().toISOString();
-        return json({
-          devices: [
-            {
-              channels: [{ channel: 'default', connectedAt, connectionId: 'e2e-mock-conn' }],
-              connectedAt,
-              deviceId,
-              hostname: 'E2E Mock Device',
-              platform: 'darwin',
-            },
-          ],
-        });
+        return (async () => {
+          const { userId } = (await req.json()) as { userId: string };
+          const deviceId = getTestDeviceId(userId);
+          const connectedAt = new Date().toISOString();
+          return json({
+            devices: [
+              {
+                channels: [{ channel: 'default', connectedAt, connectionId: 'e2e-mock-conn' }],
+                connectedAt,
+                deviceId,
+                hostname: 'E2E Mock Device',
+                platform: 'darwin',
+              },
+            ],
+          });
+        })();
       }
 
       // Device dispatch channel: the server hands the gateway an
@@ -223,7 +225,6 @@ export const startFakeGateway = (
           if (body.deviceId === 'dev-macos-offline-host') {
             return json({ error: 'DEVICE_CHANNEL_UNAVAILABLE', state: 'offline' }, 503);
           }
-          if (body.deviceId) lastDispatchedDeviceId = body.deviceId;
           void runSyntheticHeteroTurn({
             llmBaseUrl,
             orviloBaseUrl,

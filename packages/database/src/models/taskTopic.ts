@@ -85,6 +85,10 @@ export class TaskTopicModel {
       },
     );
 
+  /** Run history follows the parent Issue, including a private Project ceiling. */
+  private parentTaskReadable = () =>
+    buildTaskReadableWhere(this.db, { userId: this.userId, workspaceId: this.workspaceId });
+
   /** Issue reads follow the current parent and workspace, not historical topic flags. */
   private readable = () =>
     and(
@@ -1132,7 +1136,11 @@ export class TaskTopicModel {
     search?: string;
     statuses?: string[];
   }) {
-    const conditions = [isNotNull(tasks.automationMode), this.ownership()];
+    const conditions = [
+      isNotNull(tasks.automationMode),
+      this.ownership(),
+      this.parentTaskReadable(),
+    ];
     if (options.createdByUserId) {
       conditions.push(eq(tasks.createdByUserId, options.createdByUserId));
     }
@@ -1199,6 +1207,7 @@ export class TaskTopicModel {
     const conditions = [
       isNotNull(tasks.automationMode),
       this.ownership(),
+      this.parentTaskReadable(),
       gte(taskTopics.createdAt, sql`now() - interval '7 days'`),
     ];
     if (options?.createdByUserId) {

@@ -1,13 +1,13 @@
-import { type FC } from 'react';
+import { type FC, useMemo } from 'react';
 import { type Components, type Options } from 'react-markdown';
 
 import {
   allowedMarkdownTags,
   Markdown,
-  type MarkdownProps,
   Typography as NativeTypography,
   type TypographyProps,
 } from '@/components/Markdown';
+import { markdownComponentAdapters } from '@/components/Markdown/componentAdapters';
 import { mdxElements } from '@/components/Markdown/mdxElements';
 
 import CodeBlock from './CodeBlock';
@@ -40,19 +40,23 @@ export const CustomMDX: FC<CustomMDXProps> = ({
   remarkPlugins,
 }) => {
   // Both engines pass the same intrinsic props + HAST node to these actual owners.
-  const components = {
-    ...mdxElements,
-    a: Link,
-    img: Image,
-    pre: CodeBlock,
-    ...extraComponents,
-  } as unknown as NonNullable<MarkdownProps['components']>;
+  const components = useMemo(
+    () =>
+      markdownComponentAdapters({
+        ...mdxElements,
+        a: Link,
+        img: Image,
+        pre: CodeBlock,
+        ...extraComponents,
+      }),
+    [extraComponents],
+  );
   return (
     <Typography mobile={mobile}>
       <Markdown
         components={components}
         enableStream={false}
-        remarkPlugins={remarkPlugins}
+        remarkPlugins={remarkPlugins ?? undefined}
         allowedTags={allowedMarkdownTags([
           ...Object.keys(mdxElements),
           ...Object.keys(extraComponents ?? {}),

@@ -9,7 +9,7 @@ import MarkdownImage from './MarkdownImage';
 const mockImage = vi.hoisted(() => vi.fn());
 const mockUseClientDataSWR = vi.hoisted(() => vi.fn());
 
-vi.mock('@lobehub/ui', () => ({
+vi.mock('@/components/ImagePreview', () => ({
   Image: ({
     alt,
     classNames,

@@ -23,7 +23,7 @@ describe('AttachmentThumbs', () => {
       </div>,
     );
 
-    await userEvent.click(screen.getByRole('img'));
+    await userEvent.click(screen.getByRole('button', { name: 'screenshot.png' }));
 
     expect(onRowClick).not.toHaveBeenCalled();
   });

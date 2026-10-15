@@ -114,8 +114,7 @@ vi.mock('@/components/ActionIcon', () => ({
   ),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
+vi.mock('@/components/FloatingPanel', () => ({
   FloatingPanel: ({
     actions,
     children,
@@ -349,10 +348,7 @@ describe('TopicChatDrawer', () => {
   it('uses the container background for the conversation panel', () => {
     const { getByTestId } = render(<TopicChatDrawer />);
 
-    expect(getByTestId('topic-panel')).toHaveAttribute(
-      'data-panel-background',
-      'var(--ant-color-bg-container)',
-    );
+    expect(getByTestId('topic-panel')).toHaveAttribute('data-panel-background', 'var(--card)');
   });
 
   it('renders the share button in the floating panel actions slot', () => {

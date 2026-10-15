@@ -16,7 +16,7 @@ vi.mock('@/store/global', () => ({ useGlobalStore: () => 'en-US' }));
 vi.mock('@/store/global/selectors', () => ({
   globalGeneralSelectors: { currentLanguage: vi.fn() },
 }));
-vi.mock('@lobehub/ui/es/EmojiPicker/index', async () => {
+vi.mock('./NativeEmojiPicker', async () => {
   await lazyPicker.ready;
   return {
     default: (props: Record<string, unknown>) => {

@@ -3,7 +3,7 @@ import type { CSSProperties, FC, ReactNode, Ref } from 'react';
 import { useId } from 'react';
 
 /**
- * Props `@lobehub/ui`'s `<Icon>` hands a custom icon component. Only color and
+ * Props supplied to a custom workflow icon component. Only color and
  * size are honoured — the lucide stroke/fill knobs would break the fixed
  * geometry below.
  */

@@ -75,8 +75,7 @@ const mocks = vi.hoisted(() => ({
  * number of *visible* panels, which is what the duplicate-host bug looked like
  * on screen: two stacked panels for one topic.
  */
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
+vi.mock('@/components/FloatingPanel', () => ({
   FloatingPanel: ({ open }: { open?: boolean; styles?: { panel?: CSSProperties } }) =>
     open ? <div data-testid="topic-panel" /> : null,
 }));

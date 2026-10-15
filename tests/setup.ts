@@ -95,7 +95,7 @@ vi.mock('zustand/traditional');
 vi.mock('react-i18next', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useTranslation: () => ({
-    i18n: { changeLanguage: vi.fn(), language: 'en-US' },
+    i18n: { changeLanguage: vi.fn(), dir: () => 'ltr', language: 'en-US' },
     t: (key: string, defaultValueOrOptions?: unknown, maybeOptions?: unknown) => {
       if (typeof defaultValueOrOptions === 'string') return defaultValueOrOptions;
       const options =

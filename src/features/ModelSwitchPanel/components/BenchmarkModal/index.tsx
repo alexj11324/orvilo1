@@ -1,7 +1,7 @@
 import { t } from 'i18next';
 import { ChevronDownIcon, ChevronUpIcon, InfoIcon, PlusIcon, XIcon } from 'lucide-react';
 import type { ModelRating } from 'model-bank';
-import type { FC } from 'react';
+import type { CSSProperties, FC } from 'react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -29,7 +29,8 @@ const styles = {
     'cursor-pointer gap-1 border-dashed border-border bg-transparent px-2 text-sm leading-5.5 font-normal text-muted-foreground hover:border-primary-text hover:bg-transparent hover:text-primary-text active:not-aria-[haspopup]:translate-y-0',
   addButtonDisabled:
     'disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground',
-  bestPill: 'inline-block rounded-(--radius-chip) px-2 py-px font-semibold',
+  bestPill:
+    'inline-block rounded-(--radius-chip) bg-(--benchmark-series-wash) px-2 py-px font-semibold',
   cell: 'text-xs leading-5 text-foreground text-center',
   cellMissing: 'text-muted-foreground',
   chip: 'inline-flex max-w-50 items-center gap-1.5 rounded-(--radius-chip) border border-divider px-2 py-0.5 text-sm leading-5.5 text-foreground',
@@ -86,8 +87,16 @@ const ScoreCell: FC<ScoreCellProps> = ({ best, color, score }) => {
     <Tooltip title={tooltip}>
       <span className={styles.cell}>
         {best ? (
-          // series color + '26' alpha suffix ≈ 15% tint background
-          <span className={styles.bestPill} style={{ background: `${color}26`, color }}>
+          // Preserve the original 0x26 alpha while supporting semantic CSS color variables.
+          <span
+            className={styles.bestPill}
+            style={
+              {
+                '--benchmark-series-wash': `color-mix(in srgb, ${color} calc(100% * 38 / 255), transparent)`,
+                color,
+              } as CSSProperties
+            }
+          >
             {score.score}
           </span>
         ) : (

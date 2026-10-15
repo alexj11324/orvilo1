@@ -1,6 +1,6 @@
 'use client';
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { AGENT_SKILLS_IDENTIFIER_PREFIX } from '@orvilo/const';
+import { SkillsIcon } from '@orvilo/shared-tool-ui/components';
 import { type BuiltinInspectorProps } from '@orvilo/types';
 import { cn } from 'cn';
 import { memo } from 'react';

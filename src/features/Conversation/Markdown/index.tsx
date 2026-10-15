@@ -17,7 +17,7 @@ const MarkdownMessage = memo<MarkdownMessageProps>(
     const { highlighterTheme, mermaidTheme, fontSize } = useUserStore(
       userGeneralSettingsSelectors.config,
     );
-    const resolvedComponentProps = {
+    const resolvedComponentProps: NonNullable<MarkdownProps['componentProps']> = {
       ...componentProps,
       highlight: { theme: highlighterTheme, ...componentProps?.highlight },
       mermaid: { fullFeatured: false, theme: mermaidTheme, ...componentProps?.mermaid },

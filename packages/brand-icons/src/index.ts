@@ -85,7 +85,9 @@ import TraeMono from './Trae/components/Mono';
 import { COLOR_PRIMARY as TraePrimary, TITLE as TraeTitle } from './Trae/style';
 import UnslothAvatar from './Unsloth/components/Avatar';
 import UnslothColor from './Unsloth/components/Color';
+import UnslothCombine from './Unsloth/components/Combine';
 import UnslothMono from './Unsloth/components/Mono';
+import UnslothText from './Unsloth/components/Text';
 import { COLOR_PRIMARY as UnslothPrimary, TITLE as UnslothTitle } from './Unsloth/style';
 
 export { getLobeIconCDN } from './features/getLobeIconCDN';
@@ -219,6 +221,8 @@ export const Trae = Object.assign(TraeMono, {
   title: TraeTitle,
 });
 export const Unsloth = Object.assign(UnslothMono, {
+  Combine: UnslothCombine,
+  Text: UnslothText,
   Color: UnslothColor,
   Avatar: UnslothAvatar,
   colorPrimary: UnslothPrimary,

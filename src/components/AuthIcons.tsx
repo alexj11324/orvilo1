@@ -1,3 +1,5 @@
+import { User } from 'lucide-react';
+
 import {
   Auth0,
   Authelia,
@@ -8,25 +10,23 @@ import {
   Logto,
   MicrosoftEntra,
   Zitadel,
-} from '@lobehub/ui/icons';
-import { User } from 'lucide-react';
-
+} from '@/components/AuthBrandIcons';
 import { Apple, Aws, Google, Microsoft } from '@/components/BrandIcons';
 
 const iconComponents: { [key: string]: any } = {
   'apple': Apple,
   'auth0': Auth0,
-  'authelia': Authelia.Color,
-  'authentik': Authentik.Color,
-  'casdoor': Casdoor.Color,
+  'authelia': Authelia,
+  'authentik': Authentik,
+  'casdoor': Casdoor,
   'cloudflare': Cloudflare.Color,
   'cognito': Aws.Color,
   'github': Github,
   'google': Google.Color,
-  'logto': Logto.Color,
+  'logto': Logto,
   'microsoft': Microsoft.Color,
-  'microsoft-entra-id': MicrosoftEntra.Color,
-  'zitadel': Zitadel.Color,
+  'microsoft-entra-id': MicrosoftEntra,
+  'zitadel': Zitadel,
 };
 
 /**

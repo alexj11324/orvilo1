@@ -31,9 +31,10 @@ vi.mock('@/components/Charts', () => ({
   ),
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
+// Keep these domain tests isolated from menu portals as before, targeting the native owner.
+vi.mock('@/components/ui/tooltip', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  Tooltip: ({ children, title }: { children: ReactNode; title?: ReactNode }) => (
+  SimpleTooltip: ({ children, title }: { children: ReactNode; title?: ReactNode }) => (
     <span>
       <span data-testid={'tooltip'}>{title}</span>
       {children}
@@ -41,24 +42,17 @@ vi.mock('@lobehub/ui', async (importOriginal) => ({
   ),
 }));
 
-interface MockMenuItem {
-  key: string;
-  label: ReactNode;
-  onClick: () => void;
-}
+vi.mock('@/components/Modal', () => ({ createModal: vi.fn() }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/ui/dropdown-menu', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  createModal: vi.fn(),
-  DropdownMenu: ({ children, items }: { children: ReactNode; items: MockMenuItem[] }) => (
-    <div>
+  DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ render: trigger }: { render: ReactNode }) => <>{trigger}</>,
+  DropdownMenuItem: ({ children, onClick }: { children: ReactNode; onClick?: () => void }) => (
+    <button type={'button'} onClick={onClick}>
       {children}
-      {items.map((item) => (
-        <button key={item.key} type={'button'} onClick={item.onClick}>
-          {item.label}
-        </button>
-      ))}
-    </div>
+    </button>
   ),
 }));
 
@@ -214,10 +208,11 @@ describe('BenchmarkModalContent', () => {
       '70',
     ]);
     for (const cell of bestScoreCells) {
-      expect(cell).toHaveStyle({
-        background: `${COMPARE_SERIES_COLORS[0]}26`,
-        color: COMPARE_SERIES_COLORS[0],
-      });
+      expect(cell.style.color).toBe(COMPARE_SERIES_COLORS[0]);
+      // Happy DOM does not render color-mix; retain the actual dynamic paint binding.
+      expect(cell.style.getPropertyValue('--benchmark-series-wash')).toBe(
+        `color-mix(in srgb, ${COMPARE_SERIES_COLORS[0]} calc(100% * 38 / 255), transparent)`,
+      );
     }
     // This proves inline series binding only. Emitted CSS and actual light/dark highlights
     // and contrast still require the compiled-CSS and native Electron verification gates.

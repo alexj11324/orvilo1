@@ -1,12 +1,13 @@
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
-import { type KeyboardEvent, type MouseEvent } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { type ActionIconProps } from '@/components/ActionIcon';
 import { confirmModal } from '@/components/Modal';
-import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarDropdownMenu, {
+  type SidebarMenuInfo,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useUserMemoryStore } from '@/store/userMemory';
 
 interface PreferenceDropdownProps {
@@ -21,7 +22,7 @@ const PreferenceDropdown = memo<PreferenceDropdownProps>(({ id, size = 'small' }
   const deletePreference = useUserMemoryStore((s) => s.deletePreference);
   const setEditingMemory = useUserMemoryStore((s) => s.setEditingMemory);
 
-  const handleMenuClick = (info: { domEvent: MouseEvent | KeyboardEvent; key: string }) => {
+  const handleMenuClick = (info: SidebarMenuInfo) => {
     info.domEvent.stopPropagation();
 
     if (info.key === 'edit') {

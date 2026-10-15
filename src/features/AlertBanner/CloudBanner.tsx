@@ -1,6 +1,5 @@
 'use client';
 
-import { lobeStaticStylish } from '@lobehub/ui';
 import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { useSize } from 'ahooks';
 import { cn } from 'cn';
@@ -17,10 +16,12 @@ import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { isOnServerSide } from '@/utils/env';
 
+import gradientStyles from './CloudBanner.module.css';
+
 export const BANNER_HEIGHT = 40;
 
 const styles = {
-  background: `${lobeStaticStylish.gradientAnimation} absolute h-full w-[max(64%,1280px)] opacity-80 blur-[60px]`,
+  background: 'absolute h-full w-[max(64%,1280px)] opacity-80 blur-[60px]',
   containerDark: 'relative overflow-hidden bg-muted',
   containerLight: 'relative overflow-hidden bg-muted',
   wrapper: 'z-1 max-w-full overflow-hidden',
@@ -62,7 +63,15 @@ const CloudBanner = memo<{ mobile?: boolean }>(({ mobile }) => {
         isDarkMode ? styles.containerDark : styles.containerLight,
       )}
     >
-      <div className={styles.background} data-slot="cloud-banner-gradient" />
+      <div
+        aria-hidden
+        data-slot="cloud-banner-gradient"
+        className={cn(
+          styles.background,
+          gradientStyles.surface,
+          animationMode !== 'disabled' && !prefersReducedMotion && gradientStyles.animated,
+        )}
+      />
       <div className={cn('flex w-full items-center justify-center gap-4', styles.wrapper)}>
         {isTruncated ? (
           <Marquee pauseOnHover play={animationMode !== 'disabled' && !prefersReducedMotion}>

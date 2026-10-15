@@ -1,7 +1,7 @@
 import type { HeterogeneousAgentSessionError } from '@orvilo/electron-client-ipc';
 import type { LocalHeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import { LOCAL_HETEROGENEOUS_AGENT_TYPES } from '@orvilo/heterogeneous-agents';
-import type { ComponentType } from 'react';
+import type { JSXElementConstructor } from 'react';
 
 export type HeterogeneousAgentStatusGuideVariant = 'compact' | 'embedded' | 'inline';
 
@@ -49,7 +49,7 @@ export type SupportedHeterogeneousAgentType = LocalHeterogeneousAgentType;
 
 export interface HeterogeneousAgentGuideConfig {
   docsUrl: string;
-  icon: ComponentType<{ size?: number }>;
+  icon: JSXElementConstructor<{ size?: number }>;
   installCommands: readonly string[];
   signInCommand: string;
   title: string;

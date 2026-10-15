@@ -1,6 +1,5 @@
 'use client';
 
-import { FloatingSheet, type FloatingSheetProps } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import { ChevronDown } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -8,6 +7,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { FloatingSheet, type FloatingSheetProps } from '@/components/FloatingSheet';
 import {
   type ActionsBarConfig,
   type ConversationHooks,

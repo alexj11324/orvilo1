@@ -1,0 +1,19 @@
+/* Keep the native floating conversation panel and bottom-right toasts in distinct lanes. */
+:global(html[data-floating-panel-toast-dodge]) .host[data-x-position='right'][data-y-position='bottom'] {
+  right: calc(var(--offset-right) + var(--toast-shift-x, 0px));
+  bottom: calc(var(--offset-bottom) + var(--toast-shift-y, 0px));
+  width: var(--toast-width, var(--width));
+}
+
+:global(html[data-floating-panel-toast-dodge]) .host[data-x-position='right'][data-y-position='bottom'] [data-sonner-toast] {
+  width: var(--toast-width, var(--width));
+}
+
+@media (width <= 600px) {
+  :global(html[data-floating-panel-toast-dodge]) .host[data-x-position='right'][data-y-position='bottom'] {
+    left: auto;
+    right: calc(var(--mobile-offset-right) + var(--toast-shift-x, 0px));
+    bottom: calc(var(--mobile-offset-bottom) + var(--toast-shift-y, 0px));
+    max-width: calc(100vw - var(--mobile-offset-right) - var(--mobile-offset-left));
+  }
+}

@@ -1,9 +1,8 @@
 'use client';
 
-import { type TabBarProps } from '@lobehub/ui/mobile';
 import { cn } from 'cn';
 import { Inbox, MessageSquare, SquareUser, User } from 'lucide-react';
-import { memo, useMemo } from 'react';
+import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -21,6 +20,13 @@ const styles = {
   ),
 };
 
+interface NavItem {
+  icon: ReactNode | ((active: boolean) => ReactNode);
+  key: SidebarTabKey;
+  onClick: () => void;
+  title: ReactNode | ((active: boolean) => ReactNode);
+}
+
 const NavBar = memo(() => {
   const { t } = useTranslation('common');
   const activeKey = useActiveTabKey();
@@ -28,7 +34,7 @@ const NavBar = memo(() => {
 
   // Chat stays reachable. Inbox is the work-attention tab: native banners,
   // the desktop bell, and this bar all land on `/inbox`.
-  const items: TabBarProps['items'] = useMemo(
+  const items: NavItem[] = useMemo(
     () =>
       [
         {
@@ -67,7 +73,7 @@ const NavBar = memo(() => {
           },
           title: t('tab.me'),
         },
-      ] as TabBarProps['items'],
+      ] as NavItem[],
     [navigate, t],
   );
 

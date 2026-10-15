@@ -7,7 +7,7 @@ import { createContext, createElement, type ReactNode, use, useMemo } from 'reac
 
 // This is the existing SDK's resolved styled-theme value, not another palette
 // or provider. Public SDK types retain custom tokens and numeric screen aliases.
-type ResolvedDocumentTheme = Parameters<
+export type ResolvedDocumentTheme = Parameters<
   NonNullable<ThemeProviderProps['customToken']>
 >[0]['token'] &
   LobeCustomToken & { isDarkMode: boolean };

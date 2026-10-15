@@ -23,7 +23,7 @@ import { useIsDark } from '@/hooks/useIsDark';
 
 import { type DiagramLink, getDiagramLinks } from './links';
 import { diagramDocument, renderDiagram } from './render';
-import { diagramThemes, type MermaidTheme } from './themes';
+import { type DiagramColors, diagramThemes } from './themes';
 
 export { mermaidThemes } from './themes';
 
@@ -47,7 +47,8 @@ export interface MermaidProps extends Omit<ComponentProps<'div'>, 'children' | '
   shadow?: boolean;
   showLanguage?: boolean;
   styles?: Partial<Record<'body' | 'content' | 'header', CSSProperties>>;
-  theme?: MermaidTheme;
+  /** Retain arbitrary persisted palette names; unknown names use semantic role fallback. */
+  theme?: string;
   variant?: 'filled' | 'outlined' | 'borderless';
 }
 
@@ -102,7 +103,8 @@ export function Mermaid({
     setError(undefined);
     const style = host.current && getComputedStyle(host.current);
     const role = (name: string) => style?.getPropertyValue(name).trim() || undefined;
-    const palette = diagramTheme === 'lobe-theme' ? undefined : diagramThemes[diagramTheme];
+    const palettes: Readonly<Partial<Record<string, DiagramColors>>> = diagramThemes;
+    const palette = diagramTheme === 'lobe-theme' ? undefined : palettes[diagramTheme];
     void renderDiagram(
       `orvilo-mermaid-${id}`,
       source,

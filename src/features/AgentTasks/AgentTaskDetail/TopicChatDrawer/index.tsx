@@ -1,6 +1,5 @@
 'use client';
 
-import { FloatingPanel } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ConversationContext, TaskDetailActivity } from '@orvilo/types';
 import {
@@ -17,6 +16,7 @@ import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { FloatingPanel } from '@/components/FloatingPanel';
 import { Freeze } from '@/components/Freeze';
 import { confirmModal } from '@/components/Modal';
 import { Badge as Tag } from '@/components/reui/badge';
@@ -408,7 +408,7 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
       styles={{
         body: { padding: 0 },
         panel: {
-          background: 'var(--ant-color-bg-container)',
+          background: 'var(--card)',
           // Leave room for whatever the panel reserves when it yields the
           // bottom edge to a toast; the library's own cap assumes a 16px
           // offset and this panel sits at 8.

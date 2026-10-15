@@ -9,6 +9,7 @@ export {
 export { FilePathDisplay, getFilePathDisplayInfo } from './FilePathDisplay';
 export { default as GroupBotIcon } from './GroupBotIcon';
 export { OptionCard, type OptionCardProps } from './OptionCard';
+export { default as SkillsIcon } from './SkillsIcon';
 export {
   TodoInspectorSummary,
   TodoPanelHeader,

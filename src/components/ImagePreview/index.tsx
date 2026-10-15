@@ -2,7 +2,16 @@
 
 import { cn } from 'cn';
 import { ImageOff } from 'lucide-react';
-import { createContext, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  use,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -10,6 +19,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useSingleton } from '@/hooks/useSingleton';
 
 import type { GalleryEntry, ImagePreviewOptions, ImageProps, PreviewGroupProps } from './types';
+import { useImageSource } from './useImageSource';
 import { ImageViewer } from './viewer';
 
 interface Registration {
@@ -102,7 +112,7 @@ export function Image({
   preview,
   ref,
   size,
-  src,
+  src: source,
   style,
   styles,
   variant = 'filled',
@@ -111,6 +121,7 @@ export function Image({
   ...rest
 }: ImageProps) {
   const { t } = useTranslation('common');
+  const src = useImageSource(source);
   const group = use(GalleryContext);
   const id = useId();
   const imageRef = useRef<HTMLImageElement>(null);

@@ -9,22 +9,25 @@ import type * as ModelSelectModule from '@/components/ModelSelect';
 
 import { MultipleProvidersModelItem } from '../MultipleProvidersModelItem';
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
+// Preserve the existing isolated submenu contract while targeting its native owner.
+vi.mock('@/components/ui/dropdown-menu', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   DropdownMenuGroup: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DropdownMenuGroupLabel: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuLabel: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DropdownMenuItem: ({ children, onClick }: { children: ReactNode; onClick?: () => void }) => (
-    <button onClick={onClick}>{children}</button>
+    <button type="button" onClick={onClick}>
+      {children}
+    </button>
   ),
-  DropdownMenuItemIcon: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-  DropdownMenuItemLabel: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-  DropdownMenuPopup: ({ children, className }: { children: ReactNode; className?: string }) => (
-    <div className={className}>{children}</div>
-  ),
-  DropdownMenuPortal: ({ children }: { children: ReactNode }) => <>{children}</>,
-  DropdownMenuPositioner: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DropdownMenuSubmenuRoot: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DropdownMenuSubmenuTrigger: ({
+  DropdownMenuSub: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuSubContent: ({
+    children,
+    className,
+  }: {
+    children: ReactNode;
+    className?: string;
+  }) => <div className={className}>{children}</div>,
+  DropdownMenuSubTrigger: ({
     children,
     className,
     onClick,
@@ -34,12 +37,10 @@ vi.mock('@lobehub/ui', async (importOriginal) => ({
       {children}
     </div>
   ),
-  Tooltip: ({ children, title }: { children: ReactNode; title: string }) => (
-    <span data-testid={`tooltip-${title}`}>{children}</span>
-  ),
 }));
 
-vi.mock('@/components/ui/tooltip', () => ({
+vi.mock('@/components/ui/tooltip', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
   TooltipContent: ({ children }: { children: ReactNode }) => (
     <span data-testid={`tooltip-${children}`}>{children}</span>

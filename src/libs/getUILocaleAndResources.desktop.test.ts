@@ -11,12 +11,14 @@ vi.mock('/locales/zh-CN/ui.json', () => {
   return { default: { business: 'localized' } };
 });
 
-vi.mock('@lobehub/ui/es/i18n/resources/index', () => {
+vi.mock('./nativeUIResources', () => {
   moduleEvaluation.builtinResources();
 
   return {
-    en: { app: { builtin: 'English' } },
-    zhCn: { app: { builtin: '中文' } },
+    nativeUIResources: {
+      en: { app: { builtin: 'English' } },
+      zhCn: { app: { builtin: '中文' } },
+    },
   };
 });
 

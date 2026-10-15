@@ -17,14 +17,14 @@ import {
   LinkIcon,
   PresentationIcon,
 } from 'lucide-react';
-import type { ComponentType } from 'react';
+import type { JSXElementConstructor } from 'react';
 
 import { Github } from '@/components/BrandIcons';
 import { mimeTypeMap } from '@/components/FileIcon/config';
 
 import LinearIcon from './icons/LinearIcon';
 
-type WorkIcon = ComponentType<{ className?: string; size?: number }>;
+type WorkIcon = JSXElementConstructor<{ className?: string; size?: number }>;
 
 /**
  * Brand icon per skill provider for the unified `external` Work type. An

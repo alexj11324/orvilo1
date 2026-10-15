@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react';
 
 import { Badge } from '@/components/reui/badge';
 
-import ModelIcon from '../../../../packages/brand-icons/src/features/ModelIcon';
+import ModelIcon from '../../../packages/brand-icons/src/features/ModelIcon';
 
 export interface ModelTagProps extends Omit<ComponentProps<typeof Badge>, 'children'> {
   model: string;

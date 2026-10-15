@@ -11,7 +11,7 @@ const fixturePlugin: Plugin = {
     if (id !== ENTRY_ID) return;
 
     return `
-      import { getLobeIconCDN, MCP } from '../../packages/brand-icons/src';
+      import { getLobeIconCDN, MCP } from '@lobehub/icons';
       export { getLobeIconCDN, MCP };
     `;
   },

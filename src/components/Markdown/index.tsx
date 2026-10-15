@@ -5,7 +5,14 @@ import { code } from '@streamdown/code';
 import { math } from '@streamdown/math';
 import { cn } from 'cn';
 import { useReducedMotion } from 'motion/react';
-import { type ComponentProps, createContext, type CSSProperties, type ReactNode } from 'react';
+import {
+  type ComponentProps,
+  createContext,
+  type CSSProperties,
+  type ReactNode,
+  use,
+  useMemo,
+} from 'react';
 import {
   defaultComponents,
   defaultRemarkPlugins,
@@ -33,6 +40,7 @@ import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import { citationDetail, CitationLink } from './Citation';
+import { markdownComponentAdapters } from './componentAdapters';
 import styles from './markdown.module.css';
 import {
   type CitationItem,
@@ -191,6 +199,12 @@ function NativeLink({ node, ...props }: ComponentProps<'a'> & ExtraProps) {
   );
 }
 
+// Streamdown's default strong owner is a visual span. Preserve Markdown's
+// semantic importance for screen readers and persisted document rendering.
+function NativeStrong({ node: _node, ...props }: ComponentProps<'strong'> & ExtraProps) {
+  return <strong {...props} />;
+}
+
 function NativeSection({ node, ...props }: ComponentProps<'section'> & ExtraProps) {
   const { showFootnotes = true } = use(MarkdownContext);
   if (!showFootnotes && node?.properties.dataFootnotes !== undefined) return null;
@@ -272,6 +286,19 @@ export function Markdown({
     streamAnimationGranularity,
     streamSmoothingPreset,
   );
+  const renderers = useMemo(
+    () =>
+      markdownComponentAdapters({
+        a: NativeLink,
+        img: NativeImage,
+        pre: NativePre,
+        section: NativeSection,
+        strong: NativeStrong,
+        ...(enableGithubAlert ? { aside: NativeGithubAlert } : {}),
+        ...components,
+      }),
+    [components, enableGithubAlert],
+  );
   const rendered = (
     <PreviewGroup enable={enableImageGallery}>
       <div
@@ -306,19 +333,12 @@ export function Markdown({
           <Streamdown
             {...props}
             animated={animated && motionEnabled}
+            components={renderers}
             controls={props.controls ?? { code: true, table: true }}
             isAnimating={active}
             mode={mode ?? (enableStream || streaming || animated ? 'streaming' : 'static')}
             plugins={{ ...plugins, ...props.plugins, math: enableLatex ? math : undefined }}
             skipHtml={props.skipHtml ?? !allowHtml}
-            components={{
-              a: NativeLink,
-              img: NativeImage,
-              pre: NativePre,
-              section: NativeSection,
-              ...(enableGithubAlert ? { aside: NativeGithubAlert } : {}),
-              ...components,
-            }}
             rehypePlugins={nativeRehypePipeline({
               allowHtml,
               allowedTags: {

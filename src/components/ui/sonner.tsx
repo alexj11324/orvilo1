@@ -1,12 +1,21 @@
 'use client';
 
+import { cn } from 'cn';
 import { useTheme } from 'next-themes';
 import { Toaster as SonnerToaster, type ToasterProps } from 'sonner';
 
-function Toaster({ ...props }: ToasterProps) {
+import styles from './sonner.module.css';
+
+function Toaster({ className, ...props }: ToasterProps) {
   const { theme = 'system' } = useTheme();
 
-  return <SonnerToaster theme={theme as ToasterProps['theme']} {...props} />;
+  return (
+    <SonnerToaster
+      className={cn(styles.host, className)}
+      theme={theme as ToasterProps['theme']}
+      {...props}
+    />
+  );
 }
 
 export { Toaster };

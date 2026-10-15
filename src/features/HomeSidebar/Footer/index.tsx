@@ -1,6 +1,5 @@
 'use client';
 
-import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { BRANDING_URL, SOCIAL_URL } from '@orvilo/business-const';
 import {
   Book,
@@ -18,6 +17,7 @@ import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorks
 import ActionIcon from '@/components/ActionIcon';
 import { openChangelogModal } from '@/components/ChangelogModal';
 import { openFeedbackModal } from '@/components/FeedbackModal';
+import { DiscordIcon, GithubIcon } from '@/components/SocialIcons';
 import { GITHUB } from '@/const/url';
 import Billboard from '@/features/Billboard';
 import { useBillboardMenuItems } from '@/features/Billboard/MenuItems';

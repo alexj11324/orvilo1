@@ -4,6 +4,7 @@ import { Avatar as AvatarPrimitive } from '@base-ui/react/avatar';
 import { cn } from 'cn';
 import { type ComponentProps, isValidElement, memo, type ReactNode } from 'react';
 
+import AnimatedEmoji from './AnimatedEmoji';
 import styles from './Avatar.module.css';
 import { remoteAvatarSrc, resolveAvatar } from './fallback';
 import { useBrokenSrc } from './useBrokenSrc';
@@ -70,7 +71,7 @@ export interface AvatarProps extends AvatarRootElementProps {
 const Avatar = memo<AvatarProps>(
   ({
     alt,
-    animation: _animation,
+    animation,
     avatar,
     background,
     bordered: _bordered,
@@ -125,28 +126,31 @@ const Avatar = memo<AvatarProps>(
     } else if (typeof resolved.avatar === 'string' && resolved.avatar) {
       // A non-URL string is either an emoji identity (pages, connectors) or the
       // initials produced by the fallback above.
-      content = EMOJI_RE.test(resolved.avatar) ? (
-        <span
-          aria-label={resolved.avatar}
-          role={'img'}
-          style={{ fontSize: Math.round(numericSize * 0.72), lineHeight: 1 }}
-        >
-          {resolved.avatar}
-        </span>
-      ) : (
-        <span
-          aria-hidden="true"
-          style={{
-            color: 'var(--foreground)',
-            fontSize: style?.fontSize ?? Math.max(9, Math.round(numericSize * 0.38)),
-            fontWeight: 500,
-            lineHeight: style?.lineHeight ?? 1,
-            userSelect: 'none',
-          }}
-        >
-          {resolved.avatar}
-        </span>
-      );
+      content =
+        EMOJI_RE.test(resolved.avatar) && animation ? (
+          <AnimatedEmoji emoji={resolved.avatar} size={numericSize} />
+        ) : EMOJI_RE.test(resolved.avatar) ? (
+          <span
+            aria-label={resolved.avatar}
+            role={'img'}
+            style={{ fontSize: Math.round(numericSize * 0.72), lineHeight: 1 }}
+          >
+            {resolved.avatar}
+          </span>
+        ) : (
+          <span
+            aria-hidden="true"
+            style={{
+              color: 'var(--foreground)',
+              fontSize: style?.fontSize ?? Math.max(9, Math.round(numericSize * 0.38)),
+              fontWeight: 500,
+              lineHeight: style?.lineHeight ?? 1,
+              userSelect: 'none',
+            }}
+          >
+            {resolved.avatar}
+          </span>
+        );
     } else {
       content = children;
     }

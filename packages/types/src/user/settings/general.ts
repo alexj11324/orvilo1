@@ -1,6 +1,10 @@
-import type { HighlighterProps, MermaidProps, NeutralColors, PrimaryColors } from '@lobehub/ui';
-
 import type { ResponseAnimationStyle } from '../../aiProvider';
+import type {
+  UserHighlighterTheme,
+  UserMermaidTheme,
+  UserNeutralColor,
+  UserPrimaryColor,
+} from './theme';
 
 export type AnimationMode = 'disabled' | 'agile' | 'elegant';
 
@@ -28,12 +32,12 @@ export interface UserGeneralConfig {
    */
   expandWorkflowWhileStreaming?: boolean;
   fontSize: number;
-  highlighterTheme?: HighlighterProps['theme'];
+  highlighterTheme?: UserHighlighterTheme;
   isDevMode: boolean;
   isLiteMode: boolean;
-  mermaidTheme?: MermaidProps['theme'];
-  neutralColor?: NeutralColors;
-  primaryColor?: PrimaryColors;
+  mermaidTheme?: UserMermaidTheme;
+  neutralColor?: UserNeutralColor;
+  primaryColor?: UserPrimaryColor;
   responseLanguage?: string;
   telemetry: boolean;
   timezone?: string;

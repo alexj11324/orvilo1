@@ -16,8 +16,7 @@ const sheetHandlers = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
+vi.mock('@/components/FloatingSheet', () => ({
   ActionIcon: ({
     onClick,
     title,

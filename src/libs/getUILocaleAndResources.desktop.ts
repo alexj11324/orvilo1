@@ -27,10 +27,11 @@ const loadBusinessResources = async (locale: string): Promise<UILocaleResources 
 
 const loadOrviloUIBuiltinResources = async (locale: string): Promise<UILocaleResources | null> => {
   try {
-    const { en, zhCn } = await import('@lobehub/ui/es/i18n/resources/index');
+    const { nativeUIResources } = await import('./nativeUIResources');
+    const { en, zhCn } = nativeUIResources;
 
-    if (locale.startsWith('zh')) return zhCn as UILocaleResources;
-    return en as UILocaleResources;
+    if (locale.startsWith('zh')) return normalizeUILocaleResources(zhCn);
+    return normalizeUILocaleResources(en);
   } catch {
     return null;
   }
@@ -55,7 +56,7 @@ export const getUILocaleAndResources = async (
 
   if (!resources)
     throw new Error(
-      `Failed to load UI resources (business + @lobehub/ui builtin) for locale=${normalizedLocale}`,
+      `Failed to load UI resources (business + local UI builtin) for locale=${normalizedLocale}`,
     );
 
   return {

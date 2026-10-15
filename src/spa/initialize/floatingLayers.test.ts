@@ -8,7 +8,7 @@ import {
 
 import { reserveTitleBarForFloatingLayers } from './floatingLayers';
 
-afterEach(() => setFloatingCollisionPadding(undefined));
+afterEach(() => setFloatingCollisionPadding({}));
 
 describe('reserveTitleBarForFloatingLayers', () => {
   it('keeps every base-ui floating layer below the desktop title bar', () => {

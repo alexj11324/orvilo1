@@ -19,32 +19,32 @@ const STATE_META: Record<
   { color: string; icon: typeof CircleCheck; labelKey: string }
 > = {
   conflict: {
-    color: 'var(--ant-color-warning)',
+    color: 'var(--warning)',
     icon: TriangleAlert,
     labelKey: 'taskDetail.linearSync.state.conflict',
   },
   outcome_unknown: {
-    color: 'var(--ant-color-error)',
+    color: 'var(--destructive)',
     icon: CircleX,
     labelKey: 'taskDetail.linearSync.state.outcomeUnknown',
   },
   pending: {
-    color: 'var(--ant-color-warning)',
+    color: 'var(--warning)',
     icon: CircleDashed,
     labelKey: 'taskDetail.linearSync.state.pending',
   },
   removed: {
-    color: 'var(--ant-color-text-tertiary)',
+    color: 'var(--foreground-tertiary)',
     icon: CircleMinus,
     labelKey: 'taskDetail.linearSync.state.removed',
   },
   synced: {
-    color: 'var(--ant-color-success)',
+    color: 'var(--success)',
     icon: CircleCheck,
     labelKey: 'taskDetail.linearSync.state.synced',
   },
   unlinked: {
-    color: 'var(--ant-color-text-tertiary)',
+    color: 'var(--foreground-tertiary)',
     icon: CircleMinus,
     labelKey: 'taskDetail.linearSync.state.unlinked',
   },

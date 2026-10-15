@@ -27,14 +27,14 @@ const ActionIconWithChevron = memo<ActionIconWithChevronProps>(
               size: 18,
               width: 18,
               height: 18,
-              color: 'var(--ant-color-icon)',
+              color: 'var(--foreground-icon)',
               fill: 'transparent',
             })}
           </span>
           <span className="anticon" role="img">
             <ChevronDownIcon
               className="size-3.5"
-              color={'var(--ant-color-icon)'}
+              color={'var(--foreground-icon)'}
               fill={'transparent'}
               height={14}
               size={14}

@@ -57,6 +57,8 @@ beforeEach(() => {
   mock.agentResponse.error = undefined;
   mock.resumedResponse.data = undefined;
   mock.resumedResponse.error = undefined;
+  mock.providerResponse.data = {};
+  mock.providerResponse.error = undefined;
 });
 
 describe('first agent reload after private workspace transfer', () => {
@@ -80,5 +82,19 @@ describe('first agent reload after private workspace transfer', () => {
     expect(gate.ready).toBe(true);
     expect(gate.availability.usable).toBe(true);
     expect(mock.resumed).toHaveBeenCalledWith(false, 'first-agent', 'created-workspace');
+  });
+  it('confirms a connected CLI agent even when the provider-binding probe fails', () => {
+    mock.agents = [{ id: 'existing-agent', heterogeneousType: 'codex' }];
+    mock.providerResponse.data = undefined;
+    mock.providerResponse.error = new Error('provider bindings failed');
+    const gate = renderHook(useAgentAvailability).result.current;
+    expect(gate.error).toBeDefined();
+    expect(gate.ready).toBe(false);
+    expect(gate.confirmedUsable).toBe(true);
+  });
+  it('does not confirm an account with no agent when a probe fails', () => {
+    mock.providerResponse.data = undefined;
+    mock.providerResponse.error = new Error('provider bindings failed');
+    expect(renderHook(useAgentAvailability).result.current.confirmedUsable).toBe(false);
   });
 });

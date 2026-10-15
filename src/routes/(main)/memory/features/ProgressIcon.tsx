@@ -22,7 +22,7 @@ const ProgressIcon = memo<ProgressIconProps>(({ showInfo, format, percent }) => 
         <span
           key={i}
           style={{
-            background: i < filled ? 'var(--ant-color-primary)' : 'var(--ant-color-fill-tertiary)',
+            background: i < filled ? 'var(--primary)' : 'var(--muted)',
             borderRadius: 1,
             flex: 1,
             height: '100%',
@@ -36,7 +36,7 @@ const ProgressIcon = memo<ProgressIconProps>(({ showInfo, format, percent }) => 
     return (
       <div className="flex items-center gap-2">
         <div style={{ width: 24 }}>{content}</div>
-        <div className="text-xs" style={{ color: 'var(--ant-color-text-secondary)' }}>
+        <div className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
           {format?.(percent)}
         </div>
       </div>

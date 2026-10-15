@@ -90,7 +90,7 @@ export const useAssigneeMenuItems = (
       {
         disabled,
         extra: renderMenuCheck(!currentUserId),
-        icon: <UserRoundX size={16} style={{ color: 'var(--ant-color-text-description)' }} />,
+        icon: <UserRoundX size={16} style={{ color: 'var(--foreground-description)' }} />,
         key: 'assignee:unassigned',
         label: t('taskList.unassigned'),
         onClick: ({ domEvent }: MenuInfo) => {

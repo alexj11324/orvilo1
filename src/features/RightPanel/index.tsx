@@ -56,7 +56,7 @@ const RightPanel = memo<RightPanelProps>(
 
     return (
       <DraggablePanel
-        backgroundColor={'var(--ant-color-bg-container)'}
+        backgroundColor={'var(--card)'}
         expand={expand}
         expandable={false}
         maxWidth={maxWidth}

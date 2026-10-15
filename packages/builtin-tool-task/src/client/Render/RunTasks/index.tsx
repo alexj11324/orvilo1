@@ -42,7 +42,7 @@ export const RunTasksRender = memo<BuiltinRenderProps<RunTasksParams, RunTasksSt
         style={{
           background: 'var(--card)',
           border: '1px solid var(--sidebar-border)',
-          borderRadius: 'var(--ant-border-radius)',
+          borderRadius: 'var(--radius-card)',
           width: '100%',
         }}
       >

@@ -25,7 +25,7 @@ export const resolveAcceptanceVerdictMeta = (
 ): AcceptanceVerdictMeta => {
   if (status === 'repairing') {
     return {
-      bg: 'var(--ant-color-warning-bg)',
+      bg: 'var(--warning-wash)',
       color: 'var(--warning)',
       icon: RefreshCw,
       label: t('acceptance.status.repairing'),
@@ -34,7 +34,7 @@ export const resolveAcceptanceVerdictMeta = (
   }
   if (status === 'pending' || status === 'planned' || status === 'verifying') {
     return {
-      bg: 'var(--ant-color-info-bg)',
+      bg: 'var(--info-wash)',
       color: 'var(--info)',
       icon: Loader2,
       label: t(`acceptance.status.${status}`),
@@ -43,7 +43,7 @@ export const resolveAcceptanceVerdictMeta = (
   }
   if (status === 'accepted') {
     return {
-      bg: 'var(--ant-color-success-bg)',
+      bg: 'var(--success-wash)',
       color: 'var(--success)',
       icon: BadgeCheck,
       label: t('acceptance.status.accepted'),
@@ -59,7 +59,7 @@ export const resolveAcceptanceVerdictMeta = (
   }
   if (status === 'rejected') {
     return {
-      bg: 'var(--ant-color-error-bg)',
+      bg: 'var(--destructive-wash)',
       color: 'var(--destructive)',
       icon: RotateCcw,
       label: t('acceptance.status.rejected'),
@@ -67,14 +67,14 @@ export const resolveAcceptanceVerdictMeta = (
   }
   if (status === 'errored') {
     return {
-      bg: 'var(--ant-color-warning-bg)',
+      bg: 'var(--warning-wash)',
       color: 'var(--warning)',
       icon: HelpCircle,
       label: t('acceptance.status.errored'),
     };
   }
   return {
-    bg: 'var(--ant-color-info-bg)',
+    bg: 'var(--info-wash)',
     color: 'var(--info)',
     icon: CircleDashed,
     label: t('acceptance.verdict.inProgress'),

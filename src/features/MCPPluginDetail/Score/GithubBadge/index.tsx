@@ -71,7 +71,7 @@ const GithubBadge = memo(() => {
       />
       <div className="flex flex-row items-center gap-2">
         <Separator className="flex-1" />
-        <span style={{ color: 'var(--ant-color-text-description)', fontSize: 12 }}>OR</span>
+        <span style={{ color: 'var(--foreground-description)', fontSize: 12 }}>OR</span>
         <Separator className="flex-1" />
       </div>
       <div className="flex items-center gap-2">

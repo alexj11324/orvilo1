@@ -29,7 +29,7 @@ const ListViewSkeleton = ({
           className="flex flex-row items-center h-12 px-2"
           key={index}
           style={{
-            background: index % 2 === 0 ? 'var(--ant-color-fill-quaternary)' : 'transparent',
+            background: index % 2 === 0 ? 'var(--fill-quaternary)' : 'transparent',
             borderBlockEnd: `1px solid var(--sidebar-border)`,
             minWidth: getListViewMinWidth(showUploader),
             opacity: getOpacity(index),

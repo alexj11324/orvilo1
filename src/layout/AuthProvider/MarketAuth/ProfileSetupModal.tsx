@@ -66,7 +66,7 @@ const CountedInput = ({ maxLength, prefix, ...rest }: CountedControlProps) => (
     {prefix && (
       <span
         style={{
-          color: 'var(--ant-color-text-secondary)',
+          color: 'var(--muted-foreground)',
           left: 8,
           position: 'absolute',
           top: '50%',
@@ -80,7 +80,7 @@ const CountedInput = ({ maxLength, prefix, ...rest }: CountedControlProps) => (
     {maxLength !== undefined && (
       <span
         style={{
-          color: 'var(--ant-color-text-secondary)',
+          color: 'var(--muted-foreground)',
           fontSize: 12,
           position: 'absolute',
           right: 8,
@@ -100,7 +100,7 @@ const CountedTextArea = ({ maxLength, prefix: _prefix, ...rest }: CountedControl
     {maxLength !== undefined && (
       <span
         style={{
-          color: 'var(--ant-color-text-secondary)',
+          color: 'var(--muted-foreground)',
           fontSize: 12,
           position: 'absolute',
           right: 8,
@@ -535,11 +535,11 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                   >
                     <div
                       style={{
-                        backgroundColor: bannerUrl ? undefined : 'var(--ant-color-fill-tertiary)',
+                        backgroundColor: bannerUrl ? undefined : 'var(--muted)',
                         backgroundImage: bannerUrl ? `url(${bannerUrl})` : undefined,
                         backgroundPosition: 'center',
                         backgroundSize: 'cover',
-                        borderRadius: 'var(--ant-border-radius-lg)',
+                        borderRadius: 'var(--radius-overlay)',
                         cursor: 'pointer',
                         height: 120,
                         overflow: 'hidden',
@@ -567,12 +567,12 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                           <ImagePlus
                             size={24}
                             style={{
-                              color: bannerUrl ? '#fff' : 'var(--ant-color-text-secondary)',
+                              color: bannerUrl ? '#fff' : 'var(--muted-foreground)',
                             }}
                           />
                           <div
                             style={{
-                              color: bannerUrl ? '#fff' : 'var(--ant-color-text-secondary)',
+                              color: bannerUrl ? '#fff' : 'var(--muted-foreground)',
                               fontSize: 12,
                             }}
                           >
@@ -590,7 +590,7 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                         {...clickableProps()}
                         className={CLICKABLE_FOCUS_RING}
                         style={{
-                          color: 'var(--ant-color-error)',
+                          color: 'var(--destructive)',
                           cursor: 'pointer',
                           fontSize: 12,
                         }}

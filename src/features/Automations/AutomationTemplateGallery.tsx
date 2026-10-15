@@ -63,7 +63,7 @@ const AutomationTemplateGallery = memo<AutomationTemplateGalleryProps>(
         ) : (
           <div className="flex flex-col items-center gap-1" style={{ textAlign: 'center' }}>
             <div className="flex items-center justify-center h-10 w-10">
-              <AlarmClockIcon color={'var(--ant-color-text-quaternary)'} size={40} />
+              <AlarmClockIcon color={'var(--foreground-quaternary)'} size={40} />
             </div>
             <div className="text-base font-semibold">{t('page.empty.title')}</div>
             <div

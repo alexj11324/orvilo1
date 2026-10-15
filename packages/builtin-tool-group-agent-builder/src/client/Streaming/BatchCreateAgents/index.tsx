@@ -26,7 +26,7 @@ export const BatchCreateAgentsStreaming = memo<BuiltinStreamingProps<BatchCreate
     if (!agents || agents.length === 0) return null;
 
     return (
-      <div className="w-full rounded-(--ant-border-radius) border border-sidebar-border bg-card">
+      <div className="w-full rounded-(--radius-card) border border-sidebar-border bg-card">
         {agents.map((agent, index) => (
           <div className={cn('flex', 'items-start', 'gap-2', styles.item)} key={index}>
             <div className={styles.index}>{index + 1}.</div>

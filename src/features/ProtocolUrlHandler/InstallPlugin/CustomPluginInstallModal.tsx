@@ -195,8 +195,8 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
           <div
             className="flex gap-4 justify-between p-4 border"
             style={{
-              borderColor: 'var(--ant-color-border-secondary)',
-              background: 'var(--ant-color-bg-container)',
+              borderColor: 'var(--divider)',
+              background: 'var(--card)',
             }}
           >
             <div className="flex gap-4">

@@ -21,7 +21,7 @@ const Resources = memo<{ mode?: ModeType }>(({ mode }) => {
       className="flex flex-col"
       style={{
         border: `1px solid var(--border)`,
-        borderRadius: 'var(--ant-border-radius-lg)',
+        borderRadius: 'var(--radius-overlay)',
         overflow: 'hidden',
       }}
     >
@@ -34,7 +34,7 @@ const Resources = memo<{ mode?: ModeType }>(({ mode }) => {
             dataIndex: 'name',
             key: 'name',
             render: (text) => (
-              <span className={styles.code} style={{ color: 'var(--ant-gold)' }}>
+              <span className={styles.code} style={{ color: 'var(--palette-gold-6)' }}>
                 {text}
               </span>
             ),

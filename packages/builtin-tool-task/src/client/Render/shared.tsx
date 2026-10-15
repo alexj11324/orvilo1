@@ -90,7 +90,7 @@ export const TaskResultCard = memo<TaskResultCardProps>(
         style={{
           background: 'var(--card)',
           border: '1px solid var(--sidebar-border)',
-          borderRadius: 'var(--ant-border-radius)',
+          borderRadius: 'var(--radius-card)',
           width: '100%',
         }}
         onClick={canOpen ? open : undefined}

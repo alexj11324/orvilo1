@@ -40,7 +40,7 @@ const LibraryStatusIcon = memo<LibraryStatusIconProps>(
     if (variant === 'private') {
       return createElement(LockIcon, {
         size: 16,
-        style: { color: color ?? 'var(--ant-color-text-description)' },
+        style: { color: color ?? 'var(--foreground-description)' },
       });
     }
     if (variant === 'restricted') return <LockedLibIcon color={color} size={size} />;

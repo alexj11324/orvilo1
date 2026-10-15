@@ -150,7 +150,7 @@ const Conversation = memo(() => {
         <div className="flex items-center justify-center py-1.5 px-4">
           <span
             style={{
-              color: 'var(--ant-color-text-description)',
+              color: 'var(--foreground-description)',
               fontSize: 12,
               textAlign: 'center',
             }}

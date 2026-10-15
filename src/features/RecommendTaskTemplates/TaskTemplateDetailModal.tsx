@@ -62,7 +62,7 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
               <div className="flex flex-row items-center gap-1">
                 <span className="anticon" role="img">
                   <Clock
-                    color={'var(--ant-color-text-secondary)'}
+                    color={'var(--muted-foreground)'}
                     fill={'transparent'}
                     height={12}
                     size={12}

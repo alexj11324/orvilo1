@@ -8,8 +8,8 @@ interface LibIconProps {
 const LibIcon = memo<LibIconProps>(({ color, size = 20 }) => {
   return createElement(FolderIcon, {
     size,
-    fill: 'var(--ant-geekblue-3)',
-    style: { color: color ?? 'var(--ant-geekblue)' },
+    fill: 'var(--palette-geekblue-3)',
+    style: { color: color ?? 'var(--palette-geekblue-6)' },
   });
 });
 

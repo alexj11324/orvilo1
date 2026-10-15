@@ -30,15 +30,12 @@ export const TaskAcceptanceHeader = memo<TaskAcceptanceHeaderProps>(
         style={{ cursor: 'pointer', width: 'fit-content' }}
         {...pressableProps(onToggle)}
       >
-        <ShieldCheck color={'var(--ant-color-text-description)'} size={16} />
-        <div className="text-sm font-medium" style={{ color: 'var(--ant-color-text-secondary)' }}>
+        <ShieldCheck color={'var(--foreground-description)'} size={16} />
+        <div className="text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>
           {t('taskDetail.acceptance.title')}
         </div>
         {Boolean(count) && <Tag size="sm">{count}</Tag>}
-        <AccordionArrowIcon
-          isOpen={isOpen}
-          style={{ color: 'var(--ant-color-text-description)' }}
-        />
+        <AccordionArrowIcon isOpen={isOpen} style={{ color: 'var(--foreground-description)' }} />
       </div>
     );
 

@@ -35,7 +35,7 @@ const TaskDetailSectionHeader = memo<TaskDetailSectionHeaderProps>(
           variant="ghost"
           onClick={onToggle}
         >
-          <Icon aria-hidden color={'var(--ant-color-text-description)'} size={16} />
+          <Icon aria-hidden color={'var(--foreground-description)'} size={16} />
           <span>{title}</span>
           {typeof count === 'number' && (
             <span className="text-xs font-normal text-muted-foreground tabular-nums">{count}</span>
@@ -43,7 +43,7 @@ const TaskDetailSectionHeader = memo<TaskDetailSectionHeaderProps>(
           <AccordionArrowIcon
             aria-hidden
             isOpen={open}
-            style={{ color: 'var(--ant-color-text-description)' }}
+            style={{ color: 'var(--foreground-description)' }}
           />
         </Button>
         {trailing}

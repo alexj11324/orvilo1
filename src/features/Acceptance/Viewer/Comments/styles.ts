@@ -5,19 +5,19 @@ export const TIMELINE_NODE = 32;
 // The tail's repeated selector outranks the first/last-entry truncation.
 export const styles = {
   body: 'min-h-20 py-3 px-3.5 text-sm leading-[1.7] wrap-anywhere whitespace-pre-wrap',
-  box: 'relative flex-1 min-w-0 border border-sidebar-border rounded-(--ant-border-radius) bg-card',
-  boxSelf: 'border-[color-mix(in_srgb,var(--ant-color-info-border)_45%,transparent)]',
-  boxHeader: 'py-2 px-3.5 rounded-ss-(--ant-border-radius) rounded-se-(--ant-border-radius)',
+  box: 'relative flex-1 min-w-0 border border-sidebar-border rounded-(--radius-card) bg-card',
+  boxSelf: 'border-[color-mix(in_srgb,var(--info-border)_45%,transparent)]',
+  boxHeader: 'py-2 px-3.5 rounded-ss-(--radius-card) rounded-se-(--radius-card)',
   boxAnchored: 'outline-2 outline-solid outline-info-border outline-offset-2',
   attachments: 'pt-2.5',
-  composerBlock: 'relative p-3 border border-sidebar-border rounded-(--ant-border-radius) bg-card',
+  composerBlock: 'relative p-3 border border-sidebar-border rounded-(--radius-card) bg-card',
   deleted: 'italic text-foreground-tertiary',
   event: 'py-0.5 text-(length:--text-dense) text-muted-foreground',
   eventDot:
     'relative inline-flex flex-none items-center justify-center size-5 border border-sidebar-border rounded-[50%] text-foreground-tertiary bg-popover',
   meta: 'flex-none text-xs text-foreground-tertiary',
   timeLink:
-    'cursor-pointer p-0 border-none bg-none bg-transparent transition-colors duration-(--ant-motion-duration-fast) ease-[ease] hover:text-foreground hover:underline',
+    'cursor-pointer p-0 border-none bg-none bg-transparent transition-colors duration-(--orvilo-motion-fast) ease-[ease] hover:text-foreground hover:underline',
   panelBody: 'pt-1.5 text-(length:--text-dense) leading-[1.65] wrap-anywhere whitespace-pre-wrap',
   panelActions: '-mb-1 pt-2.5',
   panelReply: 'pt-2.5',
@@ -27,7 +27,7 @@ export const styles = {
   authorName: 'truncate flex-none max-w-45',
   headline: 'min-w-0',
   rowActions:
-    'flex-none ms-auto opacity-0 transition-opacity duration-(--ant-motion-duration-fast) ease-[ease] [@media(hover:none)]:opacity-100',
+    'flex-none ms-auto opacity-0 transition-opacity duration-(--orvilo-motion-fast) ease-[ease] [@media(hover:none)]:opacity-100',
   nodelessEntry: 'ps-11',
   eventEntry: 'ps-13.25',
   tailEntry: '[&&&]:before:[inset-block:0_14px] [&&&]:before:h-auto',

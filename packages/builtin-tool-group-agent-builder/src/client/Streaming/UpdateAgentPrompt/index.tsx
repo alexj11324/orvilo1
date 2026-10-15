@@ -13,7 +13,7 @@ export const UpdateAgentPromptStreaming = memo<BuiltinStreamingProps<UpdateAgent
     if (!prompt) return null;
 
     return (
-      <div className="w-full rounded-(--ant-border-radius) border border-sidebar-border bg-card px-3 py-2">
+      <div className="w-full rounded-(--radius-card) border border-sidebar-border bg-card px-3 py-2">
         <Markdown animated variant={'chat'}>
           {prompt}
         </Markdown>

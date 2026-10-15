@@ -14,7 +14,7 @@ export const UnassignedAssigneeIcon = memo<UnassignedAssigneeIconProps>(({ kind,
       aria-hidden
       className="flex flex-col items-center justify-center"
       style={{
-        color: 'var(--ant-color-text-description)',
+        color: 'var(--foreground-description)',
         flexShrink: 0,
         height: size,
         position: 'relative',

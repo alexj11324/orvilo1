@@ -56,7 +56,7 @@ export const QueryTaxonomyOptionsInspector = memo<
         ) : (
           <span
             className="text-xs"
-            style={{ marginInlineStart: 4, color: 'var(--ant-color-text-description)' }}
+            style={{ marginInlineStart: 4, color: 'var(--foreground-description)' }}
           >
             ({t('builtins.orvilo-user-memory.inspector.noResults')})
           </span>

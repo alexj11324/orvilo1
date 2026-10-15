@@ -43,7 +43,7 @@ const ScheduledRunFooter = memo<ScheduledRunFooterProps>(({ id }) => {
 
   return (
     <div className="flex items-center gap-1 justify-end py-1">
-      <ClockIcon size={14} style={{ color: 'var(--ant-color-text-quaternary)' }} />
+      <ClockIcon size={14} style={{ color: 'var(--foreground-quaternary)' }} />
       <div className="text-muted-foreground" style={{ fontSize: 12 }}>
         {t('input.schedule.pending', { time: formatAbsoluteDateTime(runAt) })}
       </div>

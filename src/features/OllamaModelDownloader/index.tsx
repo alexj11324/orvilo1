@@ -60,7 +60,7 @@ const OllamaModelDownloader = memo<OllamaModelDownloaderProps>(
     return (
       <Center gap={16} paddingBlock={32} style={{ width: '100%' }}>
         <FormAction
-          avatar={<Ollama color={'var(--ant-color-primary)'} size={64} />}
+          avatar={<Ollama color={'var(--primary)'} size={64} />}
           description={isDownloading ? t('ollama.download.desc') : t('ollama.unlock.description')}
           title={
             isDownloading
@@ -79,11 +79,11 @@ const OllamaModelDownloader = memo<OllamaModelDownloaderProps>(
         </FormAction>
         {isDownloading && (
           <Flexbox flex={1} gap={8} style={{ maxWidth: 300 }} width={'100%'}>
-            <Progress showInfo percent={percent} strokeColor={'var(--ant-color-success)'} />
+            <Progress showInfo percent={percent} strokeColor={'var(--success)'} />
             <Flexbox
               horizontal
               distribution={'space-between'}
-              style={{ color: 'var(--ant-color-text-description)', fontSize: 12 }}
+              style={{ color: 'var(--foreground-description)', fontSize: 12 }}
             >
               <span>
                 {t('ollama.download.remainingTime')}: {remainingTime}

@@ -213,9 +213,9 @@ const InlineToolbar = memo<InlineToolbarProps>(
       <div
         className={cn('flex flex-col p-1 shadow-md', className)}
         style={{
-          border: `1px solid ${'var(--ant-color-border)'}`,
+          border: `1px solid ${'var(--border)'}`,
 
-          background: 'var(--ant-color-bg-elevated)',
+          background: 'var(--popover)',
           borderRadius: 8,
           marginBottom: 16,
           marginTop: 16,

@@ -12,7 +12,7 @@ import GoalStatusGlyph from './GoalStatusGlyph';
 import type { GoalItemProps } from './types';
 
 const styles = {
-  card: 'min-w-0 [transition:border-color_0.2s_var(--ant-motion-ease-out),background_0.2s_var(--ant-motion-ease-out),transform_0.2s_var(--ant-motion-ease-out)] hover:[transform:translateY(-1px)] hover:border-primary-border hover:bg-fill-quaternary',
+  card: 'min-w-0 [transition:border-color_0.2s_var(--orvilo-motion-ease-out),background_0.2s_var(--orvilo-motion-ease-out),transform_0.2s_var(--orvilo-motion-ease-out)] hover:[transform:translateY(-1px)] hover:border-primary-border hover:bg-fill-quaternary',
 };
 
 export const GoalCardItem = memo<GoalItemProps>(({ goal: item }) => {
@@ -51,7 +51,7 @@ export const GoalCardItem = memo<GoalItemProps>(({ goal: item }) => {
             <div className="truncate min-w-0 text-xs text-muted-foreground">{goal.requirement}</div>
           )}
         </div>
-        <ArrowRightIcon color={'var(--ant-color-text-quaternary)'} size={16} />
+        <ArrowRightIcon color={'var(--foreground-quaternary)'} size={16} />
       </div>
       <GoalProgress
         findingCount={item.findingCount}

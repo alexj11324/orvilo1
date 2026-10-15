@@ -40,7 +40,7 @@ export const FormAction = memo<
         <Avatar
           animation={animation}
           avatar={avatar}
-          background={background ?? 'var(--ant-color-fill-content)'}
+          background={background ?? 'var(--fill-content)'}
           size={80}
         />
         <div className="flex flex-col gap-2 w-full">

@@ -1,12 +1,12 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { agentDisplayName } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
+import { Markdown } from '@/components/Markdown';
 import { Skeleton } from '@/components/ui/skeleton';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';
 import { useAgentStore } from '@/store/agent';

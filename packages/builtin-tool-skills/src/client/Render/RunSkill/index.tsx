@@ -1,10 +1,10 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { type BuiltinRenderProps } from '@orvilo/types';
 import { cn } from 'cn';
 import { memo } from 'react';
 
+import { Markdown } from '@/components/Markdown';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 import type { ActivateSkillParams, ActivateSkillState } from '../../../types';

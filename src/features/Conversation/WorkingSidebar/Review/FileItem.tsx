@@ -1,5 +1,4 @@
 'use client';
-import { PatchDiff } from '@lobehub/ui';
 import type { GitFileDiffStatus } from '@orvilo/electron-client-ipc';
 import { nanoid } from '@orvilo/utils';
 import { cn } from 'cn';
@@ -10,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { confirmModal } from '@/components/Modal';
+import PatchDiff from '@/components/PatchDiff';
 import { toast } from '@/components/toast';
 import { gitService } from '@/services/git';
 import { useFileStore } from '@/store/file';
@@ -34,73 +34,6 @@ const styles = {
   pathWrapper: 'overflow-hidden flex [flex:0_1_auto] min-w-0',
   stats: 'flex-none font-mono text-xs leading-5 tabular-nums',
 };
-
-const reviewDiffUnsafeCSS = `
-  :host {
-    --diffs-dark-bg: transparent;
-    --diffs-light-bg: transparent;
-    --diffs-gap-fallback: 8px;
-    --diffs-font-family: var(--font-mono);
-    --diffs-header-font-family: var(--font-sans);
-    --diffs-font-size: var(--text-sm);
-    --diffs-line-height: calc(var(--spacing) * 5.5);
-    --diffs-added-light: var(--success-hover);
-    --diffs-added-dark: var(--success-border-hover);
-    --diffs-modified-light: var(--info-hover);
-    --diffs-modified-dark: var(--info-border-hover);
-    --diffs-deleted-light: var(--destructive-hover);
-    --diffs-deleted-dark: var(--destructive-border-hover);
-  }
-
-  [data-gutter-buffer] {
-    opacity: 0.2;
-  }
-
-  [data-code] {
-    padding-top: 0;
-    padding-bottom: 0;
-  }
-
-  [data-gutter] {
-    backdrop-filter: blur(16px);
-  }
-
-  [data-gutter-utility-slot] [data-utility-button] {
-    width: calc(var(--spacing) * 8);
-    min-width: calc(var(--spacing) * 8);
-    height: calc(var(--spacing) * 8);
-    margin-right: calc(1ch + 1px - var(--spacing) * 4);
-    border: 1px solid var(--primary);
-    border-radius: var(--radius-button);
-    background: var(--primary);
-    color: var(--primary-on-fill);
-    fill: currentColor;
-    box-shadow: none;
-  }
-
-  [data-gutter-utility-slot] [data-utility-button]:is(:hover, :focus-visible, :active) {
-    border-color: var(--primary-hover);
-    background: var(--primary-hover);
-    color: var(--primary-hover-foreground);
-    fill: currentColor;
-  }
-
-  [data-gutter-utility-slot] [data-utility-button]:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 2px;
-  }
-
-  [data-gutter-utility-slot] [data-utility-button] [data-icon] {
-    width: calc(var(--spacing) * 4);
-    height: calc(var(--spacing) * 4);
-  }
-
-  @media (pointer: coarse) {
-    [data-gutter-utility-slot] [data-utility-button]::before {
-      inset: calc(var(--spacing) * -1.5);
-    }
-  }
-`;
 
 interface FileItemHeaderProps {
   additions: number;
@@ -302,7 +235,6 @@ const FileItemBody = memo<FileItemBodyProps>(
           toast.success(t('workingPanel.review.addSelectionToContext.success'));
         },
         overflow: wordWrap ? ('wrap' as const) : ('scroll' as const),
-        unsafeCSS: reviewDiffUnsafeCSS,
       }),
       [
         addChatContextSelection,

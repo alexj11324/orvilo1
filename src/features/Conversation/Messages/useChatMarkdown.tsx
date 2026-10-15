@@ -1,9 +1,9 @@
 'use client';
 
-import { type MarkdownProps } from '@lobehub/ui';
 import { type ReactNode, useMemo, useState } from 'react';
 
 import { HtmlPreviewDrawer } from '@/components/HtmlPreview';
+import { type MarkdownProps } from '@/components/Markdown';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 

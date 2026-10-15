@@ -1,12 +1,12 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { cn } from 'cn';
 import { FileTextIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import CopyButton from '@/components/CopyButton';
+import { Markdown } from '@/components/Markdown';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TooltipProvider } from '@/components/ui/tooltip';
 

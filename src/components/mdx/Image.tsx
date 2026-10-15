@@ -1,8 +1,9 @@
 'use server';
 
-import { Image } from '@lobehub/ui/mdx';
 import { getPlaiceholder } from 'plaiceholder';
 import { type FC } from 'react';
+
+import Image from './Image.vite';
 
 const DEFAULT_WIDTH = 800;
 
@@ -29,12 +30,10 @@ const ImageWrapper: FC<{ alt: string; src: string }> = async ({ alt, src, ...res
         height={height}
         src={src}
         width={DEFAULT_WIDTH}
-        styles={{
-          wrapper: {
-            backgroundImage: `url(${base64})`,
-            backgroundPosition: 'center',
-            backgroundSize: 'cover',
-          },
+        style={{
+          backgroundImage: `url(${base64})`,
+          backgroundPosition: 'center',
+          backgroundSize: 'cover',
         }}
       />
     );

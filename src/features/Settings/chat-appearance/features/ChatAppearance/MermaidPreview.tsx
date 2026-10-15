@@ -1,5 +1,4 @@
-import { type MermaidProps } from '@lobehub/ui';
-import { Mermaid } from '@lobehub/ui';
+import { Mermaid } from '@/components/Markdown';
 
 const code = `sequenceDiagram
     Alice->>John: Hello John, how are you?
@@ -7,7 +6,7 @@ const code = `sequenceDiagram
     Alice-)John: See you later!
 `;
 
-const MermaidPreview = ({ theme }: { theme?: MermaidProps['theme'] }) => {
+const MermaidPreview = ({ theme }: { theme?: string }) => {
   return (
     <div
       className={'flex min-w-0'}

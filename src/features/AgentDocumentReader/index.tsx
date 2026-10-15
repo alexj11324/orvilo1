@@ -1,6 +1,5 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { cn } from 'cn';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { memo } from 'react';
@@ -9,6 +8,7 @@ import useSWR from 'swr';
 
 import ActionIcon from '@/components/ActionIcon';
 import ContentLoading from '@/components/Loading/ContentLoading';
+import { Markdown } from '@/components/Markdown';
 import { Button } from '@/components/ui/button';
 import { agentDocumentService, agentDocumentSWRKeys } from '@/services/agentDocument';
 

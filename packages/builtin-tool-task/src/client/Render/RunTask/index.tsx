@@ -1,10 +1,11 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { Play } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Markdown } from '@/components/Markdown';
 
 import type { RunTaskParams, RunTaskState } from '../../../types';
 import { InlineField, monoChipClassName, SectionField, TaskResultCard } from '../shared';

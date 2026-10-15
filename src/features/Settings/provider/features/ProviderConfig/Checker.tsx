@@ -1,6 +1,5 @@
 'use client';
 
-import { Highlighter } from '@lobehub/ui';
 import { type ChatMessageError } from '@orvilo/types';
 import { TraceNameMap } from '@orvilo/types';
 import { isRecord, pickTrimmedString } from '@orvilo/utils/object';
@@ -14,6 +13,7 @@ import { Badge } from '@/components/reui/badge';
 import Select from '@/components/Select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
 import { usePermission } from '@/hooks/usePermission';
 import { useProviderName } from '@/hooks/useProviderName';
 import { chatService } from '@/services/chat';
@@ -38,9 +38,14 @@ const Error = memo<{ error: ChatMessageError }>(({ error }) => {
         {getRuntimeErrorMessage(t, error.type, { provider: providerName }, fallbackMessage)}
       </AlertTitle>
       <AlertDescription className="w-full pt-2">
-        <Highlighter actionIconSize={'small'} language={'json'} variant={'borderless'} wrap={true}>
-          {JSON.stringify(error.body || error, null, 2)}
-        </Highlighter>
+        <CodeBlock
+          defaultWrap
+          code={JSON.stringify(error.body || error, null, 2)}
+          language="json"
+          variant="ghost"
+        >
+          <CodeBlockCopyButton />
+        </CodeBlock>
       </AlertDescription>
     </Alert>
   );

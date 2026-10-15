@@ -1,9 +1,9 @@
-import { Markdown } from '@lobehub/ui';
 import { cn } from 'cn';
 import { ScrollText } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { ModelTag } from '@/components/OrviloIcons';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';
 import { useAgentStore } from '@/store/agent/store';

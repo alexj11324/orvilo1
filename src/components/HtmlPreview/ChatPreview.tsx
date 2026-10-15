@@ -1,10 +1,8 @@
 'use client';
 
-import type { HtmlPreview } from '@lobehub/ui';
 import { extractHtmlTitle } from '@orvilo/html-artifact';
 import { exportFile } from '@orvilo/utils/client';
 import { Code2, Download, Eye, Maximize2, RotateCw } from 'lucide-react';
-import type { ComponentProps } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -15,13 +13,13 @@ import {
 } from '@/components/ai-elements/web-preview';
 import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
 
-import InlineHtmlPreview from './InlinePreview';
+import InlineHtmlPreview, { type HtmlPreviewOptions } from './InlinePreview';
 import HtmlPreviewDrawer from './PreviewDrawer';
 
 interface ChatHtmlPreviewProps {
   animated?: boolean;
   content: string;
-  previewProps?: Omit<ComponentProps<typeof HtmlPreview>, 'children'>;
+  previewProps?: HtmlPreviewOptions;
 }
 
 /** Official WebPreview chrome around the existing isolated streaming HTML engine. */

@@ -1,4 +1,3 @@
-import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import {
   ChevronDown,
@@ -21,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
 import CollapsibleContent from '@/components/CollapsibleContent';
+import { Markdown } from '@/components/Markdown';
 import { confirmModal } from '@/components/Modal';
 import { Badge as Tag } from '@/components/reui/badge';
 import { toast } from '@/components/toast';

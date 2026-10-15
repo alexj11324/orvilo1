@@ -1,6 +1,6 @@
-import { Markdown } from '@lobehub/ui';
 import { memo } from 'react';
 
+import { Markdown } from '@/components/Markdown';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
 import { styles } from '../style';

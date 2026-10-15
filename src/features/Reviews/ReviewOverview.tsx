@@ -1,4 +1,3 @@
-import { Markdown } from '@lobehub/ui';
 import { clsx, cn } from 'cn';
 // GitHub check status is separate from Orvilo task and issue workflow status.
 /* eslint-disable @typescript-eslint/no-restricted-imports */
@@ -16,6 +15,7 @@ import { createElement, memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Markdown } from '@/components/Markdown';
 import { Button } from '@/components/ui/button';
 
 import { checkSummaryVisual } from './ReviewChecksPanel';

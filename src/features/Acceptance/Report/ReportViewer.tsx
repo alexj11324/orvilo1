@@ -1,6 +1,6 @@
 'use client';
 
-import { Image, Markdown } from '@lobehub/ui';
+import { Image } from '@lobehub/ui';
 import type {
   VerifyAgentPlanConfig,
   VerifyCheckItem,
@@ -43,6 +43,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import Loading from '@/components/Loading/BrandTextLoading';
+import { Markdown } from '@/components/Markdown';
 import { Button } from '@/components/ui/button';
 import {
   Empty,

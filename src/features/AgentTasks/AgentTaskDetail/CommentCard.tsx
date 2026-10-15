@@ -1,6 +1,5 @@
 import { useEditor } from '@lobehub/editor/react';
 import { LexicalRenderer } from '@lobehub/editor/renderer';
-import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { CornerDownRight, Link2, MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -9,6 +8,7 @@ import { useLocation, useNavigate } from 'react-router';
 
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
+import { Markdown } from '@/components/Markdown';
 import { confirmModal } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import {

@@ -12,7 +12,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { MAX_WIDTH } from '@/const/layoutTokens';
 
-const Highlighter = lazy(() => import('@lobehub/ui/es/Highlighter/index'));
+const StackTrace = lazy(() =>
+  import('@/components/ui/code-block').then(({ CodeBlock, CodeBlockCopyButton }) => ({
+    default: ({ code }: { code: string }) => (
+      <CodeBlock code={code} language="text" variant="ghost">
+        <CodeBlockCopyButton />
+      </CodeBlock>
+    ),
+  })),
+);
 
 export type ErrorType = Error & { digest?: string };
 
@@ -77,9 +85,7 @@ const ErrorCapture = ({ error, resetPath = '/' }: ErrorCaptureProps) => {
               <AccordionTrigger>{t('error.stack')}</AccordionTrigger>
               <AccordionContent>
                 <Suspense fallback={null}>
-                  <Highlighter language={'plaintext'} padding={12} variant={'borderless'}>
-                    {error.stack!}
-                  </Highlighter>
+                  <StackTrace code={error.stack!} />
                 </Suspense>
               </AccordionContent>
             </AccordionItem>

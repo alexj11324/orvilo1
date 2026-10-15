@@ -1,8 +1,9 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { Markdown } from '@/components/Markdown';
 
 import type { BroadcastParams } from '../../../types';
 

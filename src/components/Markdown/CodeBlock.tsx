@@ -1,7 +1,8 @@
-import { isFullHtmlDocument, type MarkdownProps, Mermaid } from '@lobehub/ui';
 import { type ComponentProps, createContext, use } from 'react';
 
 import { ChatHtmlPreview } from '@/components/HtmlPreview/ChatPreview';
+import type { HtmlPreviewOptions } from '@/components/HtmlPreview/InlinePreview';
+import { isFullHtmlDocument } from '@/components/HtmlPreview/srcDoc';
 import {
   CodeBlock,
   CodeBlockCopyButton,
@@ -14,10 +15,18 @@ import {
 } from '@/components/ui/code-block';
 
 import styles from './CodeBlock.module.css';
+import { Mermaid, type MermaidProps } from './Mermaid';
+import { resolveHighlighterThemes } from './themes';
 
-interface CodeBlockOptions {
+export interface MarkdownCodeBlockComponentProps {
+  highlight?: { theme?: string };
+  html?: HtmlPreviewOptions;
+  mermaid?: Partial<Omit<MermaidProps, 'children'>>;
+}
+
+export interface MarkdownCodeBlockOptions {
   animated?: boolean;
-  componentProps?: MarkdownProps['componentProps'];
+  componentProps?: MarkdownCodeBlockComponentProps;
   enableHtmlPreview?: boolean;
   enableMermaid?: boolean;
   fullFeaturedCodeBlock?: boolean;
@@ -25,9 +34,10 @@ interface CodeBlockOptions {
 }
 
 // A stable renderer preserves folding and scroll state while message content grows.
-export const ChatCodeBlockContext = createContext<CodeBlockOptions>({});
+export const MarkdownCodeBlockContext = createContext<MarkdownCodeBlockOptions>({});
 
-export default function ChatCodeBlock(props: ComponentProps<'pre'>) {
+/** Fenced-code renderer: Mermaid and full HTML documents get previews, everything else a code block. */
+export default function MarkdownCodeBlock(props: ComponentProps<'pre'>) {
   const {
     animated,
     componentProps,
@@ -35,7 +45,7 @@ export default function ChatCodeBlock(props: ComponentProps<'pre'>) {
     enableMermaid = true,
     fullFeaturedCodeBlock,
     streaming,
-  } = use(ChatCodeBlockContext);
+  } = use(MarkdownCodeBlockContext);
   const { code, language } = markdownCodeProps(props);
 
   // These fences are interactive previews, not ordinary source-code surfaces.
@@ -56,7 +66,6 @@ export default function ChatCodeBlock(props: ComponentProps<'pre'>) {
     );
   }
 
-  const theme = componentProps?.highlight?.theme;
   return (
     <CodeBlock
       showLineNumbers
@@ -65,7 +74,7 @@ export default function ChatCodeBlock(props: ComponentProps<'pre'>) {
       language={language ?? 'text'}
       maxLines={16}
       streaming={streaming}
-      themes={theme && theme !== 'lobe-theme' ? { dark: theme, light: theme } : undefined}
+      themes={resolveHighlighterThemes(componentProps?.highlight?.theme)}
     >
       <CodeBlockHeader>
         <CodeBlockLanguage />

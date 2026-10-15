@@ -12,7 +12,7 @@ import { homeType } from '@/features/Home/components/homeType';
 import Time from '@/features/Home/components/Time';
 import { useBriefStore } from '@/store/brief';
 
-const Markdown = lazy(() => import('@lobehub/ui/es/Markdown/index'));
+const Markdown = lazy(() => import('@/components/Markdown'));
 
 const AVATAR_SIZE = 20;
 

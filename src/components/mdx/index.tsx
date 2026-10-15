@@ -1,6 +1,5 @@
 import { type TypographyProps } from '@lobehub/ui';
 import { Typography as Typo } from '@lobehub/ui';
-import { mdxComponents } from '@lobehub/ui/mdx';
 import { type FC } from 'react';
 import Markdown, { type Components, type Options } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -42,7 +41,6 @@ export const CustomMDX: FC<CustomMDXProps> = ({
   remarkPlugins: extraRemarkPlugins,
 }) => {
   const components: Components = {
-    ...(mdxComponents as Components),
     a: Link as Components['a'],
     img: Image as Components['img'],
     pre: CodeBlock as Components['pre'],

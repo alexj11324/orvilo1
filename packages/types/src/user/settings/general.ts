@@ -1,5 +1,3 @@
-import type { HighlighterProps, MermaidProps } from '@lobehub/ui';
-
 import type { ResponseAnimationStyle } from '../../aiProvider';
 
 /**
@@ -49,10 +47,12 @@ export interface UserGeneralConfig {
    */
   expandWorkflowWhileStreaming?: boolean;
   fontSize: number;
-  highlighterTheme?: HighlighterProps['theme'];
+  /** Shiki theme id, or `lobe-theme` to follow the app theme. */
+  highlighterTheme?: string;
   isDevMode: boolean;
   isLiteMode: boolean;
-  mermaidTheme?: MermaidProps['theme'];
+  /** Mermaid palette id, or `lobe-theme` to follow the app theme. */
+  mermaidTheme?: string;
   neutralColor?: NeutralColorName;
   primaryColor?: PrimaryColorName;
   responseLanguage?: string;

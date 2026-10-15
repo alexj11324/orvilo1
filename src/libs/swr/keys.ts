@@ -1324,3 +1324,18 @@ export const mcpEventsKeys = {
   definitions: (taskId: string, connectorId: string) =>
     ['mcpEvents:definitions', taskId, connectorId] as const,
 };
+
+export const linearImportKeys = {
+  installations: (scope: string) => ['linearImport:installations', scope] as const,
+  catalog: (scope: string, installationId: string) => ['linearImport:catalog', scope, installationId] as const,
+  preview: (scope: string, installationId: string, teamId: string) => ['linearImport:preview', scope, installationId, teamId] as const,
+  destinations: (scope: string, search: string, offset: number) => ['linearImport:destinations', scope, search, offset] as const,
+  job: (scope: string, jobId: string) => ['linearImport:job', scope, jobId] as const,
+};
+
+export const workTeamKeys = {
+  documentCandidates: (teamId: string, page: number) => ['team-document-candidates', teamId, page] as const,
+  detail: (workspaceId: string, teamId: string) => ['team', workspaceId, teamId] as const,
+  userList: (workspaceId: string, userId: string) => ['work-joined-teams', userId, workspaceId] as const,
+  resources: (workspaceId: string, teamId: string) => ['team-resources', workspaceId, teamId] as const,
+};

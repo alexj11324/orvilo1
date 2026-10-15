@@ -81,12 +81,3 @@ export const classifyProposalEdit = (
 
   return 'verbatim';
 };
-
-/**
- * Seed the reject modal from a proposal: the model's note becomes the draft
- * comment, its regions become editable annotations.
- */
-export const proposalToRejectDraft = (proposal: CheckProposal) => ({
-  annotations: proposal.annotations ?? [],
-  comment: proposal.comment ?? '',
-});

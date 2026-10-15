@@ -78,8 +78,6 @@ const selectContextMessages = (messages: GmailMessage[]) => {
   return selected;
 };
 
-export const GMAIL_PROFILE_QUERIES = GMAIL_PROFILE_SEARCHES.map(({ query }) => query);
-
 export const gmailUnderstandingProvider: UnderstandingProvider = {
   connectionSource: 'composio',
   id: 'gmail',

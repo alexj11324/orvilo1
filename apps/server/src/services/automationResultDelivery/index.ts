@@ -11,6 +11,7 @@ import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
 import { automationResultDeliveries, tasks, taskTopics } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import { enqueueHatchetTask } from '@/libs/hatchet';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 import type { DeliverTaskResultParams } from '@/server/services/taskResultBridge';
 
@@ -260,7 +261,7 @@ export class AutomationResultDeliveryService {
       if (!member) throw new Error('AUTH_REVOKED');
     }
     if (!delivery.credentialId) return;
-    const model = new CredentialModel(this.db, this.userId);
+    const model = new CredentialModel(this.db, KeyVaultsGateKeeper.initWithEnvKey, this.userId);
     const row = this.workspaceId
       ? await model.findWorkspaceReadableById(delivery.credentialId, this.workspaceId)
       : await model.findPersonalById(delivery.credentialId);

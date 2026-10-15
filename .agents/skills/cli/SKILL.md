@@ -11,16 +11,17 @@ disable-model-invocation: true
 Orvilo CLI (`@orvilo/cli`) is a command-line tool for managing and interacting with Orvilo services. Built with Commander.js + TypeScript.
 
 - **Package**: `apps/cli/`
-- **Entry**: `apps/cli/src/index.ts`
-- **Binaries**: `orvilo`, `orvilo`, `orvilo` (all aliases for the same CLI)
-- **Build**: tsup
+- **Entry**: `apps/cli/src/index.ts`; command registration: `apps/cli/src/program.ts`
+- **Binaries**: `orvilo` (see `apps/cli/package.json`)
+- **Build**: tsdown
 - **Runtime**: Node.js / Bun
 
 ## Architecture
 
 ```
 apps/cli/src/
-├── index.ts                  # Entry point, registers all commands
+├── index.ts                  # Parses argv and reports startup errors
+├── program.ts                # Creates the program and registers commands
 ├── api/
 │   ├── client.ts             # tRPC client (type-safe backend API)
 │   └── http.ts               # Raw HTTP utilities
@@ -35,17 +36,14 @@ apps/cli/src/
 │   ├── connect.ts            # Device gateway connection + daemon
 │   ├── doc.ts                # Document management
 │   ├── file.ts               # File management
-│   ├── generate/             # Content generation (text/image/video/tts/asr)
+│   ├── generate/             # Audio transcription (asr)
 │   ├── kb.ts                 # Knowledge base management
 │   ├── login.ts              # OIDC Device Code Flow auth
 │   ├── logout.ts             # Clear credentials
 │   ├── memory.ts             # User memory management
 │   ├── message.ts            # Message management
-│   ├── model.ts              # AI model management
 │   ├── plugin.ts             # Plugin management
-│   ├── provider.ts           # AI provider management
 │   ├── search.ts             # Global search
-│   ├── skill.ts              # Agent skill management
 │   ├── status.ts             # Gateway connectivity check
 │   ├── topic.ts              # Conversation topic management
 │   └── workspace.ts          # Workspace list/scope/members/usage/audit
@@ -64,30 +62,32 @@ apps/cli/src/
     └── urls.ts               # Official server & gateway URLs
 ```
 
+The command list below is a curated map. `apps/cli/src/program.ts` owns registration;
+run `orvilo --help` for the complete current list. Model/provider/skill management
+and text/image/video/TTS generation commands were retired; do not restore them
+from historical instructions.
+
 ## Command Groups
 
-| Command            | Alias | Description                                                 |
-| ------------------ | ----- | ----------------------------------------------------------- |
-| `orvilo login`     | -     | Authenticate via OIDC Device Code Flow                      |
-| `orvilo logout`    | -     | Clear stored credentials                                    |
-| `orvilo connect`   | -     | Device gateway connection & daemon management               |
-| `orvilo status`    | -     | Quick gateway connectivity check                            |
-| `orvilo agent`     | -     | Agent CRUD, run, status                                     |
-| `orvilo generate`  | `gen` | Content generation (text, image, video, tts, asr, download) |
-| `orvilo doc`       | -     | Document CRUD, batch-create, parse, topic linking           |
-| `orvilo file`      | -     | File list, view, delete, recent                             |
-| `orvilo kb`        | -     | Knowledge base CRUD, folders, docs, upload, tree view       |
-| `orvilo memory`    | -     | User memory CRUD + extraction                               |
-| `orvilo message`   | -     | Message list, search, delete, count, heatmap                |
-| `orvilo topic`     | -     | Topic CRUD + search + recent                                |
-| `orvilo skill`     | -     | Skill CRUD + import (GitHub/URL/market)                     |
-| `orvilo model`     | -     | Model CRUD, toggle, batch-toggle, clear                     |
-| `orvilo provider`  | -     | Provider CRUD, config, test, toggle                         |
-| `orvilo plugin`    | -     | Plugin install, uninstall, update                           |
-| `orvilo search`    | -     | Global search across all types                              |
-| `orvilo workspace` | `ws`  | Workspace list, scope switch, members, invites, usage       |
-| `orvilo whoami`    | -     | Current user info (including the resolved workspace scope)  |
-| `orvilo usage`     | -     | Monthly/daily usage statistics                              |
+| Command            | Alias | Description                                                |
+| ------------------ | ----- | ---------------------------------------------------------- |
+| `orvilo login`     | -     | Authenticate via OIDC Device Code Flow                     |
+| `orvilo logout`    | -     | Clear stored credentials                                   |
+| `orvilo connect`   | -     | Device gateway connection & daemon management              |
+| `orvilo status`    | -     | Quick gateway connectivity check                           |
+| `orvilo agent`     | -     | Agent CRUD, run, status                                    |
+| `orvilo generate`  | `gen` | Audio transcription (asr)                                  |
+| `orvilo doc`       | -     | Document CRUD, batch-create, parse, topic linking          |
+| `orvilo file`      | -     | File list, view, delete, recent                            |
+| `orvilo kb`        | -     | Knowledge base CRUD, folders, docs, upload, tree view      |
+| `orvilo memory`    | -     | User memory CRUD + extraction                              |
+| `orvilo message`   | -     | Message list, search, delete, count, heatmap               |
+| `orvilo topic`     | -     | Topic CRUD + search + recent                               |
+| `orvilo plugin`    | -     | Plugin install, uninstall, update                          |
+| `orvilo search`    | -     | Global search across all types                             |
+| `orvilo workspace` | `ws`  | Workspace list, scope switch, members, invites, usage      |
+| `orvilo whoami`    | -     | Current user info (including the resolved workspace scope) |
+| `orvilo usage`     | -     | Monthly/daily usage statistics                             |
 
 ### Workspace Scope
 
@@ -135,9 +135,9 @@ export function register<Name>Command(program: Command) {
 }
 ```
 
-### 2. Register in Entry Point
+### 2. Register in the Program Factory
 
-In `apps/cli/src/index.ts`:
+In `apps/cli/src/program.ts`:
 
 ```typescript
 import { registerNewCommand } from './commands/new';
@@ -272,7 +272,7 @@ cd apps/cli && bun run dev -- agent list
 
 **Troubleshooting:**
 
-- If login returns `invalid_grant`, make sure the local OIDC provider is properly configured (check `OIDC_*` env vars in `.env`)
+- If login returns `invalid_grant`, make sure the local OIDC provider is properly configured (check `JWKS_KEY` and the Clerk accounts portal configuration in `.env`)
 - If you get `UNAUTHORIZED` on API calls, your token may have expired — run `bun run dev -- login --server http://localhost:3011` again
 - Dev credentials are stored in `apps/cli/.orvilo-dev/` (gitignored), not in `~/.orvilo/`
 
@@ -300,7 +300,7 @@ cd apps/cli && bun run test
 # E2E tests (requires authenticated CLI)
 cd apps/cli && bunx vitest run e2e/kb.e2e.test.ts
 
-# Link globally for testing (installs orvilo/orvilo commands)
+# Link globally for testing (installs the orvilo command)
 cd apps/cli && bun run cli:link
 ```
 
@@ -309,10 +309,10 @@ cd apps/cli && bun run cli:link
 See `references/` for each command group:
 
 - **Agent**: `references/agent.md` (CRUD, run, status)
-- **Content Generation**: `references/generate.md` (text, image, video, tts, asr, download)
+- **Content Generation**: `references/generate.md` (asr)
 - **Knowledge & Files**: `references/knowledge.md` (kb, file, doc)
 - **Conversation**: `references/conversation.md` (topic, message)
 - **Memory**: `references/memory.md` (memory management, extraction)
-- **Skills & Plugins**: `references/skills-plugins.md` (skill, plugin)
-- **Models & Providers**: `references/models-providers.md` (model, provider)
+- **Skills & Plugins**: `references/skills-plugins.md` (plugin; retired skill command noted)
+- **Models & Providers**: `references/models-providers.md` (retirement notice)
 - **Search & Config**: `references/search-config.md` (search, whoami, usage, workspace)

@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "src/utils",
+    "outDir": "dist/cipher",
+    "types": ["node"],
+    "disableSourceOfProjectReferenceRedirect": true,
+    "paths": {
+      "@orvilo/secret-cipher": ["../secret-cipher/dist/index.d.ts"]
+    }
+  },
+  "extends": "../../tsconfig.base.json",
+  "files": ["src/utils/secretCipher.ts"],
+  "references": [
+    {
+      "path": "../secret-cipher/tsconfig.build.json"
+    }
+  ]
+}

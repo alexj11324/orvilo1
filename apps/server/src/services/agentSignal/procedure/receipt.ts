@@ -44,56 +44,6 @@ export const appendProcedureReceipt = async (
 };
 
 /**
- * Reads recent procedure receipts for one runtime scope.
- *
- * Use when:
- * - Rendering compact context continuity
- * - Inspecting recent procedure outcomes
- *
- * Expects:
- * - Receipt fields are JSON written by {@link appendProcedureReceipt}
- *
- * Returns:
- * - Receipts sorted newest first and trimmed to `maxItems`
- */
-export const readProcedureReceipts = async (
-  store: Pick<AgentSignalPolicyStateStore, 'readPolicyState'>,
-  scopeKey: string,
-  maxItems: number,
-) => {
-  const state = await store.readPolicyState(PROCEDURE_RECEIPTS_POLICY_ID, scopeKey);
-
-  return Object.entries(state ?? {})
-    .filter(([key]) => key.startsWith('receipt:'))
-    .map(([, value]) => JSON.parse(value) as AgentSignalProcedureReceipt)
-    .sort((left, right) => right.updatedAt - left.updatedAt)
-    .slice(0, maxItems);
-};
-
-/**
- * Converts a receipt into compact message metadata.
- *
- * Use when:
- * - Persisting recent procedure status into message metadata
- * - Hiding internal acknowledged state from message consumers
- *
- * Expects:
- * - Receipt summary is already compact and safe for context
- *
- * Returns:
- * - Message metadata envelope
- */
-export const toMessageReceiptEnvelope = (
-  receipt: AgentSignalProcedureReceipt,
-): MessageAgentSignalProcedureReceiptEnvelope => ({
-  domainKey: receipt.domainKey,
-  id: receipt.id,
-  status: receipt.status === 'acknowledged' ? 'processing' : receipt.status,
-  summary: receipt.summary,
-  updatedAt: receipt.updatedAt,
-});
-
-/**
  * Merges one receipt envelope into message metadata.
  *
  * Use when:

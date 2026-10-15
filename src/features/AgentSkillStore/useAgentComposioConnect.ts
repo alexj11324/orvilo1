@@ -1,10 +1,9 @@
 'use client';
-
 import { upsertPluginMode } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { lambdaClient, toolsClient } from '@/libs/trpc/client';
+import { composioService } from '@/services/composio';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { useToolStore } from '@/store/tool';
@@ -75,19 +74,19 @@ export const useAgentComposioConnect = ({ agentId, appSlug, identifier, label }:
     const pending = pendingRef.current;
     if (!pending) return;
     try {
-      const status = await lambdaClient.composio.getConnection.query({
+      const status = await composioService.getConnection({
         connectedAccountId: pending.connectedAccountId,
       });
       if (status.status !== 'ACTIVE') return;
 
-      const toolsResp = await toolsClient.composio.listActions.query({ appSlug });
+      const toolsResp = await composioService.listActions({ appSlug });
       const tools = (toolsResp.tools ?? []).map((tool) => ({
         description: tool.description,
         inputSchema: tool.inputSchema,
         name: tool.name,
       }));
 
-      await lambdaClient.composio.updateComposioPlugin.mutate({
+      await composioService.updateComposioPlugin({
         agentId,
         appSlug,
         authConfigId: pending.authConfigId,
@@ -157,7 +156,7 @@ export const useAgentComposioConnect = ({ agentId, appSlug, identifier, label }:
     if (isConnected) return;
     setIsConnecting(true);
     try {
-      const conn = await lambdaClient.composio.createConnection.mutate({
+      const conn = await composioService.createConnection({
         agentId,
         appSlug,
         identifier,

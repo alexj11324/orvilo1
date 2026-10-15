@@ -166,4 +166,4 @@ Older call sites import `createModal`/`confirmModal`/`useModalContext`/`ModalHos
 ## Examples
 
 - `@/components/Modal` (preferred): `createMyFeatureModal` above; host mounted in `SPAGlobalProvider`.
-- Legacy: `src/features/SkillStore/index.tsx`, `src/features/LibraryModal/CreateNew/index.tsx`
+- Legacy: `src/features/LibraryModal/CreateNew/index.tsx`

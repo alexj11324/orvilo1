@@ -17,9 +17,6 @@ export const WORKFLOW_PROSE_QUICK_COMMIT_MS = 280;
 /** Partial prose without sentence end: commit headline after this idle delay. */
 export const WORKFLOW_PROSE_IDLE_COMMIT_MS = 680;
 
-/** Min height (px) for the streaming title row to reduce layout shift during motion. */
-export const WORKFLOW_STREAMING_TITLE_MIN_HEIGHT_PX = 22;
-
 /** Pixels from bottom of scroll port: auto-scroll in expanded workflow list stays active within this margin. */
 export const WORKFLOW_EXPANDED_SCROLL_THRESHOLD_PX = 120;
 
@@ -45,11 +42,6 @@ export const WORKFLOW_TRUNCATE_WORD_BOUNDARY_MIN_RATIO = 0.55;
 
 /** Strip markdown headings: match ATX `#` up to this many levels. */
 export const WORKFLOW_MARKDOWN_HEADING_MAX_LEVEL = 6;
-
-// ─── Tool argument / step lines (headline B/C and summaries) ───────────────
-
-/** First string tool argument preview: show at most this many chars before "…". */
-export const TOOL_FIRST_DETAIL_MAX_CHARS = 80;
 
 /** Tool step / arg combined headline: soft cap for readable one-liner. */
 export const TOOL_HEADLINE_DETAIL_MAX_CHARS = 120;

@@ -8,7 +8,7 @@ import {
   OAUTH_SESSION_TIMEOUT_MS,
   waitForOAuthSession,
 } from '@/features/Connectors/oauthSession';
-import { lambdaClient } from '@/libs/trpc/client';
+import { connectorService } from '@/services/connector';
 import { githubOAuthService } from '@/services/githubOAuth';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
@@ -119,7 +119,7 @@ export const useGitHubMcpConnect = (
         // The connect action still reports a concrete error when invoked.
       }
       try {
-        const result = await lambdaClient.connector.githubMcpCapability.query();
+        const result = await connectorService.githubMcpCapability();
         setCapability(result.capability);
       } catch {
         // Capability unknown — connect() falls back to the mutation result.

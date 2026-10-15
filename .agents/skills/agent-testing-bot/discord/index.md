@@ -1,5 +1,8 @@
 # Discord Bot Testing
 
+> Historical Messenger acceptance recipe. Its adapter/IPC surface was retired.
+> Do not run this as current product verification. See [the current entry point](../SKILL.md).
+
 **App name:** `Discord` | **Process name:** `Discord`
 
 See [references/osascript.md](../../../acceptance/references/osascript.md) for shared patterns.

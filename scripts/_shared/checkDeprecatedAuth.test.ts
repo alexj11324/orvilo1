@@ -97,59 +97,50 @@ describe('checkDeprecatedAuth', () => {
     expect(mockExit).not.toHaveBeenCalled();
   });
 
-  describe('webhook warnings (non-blocking)', () => {
-    it('should warn but not exit when Casdoor webhook is missing', async () => {
-      process.env.AUTH_SSO_PROVIDERS = 'casdoor';
-      // CASDOOR_WEBHOOK_SECRET is not set
-
+  describe('retired Better Auth configuration', () => {
+    it('warns without blocking when an old AUTH_SECRET remains', async () => {
+      process.env.AUTH_SECRET = 'retired-secret';
       const { checkDeprecatedAuth } = await import('./checkDeprecatedAuth.js');
       checkDeprecatedAuth();
-
       expect(mockExit).not.toHaveBeenCalled();
-      expect(mockConsoleWarn).toHaveBeenCalled();
+      expect(mockConsoleWarn.mock.calls.flat().join(' ')).toContain('Clerk');
+      expect(mockConsoleWarn.mock.calls.flat().join(' ')).not.toContain('retired-secret');
     });
 
-    it('should warn but not exit when Logto webhook is missing', async () => {
-      process.env.AUTH_SSO_PROVIDERS = 'logto';
-      // LOGTO_WEBHOOK_SIGNING_KEY is not set
-
+    it('routes old SSO settings to Clerk instead of removed provider variables', async () => {
+      process.env.AUTH_SSO_PROVIDERS = 'casdoor,logto';
       const { checkDeprecatedAuth } = await import('./checkDeprecatedAuth.js');
       checkDeprecatedAuth();
-
+      const output = mockConsoleWarn.mock.calls.flat().join(' ');
       expect(mockExit).not.toHaveBeenCalled();
-      expect(mockConsoleWarn).toHaveBeenCalled();
+      expect(output).toContain('Clerk');
+      expect(output).not.toContain('CASDOOR_WEBHOOK_SECRET');
+      expect(output).not.toContain('LOGTO_WEBHOOK_SIGNING_KEY');
     });
 
-    it('should not warn when Casdoor webhook is configured', async () => {
-      process.env.AUTH_SSO_PROVIDERS = 'casdoor';
-      process.env.CASDOOR_WEBHOOK_SECRET = 'test-secret';
-
+    it('does not direct NextAuth installations to the removed Better Auth runtime', async () => {
+      process.env.NEXT_AUTH_SECRET = 'old-secret';
       const { checkDeprecatedAuth } = await import('./checkDeprecatedAuth.js');
       checkDeprecatedAuth();
-
-      expect(mockExit).not.toHaveBeenCalled();
-      expect(mockConsoleWarn).not.toHaveBeenCalled();
+      const output = mockConsoleError.mock.calls.flat().join(' ');
+      expect(output).toContain('Clerk');
+      expect(output).not.toContain('migrate to Better Auth');
     });
 
-    it('should not warn when Logto webhook is configured', async () => {
-      process.env.AUTH_SSO_PROVIDERS = 'logto';
-      process.env.LOGTO_WEBHOOK_SIGNING_KEY = 'test-key';
+    it('does not tell SMTP setups to enable AUTH_EMAIL_VERIFICATION', async () => {
+      delete process.env.AUTH_EMAIL_VERIFICATION;
+      process.env.SMTP_HOST = 'smtp.example.com';
+      process.env.EMAIL_SERVICE_PROVIDER = 'resend';
 
       const { checkDeprecatedAuth } = await import('./checkDeprecatedAuth.js');
       checkDeprecatedAuth();
 
+      const output = [...mockConsoleWarn.mock.calls, ...mockConsoleError.mock.calls]
+        .flat()
+        .join(' ');
       expect(mockExit).not.toHaveBeenCalled();
-      expect(mockConsoleWarn).not.toHaveBeenCalled();
-    });
-
-    it('should not warn when provider is not casdoor or logto', async () => {
-      process.env.AUTH_SSO_PROVIDERS = 'google';
-
-      const { checkDeprecatedAuth } = await import('./checkDeprecatedAuth.js');
-      checkDeprecatedAuth();
-
-      expect(mockExit).not.toHaveBeenCalled();
-      expect(mockConsoleWarn).not.toHaveBeenCalled();
+      expect(output).not.toContain('AUTH_EMAIL_VERIFICATION');
+      expect(output).not.toContain('verify user email ownership');
     });
   });
 

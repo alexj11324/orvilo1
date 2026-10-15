@@ -7,6 +7,7 @@ import { ApiKeyModel } from '@/database/models/apiKey';
 import { authEnv } from '@/envs/auth';
 import { assertOIDCUserActive } from '@/libs/oidc-provider/access-control';
 import { validateOIDCJWT } from '@/libs/oidc-provider/jwt';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { validateApiKeyFormat } from '@/utils/apiKey';
 import { extractBearerToken } from '@/utils/server/auth';
 
@@ -78,6 +79,7 @@ export const userAuthMiddleware = async (c: Context, next: Next) => {
 
             const userApiKeyModel = new ApiKeyModel(
               db,
+              KeyVaultsGateKeeper.initWithEnvKey,
               apiKeyRecord.userId,
               apiKeyRecord.workspaceId ?? undefined,
             );

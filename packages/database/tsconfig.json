@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["esnext", "dom"],
+    "types": ["node"],
+    "paths": {
+      "@/database/*": ["./src/*"],
+      "@/config/db": ["../app-config/src/db.ts"],
+      "@/types/*": ["../types/src/*"],
+      "@/utils/*": ["../utils/src/*"]
+    }
+  },
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"],
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*.ts", "../agent-templates/src/templates/claw/raw.d.ts"]
+}

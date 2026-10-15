@@ -9,7 +9,7 @@ Use this skill when the bug or feature lives in the external CLI agent pipeline,
 
 ## Use This Skill For
 
-- Adding or changing a driver under `apps/desktop/src/main/modules/heterogeneousAgent/drivers/`
+- Adding or changing an ACP runtime entry under `packages/heterogeneous-agents/src/spawn/acpRuntime.ts`
 - Editing an adapter under `packages/heterogeneous-agents/src/adapters/` or an ACP session under `packages/heterogeneous-agents/src/spawn/`
 - Debugging the ACP stdio pipeline (`AcpStdioClient`, `session/update` notifications, `heteroAgentEvent` broadcast), `window.__HETERO_AGENT_TRACE`, or `executeHeterogeneousAgent`
 - Fixing adapter bugs such as duplicate partial/full chunks, broken message/turn boundaries, missing `tool_result`, TodoWrite state drift, or subagent thread routing

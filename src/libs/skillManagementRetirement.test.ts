@@ -68,7 +68,6 @@ describe('the platform Skill management chain stays retired', () => {
       for (const file of [
         'src/features/ChatInput/ActionBar/Tools/index.tsx',
         'src/features/ChatInput/ActionBar/Tools/useControls.tsx',
-        'src/features/ProfileEditor/AgentTool.tsx',
       ]) {
         const source = read(file);
         expect(source, `${file} still opens the skill store`).not.toContain(

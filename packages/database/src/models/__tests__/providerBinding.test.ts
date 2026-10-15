@@ -5,6 +5,7 @@ import { PROVIDER_CONFIG_ANCHOR_MODEL, providerBindingConfigSchema } from '@orvi
 import { inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createTestSecretCipher } from '../../../tests/secretCipher';
 import { getTestDB } from '../../core/getTestDB';
 import { credentials, users, workspaces } from '../../schemas';
 import { CredentialModel } from '../credential';
@@ -47,7 +48,7 @@ beforeEach(async () => {
     .insert(workspaces)
     .values({ id: workspace, name: 'Fixture', slug: workspace, primaryOwnerId: owner });
   const make = (userId: string, key: string, workspaceId?: string) =>
-    new CredentialModel(db, userId).create({
+    new CredentialModel(db, createTestSecretCipher, userId).create({
       key,
       name: key,
       type: 'kv-env',

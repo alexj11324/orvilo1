@@ -28,6 +28,8 @@ export default class HeterogeneousAgentCtr extends ControllerModule {
   private remoteServerAuth: RemoteServerAuth = {
     getAccessToken: async () => (await this.remoteServerConfigCtr?.getAccessToken()) ?? null,
     getServerUrl: async () => (await this.remoteServerConfigCtr?.getRemoteServerUrl()) ?? null,
+    refreshAccessToken: async () =>
+      (await this.remoteServerConfigCtr?.refreshAccessToken())?.success ?? false,
   };
 
   private get remoteServerConfigCtr(): RemoteServerConfigCtr | undefined {

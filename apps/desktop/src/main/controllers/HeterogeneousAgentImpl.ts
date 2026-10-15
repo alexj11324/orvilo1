@@ -46,12 +46,17 @@ import {
   QuotaSnapshotCache,
   readClaudeCodeIdentity,
 } from '@orvilo/heterogeneous-agents/quota-sampler';
-import { isLoginShellTimeoutStatus } from '@orvilo/heterogeneous-agents/resolveCliCommand';
+import {
+  isLoginShellTimeoutStatus,
+  resolveHeteroSpawnCommand,
+} from '@orvilo/heterogeneous-agents/resolveCliCommand';
+import { runHeteroTurn } from '@orvilo/heterogeneous-agents/run';
 import {
   ACP_RUNTIME_AGENT_TYPES,
   type AcpAgentRuntimeSpec,
   AcpRpcResponseError,
   type AcpSpawnTarget,
+  type AgentPromptInput,
   buildCursorAcpArgs,
   buildCursorAcpPrompt,
   buildDevinAcpArgs,
@@ -65,6 +70,7 @@ import {
   buildTraeAcpArgs,
   buildTraeAcpPrompt,
   createFileStoreImageUploader,
+  createPersistentAcpAgent,
   createStandardAcpSession,
   CursorAcpSession,
   DevinAcpSession,
@@ -79,6 +85,7 @@ import {
   isDevinAcpSessionNotFoundError,
   isDroidAcpSessionNotFoundError,
   isStandardAcpSessionNotFoundError,
+  type PersistentAcpAgent,
   readCodexSessionModel,
   resolveAcpSpawnTarget,
   type StandardAcpSession,
@@ -114,6 +121,17 @@ import {
   createLambdaFileStorePort,
   type RemoteServerAuth,
 } from '@/modules/heterogeneousAgent/fileStorePort';
+import {
+  buildGatewayAcpFingerprint,
+  buildGatewayAcpPoolKey,
+  type GatewayAcpLease,
+  GatewayAcpPool,
+} from '@/modules/heterogeneousAgent/gatewayAcpPool';
+import { resolveInProcessAgentArgs } from '@/modules/heterogeneousAgent/heteroExecArgs';
+import {
+  createDesktopBuiltinToolCaller,
+  createDesktopHeteroRunClient,
+} from '@/modules/heterogeneousAgent/heteroRunClient';
 import type { HeterogeneousAgentImageAttachment } from '@/modules/heterogeneousAgent/types';
 import { buildProxyEnv } from '@/modules/networkProxy/envBuilder';
 import { createLogger } from '@/utils/logger';
@@ -370,8 +388,104 @@ export type OrviloHeteroExecCancellationResult = HeterogeneousAgentCancellationR
 interface OrviloHeteroExecTask {
   cancellation?: Promise<OrviloHeteroExecCancellationResult>;
   exit: Promise<void>;
+  kind?: 'process';
   process: ChildProcess;
 }
+
+/**
+ * A gateway turn running in-process on a pooled persistent ACP agent (warm
+ * pool). `exit` resolves at TURN end — the agent process may stay warm.
+ */
+interface InProcessHeteroExecTask {
+  abort: AbortController;
+  /** The agent the runner started this turn on (set once the turn started). */
+  agent?: PersistentAcpAgent;
+  cancellation?: Promise<OrviloHeteroExecCancellationResult>;
+  exit: Promise<void>;
+  kind: 'inProcess';
+  lease?: GatewayAcpLease;
+  runGeneration?: number;
+}
+
+type GatewayHeteroExecTask = InProcessHeteroExecTask | OrviloHeteroExecTask;
+
+/** Gateway wrapper request, see {@link HeterogeneousAgentCtr.spawnOrviloHeteroExec}. */
+export interface SpawnOrviloHeteroExecParams {
+  agentType: string;
+  /** Resolved `orvilo hetero exec` wrapper args. */
+  args?: string[];
+  assistantMessageId?: string;
+  /** Server-backed builtin tool surface for the per-run `orvilo_cc` MCP server. */
+  builtinTools?: AcpBuiltinToolSpec[];
+  cwd?: string;
+  /** Server-minted spawn env (e.g. BYOK credentials) merged into the exec env. */
+  env?: Record<string, string>;
+  /** Image attachments (signed URLs) appended as image content blocks. */
+  imageList?: HeteroExecImageRef[];
+  jwt: string;
+  /**
+   * Called once the child process has spawned (pid available). The caller
+   * (gateway dispatcher) uses this to register the process so a later
+   * `cancelHeteroTask` can kill it by operationId.
+   */
+  onChildSpawned?: (child: ChildProcess) => void;
+  /**
+   * In-process (warm pool) counterpart of `onChildSpawned`: called each time
+   * the turn starts on an agent process. `exit` resolves at turn end (the
+   * warm process may outlive it), so a registry keyed by this is turn-scoped.
+   */
+  onInProcessTurnStarted?: (turn: { exit: Promise<void>; pid: number }) => void;
+  operationId: string;
+  /**
+   * The operation-scoped token from the dispatch (carries `hetero:tool:exec`
+   * when builtin tools are mounted). The caller often substitutes `jwt` with
+   * the device's own user token for ingest/finish, so the op token travels
+   * separately and the CLI prefers it for `execBuiltinTool` callbacks.
+   */
+  operationJwt?: string;
+  /**
+   * Prime device-run descriptor: when present, the dispatch's resolved
+   * harness is Prime (type 'orvilo') and this host launches `orvilo prime
+   * exec` instead of `hetero exec` — same child-process supervision, same
+   * kill contract. Carries the artifact pin + bound broker credential.
+   */
+  prime?: PrimeRunDescriptor;
+  prompt: string;
+  resumeFallbackSystemContext?: string;
+  resumeSessionId?: string;
+  /** Admission fence relayed to `orvilo hetero exec` via `ORVILO_RUN_GENERATION`. */
+  runGeneration?: number;
+  serverUrl: string;
+  systemContext?: string;
+  topicId: string;
+  /** Topic/run workspace — forwarded as `ORVILO_WORKSPACE_ID` for ingest. */
+  workspaceId?: string;
+}
+
+type GatewayRunAck = { reason?: string; status: 'accepted' | 'rejected' };
+
+/** Env flag that turns the gateway warm pool on (default off). */
+const WARM_POOL_ENV = 'ORVILO_HETERO_WARM_POOL';
+/** Optional comma list overriding the warm-pool agent allowlist. */
+const WARM_POOL_TYPES_ENV = 'ORVILO_HETERO_WARM_POOL_TYPES';
+const DEFAULT_WARM_POOL_TYPES = ['claude-code'];
+/** Bounded wait for an interrupted in-process turn to report its finish. */
+const IN_PROCESS_CANCEL_EXIT_WAIT_MS = 5000;
+/** `AEGIS_PACK_ENV` from `@orvilo/types` — the pack install only exists in the CLI wrapper. */
+const AEGIS_PACK_ENV_KEY = 'ORVILO_AEGIS_PACK';
+
+/**
+ * Agent types the warm pool serves, or none when the flag is off. Read per
+ * dispatch so the env can be flipped without restarting the controller.
+ */
+export const resolveWarmPoolAgentTypes = (env: NodeJS.ProcessEnv = process.env): Set<string> => {
+  if (env[WARM_POOL_ENV] !== '1') return new Set();
+  const configured = env[WARM_POOL_TYPES_ENV]?.split(',')
+    .map((type) => type.trim())
+    .filter(Boolean);
+  const types = configured?.length ? configured : DEFAULT_WARM_POOL_TYPES;
+  return new Set(types.filter((type) => ACP_RUNTIME_AGENT_TYPES.has(type)));
+};
 
 interface InteractiveAcpSession {
   cacheKeepaliveTelemetry?: HeterogeneousAgentCacheKeepaliveStatus;
@@ -419,6 +533,8 @@ export default class HeterogeneousAgentCtr {
     this.remoteServerAuth = remoteServerAuth ?? {
       getAccessToken: async () => (await this.remoteServerConfigCtr?.getAccessToken()) ?? null,
       getServerUrl: async () => (await this.remoteServerConfigCtr?.getRemoteServerUrl()) ?? null,
+      refreshAccessToken: async () =>
+        (await this.remoteServerConfigCtr?.refreshAccessToken())?.success ?? false,
     };
   }
 
@@ -434,7 +550,9 @@ export default class HeterogeneousAgentCtr {
     { acpSession: { close: () => void }; agentSessionId?: string }
   >();
   /** Device-gateway CLI wrappers keyed by their server operation id. */
-  private orviloHeteroExecTasks = new Map<string, OrviloHeteroExecTask>();
+  private orviloHeteroExecTasks = new Map<string, GatewayHeteroExecTask>();
+  /** Warm persistent-ACP agents for gateway turns (`ORVILO_HETERO_WARM_POOL=1`). */
+  private gatewayAcpPool?: GatewayAcpPool;
   /**
    * Per-operation AskUserQuestion bridge state. Keyed by `operationId` so the
    * `submitIntervention` IPC can route an answer to the right pending MCP
@@ -2373,6 +2491,7 @@ export default class HeterogeneousAgentCtr {
   afterAppReady() {
     electronApp.on('before-quit', () => {
       this.closeLingeringAcpSessions();
+      this.gatewayAcpPool?.closeAll();
       for (const [, session] of this.sessions) {
         if (session.devinAcpSession) {
           session.cancelledByUs = true;
@@ -2412,6 +2531,7 @@ export default class HeterogeneousAgentCtr {
     const onSignal = (signal: NodeJS.Signals) => {
       // Do not rely on the quit flow alone to reap a bridge kept for its title.
       this.closeLingeringAcpSessions();
+      this.gatewayAcpPool?.closeAll();
       // Defer to Electron's normal quit flow so the rest of the app gets a
       // chance to tear down. The `before-quit` handler above is idempotent.
       try {
@@ -2427,6 +2547,280 @@ export default class HeterogeneousAgentCtr {
   }
 
   /**
+   * Run a gateway-dispatched agent operation on this device.
+   *
+   * Default: spawn the embedded CLI's `orvilo hetero exec` (see
+   * {@link spawnOrviloHeteroExecCli}). With `ORVILO_HETERO_WARM_POOL=1` an
+   * allowlisted standard-ACP agent type (default `claude-code`) runs in-process
+   * on a pooled persistent agent instead, skipping the per-turn CLI + vendor
+   * bridge startup. Anything the in-process path cannot take (Prime, other
+   * types, unknown wrapper args, setup failures) keeps the CLI path.
+   */
+  spawnOrviloHeteroExec(params: SpawnOrviloHeteroExecParams): Promise<GatewayRunAck> {
+    const existing = this.orviloHeteroExecTasks.get(params.operationId);
+    if (existing?.kind === 'inProcess' || this.shouldRunGatewayTurnInProcess(params)) {
+      return this.runGatewayTurnInProcess(params).then(
+        (ack) => ack ?? this.spawnOrviloHeteroExecCli(params),
+      );
+    }
+    return this.spawnOrviloHeteroExecCli(params);
+  }
+
+  private shouldRunGatewayTurnInProcess(params: SpawnOrviloHeteroExecParams): boolean {
+    if (params.prime) return false;
+    return resolveWarmPoolAgentTypes().has(params.agentType);
+  }
+
+  private getGatewayAcpPool(): GatewayAcpPool {
+    this.gatewayAcpPool ??= new GatewayAcpPool({
+      createAgent: (options) => createPersistentAcpAgent(options),
+      createMcpServer: async ({ agentType, builtinTools, context }) => {
+        const { buildAcpBuiltinToolExtras, OrviloBuiltinMcpServer } =
+          await import('@orvilo/heterogeneous-agents/builtinMcp');
+        const server = new OrviloBuiltinMcpServer({
+          extraTools: buildAcpBuiltinToolExtras(
+            builtinTools,
+            createDesktopBuiltinToolCaller(() => context.current),
+          ),
+          // Same rule as `hetero exec`: only qoder takes `ask_user_question`
+          // over MCP; claude-code asks through ACP `elicitation/create`.
+          includeAskUserTool: agentType === 'qoder',
+        });
+        await server.start();
+        return server;
+      },
+      log: logger,
+    });
+    return this.gatewayAcpPool;
+  }
+
+  /**
+   * In-process gateway turn on the warm pool.
+   *
+   * Returns `undefined` when the turn must take the CLI path instead — only
+   * ever before anything was reported to the server. Acks `accepted` once the
+   * turn holds its pool entry's slot and its agent is prepared; the turn then
+   * runs in the background and never rejects (Electron main treats an
+   * unhandled rejection as fatal).
+   */
+  private async runGatewayTurnInProcess(
+    params: SpawnOrviloHeteroExecParams,
+  ): Promise<GatewayRunAck | undefined> {
+    const { agentType, operationId, runGeneration } = params;
+
+    // Redelivery of an admitted in-process turn: ack it, never start a second
+    // turn. A higher runGeneration fences the stale writer off first.
+    const existing = this.orviloHeteroExecTasks.get(operationId);
+    if (existing?.kind === 'inProcess') {
+      const superseded =
+        runGeneration != null &&
+        existing.runGeneration != null &&
+        runGeneration > existing.runGeneration;
+      if (!superseded) return { status: 'accepted' };
+      await this.cancelOrviloHeteroExec({ operationId, signal: 'SIGKILL' });
+      if (this.orviloHeteroExecTasks.get(operationId) === existing) {
+        this.orviloHeteroExecTasks.delete(operationId);
+      }
+    }
+    if (!this.shouldRunGatewayTurnInProcess(params)) return undefined;
+
+    const workDir = params.cwd ?? process.cwd();
+    // A stale project path is classified by `hetero exec` into a finish error.
+    if (!isSpawnableDirectory(workDir)) return undefined;
+    // The Aegis pack install lives in the CLI wrapper.
+    if (params.env?.[AEGIS_PACK_ENV_KEY] === '1') return undefined;
+    const agentArgs = resolveInProcessAgentArgs(agentType, params.args);
+    if (!agentArgs) {
+      logger.info('warm pool: unknown wrapper args, using CLI — op=%s', operationId);
+      return undefined;
+    }
+
+    const abort = new AbortController();
+    let resolveExit!: () => void;
+    const exit = new Promise<void>((resolve) => {
+      resolveExit = resolve;
+    });
+    const task: InProcessHeteroExecTask = { abort, exit, kind: 'inProcess', runGeneration };
+    this.orviloHeteroExecTasks.set(operationId, task);
+    const dropTask = () => {
+      if (this.orviloHeteroExecTasks.get(operationId) === task) {
+        this.orviloHeteroExecTasks.delete(operationId);
+      }
+      resolveExit();
+    };
+
+    let lease: GatewayAcpLease;
+    try {
+      const resolved = await resolveHeteroSpawnCommand(
+        agentType as HeterogeneousCliAgentType,
+        agentArgs.command,
+      );
+      // Process-level env: fixed for the warm agent's lifetime, so per-op
+      // values (`ORVILO_OPERATION_ID`, the op token, run generation) are
+      // deliberately absent — they would go stale on the next turn.
+      const fingerprintEnv: Record<string, string> = {
+        ...buildProxyEnv(this.app.storeManager.get('networkProxy')),
+        ...params.env,
+        ...(resolved.pathEnv ? { PATH: resolved.pathEnv } : {}),
+        ORVILO_SERVER: params.serverUrl,
+        ...(params.workspaceId ? { ORVILO_WORKSPACE_ID: params.workspaceId } : {}),
+      };
+      const fingerprint = buildGatewayAcpFingerprint({
+        agentType,
+        args: agentArgs.extraArgs,
+        builtinTools: params.builtinTools,
+        command: resolved.command,
+        cwd: workDir,
+        env: fingerprintEnv,
+        initialPermission: agentArgs.initialPermission,
+        workspaceId: params.workspaceId,
+      });
+      lease = await this.getGatewayAcpPool().lease({
+        agentOptions: {
+          agentType,
+          clientVersion: electronApp.getVersion(),
+          command: resolved.command,
+          cwd: workDir,
+          detached: true,
+          // Nested `orvilo` calls inside the agent reuse this device's login,
+          // as with the CLI wrapper. Excluded from the fingerprint: a token
+          // refresh must not cold-start the agent.
+          env: { ...fingerprintEnv, ORVILO_JWT: params.jwt },
+          extraArgs: agentArgs.extraArgs,
+          initialPermission: agentArgs.initialPermission,
+        },
+        builtinTools: params.builtinTools,
+        fingerprint,
+        key: buildGatewayAcpPoolKey({
+          agentType,
+          topicId: params.topicId,
+          workspaceId: params.workspaceId,
+        }),
+        resumeSessionId: params.resumeSessionId,
+      });
+    } catch (error) {
+      logger.warn(
+        'warm pool: setup failed, falling back to CLI — op=%s error=%s',
+        operationId,
+        error instanceof Error ? error.message : String(error),
+      );
+      dropTask();
+      return undefined;
+    }
+    task.lease = lease;
+    // Cancelled while waiting for the slot: the runner still reports the
+    // `cancelled` finish, but the entry must not keep a half-used agent.
+    if (abort.signal.aborted) lease.evict();
+
+    void this.driveGatewayTurn({ dropTask, exit, lease, params, task }).catch((error) => {
+      logger.error('warm pool: turn driver failed — op=%s error=%s', operationId, error);
+    });
+    return { status: 'accepted' };
+  }
+
+  /** Background half of {@link runGatewayTurnInProcess}. Never rejects. */
+  private async driveGatewayTurn({
+    dropTask,
+    exit,
+    lease,
+    params,
+    task,
+  }: {
+    dropTask: () => void;
+    exit: Promise<void>;
+    lease: GatewayAcpLease;
+    params: SpawnOrviloHeteroExecParams;
+    task: InProcessHeteroExecTask;
+  }): Promise<void> {
+    const { agentType, operationId } = params;
+    try {
+      const prompt = buildHeterogeneousPrompt({
+        imageList: params.imageList,
+        prompt: params.prompt,
+        systemContext: params.systemContext,
+      }) as AgentPromptInput;
+      const resumeFallbackPrompt =
+        params.resumeFallbackSystemContext === undefined
+          ? undefined
+          : (buildHeterogeneousPrompt({
+              imageList: params.imageList,
+              prompt: params.prompt,
+              systemContext: params.resumeFallbackSystemContext,
+            }) as AgentPromptInput);
+
+      const client = createDesktopHeteroRunClient({
+        auth: this.remoteServerAuth,
+        fallbackJwt: params.jwt,
+        serverUrl: params.serverUrl,
+        workspaceId: params.workspaceId,
+      });
+      const provider = agentType as NonNullable<AskUserBridgeOptions['provider']>;
+      const bridge = lease.bindTurn({
+        bridge: new AskUserBridge(operationId, { identifier: agentType, provider }),
+        context: {
+          operationJwt: params.operationJwt ?? params.jwt,
+          serverUrl: params.serverUrl,
+          workspaceId: params.workspaceId,
+        },
+        operationId,
+      });
+
+      const result = await runHeteroTurn({
+        agentType,
+        agents: lease.agents,
+        assistantMessageId: params.assistantMessageId,
+        bridge,
+        client,
+        log: logger,
+        onAgentStarted: (agent) => {
+          task.agent = agent;
+          if (task.abort.signal.aborted) {
+            void agent.interrupt().catch(() => {});
+          }
+          if (agent.pid !== undefined) params.onInProcessTurnStarted?.({ exit, pid: agent.pid });
+        },
+        operationId,
+        prompt,
+        resumeFallbackPrompt,
+        resumeSessionId: params.resumeSessionId,
+        runGeneration: params.runGeneration,
+        signal: task.abort.signal,
+        topicId: params.topicId,
+        uploadImage: createFileStoreImageUploader(async () => client.fileStore),
+      });
+      logger.info(
+        'warm pool: turn finished — op=%s result=%s finishDeliveryFailed=%s',
+        operationId,
+        result.result,
+        result.finishDeliveryFailed,
+      );
+      if (result.result === 'cancelled') lease.evict();
+    } catch (error) {
+      // `runHeteroTurn` never throws by contract; a prompt-build or bridge
+      // failure here must still not escape into the main process.
+      logger.error(
+        'warm pool: turn failed — op=%s error=%s',
+        operationId,
+        error instanceof Error ? error.message : String(error),
+      );
+      lease.evict();
+    } finally {
+      if (task.abort.signal.aborted) lease.evict();
+      try {
+        lease.release();
+      } catch (error) {
+        logger.warn('warm pool: lease release failed — op=%s error=%s', operationId, error);
+      }
+      dropTask();
+    }
+  }
+
+  private isCliExecTask(operationId: string, child: ChildProcess): boolean {
+    const task = this.orviloHeteroExecTasks.get(operationId);
+    return task?.kind !== 'inProcess' && task?.process === child;
+  }
+
+  /**
    * Spawn the embedded CLI's `hetero exec` for gateway-driven agent runs.
    * The bundled CLI handles everything downstream — no local
    * AgentStreamPipeline or IPC broadcast needed. Mirrors
@@ -2436,51 +2830,7 @@ export default class HeterogeneousAgentCtr {
    * failures such as an inaccessible cwd asynchronously through `error`, so an
    * eager accepted ack would strand the server operation without a producer.
    */
-  spawnOrviloHeteroExec(params: {
-    agentType: string;
-    assistantMessageId?: string;
-    /** Resolved `orvilo hetero exec` wrapper args. */
-    args?: string[];
-    /** Server-backed builtin tool surface for the per-run `orvilo_cc` MCP server. */
-    builtinTools?: AcpBuiltinToolSpec[];
-    cwd?: string;
-    /** Server-minted spawn env (e.g. BYOK credentials) merged into the exec env. */
-    env?: Record<string, string>;
-    /** Image attachments (signed URLs) appended as image content blocks. */
-    imageList?: HeteroExecImageRef[];
-    jwt: string;
-    /**
-     * Prime device-run descriptor: when present, the dispatch's resolved
-     * harness is Prime (type 'orvilo') and this host launches `orvilo prime
-     * exec` instead of `hetero exec` — same child-process supervision, same
-     * kill contract. Carries the artifact pin + bound broker credential.
-     */
-    prime?: PrimeRunDescriptor;
-    operationId: string;
-    /**
-     * The operation-scoped token from the dispatch (carries `hetero:tool:exec`
-     * when builtin tools are mounted). The caller often substitutes `jwt` with
-     * the device's own user token for ingest/finish, so the op token travels
-     * separately and the CLI prefers it for `execBuiltinTool` callbacks.
-     */
-    operationJwt?: string;
-    prompt: string;
-    resumeFallbackSystemContext?: string;
-    resumeSessionId?: string;
-    /** Admission fence relayed to `orvilo hetero exec` via `ORVILO_RUN_GENERATION`. */
-    runGeneration?: number;
-    serverUrl: string;
-    systemContext?: string;
-    topicId: string;
-    /** Topic/run workspace — forwarded as `ORVILO_WORKSPACE_ID` for ingest. */
-    workspaceId?: string;
-    /**
-     * Called once the child process has spawned (pid available). The caller
-     * (gateway dispatcher) uses this to register the process so a later
-     * `cancelHeteroTask` can kill it by operationId.
-     */
-    onChildSpawned?: (child: ChildProcess) => void;
-  }): Promise<{ reason?: string; status: 'accepted' | 'rejected' }> {
+  private spawnOrviloHeteroExecCli(params: SpawnOrviloHeteroExecParams): Promise<GatewayRunAck> {
     const {
       agentType,
       assistantMessageId,
@@ -2640,15 +2990,11 @@ export default class HeterogeneousAgentCtr {
         code,
         signal,
       );
-      if (this.orviloHeteroExecTasks.get(operationId)?.process === child) {
-        this.orviloHeteroExecTasks.delete(operationId);
-      }
+      if (this.isCliExecTask(operationId, child)) this.orviloHeteroExecTasks.delete(operationId);
     });
 
     child.on('error', () => {
-      if (this.orviloHeteroExecTasks.get(operationId)?.process === child) {
-        this.orviloHeteroExecTasks.delete(operationId);
-      }
+      if (this.isCliExecTask(operationId, child)) this.orviloHeteroExecTasks.delete(operationId);
     });
 
     return new Promise((resolve) => {
@@ -2719,6 +3065,10 @@ export default class HeterogeneousAgentCtr {
     const task = this.orviloHeteroExecTasks.get(operationId);
     if (!task) return;
     if (task.cancellation) return task.cancellation;
+    if (task.kind === 'inProcess') {
+      task.cancellation = this.cancelInProcessTurn(task, signal);
+      return task.cancellation;
+    }
 
     task.cancellation = (async () => {
       this.killProcessTree(task.process, signal);
@@ -2735,5 +3085,41 @@ export default class HeterogeneousAgentCtr {
     })();
 
     return task.cancellation;
+  }
+
+  /**
+   * Cancel an in-process (warm pool) turn: abort the runner, interrupt the
+   * agent and evict its pool entry. `exited` is the agent's own confirmation
+   * that its process (group) is gone — the server waits on it before admitting
+   * a replacement turn on the same native session. A turn that never reached
+   * an agent has no process to wait for.
+   */
+  private async cancelInProcessTurn(
+    task: InProcessHeteroExecTask,
+    signal: HeterogeneousAgentCancellationSignal,
+  ): Promise<OrviloHeteroExecCancellationResult> {
+    task.abort.abort();
+    const agent = task.agent;
+    let exited = true;
+    if (agent) {
+      try {
+        exited = await agent.interrupt();
+      } catch (error) {
+        logger.warn('warm pool: interrupt failed — %s', error);
+        exited = false;
+      }
+    }
+    task.lease?.evict();
+
+    let timer: NodeJS.Timeout | undefined;
+    await Promise.race([
+      task.exit,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, IN_PROCESS_CANCEL_EXIT_WAIT_MS);
+      }),
+    ]);
+    if (timer) clearTimeout(timer);
+
+    return { exited, pid: agent?.pid, signal };
   }
 }

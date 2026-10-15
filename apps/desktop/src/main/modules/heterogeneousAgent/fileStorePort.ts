@@ -8,6 +8,8 @@ const logger = createLogger('modules:heterogeneousAgent:fileStorePort');
 export interface RemoteServerAuth {
   getAccessToken: () => Promise<string | null>;
   getServerUrl: () => Promise<string | null>;
+  /** Refresh the device access token; resolves true when a new token is stored. */
+  refreshAccessToken?: () => Promise<boolean>;
 }
 
 interface LambdaCallContext {

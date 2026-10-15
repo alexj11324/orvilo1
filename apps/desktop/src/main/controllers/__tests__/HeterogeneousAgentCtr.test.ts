@@ -470,6 +470,9 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
         configOptions: options.configOptions ?? [],
         spec: (actual as any).getAcpAgentRuntime(agentType),
       }),
+    // Warm-pool gateway turns: the persistent agent is created through this
+    // factory; tests script it instead of launching a vendor process.
+    createPersistentAcpAgent: (...args: any[]) => createPersistentAcpAgentMock(...args),
     CursorAcpSession: MockCursorAcpSession,
     DroidAcpSession: MockDroidAcpSession,
     DevinAcpSession: MockDevinAcpSession,
@@ -482,6 +485,23 @@ vi.mock('@orvilo/heterogeneous-agents/spawn', async (importOriginal) => {
     TraeAcpSession: MockTraeAcpSession,
   };
 });
+
+const { createPersistentAcpAgentMock, resolveHeteroSpawnCommandMock, runHeteroTurnMock } =
+  vi.hoisted(() => ({
+    createPersistentAcpAgentMock: vi.fn(),
+    resolveHeteroSpawnCommandMock: vi.fn(),
+    runHeteroTurnMock: vi.fn(),
+  }));
+
+vi.mock('@orvilo/heterogeneous-agents/run', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  runHeteroTurn: (...args: any[]) => runHeteroTurnMock(...args),
+}));
+
+vi.mock('@orvilo/heterogeneous-agents/resolveCliCommand', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  resolveHeteroSpawnCommand: (...args: any[]) => resolveHeteroSpawnCommandMock(...args),
+}));
 
 const { consumeCodexRateLimitResetCreditMock, fetchCodexQuotaMock } = vi.hoisted(() => ({
   consumeCodexRateLimitResetCreditMock: vi.fn(),
@@ -3257,6 +3277,271 @@ describe('HeterogeneousAgentCtr', () => {
         killSpy.mockRestore();
         vi.useRealTimers();
       }
+    });
+  });
+
+  describe('spawnOrviloHeteroExec warm pool', () => {
+    const params = {
+      agentType: 'claude-code',
+      args: ['--model', 'claude-opus', '--effort', 'high'],
+      assistantMessageId: 'asst-warm',
+      cwd: '/repo',
+      jwt: 'device-jwt',
+      operationId: 'op-warm-1',
+      operationJwt: 'op-jwt',
+      prompt: 'fix the bug',
+      serverUrl: 'https://server.example.com',
+      topicId: 'topic-warm',
+      workspaceId: 'ws-warm',
+    };
+
+    const createFakeAgent = (pid = 777) => ({
+      busy: false,
+      close: vi.fn(),
+      interrupt: vi.fn(async () => true),
+      pid,
+      reusable: true,
+      runTurn: vi.fn(),
+      sessionId: undefined as string | undefined,
+    });
+
+    const okResult = {
+      finishDeliveryFailed: false,
+      result: 'success' as const,
+      resumeSessionInvalidated: false,
+    };
+
+    /** Runner stand-in: acquire like the real one, report the start, then finish. */
+    const scriptRunner = (until: (params: any) => Promise<unknown> = async () => {}) => {
+      runHeteroTurnMock.mockImplementation(async (runParams: any) => {
+        const agent = await runParams.agents.acquire({
+          fresh: false,
+          resumeSessionId: runParams.resumeSessionId,
+        });
+        runParams.onAgentStarted?.(agent);
+        await until(runParams);
+        return runParams.signal?.aborted ? { ...okResult, result: 'cancelled' } : okResult;
+      });
+    };
+
+    const createCtr = () =>
+      new HeterogeneousAgentCtr({ appStoragePath, storeManager: { get: vi.fn() } } as any, {
+        getAccessToken: async () => 'device-token',
+        getServerUrl: async () => null,
+      });
+
+    beforeEach(() => {
+      vi.mocked(existsSync).mockReturnValue(true);
+      spawnCalls.length = 0;
+      nextFakeProc = null;
+      createPersistentAcpAgentMock.mockReset();
+      createPersistentAcpAgentMock.mockImplementation(async () => createFakeAgent());
+      resolveHeteroSpawnCommandMock.mockReset();
+      resolveHeteroSpawnCommandMock.mockResolvedValue({ command: '/usr/local/bin/claude' });
+      runHeteroTurnMock.mockReset();
+      scriptRunner();
+      process.env.ORVILO_HETERO_WARM_POOL = '1';
+      delete process.env.ORVILO_HETERO_WARM_POOL_TYPES;
+    });
+
+    afterEach(() => {
+      delete process.env.ORVILO_HETERO_WARM_POOL;
+      delete process.env.ORVILO_HETERO_WARM_POOL_TYPES;
+    });
+
+    const createCliProc = () => {
+      const proc = new EventEmitter() as any;
+      const stdin = new EventEmitter() as any;
+      stdin.end = vi.fn();
+      stdin.write = vi.fn(() => true);
+      proc.kill = vi.fn(() => true);
+      proc.pid = 4321;
+      proc.stdin = stdin;
+      return proc;
+    };
+
+    it('keeps the CLI spawn path when the flag is off', async () => {
+      delete process.env.ORVILO_HETERO_WARM_POOL;
+      const proc = createCliProc();
+      nextFakeProc = proc;
+      const ctr = createCtr();
+
+      const ack = ctr.spawnOrviloHeteroExec(params);
+      expect(spawnCalls).toHaveLength(1);
+      proc.emit('spawn');
+
+      await expect(ack).resolves.toEqual({ status: 'accepted' });
+      expect(runHeteroTurnMock).not.toHaveBeenCalled();
+      expect(createPersistentAcpAgentMock).not.toHaveBeenCalled();
+    });
+
+    it('runs claude-code in-process on a pooled agent without spawning the CLI', async () => {
+      const ctr = createCtr();
+      const onInProcessTurnStarted = vi.fn();
+
+      await expect(
+        ctr.spawnOrviloHeteroExec({ ...params, onInProcessTurnStarted }),
+      ).resolves.toEqual({ status: 'accepted' });
+      await vi.waitFor(() => expect(runHeteroTurnMock).toHaveBeenCalledOnce());
+
+      expect(spawnCalls).toHaveLength(0);
+      expect(createPersistentAcpAgentMock).toHaveBeenCalledOnce();
+      expect(createPersistentAcpAgentMock.mock.calls[0][0]).toMatchObject({
+        agentType: 'claude-code',
+        command: '/usr/local/bin/claude',
+        cwd: '/repo',
+        detached: true,
+        env: expect.objectContaining({
+          ORVILO_JWT: 'device-jwt',
+          ORVILO_SERVER: 'https://server.example.com',
+          ORVILO_WORKSPACE_ID: 'ws-warm',
+        }),
+        extraArgs: ['--model', 'claude-opus', '--effort', 'high'],
+      });
+      const runParams = runHeteroTurnMock.mock.calls[0][0];
+      expect(runParams).toMatchObject({
+        agentType: 'claude-code',
+        assistantMessageId: 'asst-warm',
+        operationId: 'op-warm-1',
+        prompt: [{ text: 'fix the bug', type: 'text' }],
+        topicId: 'topic-warm',
+      });
+      expect(runParams.bridge).toBeDefined();
+      await vi.waitFor(() =>
+        expect(onInProcessTurnStarted).toHaveBeenCalledWith(expect.objectContaining({ pid: 777 })),
+      );
+    });
+
+    it('reuses the warm agent for the next turn on the same topic', async () => {
+      const ctr = createCtr();
+
+      await ctr.spawnOrviloHeteroExec(params);
+      await vi.waitFor(() => expect(runHeteroTurnMock).toHaveBeenCalledTimes(1));
+      await vi.waitFor(() => expect((ctr as any).orviloHeteroExecTasks.size).toBe(0));
+      await ctr.spawnOrviloHeteroExec({ ...params, operationId: 'op-warm-2' });
+      await vi.waitFor(() => expect(runHeteroTurnMock).toHaveBeenCalledTimes(2));
+
+      expect(createPersistentAcpAgentMock).toHaveBeenCalledOnce();
+    });
+
+    it('acks a redelivered operation without starting a second turn', async () => {
+      let finish!: () => void;
+      scriptRunner(
+        () =>
+          new Promise<void>((resolve) => {
+            finish = resolve;
+          }),
+      );
+      const ctr = createCtr();
+
+      await ctr.spawnOrviloHeteroExec(params);
+      await vi.waitFor(() => expect(runHeteroTurnMock).toHaveBeenCalledOnce());
+      await expect(ctr.spawnOrviloHeteroExec(params)).resolves.toEqual({ status: 'accepted' });
+
+      expect(runHeteroTurnMock).toHaveBeenCalledOnce();
+      expect(spawnCalls).toHaveLength(0);
+      finish();
+    });
+
+    it.each([
+      ['a Prime descriptor', { prime: { artifact: 'x' } as any }],
+      ['a non-allowlisted agent type', { agentType: 'opencode' }],
+      ['an unknown wrapper flag', { args: ['--unknown-flag', 'x'] }],
+    ])('keeps the CLI path for %s', async (_label, override) => {
+      const proc = createCliProc();
+      nextFakeProc = proc;
+      const ctr = createCtr();
+
+      const ack = ctr.spawnOrviloHeteroExec({ ...params, ...override });
+      await vi.waitFor(() => expect(spawnCalls).toHaveLength(1));
+      proc.emit('spawn');
+
+      await expect(ack).resolves.toEqual({ status: 'accepted' });
+      expect(runHeteroTurnMock).not.toHaveBeenCalled();
+    });
+
+    it('honors the allowlist override, restricted to ACP runtimes', async () => {
+      process.env.ORVILO_HETERO_WARM_POOL_TYPES = 'opencode,cursor';
+      const ctr = createCtr();
+
+      await expect(
+        ctr.spawnOrviloHeteroExec({ ...params, agentType: 'opencode', args: ['--model', 'm'] }),
+      ).resolves.toEqual({ status: 'accepted' });
+      await vi.waitFor(() => expect(runHeteroTurnMock).toHaveBeenCalledOnce());
+      expect(createPersistentAcpAgentMock.mock.calls[0][0].extraArgs).toEqual(['--model', 'm']);
+
+      const proc = createCliProc();
+      nextFakeProc = proc;
+      const ack = ctr.spawnOrviloHeteroExec({
+        ...params,
+        agentType: 'cursor',
+        operationId: 'op-cursor',
+      });
+      await vi.waitFor(() => expect(spawnCalls).toHaveLength(1));
+      proc.emit('spawn');
+      await expect(ack).resolves.toEqual({ status: 'accepted' });
+    });
+
+    it('falls back to the CLI when the pooled agent cannot be prepared', async () => {
+      createPersistentAcpAgentMock.mockRejectedValueOnce(new Error('no bridge'));
+      const proc = createCliProc();
+      nextFakeProc = proc;
+      const ctr = createCtr();
+
+      const ack = ctr.spawnOrviloHeteroExec(params);
+      await vi.waitFor(() => expect(spawnCalls).toHaveLength(1));
+      proc.emit('spawn');
+
+      await expect(ack).resolves.toEqual({ status: 'accepted' });
+      expect(runHeteroTurnMock).not.toHaveBeenCalled();
+      expect((ctr as any).orviloHeteroExecTasks.get(params.operationId)?.kind).not.toBe(
+        'inProcess',
+      );
+    });
+
+    it('cancels an in-process turn with exited from the agent interrupt and evicts it', async () => {
+      const agent = createFakeAgent();
+      agent.interrupt.mockResolvedValue(false);
+      createPersistentAcpAgentMock.mockResolvedValue(agent);
+      scriptRunner(
+        (runParams) =>
+          new Promise<void>((resolve) => {
+            runParams.signal.addEventListener('abort', () => resolve());
+          }),
+      );
+      const ctr = createCtr();
+
+      await ctr.spawnOrviloHeteroExec(params);
+      await vi.waitFor(() => expect(runHeteroTurnMock).toHaveBeenCalledOnce());
+      await vi.waitFor(() =>
+        expect((ctr as any).orviloHeteroExecTasks.get(params.operationId)?.agent).toBe(agent),
+      );
+
+      await expect(
+        ctr.cancelOrviloHeteroExec({ operationId: params.operationId, signal: 'SIGINT' }),
+      ).resolves.toEqual({ exited: false, pid: 777, signal: 'SIGINT' });
+
+      expect(agent.interrupt).toHaveBeenCalledOnce();
+      expect(runHeteroTurnMock.mock.calls[0][0].signal.aborted).toBe(true);
+      expect(agent.close).toHaveBeenCalled();
+      expect((ctr as any).gatewayAcpPool.size).toBe(0);
+      expect((ctr as any).orviloHeteroExecTasks.has(params.operationId)).toBe(false);
+    });
+
+    it('closes the warm pool on before-quit', async () => {
+      const electron = (await import('electron')) as any;
+      electron.app.on.mockClear();
+      const agent = createFakeAgent();
+      createPersistentAcpAgentMock.mockResolvedValue(agent);
+      const ctr = createCtr();
+
+      await ctr.spawnOrviloHeteroExec(params);
+      await vi.waitFor(() => expect((ctr as any).orviloHeteroExecTasks.size).toBe(0));
+      ctr.afterAppReady();
+      const calls = electron.app.on.mock.calls as Array<[string, () => void]>;
+      calls.findLast(([event]) => event === 'before-quit')![1]();
+
+      expect(agent.close).toHaveBeenCalledOnce();
     });
   });
 

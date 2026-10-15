@@ -85,17 +85,28 @@ describe('createDevOrchestrator', () => {
     ]);
   });
 
-  it('wipes the stale dist before spawning the watch builds', () => {
+  it('wipes the stale main and preload bundles before spawning the watch builds', () => {
     const h = createHarness();
     h.orchestrator.start();
 
-    expect(h.options.rmSync).toHaveBeenCalledWith('/repo/apps/desktop/dist', {
-      force: true,
-      recursive: true,
-    });
-    expect(h.options.rmSync.mock.invocationCallOrder[0]).toBeLessThan(
+    for (const dir of ['/repo/apps/desktop/dist/main', '/repo/apps/desktop/dist/preload']) {
+      expect(h.options.rmSync).toHaveBeenCalledWith(dir, { force: true, recursive: true });
+    }
+    expect(h.options.rmSync.mock.invocationCallOrder.at(1)).toBeLessThan(
       h.options.spawn.mock.invocationCallOrder[0],
     );
+  });
+
+  it('keeps the prebuilt dist/renderer that dev:static serves', () => {
+    const h = createHarness();
+    h.orchestrator.start();
+
+    const removed = h.options.rmSync.mock.calls.map(([target]) => target);
+    expect(removed).not.toContain('/repo/apps/desktop/dist');
+    expect(removed.filter((target) => target.startsWith('/repo/apps/desktop/dist'))).toEqual([
+      '/repo/apps/desktop/dist/main',
+      '/repo/apps/desktop/dist/preload',
+    ]);
   });
 
   it('shuts everything down when a vite child exits early', () => {

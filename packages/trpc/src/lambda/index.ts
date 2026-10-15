@@ -14,6 +14,7 @@ import { trpc } from './init';
 import { apiKeyScopeGuard } from './middleware/apiKeyScope';
 import { heteroOperationAuth } from './middleware/heteroOperationAuth';
 import { oidcAuth } from './middleware/oidcAuth';
+import { taskDomainErrors } from './middleware/taskDomainErrors';
 
 /**
  * Create a router
@@ -25,7 +26,7 @@ export const router = trpc.router;
  * Create an unprotected procedure
  * @link https://trpc.io/docs/v11/procedures
  **/
-const baseProcedure = trpc.procedure.use(openTelemetry);
+const baseProcedure = trpc.procedure.use(openTelemetry).use(taskDomainErrors);
 
 // `apiKeyScopeGuard` also covers public procedures: `createLambdaContext`
 // authenticates an `X-API-Key` before procedure selection, and several public

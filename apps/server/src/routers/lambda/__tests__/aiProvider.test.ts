@@ -164,6 +164,7 @@ describe('aiProviderRouter', () => {
       expect(vi.mocked(AiProviderModel).prototype.create).not.toHaveBeenCalled();
       expect(vi.mocked(ProviderBindingPlane).mock.calls).toContainEqual([
         expect.anything(),
+        expect.any(Function),
         mockUserId,
         expect.objectContaining({ workspaceId: 'ws-1' }),
       ]);

@@ -24,6 +24,7 @@ packages:
   - '../../packages/utils'
   - '../../packages/context-engine'
   - '../../packages/database'
+  - '../../packages/secret-cipher'
   - '../../packages/agent-templates'
   - '../../packages/builtin-agents'
   - '../../packages/business/model-bank'
@@ -41,7 +42,7 @@ packages:
   - '../../packages/shared-tool-ui'
   - '.'
 
-lockfile: false
+lockfile: true
 ignoreWorkspaceRootCheck: true
 
 publicHoistPattern:

@@ -1,5 +1,4 @@
 'use client';
-
 import type { WorkQueryEntityType, WorkQueryValue } from '@orvilo/types';
 import { workQueryFieldSpec, workQueryFieldSpecs } from '@orvilo/types';
 import { PlusIcon, XIcon } from 'lucide-react';
@@ -14,14 +13,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useClientDataSWR } from '@/libs/swr';
-import { taskLabelKeys, workAttentionKeys } from '@/libs/swr/keys';
-import { lambdaClient } from '@/libs/trpc/client';
+import { taskLabelKeys } from '@/libs/swr/keys';
 import { taskLabelService } from '@/services/taskLabel';
 import { workAttentionService } from '@/services/workAttention';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/slices/auth/selectors';
+import { useFetchWorkTeams } from '@/store/workTeam/hooks';
 
 import type { BuilderState, FilterRow } from './workQueryBuilder';
 import { defaultRowValue, isRowComplete, newFilterRow } from './workQueryBuilder';
@@ -208,10 +207,7 @@ const FilterRowEditor = memo<{
       })),
     [agents],
   );
-  const { data: teamsData } = useClientDataSWR(
-    workspaceId ? workAttentionKeys.teams(workspaceId) : null,
-    () => lambdaClient.team.teams.query(),
-  );
+  const { data: teamsData } = useFetchWorkTeams();
   const { data: labelsData } = useClientDataSWR(
     spec?.valueKind === 'label' && isLogin ? taskLabelKeys.list(isLogin, workspaceId) : null,
     () => taskLabelService.getLabels(),

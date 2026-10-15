@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspace } from '@/business/client/hooks/useActiveWorkspace';
 import { confirmModal } from '@/components/Modal';
-import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
 import { deviceService } from '@/services/device';
 import { gatewayConnectionService } from '@/services/electron/gatewayConnection';
+import { workspaceDeviceService } from '@/services/workspaceDevice';
 import { useElectronStore } from '@/store/electron';
 
 import { refreshDeviceList } from './const';
@@ -60,9 +60,7 @@ export const useConnectDesktopDevice = ({
           setConnecting(true);
           setError(undefined);
           try {
-            const enrollment = await createWorkspaceLambdaClient(
-              target.id,
-            ).device.shareDeviceToWorkspace.mutate({
+            const enrollment = await workspaceDeviceService.share(target.id, {
               confirmOverwrite,
               deviceId: personal.deviceId,
               visibility,

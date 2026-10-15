@@ -189,7 +189,20 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Check architecture boundaries
+        run: |
+          node scripts/architecture/check-database-boundaries.mjs
+          node scripts/architecture/check-runtime-boundaries.mjs
+          node --test scripts/architecture/check-runtime-boundaries.test.mjs
+          node scripts/ci/checkFrontendDataBoundaries.mjs
+
+      - name: Build independent type boundaries
+        run: |
+          node --test scripts/type-check-affected.test.mjs
+          pnpm exec tsc -b tsconfig.packages.json
+          node scripts/type-check-affected.mjs --all
 
       - name: Typecheck
         # Two runs lost their runner during tsgo without a TypeScript diagnostic.
@@ -346,10 +359,10 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Install CLI deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
         working-directory: apps/cli
 
       - name: Test CLI build configuration
@@ -450,7 +463,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Enforce original Chinese UI font
         if: matrix.shard == 1
@@ -501,7 +514,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Download blob reports
         uses: actions/download-artifact@v7
@@ -578,7 +591,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
         working-directory: apps/desktop
         env:
           NODE_OPTIONS: --max-old-space-size=8192
@@ -587,7 +600,7 @@ jobs:
       # workspace root (../../packages/*). Installing the root workspace relinks them so
       # tsgo can resolve sibling packages from source.
       - name: Relink root workspace members
-        run: pnpm install --ignore-scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
         env:
           NODE_OPTIONS: --max-old-space-size=8192
 
@@ -634,10 +647,7 @@ jobs:
         ports:
           - 6379:6379
         options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
     env:
       SLACK_REDIS_TEST_URL: redis://127.0.0.1:6379
 
@@ -656,7 +666,14 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify standalone production deployment
+        if: matrix.shard == 1
+        run: |
+          pnpm --filter @orvilo/server build
+          pnpm --filter @orvilo/server check:dependencies
+          pnpm --filter @orvilo/server smoke:deployment
 
       - name: Test Server Coverage
         run: bunx vitest --coverage --silent='passed-only' --reporter=default --reporter=blob --coverage.reportsDirectory=./apps/server/coverage --project server --shard=${{ matrix.shard }}/2
@@ -701,7 +718,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Download blob reports
         uses: actions/download-artifact@v7
@@ -755,7 +772,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm i
+        run: pnpm i --frozen-lockfile
 
       # The service container runs a stock ParadeDB config; on CI runners its
       # checkpoints degrade into multi-minute write storms that starve queries.

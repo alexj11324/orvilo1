@@ -21,7 +21,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Auto-close duplicate issues
         run: bun run .github/scripts/auto-close-duplicates.ts

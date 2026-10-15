@@ -27,6 +27,7 @@ import {
 import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { createTestSecretCipher } from '../../../tests/secretCipher';
 import { getTestDB } from '../../core/getTestDB';
 import { users } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -92,7 +93,7 @@ describe.skipIf(!RUN)('quota real-account E2E (local DB)', () => {
     expect(identity.externalAccountId).toBeTruthy();
     expect(readings.length).toBeGreaterThan(0);
 
-    const accounts = new AgentProviderAccountModel(db, USER_ID);
+    const accounts = new AgentProviderAccountModel(db, createTestSecretCipher, USER_ID);
     const snapshots = new AgentQuotaSnapshotModel(db, USER_ID);
     const windows = new AgentQuotaWindowModel(db, USER_ID);
     const ledger = new AgentQuotaUsageLedgerModel(db, USER_ID);

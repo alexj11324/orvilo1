@@ -1,5 +1,4 @@
 'use client';
-
 import { isDesktop } from '@orvilo/const';
 import type { DeviceListItem, DeviceWorkspaceShare } from '@orvilo/types';
 import { cn } from 'cn';
@@ -18,9 +17,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import DirIcon from '@/features/ChatInput/ControlBar/DirIcon';
 import { openAddWorkingDirModal } from '@/features/WorkingDirectory';
-import { createWorkspaceLambdaClient, lambdaQuery } from '@/libs/trpc/client';
 import { getHostPort, hostResultOr } from '@/platform';
 import { deviceService } from '@/services/device';
+import { deviceQueries } from '@/services/reactQueryBindings';
+import { workspaceDeviceService } from '@/services/workspaceDevice';
 import { nextWorkingDirs } from '@/store/device';
 
 import { refreshDeviceList } from './const';
@@ -80,11 +80,11 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
     }
     toast.error(t('devices.edit.saveFailed'));
   };
-  const updatePersonal = lambdaQuery.device.updateDevice.useMutation({
+  const updatePersonal = deviceQueries.updateDevice.useMutation({
     onError: onUpdateError,
     onSuccess: onUpdateSuccess,
   });
-  const updateWorkspace = lambdaQuery.device.updateWorkspaceDevice.useMutation({
+  const updateWorkspace = deviceQueries.updateWorkspaceDevice.useMutation({
     onError: onUpdateError,
     onSuccess: onUpdateSuccess,
   });
@@ -192,7 +192,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
       okText: t('devices.share.revoke'),
       onOk: async () => {
         try {
-          await createWorkspaceLambdaClient(share.workspaceId).device.removeWorkspaceDevice.mutate({
+          await workspaceDeviceService.remove(share.workspaceId, {
             deviceId: share.deviceId,
           });
           refreshDeviceList();

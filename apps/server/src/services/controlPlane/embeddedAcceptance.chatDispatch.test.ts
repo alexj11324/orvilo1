@@ -31,6 +31,7 @@ import {
 } from '@/database/schemas';
 import { TASK_EXECUTION_CONTROL_CANDIDATE_SQL } from '@/database/schemas/taskExecutionControl';
 import type { OrviloDatabase } from '@/database/type';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import {
   cleanupTestUser,
   createTestUser,
@@ -121,7 +122,7 @@ const seedChatRun = async () => {
 };
 
 const seedBinding = async (userId: string) => {
-  const cred = await new CredentialModel(db, userId).create({
+  const cred = await new CredentialModel(db, KeyVaultsGateKeeper.initWithEnvKey, userId).create({
     key: `key_${randomBytes(4).toString('hex')}`,
     name: 'Chat dispatch acceptance credential',
     payload: { values: { PROVIDER_KEY: SECRET_VALUE } },

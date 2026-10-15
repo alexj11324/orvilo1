@@ -48,7 +48,7 @@ const runtimeFixture = (): PageAgentExecutionRuntime => {
   // A genuine typed Drizzle mock handle; no connection, credentials or DB writes.
   // Mocked leaf constructors never touch it.
   const serverDB = drizzle.mock<typeof DatabaseSchema>();
-  return pageAgentRuntime.factory({ serverDB, userId: ctx.userId });
+  return pageAgentRuntime.factory({ serverDB, toolManifestMap: {}, userId: ctx.userId });
 };
 const realParagraphId = async (runtime: PageAgentExecutionRuntime): Promise<string> => {
   const before = await runtime.getPageContent({ format: 'both' }, ctx);

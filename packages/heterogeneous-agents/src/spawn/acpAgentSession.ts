@@ -141,7 +141,7 @@ export abstract class AcpAgentSession<
   /** The agent-native session id, set as soon as session setup resolves it. */
   protected acpSessionId?: string;
 
-  private readonly pipelineConfig: Omit<AgentStreamPipelineOptions, 'operationId'>;
+  private pipelineConfig: Omit<AgentStreamPipelineOptions, 'operationId'>;
   private cacheKeepalive?: CacheKeepaliveController;
   /** The child is held (no keep-alive) between turns for {@link AcpAgentSessionOptions.warmIdleMs}. */
   private warmHoldTimer?: ReturnType<typeof setTimeout>;
@@ -245,18 +245,22 @@ export abstract class AcpAgentSession<
    * replaces the per-turn options (operation id, prompt, callbacks). Throws
    * when the session is not {@link reusable} — callers fall back to a fresh
    * session.
+   *
+   * Bindings named like pipeline options also rebind the turn's fresh
+   * pipeline: `uploadImage` (kept for later turns) and
+   * `initialCumulativeUsage` (this turn only — a cold turn's resume seed never
+   * carries over to a warm turn).
    */
   async runWarm(bindings: Partial<TOptions>): Promise<void> {
     if (!this.reusable) throw new Error('ACP session is not reusable');
     this.adopting = true;
     try {
       this.releaseWarmHold();
-      if (this.cacheKeepalive) {
-        // An inert ping may be mid-flight; one ACP session cannot take two
-        // concurrent `session/prompt`s, so let it settle first.
-        await this.keepaliveInFlight;
-        this.cacheKeepalive?.dispose('activity');
-      }
+      // Retire the keeper first so it schedules no further ping, then let an
+      // inert ping that is already mid-flight settle: one ACP session cannot
+      // take two concurrent `session/prompt`s.
+      this.cacheKeepalive?.dispose('activity');
+      await this.keepaliveInFlight;
     } finally {
       this.adopting = false;
     }
@@ -264,8 +268,13 @@ export abstract class AcpAgentSession<
 
     this.clearTitleLinger();
     Object.assign(this.options, bindings);
+    const rebound = bindings as Partial<AgentStreamPipelineOptions>;
+    if ('uploadImage' in bindings) {
+      this.pipelineConfig = { ...this.pipelineConfig, uploadImage: rebound.uploadImage };
+    }
     this.pipeline = new AgentStreamPipeline({
       ...this.pipelineConfig,
+      initialCumulativeUsage: rebound.initialCumulativeUsage,
       operationId: this.options.operationId,
     });
     this.interruptRequested = false;
@@ -333,11 +342,18 @@ export abstract class AcpAgentSession<
   private beginWarmHold(): void {
     const ms = this.options.warmIdleMs;
     if (!ms || ms <= 0 || this.hostClosed || this.interruptRequested || this.cacheKeepalive) return;
-    this.warmHoldTimer = setTimeout(() => {
+    const timer = setTimeout(() => {
+      if (this.warmHoldTimer !== timer) return;
       this.warmHoldTimer = undefined;
       this.close();
     }, ms);
-    this.warmHoldTimer.unref?.();
+    timer.unref?.();
+    this.warmHoldTimer = timer;
+    // A child that dies while held idle ends the hold: report `closed` now
+    // instead of when the idle timer would have fired.
+    void this.client.exited.then(() => {
+      if (this.warmHoldTimer === timer) this.close();
+    });
   }
 
   private releaseWarmHold(): void {
@@ -540,7 +556,16 @@ export abstract class AcpAgentSession<
    * while `inInertTurn` is set. Resolves false on any failure so the
    * scheduler disarms instead of burning retries on a dead session.
    */
-  private async sendKeepalivePing(): Promise<boolean> {
+  private sendKeepalivePing(): Promise<boolean> {
+    const ping = this.runKeepalivePing();
+    this.keepaliveInFlight = ping;
+    void ping.finally(() => {
+      if (this.keepaliveInFlight === ping) this.keepaliveInFlight = undefined;
+    });
+    return ping;
+  }
+
+  private async runKeepalivePing(): Promise<boolean> {
     const sessionId = this.acpSessionId;
     if (!sessionId || this.hostClosed) return false;
     this.inInertTurnActive = true;

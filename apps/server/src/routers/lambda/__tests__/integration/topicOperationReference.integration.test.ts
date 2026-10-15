@@ -48,7 +48,7 @@ describe('native operation explicit topic references', () => {
         workspaceId,
         ...values,
       })
-      .returning();
+      .returning({ id: messages.id });
     return message;
   };
   const caller = (token = claims, selector = workspaceId) =>
@@ -244,7 +244,7 @@ describe('native operation explicit topic references', () => {
         sourceMessageId: anchorId,
         type: 'standalone',
       })
-      .returning();
+      .returning({ id: threads.id });
     await insertMessage({ content: `<refer_topic id="${sourceId}" />`, threadId: thread.id });
     await expect(read()).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });

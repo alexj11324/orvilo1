@@ -9,7 +9,6 @@ import {
   DropdownMenuPositioner,
   DropdownMenuSubmenuRoot,
   DropdownMenuSubmenuTrigger,
-  Flexbox,
   menuSharedStyles,
 } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
@@ -139,8 +138,8 @@ export const MultipleProvidersModelItem = memo<MultipleProvidersModelItemProps>(
                         {isProviderActive ? <Check size={16} /> : null}
                       </DropdownMenuItemIcon>
                       <DropdownMenuItemLabel>
-                        <Flexbox horizontal align="center" gap={8}>
-                          <Flexbox horizontal align="center" className="flex-none">
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center flex-none">
                             <ProviderItemRender
                               logo={p.logo}
                               name={p.name}
@@ -149,13 +148,13 @@ export const MultipleProvidersModelItem = memo<MultipleProvidersModelItemProps>(
                               source={p.source}
                               type={'avatar'}
                             />
-                          </Flexbox>
+                          </div>
                           {providerRestricted && proLabel && (
                             <Tag color="gold" size="small">
                               {proLabel}
                             </Tag>
                           )}
-                        </Flexbox>
+                        </div>
                       </DropdownMenuItemLabel>
                     </DropdownMenuItem>
                   );

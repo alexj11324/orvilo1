@@ -1,10 +1,10 @@
-import { MaskShadow } from '@lobehub/ui';
 import { useSize } from 'ahooks';
 import { cn } from 'cn';
 import { ChevronsDownUpIcon, ChevronsUpDownIcon } from 'lucide-react';
 import { lazy, memo, Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import MaskShadow from '@/components/MaskShadow';
 import { Button } from '@/components/ui/button';
 
 import { styles } from './style';
@@ -45,7 +45,6 @@ const BriefCardSummary = memo<BriefCardSummaryProps>(({ summary }) => {
     <div className="flex flex-col gap-1">
       {isOverflow && !expanded ? (
         <MaskShadow
-          size={32}
           style={{
             maxHeight: expanded ? undefined : COLLAPSED_MAX_HEIGHT,
           }}

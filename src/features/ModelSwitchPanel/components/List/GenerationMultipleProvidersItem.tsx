@@ -6,7 +6,6 @@ import {
   DropdownMenuPositioner,
   DropdownMenuSubmenuRoot,
   DropdownMenuSubmenuTrigger,
-  Flexbox,
   menuSharedStyles,
 } from '@lobehub/ui';
 import { cn } from 'cn';
@@ -43,7 +42,7 @@ const GenerationMultipleProvidersItem = memo<GenerationMultipleProvidersItemProp
     const isActive = !!activeProvider;
 
     return (
-      <Flexbox className="my-px mx-1">
+      <div className="flex flex-col my-px mx-1">
         <DropdownMenuSubmenuRoot open={subOpen} onOpenChange={setSubOpen}>
           <DropdownMenuSubmenuTrigger
             className={cn(
@@ -77,17 +76,16 @@ const GenerationMultipleProvidersItem = memo<GenerationMultipleProvidersItemProp
                   pricingMode={pricingMode}
                   provider={(activeProvider ?? item.data.providers[0]).id}
                 />
-                <Flexbox gap={4} paddingBlock={8} paddingInline={8}>
-                  <Flexbox className={modelSwitchPanelStyles.caption}>
+                <div className="flex flex-col gap-1 py-2 px-2">
+                  <div className={cn('flex flex-col', modelSwitchPanelStyles.caption)}>
                     {t('ModelSwitchPanel.useModelFrom')}
-                  </Flexbox>
+                  </div>
                   {item.data.providers.map((p) => {
                     const pKey = menuKey(p.id, item.data.model.id);
                     const isProviderActive = isActive ? activeKey === pKey : p.id === 'orvilo';
                     return (
-                      <Flexbox
-                        horizontal
-                        className={modelSwitchPanelStyles.menuItem}
+                      <div
+                        className={cn('flex', modelSwitchPanelStyles.menuItem)}
                         key={pKey}
                         onClick={() => {
                           onModelChange(item.data.model.id, p.id);
@@ -101,15 +99,15 @@ const GenerationMultipleProvidersItem = memo<GenerationMultipleProvidersItemProp
                           source={p.source}
                         />
                         {isProviderActive ? <Check size={16} /> : null}
-                      </Flexbox>
+                      </div>
                     );
                   })}
-                </Flexbox>
+                </div>
               </DropdownMenuPopup>
             </DropdownMenuPositioner>
           </DropdownMenuPortal>
         </DropdownMenuSubmenuRoot>
-      </Flexbox>
+      </div>
     );
   },
 );

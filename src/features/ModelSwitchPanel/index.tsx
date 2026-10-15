@@ -4,7 +4,6 @@ import {
   DropdownMenuPositioner,
   DropdownMenuRoot,
   DropdownMenuTrigger,
-  stopPropagation,
   TooltipGroup,
 } from '@lobehub/ui';
 import { memo, useCallback, useState } from 'react';
@@ -47,7 +46,10 @@ const ModelSwitchPanel = memo<ModelSwitchPanelProps>(
           </DropdownMenuTrigger>
           <DropdownMenuPortal>
             <DropdownMenuPositioner hoverTrigger={openOnHover} placement={placement}>
-              <DropdownMenuPopup className={styles.container} onKeyDown={stopPropagation}>
+              <DropdownMenuPopup
+                className={styles.container}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
                 <PanelContent
                   ModelItemComponent={ModelItemComponent}
                   enabledList={enabledList}

@@ -1,10 +1,11 @@
-import { Flexbox, Icon, stopPropagation, Tooltip } from '@lobehub/ui';
+import { Tooltip } from '@lobehub/ui';
 import { Tabs } from '@lobehub/ui/base-ui';
-import { ProviderIcon } from '@lobehub/ui/icons';
+import { cn } from 'cn';
 import { Brain } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ProviderIcon } from '@/components/icons';
 import SearchBar from '@/components/SearchBar';
 
 import { styles } from '../styles';
@@ -23,17 +24,10 @@ export const Toolbar = memo<ToolbarProps>(
     const { t } = useTranslation('components');
 
     return (
-      <Flexbox
-        horizontal
-        align="center"
-        className={styles.toolbar}
-        gap={4}
-        justify="space-between"
-        paddingBlock={8}
-        paddingInline={8}
-        width="100%"
+      <div
+        className={cn('flex items-center gap-1 justify-between py-2 px-2 w-full', styles.toolbar)}
       >
-        <Flexbox flex={1} width="100%">
+        <div className="flex flex-col flex-1 w-full">
           <SearchBar
             className={styles.toolbarSearch}
             clearOnEscape={false}
@@ -41,9 +35,9 @@ export const Toolbar = memo<ToolbarProps>(
             value={searchKeyword}
             visualSize="compact"
             onChange={(e) => onSearchKeywordChange(e.target.value)}
-            onKeyDown={stopPropagation}
+            onKeyDown={(e) => e.stopPropagation()}
           />
-        </Flexbox>
+        </div>
         {showGroupModeSwitch && (
           <Tabs
             activeKey={groupMode}
@@ -59,7 +53,7 @@ export const Toolbar = memo<ToolbarProps>(
                 key: 'byModel',
                 label: (
                   <Tooltip title={t('ModelSwitchPanel.byModel')}>
-                    <Icon icon={Brain} size={16} />
+                    <Brain size={16} />
                   </Tooltip>
                 ),
               },
@@ -67,7 +61,7 @@ export const Toolbar = memo<ToolbarProps>(
                 key: 'byProvider',
                 label: (
                   <Tooltip title={t('ModelSwitchPanel.byProvider')}>
-                    <Icon icon={ProviderIcon} size={16} />
+                    <ProviderIcon size={16} />
                   </Tooltip>
                 ),
               },
@@ -75,7 +69,7 @@ export const Toolbar = memo<ToolbarProps>(
             onChange={(key) => onGroupModeChange?.(key as GroupMode)}
           />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

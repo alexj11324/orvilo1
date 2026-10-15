@@ -5,8 +5,6 @@ import {
   DropdownMenuPositioner,
   DropdownMenuSubmenuRoot,
   DropdownMenuSubmenuTrigger,
-  Flexbox,
-  Icon,
   menuSharedStyles,
 } from '@lobehub/ui';
 import { cn } from 'cn';
@@ -89,20 +87,16 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
             }}
           >
             {t('ModelSwitchPanel.emptyProvider')}
-            <Icon icon={LucideArrowRight} size={16} />
+            <LucideArrowRight size={16} />
           </Block>
         );
       }
 
       case 'group-header': {
         return (
-          <Flexbox
-            horizontal
-            className={styles.groupHeader}
-            justify="space-between"
+          <div
+            className={cn('flex justify-between pt-3 pb-1 ps-3 pe-2 w-full', styles.groupHeader)}
             key={`header-${item.provider.id}`}
-            paddingBlock={'12px 4px'}
-            paddingInline={'12px 8px'}
           >
             <ProviderItemRender
               logo={item.provider.logo}
@@ -127,16 +121,14 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                 onClose();
               }}
             />
-          </Flexbox>
+          </div>
         );
       }
 
       case 'empty-model': {
         return (
-          <Flexbox
-            horizontal
-            className={cn(styles.menuItem, styles.tertiaryText)}
-            gap={8}
+          <div
+            className={cn('flex gap-2', styles.menuItem, styles.tertiaryText)}
             key={`empty-${item.provider.id}`}
             onClick={() => {
               onClose();
@@ -144,8 +136,8 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
             }}
           >
             {t('ModelSwitchPanel.emptyModel')}
-            <Icon icon={LucideArrowRight} size={16} />
-          </Flexbox>
+            <LucideArrowRight size={16} />
+          </div>
         );
       }
 
@@ -155,7 +147,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
         const restricted = isModelRestricted?.(item.model.id, item.provider.id);
 
         return (
-          <Flexbox className="my-px mx-1">
+          <div className="flex flex-col my-px mx-1">
             <DropdownMenuSubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
               <DropdownMenuSubmenuTrigger
                 className={cn(
@@ -190,7 +182,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                 </DropdownMenuPositioner>
               </DropdownMenuPortal>
             </DropdownMenuSubmenuRoot>
-          </Flexbox>
+          </div>
         );
       }
 
@@ -201,7 +193,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
         const restricted = isModelRestricted?.(item.data.model.id, singleProvider.id);
 
         return (
-          <Flexbox className="my-px mx-1">
+          <div className="flex flex-col my-px mx-1">
             <DropdownMenuSubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
               <DropdownMenuSubmenuTrigger
                 className={cn(
@@ -235,13 +227,13 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                 </DropdownMenuPositioner>
               </DropdownMenuPortal>
             </DropdownMenuSubmenuRoot>
-          </Flexbox>
+          </div>
         );
       }
 
       case 'model-item-multiple': {
         return (
-          <Flexbox className="my-px mx-1" key={item.data.displayName}>
+          <div className="flex flex-col my-px mx-1" key={item.data.displayName}>
             <MultipleProvidersModelItem
               activeKey={activeKey}
               data={item.data}
@@ -254,7 +246,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
               onModelChange={onModelChange}
               onRestrictedModelClick={onRestrictedModelClick}
             />
-          </Flexbox>
+          </div>
         );
       }
 

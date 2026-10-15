@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Slider } from '@lobehub/ui/base-ui';
 import { cn } from 'cn';
 import type { CSSProperties, ReactNode } from 'react';
@@ -130,9 +129,8 @@ function LevelSlider<T extends string = string>({
   };
 
   return (
-    <Flexbox
-      className={styles.root}
-      gap={8}
+    <div
+      className={cn('flex flex-col gap-2', styles.root)}
       style={{
         ...restStyle,
         minWidth: getMinimumWidth(levels.length, customMinWidth),
@@ -174,7 +172,7 @@ function LevelSlider<T extends string = string>({
           );
         })}
       </div>
-    </Flexbox>
+    </div>
   );
 }
 

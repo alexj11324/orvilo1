@@ -1,4 +1,4 @@
-import { Flexbox, SortableList } from '@lobehub/ui';
+import { SortableList } from '@lobehub/ui';
 import { type AiProviderModelListItem } from 'model-bank';
 import { memo } from 'react';
 
@@ -11,10 +11,10 @@ interface ListItemProps extends AiProviderModelListItem {
 const ListItem = memo<ListItemProps>(({ id, displayName, disabled }) => {
   return (
     <>
-      <Flexbox horizontal gap={8}>
+      <div className="flex gap-2">
         <ModelIcon model={id} size={24} type={'avatar'} />
         {displayName || id}
-      </Flexbox>
+      </div>
       {!disabled && <SortableList.DragHandle />}
     </>
   );

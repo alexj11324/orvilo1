@@ -1,9 +1,4 @@
-import {
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  stopPropagation,
-} from '@lobehub/ui';
+import { DropdownMenuPopup, DropdownMenuPortal, DropdownMenuPositioner } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { PanelContent } from './components/PanelContent';
@@ -26,7 +21,7 @@ export const ModelSwitchSubmenuPopup = memo<ModelSwitchSubmenuPopupProps>(
   ({ model, onModelChange, onOpenChange, provider }) => (
     <DropdownMenuPortal>
       <DropdownMenuPositioner alignOffset={-4} anchor={null} placement="right" sideOffset={8}>
-        <DropdownMenuPopup className={styles.container} onKeyDown={stopPropagation}>
+        <DropdownMenuPopup className={styles.container} onKeyDown={(e) => e.stopPropagation()}>
           <PanelContent
             model={model}
             provider={provider}

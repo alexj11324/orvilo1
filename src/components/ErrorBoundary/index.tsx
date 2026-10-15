@@ -1,17 +1,12 @@
 'use client';
 
-import { ErrorBoundary } from '@lobehub/ui';
 import { type ComponentType, memo, type ReactNode, useCallback } from 'react';
 
 import AlertFallback from './AlertFallback';
+import CatchBoundary, { type FallbackRenderProps } from './CatchBoundary';
 import SilentFallback from './SilentFallback';
 
 export type ErrorBoundaryVariant = 'alert' | 'silent';
-
-interface FallbackRenderProps {
-  error: unknown;
-  resetErrorBoundary: (...args: unknown[]) => void;
-}
 
 interface SafeBoundaryProps {
   alertTitle?: string;
@@ -42,9 +37,9 @@ const SafeBoundary = memo<SafeBoundaryProps>(
     );
 
     return (
-      <ErrorBoundary fallbackRender={fallbackRender} resetKeys={resetKeys} onError={onError}>
+      <CatchBoundary fallbackRender={fallbackRender} resetKeys={resetKeys} onError={onError}>
         {children}
-      </ErrorBoundary>
+      </CatchBoundary>
     );
   },
 );

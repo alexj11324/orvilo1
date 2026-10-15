@@ -1,12 +1,12 @@
 'use client';
 
-import { CopyButton } from '@lobehub/ui';
 import { Avatar, confirmModal, Modal } from '@lobehub/ui/base-ui';
 import { CircleCheckIcon, LogOutIcon, UnplugIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import CopyButton from '@/components/CopyButton';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
@@ -219,7 +219,7 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
 
           <div className="flex w-full items-center gap-3">
             <div className={styles.codeBox}>{deviceCodeInfo.userCode}</div>
-            <CopyButton content={deviceCodeInfo.userCode} />
+            <CopyButton content={deviceCodeInfo.userCode} title={t('copy', { ns: 'common' })} />
           </div>
 
           <div className={styles.pollingHint}>

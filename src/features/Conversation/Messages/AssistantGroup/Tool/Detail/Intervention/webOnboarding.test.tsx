@@ -6,9 +6,8 @@ import { WebOnboardingInterventions } from '@orvilo/builtin-tool-web-onboarding/
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  EmojiPicker: ({ onChange, value }: { onChange?: (next: string) => void; value?: string }) => (
+vi.mock('@/components/EmojiPicker', () => ({
+  default: ({ onChange, value }: { onChange?: (next: string) => void; value?: string }) => (
     <button data-testid="emoji-picker" type="button" onClick={() => onChange?.('🪶')}>
       {value || ''}
     </button>

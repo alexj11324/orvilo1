@@ -9,6 +9,8 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { useDocumentStore } from '@/store/document';
 
+import { commitEditorReview } from './commitEditorReview';
+
 const styles = {
   container: 'absolute z-1000 inset-be-6 inset-x-0 mx-auto [inline-size:fit-content]',
   toolbar:
@@ -89,7 +91,10 @@ interface DiffAllToolbarProps {
 }
 const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
   const { t } = useTranslation('editor');
-  const [performSave, markDirty] = useDocumentStore((s) => [s.performSave, s.markDirty]);
+  const [commitEditorMutation, markDirty] = useDocumentStore((s) => [
+    s.commitEditorMutation,
+    s.markDirty,
+  ]);
 
   const hasPendingDiffs = useEditorHasPendingDiffs(editor);
 
@@ -97,7 +102,7 @@ const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
 
   const handleSave = async () => {
     markDirty(documentId);
-    await performSave(documentId, undefined, { saveSource: 'manual' });
+    await commitEditorMutation(documentId, { saveSource: 'manual' });
   };
 
   return (
@@ -108,10 +113,15 @@ const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
             size="compact"
             variant="ghost"
             onClick={async () => {
-              editor.dispatchCommand(LITEXML_DIFFNODE_ALL_COMMAND, {
-                action: DiffAction.Reject,
-              });
-              await handleSave();
+              await commitEditorReview(
+                editor,
+                () => {
+                  editor.dispatchCommand(LITEXML_DIFFNODE_ALL_COMMAND, {
+                    action: DiffAction.Reject,
+                  });
+                },
+                handleSave,
+              );
             }}
           >
             <X className="size-4" size={16} />
@@ -121,10 +131,15 @@ const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
             size="compact"
             variant="secondary"
             onClick={async () => {
-              editor.dispatchCommand(LITEXML_DIFFNODE_ALL_COMMAND, {
-                action: DiffAction.Accept,
-              });
-              await handleSave();
+              await commitEditorReview(
+                editor,
+                () => {
+                  editor.dispatchCommand(LITEXML_DIFFNODE_ALL_COMMAND, {
+                    action: DiffAction.Accept,
+                  });
+                },
+                handleSave,
+              );
             }}
           >
             <Check className="size-4 text-success-text" size={16} />

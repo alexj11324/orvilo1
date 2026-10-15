@@ -1,5 +1,10 @@
 import type { IEditor } from '@lobehub/editor';
-import { LITEXML_APPLY_COMMAND, LITEXML_MODIFY_COMMAND } from '@lobehub/editor/litexml-commands';
+import {
+  LITEXML_APPLY_COMMAND,
+  LITEXML_MODIFY_COMMAND,
+  LITEXML_MODIFY_WITH_RESULTS_COMMAND,
+  type LiteXmlOperationResult,
+} from '@lobehub/editor/litexml-commands';
 import type { PageContentContext } from '@orvilo/prompts';
 import debug from 'debug';
 
@@ -86,7 +91,23 @@ const hasDataSource = (editor: InspectableEditor, type: string) =>
  * - Node modifications (insert, modify, remove)
  * - Text replacement
  */
+/** Command objects must come from the same module as the selected editor's
+ * listeners. The default remains the currently shipped SDK backend; native
+ * callers explicitly bind their owned symbols when attaching an editor. */
+export interface EditorRuntimeCommandBindings {
+  apply: typeof LITEXML_APPLY_COMMAND;
+  modify: typeof LITEXML_MODIFY_COMMAND;
+  /** Backend-owned validation and applied-operation results; never infer from dispatch boolean. */
+  modifyWithResults?: typeof LITEXML_MODIFY_WITH_RESULTS_COMMAND;
+}
+const sdkCommandBindings: EditorRuntimeCommandBindings = {
+  apply: LITEXML_APPLY_COMMAND,
+  modify: LITEXML_MODIFY_COMMAND,
+  modifyWithResults: LITEXML_MODIFY_WITH_RESULTS_COMMAND,
+};
+
 export class EditorRuntime {
+  private commandBindings: EditorRuntimeCommandBindings = sdkCommandBindings;
   private editor: IEditor | null = null;
   private titleSetter: ((title: string) => void) | null = null;
   private titleGetter: (() => string) | null = null;
@@ -98,8 +119,9 @@ export class EditorRuntime {
   /**
    * Set the current editor instance
    */
-  setEditor(editor: IEditor | null) {
+  setEditor(editor: IEditor | null, commands: EditorRuntimeCommandBindings = sdkCommandBindings) {
     this.editor = editor;
+    this.commandBindings = commands;
     log('[EditorRuntime] setEditor', this.getDebugSnapshot());
   }
 
@@ -484,6 +506,7 @@ export class EditorRuntime {
     > = [];
 
     const results: ModifyOperationResult[] = [];
+    const payloadResultIndices: number[] = [];
 
     for (const op of operations) {
       try {
@@ -506,7 +529,12 @@ export class EditorRuntime {
                 `Insert operation requires either 'beforeId' or 'afterId'. Got: ${JSON.stringify(Object.keys(op))}.`,
               );
             }
-            results.push({ action: 'insert', success: true });
+            payloadResultIndices.push(results.length);
+            results.push({
+              action: 'insert',
+              success: false,
+              error: 'Operation has not been confirmed by the editor.',
+            });
             break;
           }
 
@@ -515,7 +543,12 @@ export class EditorRuntime {
               action: 'modify',
               litexml: op.litexml,
             });
-            results.push({ action: 'modify', success: true });
+            payloadResultIndices.push(results.length);
+            results.push({
+              action: 'modify',
+              success: false,
+              error: 'Operation has not been confirmed by the editor.',
+            });
             break;
           }
 
@@ -524,7 +557,12 @@ export class EditorRuntime {
               action: 'remove',
               id: op.id,
             });
-            results.push({ action: 'remove', success: true });
+            payloadResultIndices.push(results.length);
+            results.push({
+              action: 'remove',
+              success: false,
+              error: 'Operation has not been confirmed by the editor.',
+            });
             break;
           }
         }
@@ -540,7 +578,42 @@ export class EditorRuntime {
     }
 
     log('Dispatching LiteXML modify batch with payload:', commandPayload);
-    editor.dispatchCommand(LITEXML_MODIFY_COMMAND, commandPayload);
+    if (commandPayload.length > 0) {
+      const command = this.commandBindings.modifyWithResults;
+      if (!command) {
+        // An explicit backend must supply its own result-producing command.
+        // Falling back to guessed SDK symbols could mutate another backend or
+        // report success for a command that has no matching listener.
+        for (const index of payloadResultIndices) {
+          results[index].error =
+            'The editor backend does not provide confirmed LiteXML operation results.';
+        }
+      } else {
+        const confirmation: { results?: LiteXmlOperationResult[] } = {};
+        editor.dispatchCommand(command, {
+          operations: commandPayload,
+          onResults: (operationResults) => {
+            confirmation.results = operationResults;
+          },
+        });
+        if (!confirmation.results) {
+          throw new Error('modifyNodes failed: editor did not return LiteXML operation results.');
+        }
+        for (const operationResult of confirmation.results) {
+          const index = payloadResultIndices[operationResult.index];
+          if (index === undefined)
+            throw new Error('modifyNodes failed: editor returned an invalid result index.');
+          results[index] =
+            operationResult.status === 'applied'
+              ? { action: results[index].action, success: true }
+              : {
+                  action: results[index].action,
+                  success: false,
+                  error: operationResult.reason ?? 'The editor rejected the operation.',
+                };
+        }
+      }
+    }
 
     const successCount = results.filter((r) => r.success).length;
     const totalCount = results.length;
@@ -830,7 +903,7 @@ export class EditorRuntime {
         throw new Error('replaceText failed: LiteXML data source is not ready.');
       }
 
-      editor.dispatchCommand(LITEXML_APPLY_COMMAND, { litexml: litexmlUpdates });
+      editor.dispatchCommand(this.commandBindings.apply, { litexml: litexmlUpdates });
       log('LiteXML replace dispatched');
     }
 

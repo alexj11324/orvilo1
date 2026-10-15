@@ -2,13 +2,7 @@
 
 import '@/styles/fonts.css';
 
-import {
-  ConfigProvider,
-  FontLoader,
-  type NeutralColors,
-  type PrimaryColors,
-  ThemeProvider,
-} from '@lobehub/ui';
+import { ConfigProvider, type NeutralColors, type PrimaryColors, ThemeProvider } from '@lobehub/ui';
 import * as m from 'motion/react-m';
 import { type ReactNode } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
@@ -16,6 +10,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import Link from '@/components/Link';
 import { genFontFamily, genFontFamilyCode } from '@/const/font';
 import { ORVILO_THEME_NEUTRAL_COLOR, ORVILO_THEME_PRIMARY_COLOR } from '@/const/theme';
+import { useCustomFontStylesheet } from '@/hooks/useCustomFontStylesheet';
 import { useIsDark } from '@/hooks/useIsDark';
 import { getUILocaleAndResources } from '@/libs/getUILocaleAndResources';
 import type { UILocaleResources } from '@/libs/getUILocaleAndResources.utils';
@@ -52,6 +47,7 @@ const AppTheme = memo<AppThemeProps>(
     customFontURL,
     customFontFamily,
   }) => {
+    useCustomFontStylesheet(customFontURL);
     const language = useGlobalStore(systemStatusSelectors.language);
     const isDark = useIsDark();
 
@@ -149,7 +145,6 @@ const AppTheme = memo<AppThemeProps>(
               },
             }}
           >
-            {!!customFontURL && <FontLoader url={customFontURL} />}
             <BaseGlobalStyle />
             <GlobalStyle />
             <ThemeRoles>{children}</ThemeRoles>

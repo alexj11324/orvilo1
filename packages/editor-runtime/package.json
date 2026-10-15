@@ -6,6 +6,10 @@
     ".": "./src/index.ts"
   },
   "main": "./src/index.ts",
+  "scripts": {
+    "test": "vitest",
+    "test:coverage": "vitest --coverage --silent='passed-only'"
+  },
   "dependencies": {
     "@orvilo/prompts": "workspace:*"
   },
@@ -13,7 +17,7 @@
     "lexical": "0.42.0"
   },
   "peerDependencies": {
-    "@lobehub/editor": "^4.17.1",
+    "@lobehub/editor": "^4.29.2",
     "debug": "*"
   }
 }

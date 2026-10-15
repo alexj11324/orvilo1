@@ -796,6 +796,139 @@ name: skill-name
     });
   });
 
+  describe('explicit proposal review persistence', () => {
+    it.each(['accept', 'reject'] as const)(
+      'persists the %s result after the real Lexical transaction and preserves undo/redo',
+      async (review) => {
+        const { createHeadlessEditor } = await import('@lobehub/editor/headless');
+        const { DiffAction, LITEXML_MODIFY_COMMAND, LITEXML_DIFFNODE_ALL_COMMAND } =
+          await import('@lobehub/editor/litexml-commands');
+        const { HISTORY_PUSH_TAG, UNDO_COMMAND, REDO_COMMAND } = await import('lexical');
+        const { commitEditorReview } = await import('@/features/EditorCanvas/commitEditorReview');
+        const headless = createHeadlessEditor({
+          initialValue: { type: 'markdown', content: 'Original paragraph.' },
+        });
+        try {
+          const editor = headless.kernel;
+          const lexicalEditor = editor.getLexicalEditor();
+          if (!lexicalEditor) throw new Error('Expected initialized real Lexical editor');
+          const initial = headless.export();
+          useDocumentStore.getState().initDocumentWithEditor({
+            content: initial.markdown,
+            documentId: 'doc-1',
+            editor,
+            editorData: initial.editorData,
+            sourceType: 'page',
+          });
+          const xml = editor.getDocument('litexml');
+          if (typeof xml !== 'string') throw new TypeError('Expected actual LiteXML document');
+          const id = /<p id="([^"]+)"/.exec(xml)?.[1];
+          if (!id) throw new Error('Expected stable paragraph address');
+          lexicalEditor.update(
+            () => {
+              editor.dispatchCommand(LITEXML_MODIFY_COMMAND, [
+                { action: 'modify', litexml: `<p id="${id}">Suggested paragraph.</p>` },
+              ]);
+            },
+            { discrete: true, tag: HISTORY_PUSH_TAG },
+          );
+          const pending = JSON.stringify(headless.export().editorData);
+          expect(pending).toContain('"type":"diff"');
+          expect(pending).toContain('Original paragraph.');
+          expect(pending).toContain('Suggested paragraph.');
+          // Proposals are persisted before review; rejecting must overwrite that
+          // saved pending state, even when its Markdown matches the old content.
+          await useDocumentStore
+            .getState()
+            .commitEditorMutation('doc-1', { saveSource: 'llm_call' });
+          const savedProposal = vi.mocked(documentService.updateDocument).mock.calls.at(-1)?.[0];
+          expect(savedProposal).toMatchObject({ id: 'doc-1', saveSource: 'llm_call' });
+          expect(savedProposal?.editorData).toContain('"type":"diff"');
+          expect(savedProposal?.editorData).toContain('Original paragraph.');
+          expect(savedProposal?.editorData).toContain('Suggested paragraph.');
+          expect(JSON.parse(savedProposal?.editorData ?? 'null')).toEqual(
+            headless.export().editorData,
+          );
+          vi.mocked(documentService.updateDocument).mockClear();
+
+          await commitEditorReview(
+            editor,
+            () => {
+              editor.dispatchCommand(LITEXML_DIFFNODE_ALL_COMMAND, {
+                action: review === 'accept' ? DiffAction.Accept : DiffAction.Reject,
+              });
+            },
+            async () => {
+              useDocumentStore.getState().markDirty('doc-1');
+              await useDocumentStore
+                .getState()
+                .commitEditorMutation('doc-1', { saveSource: 'manual' });
+            },
+          );
+          const reviewed = headless.export();
+          const json = JSON.stringify(reviewed.editorData);
+          expect(json).not.toContain('"type":"diff"');
+          expect(reviewed.markdown).toContain(
+            review === 'accept' ? 'Suggested paragraph.' : 'Original paragraph.',
+          );
+          expect(json).not.toContain(
+            review === 'accept' ? 'Original paragraph.' : 'Suggested paragraph.',
+          );
+          const persisted = vi.mocked(documentService.updateDocument).mock.calls.at(-1)?.[0];
+          expect(persisted).toMatchObject({
+            id: 'doc-1',
+            content: reviewed.markdown,
+            saveSource: 'manual',
+          });
+          expect(JSON.parse(persisted?.editorData ?? 'null')).toEqual(reviewed.editorData);
+          const reopened = createHeadlessEditor();
+          try {
+            reopened.kernel.setDocument('json', persisted?.editorData ?? 'null');
+            // Production JSON hydration renews runtime node IDs by default.
+            // Compare every persisted field except those session identities.
+            const withoutRuntimeIds = (data: unknown) =>
+              JSON.parse(
+                JSON.stringify(data, (key, value) =>
+                  key === 'id' || key === 'nodeId' ? undefined : value,
+                ),
+              );
+            expect(withoutRuntimeIds(reopened.export().editorData)).toEqual(
+              withoutRuntimeIds(reviewed.editorData),
+            );
+            expect(reopened.export().markdown).toBe(reviewed.markdown);
+          } finally {
+            reopened.destroy();
+          }
+          expect(useDocumentStore.getState().documents['doc-1']).toMatchObject({
+            content: reviewed.markdown,
+            editorData: reviewed.editorData,
+            isDirty: false,
+          });
+
+          lexicalEditor.update(
+            () => {
+              editor.dispatchCommand(UNDO_COMMAND, undefined);
+            },
+            { discrete: true },
+          );
+          const undone = JSON.stringify(headless.export().editorData);
+          expect(undone).toContain('"type":"diff"');
+          expect(undone).toContain('Original paragraph.');
+          expect(undone).toContain('Suggested paragraph.');
+          lexicalEditor.update(
+            () => {
+              editor.dispatchCommand(REDO_COMMAND, undefined);
+            },
+            { discrete: true },
+          );
+          expect(headless.export().editorData).toEqual(reviewed.editorData);
+        } finally {
+          headless.destroy();
+        }
+      },
+    );
+  });
+
   describe('setEditorState', () => {
     it('should set editor state', () => {
       const { result } = renderHook(() => useDocumentStore());

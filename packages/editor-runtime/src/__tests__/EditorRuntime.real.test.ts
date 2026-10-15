@@ -15,6 +15,36 @@ import editAllFixture from './fixtures/edit-all.json';
 import removeFixture from './fixtures/remove.json';
 import removeThenAddFixture from './fixtures/remove-then-add.json';
 
+type XMLBlockShape = {
+  tag: string;
+  attributes: Array<[string, string]>;
+  children: Array<XMLBlockShape | string>;
+};
+const readRootBlocks = (xml: string): Element[] => {
+  const document = new DOMParser().parseFromString(xml, 'application/xml');
+  expect(document.querySelector('parsererror')).toBeNull();
+  expect(document.documentElement.tagName).toBe('root');
+  return Array.from(document.documentElement.children);
+};
+const blockShape = (element: Element): XMLBlockShape => ({
+  tag: element.tagName,
+  // IDs are independently asserted below; compare all other structure and text.
+  attributes: Array.from(element.attributes, ({ name, value }): [string, string] => [
+    name,
+    value,
+  ]).filter(([name]) => name !== 'id'),
+  children: Array.from(element.childNodes).flatMap((node): Array<XMLBlockShape | string> => {
+    if (node.nodeType === Node.ELEMENT_NODE && node instanceof Element) return [blockShape(node)];
+    const text = node.textContent ?? '';
+    return node.nodeType === Node.TEXT_NODE && text.trim() ? [text] : [];
+  }),
+});
+const runtimeBlockId = (block: Element): string => {
+  const id = block.getAttribute('id');
+  if (!id) throw new Error('Fixture root blocks must expose a live LiteXML ID');
+  return id;
+};
+
 describe('EditorRuntime - Real Cases', () => {
   let runtime: EditorRuntime;
   let editor: IEditor;
@@ -140,21 +170,19 @@ describe('EditorRuntime - Real Cases', () => {
       editor.setDocument('json', removeFixture);
       await moment();
 
-      // Get paragraph count before removal
-      const xmlBefore = editor.getDocument('litexml') as unknown as string;
-      const paragraphsBefore = [...xmlBefore.matchAll(/<p id="([^"]+)"/g)];
-      const initialCount = paragraphsBefore.length;
-
+      const before = readRootBlocks(editor.getDocument('litexml') as unknown as string);
+      expect(before).toHaveLength(removeFixture.root.children.length);
+      // Preserve the historical case: six paragraphs plus the cultural-heritage
+      // list are removed; the Southern Song paragraph and its list remain.
+      const fixtureIds = ['73', '70', '67', '47', '44', '41', '27'];
+      const indices = fixtureIds.map((id) =>
+        removeFixture.root.children.findIndex((node) => node.id === id),
+      );
+      expect(indices.every((index) => index >= 0)).toBe(true);
+      const removedIds = indices.map((index) => runtimeBlockId(before[index]));
+      const expected = before.filter((_, index) => !indices.includes(index));
       const result = await runtime.modifyNodes({
-        operations: [
-          { action: 'remove', id: 'wps3' },
-          { action: 'remove', id: 'w936' },
-          { action: 'remove', id: 'vse9' },
-          { action: 'remove', id: 'sp45' },
-          { action: 'remove', id: 's8f8' },
-          { action: 'remove', id: 'rrqb' },
-          { action: 'remove', id: 'plu1' },
-        ],
+        operations: removedIds.map((id) => ({ action: 'remove' as const, id })),
       });
       await moment();
 
@@ -164,19 +192,11 @@ describe('EditorRuntime - Real Cases', () => {
       expect(result.results.every((r) => r.success)).toBe(true);
       expect(result.results.every((r) => r.action === 'remove')).toBe(true);
 
-      // Verify paragraphs were removed
-      const xmlAfter = editor.getDocument('litexml') as unknown as string;
-
-      // Verify the removed IDs are no longer present
-      expect(xmlAfter).not.toContain('id="wps3"');
-      expect(xmlAfter).not.toContain('id="w936"');
-      expect(xmlAfter).not.toContain('id="vse9"');
-      expect(xmlAfter).not.toContain('id="sp45"');
-      expect(xmlAfter).not.toContain('id="s8f8"');
-      expect(xmlAfter).not.toContain('id="rrqb"');
-      expect(xmlAfter).not.toContain('id="plu1"');
-
-      expect(xmlAfter).toMatchSnapshot();
+      const after = readRootBlocks(editor.getDocument('litexml') as unknown as string);
+      expect(after).toHaveLength(before.length - 7);
+      expect(after.map(runtimeBlockId)).toEqual(expected.map(runtimeBlockId));
+      expect(after.map(blockShape)).toEqual(expected.map(blockShape));
+      for (const id of removedIds) expect(after.map(runtimeBlockId)).not.toContain(id);
     });
   });
 
@@ -186,25 +206,19 @@ describe('EditorRuntime - Real Cases', () => {
       editor.setDocument('json', removeThenAddFixture);
       await moment();
 
-      // First operation: remove 13 paragraphs
+      const before = readRootBlocks(editor.getDocument('litexml') as unknown as string);
+      expect(before).toHaveLength(16);
+      expect(before).toHaveLength(removeThenAddFixture.root.children.length);
+      // The original scenario removes the 13 middle blocks, including nested
+      // lists/headings, while preserving the intro and both section headings.
+      const targets = before.slice(2, 15);
+      const removedIds = targets.map(runtimeBlockId);
+      const preserved = [before[0], before[1], before[15]];
+      const anchorId = runtimeBlockId(before[1]);
+      expect(before[1].textContent?.trim()).toBe('必游景点');
       const removeResult = await runtime.modifyNodes({
-        operations: [
-          { action: 'remove', id: 'x4qr' },
-          { action: 'remove', id: 'xfvd' },
-          { action: 'remove', id: 'xqzz' },
-          { action: 'remove', id: 'zrby' },
-          { action: 'remove', id: '02gk' },
-          { action: 'remove', id: '0dl6' },
-          { action: 'remove', id: '0ops' },
-          { action: 'remove', id: '1rnx' },
-          { action: 'remove', id: '22sj' },
-          { action: 'remove', id: '2dx5' },
-          { action: 'remove', id: '3gva' },
-          { action: 'remove', id: '3rzw' },
-          { action: 'remove', id: '434i' },
-        ],
+        operations: removedIds.map((id) => ({ action: 'remove' as const, id })),
       });
-
       await moment();
 
       // Verify all remove operations succeeded
@@ -214,15 +228,18 @@ describe('EditorRuntime - Real Cases', () => {
       expect(removeResult.results.every((r) => r.action === 'remove')).toBe(true);
 
       // Verify the content was removed
-      const removed = editor.getDocument('litexml') as unknown as string;
-      expect(removed).toMatchSnapshot('remove 13 paragraphs');
+      const removed = readRootBlocks(editor.getDocument('litexml') as unknown as string);
+      expect(removed).toHaveLength(3);
+      expect(removed.map(runtimeBlockId)).toEqual(preserved.map(runtimeBlockId));
+      expect(removed.map(blockShape)).toEqual(preserved.map(blockShape));
+      for (const id of removedIds) expect(removed.map(runtimeBlockId)).not.toContain(id);
 
-      // Second operation: insert a list after wtm5
+      // Insert after the actual surviving section heading, never a stale ID.
       const insertResult = await runtime.modifyNodes({
         operations: [
           {
             action: 'insert',
-            afterId: 'wtm5',
+            afterId: anchorId,
             litexml:
               '<ul><li>西湖风景区：杭州的灵魂，世界文化遗产</li><li>灵隐寺：杭州最著名的佛教寺庙</li><li>西溪国家湿地公园：中国第一个国家湿地公园</li><li>宋城：以宋代文化为主题的大型主题公园</li></ul>',
           },
@@ -237,8 +254,25 @@ describe('EditorRuntime - Real Cases', () => {
       expect(insertResult.results.every((r) => r.action === 'insert')).toBe(true);
 
       // Verify full output
-      const xmlAfter = editor.getDocument('litexml') as unknown as string;
-      expect(xmlAfter).toMatchSnapshot('insert new');
+      const after = readRootBlocks(editor.getDocument('litexml') as unknown as string);
+      expect(after).toHaveLength(4);
+      expect(after[0] && runtimeBlockId(after[0])).toBe(runtimeBlockId(preserved[0]));
+      expect(after[1] && runtimeBlockId(after[1])).toBe(anchorId);
+      expect(after[3] && runtimeBlockId(after[3])).toBe(runtimeBlockId(preserved[2]));
+      expect([after[0], after[1], after[3]].map(blockShape)).toEqual(preserved.map(blockShape));
+      expect(after[2].tagName).toBe('ul');
+      expect(Array.from(after[2].children, (item) => item.textContent?.trim())).toEqual([
+        '西湖风景区：杭州的灵魂，世界文化遗产',
+        '灵隐寺：杭州最著名的佛教寺庙',
+        '西溪国家湿地公园：中国第一个国家湿地公园',
+        '宋城：以宋代文化为主题的大型主题公园',
+      ]);
+      expect(Array.from(after[2].children, (item) => item.tagName)).toEqual([
+        'li',
+        'li',
+        'li',
+        'li',
+      ]);
     });
   });
 });

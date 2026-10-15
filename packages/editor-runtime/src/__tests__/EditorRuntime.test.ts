@@ -36,9 +36,9 @@ describe('EditorRuntime', () => {
       expect(result.nodeCount).toBeGreaterThanOrEqual(0);
       expect(result.extractedTitle).toBeUndefined();
 
-      // Verify editor state - full text match (editor adds trailing space)
+      // Verify editor state - full text match (canonical Markdown ends with a newline)
       const editorMarkdown = editor.getDocument('markdown') as unknown as string;
-      expect(editorMarkdown).toBe('Hello world\n\nThis is a paragraph. \n\n');
+      expect(editorMarkdown).toBe('Hello world\n\nThis is a paragraph.\n');
 
       // Verify XML structure
       const editorXml = editor.getDocument('litexml') as unknown as string;
@@ -55,9 +55,9 @@ describe('EditorRuntime', () => {
       expect(result.extractedTitle).toBe('My Document Title');
       expect(mockTitleSetter).toHaveBeenCalledWith('My Document Title');
 
-      // Verify editor state - only content without title (editor adds trailing space)
+      // Verify editor state - only content without title (canonical Markdown ends with a newline)
       const editorMarkdown = editor.getDocument('markdown') as unknown as string;
-      expect(editorMarkdown).toBe('This is the content. \n\n');
+      expect(editorMarkdown).toBe('This is the content.\n');
     });
 
     it('should handle markdown with multiple headings', async () => {
@@ -69,10 +69,10 @@ describe('EditorRuntime', () => {
       // Verify title extraction (only first h1)
       expect(result.extractedTitle).toBe('Main Title');
 
-      // Verify editor state - content after title extraction (editor adds trailing space)
+      // Verify editor state - content after title extraction (canonical Markdown ends with a newline)
       const editorMarkdown = editor.getDocument('markdown') as unknown as string;
       expect(editorMarkdown).toBe(
-        '## Section 1\n\nContent here. \n\n## Section 2\n\nMore content. \n\n',
+        '## Section 1\n\nContent here.\n\n## Section 2\n\nMore content.\n',
       );
     });
 
@@ -265,8 +265,20 @@ describe('EditorRuntime', () => {
         expect(result.successCount).toBe(1);
         expect(result.results[0].action).toBe('remove');
 
-        const markdownAfter = editor.getDocument('litexml') as unknown as string;
-        expect(markdownAfter).toMatchSnapshot();
+        const parseBlocks = (xml: string) =>
+          Array.from(
+            new DOMParser().parseFromString(xml, 'application/xml').documentElement.children,
+          );
+        const expectedBlocks = parseBlocks(xmlBefore)
+          .filter((node) => node.getAttribute('id') !== paragraphId)
+          .map((node) => node.outerHTML);
+        const afterBlocks = parseBlocks(editor.getDocument('litexml') as unknown as string);
+        expect(afterBlocks).toHaveLength(2);
+        expect(afterBlocks.map((node) => node.outerHTML)).toEqual(expectedBlocks);
+        expect(afterBlocks.map((node) => node.textContent?.trim())).toEqual([
+          'Title',
+          'Second paragraph.',
+        ]);
       });
 
       it('should remove multiple nodes', async () => {

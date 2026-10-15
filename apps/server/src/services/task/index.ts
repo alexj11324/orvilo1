@@ -654,6 +654,21 @@ export class TaskService {
     const automationControl = Boolean(
       resolved.automationMode && ['paused', 'scheduled'].includes(status) && !guard,
     );
+    // Pausing future ticks must leave the current round's execution claim intact.
+    if (
+      automationControl &&
+      status === 'paused' &&
+      resolvedStatus === 'running' &&
+      input.workflow === undefined &&
+      !expectedContract
+    ) {
+      const task = await this.taskModel.updateContext(resolved.id, {
+        scheduler: { automationPaused: true },
+      });
+      if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      options?.onStatusCommitted?.();
+      return { paused: [], task, unlocked: [] };
+    }
     if (resolvedStatus === 'running' && status !== 'running' && !automationControl) {
       const topics = await this.taskTopicModel.findByTaskId(resolved.id);
       const aiAgentService = new AiAgentService(this.db, this.userId, {

@@ -2442,23 +2442,27 @@ describe('TaskService', () => {
 
     it('preserves the current automation reservation and native operation when pausing', async () => {
       const prev = baseTask({ status: 'running' });
-      const next = baseTask({ status: 'paused' });
+      const next = baseTask({
+        status: 'running',
+        context: { scheduler: { automationPaused: true } },
+      });
       mockTaskModel.resolve.mockResolvedValue(prev);
-      mockTaskModel.updateWithLog.mockResolvedValue(next);
-      mockTaskTopicModel.findByTaskId.mockResolvedValue([]);
+      mockTaskModel.derivedStatusByIds.mockResolvedValue({ 'task-1': 'running' });
+      mockTaskModel.updateContext.mockResolvedValue(next);
 
-      const actor = { userId };
-      await new TaskService(db, userId).updateStatus({ id: 'T-1', status: 'paused' as any }, actor);
-
-      expect(mockTaskModel.updateWithLog).toHaveBeenCalledWith(
-        'task-1',
-        expect.objectContaining({
-          status: 'paused',
-        }),
-        actor,
+      const result = await new TaskService(db, userId).updateStatus(
+        { id: 'T-1', status: 'paused' },
+        { userId },
       );
+
+      expect(result.task).toBe(next);
+      expect(mockTaskModel.updateContext).toHaveBeenCalledWith('task-1', {
+        scheduler: { automationPaused: true },
+      });
+      expect(mockTaskModel.updateWithLog).not.toHaveBeenCalled();
+      expect(mockTaskModel.updateStatus).not.toHaveBeenCalled();
       expect(interruptTaskMock).not.toHaveBeenCalled();
-      expect(mockTaskModel.updateWithLog.mock.calls[0][1]).not.toHaveProperty('runReservationId');
+      expect(scheduleNextTopic).not.toHaveBeenCalled();
     });
 
     it('returns no transition when the owning run reservation was superseded', async () => {

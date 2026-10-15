@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { type OrviloDatabase } from '@orvilo/database';
 import { getTestDB } from '@orvilo/database/test-utils';
+import type { TaskContext } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,6 +11,7 @@ import { IssueDeliveryModel } from '@/database/models/issueDelivery';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { projects, taskDispatches, tasks, taskTopics } from '@/database/schemas';
 import { acceptances, verifyCheckResults, verifyRuns } from '@/database/schemas/verify';
@@ -179,6 +181,128 @@ describe('Task Router Integration', () => {
       note: 'Discussion',
     });
   });
+
+  it('pauses future automation while preserving the current round and both queued occurrences', async () => {
+    const taskModel = new TaskModel(serverDB, userId);
+    const topicModel = new TaskTopicModel(serverDB, userId);
+    const dispatchModel = new TaskDispatchModel(serverDB);
+    const task = await taskModel.create({
+      instruction: 'Finish the current round',
+      assigneeAgentId: testAgentId,
+      automationMode: 'heartbeat',
+      heartbeatInterval: 600,
+      workflowCategory: 'in_progress',
+    });
+    await seedConfirmedIssuePlan(serverDB, task.id);
+    const request = (key: string) =>
+      dispatchModel.request({
+        taskId: task.id,
+        trigger: 'heartbeat',
+        requestedBy: userId,
+        initiator: userId,
+        idempotencyKey: key,
+      });
+    const first = await request('pause-first');
+    if (first.state === 'busy') throw new Error('First occurrence was not retained');
+    const operationId = 'pause-current-operation';
+    const [dispatch] = await serverDB
+      .update(taskDispatches)
+      .set({ operationId, phase: 'running', fence: 1 })
+      .where(eq(taskDispatches.id, first.dispatch.id))
+      .returning();
+    await taskModel.updateCurrentTopic(task.id, testTopicId);
+    await topicModel.startRun(task.id, testTopicId, {
+      dispatch,
+      operationId,
+      seq: 1,
+      integration: {
+        role: 'task',
+        state: 'pending',
+        attempts: 0,
+        branch: 'task/current',
+        baseBranch: 'canary',
+        expectedHeadSha: 'a'.repeat(40),
+        expectedBaseSha: 'b'.repeat(40),
+      },
+    });
+    await dispatchModel.settle({
+      dispatchId: dispatch.id,
+      expected: ['running'],
+      fence: 1,
+      generation: dispatch.generation,
+      operationId,
+      phase: 'succeeded',
+    });
+    const second = await request('pause-second');
+    const third = await request('pause-third');
+    if (second.state === 'busy' || third.state === 'busy')
+      throw new Error('Queued occurrence lost');
+    expect([second.dispatch.phase, third.dispatch.phase]).toEqual(['queued', 'queued']);
+    await serverDB
+      .update(tasks)
+      .set({
+        runReservationId: 'current-round-reservation',
+        runReservationExpiresAt: new Date(Date.now() + 60_000),
+      })
+      .where(eq(tasks.id, task.id));
+    const before = (await taskModel.findById(task.id))!;
+    const beforeTopic = await topicModel.findByTopicId(testTopicId);
+    const dispatchIds = [dispatch.id, second.dispatch.id, third.dispatch.id];
+    const beforeDispatches = await Promise.all(dispatchIds.map((id) => dispatchModel.findById(id)));
+
+    const response = await new TaskService(serverDB, userId).updateStatus(
+      { id: task.id, status: 'paused' },
+      { userId },
+    );
+    const paused = (await taskModel.findById(task.id))!;
+    expect(response.task.context).toMatchObject({ scheduler: { automationPaused: true } });
+    expect(response.task).toEqual(paused);
+    expect((paused.context as TaskContext)?.execution?.parked).toBeUndefined();
+    expect(paused).toMatchObject({
+      executionGeneration: before.executionGeneration,
+      domainRevision: before.domainRevision,
+      requirementRevision: before.requirementRevision,
+      policyRevision: before.policyRevision,
+      currentTopicId: before.currentTopicId,
+      runReservationId: before.runReservationId,
+      runReservationExpiresAt: before.runReservationExpiresAt,
+      workflowCategory: before.workflowCategory,
+    });
+    expect((paused.context as TaskContext)?.issuePlan).toEqual(
+      (before.context as TaskContext)?.issuePlan,
+    );
+    expect(await topicModel.findByTopicId(testTopicId)).toEqual(beforeTopic);
+    expect(await Promise.all(dispatchIds.map((id) => dispatchModel.findById(id)))).toEqual(
+      beforeDispatches,
+    );
+    expect(mockExecAgent).not.toHaveBeenCalled();
+    expect(mockInterruptTask).not.toHaveBeenCalled();
+    expect(
+      await topicModel.settleIfRunning(task.id, testTopicId, operationId, 'completed', 'done', {
+        dispatchId: dispatch.id,
+        fence: 1,
+        generation: dispatch.generation,
+      }),
+    ).toMatch(/^completion:/);
+    expect(await dispatchModel.findById(dispatch.id)).toMatchObject({
+      phase: 'waiting',
+      waitingReason: 'automation_delivery_pending',
+    });
+    expect((await dispatchModel.findById(second.dispatch.id))?.phase).toBe('queued');
+    expect((await dispatchModel.findById(third.dispatch.id))?.phase).toBe('queued');
+  });
+
+  it.each([undefined, 'heartbeat'] as const)(
+    'keeps idle %s pause as an execution park',
+    async (automationMode) => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Idle', automationMode });
+      await new TaskService(serverDB, userId).updateStatus({ id: task.id, status: 'paused' });
+      const context = (await model.findById(task.id))?.context as TaskContext;
+      expect(context?.execution?.parked).toBeDefined();
+      expect((await model.derivedStatusByIds([task.id]))[task.id]).toBe('paused');
+    },
+  );
 
   describe('automation result outputs', () => {
     // Output metadata is editable on disabled drafts without arming native automation.

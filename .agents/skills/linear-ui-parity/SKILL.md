@@ -13,7 +13,7 @@ Linear owns the observed reference evidence. [DESIGN.md](../../../DESIGN.md) own
 
 1. Enumerate the current Linear navigation, including menus, collapsed groups, and deep links. Pair every page with its Orvilo route and keep one inventory row per page × state. A historical matrix is a lead, not current proof. Keep workspace, team, project, and issue scopes distinct.
 2. Record the reference and candidate URL, revision, locale, theme, viewport, and data state for every observation. Compare populated with populated and empty with empty. When the data differs, limit conclusions to what the pair can prove.
-3. Run both products live. See [runtime setup](references/runtime-setup.md) for the shared Electron candidate, the signed-in reference browser, and the rules for mutating data on either side.
+3. Run both products live. See [runtime setup](references/runtime-setup.md) for the shared Electron candidate, the signed-in reference browser, and the rules for mutating data on either side. If the candidate URL is `/onboarding`, follow the signed-out recovery in runtime setup before recording a comparison.
 
 ## 2. Discover differences systematically
 

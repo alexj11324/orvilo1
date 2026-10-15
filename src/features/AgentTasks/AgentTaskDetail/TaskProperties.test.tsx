@@ -52,14 +52,6 @@ vi.mock('@/store/task', () => ({
     selector(mocks.taskState),
 }));
 
-vi.mock('antd-style', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  cssVar: {
-    colorTextDescription: '#999',
-    colorTextSecondary: '#666',
-  },
-}));
-
 vi.mock('@/features/Labels/LabelChips', () => ({
   default: () => <span>labels</span>,
 }));

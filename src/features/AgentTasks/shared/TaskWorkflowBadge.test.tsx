@@ -1,7 +1,6 @@
 /** @vitest-environment happy-dom */
 import type { TaskWorkflowCategory } from '@orvilo/types';
 import { cleanup, render, screen } from '@testing-library/react';
-import { cssVar } from 'antd-style';
 import { Loader2 } from 'lucide-react';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -115,7 +114,7 @@ describe('TaskWorkflowBadge', () => {
      * renders no glyph at all.
      */
     it('in_progress no longer draws the Loader2 it used to', () => {
-      const loader = referenceShape(Loader2, cssVar.colorInfo);
+      const loader = referenceShape(Loader2, 'var(--info)');
 
       expect(loader).not.toBeNull();
       expect(badgeShape('in_progress')).not.toBe(loader);

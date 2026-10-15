@@ -44,11 +44,6 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('@lobehub/ui/base-ui', () => ({
-  Avatar: () => <span />,
-  Text: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-}));
-
 vi.mock('@lobehub/icons', () => ({
   Orvilo: { Morden: () => <span /> },
 }));
@@ -56,19 +51,6 @@ vi.mock('@lobehub/icons', () => ({
 vi.mock('@/components/OrviloIcons', () => ({
   ModelIcon: () => <span />,
   ProviderIcon: () => <span />,
-}));
-
-vi.mock('antd-style', async (importOriginal) => ({
-  ...((await importOriginal()) as Record<string, unknown>),
-  createStaticStyles: () => ({
-    container: 'container',
-    detailPopup: 'detailPopup',
-    dropdownMenu: 'dropdownMenu',
-    tag: 'tag',
-    token: 'token',
-  }),
-  cx: (...classNames: Array<string | undefined>) => classNames.filter(Boolean).join(' '),
-  useResponsive: () => ({ mobile: false }),
 }));
 
 vi.mock('@/components/ModelSelect', () => ({

@@ -59,10 +59,6 @@ const mocks = vi.hoisted(() => ({
 const serializeSize = (size: unknown) =>
   size === undefined ? '' : typeof size === 'string' ? size : JSON.stringify(size);
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-}));
-
 vi.mock('@/utils/clipboard', () => ({
   copyToClipboard: vi.fn(),
 }));

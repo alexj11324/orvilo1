@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { describe, expect, it } from 'vitest';
 
 import { sortIconActiveClass } from './sortOrder';

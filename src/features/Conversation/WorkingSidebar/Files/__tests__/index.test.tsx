@@ -172,11 +172,6 @@ vi.mock('@/store/chat', () => ({
 
 const messageSpy = vi.hoisted(() => ({ warning: vi.fn() }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  message: messageSpy,
-}));
-
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
@@ -241,15 +236,6 @@ vi.mock('@/components/ui/empty', () => ({
   EmptyHeader: ({ children }: { children?: ReactNodeType }) => <div>{children}</div>,
   EmptyMedia: ({ children }: { children?: ReactNodeType }) => <div>{children}</div>,
 }));
-
-vi.mock('antd-style', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-
-  return {
-    ...actual,
-    createStaticStyles: () => () => ({}),
-  };
-});
 
 vi.mock('@/components/NeuralNetworkLoading', () => ({
   default: () => <div />,

@@ -8,10 +8,6 @@ import { useGroupDropdownMenu } from './useDropdownMenu';
 
 const createConnectAgentMenuItemMock = vi.hoisted(() => vi.fn(() => ({ key: 'newPlatformAgent' })));
 
-vi.mock('@lobehub/ui', () => ({
-  Icon: () => null,
-}));
-
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
   useActiveWorkspaceId: () => null,
 }));

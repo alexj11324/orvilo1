@@ -145,54 +145,6 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => {
-  return {
-    ...(await importOriginal<object>()),
-    ActionIcon: ({
-      disabled,
-      onClick,
-      title,
-    }: {
-      disabled?: boolean;
-      onClick?: () => void;
-      title?: string;
-    }) => (
-      <button
-        aria-label={title}
-        data-testid={title ? 'calendar' : 'refresh'}
-        disabled={disabled}
-        type="button"
-        onClick={onClick}
-      />
-    ),
-    Flexbox: ({ children, className }: { children?: ReactNode; className?: string }) => (
-      <div className={className}>{children}</div>
-    ),
-    Icon: () => <svg />,
-    // Render the popover content unconditionally so window rows are assertable
-    // without driving the open/close interaction.
-    Popover: ({
-      children,
-      content,
-      onOpenChange,
-    }: {
-      children?: ReactNode;
-      content?: ReactNode;
-      onOpenChange?: (open: boolean) => void;
-    }) => (
-      <div>
-        <div data-testid="popover-content">{content}</div>
-        <div data-testid="quota-trigger" onClick={() => onOpenChange?.(true)}>
-          {children}
-        </div>
-      </div>
-    ),
-    Skeleton: { Button: () => <div data-testid="skeleton" /> },
-    Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
-    Tooltip: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  };
-});
-
 vi.mock('@/components/ui/popover', () => {
   const PopoverContext = createContext<((open: boolean) => void) | undefined>(undefined);
   return {

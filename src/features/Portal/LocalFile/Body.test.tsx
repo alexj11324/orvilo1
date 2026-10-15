@@ -13,48 +13,14 @@ vi.mock('@orvilo/const', async (importOriginal) => ({
   isDesktop: true,
 }));
 
-vi.mock('antd-style', async (importOriginal) => ({
-  ...((await importOriginal()) as Record<string, unknown>),
-  createStaticStyles: () => ({
-    card: 'card',
-    key: 'key',
-    row: 'row',
-    value: 'value',
-  }),
-  cx: (...args: unknown[]) => args.filter(Boolean).join(' '),
-  cssVar: {
-    colorBgContainer: 'var(--color-bg-container)',
-    colorBorderSecondary: 'var(--color-border-secondary)',
-    colorTextSecondary: 'var(--color-text-secondary)',
-    fontFamilyCode: 'monospace',
-  },
-}));
-
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
 }));
 
-vi.mock('@lobehub/ui', () => ({
-  ActionIcon: () => null,
-  Center: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  Empty: ({ description }: { description?: ReactNode }) => <div>{description}</div>,
-  Flexbox: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  Icon: () => null,
-  Markdown: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  Text: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-  Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
-}));
-
 vi.mock('@/components/Image', () => ({
   default: ({ alt, src }: { alt?: string; src?: string }) => <img alt={alt} src={src} />,
-}));
-
-vi.mock('@lobehub/ui/base-ui', () => ({
-  Tabs: () => null,
-  Text: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-  ToggleGroup: () => null,
 }));
 
 vi.mock('@/components/CodeEditorPane', () => ({

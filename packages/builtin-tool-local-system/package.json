@@ -17,9 +17,6 @@
     "@orvilo/types": "workspace:*"
   },
   "peerDependencies": {
-    "@lobehub/ui": "^5",
-    "antd": "^6",
-    "antd-style": "*",
     "diff": "*",
     "lucide-react": "*",
     "path-browserify-esm": "*",

@@ -36,6 +36,9 @@ jobs:
       - name: Install isolated Desktop dependencies with normal lifecycle scripts
         run: pnpm install --no-frozen-lockfile
         working-directory: apps/desktop
+      - name: Materialize the declared Electron binary with its official installer
+        run: node node_modules/electron/install.js
+        working-directory: apps/desktop
       - name: Install Linux display and runtime libraries
         run: pnpm exec playwright install-deps chromium
       - name: Check resource guard platform cases
@@ -62,7 +65,7 @@ jobs:
           NODE="$(command -v node)"
           # A finite process scope is required; run Electron as the original non-root runner.
           # Scope/ancestor/host headroom is measured by the unchanged admission thresholds.
-          sudo systemd-run --scope --property=MemoryAccounting=yes --property=MemoryMax=6G \
+          sudo systemd-run --scope --property=MemoryAccounting=yes --property=MemoryMax=12G \
             runuser -u "$(id -un)" -- env \
             PATH="$PATH" HOME="$HOME" ORVILO_PRODUCT_ROOT="$ORVILO_PRODUCT_ROOT" \
             xvfb-run -a python3 "$RUNNER_TEMP/native-harness/guard.py" \

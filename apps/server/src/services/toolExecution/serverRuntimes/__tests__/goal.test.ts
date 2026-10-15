@@ -39,33 +39,15 @@ beforeEach(() => {
 });
 
 describe('goalRuntime.createGoal', () => {
-  it('queues the advance so a failed kickoff is genuinely recoverable', async () => {
-    // This path calls GoalService directly, so nothing else schedules the goal.
-    // Without the queued advance the "the server will pick it up" message below
-    // is false and the goal sits in `planning` forever.
-    mocks.advanceGoal.mockRejectedValue(new Error('runner offline'));
-
+  it('does not create or start a standalone Goal', async () => {
     const result = await runtime().createGoal(args);
 
-    expect(mocks.scheduleGoalAdvance).toHaveBeenCalledWith({
-      goalId: 'goal_1',
-      // The label survives the queue hop onto the trajectory, so a run can be
-      // sliced by what drove it — asserted here rather than left loose.
-      trigger: 'create',
-      userId: 'user-1',
-      workspaceId: 'ws-1',
-    });
-    expect(result.success).toBe(true);
-    expect(result.content).toContain('Do not create it again');
-  });
-
-  it('reports the started goal when the kickoff succeeds', async () => {
-    mocks.advanceGoal.mockResolvedValue({ result: { message: 'Started task T-1', taskId: 't1' } });
-
-    const result = await runtime().createGoal(args);
-
-    expect(mocks.scheduleGoalAdvance).toHaveBeenCalledOnce();
-    expect(result.success).toBe(true);
-    expect(result.content).toContain('Started task T-1');
+    expect(mocks.create).not.toHaveBeenCalled();
+    expect(mocks.scheduleGoalAdvance).not.toHaveBeenCalled();
+    expect(mocks.advanceGoal).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+    expect(result.content).toBe(
+      'Standalone Goal execution is unavailable; use an Issue plan and Checklist',
+    );
   });
 });

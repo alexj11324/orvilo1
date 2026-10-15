@@ -1,4 +1,3 @@
-import { useEditor } from '@lobehub/editor/react';
 import { buildAgentDocumentUrl } from '@orvilo/builtin-tool-agent-documents';
 import { isDesktop } from '@orvilo/const';
 import { Download, Link2, Maximize2, Trash2 } from 'lucide-react';
@@ -13,8 +12,11 @@ import { formatPageEditorInfoTime } from '@/features/PageEditor/formatPageEditor
 import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { useIsLargeViewport } from '@/hooks/useIsMobile';
 import { agentDocumentService } from '@/services/agentDocument';
+import { useDocumentStore } from '@/store/document';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
+
+import { readOwnedMarkdownForExport } from './ownedMarkdownExport';
 
 interface UseMenuParams {
   agentDocumentId?: string;
@@ -41,7 +43,9 @@ export const useMenu = ({
   const { t } = useTranslation(['file', 'common', 'chat']);
 
   const lg = useIsLargeViewport();
-  const editor = useEditor();
+  const editor = useDocumentStore((state) =>
+    state.activeDocumentId === documentId ? state.editor : undefined,
+  );
   const appOrigin = useAppOrigin();
   const activeWorkspaceSlug = useActiveWorkspaceSlug();
 
@@ -61,10 +65,10 @@ export const useMenu = ({
     };
 
     const handleExportMarkdown = async () => {
-      if (!editor) return;
-      const markdown = (editor.getDocument('markdown') as unknown as string) || '';
       const fileName = `${title || 'Untitled'}.md`;
       try {
+        const markdown = readOwnedMarkdownForExport(documentId, useDocumentStore.getState);
+        if (markdown === undefined) return;
         if (isDesktop) {
           const { desktopExportService } = await import('@/services/electron/desktopExportService');
           await desktopExportService.exportMarkdown({ content: markdown, fileName });
@@ -132,6 +136,7 @@ export const useMenu = ({
       {
         children: [
           {
+            disabled: !editor,
             key: 'export-markdown',
             label: t('pageEditor.menu.export.markdown'),
             onClick: handleExportMarkdown,

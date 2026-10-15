@@ -227,9 +227,28 @@ try {
         ),
       );
       await page.locator('[data-scene="panel"]').click();
-      await page.locator('[data-open-panel]').click();
+      const panelOpener = page.locator('[data-open-panel]');
+      await panelOpener.waitFor({ state: 'visible' });
+      check(
+        prefix + '-panel-closed-inline-owner-mounted',
+        (await page
+          .locator('[data-sdk-scene="panel"] [data-floating-panel-inline-host]')
+          .count()) === 1 &&
+          (await page.getByRole('dialog', { name: 'Native review panel' }).count()) === 0,
+      );
+      await panelOpener.click();
       const panel = page.getByRole('dialog', { name: 'Native review panel' });
       await panel.waitFor();
+      check(
+        prefix + '-panel-real-inline-portal-location',
+        await panel.evaluate(
+          (node) =>
+            node
+              .closest('[data-floating-panel-inline-host]')
+              ?.closest('[data-sdk-scene="panel"]') !== null &&
+            node.closest('[data-floating-panel-inline-host]') !== null,
+        ),
+      );
       await page.getByLabel('Panel draft').fill('真实 Native draft');
       check(
         prefix + '-panel-real-input',
@@ -354,6 +373,91 @@ try {
       await page.emulateMedia({ reducedMotion: 'no-preference' });
       await capture(prefix + '-sheet-restored');
     }
+  // Append actual new product behavior after every original visual scenario.
+  const codePaneSourceFiles = [
+    'src/components/CodeEditorPane/nativePaneFixture.ts',
+    'src/components/CodeEditorPane/nativePane.ts',
+    'src/components/CodeEditorPane/nativeTheme.ts',
+    'src/components/CodeEditorPane/style.ts',
+    'src/components/NativeEditorKit/codeDocumentChange.ts',
+    'src/components/NativeCodeEditor/professional/codeBlockIsland.ts',
+    'src/components/NativeCodeEditor/professional/kernel.ts',
+  ];
+  const codePaneSources = [];
+  const codePaneModuleURL = '/@fs/' + path.join(root, codePaneSourceFiles[0]).replace(/^\//, '');
+  const codePaneStart = Date.now();
+  let codePaneReceipt;
+  try {
+    // Unmount the last sheet's focus trap before attaching the isolated CM host.
+    await page.locator('[data-scene="image"]').click();
+    await page.getByAltText('Native test image', { exact: true }).waitFor();
+    for (const file of codePaneSourceFiles) {
+      const bytes = fs.readFileSync(path.join(root, file));
+      const sha256 = hash(bytes);
+      assert.equal(
+        sha256,
+        binding.productFiles[file],
+        'New pane source must be tracked and bound: ' + file,
+      );
+      codePaneSources.push({ file, sha256, bytes: bytes.length });
+    }
+    const actual = await page.evaluate(async (moduleURL) => {
+      const host = document.createElement('section');
+      host.setAttribute('data-native-code-pane-behavior-host', '');
+      host.setAttribute('aria-label', 'Native code pane behavior verification');
+      host.className = 'h-80 w-full';
+      document.body.append(host);
+      try {
+        if (!host.isConnected) throw new Error('Professional pane host is not attached');
+        const fixture = await import(moduleURL);
+        if (typeof fixture.verifyNativeCodePane !== 'function')
+          throw new Error('Actual product pane fixture export missing');
+        const result = await fixture.verifyNativeCodePane(host);
+        if (host.querySelector('.cm-editor'))
+          throw new Error('Actual professional pane survived fixture disposal');
+        return { result, actualAttachedHost: true, actualPaneDisposed: true };
+      } finally {
+        host.remove();
+      }
+    }, codePaneModuleURL);
+    check(
+      'actual-professional-code-pane-behavior',
+      actual.actualAttachedHost &&
+        actual.actualPaneDisposed &&
+        actual.result.actualProfessionalKernel === true &&
+        actual.result.reversedAndMultipleSelection === true &&
+        actual.result.externalEchoes === 0 &&
+        actual.result.actualReadOnly === true &&
+        actual.result.saves === 1,
+      actual,
+    );
+    codePaneReceipt = {
+      status: 'ACTUAL_PRODUCT_BEHAVIOR_PASS',
+      head: binding.head,
+      moduleURL: codePaneModuleURL,
+      sources: codePaneSources,
+      actual,
+      elapsedMilliseconds: Date.now() - codePaneStart,
+      realElectronPage: true,
+      visualAcceptanceInferred: false,
+      originalMatrixUnchanged: true,
+    };
+  } catch (error) {
+    codePaneReceipt = {
+      status: 'HOLD',
+      head: binding.head,
+      moduleURL: codePaneModuleURL,
+      sources: codePaneSources,
+      elapsedMilliseconds: Date.now() - codePaneStart,
+      error: { message: String(error), stack: error.stack },
+      realElectronPage: true,
+      visualAcceptanceInferred: false,
+      originalMatrixUnchanged: true,
+    };
+    throw error;
+  } finally {
+    if (codePaneReceipt) write('actual-native-code-pane-behavior.json', codePaneReceipt);
+  }
   verify();
   check('zero-renderer-errors', errors.length === 0, { errors });
   check('zero-failed-network', network.length === 0, { network });

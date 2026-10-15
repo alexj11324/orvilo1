@@ -112,6 +112,7 @@ export function FloatingPanel({
   const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
   const reducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
   const motion = animationMode !== 'disabled' && !reducedMotion;
+  const [inlineContainer, setInlineContainer] = useState<HTMLDivElement | null>(null);
   const [size, setSize] = useState<
     Size & { sourceWidth: typeof width; sourceHeight: typeof height }
   >();
@@ -329,7 +330,11 @@ export function FloatingPanel({
       }}
     >
       {getContainer === false ? (
-        content
+        // Popup requires DialogPortalContext even when its DOM stays inline.
+        // An explicit null target waits for this local host instead of using body.
+        <div className="contents" data-floating-panel-inline-host="" ref={setInlineContainer}>
+          <DialogPortal container={inlineContainer}>{content}</DialogPortal>
+        </div>
       ) : (
         <DialogPortal container={getContainer ?? undefined}>{content}</DialogPortal>
       )}

@@ -5,8 +5,10 @@ export interface IslandChangeDesc {
 export interface IslandRange {
   readonly anchor: number;
   readonly assoc: number;
+  readonly from: number;
   readonly head: number;
   map: (changes: IslandChangeDesc, association?: number) => IslandRange;
+  readonly to: number;
 }
 export interface IslandSelection {
   readonly constructor: {
@@ -14,6 +16,7 @@ export interface IslandSelection {
     cursor: (position: number, association?: number) => IslandRange;
     create: (ranges: readonly IslandRange[], mainIndex: number) => IslandSelection;
   };
+  readonly main: IslandRange;
   readonly mainIndex: number;
   readonly ranges: readonly IslandRange[];
 }
@@ -44,18 +47,17 @@ export interface ProfessionalCodeInstance {
   setValue: (value: string) => void;
   readonly view: {
     readonly constructor: {
-      theme: (
-        spec: Record<string, Record<string, string | number>>,
-        options: { dark: boolean },
-      ) => unknown;
+      theme: (spec: unknown, options: { dark: boolean }) => unknown;
     };
     readonly contentDOM: HTMLElement;
+    readonly dom: HTMLElement;
     setState: (state: unknown) => void;
     readonly state: {
       readonly constructor: {
         allowMultipleSelections: { of: (value: boolean) => unknown };
         create: (config: { doc: string; extensions: unknown[] }) => unknown;
       };
+      readonly doc: { lineAt: (position: number) => { from: number; number: number } };
       readonly readOnly: boolean;
       readonly selection: IslandSelection;
       update: (spec: {
@@ -69,10 +71,15 @@ export interface ProfessionalCodeInstance {
   };
 }
 export interface ProfessionalCodeOptions {
+  autoCloseBrackets?: boolean;
+  foldGutter?: boolean;
   indentWithTabs: boolean;
   lineNumbers: boolean;
+  lineWrapping?: boolean;
+  matchBrackets?: boolean;
   mode: string;
   readOnly: boolean;
+  styleActiveLine?: boolean;
   tabSize: number;
   theme: string;
   useHistory?: boolean;

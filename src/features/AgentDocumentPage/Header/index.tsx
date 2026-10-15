@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import ShareButton from '@/business/client/features/PageShare/ShareButton';
 import ActionIcon from '@/components/ActionIcon';
 import { DropdownMenu } from '@/components/ItemsMenu';
-import { AutoSaveHint } from '@/features/EditorCanvas';
+import AutoSaveHint from '@/features/EditorCanvas/AutoSaveHint';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import { useAgentStore } from '@/store/agent';

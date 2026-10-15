@@ -9,6 +9,12 @@ import { proveStrictGitLineage } from './strict-lineage.mjs';
 
 export async function runLineageFixtures({ out, ts, sha, extractAt, canonical, postcss, valueParser, invariantRecords, compiledRecords }) {
   const folder = path.join(out, 'strict-lineage-fixtures'); await mkdir(folder);
+  // These repositories must work on a clean CI account. Never read or mutate
+  // the runner's system/global identity, and never rely on inherited author env.
+  const fixtureEnv = { ...process.env, GIT_CONFIG_NOSYSTEM: '1',
+    GIT_CONFIG_GLOBAL: path.join(folder, 'absent-global-gitconfig') };
+  for (const key of ['GIT_AUTHOR_NAME', 'GIT_AUTHOR_EMAIL', 'GIT_COMMITTER_NAME', 'GIT_COMMITTER_EMAIL', 'EMAIL'])
+    delete fixtureEnv[key];
   const initial = "export function view(){ const role = 'h-[13px] w-8'; return role; }\n";
   const cases = [
     { name: 'exact-transition-and-unrelated-later-commit', after: initial.replace('h-[13px]', 'h-3.25'), later: '\nexport const unrelated = true;\n', prove: true },
@@ -30,19 +36,27 @@ export async function runLineageFixtures({ out, ts, sha, extractAt, canonical, p
   const rows = [];
   for (const fixture of cases) {
     const root = path.join(folder, fixture.name); await mkdir(root);
-    const git = (args, options = {}) => execFileSync('git', args, { cwd: root, maxBuffer: 32 * 1024 * 1024, ...options });
+    // Per-command identity also covers merge --no-commit, which still asks Git
+    // for a committer before reaching the conflict/status semantics under test.
+    const git = (args, options = {}) => execFileSync('git',
+      ['-c', 'user.name=CSS fixture', '-c', 'user.email=css-fixture@example.invalid', ...args],
+      { cwd: root, maxBuffer: 32 * 1024 * 1024, ...options, env: fixtureEnv });
     git(['init', '-q', '-b', 'main']);
+    // Actual environment-clean regression: both author and committer resolve
+    // through this command wrapper with global/system/user-env identity absent.
+    for (const ident of ['GIT_AUTHOR_IDENT', 'GIT_COMMITTER_IDENT'])
+      assert.match(git(['var', ident]).toString(), /^CSS fixture <css-fixture@example\.invalid> /);
     const original = fixture.before || initial;
     await writeFile(path.join(root, 'owner.ts'), original);
-    git(['add', '.']); git(['-c', 'user.name=CSS fixture', '-c', 'user.email=css-fixture@example.invalid', 'commit', '-qm', 'Original']);
+    git(['add', '.']); git(['commit', '-qm', 'Original']);
     const baseline = git(['rev-parse', 'HEAD']).toString().trim();
     const blob = git(['rev-parse', 'HEAD:owner.ts']).toString().trim();
     if (fixture.after === null) git(['rm', '-q', 'owner.ts']);
     else { await writeFile(path.join(root, 'owner.ts'), fixture.after); git(['add', '.']); }
-    git(['-c', 'user.name=CSS fixture', '-c', 'user.email=css-fixture@example.invalid', 'commit', '-qm', 'Transition']);
+    git(['commit', '-qm', 'Transition']);
     if (fixture.later) {
       await writeFile(path.join(root, 'owner.ts'), fixture.after + fixture.later);
-      git(['add', '.']); git(['-c', 'user.name=CSS fixture', '-c', 'user.email=css-fixture@example.invalid', 'commit', '-qm', 'Unrelated later change']);
+      git(['add', '.']); git(['commit', '-qm', 'Unrelated later change']);
     }
     if (fixture.merge) {
       git(['checkout', '-qb', 'alternate', baseline]);
@@ -53,13 +67,13 @@ export async function runLineageFixtures({ out, ts, sha, extractAt, canonical, p
           : fixture.after;
         await writeFile(path.join(root, 'owner.ts'), alternate); git(['add', '.']);
       }
-      git(['-c', 'user.name=CSS fixture', '-c', 'user.email=css-fixture@example.invalid', 'commit', '-qm', 'Alternate parent']);
+      git(['commit', '-qm', 'Alternate parent']);
       git(['checkout', '-q', 'main']);
       try { git(['merge', '--no-ff', '--no-commit', 'alternate']); }
       catch (error) { assert.equal(error.status, 1, 'Only an actual merge conflict is resolved by this fixture'); }
       git(['rev-parse', '--verify', 'MERGE_HEAD']);
       await writeFile(path.join(root, 'owner.ts'), fixture.after); git(['add', '.']);
-      git(['-c', 'user.name=CSS fixture', '-c', 'user.email=css-fixture@example.invalid', 'commit', '-qm', 'Actual two-parent merge']);
+      git(['commit', '-qm', 'Actual two-parent merge']);
       assert.equal(git(['rev-list', '--parents', '-n', '1', 'HEAD']).toString().trim().split(' ').length, 3);
     }
     const initialHead = git(['rev-parse', 'HEAD']).toString().trim();
@@ -143,6 +157,7 @@ export async function runLineageFixtures({ out, ts, sha, extractAt, canonical, p
     assert.equal(holds.length > 0, fixture.hold, fixture.name);
     rows.push({ name: fixture.name, actualPostcssAST: true, alternateBindingHolds: holds, passed: true });
   }
-  return { schema: 'real-git-and-public-ts-lineage-fixtures-v2', rows, allExpectationsMatched: true,
+  return { schema: 'real-git-and-public-ts-lineage-fixtures-v2',
+    fixtureIdentity: { actualAuthorAndCommitterVerified: true, ambientIdentityDisabled: true, scope: 'temporary-fixture-command-only' }, rows, allExpectationsMatched: true,
     actualProductProofOrAcceptanceInferred: false };
 }

@@ -1,0 +1,7 @@
+{
+  "adaptation": "Retain complete original theme selector tree; replace runtime cssVar dependency with owned semantic roles and exact owned palette steps. Existing qualified CodeEditorPane chrome overrides retained unchanged.",
+  "license": "nativeTheme.LICENSE",
+  "packageVersion": "4.29.2",
+  "source": "@lobehub/editor/es/codemirror/theme.js",
+  "sourceSHA256": "75d5b3104631f5f29a97faba4be3ec273c4cd1c11bb9ef4b64035e3dfc1805a6"
+}

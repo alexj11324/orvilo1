@@ -383,3 +383,20 @@ scoped-variable proofs. Eight Python source/guard checks pass; its 18 Node
 fixtures and whole compiler still require actual CI execution. The focused
 Electron configuration imports its .mts helper explicitly, correcting the last
 CI startup failure. No Electron acceptance or migration completion is claimed.
+
+### Standalone code editor and document export follow-up
+
+The actual standalone CodeEditorPane uses the existing approved professional
+CodeMirror kernel and owned syntax theme instead of the SDK loader/theme. It
+retains language controls, readonly mode, cursor reporting, save callbacks and
+selection/history handling. AgentDocumentPage export reads the current owned
+document port and rejects stale document menus. Related tests pass (22); the
+real Electron driver now invokes the professional editor behavior fixture after
+its unchanged visual matrix. Runtime acceptance remains pending.
+
+The b866 focused Electron run reached real image interactions, then exposed a
+FloatingPanel inline path without the required Base UI portal context. The fix
+keeps a genuine Portal targeted at a local inline host, with two actual driver
+regressions. The b866 CSS proof stopped on missing temporary Git fixture identity;
+all fixture commands now receive their own identity without global configuration.
+Both fixes await fresh CI; neither previous failure is relabeled as success.

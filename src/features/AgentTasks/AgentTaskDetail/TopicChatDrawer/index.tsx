@@ -1,7 +1,6 @@
 'use client';
 
 import { Freeze } from '@lobehub/ui';
-import { FloatingPanel } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ConversationContext, TaskDetailActivity } from '@orvilo/types';
 import {
@@ -18,6 +17,7 @@ import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import FloatingPanel from '@/components/FloatingPanel';
 import { confirmModal } from '@/components/Modal';
 import { Badge as Tag } from '@/components/reui/badge';
 import { toast } from '@/components/toast';
@@ -396,9 +396,7 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
   return (
     <FloatingPanel
       actions={<Freeze frozen={!open}>{actions}</Freeze>}
-      getContainer={false}
       height={expanded ? EXPANDED_PANEL_HEIGHT : DEFAULT_PANEL_HEIGHT}
-      mask={false}
       minHeight={320}
       minWidth={360}
       open={open}

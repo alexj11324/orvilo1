@@ -18,7 +18,7 @@ Body slot: pass **`content`** (or `children`; runtime uses `content ?? children`
 
 ### Global `ModalHost` (required)
 
-`createModal` renders through the app-level **`ModalHost`** from `@/components/Modal`, already mounted once near the root in `SPAGlobalProvider` and every app shell (Auth, Share, Workbench). Without it, `createModal` calls will not appear. The lobehub base-ui host stays mounted until remaining legacy call sites migrate.
+`createModal` renders through the app-level **`ModalHost`** from `@/components/Modal`, already mounted once near the root in `SPAGlobalProvider` and every app shell (Auth, Share, Workbench). Without it, `createModal` calls will not appear. The lobehub base-ui `ModalHost` is no longer mounted, so a legacy `@lobehub/ui/base-ui` `createModal` call renders nothing.
 
 ### Why imperative?
 
@@ -161,7 +161,7 @@ Async `onOk` shows a spinner on the OK button, closes on resolve, stays open on 
 
 ## Legacy: `@lobehub/ui` / `@lobehub/ui/base-ui`
 
-Older call sites import `createModal`/`confirmModal`/`useModalContext`/`ModalHost` from `@lobehub/ui/base-ui` (same API — migration is an import-path swap to `@/components/Modal`), or from `@lobehub/ui` root (typed as **antd `Modal` props**: `children`, `allowFullscreen`, `getContainer`, `destroyOnHidden`, `styles.body`). Prefer the local stack for new work.
+First-party code no longer imports `createModal`/`confirmModal`/`useModalContext`/`ModalHost` from `@lobehub/ui/base-ui` (same API — an import-path swap to `@/components/Modal`) or from `@lobehub/ui` root (typed as **antd `Modal` props**: `children`, `allowFullscreen`, `getContainer`, `destroyOnHidden`, `styles.body`). Do not reintroduce them: their host is no longer mounted.
 
 ## Examples
 

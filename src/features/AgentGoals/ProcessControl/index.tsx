@@ -19,7 +19,6 @@ import { chatPortalSelectors } from '@/store/chat/selectors';
 import { goalSelectors, useGoalStore } from '@/store/goal';
 
 import { isExperiment } from '../Experiments/model';
-import GoalAcceptanceCriteria from '../GoalAcceptanceCriteria';
 import Activity from './Activity';
 import Deliverables from './Deliverables';
 import Findings from './Findings';
@@ -117,15 +116,7 @@ const ProcessControl = memo<ProcessControlProps>(
     const planning =
       ['planning', 'running'].includes(graph.goal.status) &&
       !graph.nodes.some((view) => view.node.kind === 'task');
-    // Presence of the acceptance block (not a non-empty list) keeps the section
-    // mounted: removing the last criterion must leave the add control reachable,
-    // while legacy prose-only goals (no acceptance config at all) show nothing.
-    const acceptanceConfig = graph.goal.config?.acceptance;
-    const criteriaIds = acceptanceConfig?.criteriaIds ?? [];
-    // A closed goal cannot move: the coordinator returns immediately for these,
-    // and a Task added here would sit `proposed` forever. Stop offering actions
-    // that cannot land. The goal otherwise advances entirely on its own — the
-    // only legitimate human control over its pace is pause/resume.
+    // Closed Goals cannot accept new work or decisions.
     const closed = ['achieved', 'canceled', 'failed'].includes(graph.goal.status);
     const canAct = canEdit && !closed;
     const hasExperiments = graph.nodes.some((view) => view.node.kind === 'experiment');
@@ -164,30 +155,6 @@ const ProcessControl = memo<ProcessControlProps>(
         <Accordion multiple defaultValue={['deliverables', 'findings', 'activity']}>
           {(
             [
-              // The structured acceptance standard the terminal goal acceptance is
-              // gated on. Collapsed by default — reference material, like the task
-              // detail's 交付验收 section. Prose-only legacy goals have none.
-              !!acceptanceConfig && {
-                children: (
-                  <div className={`flex flex-col ${styles.section}`}>
-                    <GoalAcceptanceCriteria criteriaIds={criteriaIds} goalId={goalId} />
-                  </div>
-                ),
-                key: 'acceptance',
-                title: (
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-semibold">{t('goalAcceptance.title')}</div>
-                    {criteriaIds.length > 0 && (
-                      <Badge size="sm" variant="secondary">
-                        {criteriaIds.length}
-                      </Badge>
-                    )}
-                    <div className="text-xs text-muted-foreground">
-                      {t('goalAcceptance.gateHint')}
-                    </div>
-                  </div>
-                ),
-              },
               // Between the standard and the conclusions on purpose: 验收标准 says
               // what counts as done, 交付物 what was produced, 结论 what the goal now
               // believes about it. Findings routinely cite these artifacts.

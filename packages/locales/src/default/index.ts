@@ -45,7 +45,6 @@ import thread from './thread';
 import tool from './tool';
 import topic from './topic';
 import ui from './ui';
-import verify from './verify';
 import welcome from './welcome';
 
 const resources = {
@@ -96,7 +95,6 @@ const resources = {
   tool,
   topic,
   ui,
-  verify,
   welcome,
 } as const;
 

@@ -76,7 +76,7 @@ const SearchResultsOverlay = memo(() => {
             // Search narrows the list the user is looking at, so it has to honour
             // the source they picked. Omitting it left the chip visibly selected
             // while results came back from every non-hidden source — and made
-            // `Acceptance` search unusable, since that source is hidden unless
+            // a selected source unusable, since its results are hidden unless
             // explicitly asked for.
             sourceFilter,
             visibility,

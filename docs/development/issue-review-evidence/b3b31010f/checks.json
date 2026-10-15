@@ -1,0 +1,41 @@
+{
+  "capturedAt": "2026-10-13T21:59:04.600Z",
+  "environment": {
+    "renderer": "Real Electron with Vite HMR at 5198",
+    "backend": "Isolated local Next backend 31698 with PostgreSQL orvilo_issue769_qa",
+    "window": "1290 x 900 logical pixels, DPR 2, light appearance"
+  },
+  "goal": {
+    "id": "goal_PTJLj4betFi7",
+    "title": "Issue 777 Goal UI retirement QA",
+    "status": "paused"
+  },
+  "limitations": [
+    "The Goal was created through the normal API with an expired deadline. Its materialized task has no Agent operation; the existing age-based UI therefore labels its unused attempt as lost.",
+    "The sidebar Goal entry was already absent. The real route was loaded through the native Electron DevTools Console, then all controls were exercised through normal UI.",
+    "This is rendering and action eligibility evidence, not a Goal execution run. The automatic Issue review loop and migration receipts are reused from cd7c40d33 because server and database production sources are identical."
+  ],
+  "nodes": [
+    {
+      "id": "696c03f0-7c7a-4c6a-b116-a4cd7a61e383",
+      "kind": "problem",
+      "status": "active",
+      "taskId": null,
+      "title": "Issue 777 Goal UI retirement QA"
+    },
+    {
+      "id": "1241afaa-1c4b-4169-acab-3959a2c0918c",
+      "kind": "task",
+      "status": "active",
+      "taskId": "task_SDtU1dzEpwHQ",
+      "title": "Goal card rendering QA"
+    }
+  ],
+  "observed": [
+    "Paused Goal detail renders the nonempty Frontier and graph.",
+    "Add Task opens its description form and can be canceled without creating a task.",
+    "Fullscreen graph renders the linked Task node without the retired verifier shield badge."
+  ],
+  "qaTaskOperationCount": 0,
+  "sourceCommit": "b3b31010ffe8f8c556b3c4af3380c8b7a1498c7f"
+}

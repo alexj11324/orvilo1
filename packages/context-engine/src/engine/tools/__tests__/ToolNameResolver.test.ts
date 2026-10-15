@@ -902,16 +902,16 @@ describe('ToolNameResolver', () => {
       it('should drop an explicitly namespaced API missing from its manifest', () => {
         const toolCalls = [
           {
-            function: { arguments: '{}', name: 'orvilo-local-system____submitEvidence' },
+            function: { arguments: '{}', name: 'orvilo-local-system____submitTaskReview' },
             id: 'call_1',
             type: 'function',
           },
         ];
 
         const manifests = {
-          'orvilo-acceptance-evidence': {
-            api: [{ description: '', name: 'submitEvidence', parameters: {} }],
-            identifier: 'orvilo-acceptance-evidence',
+          'orvilo-task': {
+            api: [{ description: '', name: 'submitTaskReview', parameters: {} }],
+            identifier: 'orvilo-task',
             meta: {},
             type: 'builtin' as const,
           },
@@ -923,9 +923,7 @@ describe('ToolNameResolver', () => {
           },
         };
 
-        const result = resolver.resolve(toolCalls, manifests, [
-          'orvilo-acceptance-evidence____submitEvidence',
-        ]);
+        const result = resolver.resolve(toolCalls, manifests, ['orvilo-task____submitTaskReview']);
 
         expect(result).toEqual([]);
       });

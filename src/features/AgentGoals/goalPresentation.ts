@@ -10,7 +10,6 @@ const goalStatusKeyMap = {
   planning: 'goalList.status.planning',
   review: 'goalList.status.review',
   running: 'goalList.status.running',
-  verifying: 'goalList.status.verifying',
 } as const satisfies Record<GoalStatus, string>;
 
 export type GoalStatusKey = (typeof goalStatusKeyMap)[GoalStatus];

@@ -6,7 +6,6 @@ import type * as taskReview from '@/server/services/task/review';
 
 import { createTaskRuntime, taskRuntime } from '../task';
 
-const verifyMocks = vi.hoisted(() => ({ createCriteriaFromDrafts: vi.fn() }));
 const reviewMocks = vi.hoisted(() => ({ submitIssueReview: vi.fn() }));
 vi.mock('@/server/services/task/review', async (importOriginal) => ({
   ...(await importOriginal<typeof taskReview>()),
@@ -85,12 +84,6 @@ vi.mock('@/server/services/task', () => ({
 vi.mock('@/server/services/taskIntegration', () => ({
   TaskIntegrationService: vi.fn(function () {
     return deletionMocks;
-  }),
-}));
-
-vi.mock('@/server/services/verify/planGenerator', () => ({
-  VerifyPlanGeneratorService: vi.fn().mockImplementation(function () {
-    return verifyMocks;
   }),
 }));
 
@@ -1076,7 +1069,7 @@ describe('createTaskRuntime', () => {
     });
   });
 
-  describe('setTaskSchedule / setTaskVerify / updateTaskStatus', () => {
+  describe('setTaskSchedule / updateTaskStatus', () => {
     it('applies schedule changes and succeeds', async () => {
       const taskCaller = {
         update: vi.fn().mockResolvedValue({}),
@@ -1103,37 +1096,6 @@ describe('createTaskRuntime', () => {
       expect(taskCaller.update).toHaveBeenCalledWith(
         expect.objectContaining({ automationMode: 'schedule', id: 'task-1' }),
       );
-    });
-
-    it('applies verify config changes and succeeds', async () => {
-      const taskCaller = {
-        updateVerifyConfig: vi.fn().mockResolvedValue({}),
-      };
-      const taskModel = {
-        resolve: vi.fn().mockResolvedValue({ id: 'task-1', identifier: 'T-1' }),
-      };
-      const runtime = createTaskRuntime({
-        agentModel: { existsById: vi.fn() } as any,
-        taskCaller: taskCaller as any,
-        taskModel: taskModel as any,
-        taskService: {} as any,
-        toolCallId: 'tool-call-verify',
-      });
-
-      const result = await runtime.setTaskVerify({
-        enabled: true,
-        identifier: 'T-1',
-        requirement: 'The output must include a working demo.',
-      });
-
-      expect(result.success).toBe(true);
-      expect(taskCaller.updateVerifyConfig).toHaveBeenCalledWith({
-        id: 'task-1',
-        verify: {
-          enabled: true,
-          requirement: 'The output must include a working demo.',
-        },
-      });
     });
 
     it('handles status-only updates', async () => {

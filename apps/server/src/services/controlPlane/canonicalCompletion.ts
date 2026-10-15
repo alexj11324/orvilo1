@@ -1,4 +1,3 @@
-import type { DurableReceipt } from '@orvilo/agent-execution';
 import { deriveLegacyTaskStatus } from '@orvilo/types';
 import { and, eq } from 'drizzle-orm';
 
@@ -9,8 +8,6 @@ import {
   tasks,
   taskTopics,
   topics,
-  verifyCheckResults,
-  verifyRuns,
   workspaceMembers,
 } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
@@ -18,169 +15,113 @@ import { AgentDelegationService } from '@/server/services/agentDelegation/execut
 
 import type { CanonicalRunBinding } from './canonicalRun';
 
-/** Supplied by trusted server registration, not by an agent or completion request.
- * Receipt loading must read the durable store; mappings bind its exact request digest
- * to a check in the frozen Verify plan. No default mapping is inferred from text. */
-export interface CanonicalReceiptMapping {
-  checkItemId: string;
-  receiptId: string;
-  requestDigest: string;
-  sourceCriterionId: string;
-}
-export interface CanonicalCompletionEvidence {
-  loadReceipt: (id: string) => Promise<DurableReceipt | undefined>;
-  mappings: CanonicalReceiptMapping[];
-}
 export type CanonicalCompletionOutcome =
   | { state: 'denied'; reason: string }
   | { state: 'observed'; taskStatus: string; completed: boolean };
 
-/** Invokes existing Verify convergence, never writes a verdict or task status.
- * This is not the generic atomic CompletionPersistence contract: Verify performs
- * its own reservations and contract rechecks, and may leave completion pending. */
-export class CanonicalVerifyCompletion {
+/** Observes the current Issue status without turning runtime outcomes into a verdict. */
+export class CanonicalIssueCompletion {
   constructor(private readonly db: OrviloDatabase) {}
 
-  async reconcile(
-    input: CanonicalRunBinding,
-    evidence?: CanonicalCompletionEvidence,
-  ): Promise<CanonicalCompletionOutcome> {
+  async reconcile(input: CanonicalRunBinding): Promise<CanonicalCompletionOutcome> {
     const binding = structuredClone(input);
     const deny = (reason: string): CanonicalCompletionOutcome => ({ state: 'denied', reason });
-    // Verify settlement is task-only — a conversation subject has no task
-    // contract to reconcile (no placeholder taskId may reach this path).
     if (binding.subject.kind !== 'task') return deny('run_subject_not_task');
     const taskId = binding.subject.taskId;
-    if (!evidence?.mappings.length) return deny('receipt_mapping_unavailable');
-    const captured = { ...evidence, mappings: structuredClone(evidence.mappings) };
-    const preflight = await this.validate(binding, captured);
-    if (preflight) return deny(preflight);
-    const { driveTaskFromVerify } = await import('@/server/services/verify/settle');
-    await driveTaskFromVerify(this.db, binding.userId, binding.operationId, binding.workspaceId, {
-      beforeCompletion: (tx) => this.authorizeAtCommit(tx, binding, captured),
+    return this.db.transaction(async (transaction) => {
+      const db = transaction as OrviloDatabase;
+      await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, binding.workspaceId)))
+        .for('update');
+      await db
+        .select({ id: taskDispatches.id })
+        .from(taskDispatches)
+        .where(
+          and(
+            eq(taskDispatches.id, binding.dispatchId),
+            eq(taskDispatches.workspaceId, binding.workspaceId),
+          ),
+        )
+        .for('update');
+      const [grant] = await db
+        .select()
+        .from(executionGrants)
+        .where(
+          and(
+            eq(executionGrants.id, binding.grantId),
+            eq(executionGrants.workspaceId, binding.workspaceId),
+          ),
+        )
+        .for('update');
+      if (
+        !grant ||
+        grant.taskId !== taskId ||
+        grant.delegationSubjectType !== 'user' ||
+        grant.delegationSubjectId !== binding.userId ||
+        grant.status !== 'active' ||
+        grant.revokedAt ||
+        !grant.expiresAt ||
+        grant.expiresAt.getTime() <= Date.now()
+      )
+        return deny('delegation_unavailable');
+      await db
+        .select({ id: taskTopics.id })
+        .from(taskTopics)
+        .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, binding.topicId)))
+        .for('update');
+      const [member] = await db
+        .select()
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, binding.workspaceId),
+            eq(workspaceMembers.userId, binding.userId),
+          ),
+        )
+        .for('update');
+      if (
+        !member ||
+        member.deletedAt ||
+        member.suspendedAt ||
+        member.authzVersion !== grant.authzVersions?.workspaceAuthzVersion
+      )
+        return deny('delegation_unavailable');
+      const invalid = await new CanonicalIssueCompletion(db).validate(binding);
+      if (invalid) return deny(invalid);
+      try {
+        await new AgentDelegationService(db, binding.userId, binding.workspaceId).assertMayCommit({
+          taskId,
+          topicId: binding.topicId,
+          grantId: binding.grantId,
+          epoch: binding.executionEpoch,
+          runtime: {
+            registrationId: binding.runtimeRegistrationId,
+            ownerId: binding.runtimeOwnerId,
+            leaseId: binding.runtimeLeaseId,
+          },
+        });
+      } catch {
+        return deny('delegation_unavailable');
+      }
+      if (grant.expiresAt.getTime() <= Date.now()) return deny('delegation_unavailable');
+      const [task] = await db
+        .select()
+        .from(tasks)
+        .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, binding.workspaceId)))
+        .limit(1);
+      return {
+        completed: task.workflowCategory === 'done',
+        state: 'observed',
+        taskStatus: deriveLegacyTaskStatus(task),
+      };
     });
-    const [task] = await this.db
-      .select()
-      .from(tasks)
-      .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, binding.workspaceId)))
-      .limit(1);
-    if (!task) return deny('task_missing_after_reconciliation');
-    // Recurring tasks may rearm as scheduled; a void settlement return is not
-    // done. `tasks.status` is retired — Issue Status is `workflowCategory`.
-    return {
-      completed: task.workflowCategory === 'done',
-      state: 'observed',
-      taskStatus: deriveLegacyTaskStatus(task),
-    };
-  }
-  /** Runs only inside the actual TaskModel status CAS transaction, never around settlement. */
-  async authorizeAtCommit(
-    db: OrviloDatabase,
-    binding: CanonicalRunBinding,
-    evidence: CanonicalCompletionEvidence,
-  ): Promise<boolean> {
-    if (binding.subject.kind !== 'task') return false;
-    const taskId = binding.subject.taskId;
-    await db
-      .select({ id: taskDispatches.id })
-      .from(taskDispatches)
-      .where(
-        and(
-          eq(taskDispatches.id, binding.dispatchId),
-          eq(taskDispatches.workspaceId, binding.workspaceId),
-        ),
-      )
-      .for('update');
-    await db
-      .select({ id: tasks.id })
-      .from(tasks)
-      .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, binding.workspaceId)))
-      .for('update');
-    const [grant] = await db
-      .select()
-      .from(executionGrants)
-      .where(
-        and(
-          eq(executionGrants.id, binding.grantId),
-          eq(executionGrants.workspaceId, binding.workspaceId),
-        ),
-      )
-      .for('update');
-    if (
-      !grant ||
-      grant.taskId !== taskId ||
-      grant.delegationSubjectType !== 'user' ||
-      grant.delegationSubjectId !== binding.userId ||
-      grant.status !== 'active' ||
-      grant.revokedAt ||
-      !grant.expiresAt ||
-      grant.expiresAt.getTime() <= Date.now()
-    )
-      return false;
-    await db
-      .select({ id: taskTopics.id })
-      .from(taskTopics)
-      .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, binding.topicId)))
-      .for('update');
-    const [member] = await db
-      .select()
-      .from(workspaceMembers)
-      .where(
-        and(
-          eq(workspaceMembers.workspaceId, binding.workspaceId),
-          eq(workspaceMembers.userId, binding.userId),
-        ),
-      )
-      .for('update');
-    if (
-      !member ||
-      member.deletedAt ||
-      member.suspendedAt ||
-      member.authzVersion !== grant.authzVersions?.workspaceAuthzVersion
-    )
-      return false;
-    const [verify] = await db
-      .select({ id: verifyRuns.id })
-      .from(verifyRuns)
-      .where(
-        and(
-          eq(verifyRuns.operationId, binding.operationId),
-          eq(verifyRuns.workspaceId, binding.workspaceId),
-        ),
-      )
-      .for('update');
-    if (!verify) return false;
-    await db
-      .select({ id: verifyCheckResults.id })
-      .from(verifyCheckResults)
-      .where(eq(verifyCheckResults.verifyRunId, verify.id))
-      .for('update');
-    if (await new CanonicalVerifyCompletion(db).validate(binding, evidence)) return false;
-    try {
-      await new AgentDelegationService(db, binding.userId, binding.workspaceId).assertMayCommit({
-        taskId,
-        topicId: binding.topicId,
-        grantId: binding.grantId,
-        epoch: binding.executionEpoch,
-        runtime: {
-          registrationId: binding.runtimeRegistrationId,
-          ownerId: binding.runtimeOwnerId,
-          leaseId: binding.runtimeLeaseId,
-        },
-      });
-    } catch {
-      return false;
-    }
-    return grant.expiresAt.getTime() > Date.now();
   }
 
-  private async validate(
-    binding: CanonicalRunBinding,
-    evidence: CanonicalCompletionEvidence,
-  ): Promise<string | undefined> {
+  private async validate(binding: CanonicalRunBinding): Promise<string | undefined> {
     if (binding.subject.kind !== 'task') return 'run_subject_not_task';
     const taskId = binding.subject.taskId;
-    const mappings = structuredClone(evidence.mappings);
     const [liveTask] = await this.db
       .select({ id: tasks.id, isDeleted: tasks.isDeleted, deletedAt: tasks.deletedAt })
       .from(tasks)
@@ -236,68 +177,6 @@ export class CanonicalVerifyCompletion {
       }))
     )
       return 'dispatch_contract_changed';
-    const [verify] = await this.db
-      .select()
-      .from(verifyRuns)
-      .where(
-        and(
-          eq(verifyRuns.operationId, binding.operationId),
-          eq(verifyRuns.workspaceId, binding.workspaceId),
-        ),
-      )
-      .limit(1);
-    if (!verify?.planConfirmedAt || verify.status !== 'passed' || !verify.plan?.length)
-      return 'verification_not_passed';
-    const required = verify.plan.filter((item) => item.required);
-    if (
-      !required.length ||
-      new Set(mappings.map((item) => item.checkItemId)).size !== mappings.length
-    )
-      return 'invalid_receipt_mapping';
-    const checks = await this.db
-      .select()
-      .from(verifyCheckResults)
-      .where(
-        and(
-          eq(verifyCheckResults.verifyRunId, verify.id),
-          eq(verifyCheckResults.workspaceId, binding.workspaceId),
-        ),
-      );
-    for (const criterion of required) {
-      const mapping = mappings.find((item) => item.checkItemId === criterion.id);
-      if (
-        !criterion.sourceCriterionId ||
-        !mapping ||
-        mapping.sourceCriterionId !== criterion.sourceCriterionId ||
-        !checks.some(
-          (check) =>
-            check.checkItemId === criterion.id &&
-            check.sourceCriterionId === criterion.sourceCriterionId &&
-            check.verdict === 'passed',
-        )
-      )
-        return 'criterion_evidence_unavailable';
-      const receipt = await evidence.loadReceipt(mapping.receiptId);
-      if (
-        !receipt ||
-        receipt.id !== mapping.receiptId ||
-        receipt.schemaVersion !== 1 ||
-        receipt.status !== 'verified' ||
-        !receipt.evidence.length ||
-        !mapping.requestDigest ||
-        receipt.requestDigest !== mapping.requestDigest ||
-        receipt.fence.tenantId !== binding.workspaceId ||
-        receipt.fence.principalId !== binding.userId ||
-        receipt.fence.taskId !== taskId ||
-        receipt.fence.grantId !== binding.grantId ||
-        receipt.fence.epoch !== binding.executionEpoch ||
-        receipt.fence.ownerId !== binding.runtimeOwnerId ||
-        receipt.fence.leaseId !== binding.runtimeLeaseId ||
-        receipt.fence.policyRevision !== binding.policyRevision ||
-        receipt.fence.stateRevision !== binding.stateRevision
-      )
-        return 'receipt_identity_changed';
-    }
     return undefined;
   }
 }

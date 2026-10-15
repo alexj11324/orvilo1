@@ -164,7 +164,7 @@ export interface TaskExecutionEnvironmentSnapshot {
  * re-deriving it from mutable task config.
  *
  * Every field is assembled from authoritative inputs (task revisions, the
- * provisioned workspace, the mounted tool surface, acceptance config, the
+ * provisioned workspace, the mounted tool surface, the
  * delegation grant) — never re-synthesized by the model.
  */
 /** Evidence that a `blocks` dependency was satisfied at dispatch time. */
@@ -183,8 +183,6 @@ export interface TaskDependencyReceipt {
     /** Immutable source commit accepted for the upstream delivery. */
     sourceSha?: string;
     topicId: string;
-    /** Verification operation that accepted the delivery, when recorded. */
-    verifyOperationId?: string;
   };
   /**
    * Whether the recorded delivery is the upstream's *current* valid delivery
@@ -213,7 +211,7 @@ export interface TaskDependencyReceipt {
 
 /**
  * The frozen policy content a run executes under: what the prompt said, what
- * the acceptance gate required, and which upstream deliveries the run relied
+ * which upstream deliveries the run relied
  * on. Assembled once per attempt and persisted verbatim — continuations and
  * repairs inherit it instead of re-reading live task rows, so editing a Task
  * mid-run can never silently rewrite an in-flight attempt.
@@ -223,17 +221,6 @@ export interface TaskExecutionContractContent {
   dependencies?: TaskDependencyReceipt[];
   /** `task.instruction` frozen at dispatch — the prompt's policy payload. */
   instruction: string;
-  /** Frozen verify gate: criteria + requirement as rendered into the prompt. */
-  verify?: {
-    criteria?: Array<{
-      required?: boolean;
-      requiredEvidence?: Array<{ hint?: string; type: string }>;
-      title: string;
-    }>;
-    enabled: boolean;
-    maxIterations?: number;
-    requirement?: string | null;
-  };
 }
 
 /** A saved automation revision. Embedded on the occurrence; never a second dispatch. */
@@ -290,11 +277,9 @@ export interface TaskEventDispatchEvidence {
 }
 
 export interface TaskExecutionContract {
-  /** Acceptance gate the run must satisfy (required evidence exists). */
-  acceptance: { enabled: boolean };
   /** Frozen budget: goal-loop round and attempt cap (`null` = unbounded). */
   budget: { maxRounds: number | null; round: number };
-  /** Frozen policy payload — instruction, verify gate, dependency receipts. */
+  /** Frozen policy payload — instruction and dependency receipts. */
   content?: TaskExecutionContractContent;
   /** Stable identity of this contract row (unique per attempt). */
   contractId?: string;
@@ -392,7 +377,6 @@ export type TaskActivityLogType =
   | 'sub_issue_removed'
   | 'team'
   | 'title'
-  | 'verify_config'
   | 'workflow_state';
 
 /**
@@ -432,7 +416,6 @@ export const TASK_ACTIVITY_LOG_BEHAVIOR: Record<TaskActivityLogType, TaskActivit
   sub_issue_removed: 'event',
   team: 'value',
   title: 'value',
-  verify_config: 'session',
   workflow_state: 'value',
 };
 
@@ -772,12 +755,6 @@ export interface TaskTopicIntegration {
    * Minimum rollback version = the first release that understands this key.
    */
   verificationPollFailureStages?: Partial<Record<VerificationPollStage, number>>;
-  /**
-   * Original verified delivery waiting for this corrective integration chain.
-   * Once the chain settles, the lifecycle re-drives that Verify run so task
-   * completion and the creator callback still use the accepted delivery.
-   */
-  verifyOperationId?: string;
   /** True once the provisioned worktree was removed after integration. */
   worktreeCleaned?: boolean;
   /**
@@ -785,35 +762,6 @@ export interface TaskTopicIntegration {
    * on sandbox-contract records — the clone lives inside the ephemeral sandbox.
    */
   worktreePath?: string;
-}
-
-/**
- * Legacy Task-level delivery-acceptance gate config persisted under
- * `tasks.config.verify`. New flows persist this policy on the Task's Acceptance;
- * this shape remains for API compatibility and lazy migration. It is *not*
- * unioned with any agent-level mount
- * (`agencyConfig.verifyRubricId`) — the task config is authoritative and never
- * field-level merged with the agent-level rubric.
- *
- * Subtasks inherit with whole-config override semantics: a subtask uses its own
- * config when present, otherwise the nearest ancestor's config in full (never a
- * field-level merge). Resolved at runtime via `TaskModel.resolveVerifyConfig`.
- */
-export interface TaskVerifyConfig {
-  /** Whether the verify gate runs on topic completion. */
-  enabled?: boolean;
-  /** Task-level cap on verify repair / re-run iterations. */
-  maxIterations?: number;
-  /**
-   * The one-sentence acceptance requirement the user typed — the source the
-   * acceptance criteria were AI-generated from. Kept so the UI can show it and
-   * offer "regenerate", distinct from the resolved criteria themselves.
-   */
-  requirement?: string;
-  /** One-off ad-hoc criteria ids (references `verify_criteria.id`). */
-  verifyCriteriaIds?: string[];
-  /** Reuse a rubric template (references `verify_rubrics.id`). */
-  verifyRubricId?: string;
 }
 
 export interface WorkspaceDocNode {
@@ -1339,7 +1287,6 @@ export type TaskDetailPropertyChange =
     }
   | { field: 'status'; from: TaskStatus | null; to: TaskStatus }
   | { field: 'title'; from: string | null; to: string | null }
-  | { field: 'verify' }
   | {
       field: 'workflow';
       from: TaskActivityWorkflowValue | null;
@@ -1450,24 +1397,6 @@ export interface TaskDetailActivity {
   /** Comment-only: ISO timestamp of the latest persisted edit. */
   updatedAt?: string;
   userId?: string | null;
-  /**
-   * Topic-only: the verification bound to this run. Present as soon as a
-   * verify session exists — `status` is null while it is still being planned,
-   * so the row can say "verifying" before there is a verdict.
-   */
-  verify?: TaskRunVerifySummary | null;
-}
-
-export interface TaskRunVerifySummary {
-  /** The aggregate this round is chained onto — the link target. */
-  acceptanceId: string | null;
-  /** Checks that returned a passing verdict in this round. */
-  passed: number;
-  roundIndex: number | null;
-  runId: string;
-  status: string | null;
-  /** Checks this round produced a result for; 0 while the plan is unexecuted. */
-  total: number;
 }
 
 /**
@@ -1576,8 +1505,6 @@ export interface TaskDetailData {
   topicCount?: number;
   updatedAt?: string;
   userId?: string | null;
-  /** Task Acceptance policy, exposed in the legacy TaskVerifyConfig API shape. */
-  verify?: TaskVerifyConfig | null;
   /** Visibility within a workspace. 'public' is workspace-shared (default);
    *  'private' is only visible to the creator. Ignored in personal mode. */
   visibility?: 'private' | 'public';

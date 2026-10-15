@@ -22,12 +22,11 @@ const OPTIONS: Array<{ key: ResourceSourceFilter; labelKey: string }> = [
   { key: ResourceSourceFilter.All, labelKey: 'FileManager.source.all' },
   { key: ResourceSourceFilter.Generated, labelKey: 'FileManager.source.generated' },
   { key: ResourceSourceFilter.Uploaded, labelKey: 'FileManager.source.uploaded' },
-  { key: ResourceSourceFilter.Acceptance, labelKey: 'FileManager.source.acceptance' },
 ];
 
 /**
- * Origin chips for the explorer list: All / AI generated / Uploaded /
- * Acceptance. Sits on the item-count row so the count and the pool it counts
+ * Origin chips for the explorer list: All / AI generated / Uploaded.
+ * Sits on the item-count row so the count and the pool it counts
  * read as one statement.
  *
  * Renders nothing where origin is meaningless (inside a library, on Pages or

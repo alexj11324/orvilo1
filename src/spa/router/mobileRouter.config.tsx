@@ -384,10 +384,8 @@ export const mobileRoutes: RouteObject[] = [
         path: ':workspaceSlug',
       },
 
-      // Retired standalone Acceptance / Verify platform — both roots must stay
-      // reserved words so `/:workspaceSlug` cannot claim `acceptance` /
-      // `verify`; the acceptance a stored link pointed at is reachable from
-      // the task board.
+      // Retired roots stay reserved so `/:workspaceSlug` cannot parse a stored
+      // Acceptance / Verify link as a workspace. Both redirect to the Issue board.
       {
         element: redirectElement('/tasks'),
         path: 'acceptance/*',

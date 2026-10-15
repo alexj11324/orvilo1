@@ -1,0 +1,40 @@
+{
+  "browserChecks": {
+    "main": {
+      "passed": 34,
+      "failed": 1,
+      "failure": "First design page.goto timed out during cold Vite transforms."
+    },
+    "exactCaseRetry": {
+      "passed": 1,
+      "failed": 0,
+      "scenario": "production feature geometry and portals: 1280 light default"
+    },
+    "assertionsOrTimeoutsWeakened": false
+  },
+  "entries": ["index.html", "standaloneTheme.html", "design.html"],
+  "green": [
+    {
+      "config": "vite.config.ts",
+      "exitCode": 0,
+      "seconds": 13.46
+    },
+    {
+      "config": "design.vite.config.ts",
+      "exitCode": 0,
+      "seconds": 62
+    }
+  ],
+  "independentLightReview": "No findings in the six-file CI repair diff; remote CI remains pending.",
+  "lint": "6 files clean",
+  "red": {
+    "injectedImport": "@/features/AgentTasks/AgentTaskDetail/TaskAcceptanceHeader",
+    "runtimeReference": true,
+    "repositoryFixtureModified": false,
+    "exitCode": 1,
+    "seconds": 8.14,
+    "error": "Rolldown failed to resolve import from tests/ui-alignment/designFixture.tsx"
+  },
+  "scope": "Existing Vite8 fixture module graphs in the required Typecheck job and before the Browser geometry matrix.",
+  "sourceCommit": "3457d75937058916daf4551c79ba7f76c19862a7"
+}

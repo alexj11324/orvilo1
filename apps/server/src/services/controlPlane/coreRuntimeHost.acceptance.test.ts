@@ -73,7 +73,7 @@ it.skipIf(!process.env.CORE_DOCKER_IMAGE || process.env.TEST_SERVER_DB !== '1')(
     try {
       expect(await host.reconcileCompletion()).toEqual({
         state: 'denied',
-        reason: 'receipt_mapping_unavailable',
+        reason: 'dispatch_contract_changed',
       });
       const started = await host.start();
       expect(started, JSON.stringify(started)).toMatchObject({ ok: true });

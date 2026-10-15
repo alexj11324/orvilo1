@@ -14,7 +14,6 @@ import { sweep as linearSyncSweepHandler } from '@/server/router-hono/workflows/
 import { runScheduleDispatch } from '@/server/router-hono/workflows/task/handlers/scheduleDispatch';
 import { scheduledTopicDispatch } from '@/server/router-hono/workflows/task/handlers/scheduledTopicDispatch';
 import { watchdog } from '@/server/router-hono/workflows/task/handlers/watchdog';
-import { sweep as verifySweepHandler } from '@/server/router-hono/workflows/verify/handlers/sweep';
 import { advanceGoal } from '@/server/services/goal/advanceGoal';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 import { runMcpEventInboxSweep } from '@/server/services/mcpEvents/runtime';
@@ -178,14 +177,6 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     retries: 3,
   });
 
-  const verifySweep = hatchet.task({
-    name: HATCHET_TASK_NAMES.verifySweep,
-    executionTimeout: '15m',
-    fn: async () => runInternalHandler(verifySweepHandler),
-    onCrons: ['*/5 * * * *'],
-    retries: 3,
-  });
-
   const goalSweep = hatchet.task({
     name: HATCHET_TASK_NAMES.goalSweep,
     executionTimeout: '15m',
@@ -229,6 +220,5 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     taskScheduleExecute,
     taskScheduledTopicDispatch,
     taskWatchdog,
-    verifySweep,
   ];
 };

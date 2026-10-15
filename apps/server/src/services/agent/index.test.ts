@@ -671,8 +671,8 @@ describe('AgentService', () => {
     it('should keep a custom avatar over the builtin fallback', async () => {
       const mockAgent = {
         avatar: 'https://example.com/custom.png',
-        id: 'agent-task',
-        slug: 'task-agent',
+        id: 'agent-page',
+        slug: 'page-agent',
       };
 
       const mockAgentModel = {
@@ -685,7 +685,7 @@ describe('AgentService', () => {
       (parseAgentConfig as any).mockReturnValue({});
 
       const newService = new AgentService(mockDb, mockUserId);
-      const result = await newService.getAgentConfigById('agent-task');
+      const result = await newService.getAgentConfigById('agent-page');
 
       expect(result?.avatar).toBe('https://example.com/custom.png');
     });

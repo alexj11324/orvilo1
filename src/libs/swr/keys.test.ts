@@ -8,7 +8,6 @@ import {
   recentKeys,
   resourceKeys,
   taskKeys,
-  verifyKeys,
   workKeys,
 } from './keys';
 import { CACHE_TIERS } from './localStorageProvider';
@@ -60,33 +59,6 @@ describe('recentKeys', () => {
     );
 
     expect(persisted).toBe(true);
-  });
-});
-
-describe('retired acceptance collection keys', () => {
-  // The Acceptance list / page / status feeds were the standalone workspace's
-  // cache. They are retired with it, so no key builder may reappear — the
-  // persisted rows are purged by `swr/migrations/retiredKeys`.
-  it('no longer builds a key for the retired collection reads', () => {
-    expect(verifyKeys).not.toHaveProperty('acceptances');
-    expect(verifyKeys).not.toHaveProperty('acceptancePage');
-    expect(verifyKeys).not.toHaveProperty('acceptanceStatuses');
-  });
-
-  it('keeps the bundle / subject / purge-preview keys the task panel reads', () => {
-    expect(verifyKeys.acceptanceBundle('acceptance-1')).toEqual([
-      'verify:acceptanceBundle',
-      'acceptance-1',
-    ]);
-    expect(verifyKeys.acceptanceBySubject('task', 'T-1')).toEqual([
-      'verify:acceptanceBySubject',
-      'task',
-      'T-1',
-    ]);
-    expect(verifyKeys.acceptancePurgePreview('acceptance-1')).toEqual([
-      'verify:acceptancePurgePreview',
-      'acceptance-1',
-    ]);
   });
 });
 

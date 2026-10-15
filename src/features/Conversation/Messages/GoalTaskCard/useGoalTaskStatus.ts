@@ -7,13 +7,7 @@ import { getGoalTaskProgress } from './goalTaskProgress';
  * of its Tasks are closed. The card only holds the goal id, so everything else is
  * fetched here.
  */
-export const useGoalTaskStatus = ({
-  criteriaCount = 0,
-  goalId,
-}: {
-  criteriaCount?: number;
-  goalId?: string;
-}) => {
+export const useGoalTaskStatus = ({ goalId }: { goalId?: string }) => {
   const useFetchGoalGraph = useGoalStore((s) => s.useFetchGoalGraph);
   useFetchGoalGraph(goalId);
   const snapshot = useGoalStore(goalSelectors.goalGraph(goalId));
@@ -23,7 +17,6 @@ export const useGoalTaskStatus = ({
   return {
     agentId: snapshot?.goal.agentId ?? undefined,
     progress: getGoalTaskProgress({
-      criteriaCount,
       pendingDecisions:
         snapshot?.decisions.filter((decision) => decision.status === 'pending').length ?? 0,
       status: snapshot?.goal.status,

@@ -54,13 +54,6 @@ export const DEFAULT_MODEL = 'deepseek-v4-flash';
 export const DEFAULT_ONBOARDING_MODEL = 'gemini-3-flash-preview';
 export const DEFAULT_ONBOARDING_PROVIDER = 'google';
 export const DEFAULT_PROVIDER = 'deepseek';
-// MUST stay vision-capable: the acceptance review step judges evidence
-// screenshots with this model, and a text-only judge silently passes every
-// check whose evidence it cannot read.
-export const DEFAULT_REVIEW_PREDICT_MODEL = 'gemini-3.6-flash';
-export const DEFAULT_REVIEW_PREDICT_PROVIDER = 'google';
-export const DEFAULT_VERIFY_MODEL = 'glm-5.3-flash';
-export const DEFAULT_VERIFY_PROVIDER = 'zhipu';
 
 export const UTM_SOURCE = 'chat_preview';
 

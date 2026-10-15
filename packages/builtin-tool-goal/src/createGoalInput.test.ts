@@ -7,33 +7,17 @@ import {
 } from './createGoalInput';
 
 describe('buildGoalRequirement', () => {
-  it('composes structured markdown the requirement document renders cleanly', () => {
-    // The text is shown by the goal page's markdown editor, so blocks separate
-    // with blank lines while the numbered criteria stay one tight list, each
-    // how-to-judge note on its own sub-line instead of a run-on parenthetical.
-    const text = buildGoalRequirement(
-      'Ship it',
-      [
-        { description: 'Runs locally', instruction: 'Run the demo script', title: 'Local run' },
-        { title: 'Docs complete' },
-      ],
-      'End-to-end reproduction',
-    );
-
-    expect(text).toBe(
-      [
-        '## Ship it',
-        '',
-        '**Scope:** End-to-end reproduction',
-        '',
-        '**Acceptance criteria** — every one must be satisfied with concrete evidence:',
-        '',
-        '1. **Local run** — Runs locally  ',
-        '   *How to judge:* Run the demo script',
-        '2. **Docs complete**',
-      ].join('\n'),
+  it('keeps editable acceptance criteria as normal description text', () => {
+    expect(buildGoalRequirement('Ship', 'It works', 'Publish')).toBe(
+      '## Ship\n\nPublish\n\nIt works',
     );
   });
+});
+
+it('does not duplicate the unified description saved by the editor', () => {
+  expect(buildGoalRequirement('Ship', 'Publish with evidence', 'Publish with evidence')).toBe(
+    '## Ship\n\nPublish with evidence',
+  );
 });
 
 describe('resolveGoalAttemptBudget', () => {

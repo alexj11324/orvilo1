@@ -2,16 +2,9 @@
 
 import { isDesktop } from '@orvilo/const';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
-import {
-  BadgeCheckIcon,
-  BotIcon,
-  CheckCircleIcon,
-  CheckSquareIcon,
-  FileTextIcon,
-} from 'lucide-react';
+import { BotIcon, CheckSquareIcon, FileTextIcon } from 'lucide-react';
 import type { MouseEvent } from 'react';
 import { createElement, memo, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { shouldHardNavigateToWorkbench } from '@/libs/next/workbenchNavigation';
@@ -33,11 +26,9 @@ const styles = {
 };
 
 const ENTITY_ICONS = {
-  acceptance: BadgeCheckIcon,
   agent: BotIcon,
   document: FileTextIcon,
   task: CheckSquareIcon,
-  verify: CheckCircleIcon,
 } as const;
 
 interface InternalEntityLinkProps {
@@ -47,17 +38,13 @@ interface InternalEntityLinkProps {
 }
 
 export const InternalEntityLink = memo<InternalEntityLinkProps>(({ href, label, reference }) => {
-  const { t } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
   const activeAgentId = useAgentStore((s) => s.activeAgentId);
-  const [openAcceptance, openAgentDetail, openDocument, openTaskDetail, openVerifyReport] =
-    useChatStore((s) => [
-      s.openAcceptance,
-      s.openAgentDetail,
-      s.openDocument,
-      s.openTaskDetail,
-      s.openVerifyReport,
-    ]);
+  const [openAgentDetail, openDocument, openTaskDetail] = useChatStore((s) => [
+    s.openAgentDetail,
+    s.openDocument,
+    s.openTaskDetail,
+  ]);
   // A pasted URL says nothing about what it points to, so resolve the entity's
   // own title and show that instead — the same read the hover preview makes,
   // under the same key, so the eager fetch also makes the hover card instant.
@@ -70,7 +57,7 @@ export const InternalEntityLink = memo<InternalEntityLinkProps>(({ href, label, 
     reference.type !== 'route' && !reference.workspaceSlug && isBareLinkLabel(label, href);
   const { data: entity } = useClientDataSWR(
     shouldResolveTitle ? internalEntityPreviewKey(reference) : null,
-    () => getPreviewData(reference, t),
+    () => getPreviewData(reference),
     { revalidateOnFocus: false },
   );
   const displayLabel = (shouldResolveTitle && entity?.title) || label;
@@ -94,24 +81,12 @@ export const InternalEntityLink = memo<InternalEntityLinkProps>(({ href, label, 
 
       event.preventDefault();
 
-      if (
-        (reference.type === 'acceptance' ||
-          reference.type === 'document' ||
-          reference.type === 'verify') &&
-        shouldHardNavigateToWorkbench(reference.pathname)
-      ) {
+      if (reference.type === 'document' && shouldHardNavigateToWorkbench(reference.pathname)) {
         window.location.assign(reference.pathname);
         return;
       }
 
-      // Portal-backed entities (verify / acceptance) open in-context regardless
-      // of workspace scope — their reads are id-addressed and scope-independent.
-      if (
-        'workspaceSlug' in reference &&
-        reference.workspaceSlug &&
-        reference.type !== 'verify' &&
-        reference.type !== 'acceptance'
-      ) {
+      if ('workspaceSlug' in reference && reference.workspaceSlug) {
         navigate(reference.pathname, { escape: true });
         return;
       }
@@ -126,13 +101,6 @@ export const InternalEntityLink = memo<InternalEntityLinkProps>(({ href, label, 
       }
 
       switch (reference.type) {
-        case 'acceptance': {
-          // The conversation is the working surface — the acceptance opens
-          // beside it in the portal, same as a verify report, never a
-          // full-page navigation away from the chat.
-          openAcceptance(reference.acceptanceId);
-          break;
-        }
         case 'agent': {
           openAgentDetail(reference.agentId);
           break;
@@ -152,10 +120,6 @@ export const InternalEntityLink = memo<InternalEntityLinkProps>(({ href, label, 
           openTaskDetail(reference.taskId);
           break;
         }
-        case 'verify': {
-          openVerifyReport(reference.runId);
-          break;
-        }
         case 'route': {
           navigate(reference.pathname);
           break;
@@ -166,11 +130,9 @@ export const InternalEntityLink = memo<InternalEntityLinkProps>(({ href, label, 
       activeAgentId,
       agentDocuments,
       navigate,
-      openAcceptance,
       openAgentDetail,
       openDocument,
       openTaskDetail,
-      openVerifyReport,
       reference,
       resolveAgentDocuments,
       shouldResolveAgentDocument,

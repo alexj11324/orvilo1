@@ -79,7 +79,6 @@ vi.mock('./buildTaskPrompt', () => ({
         contractContent?: TaskExecutionContract['content'];
       },
     ) => ({
-      acceptanceEnabled: false,
       contractContent: opts?.contractContent ?? { instruction: task.instruction },
       fileIds: [],
       prompt: 'do the thing',
@@ -121,11 +120,9 @@ const approvalGrant = (overrides: Partial<ActionApprovalItem> = {}): ActionAppro
   }) as ActionApprovalItem;
 
 const priorContract: TaskExecutionContract = {
-  acceptance: { enabled: false },
   budget: { maxRounds: null, round: 1 },
   content: {
     instruction: 'FROZEN source instruction',
-    verify: { criteria: [{ title: 'frozen criterion' }], enabled: true, requirement: 'frozen req' },
   },
   contractId: 'contract-0',
   environment: {},
@@ -172,7 +169,7 @@ const setupHappyPath = (task: TaskItem, topics: TaskTopicItem[] = []) => {
   vi.spyOn(TaskModel.prototype, 'getCheckpointConfig').mockReturnValue({
     onAgentRequest: false,
   } as never);
-  vi.spyOn(TaskModel.prototype, 'getReviewConfig').mockReturnValue(undefined);
+
   vi.spyOn(TaskTopicModel.prototype, 'startRun').mockResolvedValue(undefined as never);
   const prepare = vi.spyOn(TaskDispatchService.prototype, 'prepare').mockResolvedValue({
     dispatch: { generation: 1, id: 'dsp-1' } as never,
@@ -467,7 +464,7 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
         policyRevision: 1,
         requirementRevision: 1,
       },
-      content: { instruction: 'ORIGINAL: investigate this report', verify: { enabled: false } },
+      content: { instruction: 'ORIGINAL: investigate this report' },
       input: {
         data: { report: 'UNIQUE_REPORT_931' },
         eventId: 'event-1',
@@ -868,7 +865,6 @@ describe('TaskRunnerService settlement evidence (SA05-B)', () => {
     await newRunner().runTask({
       ...runParams,
       parentOperationId: 'op-bogus',
-      skipTaskVerification: true,
     });
 
     expect(prepare).toHaveBeenCalledWith(

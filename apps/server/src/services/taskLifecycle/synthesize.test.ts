@@ -9,10 +9,9 @@ import {
 } from './synthesize';
 
 const baseInput = (overrides: Partial<Parameters<typeof shouldEmitTopicBrief>[0]> = {}) => ({
-  hasReviewConfigEnabled: false,
   isTrivialContent: false,
   reason: 'done' as string,
-  reviewTerminated: false,
+
   task: { automationMode: null } as { automationMode: 'heartbeat' | 'schedule' | null },
   ...overrides,
 });
@@ -22,18 +21,6 @@ describe('shouldEmitTopicBrief', () => {
     const result = shouldEmitTopicBrief(baseInput({ reason: 'error' }));
     expect(result.emit).toBe('yes');
     expect(result.reason).toBe('execution-error');
-  });
-
-  it("returns 'no' when judge already terminated the lifecycle", () => {
-    const result = shouldEmitTopicBrief(baseInput({ reviewTerminated: true }));
-    expect(result.emit).toBe('no');
-    expect(result.reason).toBe('judge-handled');
-  });
-
-  it("returns 'no' when review is configured (judge owns the brief on this path)", () => {
-    const result = shouldEmitTopicBrief(baseInput({ hasReviewConfigEnabled: true }));
-    expect(result.emit).toBe('no');
-    expect(result.reason).toBe('review-config-enabled');
   });
 
   it("returns 'unknown' for heartbeat ticks (defers to LLM — most are noise but some warrant surfacing)", () => {
@@ -70,7 +57,6 @@ describe('shouldEmitTopicBrief', () => {
   it("returns 'unknown' for heartbeat even when other conditions look fine", () => {
     const result = shouldEmitTopicBrief(
       baseInput({
-        hasReviewConfigEnabled: false,
         isTrivialContent: false,
         task: { automationMode: 'heartbeat' },
       }),

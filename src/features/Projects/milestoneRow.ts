@@ -66,7 +66,7 @@ export const getMilestoneAnchorId = (milestoneId: string) => `milestone-${milest
  * URL update that a router is free to treat as a navigation rather than a
  * scroll; the address is still the real `href`, so the link stays copyable.
  * Driving it in JS is also how this repo already moves to an in-page anchor
- * (`Acceptance/Viewer/Comments/anchor.ts`, `SettingsSearch/anchor.tsx`).
+ * (`SettingsSearch/anchor.tsx`).
  */
 export const scrollToMilestoneAnchor = (milestoneId: string) => {
   const target = document.getElementById(getMilestoneAnchorId(milestoneId));

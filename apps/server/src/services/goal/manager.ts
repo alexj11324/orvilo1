@@ -1,6 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
 
-import { GOAL_ACCEPTANCE_TASK_TITLE } from '@orvilo/const/goal';
 import { buildGoalManagerPrompt } from '@orvilo/prompts';
 import type { GoalGraphSnapshot, GoalManagerState, GoalTickResult, TaskItem } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
@@ -412,13 +411,10 @@ export class GoalManagerService {
     // An invited turn skips the checks below. They ask "should an uninvited main
     // Agent interrupt what is running", and the caller has already answered a
     // harder question: the coordinator is out of moves and the alternative is
-    // stopping the Goal on a person. The acceptance guard belongs to that set too:
-    // it means "verification exists, stop planning more work", which is right for an
-    // uninvited turn and wrong for a takeover invited BECAUSE the terminal
-    // acceptance is the thing that failed.
+    // stopping the Goal on a person. A recorded planning-complete checkpoint
+    // suppresses another uninvited planning turn.
     if (!problem) {
-      if (state?.readyForAcceptance || nodes.some((n) => n.title === GOAL_ACCEPTANCE_TASK_TITLE))
-        return null;
+      if (state?.readyForAcceptance) return null;
       const tasks = await new TaskModel(this.db, this.userId, this.workspaceId).findByIds(
         unfinished.flatMap((n) => (n.taskId ? [n.taskId] : [])),
       );
@@ -695,27 +691,6 @@ export class GoalManagerService {
       const unfinished = graph.nodes.filter(
         (n) => n.kind === 'task' && !terminalNodes.has(n.status),
       );
-      // A takeover of the terminal acceptance can only be answered with `escalate`.
-      // The acceptance task is matched by TITLE regardless of status, so a corrective
-      // task returns to that same failed node and `verify` sets `readyForAcceptance`
-      // without producing a fresh run — both end at the Gate. Refusing here keeps the
-      // prompt's offer and the server's answer the same; letting the acceptance be
-      // superseded is a lifecycle change, not a validation one.
-      if (
-        state.problem &&
-        (plan.action === 'tasks' || plan.action === 'verify') &&
-        graph.nodes.some(
-          (n) =>
-            n.kind === 'task' &&
-            n.taskId === state.problemTaskId &&
-            n.title === GOAL_ACCEPTANCE_TASK_TITLE,
-        )
-      )
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message:
-            'A failed Goal acceptance can only be escalated; it cannot be superseded by new work yet',
-        });
       // The unfinished-work guard asks whether an UNINVITED turn may plan while
       // work is in flight; it would double-plan the frontier. A takeover turn
       // inherits work that is stuck by definition — the coordinator only handed it

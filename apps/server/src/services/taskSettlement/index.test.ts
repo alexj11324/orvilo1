@@ -132,7 +132,7 @@ describe('settleTaskExecution', () => {
     mocks.findById.mockResolvedValue(
       runningTask({
         parkedReason: 'review_required',
-        error: 'Delivery is waiting for a reviewer Agent: cannot mount submitVerifyResult',
+        error: 'Delivery is waiting for a reviewer Agent: cannot mount submitTaskReview',
       }),
     );
     const result = await settle({ outcome: 'succeeded', context: { error: null } });
@@ -141,7 +141,7 @@ describe('settleTaskExecution', () => {
       'task-1',
       'paused',
       expect.objectContaining({
-        error: expect.stringContaining('cannot mount submitVerifyResult'),
+        error: expect.stringContaining('cannot mount submitTaskReview'),
       }),
     );
     expect(mocks.requestReviewerAssignment).not.toHaveBeenCalled();
@@ -255,9 +255,9 @@ describe('settleTaskExecution', () => {
     );
   });
 
-  it('an automatic pass with the live reviewer cleared waits for Orchestrator assignment', async () => {
+  it('a completed delivery with the live reviewer cleared waits for Orchestrator assignment', async () => {
     mocks.findById.mockResolvedValue(runningTask({ reviewerAgentId: null }));
-    const result = await settle({ verifyOutcome: 'passed' });
+    const result = await settle({ outcome: 'succeeded' });
     expect(result).toMatchObject({
       applied: true,
       workflowCategory: 'in_progress',
@@ -271,10 +271,10 @@ describe('settleTaskExecution', () => {
     );
     expect(mocks.requestReviewerAssignment).toHaveBeenCalled();
   });
-  it('an automatic pass preserves unanswered input instead of requesting reviewer assignment', async () => {
+  it('a completed delivery preserves unanswered input instead of requesting reviewer assignment', async () => {
     mocks.findById.mockResolvedValue(runningTask({ reviewerAgentId: null }));
     mocks.hasUnresolvedInput.mockResolvedValue(true);
-    const result = await settle({ verifyOutcome: 'passed' });
+    const result = await settle({ outcome: 'succeeded' });
     expect(result).toMatchObject({
       applied: true,
       workflowCategory: 'in_progress',
@@ -287,80 +287,6 @@ describe('settleTaskExecution', () => {
     );
     expect(mocks.requestReviewerAssignment).not.toHaveBeenCalled();
   });
-  it('manual acceptance completes a delivery without a reviewer and never asks the Orchestrator', async () => {
-    mocks.findById.mockResolvedValue(
-      runningTask({
-        reviewerAgentId: null,
-        parkedReason: 'review_required',
-        error: 'Delivery is waiting for a reviewer Agent',
-      }),
-    );
-    const result = await settle({
-      verifyOutcome: 'passed',
-      context: { manualAcceptance: true, error: null },
-    });
-    expect(result).toMatchObject({
-      applied: true,
-      workflowCategory: 'done',
-      attention: 'none',
-      decision: { type: 'complete' },
-    });
-    expect(mocks.updateStatus).toHaveBeenCalledWith(
-      'task-1',
-      'completed',
-      expect.objectContaining({ workflowCategory: 'done', error: null }),
-    );
-    expect(mocks.requestReviewerAssignment).not.toHaveBeenCalled();
-  });
-  it('verify passed → done/succeeded/none', async () => {
-    const result = await settle({ verifyOutcome: 'passed' });
-
-    expect(result).toMatchObject({
-      applied: true,
-      attention: 'none',
-      decision: { type: 'complete' },
-      execution: 'succeeded',
-      workflowCategory: 'done',
-    });
-    expect(mocks.updateStatus).toHaveBeenCalledWith(
-      'task-1',
-      'completed',
-      expect.objectContaining({ workflowCategory: 'done' }),
-    );
-  });
-
-  it('verify failed + auto repair → in_progress + queued execution', async () => {
-    const result = await settle({
-      context: { repairSpawned: true },
-      verifyOutcome: 'failed',
-    });
-
-    expect(result).toMatchObject({
-      applied: true,
-      attention: 'needs_changes',
-      decision: { type: 'retry' },
-      execution: 'queued',
-      workflowCategory: 'in_progress',
-    });
-    expect(mocks.updateStatus).toHaveBeenCalledWith(
-      'task-1',
-      'running',
-      expect.objectContaining({ workflowCategory: 'in_progress' }),
-    );
-  });
-
-  it('verify failed without repair → in_review + needs_changes', async () => {
-    const result = await settle({ verifyOutcome: 'failed' });
-
-    expect(result).toMatchObject({
-      applied: true,
-      attention: 'needs_changes',
-      decision: { type: 'review' },
-      execution: 'succeeded',
-      workflowCategory: 'in_review',
-    });
-  });
-
   it('stale-generation settle is a no-op (fence via task_topics generation)', async () => {
     mocks.findById.mockResolvedValue(runningTask({ currentTopicId: 'topic-1' }));
     mocks.findByTopicId.mockResolvedValue({ dispatchFence: 9, executionGeneration: 5 });

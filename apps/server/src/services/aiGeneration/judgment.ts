@@ -22,7 +22,7 @@ const log = debug('orvilo-server:ai-generation:judgment');
 /**
  * Operator-configured fallback binding for retained judgments: an agent id or
  * builtin slug the deployment designates for machine judgments. Individual
- * consumers always prefer their own domain binding (task assignee, verify
+ * consumers always prefer their own domain binding (task assignee, eval
  * agent, project coordinator, ...) and only reach this env var when the domain
  * has no natural agent.
  */
@@ -107,7 +107,7 @@ export const isAcpJudgmentRunError = (error: unknown): error is AcpJudgmentRunEr
 /**
  * The bound agent replied, but the payload fails the declared schema. Typed
  * separately from a run failure: the operation may have completed `done`, yet
- * the answer is unusable and must never reach a planning/acceptance write.
+ * the answer is unusable and must never reach a planning or evaluation write.
  */
 export class AcpJudgmentValidationError extends Error {
   readonly code = 'ACP_JUDGMENT_SCHEMA_MISMATCH' as const;
@@ -302,7 +302,7 @@ export interface AcpJudgmentRunParams {
   model?: string;
   /** Require a durable operation-bound submission instead of parsing assistant prose. */
   outputMode?: 'tool';
-  /** Parent operation this judgment serves (verified run, task op, ...). */
+  /** Parent operation this judgment serves (evaluation run, task op, ...). */
   parentOperationId?: string;
   /** Internal: polling cadence for the operation row (tests shrink this). */
   pollIntervalMs?: number;
@@ -562,7 +562,7 @@ export const runAcpJudgment = async <T = unknown>(
   const body = buildJudgmentPrompt(prompt, input.schema);
 
   // Imported lazily on purpose: services/aiAgent transitively reaches back into
-  // judgment consumers (agentSignal, verify). A static import here would close
+  // judgment consumers (agentSignal, evaluation). A static import here would close
   // an aiAgent → agentSignal → aiGeneration → aiAgent module cycle.
   const { AiAgentService } = await import('@/server/services/aiAgent');
 
@@ -1001,7 +1001,7 @@ export const runAcpJudgment = async <T = unknown>(
           taskId: judgment.taskId ?? null,
         },
         autoStart: true,
-        skipTaskVerification: true,
+
         disableTools: judgment.outputMode !== 'tool',
         fileIds: judgment.fileIds,
         instructions,

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { GoalCriteriaGeneratorService } from './criteriaGenerator';
+import { GoalDecompositionPlannerService } from './decompositionPlanner';
 import { GoalExplorationPlanner } from './explorationPlanner';
 
 const mocks = vi.hoisted(() => ({ run: vi.fn(), generate: vi.fn(), settings: vi.fn() }));
@@ -24,25 +24,19 @@ vi.mock('@/server/services/aiGeneration/judgment', () => ({ runAcpJudgment: mock
 
 beforeEach(() => vi.clearAllMocks());
 describe('ACP planning without a builtin provider (#623)', () => {
-  it('drafts acceptance criteria through the selected ACP judgment binding', async () => {
-    const data = { title: 'Ship it', instruction: 'Publish the release', criteria: [] };
-    mocks.generate.mockResolvedValue(data);
+  it('decomposes through the selected ACP Agent without provider generation', async () => {
+    const data = {
+      problemStatement: 'Ship it',
+      tasks: [{ title: 'Publish', instruction: 'Publish the release' }],
+    };
+    mocks.run.mockResolvedValue({ data });
     await expect(
-      new GoalCriteriaGeneratorService({} as never, 'user', 'workspace').generatePlan({
+      new GoalDecompositionPlannerService({} as never, 'user', 'workspace').decompose({
         agentId: 'codex',
-        goal: 'Ship it',
+        requirement: 'Ship it',
       }),
     ).resolves.toEqual(data);
-    expect(mocks.generate).toHaveBeenCalledWith(
-      expect.objectContaining({ schema: expect.any(Object) }),
-      expect.objectContaining({
-        judgment: expect.objectContaining({
-          binding: { agentId: 'codex', allowEnvFallback: false },
-        }),
-        kind: 'judgment',
-      }),
-    );
-    expect(mocks.run).not.toHaveBeenCalled();
+    expect(mocks.generate).not.toHaveBeenCalled();
     expect(mocks.settings).not.toHaveBeenCalled();
   });
   it('uses the same ACP round for exploration', async () => {

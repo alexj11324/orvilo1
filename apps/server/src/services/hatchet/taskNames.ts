@@ -14,7 +14,6 @@ export const HATCHET_TASK_NAMES = {
   taskScheduleExecute: 'orvilo-task-schedule-execute',
   taskScheduledTopicDispatch: 'orvilo-task-scheduled-topic-dispatch',
   taskWatchdog: 'orvilo-task-watchdog',
-  verifySweep: 'orvilo-verify-sweep',
   workflowDispatch: 'orvilo-workflow-dispatch',
   workflowDispatchSweep: 'orvilo-workflow-dispatch-sweep',
 } as const;

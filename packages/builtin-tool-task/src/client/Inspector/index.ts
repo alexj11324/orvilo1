@@ -11,7 +11,6 @@ import { ListWorkspaceMembersInspector } from './ListWorkspaceMembers';
 import { RunTaskInspector } from './RunTask';
 import { RunTasksInspector } from './RunTasks';
 import { SetTaskScheduleInspector } from './SetTaskSchedule';
-import { SetTaskVerifyInspector } from './SetTaskVerify';
 import { SubmitTaskReviewInspector } from './SubmitTaskReview';
 import {
   AddTaskCommentInspector,
@@ -40,7 +39,6 @@ export const TaskInspectors: Record<string, BuiltinInspector> = {
   [TaskApiName.runTask]: RunTaskInspector as BuiltinInspector,
   [TaskApiName.runTasks]: RunTasksInspector as BuiltinInspector,
   [TaskApiName.setTaskSchedule]: SetTaskScheduleInspector as BuiltinInspector,
-  [TaskApiName.setTaskVerify]: SetTaskVerifyInspector as BuiltinInspector,
   [TaskApiName.submitTaskReview]: SubmitTaskReviewInspector as BuiltinInspector,
   [TaskApiName.updateTaskComment]: UpdateTaskCommentInspector as BuiltinInspector,
   [TaskApiName.updateTaskStatus]: UpdateTaskStatusInspector as BuiltinInspector,
@@ -57,7 +55,6 @@ export { ListWorkspaceMembersInspector } from './ListWorkspaceMembers';
 export { RunTaskInspector } from './RunTask';
 export { RunTasksInspector } from './RunTasks';
 export { SetTaskScheduleInspector } from './SetTaskSchedule';
-export { SetTaskVerifyInspector } from './SetTaskVerify';
 export { SubmitTaskReviewInspector } from './SubmitTaskReview';
 export {
   AddTaskCommentInspector,

@@ -31,7 +31,7 @@ is required for durable wakeups; local in-process timers alone cannot survive a
 restart. A lost diagnostic dispatch response can be adopted from the dedicated
 Topic using the server-minted incident message identity (not timestamps). An unfinished diagnosis expires after ten minutes and opens the existing
 human Gate; automated recovery of a broken supervisor is not yet implemented.
-The diagnostic Topic is not a graph Task and cannot prevent terminal acceptance.
+The diagnostic Topic is not a graph Issue and does not count toward workflow completion.
 
 The server-owned `config.supervisorState` holds a revisioned incident ledger and
 Topic identity. Compare-and-swap and row locks protect transitions. Policy writes

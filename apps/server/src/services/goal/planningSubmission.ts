@@ -1,9 +1,5 @@
 import type { GenerateObjectSchema } from '@orvilo/model-runtime';
-import {
-  GOAL_CRITERIA_DRAFT_JSON_SCHEMA,
-  GOAL_DECOMPOSE_JSON_SCHEMA,
-  GOAL_EXPLORE_JSON_SCHEMA,
-} from '@orvilo/prompts';
+import { GOAL_DECOMPOSE_JSON_SCHEMA, GOAL_EXPLORE_JSON_SCHEMA } from '@orvilo/prompts';
 import { TRPCError } from '@trpc/server';
 import Ajv from 'ajv';
 import { and, eq, sql } from 'drizzle-orm';
@@ -13,7 +9,6 @@ import { agentOperations } from '@/database/schemas/agentOperations';
 import type { OrviloDatabase } from '@/database/type';
 
 const schemas = new Map<string, GenerateObjectSchema>([
-  ['goal.criteriaDraft', GOAL_CRITERIA_DRAFT_JSON_SCHEMA],
   ['goal.decompose', GOAL_DECOMPOSE_JSON_SCHEMA],
   ['goal.explore', GOAL_EXPLORE_JSON_SCHEMA],
 ]);

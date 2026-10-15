@@ -1,5 +1,10 @@
 # Core canonical authority mapping constraints
 
+> Historical baseline audit. The Verify completion and decision mappings below
+> were removed in #777. Current `CanonicalIssueCompletion` observes Issue Done
+> under live authorization and run fences; it never writes a verdict or status.
+> See [Issue review](issue-review.md) and [session observations](../core-session-recovery.md).
+
 Static audit of the Orvilo baseline on Linux, 2026-09-30. This identifies reuse points and missing mappings; it does not claim a working production adapter.
 
 | Core concept                | Canonical evidence                                                                                      | Constraint                                                                                                                                                                                                                                                                                                                 |

@@ -434,17 +434,15 @@ describe('topic command', () => {
         items: [
           message({ content: 'Supervisor message', id: 'm1', role: 'supervisor' }),
           message({ content: 'Task message', id: 'm2', role: 'task', threadId: 'thread-1' }),
-          message({ content: 'Verify message', id: 'm3', role: 'verify' }),
         ],
         topic: topicDetail,
-        total: 3,
+        total: 2,
       });
 
       await createProgram().parseAsync(['node', 'test', 'topic', 'view', 't1']);
 
       expect(output()).toContain('supervisor');
       expect(output()).toContain('task');
-      expect(output()).toContain('verify');
       expect(output()).toContain('[thread thread-1]');
       expect(output().indexOf('Task message')).toBeGreaterThan(
         output().indexOf('Supervisor message'),

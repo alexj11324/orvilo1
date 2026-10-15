@@ -40,11 +40,11 @@ export type GoalTickBranch =
   /** The graph has no tasks yet — decompose the goal into explorable directions first. */
   | 'plan_decomposition'
   | 'explore_graph'
-  /** Every task node finished; the goal-level acceptance contract is next. */
-  | 'terminal_acceptance'
+  /** Every Issue is done and the Goal can finish. */
+  | 'goal_completed'
   /**
    * Every task node finished, but a declared numeric clause is unmet, so the
-   * delivery contract is not attempted. Distinct from `terminal_acceptance`
+   * Goal cannot finish. Distinct from `goal_completed`
    * on purpose: both stop in the terminal phase, and a replay that could not
    * tell them apart would report a regressed gate as a match.
    */
@@ -55,9 +55,8 @@ export type GoalTickBranch =
   | 'missing_task'
   /** Its task finished; fold the outcome into a finding. */
   | 'consume_completed'
-  /** Its operation outlived the lease / failed verification — automatic recovery. */
+  /** Its operation outlived the lease — automatic recovery. */
   | 'recover_lease'
-  | 'recover_verification'
   /** Recovery is exhausted or the failure is not recoverable; open a gate. */
   | 'failure_decision'
   /** Task is parked or already in flight. */

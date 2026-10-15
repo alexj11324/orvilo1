@@ -1,9 +1,7 @@
-import { verifyRunStatuses } from '@orvilo/const/verify';
 import type {
   AgentOperationCompletionReason,
   AgentOperationJudgmentContext,
   AgentOperationStatus,
-  VerifyCheckItem,
 } from '@orvilo/types';
 import { boolean, index, integer, jsonb, pgTable, text } from 'drizzle-orm/pg-core';
 
@@ -78,22 +76,6 @@ export const agentOperations = pgTable(
     // ---- Lifecycle ----
     status: text('status').$type<AgentOperationStatus>().notNull(),
     completionReason: text('completion_reason').$type<AgentOperationCompletionReason>(),
-
-    // ---- Verify (delivery checker) — DEPRECATED, moved to verify_runs ----
-    // The plan snapshot + rollup status now live on `verify_runs` (the session
-    // entity), which links back here via `verify_runs.operation_id`. These columns
-    // are retained only to avoid an ALTER on this analytics table; they are no
-    // longer read or written by the verify pipeline and are dropped in a later
-    // cleanup migration.
-    // Denormalized rollup of the verify (delivery checker) state. Shares the
-    // single `verifyRunStatuses` set from `@orvilo/const/verify` so it can't drift
-    // from `verify_runs.status`.
-    /** @deprecated read from verify_runs.status */
-    verifyStatus: text('verify_status', { enum: verifyRunStatuses }),
-    /** @deprecated read from verify_runs.plan */
-    verifyPlan: jsonb('verify_plan').$type<VerifyCheckItem[]>(),
-    /** @deprecated read from verify_runs.plan_confirmed_at */
-    verifyPlanConfirmedAt: timestamptz('verify_plan_confirmed_at'),
 
     startedAt: timestamptz('started_at'),
     completedAt: timestamptz('completed_at'),

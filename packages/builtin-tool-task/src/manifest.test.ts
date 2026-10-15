@@ -77,3 +77,11 @@ describe('automatic reviewer assignment contract', () => {
     expect(view?.description).toContain('cannot be assigned as reviewer');
   });
 });
+
+describe('Issue review tool surface', () => {
+  it('retains one review submission without the retired Verify gate API', () => {
+    const names = TaskManifest.api.map((api) => api.name);
+    expect(names.filter((name) => name === 'submitTaskReview')).toHaveLength(1);
+    expect(names).not.toContain('setTaskVerify');
+  });
+});

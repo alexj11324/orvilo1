@@ -20,7 +20,6 @@ import { registerDepCommands } from './dep';
 import { registerDocCommands } from './doc';
 import { briefIcon, priorityLabel, statusBadge } from './helpers';
 import { registerLifecycleCommands } from './lifecycle';
-import { registerReviewCommands } from './review';
 import { registerTopicCommands } from './topic';
 import { resolveAppUrlBuilder } from './url';
 
@@ -360,33 +359,6 @@ export function registerTaskCommand(program: Command) {
             console.log(`  tasks.after: ${cp.tasks.afterIds.join(', ')}`);
         } else {
           console.log(`  ${pc.dim('(not configured, default: onAgentRequest=true)')}`);
-        }
-      }
-
-      // ── Review ──
-      {
-        const rv = t.review as any;
-        console.log(`\n${pc.bold('Review:')}`);
-        if (rv && rv.enabled) {
-          console.log(
-            `  judge: ${rv.judge?.model || 'default'}${rv.judge?.provider ? ` (${rv.judge.provider})` : ''}`,
-          );
-          console.log(`  maxIterations: ${rv.maxIterations}  autoRetry: ${rv.autoRetry}`);
-          if (rv.rubrics?.length > 0) {
-            for (let i = 0; i < rv.rubrics.length; i++) {
-              const rb = rv.rubrics[i];
-              const threshold = rb.threshold ? ` ≥ ${Math.round(rb.threshold * 100)}%` : '';
-              const typeTag = pc.dim(`[${rb.type}]`);
-              let configInfo = '';
-              if (rb.type === 'llm-rubric') configInfo = rb.config?.criteria || '';
-              else if (rb.type === 'contains' || rb.type === 'equals')
-                configInfo = `value="${rb.config?.value}"`;
-              else if (rb.type === 'regex') configInfo = `pattern="${rb.config?.pattern}"`;
-              console.log(`  ${i + 1}. ${rb.name} ${typeTag}${threshold} ${pc.dim(configInfo)}`);
-            }
-          }
-        } else {
-          console.log(`  ${pc.dim('(not configured)')}`);
         }
       }
 
@@ -734,7 +706,6 @@ export function registerTaskCommand(program: Command) {
   // Register subcommand groups
   registerLifecycleCommands(task);
   registerCheckpointCommands(task);
-  registerReviewCommands(task);
   registerDepCommands(task);
   registerTopicCommands(task);
   registerDocCommands(task);

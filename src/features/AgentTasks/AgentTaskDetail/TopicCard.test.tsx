@@ -27,11 +27,8 @@ vi.mock('@/hooks/useActivityTime', () => ({
   useActivityTime: () => ({ text: '4m ago', title: '4m ago' }),
 }));
 
-// None of these render for this activity; they are stubbed only to keep the
-// reply editor's upload stack and the verify feature out of the module graph.
+// Keep the reply editor's upload stack out of this card test's module graph.
 vi.mock('./RunReplyEditor', () => ({ default: () => null }));
-vi.mock('./RunVerifyDetail', () => ({ default: () => <span>Acceptance checklist</span> }));
-vi.mock('./RunVerifyTag', () => ({ default: () => <span>Accepted</span> }));
 
 vi.mock('@/features/AgentProfileCard/AgentProfilePopup', () => ({
   default: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -55,7 +52,7 @@ describe('TopicCard', () => {
   });
 
   it('shows the delivery without a second acceptance status or checklist', () => {
-    render(<TopicCard activity={{ ...activity, verify: { total: 1 } } as TaskDetailActivity} />, {
+    render(<TopicCard activity={activity} />, {
       wrapper: MemoryRouter,
     });
     expect(screen.getByRole('link', { name: 'primes.py' })).toBeVisible();

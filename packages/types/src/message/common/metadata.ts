@@ -261,9 +261,6 @@ export const MessageMetadataSchema = ModelUsageSchema.merge(ModelPerformanceSche
   taskCallback: MessageTaskCallbackSchema.optional(),
   toolExecutionTimeMs: z.number().optional(),
   trigger: z.nativeEnum(RequestTrigger).optional(),
-  // role='verify' card: which Agent Run (agent_operations.id) it renders.
-  verifyOperationId: z.string().optional(),
-  verifyRound: z.number().optional(),
   work: MessageWorkMetadataSchema.optional(),
   // @deprecated token usage moved to the top-level `usage` column. Still listed
   // so zod doesn't strip `metadata.usage` from legacy writes during migration.
@@ -436,8 +433,7 @@ export interface MessageMetadata {
    * row. Always the message's OWN operation — for sub-agent (callAgent) turns
    * this is the sub-operation, not the root; climb `parent_operation_id` for
    * the root. Do not confuse with `work.rootOperationId` (Work display anchor,
-   * root op, only on Work-producing rounds) or `verifyOperationId` (the run a
-   * verify card verifies).
+   * root op, only on Work-producing rounds).
    */
   operationId?: string;
   orchestrationRole?: 'supervisor' | 'member';
@@ -534,13 +530,6 @@ export interface MessageMetadata {
    * but new writers should target the top-level `usage` instead.
    */
   usage?: ModelUsage;
-  /**
-   * Agent Run operation id this verify card belongs to (for role='verify' messages).
-   * References `agent_operations.id`; the card reads the verify plan + results off it.
-   */
-  verifyOperationId?: string;
-  /** Display round number for the verify card (1-based; repair rounds are separate). */
-  verifyRound?: number;
   /**
    * Final assistant message marker for Work artifacts produced during one root
    * operation. Work ownership stays on `work_versions.root_operation_id`; this

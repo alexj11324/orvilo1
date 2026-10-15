@@ -467,9 +467,7 @@ export function createPreviewBackend(
       case 'task.getPinnedDocuments': {
         return success([]);
       }
-      case 'task.getCheckpoint':
-      case 'task.getReview':
-      case 'task.getVerifyConfig': {
+      case 'task.getCheckpoint': {
         return success(null);
       }
     }

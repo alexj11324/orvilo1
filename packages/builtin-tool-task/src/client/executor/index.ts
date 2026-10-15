@@ -78,7 +78,6 @@ const DETAIL_MUTATING_APIS = new Set<string>([
   TaskApiName.editTask,
   TaskApiName.runTask,
   TaskApiName.setTaskSchedule,
-  TaskApiName.setTaskVerify,
   TaskApiName.submitTaskReview,
   TaskApiName.updateTaskComment,
   TaskApiName.updateTaskStatus,
@@ -639,101 +638,6 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
     success: false,
   });
 
-  setTaskVerify = async (
-    params: {
-      enabled?: boolean | null;
-      identifier: string;
-      maxIterations?: number | null;
-      requirement?: string | null;
-      verifyCriteriaIds?: string[] | null;
-      verifyRubricId?: string | null;
-    },
-    _ctx?: BuiltinToolContext,
-  ): Promise<BuiltinToolResult> => {
-    try {
-      log('[TaskExecutor] setTaskVerify - params:', params);
-
-      const { identifier } = params;
-
-      // Only forward keys the caller actually provided. The TRPC contract
-      // (task.updateVerifyConfig) treats `null` as "clear" and omission as
-      // "leave untouched", so an undefined field must NOT reach the payload.
-      const verify: {
-        enabled?: boolean | null;
-        maxIterations?: number | null;
-        requirement?: string | null;
-        verifyCriteriaIds?: string[] | null;
-        verifyRubricId?: string | null;
-      } = {};
-      const changes: string[] = [];
-
-      if (params.enabled !== undefined) {
-        verify.enabled = params.enabled;
-        changes.push(
-          params.enabled === null
-            ? 'verify enabled cleared'
-            : `verify ${params.enabled ? 'enabled' : 'disabled'}`,
-        );
-      }
-      if (params.requirement !== undefined) {
-        verify.requirement = params.requirement;
-        changes.push(
-          params.requirement ? 'acceptance requirement set' : 'acceptance requirement cleared',
-        );
-      }
-      if (params.maxIterations !== undefined) {
-        verify.maxIterations = params.maxIterations;
-        changes.push(
-          params.maxIterations === null
-            ? 'max iterations cleared'
-            : `max iterations → ${params.maxIterations}`,
-        );
-      }
-
-      if (params.verifyRubricId !== undefined) {
-        verify.verifyRubricId = params.verifyRubricId;
-        changes.push(
-          params.verifyRubricId
-            ? `verify rubric → ${params.verifyRubricId}`
-            : 'verify rubric cleared',
-        );
-      }
-      if (params.verifyCriteriaIds !== undefined) {
-        verify.verifyCriteriaIds = params.verifyCriteriaIds;
-        changes.push(
-          params.verifyCriteriaIds?.length
-            ? `verify criteria → ${params.verifyCriteriaIds.length} item(s)`
-            : 'verify criteria cleared',
-        );
-      }
-
-      if (Object.keys(verify).length === 0) {
-        return {
-          content: 'No verify fields provided; nothing to update.',
-          error: { message: 'No verify fields provided.', type: 'NoFields' },
-          success: false,
-        };
-      }
-
-      await taskService.updateVerifyConfig({ id: identifier, verify });
-      await getTaskStoreState().internal_refreshTaskDetail(identifier);
-
-      return {
-        content: formatTaskEdited(identifier, changes),
-        state: { enabled: params.enabled, identifier, success: true },
-        success: true,
-      };
-    } catch (error) {
-      log('[TaskExecutor] setTaskVerify - error:', error);
-      const message = error instanceof Error ? error.message : 'Failed to set task verify config';
-      return {
-        content: `Failed to set task verify config: ${message}`,
-        error: { message, type: 'SetTaskVerifyFailed' },
-        success: false,
-      };
-    }
-  };
-
   listWorkspaceMembers = async (
     params: ListWorkspaceMembersParams = {},
   ): Promise<BuiltinToolResult> => {
@@ -998,7 +902,7 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
 
       const reviewers = await lambdaClient.task.listReviewerAgents.query();
       return {
-        content: `${formatTaskDetail(detail)}\nUsable reviewer Agents: ${JSON.stringify(reviewers.data)}. Set reviewerAgentId with editTask before this delivered Issue enters review. For automatic assignment, choose canVerifyDeliveries=true when available. Unsupported choices remain selectable but wait for a person.`,
+        content: `${formatTaskDetail(detail)}\nUsable reviewer Agents: ${JSON.stringify(reviewers.data)}. Set reviewerAgentId with editTask before this delivered Issue enters review. Choose canReviewIssues=true; unsupported runtimes cannot be assigned as reviewer.`,
         state: {
           domainRevision: detail.domainRevision,
           identifier: detail.identifier,

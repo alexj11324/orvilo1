@@ -277,8 +277,7 @@ export const createServerAgentToolsEngine = (
 
   // Custom mode: the tool set is EXACTLY the agent's declared plugins — no
   // alwaysOn tools, no default/runtime-managed injection, no activator. Used by
-  // focused builtin sub-agents (e.g. the verify agent, which mounts only its
-  // writeback tool) that need a precise, self-configured toolset.
+  // focused builtin sub-agents that need a precise, self-configured toolset.
   const customModeRules = Object.fromEntries((agentConfig.plugins ?? []).map((id) => [id, true]));
 
   const agentModeRules = {

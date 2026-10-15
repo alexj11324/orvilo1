@@ -45,27 +45,3 @@
   font-size: var(--text-sm);
   line-height: calc(1.375 / 0.875);
 }
-
-.generatingTextTrack {
-  animation: goal-modal-generation-roll 16s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-.content[data-motion-disabled] .generatingTextTrack {
-  animation: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .generatingTextTrack {
-    animation: none;
-  }
-}
-
-/* Same 22px phrase plane and 16s continuous status cadence; not an entry transition.
-   Motion is nonessential: the first phrase and accessible status remain readable. */
-@keyframes goal-modal-generation-roll {
-  0%, 20% { transform: translateY(0); }
-  25%, 45% { transform: translateY(calc(var(--spacing) * -5.5)); }
-  50%, 70% { transform: translateY(calc(var(--spacing) * -11)); }
-  75%, 95% { transform: translateY(calc(var(--spacing) * -16.5)); }
-  100% { transform: translateY(calc(var(--spacing) * -22)); }
-}

@@ -172,14 +172,7 @@ interface TxFake {
 const createTx = (persistedLessons: Record<string, unknown>[]): TxFake => {
   const inserted = new Map<unknown, Record<string, unknown>[]>();
   const updates: Record<string, unknown>[] = [];
-  const selects = [
-    [],
-    [],
-    [{ value: 0 }],
-    persistedLessons,
-    [{ active: 1, compiled: 0, retired: 0 }],
-    [],
-  ];
+  const selects = [[], [], [{ value: 0 }], persistedLessons, [{ active: 1, retired: 0 }], []];
   let selectIndex = 0;
   const selectChain = () => {
     const result = selects[selectIndex++];

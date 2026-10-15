@@ -7,7 +7,6 @@ const task = {
 } as Parameters<typeof buildTaskExecutionContract>[0];
 
 const baseInput = {
-  acceptanceEnabled: true,
   dispatch: {
     generation: 4,
     planRevision: 2,
@@ -24,11 +23,10 @@ const baseInput = {
 };
 
 describe('buildTaskExecutionContract', () => {
-  it('freezes versions, tools, acceptance and environment into schema v1', () => {
+  it('freezes versions, tools and environment into schema v1', () => {
     const contract = buildTaskExecutionContract(task, baseInput);
 
     expect(contract).toMatchObject({
-      acceptance: { enabled: true },
       environment: {
         branch: 'task/T-1',
         repo: 'acme/widget',
@@ -48,17 +46,9 @@ describe('buildTaskExecutionContract', () => {
     expect(contract.integration).toBeUndefined();
   });
 
-  it('derives round from totalTopics when no goal loop is active', () => {
+  it('derives round from totalTopics for the next task run', () => {
     const contract = buildTaskExecutionContract(task, baseInput);
     expect(contract.budget).toEqual({ maxRounds: null, round: 3 });
-  });
-
-  it('binds the goal-loop budget the prompt rendered', () => {
-    const contract = buildTaskExecutionContract(task, {
-      ...baseInput,
-      goalLoop: { maxRounds: 5, round: 3 },
-    });
-    expect(contract.budget).toEqual({ maxRounds: 5, round: 3 });
   });
 
   it('carries the delegation grant and integration pinning when present', () => {

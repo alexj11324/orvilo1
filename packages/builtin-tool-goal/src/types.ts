@@ -1,8 +1,4 @@
-export type {
-  CreateGoalParams,
-  CreateGoalState,
-  GoalCriterionDraft,
-} from '@orvilo/builtin-tool-task';
+export type { CreateGoalParams, CreateGoalState } from '@orvilo/builtin-tool-task';
 
 export const GoalApiName = {
   createGoal: 'createGoal',

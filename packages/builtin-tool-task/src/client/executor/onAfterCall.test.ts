@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   refreshTaskList: vi.fn(),
   refreshVersions: vi.fn(),
   registerTask: vi.fn(),
-  updateVerifyConfig: vi.fn(),
 }));
 
 vi.mock('@/store/chat', () => ({
@@ -27,9 +26,7 @@ vi.mock('@/store/task/slices/detail/reducer', () => ({
 }));
 
 vi.mock('@/services/task', () => ({
-  taskService: {
-    updateVerifyConfig: mocks.updateVerifyConfig,
-  },
+  taskService: {},
 }));
 
 vi.mock('@/services/work', () => ({
@@ -51,7 +48,6 @@ describe('TaskExecutor.onAfterCall — portal auto-open', () => {
     mocks.refreshTaskList.mockResolvedValue(undefined);
     mocks.refreshVersions.mockResolvedValue(undefined);
     mocks.registerTask.mockResolvedValue({ id: 'work-1' });
-    mocks.updateVerifyConfig.mockResolvedValue(undefined);
     mocks.getChatStoreState.mockReturnValue({ openTaskDetail: mocks.openTaskDetail });
     mocks.getTaskStoreState.mockReturnValue({
       activeTaskId: undefined,
@@ -95,27 +91,4 @@ describe('TaskExecutor.onAfterCall — portal auto-open', () => {
   // at the tool-execution dispatch layer (`invokeExecutor`), driven by the
   // manifest `work` config — covered by the dispatch-layer + shared-extractor
   // tests instead.
-  it('applies verify config and refreshes the task detail', async () => {
-    const result = await taskExecutor.setTaskVerify(
-      {
-        enabled: true,
-        identifier: 'TASK-1',
-        requirement: 'Ship tested output',
-      },
-      { agentId: 'agent-1' } as any,
-    );
-
-    expect(result.success).toBe(true);
-    expect(mocks.updateVerifyConfig).toHaveBeenCalledWith({
-      id: 'TASK-1',
-      verify: {
-        enabled: true,
-        requirement: 'Ship tested output',
-      },
-    });
-    expect(mocks.internalRefreshTaskDetail).toHaveBeenCalledWith('TASK-1');
-    // The executor itself no longer registers Work or touches the work caches.
-    expect(mocks.registerTask).not.toHaveBeenCalled();
-    expect(mocks.refreshVersions).not.toHaveBeenCalled();
-  });
 });

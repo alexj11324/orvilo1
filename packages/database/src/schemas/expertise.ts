@@ -32,16 +32,10 @@ import { agentOperations } from './agentOperations';
 import { documents } from './file';
 import { projects } from './project';
 import { users } from './user';
-import { verifyCriteria, verifyEvidence } from './verify';
 import { workspaces } from './workspace';
 
 /**
  * Expertise —— SCLPT 自进化体系的数据层。
- *
- * 与 verify 的关系是**编译**，不是同一层：
- *   经验（人读的心得，注入上下文）──成熟到可程序化──▶ verify criterion（机器能跑）
- * 所以心得表独立存在，成熟后单向编译出 criterion 并回填 compiledCriterionId。
- * 心智模型层的心得永远编译不出来，那正是人类专家不可替代的部分。
  *
  * 表的分工：
  *   domains    专长本体 + SCLPT 的非 P 部分（过滤器 / 分层 / Canon / 流程 / 证据规格）
@@ -332,9 +326,6 @@ export const expertiseLessons = pgTable(
     compilability: text('compilability', { enum: EXPERTISE_COMPILABILITIES })
       .notNull()
       .default('compilable'),
-    compiledCriterionId: uuid('compiled_criterion_id').references(() => verifyCriteria.id, {
-      onDelete: 'set null',
-    }),
 
     /**
      * hits 的冗余计数 —— 不是优化而是必需：hits 是唯一有规模风险的表，
@@ -367,7 +358,6 @@ export const expertiseLessons = pgTable(
     unique('expertise_lessons_id_domain_unique').on(t.id, t.domainId),
     index('expertise_lessons_domain_status_hits_idx').on(t.domainId, t.status, t.hitCount),
     index('expertise_lessons_domain_layer_idx').on(t.domainId, t.layer),
-    index('expertise_lessons_compiled_criterion_idx').on(t.compiledCriterionId),
   ],
 );
 
@@ -450,7 +440,7 @@ export const expertiseRuns = pgTable(
     actorType: text('actor_type', { enum: EXPERTISE_ACTOR_TYPES }).notNull(),
     actorId: text('actor_id').notNull(),
 
-    /** 沿用 acceptance 的 subject 约定，不自己发明一套。 */
+    /** 本次实践的对象类型和标识。 */
     subjectType: text('subject_type', { enum: EXPERTISE_SUBJECT_TYPES }).notNull(),
     subjectId: text('subject_id').notNull(),
 
@@ -527,8 +517,6 @@ export const expertiseHits = pgTable(
     example: text('example'),
     severity: text('severity', { enum: EXPERTISE_HIT_SEVERITIES }),
 
-    /** 证据接 verify_evidence，不退化成一句话。 */
-    evidenceId: uuid('evidence_id').references(() => verifyEvidence.id, { onDelete: 'set null' }),
     operationId: text('operation_id').references(() => agentOperations.id, {
       onDelete: 'set null',
     }),
@@ -590,8 +578,6 @@ export const expertiseDomainSnapshots = pgTable(
     retiredTotal: integer('retired_total').notNull().default(0),
     /** = learnedTotal − retiredTotal。退休会让曲线掉头，那正是「能力在退」的可视化。 */
     activeCount: integer('active_count').notNull(),
-    /** 固化度的分子：已编译成 verify criterion 的条数。 */
-    compiledCount: integer('compiled_count').notNull().default(0),
     layerCounts: jsonb('layer_counts').$type<Record<string, number>>().notNull().default({}),
 
     // ---- 6 小时定时作业回填：P(n) = P∞·(1−e^(−n/τ)) ----

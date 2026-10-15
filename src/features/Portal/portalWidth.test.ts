@@ -4,7 +4,6 @@ import {
   CHAT_PORTAL_MAX_WIDTH,
   CHAT_PORTAL_TASK_WIDTH,
   CHAT_PORTAL_TOOL_UI_WIDTH,
-  CHAT_PORTAL_WIDE_WIDTH,
   CHAT_PORTAL_WIDTH,
 } from '@/const/layoutTokens';
 import { PortalViewType } from '@/store/chat/slices/portal/initialState';
@@ -20,8 +19,6 @@ describe('getPortalViewMinWidth', () => {
 
   it('widens the views that render tool UI, code or nested conversations', () => {
     for (const viewType of [
-      PortalViewType.Acceptance,
-      PortalViewType.AcceptanceCheck,
       PortalViewType.AgentDetail,
       PortalViewType.Artifact,
       PortalViewType.GoalMetric,
@@ -37,12 +34,6 @@ describe('getPortalViewMinWidth', () => {
 });
 
 describe('getPortalViewWidth', () => {
-  it('opens acceptance wide even when the legacy shared width is narrow', () => {
-    expect(
-      getPortalViewWidth({ legacyWidth: CHAT_PORTAL_WIDTH, viewType: PortalViewType.Acceptance }),
-    ).toBe(CHAT_PORTAL_WIDE_WIDTH);
-  });
-
   it('opens task and goal-node detail at the task width even when the legacy width is narrow', () => {
     for (const viewType of [
       PortalViewType.TaskDetail,
@@ -56,9 +47,9 @@ describe('getPortalViewWidth', () => {
   });
 
   it('remembers the width per view instead of sharing one value', () => {
-    const widths = { [PortalViewType.Acceptance]: 1000, [PortalViewType.TaskDetail]: 620 };
+    const widths = { [PortalViewType.ToolUI]: 1000, [PortalViewType.TaskDetail]: 620 };
 
-    expect(getPortalViewWidth({ viewType: PortalViewType.Acceptance, widths })).toBe(1000);
+    expect(getPortalViewWidth({ viewType: PortalViewType.ToolUI, widths })).toBe(1000);
     expect(getPortalViewWidth({ viewType: PortalViewType.TaskDetail, widths })).toBe(620);
     // untouched views are unaffected by the two above
     expect(
@@ -97,14 +88,14 @@ describe('getPortalViewWidth', () => {
     ).toBe(CHAT_PORTAL_TOOL_UI_WIDTH);
     expect(
       getPortalViewWidth({
-        viewType: PortalViewType.Acceptance,
-        widths: { [PortalViewType.Acceptance]: 300 },
+        viewType: PortalViewType.ToolUI,
+        widths: { [PortalViewType.ToolUI]: 300 },
       }),
     ).toBe(CHAT_PORTAL_TOOL_UI_WIDTH);
     expect(
       getPortalViewWidth({
-        viewType: PortalViewType.Acceptance,
-        widths: { [PortalViewType.Acceptance]: 9999 },
+        viewType: PortalViewType.ToolUI,
+        widths: { [PortalViewType.ToolUI]: 9999 },
       }),
     ).toBe(CHAT_PORTAL_MAX_WIDTH);
   });

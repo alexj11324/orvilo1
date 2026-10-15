@@ -1026,18 +1026,6 @@ export interface OrviloAgentAgencyConfig {
    */
   topicSharePolicy?: AgentTopicSharePolicy;
   /**
-   * Ad-hoc verify criteria mounted directly on this agent, in addition to any
-   * `verifyRubricId`. Use for one-off checks that don't warrant a reusable
-   * rubric. References `verify_criteria.id`.
-   */
-  verifyCriteriaIds?: string[];
-  /**
-   * Verify (delivery checker) rubric (reusable criteria template) mounted on
-   * this agent. Every run instantiates this rubric's criteria — together with
-   * any `verifyCriteriaIds` — into its check plan. References `verify_rubrics.id`.
-   */
-  verifyRubricId?: string;
-  /**
    * Per-device working directory source chosen for this agent. Key = `deviceId`
    * (the local machine uses its own gateway deviceId, so local and remote share
    * one model). This is the **agent-level** source in the resolution precedence:

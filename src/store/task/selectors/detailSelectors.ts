@@ -1,4 +1,4 @@
-import type { TaskDetailData, TaskLabelSummary, TaskVerifyConfig } from '@orvilo/types';
+import type { TaskDetailData, TaskLabelSummary } from '@orvilo/types';
 
 import type { SaveStatus } from '@/types/saveState';
 
@@ -125,14 +125,6 @@ const taskScheduleMaxExecutions = (s: TaskStoreState, taskId?: string) =>
 
 const taskCheckpoint = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.checkpoint;
 
-// Read the RESOLVED verify config that getTaskDetail populates via
-// TaskModel.getVerifyConfig (which includes the legacy `config.review` fallback
-// during migration) — not the raw `config.verify`. Reading raw config.verify
-// would return undefined for a legacy review-only task, so the panel would open
-// as unconfigured and the first autosave could clobber the old settings.
-const taskVerifyConfig = (s: TaskStoreState, taskId?: string): TaskVerifyConfig | undefined =>
-  taskDetail(s, taskId)?.verify ?? undefined;
-
 const taskWorkspace = (s: TaskStoreState, taskId?: string) =>
   taskDetail(s, taskId)?.workspace ?? [];
 
@@ -217,7 +209,6 @@ export const taskDetailSelectors = {
   activeTaskStatus: (s: TaskStoreState) => taskStatus(s, s.activeTaskId),
   activeTaskSubtasks: (s: TaskStoreState) => taskSubtasks(s, s.activeTaskId),
   activeTaskTopicCount: (s: TaskStoreState) => taskTopicCount(s, s.activeTaskId),
-  activeTaskVerifyConfig: (s: TaskStoreState) => taskVerifyConfig(s, s.activeTaskId),
   activeTaskVisibility: (s: TaskStoreState) => taskVisibility(s, s.activeTaskId),
   activeTaskWorkspace: (s: TaskStoreState) => taskWorkspace(s, s.activeTaskId),
   activeTaskWorkspaceId: (s: TaskStoreState) => taskWorkspaceId(s, s.activeTaskId),
@@ -272,7 +263,6 @@ export const taskDetailSelectors = {
   taskSubtasks,
   taskTeamId,
   taskTopicCount,
-  taskVerifyConfig,
   taskVisibility,
   taskWorkflowCategory,
   taskWorkflowStateId,

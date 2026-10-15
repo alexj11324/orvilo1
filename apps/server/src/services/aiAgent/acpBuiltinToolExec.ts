@@ -79,7 +79,7 @@ const log = debug('orvilo-server:ai-agent:acp-builtin-tool');
  *
  * Under ACP the agent harness owns its tool loop on the execution host
  * (desktop / connected device / cloud sandbox). Orvilo builtin tools that
- * still need the server — verify writeback, brief, memory, orchestration —
+ * still need the server — Issue review writeback, brief, memory, orchestration —
  * are mounted on the host's per-run `orvilo_cc` MCP server and call back
  * here through `execBuiltinTool`. This module rebuilds the
  * `ToolExecutionContext` the retired in-process loop supplied, enforces the

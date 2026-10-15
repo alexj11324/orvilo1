@@ -50,6 +50,11 @@ const collectViolations = (rules: Rule[], scanTargets = serverSources): string[]
 // embedded harness, and nothing server-side may import the client loop.
 const RETIRED_SERVER_RULES: Rule[] = [
   {
+    pattern:
+      /(?:services|workflows)\/verify[/'"]|database\/models\/(?:acceptance|verify)[A-Za-z]*['"]|\b(?:runVerifyOnCompletion|instantiateVerifyPlanOnStart|TaskReviewService)\b/,
+    reason: '#777 retired the acceptance workspace, verify engine and scalar task review',
+  },
+  {
     pattern: /\bresolveQuotaAccountEnv\b|\bselectAccountForAgent\b|\bresolveAccountLoads\b/,
     reason: 'P06 retired quota-driven account routing and env injection',
   },
@@ -145,6 +150,28 @@ describe('hetero-operation capability grant surface (P05)', () => {
   });
 });
 
+describe('retired acceptance engine (#777)', () => {
+  it.each([
+    'apps/server/src/services/verify',
+    'apps/server/src/services/taskReview',
+    'apps/server/src/router-hono/workflows/verify',
+    'apps/server/src/routers/lambda/acceptance.ts',
+    'apps/server/src/routers/lambda/acceptanceComment.ts',
+    'apps/server/src/routers/lambda/verify.ts',
+  ])('does not restore %s', (filePath) => {
+    expect(lstatSync(path.join(REPO_ROOT, filePath), { throwIfNoEntry: false })).toBeUndefined();
+  });
+
+  it('keeps Issue review and ordinary device queue recovery', () => {
+    for (const filePath of [
+      'apps/server/src/services/task/review.ts',
+      'apps/server/src/services/task/reviewerAssignment.ts',
+      'apps/server/src/services/aiAgent/deviceQueue.ts',
+    ])
+      expect(lstatSync(path.join(REPO_ROOT, filePath))).toBeDefined();
+  });
+});
+
 describe('server-wide retirement guards', () => {
   it('has no calls or definitions of retired server surfaces', () => {
     expect(collectViolations(RETIRED_SERVER_RULES)).toEqual([]);
@@ -155,8 +182,6 @@ describe('parity — retained capability registrations stay', () => {
   const lambdaIndex = readRepo('apps/server/src/routers/lambda/index.ts');
 
   it.each([
-    'acceptance',
-    'acceptanceComment',
     'agent',
     'agentNotify',
     'agentQuota',
@@ -166,7 +191,6 @@ describe('parity — retained capability registrations stay', () => {
     'goal',
     'task',
     'topic',
-    'verify',
   ])('lambdaRouter still registers %s', (key) => {
     expect(lambdaIndex).toMatch(new RegExp(`^\\s*${key}: \\w+Router,`, 'm'));
   });
@@ -180,11 +204,7 @@ describe('the guards themselves are falsifiable', () => {
       'packages/database/src/repositories/dataImporter/index.ts',
       "table: 'aiProviders'",
     ],
-    [
-      'lambda registration',
-      'apps/server/src/routers/lambda/index.ts',
-      'acceptance: acceptanceRouter',
-    ],
+    ['lambda registration', 'apps/server/src/routers/lambda/index.ts', 'task: taskRouter'],
   ])('the %s assertion has something to check', (label, file, probe) => {
     const text = readRepo(file);
     // Parity probes exist; retirement probes do not — inverted per label.

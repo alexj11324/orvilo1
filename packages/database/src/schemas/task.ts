@@ -516,7 +516,7 @@ export const taskTopics = pgTable(
     environmentSnapshot: jsonb('environment_snapshot').$type<TaskExecutionEnvironmentSnapshot>(),
     /**
      * Frozen TaskExecutionContract for this run — the versioned binding of
-     * revisions, environment, mounted tools, acceptance gate and budget that
+     * revisions, environment, mounted tools and budget that
      * the run was dispatched under. Retries/continuations rebind to it rather
      * than re-deriving constraints from mutable task config.
      */
@@ -539,13 +539,6 @@ export const taskTopics = pgTable(
     // Per-run workspace-integration record (CAID merge-back state).
     // Null for runs that never provisioned an isolated worktree.
     integration: jsonb('integration').$type<TaskTopicIntegration>(),
-
-    // Review results (populated after topic completes + review runs)
-    reviewPassed: integer('review_passed'), // 1 = passed, 0 = failed, null = not reviewed
-    reviewScore: integer('review_score'), // overall score 0-100
-    reviewScores: jsonb('review_scores'), // [{rubricId, score, passed, reason}]
-    reviewIteration: integer('review_iteration'), // which iteration (1, 2, 3...)
-    reviewedAt: timestamptz('reviewed_at'),
 
     // Snapshot of the task's visibility at the time this run was created.
     // Topics inherit `tasks.visibility` on insert but are **not** cascaded by

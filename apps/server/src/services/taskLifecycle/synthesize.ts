@@ -2,11 +2,9 @@ import type { BriefType, TaskItem } from '@orvilo/types';
 
 /** Inputs for the brief-emission rule. Pure data, no I/O. */
 export interface ShouldEmitTopicBriefInput {
-  hasReviewConfigEnabled: boolean;
   /** True when content is empty / whitespace-only / a trivial acknowledgement. */
   isTrivialContent: boolean;
   reason: string;
-  reviewTerminated: boolean;
   task: Pick<TaskItem, 'automationMode'> | null;
 }
 
@@ -35,26 +33,20 @@ export interface ShouldEmitTopicBriefResult {
  *   today the error branch in `onTopicComplete` builds its own urgent
  *   error brief inline, so this rule only fires once that path is folded
  *   into `synthesizeTopicBrief`. The verdict is correct ahead of time.
- * - `'no'` — review-judge already produced a brief upstream, review is
- *   configured (judge owns the next run), or trivial content on a manual
- *   tick. Heartbeat used to be `'no'` here too, but is now deferred to the
+ * - `'no'` — trivial content on a manual tick. Heartbeat used to be `'no'` here too, but is now deferred to the
  *   judge: most heartbeat ticks are mid-loop noise, but the occasional one
  *   surfaces something the user would want to see, and that judgment
  *   requires reading the content.
  *
  * Non-conclusive branch:
  * - `'unknown'` — heartbeat tick, OR non-trivial content on a manual /
- *   non-scheduled task with no review configured. Caller defers to
+ *   non-scheduled task. Caller defers to
  *   `chainJudgeBriefEmit`.
  */
 export const shouldEmitTopicBrief = (
   input: ShouldEmitTopicBriefInput,
 ): ShouldEmitTopicBriefResult => {
   if (input.reason === 'error') return { emit: 'yes', reason: 'execution-error' };
-  if (input.reviewTerminated) return { emit: 'no', reason: 'judge-handled' };
-  // The judge path may not have terminated (e.g. review disabled or threw),
-  // but if review is configured we still defer to it on subsequent runs.
-  if (input.hasReviewConfigEnabled) return { emit: 'no', reason: 'review-config-enabled' };
   if (input.task?.automationMode === 'heartbeat') {
     return { emit: 'unknown', reason: 'heartbeat-needs-judge' };
   }

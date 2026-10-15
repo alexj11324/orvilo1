@@ -34,7 +34,7 @@ describe('buildHomeGoalEntries', () => {
     const goals = [
       goal({ id: 'r1', goal: { status: 'running' } }),
       goal({ id: 'd1', goal: { status: 'review' } }),
-      goal({ id: 'r2', goal: { status: 'verifying' } }),
+      goal({ id: 'r2', goal: { status: 'planning' } }),
     ];
 
     const entries = buildHomeGoalEntries(goals);
@@ -64,13 +64,13 @@ describe('buildHomeGoalEntries', () => {
     expect(entry.statusKey).toBe('goalList.status.review');
   });
 
-  it('keeps a verifying goal in the running bucket', () => {
-    const goals = [goal({ id: 'v', goal: { status: 'verifying' } })];
+  it('keeps a planning goal in the running bucket', () => {
+    const goals = [goal({ id: 'v', goal: { status: 'planning' } })];
 
     const [entry] = buildHomeGoalEntries(goals);
 
     expect(entry.bucket).toBe('running');
-    expect(entry.statusKey).toBe('goalList.status.verifying');
+    expect(entry.statusKey).toBe('goalList.status.planning');
   });
 
   it('carries the graph roll-up the row renders', () => {

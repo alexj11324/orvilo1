@@ -516,7 +516,6 @@ export class ExpertiseIngestionService {
       const [counts] = await tx
         .select({
           active: sql<number>`count(*) filter (where ${expertiseLessons.status} = 'active')::int`,
-          compiled: sql<number>`count(*) filter (where ${expertiseLessons.compiledCriterionId} is not null)::int`,
           retired: sql<number>`count(*) filter (where ${expertiseLessons.status} = 'retired')::int`,
         })
         .from(expertiseLessons)
@@ -535,7 +534,6 @@ export class ExpertiseIngestionService {
 
       await tx.insert(expertiseDomainSnapshots).values({
         activeCount: counts?.active ?? 0,
-        compiledCount: counts?.compiled ?? 0,
         domainId: input.domain.id,
         layerCounts: Object.fromEntries(
           layerRows.filter((row) => row.layer).map((row) => [row.layer!, row.value]),

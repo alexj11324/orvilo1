@@ -28,7 +28,7 @@ export const goalRuntime: ServerRuntimeRegistration = {
 
     return {
       createGoal: async (args: {
-        criteria: Array<{ description?: string; instruction?: string; title: string }>;
+        criteriaDescription: string;
         deadline?: string | null;
         instruction: string;
         maxConcurrentTasks?: number | null;
@@ -38,8 +38,8 @@ export const goalRuntime: ServerRuntimeRegistration = {
       }) => {
         if (!agentId) return { content: 'A goal needs the current agent.', success: false };
 
-        const drafts = (args.criteria ?? []).filter((item) => item.title?.trim());
-        if (drafts.length === 0) {
+        const criteriaDescription = args.criteriaDescription?.trim();
+        if (!criteriaDescription) {
           return { content: 'A goal needs at least one acceptance criterion.', success: false };
         }
 
@@ -58,15 +58,12 @@ export const goalRuntime: ServerRuntimeRegistration = {
             // `maxIterations` caps attempts on one Work; it is deliberately not
             // passed as `maxRounds`, which counts runs across every Work in the
             // graph and would strand later tasks that have not run at all.
-            // Structured criteria persist alongside the prose requirement so the
-            // goal page can edit them and the terminal acceptance runs exactly them.
-            criteria: drafts,
             maxTotalCost: args.maxTotalCost ?? undefined,
             // No seed work: the coordinator plans the decomposition on first
             // advance, so a complex ask becomes several explorable directions
             // instead of one task that mirrors the whole request.
             problemDescription: args.instruction,
-            requirement: buildGoalRequirement(args.name, drafts, args.instruction),
+            requirement: buildGoalRequirement(args.name, criteriaDescription, args.instruction),
             title: args.name,
           });
           // The TRPC `goal.create` route queues this; calling the service
@@ -81,7 +78,7 @@ export const goalRuntime: ServerRuntimeRegistration = {
             workspaceId: workspaceId ?? undefined,
           });
 
-          const created = `Goal "${graph.goal.title}" created with ${drafts.length} acceptance criteria.`;
+          const created = `Goal "${graph.goal.title}" created.`;
           const tail =
             'Execution continues in its own task; do not perform or reproduce the work in this conversation.';
 

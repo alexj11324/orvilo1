@@ -36,7 +36,6 @@ packages:
   - '../../packages/builtin-tool-notebook'
   - '../../packages/builtin-tool-task'
   - '../../packages/builtin-tool-user-interaction'
-  - '../../packages/builtin-tool-verify'
   - '../../packages/agent-manager-runtime'
   - '../../packages/shared-tool-ui'
   - '.'

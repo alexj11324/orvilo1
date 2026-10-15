@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 
 import type { VerificationPollStage } from '@orvilo/types';
+import * as taskTypes from '@orvilo/types';
 import { vi } from 'vitest';
 
 import {
@@ -18,6 +19,8 @@ import type {
 } from '../../githubRepo/reviewSnapshot';
 
 type Row = {
+  dispatchFence: number;
+  operationId: string;
   executionGeneration?: number;
   integration: {
     attempts: number;
@@ -111,6 +114,8 @@ function setup(
     /** Ordered per-call snapshot overrides — 'unavailable' makes the read fail. */
     reads?: (Partial<RemotePrReviewSnapshot> | 'unavailable')[];
     runningTask?: boolean;
+    noReviewer?: boolean;
+    currentDispatchFence?: number;
     noMatchingRowsAtConfirmation?: boolean;
     otherRepositoryRow?: boolean;
     premerge?: Partial<RemotePrReviewSnapshot>;
@@ -123,6 +128,8 @@ function setup(
   } = {},
 ) {
   const row: Row = {
+    dispatchFence: 7,
+    operationId: 'op-delivery',
     executionGeneration: options.staleGeneration ? 2 : 3,
     integration: {
       attempts: 0,
@@ -157,6 +164,12 @@ function setup(
     });
   }
   const task = {
+    automationMode: null,
+    currentTopicId: 'topic-1',
+    error: null as string | null,
+    parkedReason: null as string | null,
+    reviewerAgentId: options.noReviewer ? null : 'reviewer-1',
+    workflowCategory: 'in_progress',
     assigneeAgentId: null,
     context: { deliveryReview: { handledFeedbackIds: options.handled ?? [] } },
     createdByUserId: 'u1',
@@ -169,6 +182,10 @@ function setup(
   };
   const state = {
     completed: [] as string[],
+    settled: [] as string[],
+    reviewStarts: [] as string[],
+    assignmentRequests: [] as string[],
+    task,
     errors: [] as (string | null)[],
     expected: [] as (ExpectedPullRequestIdentity | undefined)[],
     events: [] as string[],
@@ -190,6 +207,7 @@ function setup(
   };
   const mocks: Record<string, Record<string, unknown>> = {
     '@orvilo/types': {
+      ...taskTypes,
       // The mergeHttp path imports the REAL githubRepo module — its transitive
       // imports reach into @orvilo/types, so the mock must provide every
       // top-level binding those modules touch.
@@ -220,6 +238,26 @@ function setup(
         async findById() {
           return structuredClone({ ...task, ...options.freshTask });
         }
+        async hasUnresolvedInput() {
+          return false;
+        }
+        async updateStatusIfCurrent(
+          _id: string,
+          expected: string,
+          status: string,
+          extra: Record<string, unknown>,
+        ) {
+          const current = { ...task, ...options.freshTask };
+          if (current.status !== expected) return null;
+          task.status = status;
+          if (typeof extra.workflowCategory === 'string')
+            task.workflowCategory = extra.workflowCategory;
+          if (typeof extra.parkedReason === 'string') task.parkedReason = extra.parkedReason;
+          if (extra.error === null || typeof extra.error === 'string') task.error = extra.error;
+          state.settled.push(status);
+          return structuredClone(task);
+        }
+        async logWorkflowMove() {}
         async update(_id: string, patch: { error?: string | null }) {
           state.errors.push(patch.error ?? null);
         }
@@ -232,6 +270,15 @@ function setup(
       TaskTopicModel: class {
         async findByTaskId() {
           return structuredClone(state.rows);
+        }
+        async findByTopicId(id: string) {
+          const found = state.rows.find((item) => item.topicId === id);
+          return found
+            ? {
+                ...structuredClone(found),
+                dispatchFence: options.currentDispatchFence ?? found.dispatchFence,
+              }
+            : null;
         }
         async updateIntegration(
           _task: string,
@@ -274,8 +321,30 @@ function setup(
       TaskService: class {
         async updateStatus(args: { status: string }) {
           if (args.status === 'paused') state.events.push('enter-review');
-          if (args.status === 'completed') state.completed.push(args.status);
+          task.status = args.status;
+          if (args.status === 'completed') {
+            state.completed.push(args.status);
+            task.workflowCategory = 'done';
+          }
         }
+      },
+    },
+    '@/database/models/team': { TeamModel: class {} },
+    '@/server/services/task/review': {
+      startIssueReview: async (
+        _db: unknown,
+        _user: string,
+        _task: string,
+        options: { deliveryOperationId: string },
+      ) => {
+        state.reviewStarts.push(options.deliveryOperationId);
+      },
+    },
+    '@/server/services/task/reviewerAssignment': {
+      isWaitingForReviewer: () => false,
+      WAITING_FOR_REVIEWER: 'Delivery is waiting for a reviewer Agent',
+      requestReviewerAssignment: async () => {
+        state.assignmentRequests.push(task.id);
       },
     },
     '@/server/services/taskRunner': {
@@ -411,7 +480,7 @@ add('does not merge an otherwise green PR when GitHub says blocked', async (load
   const f = setup({ first: { mergeableState: 'blocked' } });
   const result = await (await load(f.mocks))(f.db);
   assert.equal(f.state.merges.length, 0);
-  assert.equal(f.state.completed.length, 0);
+  assert.equal(f.state.settled.length, 0);
   assert.deepEqual(result.waiting, ['T-1']);
 });
 
@@ -421,7 +490,7 @@ add('confirmation must match the head passed to the merge request', async (load)
     await load(f.mocks)
   )(f.db);
   assert.equal(f.state.merges.length, 1);
-  assert.equal(f.state.completed.length, 0);
+  assert.equal(f.state.settled.length, 0);
   assert.equal(f.state.expected[1]?.headSha, HEAD);
 });
 
@@ -435,7 +504,7 @@ add('confirmation cannot silently change target branch or repository identity', 
     await (
       await load(f.mocks)
     )(f.db);
-    assert.equal(f.state.completed.length, 0);
+    assert.equal(f.state.settled.length, 0);
   }
 });
 
@@ -447,7 +516,7 @@ add('failed proof persistence does not call completed', async (load) => {
   await (
     await load(f.mocks)
   )(f.db);
-  assert.equal(f.state.completed.length, 0);
+  assert.equal(f.state.settled.length, 0);
   assert.ok(f.state.errors.some((error) => error?.includes('proof')));
 });
 
@@ -456,7 +525,7 @@ add('a disappeared delivery row cannot be completed', async (load) => {
   await (
     await load(f.mocks)
   )(f.db);
-  assert.equal(f.state.completed.length, 0);
+  assert.equal(f.state.settled.length, 0);
 });
 
 add('a same-name branch from another repository is not stamped integrated', async (load) => {
@@ -480,7 +549,7 @@ add(
     const result = await (await load(f.mocks))(f.db);
     // The integrated successor owns the outcome: completion is retried (the
     // DB gate re-verifies proof) without dispatching or re-reading GitHub.
-    assert.equal(f.state.completed.length, 1);
+    assert.equal(f.state.settled.length, 1);
     assert.equal(f.state.expected.length, 0);
     assert.equal(f.state.merges.length, 0);
     assert.deepEqual(result.merged, ['T-1']);
@@ -493,14 +562,14 @@ add('a delivery row from a superseded generation is ignored', async (load) => {
   assert.equal(result.checked, 0);
   assert.equal(f.state.expected.length, 0);
   assert.equal(f.state.merges.length, 0);
-  assert.equal(f.state.completed.length, 0);
+  assert.equal(f.state.settled.length, 0);
 });
 
 add('a mid-sweep restart fences the merge against the new generation', async (load) => {
   const f = setup({ freshTask: { executionGeneration: 4, status: 'running' } });
   const result = await (await load(f.mocks))(f.db);
   assert.equal(f.state.merges.length, 0);
-  assert.equal(f.state.completed.length, 0);
+  assert.equal(f.state.settled.length, 0);
   assert.deepEqual(result.waiting, ['T-1']);
 });
 
@@ -508,7 +577,7 @@ add('a deleted task cannot merge its stale review snapshot', async (load) => {
   const f = setup({ freshTask: { isDeleted: true } });
   const result = await (await load(f.mocks))(f.db);
   assert.equal(f.state.merges.length, 0);
-  assert.equal(f.state.completed.length, 0);
+  assert.equal(f.state.settled.length, 0);
   assert.deepEqual(result.waiting, ['T-1']);
 });
 
@@ -519,7 +588,7 @@ add('a late pending check re-read at the merge boundary blocks the merge', async
   const result = await (await load(f.mocks))(f.db);
   assert.equal(f.state.expected.length, 2);
   assert.equal(f.state.merges.length, 0);
-  assert.equal(f.state.completed.length, 0);
+  assert.equal(f.state.settled.length, 0);
   assert.deepEqual(result.waiting, ['T-1']);
 });
 
@@ -531,7 +600,7 @@ add(
     });
     const result = await (await load(f.mocks))(f.db);
     assert.equal(f.state.merges.length, 0);
-    assert.equal(f.state.completed.length, 1);
+    assert.equal(f.state.settled.length, 1);
     assert.deepEqual(result.merged, ['T-1']);
   },
 );
@@ -541,7 +610,7 @@ add('a delivered-but-unbound row is adopted into review by establishing its PR',
   const result = await (await load(f.mocks))(f.db);
   assert.ok(f.state.events.includes('create-pr'));
   assert.equal(f.state.merges.length, 1);
-  assert.equal(f.state.completed.length, 1);
+  assert.equal(f.state.settled.length, 1);
   assert.deepEqual(result.merged, ['T-1']);
 });
 
@@ -627,15 +696,73 @@ add('an external merge of a different accepted head is not completed', async (lo
   await (
     await load(f.mocks)
   )(f.db);
-  assert.equal(f.state.completed.length, 0);
+  assert.equal(f.state.settled.length, 0);
   assert.ok(f.state.errors.some((error) => error?.includes('accepted delivery')));
 });
+
+for (const rowState of ['verification_pending', 'integrated']) {
+  add(`${rowState} PR delivery starts Issue review instead of becoming Done`, async (load) => {
+    const f = setup({ rowState });
+    await (
+      await load(f.mocks)
+    )(f.db);
+    assert.equal(f.state.rows[0].integration.state, 'integrated');
+    assert.equal(f.state.task.workflowCategory, 'in_review');
+    assert.equal(f.state.task.status, 'paused');
+    assert.deepEqual(f.state.reviewStarts, ['op-delivery']);
+    assert.equal(f.state.settled.length, 1);
+    assert.equal(f.state.completed.length, 0);
+  });
+  add(
+    `${rowState} PR delivery without a reviewer waits for Orchestrator assignment`,
+    async (load) => {
+      const f = setup({ rowState, noReviewer: true });
+      await (
+        await load(f.mocks)
+      )(f.db);
+      assert.equal(f.state.task.workflowCategory, 'in_progress');
+      assert.equal(f.state.task.status, 'paused');
+      assert.equal(f.state.task.error, 'Delivery is waiting for a reviewer Agent');
+      assert.deepEqual(f.state.assignmentRequests, ['task-1']);
+      assert.deepEqual(f.state.reviewStarts, []);
+      assert.equal(f.state.settled.length, 1);
+      assert.equal(f.state.completed.length, 0);
+    },
+  );
+  add(`${rowState} PR delivery cannot settle a superseding task generation`, async (load) => {
+    const f = setup({ rowState, freshTask: { executionGeneration: 4 } });
+    await (
+      await load(f.mocks)
+    )(f.db);
+    assert.equal(f.state.task.workflowCategory, 'in_progress');
+    assert.deepEqual(f.state.reviewStarts, []);
+    assert.equal(f.state.settled.length, 0);
+  });
+  add(`${rowState} PR delivery preserves a manual status change`, async (load) => {
+    const f = setup({ rowState, freshTask: { status: 'backlog' } });
+    await (
+      await load(f.mocks)
+    )(f.db);
+    assert.equal(f.state.task.workflowCategory, 'in_progress');
+    assert.deepEqual(f.state.reviewStarts, []);
+    assert.equal(f.state.settled.length, 0);
+  });
+  add(`${rowState} PR delivery cannot settle a superseding dispatch fence`, async (load) => {
+    const f = setup({ rowState, currentDispatchFence: 9 });
+    await (
+      await load(f.mocks)
+    )(f.db);
+    assert.equal(f.state.task.workflowCategory, 'in_progress');
+    assert.deepEqual(f.state.reviewStarts, []);
+    assert.equal(f.state.settled.length, 0);
+  });
+}
 
 add('the confirmed merge proof wins over the merge API response SHA', async (load) => {
   const f = setup();
   const result = await (await load(f.mocks))(f.db);
   assert.deepEqual(result.merged, ['T-1']);
-  assert.equal(f.state.completed.length, 1);
+  assert.equal(f.state.settled.length, 1);
   assert.equal(f.state.rows[0].integration.integratedSha, MERGE);
   assert.equal(f.state.expected[0]?.headBranch, 'task/T-1');
 });
@@ -647,7 +774,7 @@ add(
     const result = await (await load(f.mocks))(f.db);
     assert.deepEqual(result.waiting, ['T-1']);
     assert.equal(f.state.merges.length, 0);
-    assert.equal(f.state.completed.length, 0);
+    assert.equal(f.state.settled.length, 0);
   },
   false,
 );
@@ -675,7 +802,7 @@ add(
     assert.equal(f.state.rows[0].integration.lastErrorCode, 'remote_verification_unavailable');
     assert.deepEqual(f.state.rows[0].integration.verificationPollFailureStages, { snapshot: 10 });
     assert.equal(f.state.merges.length, 0);
-    assert.equal(f.state.completed.length, 0);
+    assert.equal(f.state.settled.length, 0);
   },
   false,
 );
@@ -741,7 +868,7 @@ add('a merge accepted but unconfirmed reconciles without a second merge call', a
   assert.deepEqual(second.merged, ['T-1']);
   // The merge RPC ran exactly once — the second pass reconciled by reading.
   assert.equal(f.state.merges.length, 1);
-  assert.equal(f.state.completed.length, 1);
+  assert.equal(f.state.settled.length, 1);
 });
 
 // Merge gate: first snapshot always succeeds, merge-boundary reads always
@@ -840,7 +967,7 @@ add('concurrent sweeps admit exactly one merge owner', async (load) => {
   assert.equal(f.state.merges.length, 1);
   // The owner merged through proof; the loser either deferred to the CAS claim
   // (waiting) or reconciled by observing the already-merged remote (merged).
-  assert.ok(f.state.completed.length >= 1);
+  assert.ok(f.state.settled.length >= 1);
   for (const res of [a, b]) {
     assert.equal(res.corrected.length + res.paused.length, 0);
     assert.ok(res.merged.includes('T-1') || res.waiting.includes('T-1'));

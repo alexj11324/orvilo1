@@ -5,7 +5,6 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
-import { AcceptanceModel } from '@/database/models/acceptance';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
@@ -56,15 +55,6 @@ vi.mock('@/server/services/taskLifecycle', () => ({
   TaskLifecycleService: vi.fn().mockImplementation(function () {
     return {
       onTopicComplete: vi.fn(),
-    };
-  }),
-}));
-
-// Mock TaskReviewService
-vi.mock('@/server/services/taskReview', () => ({
-  TaskReviewService: vi.fn().mockImplementation(function () {
-    return {
-      review: vi.fn(),
     };
   }),
 }));
@@ -1884,14 +1874,14 @@ describe('Task Router Integration', () => {
         .set({
           context,
           workflowCategory: 'in_progress',
-          error: 'Reviewer runtime cannot mount submitVerifyResult',
+          error: 'Reviewer runtime cannot mount submitTaskReview',
         })
         .where(eq(tasks.id, task.data.id));
       const detail = await caller.detail({ id: task.data.id });
       expect(detail.data).toMatchObject({
         workflowCategory: 'in_progress',
         parkedReason: reason,
-        error: 'Reviewer runtime cannot mount submitVerifyResult',
+        error: 'Reviewer runtime cannot mount submitTaskReview',
       });
     },
   );
@@ -2744,162 +2734,6 @@ describe('Task Router Integration', () => {
       });
       await flushAfterResponse();
       expect(mockNotifyTaskCommentActivity).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('review config', () => {
-    it('should set and retrieve review rubrics', async () => {
-      const task = await caller.create({ instruction: 'Test' });
-
-      await caller.updateReview({
-        id: task.data.id,
-        review: {
-          autoRetry: true,
-          enabled: true,
-          maxIterations: 3,
-          rubrics: [
-            {
-              config: { criteria: '内容准确性' },
-              id: 'r1',
-              name: '准确性',
-              threshold: 0.8,
-              type: 'llm-rubric',
-              weight: 1,
-            },
-            {
-              config: { value: '```' },
-              id: 'r2',
-              name: '包含代码',
-              type: 'contains',
-              weight: 1,
-            },
-          ],
-        },
-      });
-
-      const review = await caller.getReview({ id: task.data.id });
-      expect(review.data!.enabled).toBe(true);
-      expect(review.data!.rubrics).toHaveLength(2);
-      expect(review.data!.rubrics[0].type).toBe('llm-rubric');
-    });
-  });
-
-  describe('verify config', () => {
-    it('moves verify config supplied at task creation into Acceptance', async () => {
-      const task = await caller.create({
-        config: {
-          model: 'test-model',
-          verify: { enabled: true, maxIterations: 2, requirement: 'Ship the artifact' },
-        },
-        instruction: 'Test',
-      });
-
-      const storedTask = await new TaskModel(serverDB, userId).findById(task.data.id);
-      const acceptance = await new AcceptanceModel(serverDB, userId).findBySubject(
-        'task',
-        task.data.id,
-      );
-
-      expect(storedTask?.config).toEqual({ model: 'test-model' });
-      expect(acceptance).toMatchObject({
-        config: { enabled: true, maxIterations: 2 },
-        requirement: 'Ship the artifact',
-      });
-    });
-
-    it('should set and retrieve verify config (round-trip)', async () => {
-      const task = await caller.create({ instruction: 'Test' });
-
-      await caller.updateVerifyConfig({
-        id: task.data.id,
-        verify: {
-          enabled: true,
-          maxIterations: 3,
-          verifyCriteriaIds: ['c1', 'c2'],
-          verifyRubricId: 'rub_1',
-        },
-      });
-
-      const verify = await caller.getVerifyConfig({ id: task.data.id });
-      expect(verify.data).toEqual({
-        enabled: true,
-        maxIterations: 3,
-        verifyCriteriaIds: ['c1', 'c2'],
-        verifyRubricId: 'rub_1',
-      });
-
-      // task.detail must surface the saved verify config (not leave it undefined).
-      const detail = await caller.detail({ id: task.data.id });
-      expect(detail.data!.verify).toEqual({
-        enabled: true,
-        maxIterations: 3,
-        verifyCriteriaIds: ['c1', 'c2'],
-        verifyRubricId: 'rub_1',
-      });
-
-      const storedTask = await new TaskModel(serverDB, userId).findById(task.data.id);
-      const acceptance = await new AcceptanceModel(serverDB, userId).findBySubject(
-        'task',
-        task.data.id,
-      );
-      expect(storedTask?.config).not.toHaveProperty('verify');
-      expect(acceptance).toMatchObject({
-        config: {
-          enabled: true,
-          maxIterations: 3,
-          verifyCriteriaIds: ['c1', 'c2'],
-          verifyRubricId: 'rub_1',
-        },
-      });
-    });
-
-    it('should clear a saved field when passed null', async () => {
-      const task = await caller.create({ instruction: 'Test' });
-
-      await caller.updateVerifyConfig({
-        id: task.data.id,
-        verify: { enabled: true, verifyRubricId: 'rub_1' },
-      });
-
-      // Clear the rubric.
-      await caller.updateVerifyConfig({
-        id: task.data.id,
-        verify: { verifyRubricId: null },
-      });
-
-      const verify = await caller.getVerifyConfig({ id: task.data.id });
-      expect(verify.data).toEqual({ enabled: true });
-    });
-
-    it('getVerifyConfig falls back to the legacy review key', async () => {
-      const task = await caller.create({ instruction: 'Test' });
-
-      await caller.updateReview({
-        id: task.data.id,
-        review: { autoRetry: true, enabled: true, maxIterations: 4, rubrics: [] },
-      });
-
-      const verify = await caller.getVerifyConfig({ id: task.data.id });
-      expect(verify.data).toEqual({ enabled: true, maxIterations: 4 });
-    });
-
-    it('preserves legacy verify fields when applying a partial Acceptance patch', async () => {
-      const task = await caller.create({ instruction: 'Test' });
-      await new TaskModel(serverDB, userId).updateVerifyConfig(task.data.id, {
-        enabled: true,
-        maxIterations: 4,
-      });
-
-      await caller.updateVerifyConfig({
-        id: task.data.id,
-        verify: { maxIterations: 2 },
-      });
-
-      const verify = await caller.getVerifyConfig({ id: task.data.id });
-      expect(verify.data).toEqual({
-        enabled: true,
-        maxIterations: 2,
-      });
     });
   });
 

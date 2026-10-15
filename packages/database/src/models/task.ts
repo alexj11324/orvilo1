@@ -17,7 +17,6 @@ import type {
   TaskMoveScope,
   TaskStatus,
   TaskSubtaskProgress,
-  TaskVerifyConfig,
   TaskWorkflowCategory,
   WorkspaceData,
   WorkspaceDocNode,
@@ -75,7 +74,6 @@ import {
 import { taskDescriptionHistories } from '../schemas/taskDescriptionHistory';
 import { teams, teamWorkflowStates } from '../schemas/team';
 import { topics } from '../schemas/topic';
-import { acceptances } from '../schemas/verify';
 import { works } from '../schemas/work';
 import { taskSubscriptions } from '../schemas/workAttention';
 import type { OrviloDatabase } from '../type';
@@ -1929,18 +1927,6 @@ export class TaskModel {
               : `${mutation.idempotencyKey}:${task.id}`,
         });
       }
-      await tx
-        .delete(acceptances)
-        .where(
-          and(
-            eq(acceptances.subjectType, 'task'),
-            inArray(acceptances.subjectId, taskIds),
-            buildWorkspaceWhere(
-              { userId: this.userId, workspaceId: this.workspaceId },
-              { userId: acceptances.userId, workspaceId: acceptances.workspaceId },
-            ),
-          ),
-        );
       const result = await tx
         .delete(tasks)
         .where(and(inArray(tasks.id, taskIds), this.ownership()))
@@ -3741,97 +3727,11 @@ export class TaskModel {
     return this.updateTaskConfig(id, { checkpoint }, options);
   }
 
-  // ========== Review Config ==========
-
-  getReviewConfig(task: TaskItem): Record<string, any> | undefined {
-    return (task.config as Record<string, any>)?.review;
-  }
-
-  async updateReviewConfig(
-    id: string,
-    review: Record<string, any>,
-    options?: { invalidateRun?: boolean },
-  ): Promise<TaskItem | null> {
-    return this.updateTaskConfig(id, { review }, options);
-  }
-
-  // ========== Verify Config ==========
-
-  /**
-   * Read this task's own verify config from `config.verify`. During the
-   * migration window it falls back to the legacy `config.review` key so tasks
-   * configured before the verify cutover still surface their gate settings —
-   * only the shared `enabled` / `maxIterations` fields carry over (review's
-   * inline rubrics are dropped, no data was using them).
-   */
-  getVerifyConfig(task: TaskItem): TaskVerifyConfig | undefined {
-    const config = task.config as Record<string, any> | undefined;
-    if (config?.verify) return config.verify as TaskVerifyConfig;
-
-    const review = config?.review as Record<string, any> | undefined;
-    if (review && (review.enabled !== undefined || review.maxIterations !== undefined)) {
-      return { enabled: review.enabled, maxIterations: review.maxIterations };
-    }
-    return undefined;
-  }
-
-  /**
-   * Resolve the effective verify config for a task, honoring subtask
-   * inheritance. Whole-config override semantics: the task uses its own config
-   * when it has one, otherwise it walks up `parentTaskId` and adopts the
-   * nearest ancestor's config in full (never a field-level merge of the two).
-   * Returns `undefined` when no task in the chain has a verify config.
-   */
-  async resolveVerifyConfig(taskId: string): Promise<TaskVerifyConfig | undefined> {
-    const seen = new Set<string>();
-    let currentId: string | null = taskId;
-
-    while (currentId && !seen.has(currentId)) {
-      seen.add(currentId);
-      const task = await this.findById(currentId);
-      if (!task) break;
-
-      const config = this.getVerifyConfig(task);
-      if (config) return config;
-
-      currentId = task.parentTaskId;
-    }
-    return undefined;
-  }
-
-  /**
-   * Patch the task's own `config.verify`. Per-key semantics (a plain deep-merge
-   * can't express "remove", and JSON can't transmit `undefined`):
-   * - `null`      → clear the key (e.g. switch a rubric/verifier back to default)
-   * - omitted     → leave the existing value untouched
-   * - any value   → set it (arrays replace wholesale, not index-merged)
-   *
-   * The merge is scoped to the `verify` sub-object so sibling config keys
-   * (model, checkpoint, schedule, …) are preserved.
-   */
-  async updateVerifyConfig(
-    id: string,
-    patch: { [K in keyof TaskVerifyConfig]?: TaskVerifyConfig[K] | null },
-  ): Promise<TaskItem | null> {
-    const task = await this.findById(id);
-    if (!task) return null;
-
-    const config = (task.config as Record<string, any>) || {};
-    const next: Record<string, any> = { ...(config.verify as TaskVerifyConfig | undefined) };
-
-    for (const [key, value] of Object.entries(patch)) {
-      if (value === null) delete next[key];
-      else if (value !== undefined) next[key] = value;
-    }
-
-    return this.update(id, { config: { ...config, verify: next } });
-  }
-
   /**
    * @deprecated The execution lifecycle should not pause by default — it
    * settles through `settleTaskExecution` instead, which applies
-   * {@link resolveTaskReviewRequirement}: only an explicit checkpoint, the
-   * project's `requireHumanReview` policy, or an enabled verify gate parks a
+   * {@link resolveTaskReviewRequirement}: an explicit checkpoint or the
+   * project's `requireHumanReview` policy parks a
    * successful run for review. Kept for compatibility with callers that have
    * not migrated; the legacy default-pause behavior it encodes is retired.
    */
@@ -3847,11 +3747,9 @@ export class TaskModel {
    *
    * - the task's checkpoint requires review (`checkpoint.topic.after`),
    * - the owning project's `orchestrationPolicy.requireHumanReview` is `true`,
-   * - an explicit verify gate is enabled on the resolved verify config.
    *
    * Resolved asynchronously so the project's effective policy
-   * (`projectRequiresHumanReview` included) and the ancestor-inherited verify
-   * config come from their real sources.
+   * (`projectRequiresHumanReview` included) comes from its real source.
    */
   async resolveTaskReviewRequirement(task: TaskItem): Promise<boolean> {
     const checkpoint = this.getCheckpointConfig(task);
@@ -3862,7 +3760,7 @@ export class TaskModel {
       );
       if (project && projectEffectiveRequireHumanReview(project)) return true;
     }
-    return (await this.resolveVerifyConfig(task.id))?.enabled === true;
+    return false;
   }
 
   // Check if a task should be paused before starting (parent's tasks.beforeIds)
@@ -3928,7 +3826,7 @@ export class TaskModel {
 
   // Find stuck tasks (running but heartbeat timed out)
   // Only checks tasks that have both lastHeartbeatAt and heartbeatTimeout set.
-  // A completion callback owns a long-lived lease while verify/settlement
+  // A completion callback owns a long-lived lease while review/settlement
   // side effects are running; its heartbeat is deliberately not treated as a
   // dead generation. API callers may additionally restrict the sweep to one
   // task creator and workspace.
@@ -5123,7 +5021,7 @@ export class TaskModel {
   }
 
   /**
-   * Append a `session` activity (description body, acceptance criteria): an
+   * Append a `session` activity (description body): an
    * edit with no before/after worth naming, saved many times in one sitting.
    * When the Issue's newest row is the same kind by the same actor inside the
    * collapse window, that row is moved to now instead of adding another, so a
@@ -5135,7 +5033,7 @@ export class TaskModel {
    */
   private async appendSessionActivity(
     taskId: string,
-    type: 'description' | 'verify_config',
+    type: 'description',
     actor: { agentId?: string | null; userId?: string | null },
   ): Promise<void> {
     const { actorKind, ...actorColumns } = taskActivityActor(actor);
@@ -5179,7 +5077,7 @@ export class TaskModel {
    */
   async logSessionActivity(
     taskId: string,
-    type: 'description' | 'verify_config',
+    type: 'description',
     actor: { agentId?: string | null; userId?: string | null },
   ): Promise<void> {
     await this.db.transaction(async (tx) => {

@@ -1,20 +1,13 @@
 import { createHash, randomUUID } from 'node:crypto';
 
 import type { Commitment, ControlResult, DurableReceipt } from '@orvilo/agent-execution';
+import type { TaskConfig } from '@orvilo/types';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { legacyStatusExpr } from '@/database/models/taskExecutionSql';
-import {
-  acceptances,
-  taskDependencies,
-  tasks,
-  trashItems,
-  verifyCheckResults,
-  verifyRuns,
-} from '@/database/schemas';
+import { taskDependencies, tasks, trashItems } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 
-import type { CanonicalReceiptMapping } from './canonicalCompletion';
 import {
   CanonicalRunAuthority,
   type CanonicalRunBinding,
@@ -31,7 +24,6 @@ export const CORE_SESSION_SNAPSHOT_CANDIDATE_SQL = `CREATE TABLE IF NOT EXISTS c
 /** Configured by the trusted host. Neither commitments nor receipt loaders come from Prime. */
 export interface CanonicalSessionEvidence {
   commitments: Commitment[];
-  completionMappings: CanonicalReceiptMapping[];
   /** Optional content identity only: it never supplies authority or completion evidence. */
   historyContentHash?: string;
   loadReceipts: () => Promise<DurableReceipt[]>;
@@ -41,9 +33,8 @@ export interface CanonicalSessionSnapshot {
     binding: CanonicalRunBinding;
     run: CanonicalRunSnapshot;
     commitments: Commitment[];
-    completionMappings: CanonicalReceiptMapping[];
     receipts: DurableReceipt[];
-    verification: Record<string, unknown>;
+    issue: Record<string, unknown>;
     dependencies: Record<string, unknown>[];
     tombstones: Record<string, unknown>[];
   };
@@ -100,16 +91,12 @@ export class CanonicalSessionSnapshots {
     run: CanonicalRunSnapshot,
     input: CanonicalSessionEvidence,
   ) {
-    // Session snapshots are task-scoped (verify plan, acceptance, task
-    // dependencies) — a conversation subject never reaches them.
+    // Issue snapshots are task-scoped; conversation subjects never reach them.
     if (binding.subject.kind !== 'task') fail('Run subject is not a task execution');
     const taskId = binding.subject.taskId;
     if (input.historyContentHash !== undefined && !/^[a-f0-9]{64}$/.test(input.historyContentHash))
       fail('Invalid history content hash');
     const commitments = structuredClone(input.commitments).sort((a, b) => a.id.localeCompare(b.id));
-    const mappings = structuredClone(input.completionMappings).sort((a, b) =>
-      a.checkItemId.localeCompare(b.checkItemId),
-    );
     if (
       !commitments.length ||
       new Set(commitments.map((c) => c.id)).size !== commitments.length ||
@@ -118,83 +105,19 @@ export class CanonicalSessionSnapshots {
       )
     )
       fail('Trusted commitments unavailable');
-    const [verify] = await tx
-      .select()
-      .from(verifyRuns)
-      .where(
-        and(
-          eq(verifyRuns.workspaceId, binding.workspaceId),
-          eq(verifyRuns.operationId, binding.operationId),
-        ),
-      )
+    const [issue] = await tx
+      .select({
+        id: tasks.id,
+        instruction: tasks.instruction,
+        reviewerAgentId: tasks.reviewerAgentId,
+        config: tasks.config,
+        workflowCategory: tasks.workflowCategory,
+      })
+      .from(tasks)
+      .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, binding.workspaceId)))
       .for('update')
       .limit(1);
-    if (!verify?.planConfirmedAt || !verify.plan?.length)
-      fail('Frozen canonical Verify plan unavailable');
-    const [acceptance] = verify.acceptanceId
-      ? await tx
-          .select({
-            id: acceptances.id,
-            status: acceptances.status,
-            subjectType: acceptances.subjectType,
-            subjectId: acceptances.subjectId,
-            updatedAt: acceptances.updatedAt,
-          })
-          .from(acceptances)
-          .where(
-            and(
-              eq(acceptances.id, verify.acceptanceId),
-              eq(acceptances.workspaceId, binding.workspaceId),
-            ),
-          )
-          .for('update')
-          .limit(1)
-      : [];
-    if (
-      verify.acceptanceId &&
-      (!acceptance ||
-        !(
-          (acceptance.subjectType === 'task' && acceptance.subjectId === taskId) ||
-          (acceptance.subjectType === 'topic' && acceptance.subjectId === binding.topicId)
-        ))
-    )
-      fail('Canonical acceptance scope unavailable');
-    const required = verify.plan.filter((item) => item.required);
-    if (
-      !required.length ||
-      mappings.length !== required.length ||
-      new Set(mappings.map((m) => m.checkItemId)).size !== mappings.length ||
-      required.some(
-        (item) =>
-          !item.sourceCriterionId ||
-          !mappings.some(
-            (m) =>
-              m.checkItemId === item.id &&
-              m.sourceCriterionId === item.sourceCriterionId &&
-              m.requestDigest &&
-              m.receiptId,
-          ),
-      )
-    )
-      fail('Explicit criterion receipt mapping unavailable');
-    const checks = await tx
-      .select({
-        id: verifyCheckResults.id,
-        checkItemId: verifyCheckResults.checkItemId,
-        sourceCriterionId: verifyCheckResults.sourceCriterionId,
-        status: verifyCheckResults.status,
-        verdict: verifyCheckResults.verdict,
-        userDecision: verifyCheckResults.userDecision,
-        userDecisionDetail: verifyCheckResults.userDecisionDetail,
-      })
-      .from(verifyCheckResults)
-      .where(
-        and(
-          eq(verifyCheckResults.verifyRunId, verify.id),
-          eq(verifyCheckResults.workspaceId, binding.workspaceId),
-        ),
-      )
-      .for('update');
+    if (!issue) fail('Canonical Issue unavailable');
     const edges = await tx
       .select()
       .from(taskDependencies)
@@ -258,14 +181,6 @@ export class CanonicalSessionSnapshots {
       )
         fail('Durable receipt identity unavailable');
     }
-    for (const mapping of mappings)
-      if (
-        !receipts.some(
-          (receipt) =>
-            receipt.id === mapping.receiptId && receipt.requestDigest === mapping.requestDigest,
-        )
-      )
-        fail('Mapped receipt unavailable');
     // Include every receipt, including ambiguous/pending work. Never silently filter a source fence.
     const reloaded = structuredClone(await input.loadReceipts()).sort((a, b) =>
       a.id.localeCompare(b.id),
@@ -275,20 +190,13 @@ export class CanonicalSessionSnapshots {
       binding: structuredClone(binding),
       run,
       commitments,
-      completionMappings: mappings,
       receipts,
-      verification: {
-        id: verify.id,
-        operationId: verify.operationId,
-        acceptanceId: verify.acceptanceId,
-        acceptance: acceptance ?? null,
-        roundIndex: verify.roundIndex,
-        plan: verify.plan,
-        planConfirmedAt: verify.planConfirmedAt,
-        status: verify.status,
-        userDecision: verify.userDecision,
-        decisionDetail: verify.decisionDetail,
-        checks: checks.sort((a, b) => a.id.localeCompare(b.id)),
+      issue: {
+        id: issue.id,
+        instruction: issue.instruction,
+        reviewerAgentId: issue.reviewerAgentId,
+        review: (issue.config as TaskConfig)?.issueReview ?? null,
+        workflowCategory: issue.workflowCategory,
       },
       dependencies: edges
         .sort((a, b) => a.id.localeCompare(b.id))
@@ -311,7 +219,6 @@ export class CanonicalSessionSnapshots {
     evidence = {
       ...evidence,
       commitments: structuredClone(evidence.commitments),
-      completionMappings: structuredClone(evidence.completionMappings),
     };
     return this.observe(binding, async (run, tx) => {
       const authority = await this.collect(tx, binding, run, evidence);
@@ -343,7 +250,6 @@ export class CanonicalSessionSnapshots {
     evidence = {
       ...evidence,
       commitments: structuredClone(evidence.commitments),
-      completionMappings: structuredClone(evidence.completionMappings),
     };
     return this.observe(binding, async (run, tx) => {
       // Narrowed: the canonical task admission already rejected non-task subjects.

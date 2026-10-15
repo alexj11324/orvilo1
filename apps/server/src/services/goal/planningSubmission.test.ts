@@ -15,7 +15,10 @@ const workspaceId = 'planning-submission-workspace';
 const input = {
   operationId,
   token: 'turn',
-  result: { title: 'Release', instruction: 'Ship it', criteria: [] },
+  result: {
+    problemStatement: 'Release',
+    tasks: [{ title: 'Ship', instruction: 'Ship with evidence', dependsOn: [], hypothesis: null }],
+  },
 };
 beforeEach(async () => {
   await db.insert(users).values({ id: userId }).onConflictDoNothing();
@@ -26,7 +29,7 @@ beforeEach(async () => {
   await new AgentOperationModel(db, userId).recordStart({
     operationId,
     appContext: {
-      judgment: { purpose: 'goal.criteriaDraft', outputMode: 'tool', intentKey: 'turn' },
+      judgment: { purpose: 'goal.decompose', outputMode: 'tool', intentKey: 'turn' },
     },
     metadata: { keep: 'existing' },
   });

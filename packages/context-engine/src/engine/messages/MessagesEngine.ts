@@ -24,7 +24,6 @@ import {
   TasksFlattenProcessor,
   ToolCallProcessor,
   ToolMessageReorder,
-  VerifyMessageProcessor,
 } from '../../processors';
 import {
   ActiveTopicDocumentContextInjector,
@@ -501,9 +500,6 @@ export class MessagesEngine {
       // messages — so this pass must run AFTER that conversion to catch
       // task-shaped residue too.
       new PlaceholderMessageFilterProcessor(),
-      // Verify (delivery-checker) cards: drop empty UI-only ones; surface
-      // auto-repair failure feedback as a user turn for the repair run
-      new VerifyMessageProcessor(),
       // Task-callback cards: surface a finished task's handoff as a user turn
       // so the creator agent reads it and continues
       new TaskCallbackMessageProcessor(),

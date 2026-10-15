@@ -24,11 +24,12 @@ Legacy `claimExecutionEpoch` and `TaskTopicModel.startRun` reject registered Cor
 
 ## Verified completion
 
-`CanonicalVerifyCompletion` requires the actual passed and confirmed frozen Verify plan, persisted passed criteria, and explicit server-owned mappings to verified durable receipts for every required criterion. It neither creates a passed verdict nor trusts runtime output as a verdict. Receipt fences use the runtime owner and opaque runtime lease.
+`CanonicalIssueCompletion` observes the current Issue status without writing a verdict
+or status. It reports completion only when `workflowCategory` is `done`, after
+checking the current dispatch, task, topic, grant, membership and runtime fences.
+A successful operation or durable action receipt cannot make an Issue Done.
 
-The final authorization hook runs inside `TaskModel.updateStatusForExecutionContract` through existing `driveTaskFromVerify` and `TaskService.updateStatus`. It locks/rechecks dispatch, task, grant, topic epoch/runtime identity, membership, Verify run and result rows, including revalidation after asynchronous receipt loading. It does not hold an outer transaction over Verify convergence. Existing non-Core callers retain their prior behavior.
-
-The adapter reads actual status after convergence. Recurring tasks that rearm are explicitly not reported completed. This guard fences the final status mutation; earlier Verify publishing/integration actions retain their existing authorization gates.
+The reviewer Agent owns the ordinary [Issue review](issue-review.md) flow.
 
 ## Linux acceptance evidence
 
@@ -85,6 +86,11 @@ their own workspace/user IDs. The two test files pass repository scoped lint.
 
 `CanonicalSessionSnapshots` captures an immutable server-owned observation under serializable `CanonicalRunAuthority.withSnapshot` admission. Its separate unnumbered candidate `core_session_snapshots` table stores the identity, capture time, digest and observation; it is additional to the two runtime-control columns, handoff history table and receipt table described above. The table is not installed automatically in production.
 
-The observation binds the current runtime fence/registration, trusted typed-action commitments, frozen Verify plan and persisted checks, raw canonical decision/detail, scoped acceptance aggregate, dependency edges and prerequisite task revisions/deletion state, relevant recycle-bin records, explicit receipt mappings and every private durable receipt. Unmapped pending or ambiguous receipts are retained; a receipt from an unsupported foreign/source fence blocks capture instead of being dropped. A missing canonical plan or required trusted mapping returns an explicit unavailable result. Verify criteria are not silently converted into action commitments or invented acceptance decisions.
+The observation binds the current runtime fence/registration, trusted typed-action
+commitments, live Issue description/reviewer/review cycle/workflow, dependency
+edges and prerequisite revisions/deletion state, relevant recycle-bin records and
+every private durable receipt. Pending or ambiguous receipts remain in the
+snapshot; a foreign receipt fence blocks capture. The inherited Verify plan,
+Acceptance aggregate and criterion receipt mappings have been removed.
 
 Recovery re-reads canonical authority and content and compares their digest with the saved observation. A changed receipt, decision, dependency, owner/lease/epoch, policy or trusted commitment invalidates the observation and requires explicit recapture. Task or topic soft deletion denies canonical admission. An optional SHA-256 history-content hash is validated and must match on recovery, but its contents never provide authority. The API returns an observation, not permission to resume a runtime, replay an action or complete a task. Durable-store receipt reads are checked twice around asynchronous IO; no cross-store transaction is claimed, and future use still requires current admission.

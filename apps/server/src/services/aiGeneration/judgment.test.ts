@@ -152,12 +152,12 @@ describe('resolveAcpJudgmentAgent — binding precedence, never deployment keys'
   });
 
   it('blocks when a pinned agentId no longer exists — no slug/env fallthrough (F10)', async () => {
-    mocks.agentGetBuiltin.mockResolvedValue({ id: 'builtin-verify' });
+    mocks.agentGetBuiltin.mockResolvedValue({ id: 'builtin-page' });
     process.env[ACP_JUDGMENT_AGENT_ENV] = 'env-agent';
     // An explicitly pinned execution identity that died is a hard boundary:
     // slug/env candidates are never consulted.
     await expect(
-      resolveAcpJudgmentAgent(db, 'u1', { agentId: 'gone', slug: 'verify-agent' }),
+      resolveAcpJudgmentAgent(db, 'u1', { agentId: 'gone', slug: 'page-agent' }),
     ).rejects.toMatchObject({ code: 'ACP_JUDGMENT_NO_BINDING' });
     expect(mocks.agentGetBuiltin).not.toHaveBeenCalled();
   });
@@ -193,7 +193,7 @@ describe('runAcpJudgment', () => {
         attempt: 2,
         binding: { agentId: 'agent-1' },
         pollIntervalMs: 1,
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
         taskId: 'task-9',
       },
     });
@@ -215,9 +215,9 @@ describe('runAcpJudgment', () => {
       disableTools: true,
       maxSteps: 4,
       taskId: 'task-9',
-      title: '[judgment] verify.judge',
+      title: '[judgment] eval.judge',
       trigger: 'acp_judgment',
-      skipTaskVerification: true,
+
       userInterventionConfig: { approvalMode: 'headless' },
     });
     // A task-scoped administrative judgment must not recursively verify itself.
@@ -225,8 +225,8 @@ describe('runAcpJudgment', () => {
       judgment: {
         attempt: 2,
         budget: { maxSteps: 4, maxWaitMs: 180_000 },
-        intentKey: expect.stringContaining('verify.judge:2:'),
-        purpose: 'verify.judge',
+        intentKey: expect.stringContaining('eval.judge:2:'),
+        purpose: 'eval.judge',
       },
       suppressSignal: true,
       taskId: 'task-9',
@@ -338,7 +338,7 @@ describe('runAcpJudgment', () => {
       judgment: {
         binding: { agentId: 'agent-1' },
         pollIntervalMs: 1,
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
         tracing: { onPersisted, scenario: 'verify_judge' },
       },
     });
@@ -384,7 +384,7 @@ describe('runAcpJudgment', () => {
 
     const error = await runAcpJudgment(db, 'u1', {
       input: JUDGMENT_INPUT,
-      judgment: { binding: { agentId: 'agent-1' }, pollIntervalMs: 1, purpose: 'verify.judge' },
+      judgment: { binding: { agentId: 'agent-1' }, pollIntervalMs: 1, purpose: 'eval.judge' },
     }).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(AcpJudgmentRunError);
@@ -405,7 +405,7 @@ describe('runAcpJudgment', () => {
     await expect(
       runAcpJudgment(db, 'u1', {
         input: JUDGMENT_INPUT,
-        judgment: { binding: { agentId: 'agent-1' }, pollIntervalMs: 1, purpose: 'verify.judge' },
+        judgment: { binding: { agentId: 'agent-1' }, pollIntervalMs: 1, purpose: 'eval.judge' },
       }),
     ).rejects.toBeInstanceOf(AcpJudgmentRunError);
   });
@@ -426,7 +426,7 @@ describe('runAcpJudgment', () => {
         judgment: {
           binding: { agentId: 'agent-1' },
           pollIntervalMs: 1,
-          purpose: 'verify.judge',
+          purpose: 'eval.judge',
           timeoutMs: 5,
         },
       }),
@@ -460,7 +460,7 @@ describe('runAcpJudgment', () => {
         judgment: {
           binding: { agentId: 'agent-1' },
           pollIntervalMs: 1,
-          purpose: 'verify.judge',
+          purpose: 'eval.judge',
           signal: controller.signal,
         },
       }),
@@ -496,7 +496,7 @@ describe('runAcpJudgment', () => {
       judgment: {
         binding: { agentId: 'agent-1' },
         pollIntervalMs: 1,
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
         signal: controller.signal,
       },
     }).catch((e: unknown) => e);
@@ -537,7 +537,7 @@ describe('runAcpJudgment', () => {
         judgment: {
           binding: { agentId: 'agent-1' },
           pollIntervalMs: 100,
-          purpose: 'verify.judge',
+          purpose: 'eval.judge',
           timeoutMs: 1_000,
         },
       });
@@ -573,7 +573,7 @@ describe('runAcpJudgment', () => {
 
     const error = await runAcpJudgment(db, 'u1', {
       input: strictInput,
-      judgment: { binding: { agentId: 'agent-1' }, pollIntervalMs: 1, purpose: 'verify.judge' },
+      judgment: { binding: { agentId: 'agent-1' }, pollIntervalMs: 1, purpose: 'eval.judge' },
     }).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(AcpJudgmentValidationError);
@@ -597,7 +597,7 @@ describe('runAcpJudgment', () => {
         model: 'claude-3-5',
         pollIntervalMs: 1,
         provider: 'anthropic',
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
       },
     });
 
@@ -607,16 +607,16 @@ describe('runAcpJudgment', () => {
   });
 
   it('applies the advisory model/provider only for slug-bound builtins', async () => {
-    mocks.agentGetBuiltin.mockResolvedValue({ id: 'builtin-verify' });
+    mocks.agentGetBuiltin.mockResolvedValue({ id: 'builtin-page' });
 
     await runAcpJudgment(db, 'u1', {
       input: JUDGMENT_INPUT,
       judgment: {
-        binding: { slug: 'verify-agent' },
+        binding: { slug: 'page-agent' },
         model: 'claude-3-5',
         pollIntervalMs: 1,
         provider: 'anthropic',
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
       },
     });
 
@@ -624,7 +624,7 @@ describe('runAcpJudgment', () => {
     expect(execArgs).toMatchObject({
       model: 'claude-3-5',
       provider: 'anthropic',
-      slug: 'verify-agent',
+      slug: 'page-agent',
     });
   });
 
@@ -657,7 +657,7 @@ describe('runAcpJudgment', () => {
       judgment: {
         binding: { agentId: 'agent-1' },
         pollIntervalMs: 1,
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
         signal: controller.signal,
       },
     }).catch((e: unknown) => e);
@@ -684,7 +684,7 @@ describe('runAcpJudgment', () => {
       judgment: {
         binding: { agentId: 'agent-1' },
         pollIntervalMs: 1,
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
         signal: controller.signal,
       },
     }).catch((e: unknown) => e);
@@ -717,7 +717,7 @@ describe('runAcpJudgment', () => {
         judgment: {
           binding: { agentId: 'agent-1' },
           pollIntervalMs: 100,
-          purpose: 'verify.judge',
+          purpose: 'eval.judge',
           timeoutMs: 1_000,
         },
       });
@@ -731,7 +731,7 @@ describe('runAcpJudgment', () => {
       });
       expect(mocks.execAgent).toHaveBeenCalledTimes(1);
       expect(mocks.operationFindByJudgmentIntent).toHaveBeenCalledWith(
-        expect.stringContaining('verify.judge:0:'),
+        expect.stringContaining('eval.judge:0:'),
       );
       expect(mocks.interruptTask).toHaveBeenCalledWith({ operationId: 'op-late' });
     } finally {
@@ -759,7 +759,7 @@ describe('runAcpJudgment', () => {
         judgment: {
           binding: { agentId: 'agent-1' },
           pollIntervalMs: 100,
-          purpose: 'verify.judge',
+          purpose: 'eval.judge',
           timeoutMs: 1_000,
         },
       });
@@ -789,7 +789,7 @@ describe('runAcpJudgment', () => {
     await expect(
       runAcpJudgment(db, 'u1', {
         input: JUDGMENT_INPUT,
-        judgment: { binding: { agentId: 'agent-1' }, pollIntervalMs: 1, purpose: 'verify.judge' },
+        judgment: { binding: { agentId: 'agent-1' }, pollIntervalMs: 1, purpose: 'eval.judge' },
       }),
     ).rejects.toBeInstanceOf(AcpJudgmentRunError);
     expect(mocks.tracingRecord).toHaveBeenCalledWith(
@@ -813,13 +813,13 @@ describe('runAcpJudgment launch registration (J01–J02)', () => {
 
     await runAcpJudgment(db, 'u1', {
       input: JUDGMENT_INPUT,
-      judgment: { binding: { agentId: 'agent-1' }, pollIntervalMs: 1, purpose: 'verify.judge' },
+      judgment: { binding: { agentId: 'agent-1' }, pollIntervalMs: 1, purpose: 'eval.judge' },
     });
 
     expect(mocks.operationClaimLaunch).toHaveBeenCalledWith(
       expect.objectContaining({
-        intentKey: expect.stringContaining('verify.judge:0:'),
-        purpose: 'verify.judge',
+        intentKey: expect.stringContaining('eval.judge:0:'),
+        purpose: 'eval.judge',
       }),
     );
     expect(mocks.operationClaimLaunch.mock.invocationCallOrder[0]).toBeLessThan(
@@ -841,7 +841,7 @@ describe('runAcpJudgment launch registration (J01–J02)', () => {
         binding: { agentId: 'agent-1' },
         intentKey: 'ik-1',
         pollIntervalMs: 1,
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
       },
     };
 
@@ -874,7 +874,7 @@ describe('runAcpJudgment launch registration (J01–J02)', () => {
         binding: { agentId: 'agent-1' },
         intentKey: 'ik-1',
         pollIntervalMs: 1,
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
       },
     });
 
@@ -895,7 +895,7 @@ describe('runAcpJudgment launch registration (J01–J02)', () => {
         binding: { agentId: 'agent-1' },
         intentKey: 'ik-fixed',
         pollIntervalMs: 1,
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
       },
     }).catch((e: unknown) => e);
 
@@ -925,7 +925,7 @@ describe('runAcpJudgment launch registration (J01–J02)', () => {
         binding: { agentId: 'agent-1' },
         intentKey: 'ik-1',
         pollIntervalMs: 1,
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
       },
     }).catch((e: unknown) => e);
 
@@ -954,7 +954,7 @@ describe('runAcpJudgment launch registration (J01–J02)', () => {
         binding: { agentId: 'agent-1' },
         intentKey: 'ik-1',
         pollIntervalMs: 1,
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
         timeoutMs: 5,
       },
     });
@@ -1003,7 +1003,7 @@ describe('runAcpJudgment launch registration (J01–J02)', () => {
         binding: { agentId: 'agent-1' },
         intentKey: 'ik-1',
         pollIntervalMs: 1,
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
       },
     }).catch((e: unknown) => e);
 
@@ -1033,7 +1033,7 @@ describe('runAcpJudgment launch registration (J01–J02)', () => {
         binding: { agentId: 'agent-1' },
         intentKey: 'ik-1',
         pollIntervalMs: 1,
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
       },
     });
 
@@ -1062,7 +1062,7 @@ describe('runAcpJudgment launch registration (J01–J02)', () => {
         binding: { agentId: 'agent-1' },
         intentKey: 'ik-1',
         pollIntervalMs: 1,
-        purpose: 'verify.judge',
+        purpose: 'eval.judge',
       },
     }).catch((e: unknown) => e);
 
@@ -1075,7 +1075,7 @@ describe('runAcpJudgment launch registration (J01–J02)', () => {
     const judgment = {
       binding: { agentId: 'agent-1' },
       pollIntervalMs: 1,
-      purpose: 'verify.judge',
+      purpose: 'eval.judge',
     };
 
     await runAcpJudgment(db, 'u1', { input: JUDGMENT_INPUT, judgment });
@@ -1162,7 +1162,7 @@ describe('planning tool submissions (#623)', () => {
       input: JUDGMENT_INPUT,
       judgment: {
         binding: { agentId: 'agent-1' },
-        purpose: 'goal.criteriaDraft',
+        purpose: 'goal.decompose',
         outputMode: 'tool',
       },
     });
@@ -1184,7 +1184,7 @@ describe('planning tool submissions (#623)', () => {
         input: JUDGMENT_INPUT,
         judgment: {
           binding: { agentId: 'agent-1' },
-          purpose: 'goal.criteriaDraft',
+          purpose: 'goal.decompose',
           outputMode: 'tool',
         },
       }),

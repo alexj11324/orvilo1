@@ -4,7 +4,6 @@ import {
   type AgentOperationStatus,
   LIVE_AGENT_OPERATION_LAUNCH_STATUSES,
   TERMINAL_AGENT_OPERATION_STATUSES,
-  type VerifyRunStatus,
 } from '@orvilo/types';
 import { and, desc, eq, gte, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 
@@ -23,13 +22,6 @@ import { agentOperations } from '../schemas/agentOperations';
 import type { OrviloDatabase } from '../type';
 import { notShareVisitorTopicRef } from '../utils/shareVisitor';
 import { buildWorkspaceWhere } from '../utils/workspace';
-
-/**
- * Verify rollup states. Aliases the single `VerifyRunStatus` source of truth in
- * `@orvilo/types` (which also backs the `verify_status` column enum and
- * `verify_runs.status`) so the three never drift.
- */
-export type VerifyStatus = VerifyRunStatus;
 
 export interface RecordOperationStartParams {
   agentId?: string | null;
@@ -55,8 +47,6 @@ export interface RecordOperationStartParams {
   operationId: string;
   parentOperationId?: string | null;
   provider?: string;
-  /** Do not instantiate a new task Verify plan for this internal operation. */
-  skipTaskVerification?: boolean;
   startedAt?: Date;
   taskId?: string | null;
   threadId?: string | null;
@@ -240,7 +230,7 @@ export class AgentOperationModel {
       chatGroupId: params.chatGroupId ?? null,
       id: params.operationId,
       maxSteps: params.maxSteps,
-      ...(params.metadata || params.executionEngine || params.skipTaskVerification
+      ...(params.metadata || params.executionEngine
         ? {
             metadata: {
               ...params.metadata,
@@ -248,7 +238,6 @@ export class AgentOperationModel {
               // provenance must reflect the path that actually recorded the
               // row, not whatever an upstream payload happened to carry.
               ...(params.executionEngine ? { executionEngine: params.executionEngine } : {}),
-              ...(params.skipTaskVerification ? { skipTaskVerification: true } : {}),
             },
           }
         : {}),
@@ -564,7 +553,7 @@ export class AgentOperationModel {
   /**
    * Raw ownership-scoped lookup. Agent-share visitor runs execute under the
    * CREATOR's identity, so this DOES return their operations — required by the
-   * agent runtime (execution, intervention, completion, verify, abandon), which
+   * agent runtime (execution, intervention, completion, abandon), which
    * has to resolve the operation it is currently driving no matter who started
    * it. Creator-facing read entry points must use
    * {@link AgentOperationModel.findOwnOperationById} instead.
@@ -838,7 +827,7 @@ export class AgentOperationModel {
    * Total USD cost of every operation bound to a task — the goal outer loop's
    * budget meter. Only root (task-bound) operations carry `taskId`, and each
    * root's `totalCost` scalar already includes its direct children's rollup
-   * (see `persistCompletion`), so this sum covers verify / repair sub-runs
+   * (see `persistCompletion`), so this sum covers review / repair sub-runs
    * without walking parent chains. Re-derived on every call — exact regardless
    * of how many times a round settles.
    */
@@ -954,12 +943,4 @@ export class AgentOperationModel {
       .returning({ id: agentOperations.id });
     return rows.length === 1;
   }
-
-  // ============================================
-  // Verify (delivery checker)
-  // ============================================
-  // The verify plan snapshot + rollup status moved off this table onto
-  // `verify_runs` (the session entity), addressed via `VerifyRunModel`. The
-  // `verify_plan` / `verify_status` columns here are deprecated (see schema) and
-  // no longer read or written through this model.
 }

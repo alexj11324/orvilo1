@@ -64,8 +64,6 @@ const EXPANDED_PANEL_WIDTH = 'min(960px, calc(100vw - 16px))';
 
 export interface TopicChatDrawerBodyProps {
   agentId: string;
-  defaultInputExpanded?: boolean;
-  disableInputCollapse?: boolean;
   /**
    * The run to resume streaming from. Hosts that embed the body outside the
    * drawer pass it themselves; the drawer falls back to its own topic's run.
@@ -75,7 +73,7 @@ export interface TopicChatDrawerBodyProps {
 }
 
 export const TopicChatDrawerBody = memo<TopicChatDrawerBodyProps>(
-  ({ agentId, defaultInputExpanded, disableInputCollapse, runningOperation, topicId }) => {
+  ({ agentId, runningOperation, topicId }) => {
     const isLogin = useUserStore(authSelectors.isLogin);
     const useHydrateAgentConfig = useAgentStore((s) => s.useHydrateAgentConfig);
 
@@ -124,10 +122,7 @@ export const TopicChatDrawerBody = memo<TopicChatDrawerBodyProps>(
               <ChatList disableActionsBar itemContent={itemContent} />
             </div>
             <div className="px-3 pt-0 pb-3" style={{ flexShrink: 0 }}>
-              <FeedbackInput
-                defaultExpanded={defaultInputExpanded}
-                disableCollapse={disableInputCollapse}
-              />
+              <FeedbackInput />
             </div>
           </div>
         </TaskCardScopeProvider>

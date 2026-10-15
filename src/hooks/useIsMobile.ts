@@ -1,10 +1,6 @@
 import { useLayoutEffect, useState } from 'react';
 
-import {
-  useResolvedLargeMinWidth,
-  useResolvedMediumMinWidth,
-  useResolvedMobileMaxWidth,
-} from '@/styles/themeRoles';
+import { useResolvedLargeMinWidth, useResolvedMobileMaxWidth } from '@/styles/themeRoles';
 
 function useViewportMediaQuery(query: string, serverSnapshot: boolean): boolean {
   const [matches, setMatches] = useState(serverSnapshot);
@@ -32,10 +28,4 @@ export const useIsMobile = (): boolean => {
 export const useIsLargeViewport = (serverSnapshot = true): boolean => {
   const largeMinWidth = useResolvedLargeMinWidth();
   return useViewportMediaQuery(`(min-width: ${largeMinWidth}px)`, serverSnapshot);
-};
-
-// Acceptance flow tabs retain the former md=false server/first-render contract.
-export const useIsMediumViewport = (): boolean => {
-  const mediumMinWidth = useResolvedMediumMinWidth();
-  return useViewportMediaQuery(`(min-width: ${mediumMinWidth}px)`, false);
 };

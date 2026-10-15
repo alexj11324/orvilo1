@@ -3,15 +3,12 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
-import { AcceptanceModel } from '@/database/models/acceptance';
 import { BriefModel } from '@/database/models/brief';
 import { GoalModel } from '@/database/models/goal';
 import { GoalGraphModel } from '@/database/models/goalGraph';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import { VerifyRunModel } from '@/database/models/verifyRun';
 import {
-  acceptances,
   goalEdges,
   goalEvents,
   goalNodes,
@@ -49,7 +46,6 @@ beforeEach(async () => {
 
 afterEach(async () => {
   vi.restoreAllMocks();
-  await db.delete(acceptances);
   await db.delete(goalEdges);
   await db.delete(goalEvents);
   await db.delete(goalNodes);
@@ -64,7 +60,7 @@ afterEach(async () => {
 });
 
 describe('buildTaskPrompt Goal loop context', () => {
-  it('uses Issue description and comments instead of Acceptance loop feedback for graph work', async () => {
+  it('uses Issue description and reviewer comments for graph work', async () => {
     const taskModel = new TaskModel(db, userId);
     const task = await taskModel.create({
       instruction:
@@ -84,22 +80,6 @@ describe('buildTaskPrompt Goal loop context', () => {
       title: 'Close acceptance gap',
     });
     await graphModel.bindTask(goal.id, taskNode!.id, task.id);
-    const acceptance = await new AcceptanceModel(db, userId).create({
-      subjectType: 'task',
-      subjectId: task.id,
-    });
-    await new VerifyRunModel(db, userId).create({
-      acceptanceId: acceptance.id,
-      roundIndex: 1,
-      metadata: {
-        goalReview: {
-          status: 'rejected',
-          predictionIds: ['prediction-1'],
-          feedback:
-            'The exported document is missing its table. Restore the table and submit fresh evidence.',
-        },
-      },
-    });
     await taskModel.addComment({
       taskId: task.id,
       userId,
@@ -118,11 +98,10 @@ describe('buildTaskPrompt Goal loop context', () => {
     expect(result.prompt).toContain('The exported document must include its table.');
     expect(result.prompt).toContain('Reviewer feedback: restore the exported table.');
     expect(result.prompt).not.toContain('Automatic Acceptance review:');
-    expect(result.goalLoop).toBeUndefined();
   });
 });
 
-describe('buildTaskPrompt delivery acceptance', () => {
+describe('buildTaskPrompt Issue instructions', () => {
   const buildFor = async (taskId: string) => {
     const taskModel = new TaskModel(db, userId);
     const currentTask = await taskModel.findById(taskId);
@@ -135,24 +114,20 @@ describe('buildTaskPrompt delivery acceptance', () => {
     });
   };
 
-  it('uses ordinary Issue review instead of the old acceptance section even with a verify config', async () => {
+  it('renders ordinary Issue instructions without retired engine prompts', async () => {
     const task = await new TaskModel(db, userId).create({
-      config: { verify: { enabled: true, requirement: 'The report is delivered as a document.' } },
       instruction: 'Write the report.',
     });
 
     const result = await buildFor(task.id);
 
     expect(result.prompt).not.toContain('Verify — delivery acceptance');
-    expect(result.acceptanceEnabled).toBe(false);
   });
 
   it('omits the acceptance section for a recurring task', async () => {
-    // A recurring task never gets a verify plan instantiated, so its per-tick
-    // prompt must not ask the builder to self-evidence acceptance criteria.
+    // The recurring prompt uses the published task instruction.
     const task = await new TaskModel(db, userId).create({
       automationMode: 'schedule',
-      config: { verify: { enabled: true, requirement: 'The report is delivered as a document.' } },
       instruction: 'Send the daily report.',
       schedulePattern: '0 9 * * *',
     });

@@ -624,28 +624,6 @@ export class TaskTopicModel {
       .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, topicId), this.ownership()));
   }
 
-  async updateReview(
-    taskId: string,
-    topicId: string,
-    review: {
-      iteration: number;
-      passed: boolean;
-      score: number;
-      scores: any[];
-    },
-  ): Promise<void> {
-    await this.db
-      .update(taskTopics)
-      .set({
-        reviewIteration: review.iteration,
-        reviewPassed: review.passed ? 1 : 0,
-        reviewScore: review.score,
-        reviewScores: review.scores,
-        reviewedAt: new Date(),
-      })
-      .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, topicId), this.ownership()));
-  }
-
   async timeoutRunning(taskId: string): Promise<number> {
     const result = await this.db
       .update(taskTopics)
@@ -982,11 +960,6 @@ export class TaskTopicModel {
         id: topics.id,
         metadata: topics.metadata,
         operationId: taskTopics.operationId,
-        reviewIteration: taskTopics.reviewIteration,
-        reviewPassed: taskTopics.reviewPassed,
-        reviewScore: taskTopics.reviewScore,
-        reviewScores: taskTopics.reviewScores,
-        reviewedAt: taskTopics.reviewedAt,
         seq: taskTopics.seq,
         status: taskTopics.status,
         title: topics.title,

@@ -34,7 +34,6 @@ import { registerTopicCommand } from './commands/topic';
 import { registerTraceCommand } from './commands/trace';
 import { registerUpdateCommand } from './commands/update';
 import { registerUserCommand } from './commands/user';
-import { registerVerifyCommand } from './commands/verify';
 import { registerWorkspaceCommand } from './commands/workspace';
 import { CLI_DISPLAY_NAME, CLI_PRIMARY_BIN, CLI_PRODUCT_NAME } from './constants/identity';
 import { cliVersion } from './pkg';
@@ -100,7 +99,6 @@ export function createProgram() {
   registerPrimeCommand(program);
   registerWorkspaceCommand(program);
   registerUserCommand(program);
-  registerVerifyCommand(program);
   registerConfigCommand(program);
   registerEvalCommand(program);
   registerMigrateCommand(program);

@@ -1,0 +1,39 @@
+{
+  "after": {
+    "tasks": 21,
+    "comments": 9,
+    "agents": 7
+  },
+  "applied": true,
+  "at": "2026-10-13T19:37:33.402Z",
+  "before": {
+    "tasks": 21,
+    "comments": 9,
+    "agents": 7
+  },
+  "database": "orvilo_issue769_qa",
+  "droppedTables": [
+    "acceptance_comments",
+    "acceptance_flow_edges",
+    "acceptance_flow_nodes",
+    "acceptance_flows",
+    "acceptances",
+    "verify_check_results",
+    "verify_criteria",
+    "verify_evidence",
+    "verify_reports",
+    "verify_review_predictions",
+    "verify_rubric_criteria",
+    "verify_rubrics",
+    "verify_runs"
+  ],
+  "elapsedMs": 116.28424999999999,
+  "method": "Exact forward SQL transaction on the isolated QA database; its manually initialized schema has no migration journal history.",
+  "migration": "0212_remove_acceptance_engine.sql",
+  "migrationSha256": "4ae7e7edcd365b0fbc323b723a1114f61d4af8d5a331414d11f97bc0243055c0",
+  "reviewerRule": {
+    "code": "23514",
+    "constraint": "tasks_in_review_reviewer_required"
+  },
+  "sourceCommit": "cd7c40d3350758ad851cda85291602c703fd71e6"
+}

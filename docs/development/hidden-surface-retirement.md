@@ -1,5 +1,10 @@
 # 隐藏产品面退役
 
+> Historical retirement inventory. #777 also removes the previously retained
+> Acceptance engine, panel and evidence tool. Current guards preserve the
+> reviewer Agent, `submitTaskReview` and the database reviewer rule.
+> See [Issue review](issue-review.md).
+
 > 本文件是「隐藏产品面退役」战役的**入口清点表与处置记录**。
 > 产品边界与判据见 [product-scope.md](./product-scope.md)；更早一轮的收敛记录见 [task-first-rollout.md](./task-first-rollout.md)。
 

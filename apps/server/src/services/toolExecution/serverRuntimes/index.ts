@@ -26,8 +26,6 @@ const runtimeLoaders: Record<string, () => Promise<ServerRuntimeRegistration>> =
   'agent-signal-review': async () => (await import('./agentSignalReview')).agentSignalReviewRuntime,
   'agent-signal-skill-management': async () =>
     (await import('./agentSignalSkillManagement')).agentSignalSkillManagementRuntime,
-  'orvilo-acceptance-evidence': async () =>
-    (await import('./acceptanceEvidence')).acceptanceEvidenceRuntime,
   'orvilo-activator': async () => (await import('./activator')).activatorRuntime,
   'orvilo-agent': async () => (await import('./orviloAgent')).orviloAgentRuntime,
   'orvilo-agent-builder': async () => (await import('./agentBuilder')).agentBuilderRuntime,
@@ -55,7 +53,6 @@ const runtimeLoaders: Record<string, () => Promise<ServerRuntimeRegistration>> =
   'orvilo-topic-reference': async () => (await import('./topicReference')).topicReferenceRuntime,
   'orvilo-user-interaction': async () => (await import('./userInteraction')).userInteractionRuntime,
   'orvilo-user-memory': async () => (await import('./memory')).memoryRuntime,
-  'orvilo-verify': async () => (await import('./verifyResult')).verifyResultRuntime,
   'orvilo-web-browsing': async () => (await import('./webBrowsing')).webBrowsingRuntime,
   'orvilo-web-onboarding': async () => (await import('./webOnboarding')).webOnboardingRuntime,
   'orvilo-task': async () => (await import('./task')).taskRuntime,

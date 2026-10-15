@@ -221,8 +221,7 @@ const ends = (change: PropertyChange): { from: unknown; to: unknown } | undefine
   'from' in change && 'to' in change ? { from: change.from, to: change.to } : undefined;
 
 /** Mirrors the server's `session` kinds: saves in one sitting are one entry. */
-const isSessionChange = (change: PropertyChange): boolean =>
-  change.field === 'description' || change.field === 'verify';
+const isSessionChange = (change: PropertyChange): boolean => change.field === 'description';
 
 /**
  * Append a synthesized property row the way the server will show it once it

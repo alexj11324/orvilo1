@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import { acceptanceEvidenceRuntime } from '../acceptanceEvidence';
 import { activatorRuntime } from '../activator';
 import { agentBuilderRuntime } from '../agentBuilder';
 import { agentDocumentsRuntime } from '../agentDocuments';
@@ -32,7 +31,6 @@ import { skillsRuntime } from '../skills';
 import { taskRuntime } from '../task';
 import { topicReferenceRuntime } from '../topicReference';
 import { userInteractionRuntime } from '../userInteraction';
-import { verifyResultRuntime } from '../verifyResult';
 import { webBrowsingRuntime } from '../webBrowsing';
 import { webOnboardingRuntime } from '../webOnboarding';
 
@@ -40,7 +38,6 @@ import { webOnboardingRuntime } from '../webOnboarding';
 // module's registration — a drifted key would make `hasServerRuntime` answer
 // for the wrong tool. Keep this list in sync with `index.ts`'s loaders.
 const ALL_REGISTRATIONS = [
-  acceptanceEvidenceRuntime,
   activatorRuntime,
   agentBuilderRuntime,
   agentDocumentsRuntime,
@@ -71,7 +68,6 @@ const ALL_REGISTRATIONS = [
   taskRuntime,
   topicReferenceRuntime,
   userInteractionRuntime,
-  verifyResultRuntime,
   webBrowsingRuntime,
   webOnboardingRuntime,
 ];

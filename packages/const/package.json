@@ -12,8 +12,7 @@
     "./mediaRef": "./src/mediaRef.ts",
     "./plugin": "./src/plugin.ts",
     "./rbac": "./src/rbac.ts",
-    "./url": "./src/url.ts",
-    "./verify": "./src/verify.ts"
+    "./url": "./src/url.ts"
   },
   "main": "./src/index.ts",
   "dependencies": {

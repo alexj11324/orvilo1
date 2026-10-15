@@ -12,7 +12,7 @@ vi.mock('@orvilo/builtin-tool-task/client/executor', () => ({
 const { goalExecutor } = await import('./index');
 
 const params = {
-  criteria: [{ title: 'It works' }],
+  criteriaDescription: 'It works',
   instruction: 'do the thing',
   name: 'A goal',
 };

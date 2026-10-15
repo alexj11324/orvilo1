@@ -9,7 +9,6 @@
 export const goalStatuses = [
   'planning',
   'running',
-  'verifying',
   'review',
   'paused',
   'achieved',
@@ -44,13 +43,6 @@ export type GoalSubjectType = (typeof goalSubjectTypes)[number];
 export const GOAL_COORDINATOR_ACTOR_ID = 'goal-coordinator';
 
 /**
- * Fixed title of the terminal Goal-acceptance Work the coordinator creates
- * once every other Work is terminal. Stored in English as data; clients
- * recognize it and render the localized copy (`goalProcess.node.terminalAcceptance`).
- */
-export const GOAL_ACCEPTANCE_TASK_TITLE = 'Complete full Goal acceptance';
-
-/**
  * Task error strings the Goal coordinator matches on to route a paused Task.
  *
  * These are a contract between whoever pauses a Task and the coordinator that
@@ -59,46 +51,9 @@ export const GOAL_ACCEPTANCE_TASK_TITLE = 'Complete full Goal acceptance';
  * stops a long-horizon goal until a person clicks retry.
  */
 export const LEASE_EXPIRED_ERROR = 'Goal Task operation lease expired.';
-/** The verifier ran and judged the delivery short of the criteria. */
-export const VERIFICATION_FAILED_ERROR = 'Delivery did not pass verification.';
-/** The verifier itself could not run, so the delivery was never evaluated. */
-export const VERIFICATION_ERRORED_ERROR =
-  'Verification could not run (internal error); the delivery was not evaluated.';
-/**
- * The review read the evidence and found the criterion undecidable from it — it
- * asks for an action the review layer cannot perform (re-running the delivered
- * scripts, building, driving a live system).
- *
- * Deliberately has NO recovery branch, so it falls through to the human gate.
- * Another attempt cannot help: the builder would re-deliver the same artifacts
- * against the same unprovable criterion, which is how one such check ate an
- * entire attempt budget before this outcome existed.
- */
-export const VERIFICATION_UNJUDGEABLE_ERROR =
-  'Acceptance review could not judge the delivery from evidence alone; the criterion needs a judge that can act on the system.';
-/**
- * The delivery's own verifiers ran and passed, but the Acceptance review layered
- * on top of them could not run — a provider outage that outlived the in-place
- * retry, a reviewer without credentials, an artifact the review model could not
- * open.
- *
- * Deliberately has NO recovery branch. Recovering it like a rejection started a
- * fresh builder attempt, which re-delivered into the same broken review and spent
- * the Task's attempt budget without the delivery ever being judged.
- */
-export const ACCEPTANCE_REVIEW_ERRORED_ERROR =
-  'Acceptance review could not run; the delivery passed its verifiers but was never reviewed.';
-/**
- * The delivery passed verification, but the agent was configured for the
- * Aegis method pack and its completion evidence is missing, malformed or
- * low-confidence — so the run must not auto-complete.
- *
- * Deliberately has NO recovery branch: it falls through to the human
- * decision gate, which is the advisory "requires review" downgrade. The
- * verify verdict itself is unchanged — server-side verification stays
- * authoritative; this only withholds auto-accept. A retry could produce the
- * same missing evidence again, so retrying automatically would just spend
- * the attempt budget.
- */
-export const AEGIS_EVIDENCE_REQUIRED_ERROR =
-  'Delivery passed verification, but the Aegis completion evidence is missing or low-confidence; requires human review.';
+
+/** Default attempt budget for each Issue dispatched by a Goal. */
+export const DEFAULT_GOAL_MAX_ROUNDS = 3;
+
+/** Bounds for a Goal's per-Issue attempt budget. */
+export const GOAL_MAX_ROUNDS_RANGE = { max: 10, min: 2 } as const;

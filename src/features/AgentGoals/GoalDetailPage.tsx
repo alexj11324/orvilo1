@@ -150,9 +150,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
   // explicitly paused). A goal in review awaits the human, and a closed goal
   // cannot move — pausing either would be a dead or misleading button.
   const canPause =
-    canEdit &&
-    nodes.length > 0 &&
-    ['paused', 'planning', 'running', 'verifying'].includes(goal.status);
+    canEdit && nodes.length > 0 && ['paused', 'planning', 'running'].includes(goal.status);
 
   const durationText = goal.startedAt
     ? formatSpan((goal.completedAt ?? new Date()).getTime() - goal.startedAt.getTime())

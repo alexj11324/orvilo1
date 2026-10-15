@@ -16,7 +16,6 @@ describe('deriveOperationGoals', () => {
         {
           apiName: 'createGoal',
           arguments: JSON.stringify({
-            criteria: [{ title: 'Four lines' }, { title: 'No English' }],
             maxIterations: 3,
             name: 'San Francisco night fog',
           }),
@@ -37,9 +36,7 @@ describe('deriveOperationGoals', () => {
       ]),
     ]);
 
-    expect(goals).toEqual([
-      { criteriaCount: 2, goalId: 'goal-41', name: 'San Francisco night fog' },
-    ]);
+    expect(goals).toEqual([{ goalId: 'goal-41', name: 'San Francisco night fog' }]);
   });
 
   it('ignores pending, failed, and non-Goal tool calls', () => {

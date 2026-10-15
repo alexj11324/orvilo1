@@ -28,7 +28,6 @@ import { useAgentStore } from '@/store/agent';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
-import { selectCurrentTurnTodosFromMessages } from '@/store/chat/slices/message/selectors/dbMessage';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { fileChatSelectors, useFileStore } from '@/store/file';
 
@@ -49,9 +48,6 @@ import {
   getConversationChatInputUiState,
   toChatInputMessages,
 } from './utils';
-import GoalArmedChip from './VerifyTray/GoalArmedChip';
-import { useGoalArmStore } from './VerifyTray/goalArmStore';
-import GoalTray from './VerifyTray/GoalTray';
 import { canSendVoiceMessage, useCanSendVoiceMessage } from './voiceMessageCapability';
 
 /** Max recent messages to feed into auto-complete context (≈10 conversation turns) */
@@ -313,17 +309,6 @@ const ChatInput = memo<ChatInputProps>(
       (s) => operationSelectors.queuedMessageCount(context)(s) > 0,
     );
 
-    // Detect whether TodoProgress will render (mirrors its own gating) so we
-    // can square the top corners of GoalTray when it sits flush below.
-    const hasTodos = (selectCurrentTurnTodosFromMessages(dbMessages)?.items.length ?? 0) > 0;
-
-    // Pre-topic "armed goal" state (topic Goal lab). `armedAt` is only ever set
-    // by the lab-gated "+" → Goal entry, so its presence already implies the
-    // lab is on. While armed the goal chip rides the action bar and the composer
-    // placeholder prompts for the goal (the next message becomes it).
-    const goalArmedAt = useGoalArmStore((s) => (agentId ? s.armedAt[agentId] : undefined));
-    const goalArmed = !!agentId && !context.topicId && goalArmedAt !== undefined;
-
     // Computed state
     const isInputEmpty = !inputMessage.trim() && fileList.length === 0 && contextList.length === 0;
     const { placeholderVariant, showSendMenu, showStopButton } = getConversationChatInputUiState({
@@ -529,22 +514,15 @@ const ChatInput = memo<ChatInputProps>(
           >
             {!disableQueue && hasQueuedMessages && <QueueTray />}
             <TodoProgress topAttached={!disableQueue && hasQueuedMessages} />
-            <GoalTray topAttached={(!disableQueue && hasQueuedMessages) || hasTodos} />
           </div>
-          {/* Append the armed-goal chip to every composer's action bar. While armed,
-              the next message becomes the goal and the placeholder explains that state. */}
           {chatbotSurface ? (
             <ChatbotComposer
               controlBarSlot={controlBarSlot}
-              extraContent={<GoalArmedChip />}
               hidden={hasBottomInterventions}
               isConfigLoading={isConfigLoading}
               placeholderVariant={placeholderVariant}
               sendAreaPrefix={businessSendAreaPrefix}
               showControlBar={showControlBar}
-              placeholder={
-                goalArmed ? t('acceptance.tray.goalArmedPlaceholder', { ns: 'verify' }) : undefined
-              }
               primaryContent={
                 <>
                   {leftContent}
@@ -563,19 +541,13 @@ const ChatInput = memo<ChatInputProps>(
               controlBarInCard={controlBarInCard}
               controlBarSlot={controlBarSlot}
               editorDefaultRows={editorDefaultRows}
+              extraActionItems={extraActionItems}
               hidden={hasBottomInterventions}
               isConfigLoading={isConfigLoading}
               leftContent={leftContent}
               placeholderVariant={placeholderVariant}
               sendAreaPrefix={businessSendAreaPrefix}
               showControlBar={showControlBar}
-              extraActionItems={[
-                ...(extraActionItems ?? []),
-                { children: <GoalArmedChip />, key: 'goal-armed-chip' },
-              ]}
-              placeholder={
-                goalArmed ? t('acceptance.tray.goalArmedPlaceholder', { ns: 'verify' }) : undefined
-              }
             />
           )}
         </div>

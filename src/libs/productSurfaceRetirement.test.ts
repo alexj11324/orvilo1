@@ -9,17 +9,9 @@
  * surface back. It reads the wiring files as text, which is deliberate: it is
  * asserting on the *shape of the repository*, not on runtime behaviour.
  *
- * It is deliberately symmetric. Retiring a product surface means two things go
- * away (the entry points and the distribution chain) and two things stay (the
- * task-scoped capability and the engine behind it). A gate that only checked
- * the first half would happily pass a change that also destroyed the second,
- * so both halves are asserted here:
- *
- *   must be gone  — the standalone platform's entries and its install chain
- *   must stay     — the run-scoped evidence tool and the completion-gate engine
- *
- * See `docs/development/hidden-surface-retirement.md` for the inventory this
- * mirrors.
+ * The inherited engine, entries and distribution chain are removed together.
+ * Ordinary Issue review and the runtime's unrelated skills remain available.
+ * See `docs/development/issue-review.md` for the replacement flow.
  */
 import { lstatSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -57,11 +49,14 @@ describe('retired product surfaces stay retired', () => {
       const program = read('apps/cli/src/program.ts');
 
       expect(program).not.toContain('registerAcceptanceCommands');
+      expect(program).not.toContain('registerVerifyCommands');
 
       for (const file of [
         'apps/cli/src/commands/acceptanceFlow.ts',
         'apps/cli/src/commands/acceptanceRun.ts',
         'apps/cli/src/commands/verifyAcceptance.ts',
+        'apps/cli/src/commands/verify.ts',
+        'apps/cli/src/commands/verifyHelpers.ts',
       ]) {
         expect(exists(file), `${file} is back`).toBe(false);
       }
@@ -106,39 +101,47 @@ describe('retired product surfaces stay retired', () => {
     });
   });
 
-  describe('the task-scoped capability is untouched', () => {
-    // These are the two halves that a careless "delete everything named
-    // acceptance" pass would destroy. Both are load-bearing for the completion
-    // gate: `runStructuralGate` marks a check `uncertain` when a declared
-    // `requiredEvidence` artifact is missing, and the executing agent supplies
-    // that artifact through the builtin tool below.
-    it('keeps the run-scoped evidence tool', () => {
-      expect(exists('packages/builtin-tool-acceptance-evidence/src/manifest.ts')).toBe(true);
-      expect(read('packages/builtin-tools/src/identifiers.ts')).toContain(
+  describe('Issue review replaces the inherited engine', () => {
+    it('removes the old verdict and evidence tool packages', () => {
+      expect(exists('packages/builtin-tool-acceptance-evidence')).toBe(false);
+      expect(exists('packages/builtin-tool-verify')).toBe(false);
+      expect(read('packages/builtin-tools/src/identifiers.ts')).not.toContain(
         'AcceptanceEvidenceManifest',
       );
     });
 
-    it('keeps the completion-gate engine', () => {
+    it('removes the old engine and tables', () => {
       for (const file of [
-        'apps/server/src/services/verify/acceptanceService.ts',
-        'apps/server/src/services/verify/executor.ts',
-        'apps/server/src/services/verify/settle.ts',
-        'apps/server/src/services/verify/statusService.ts',
+        'apps/server/src/services/verify',
+        'packages/database/src/schemas/verify.ts',
+        'packages/database/src/schemas/acceptanceComment.ts',
+        'packages/database/src/schemas/acceptanceFlow.ts',
       ]) {
-        expect(exists(file), `${file} is gone`).toBe(true);
+        expect(exists(file), `${file} is back`).toBe(false);
       }
     });
 
-    it('keeps the task-side acceptance panel', () => {
+    it('removes the task-side acceptance panel', () => {
       for (const file of [
+        'src/features/Acceptance',
         'src/features/AgentTasks/AgentTaskDetail/TaskAcceptanceStateRow.tsx',
         'src/features/AgentTasks/AgentTaskDetail/useOpenAcceptanceInPanel.ts',
         'src/features/Portal/Acceptance/index.ts',
         'src/features/GlobalOverlays/AcceptancePortalDrawer.tsx',
       ]) {
-        expect(exists(file), `${file} is gone`).toBe(true);
+        expect(exists(file), `${file} is back`).toBe(false);
       }
+    });
+
+    it('keeps Agent review and the database reviewer rule', () => {
+      expect(exists('apps/server/src/services/task/review.ts')).toBe(true);
+      expect(read('packages/builtin-tool-task/src/manifest.ts')).toContain(
+        'name: TaskApiName.submitTaskReview',
+      );
+      expect(read('packages/database/src/schemas/task.ts')).toContain(
+        'tasks_in_review_reviewer_required',
+      );
+      expect(read('packages/database/src/schemas/task.ts')).toContain('reviewerAgentId');
     });
 
     it('keeps the builtin skills the runtime still injects', () => {

@@ -75,7 +75,7 @@ describe('reviewer assignment after delivery', () => {
         agentId: 'orchestrator',
         additionalPluginIds: ['orvilo-task'],
         appContext: { taskId: 'task-1' },
-        skipTaskVerification: true,
+
         prompt: expect.stringContaining('canReviewIssues=true'),
       }),
     );
@@ -131,11 +131,11 @@ describe('reviewer assignment after delivery', () => {
   });
   it('an unsupported reviewer keeps delivery waiting without checks', async () => {
     mocks.findById.mockResolvedValue({ ...task, reviewerAgentId: 'reviewer' });
-    mocks.resolveIssueReviewer.mockRejectedValueOnce(new Error('cannot mount submitVerifyResult'));
+    mocks.resolveIssueReviewer.mockRejectedValueOnce(new Error('cannot mount submitTaskReview'));
     await resumeReviewerAssignment(db, 'user-1', 'task-1', 'ws-1');
     expect(mocks.updateWithLog).toHaveBeenCalledWith(
       'task-1',
-      { error: expect.stringContaining('cannot mount submitVerifyResult') },
+      { error: expect.stringContaining('cannot mount submitTaskReview') },
       {},
       { expectedDomainRevision: 5 },
     );

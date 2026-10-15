@@ -9,8 +9,6 @@ import {
   CircleSlash,
   CircleX,
   LoaderCircle,
-  RefreshCw,
-  RotateCcw,
   Stamp,
   Target,
 } from 'lucide-react';
@@ -42,10 +40,7 @@ const PHASE_META = {
   awaitingReview: { color: 'var(--warning)', icon: Stamp, settled: true },
   closed: { color: 'var(--ant-color-text-tertiary)', icon: CircleSlash, settled: true },
   errored: { color: 'var(--destructive)', icon: CircleX, settled: true },
-  rejected: { color: 'var(--destructive)', icon: RotateCcw, settled: false },
-  repairing: { color: 'var(--warning)', icon: RefreshCw, settled: false },
   running: { color: 'var(--info)', icon: LoaderCircle, settled: false },
-  verifying: { color: 'var(--info)', icon: LoaderCircle, settled: false },
 } as const;
 
 type PhaseKey = keyof typeof PHASE_META;
@@ -67,15 +62,6 @@ const phaseLabel = (t: TFunction<'plugin'>, phase: PhaseKey): string => {
     }
     case 'errored': {
       return t('builtins.orvilo-task.goal.phase.errored');
-    }
-    case 'rejected': {
-      return t('builtins.orvilo-task.goal.phase.rejected');
-    }
-    case 'repairing': {
-      return t('builtins.orvilo-task.goal.phase.repairing');
-    }
-    case 'verifying': {
-      return t('builtins.orvilo-task.goal.phase.verifying');
     }
     case 'running': {
       return t('builtins.orvilo-task.goal.running');
@@ -109,9 +95,6 @@ const resolvePhase = (status: GoalStatus | undefined, pendingDecisions: number):
     }
     case 'review': {
       return 'awaitingReview';
-    }
-    case 'verifying': {
-      return 'verifying';
     }
     default: {
       return 'running';
@@ -162,10 +145,7 @@ const CreateGoalRender = memo<BuiltinRenderProps<CreateGoalParams, CreateGoalSta
           onClick={openGoal}
         >
           {createElement(meta.icon, {
-            className:
-              phase === 'running' || phase === 'verifying' || phase === 'repairing'
-                ? 'animate-spin'
-                : undefined,
+            className: phase === 'running' ? 'animate-spin' : undefined,
             size: 15,
             style: { color: meta.color },
           })}
@@ -181,9 +161,7 @@ const CreateGoalRender = memo<BuiltinRenderProps<CreateGoalParams, CreateGoalSta
             <div className="text-xs text-muted-foreground">
               {meta.settled
                 ? t('builtins.orvilo-task.goal.settledHint')
-                : t('builtins.orvilo-task.goal.runningHint', {
-                    count: args?.criteria?.length ?? 0,
-                  })}
+                : t('builtins.orvilo-task.goal.runningHint')}
             </div>
           </div>
         </div>

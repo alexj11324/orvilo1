@@ -38,9 +38,6 @@ export const TaskApiName = {
   /** Configure (or clear) the recurring schedule of a task */
   setTaskSchedule: 'setTaskSchedule',
 
-  /** Configure (or clear) the delivery-acceptance (verify) gate of a task */
-  setTaskVerify: 'setTaskVerify',
-
   /** Record the current reviewer Agent's verdict on an Issue. */
   submitTaskReview: 'submitTaskReview',
 
@@ -88,18 +85,8 @@ export interface CreateTaskState {
 
 // ==================== createGoal ====================
 
-export interface GoalCriterionDraft {
-  description?: string;
-  instruction?: string;
-  onFail?: 'auto_repair' | 'manual';
-  required?: boolean;
-  title: string;
-  verifierConfig?: Record<string, unknown>;
-  verifierType?: 'agent' | 'llm' | 'program';
-}
-
 export interface CreateGoalParams {
-  criteria: GoalCriterionDraft[];
+  criteriaDescription: string;
   /** ISO-8601 calendar-time budget; past it the coordinator stops dispatching. */
   deadline?: string | null;
   instruction: string;
@@ -304,29 +291,6 @@ export interface SetTaskScheduleParams {
 
 export interface SetTaskScheduleState {
   automationMode?: TaskAutomationMode | null;
-  identifier: string;
-  success: boolean;
-}
-
-// ==================== setTaskVerify ====================
-
-export interface SetTaskVerifyParams {
-  /** Turn the verify gate on/off. Pass null to clear the flag. */
-  enabled?: boolean | null;
-  identifier: string;
-  /** Cap on verify repair / re-run iterations (1-10). Pass null to clear. */
-  maxIterations?: number | null;
-  /** One-sentence acceptance requirement; the source criteria are synthesized from. Pass null to clear. */
-  requirement?: string | null;
-  /** Agent that executes the verify run. Pass null to fall back to the built-in verify agent. */
-  /** Ad-hoc acceptance criteria ids (references verify_criteria.id). Pass null to clear. */
-  verifyCriteriaIds?: string[] | null;
-  /** Reuse a rubric template (references verify_rubrics.id). Pass null to clear. */
-  verifyRubricId?: string | null;
-}
-
-export interface SetTaskVerifyState {
-  enabled?: boolean | null;
   identifier: string;
   success: boolean;
 }

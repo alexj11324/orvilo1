@@ -11,7 +11,6 @@ import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { hasActiveExecution, isExecutionParked } from '@/database/models/taskExecutionSql';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { IntegrationLeaseItem } from '@/database/schemas';
 import { integrationLeases } from '@/database/schemas';
 import type { RepoRefLeaseOutcomeContext } from '@/database/schemas/integrationLease';
@@ -29,7 +28,6 @@ import {
 import { TaskRunnerService } from '@/server/services/taskRunner';
 import { taskRunIdempotencyKey } from '@/server/services/taskRunner/idempotency';
 import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
-import { runVerifyOnCompletion } from '@/server/services/verify';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
 const log = debug('task-integration');
@@ -254,7 +252,7 @@ export class TaskIntegrationService {
 
   /**
    * Freeze a sandbox run's remote delivery identity at the terminal callback
-   * boundary, before handoff generation or verification can introduce a delay.
+   * boundary, before handoff generation can introduce a delay.
    * Later integration checks may observe the remote again, but they can only
    * compare against these accepted head/base/PR values.
    */
@@ -295,7 +293,6 @@ export class TaskIntegrationService {
     completionReservationId?: string;
     task: TaskItem;
     taskTopicId: string;
-    verifyOperationId?: string;
   }): Promise<IntegrationOutcome> {
     const { taskTopicId } = params;
 
@@ -339,18 +336,7 @@ export class TaskIntegrationService {
 
     try {
       const taskTopic = owner.topic;
-      const storedRecord = taskTopic?.integration;
-      const record = storedRecord
-        ? {
-            ...storedRecord,
-            verifyOperationId: params.verifyOperationId ?? storedRecord.verifyOperationId,
-          }
-        : undefined;
-      if (record && params.verifyOperationId !== storedRecord?.verifyOperationId) {
-        await this.updateIntegrationOrThrow(task.id, taskTopicId, {
-          verifyOperationId: params.verifyOperationId,
-        });
-      }
+      const record = taskTopic?.integration;
       if (
         !record ||
         !taskTopic?.topicId ||
@@ -563,7 +549,6 @@ export class TaskIntegrationService {
         completionReservationId?: string;
         task: TaskItem;
         taskTopicId: string;
-        verifyOperationId?: string;
       };
       taskId: string;
       topicId: string;
@@ -609,7 +594,6 @@ export class TaskIntegrationService {
             completionReservationId: ctx.params.completionReservationId,
             task: ctx.params.task,
             taskTopicId: ctx.params.taskTopicId,
-            verifyOperationId: ctx.params.verifyOperationId,
           });
         });
         return 'hold';
@@ -1280,7 +1264,7 @@ export class TaskIntegrationService {
     }
     if (check.merged) {
       await this.landRemoteMerge(task.id, topicId, record, check);
-      return (await this.scheduleDeferredVerify(task, record)) ? 'hold' : 'settled';
+      return 'settled';
     }
     if (check.error) {
       await this.updateIntegrationOrThrow(task.id, topicId, {
@@ -1316,7 +1300,7 @@ export class TaskIntegrationService {
 
     if (check.merged) {
       await this.landRemoteMerge(task.id, topicId, record, check);
-      return (await this.scheduleDeferredVerify(task, record)) ? 'hold' : 'settled';
+      return 'settled';
     }
 
     if (check.error) {
@@ -1608,7 +1592,7 @@ export class TaskIntegrationService {
     });
     const outcome = await this.publishAndCleanup(task.id, record, sha, lease);
     if (outcome !== 'settled') return outcome;
-    return (await this.scheduleDeferredVerify(task, record)) ? 'hold' : outcome;
+    return outcome;
   }
 
   /**
@@ -1863,7 +1847,6 @@ export class TaskIntegrationService {
       // can finish inside runTask's callback replay; writing this afterward
       // would regress an already integrated row back to merging/conflict.
       state: 'conflict',
-      verifyOperationId: record.verifyOperationId,
     });
 
     const runner = new TaskRunnerService(this.db, this.userId, this.workspaceId);
@@ -1884,7 +1867,7 @@ export class TaskIntegrationService {
       },
       parentOperationId: originalRun?.operationId ?? undefined,
       replaceReservationId: completionReservationId,
-      skipTaskVerification: true,
+
       idempotencyKey: taskRunIdempotencyKey.integrationCorrection({
         attempt: attempts,
         taskId: task.id,
@@ -1949,7 +1932,7 @@ export class TaskIntegrationService {
         .find((t) => t.status === 'completed' && t.topicId);
       // Mutation-boundary re-verification (SA05-A): the recorded delivery must
       // still be the upstream's current claim — same topic, same dispatch, same
-      // acceptance operation, and the upstream's live execution generation
+      // operation, and the upstream's live execution generation
       // still equal to the generation the delivery belongs to. Fields absent
       // from receipts persisted before this binding existed are skipped.
       const receiptDelivery = receipt.delivery;
@@ -1964,9 +1947,7 @@ export class TaskIntegrationService {
             (receiptDelivery.dispatchId === undefined ||
               delivered.dispatchId === receiptDelivery.dispatchId) &&
             (receiptDelivery.executionGeneration === undefined ||
-              delivered.executionGeneration === receiptDelivery.executionGeneration) &&
-            (receiptDelivery.verifyOperationId === undefined ||
-              delivered.integration?.verifyOperationId === receiptDelivery.verifyOperationId)));
+              delivered.executionGeneration === receiptDelivery.executionGeneration)));
       if (!stillValid) return receipt;
     }
     return undefined;
@@ -2005,48 +1986,6 @@ export class TaskIntegrationService {
       current = byTopicId.get(ownerTopicId);
     }
     return ownerTopicId;
-  }
-
-  /**
-   * A completion whose integration previously held never reached the runtime's
-   * normal verify scheduler. Once recovery or a corrective run publishes the
-   * branch, resume the original run's confirmed Verify plan and keep this
-   * lifecycle invocation from settling the Task independently.
-   */
-  private async scheduleDeferredVerify(
-    task: TaskItem,
-    record: TaskTopicIntegration,
-  ): Promise<boolean> {
-    const rows = await this.taskTopicModel.findByTaskId(task.id);
-    const originalRun = rows.find(
-      (row) =>
-        row.operationId &&
-        row.integration?.branch === record.branch &&
-        row.integration.role === 'task',
-    );
-    if (!originalRun?.operationId) return false;
-
-    const verifyRun = await new VerifyRunModel(
-      this.db,
-      this.userId,
-      this.workspaceId,
-    ).findByOperation(originalRun.operationId);
-    if (!verifyRun?.planConfirmedAt) return false;
-
-    const handoff = originalRun.handoff as { content?: string } | null;
-    after(() =>
-      runVerifyOnCompletion(
-        this.db,
-        this.userId,
-        {
-          deliverable: handoff?.content ?? '',
-          goal: task.instruction,
-          operationId: originalRun.operationId!,
-        },
-        this.workspaceId,
-      ),
-    );
-    return true;
   }
 
   /**
@@ -2113,7 +2052,7 @@ export class TaskIntegrationService {
           // The merge proof landed but the task never transitioned (a deferred
           // re-entry dropped with its process, or a hold outlived the request):
           // finish it here.
-          await this.completeDeferredIntegration(task, record);
+          await this.completeDeferredIntegration(task, row.topicId);
           result.completed.push(task.identifier);
           continue;
         }
@@ -2124,7 +2063,7 @@ export class TaskIntegrationService {
         } else if (outcome === 'settled') {
           const refreshed = (await this.taskTopicModel.findByTopicId(row.topicId))?.integration;
           if (refreshed?.state === 'integrated') {
-            await this.completeDeferredIntegration(task, refreshed);
+            await this.completeDeferredIntegration(task, row.topicId);
             result.completed.push(task.identifier);
           } else {
             result.held.push(task.identifier);
@@ -2139,27 +2078,22 @@ export class TaskIntegrationService {
     return result;
   }
 
-  /**
-   * Terminal transition for a deferred/swept integration that settled: a bound
-   * verify plan owns completion (same redirect as the lifecycle gate);
-   * otherwise the task completes here — mirroring how the delivery-review
-   * sweep completes repo-bound rows.
-   */
-  private async completeDeferredIntegration(
-    task: TaskItem,
-    record: TaskTopicIntegration,
-  ): Promise<void> {
-    if (record.verifyOperationId) {
-      const { driveTaskFromVerify } = await import('../verify/settle');
-      await driveTaskFromVerify(this.db, this.userId, record.verifyOperationId, this.workspaceId);
-      return;
-    }
-    // TaskService statically imports this service — keep the edge dynamic so
-    // module initialization stays acyclic.
-    const { TaskService } = await import('../task');
-    await new TaskService(this.db, this.userId, this.workspaceId).updateStatus({
-      id: task.id,
-      status: 'completed',
-    });
+  /** Settle the stored delivery through the same Issue review path as normal completion. */
+  private async completeDeferredIntegration(task: TaskItem, topicId: string): Promise<void> {
+    const topic = await this.taskTopicModel.findByTopicId(topicId);
+    const { settleTaskExecution } = await import('../taskSettlement');
+    await settleTaskExecution(
+      this.db,
+      this.userId,
+      {
+        taskId: task.id,
+        operationId: topic?.operationId ?? undefined,
+        executionGeneration: topic?.executionGeneration ?? undefined,
+        dispatchFence: topic?.dispatchFence ?? undefined,
+        outcome: 'succeeded',
+        context: { expectedStatus: task.status, throughTaskService: true },
+      },
+      this.workspaceId,
+    );
   }
 }

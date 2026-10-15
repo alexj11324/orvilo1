@@ -21,9 +21,6 @@ const {
   authorize,
   sign,
   end,
-  decision,
-  reviewer,
-  runDecision,
   composePrime,
   issueTask,
   repairCurrent,
@@ -36,9 +33,6 @@ const {
   authorize: vi.fn(),
   sign: vi.fn(),
   end: vi.fn(),
-  decision: vi.fn(),
-  reviewer: vi.fn(),
-  runDecision: vi.fn(),
   composePrime: vi.fn(),
   issueTask: vi.fn(),
   repairCurrent: vi.fn(),
@@ -110,12 +104,6 @@ vi.mock('@/database/models/task', () => ({
 vi.mock('@/server/services/task/review', () => ({
   readIssueReview: (task: { config?: { issueReview?: unknown } }) => task.config?.issueReview,
 }));
-vi.mock('@/database/models/verifyRun', () => ({
-  VerifyRunModel: class {
-    findByOperation = async () => ({ userDecision: runDecision() });
-  },
-}));
-vi.mock('@/server/services/verify/reviewerAgent', () => ({ resolveIssueReviewer: reviewer }));
 vi.mock('@/database/models/message', () => ({ MessageModel: class {} }));
 vi.mock('@/database/models/topic', () => ({
   TopicModel: class {
@@ -162,7 +150,7 @@ const db = {
       where: () => ({
         limit: async () =>
           columns
-            ? [{ userDecision: decision() }]
+            ? [{ userDecision: null }]
             : [...rows.values()]
                 .filter(
                   (row) =>
@@ -189,11 +177,11 @@ const payload: DeviceQueuePayload = {
 };
 const hooks = [
   {
-    id: 'reviewer-terminal',
+    id: 'task-on-complete',
     type: 'onComplete',
     webhook: {
-      body: { checkItemId: 'check', parentOperationId: 'parent' },
-      url: '/api/workflows/verify/on-verifier-complete',
+      body: { taskId: 'task' },
+      url: '/api/workflows/task/on-topic-complete',
     },
   },
 ];
@@ -216,21 +204,15 @@ describe('ordinary offline device queue', () => {
     sign.mockResolvedValue('fresh-secret');
     complete.mockResolvedValue(undefined);
     end.mockResolvedValue(undefined);
-    decision.mockReturnValue(null);
-    runDecision.mockReturnValue(null);
-    reviewer.mockResolvedValue('agent');
+
     savedAgentConfig.mockResolvedValue(undefined);
     rows.set('parent', { id: 'parent', taskId: 'task', userId: 'user' } as AgentOperationItem);
   });
 
-  it('resumes the original ordinary/verifier operation with its prompt, device, hooks, and fresh authorization', async () => {
+  it('resumes the original ordinary operation with its prompt, device, hooks, and fresh authorization', async () => {
     expect(await queueOfflineDeviceRun(db, 'user', 'original-op', payload)).toBe(true);
     const stored = rows.get('original-op')!;
     expect(stored.status).toBe('idle');
-    expect(readDeviceQueue(stored.metadata)?.verifyCheck).toEqual({
-      parentOperationId: 'parent',
-      checkItemId: 'check',
-    });
     expect(JSON.stringify(stored.metadata)).not.toContain('fresh-secret');
     await Promise.all([sweepQueuedDeviceOperations({ db }), sweepQueuedDeviceOperations({ db })]);
     expect(dispatch).toHaveBeenCalledTimes(1);
@@ -328,44 +310,11 @@ describe('ordinary offline device queue', () => {
     expect(complete).toHaveBeenCalledTimes(1);
   });
 
-  it('never launches a queued run canceled by a person or an accepted check', async () => {
+  it('never launches a queued run canceled by a person', async () => {
     await queueOfflineDeviceRun(db, 'user', 'original-op', payload);
     expect(await cancelQueuedDeviceOperation(db, 'user', 'original-op')).toBe(true);
     await sweepQueuedDeviceOperations({ db });
     expect(dispatch).not.toHaveBeenCalled();
-    expect(rows.get('original-op')?.status).toBe('interrupted');
-  });
-
-  it('does not send a queued check when its manual decision lands during launch preparation', async () => {
-    await queueOfflineDeviceRun(db, 'user', 'original-op', payload);
-    sign.mockImplementation(async () => {
-      decision.mockReturnValue('accepted');
-      return 'fresh-secret';
-    });
-    await sweepQueuedDeviceOperations({ db });
-    expect(dispatch).not.toHaveBeenCalled();
-    expect(rows.get('original-op')?.status).toBe('interrupted');
-  });
-
-  it.each(['replacement', null])(
-    'cancels the parked check when its Issue reviewer becomes %s',
-    async (nextReviewer) => {
-      await queueOfflineDeviceRun(db, 'user', 'original-op', payload);
-      if (nextReviewer) reviewer.mockResolvedValue(nextReviewer);
-      else reviewer.mockRejectedValue(new Error('Set a reviewer Agent on the Issue.'));
-      await sweepQueuedDeviceOperations({ db });
-      expect(dispatch).not.toHaveBeenCalled();
-      expect(sign).not.toHaveBeenCalled();
-      expect(rows.get('original-op')?.status).toBe('interrupted');
-    },
-  );
-
-  it('cancels the parked check after an aggregate manual decision', async () => {
-    await queueOfflineDeviceRun(db, 'user', 'original-op', payload);
-    runDecision.mockReturnValue('accepted');
-    await sweepQueuedDeviceOperations({ db });
-    expect(dispatch).not.toHaveBeenCalled();
-    expect(sign).not.toHaveBeenCalled();
     expect(rows.get('original-op')?.status).toBe('interrupted');
   });
 
@@ -392,6 +341,29 @@ describe('ordinary offline device queue', () => {
       expect(operation.status).toBe('interrupted');
     },
   );
+
+  it('fences an Issue review cycle changed while its saved env is loaded', async () => {
+    const operation = rows.get('original-op')!;
+    operation.taskId = 'task';
+    operation.appContext = { issueReviewCycleId: 'cycle' };
+    issueTask.mockResolvedValue({
+      workflowCategory: 'in_review',
+      reviewerAgentId: 'agent',
+      config: { issueReview: { cycleId: 'cycle', reviewerOperationId: 'original-op' } },
+    });
+    savedAgentConfig.mockImplementation(async () => {
+      issueTask.mockResolvedValue({
+        workflowCategory: 'in_review',
+        reviewerAgentId: 'agent',
+        config: { issueReview: { cycleId: 'replacement', reviewerOperationId: 'original-op' } },
+      });
+      return { agencyConfig: { heterogeneousProvider: { type: 'opencode', env: {} } } };
+    });
+    await queueOfflineDeviceRun(db, 'user', 'original-op', payload);
+    await sweepQueuedDeviceOperations({ db });
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(operation.status).toBe('interrupted');
+  });
 
   it('fences an invalidated automatic repair before reconnect launch', async () => {
     const operation = rows.get('original-op')!;

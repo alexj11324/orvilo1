@@ -292,8 +292,7 @@ export interface ListByWorkspaceParams {
 
 // Not exported: only used as this module's own return-type annotation. The
 // service layer (`src/services/work.ts`) names its own `WorkSummaryPage` for
-// client consumption, mirroring how `VerifyReportSummaryPage` is named once,
-// at the service boundary, rather than duplicated from the db layer.
+// client consumption at the service boundary.
 interface WorkSummaryPage {
   items: WorkSummaryItem[];
   nextCursor: string | null;

@@ -215,7 +215,7 @@ export interface InternalExecAgentParams extends ExecAgentParams {
    * still belong to the task, but must not instantiate a second Verify plan;
    * the original task operation remains the delivery authority.
    */
-  skipTaskVerification?: boolean;
+
   /**
    * Whether the LLM call should use streaming.
    * Defaults to true. Set to false for non-streaming scenarios (e.g., bot integrations).

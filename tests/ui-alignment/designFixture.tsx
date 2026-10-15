@@ -20,7 +20,6 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { genFontFamily, genFontFamilyCode } from '@/const/font';
-import { TaskAcceptanceHeader } from '@/features/AgentTasks/AgentTaskDetail/TaskAcceptanceHeader';
 import { taskDetailLayoutStyles as taskStyles } from '@/features/AgentTasks/AgentTaskDetail/taskDetailLayoutStyles';
 import MCPDependenciesGuide from '@/features/MCP/MCPInstallProgress/MCPDependenciesGuide';
 import IssueFilterPopover from '@/features/Projects/Issues/IssueFilterPopover';
@@ -67,7 +66,6 @@ await i18next.use(initReactI18next).init({
 });
 
 function Fixture() {
-  const [open, setOpen] = useState(true);
   const [filters, setFilters] = useState<ProjectIssueFilter[]>([]);
   const [milestoneId, setMilestoneId] = useState<string>();
   return (
@@ -118,14 +116,13 @@ function Fixture() {
         <output>{JSON.stringify(filters)}</output>
       </section>
       <section data-testid="task-feature">
-        <h2>Task detail acceptance header — actual component with populated count</h2>
+        <h2>Issue description and property layout probes</h2>
         <div className={taskStyles.description} data-testid="retained-task-description">
           Task description layout probe — 项目说明
         </div>
         <div className={taskStyles.propertyValue} data-testid="retained-rail-value">
           Project milestone — 项目里程碑
         </div>
-        <TaskAcceptanceHeader count={14} isOpen={open} onToggle={() => setOpen(!open)} />
       </section>
       <section className="flex flex-wrap gap-2" data-testid="badge-probes">
         {(

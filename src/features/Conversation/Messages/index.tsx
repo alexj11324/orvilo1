@@ -29,7 +29,6 @@ import TaskCallbackMessage from './TaskCallback';
 import TasksMessage from './Tasks';
 import ToolMessage from './Tool';
 import UserMessage from './User';
-import VerifyMessage from './Verify';
 
 const styles = {
   loading: 'opacity-60',
@@ -213,10 +212,6 @@ const MessageItem = memo<MessageItemProps>(
 
         case 'tool': {
           return <ToolMessage disableEditing={effectiveDisableEditing} id={id} index={index} />;
-        }
-
-        case 'verify': {
-          return <VerifyMessage id={id} index={index} />;
         }
 
         case 'taskCallback': {

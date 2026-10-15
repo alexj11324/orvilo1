@@ -171,14 +171,6 @@ export const topicCommentKeys = {
   ]),
 };
 
-// ---- acceptance comment -------------------------------------------------
-export const acceptanceCommentKeys = {
-  list: def('acceptanceComment:list', (acceptanceId: string) => [
-    'acceptanceComment:list',
-    acceptanceId,
-  ]),
-};
-
 // ---- document comment ---------------------------------------------------
 export const documentCommentKeys = {
   detail: def('documentComment:detail', (workspaceId: string | null, commentId: string) => [
@@ -841,57 +833,11 @@ export const statsKeys = {
   usageStat: def('stats:usageStat', () => ['stats:usageStat']),
 };
 
-// ---- verify (deliverable judging) ---------------------------------------
+// ---- expertise ---------------------------------------------------------
 export const expertiseKeys = {
   domain: def('expertise:domain', (domainId: string) => ['expertise:domain', domainId]),
   lesson: def('expertise:lesson', (lessonId: string) => ['expertise:lesson', lessonId]),
   overview: def('expertise:overview', (agentId: string) => ['expertise:overview', agentId]),
-};
-
-export const verifyKeys = {
-  acceptanceBundle: def('verify:acceptanceBundle', (acceptanceId: string) => [
-    'verify:acceptanceBundle',
-    acceptanceId,
-  ]),
-  acceptanceBySubject: def(
-    'verify:acceptanceBySubject',
-    (subjectType: string, subjectId: string) => [
-      'verify:acceptanceBySubject',
-      subjectType,
-      subjectId,
-    ],
-  ),
-  acceptancePurgePreview: def('verify:acceptancePurgePreview', (acceptanceId: string) => [
-    'verify:acceptancePurgePreview',
-    acceptanceId,
-  ]),
-  criteria: def('verify:criteria', () => ['verify:criteria']),
-  instruction: def('verify:instruction', (documentId: string) => [
-    'verify:instruction',
-    documentId,
-  ]),
-  reportBundle: def('verify:reportBundle', (verifyRunId: string) => [
-    'verify:reportBundle',
-    verifyRunId,
-  ]),
-  reportSummaries: def(
-    'verify:reportSummaries',
-    (workspaceId?: string | null, q?: string, cursor?: string) => [
-      'verify:reportSummaries',
-      workspaceId ?? '',
-      q ?? '',
-      cursor ?? '',
-    ],
-  ),
-  results: def('verify:results', (operationId: string) => ['verify:results', operationId]),
-  rubric: def('verify:rubric', (rubricId: string) => ['verify:rubric', rubricId]),
-  rubricCriteria: def('verify:rubricCriteria', (rubricId: string) => [
-    'verify:rubricCriteria',
-    rubricId,
-  ]),
-  rubrics: def('verify:rubrics', () => ['verify:rubrics']),
-  state: def('verify:state', (operationId: string) => ['verify:state', operationId]),
-  tracing: def('verify:tracing', (tracingId: string) => ['verify:tracing', tracingId]),
 };
 
 // ---- inbox / notifications ----------------------------------------------
@@ -1307,13 +1253,11 @@ export const swrKeys = {
   tool: toolKeys,
   topic: topicKeys,
   topicComment: topicCommentKeys,
-  acceptanceComment: acceptanceCommentKeys,
   documentComment: documentCommentKeys,
   documentLike: documentLikeKeys,
   topicAction: topicActionKeys,
   user: userKeys,
   userMemory: userMemoryKeys,
-  verify: verifyKeys,
   pullRequest: pullRequestKeys,
   workAttention: workAttentionKeys,
 };

@@ -80,10 +80,6 @@ class TaskService {
 
   getCheckpoint = async (id: string) => lambdaClient.task.getCheckpoint.query({ id });
 
-  getReview = async (id: string) => lambdaClient.task.getReview.query({ id });
-
-  getVerifyConfig = async (id: string) => lambdaClient.task.getVerifyConfig.query({ id });
-
   /**
    * Workspace-wide automation run history + 24h/7d outcome counts — the data
    * behind the Automations "All runs" page.
@@ -362,16 +358,6 @@ class TaskService {
 
   updateCheckpoint = async (id: string, checkpoint: CheckpointConfig) =>
     lambdaClient.task.updateCheckpoint.mutate({ checkpoint, id });
-
-  updateReview = async (...args: Parameters<typeof lambdaClient.task.updateReview.mutate>) =>
-    lambdaClient.task.updateReview.mutate(...args);
-
-  updateVerifyConfig = async (
-    ...args: Parameters<typeof lambdaClient.task.updateVerifyConfig.mutate>
-  ) => lambdaClient.task.updateVerifyConfig.mutate(...args);
-
-  runReview = async (id: string, params?: { content?: string; topicId?: string }) =>
-    lambdaClient.task.runReview.mutate({ id, ...params });
 
   pinDocument = async (taskId: string, documentId: string, pinnedBy?: string) =>
     lambdaClient.task.pinDocument.mutate({ documentId, pinnedBy, taskId });

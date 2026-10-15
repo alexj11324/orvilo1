@@ -3,7 +3,6 @@ import {
   CHAT_PORTAL_MAX_WIDTH,
   CHAT_PORTAL_TASK_WIDTH,
   CHAT_PORTAL_TOOL_UI_WIDTH,
-  CHAT_PORTAL_WIDE_WIDTH,
   CHAT_PORTAL_WIDTH,
 } from '@/const/layoutTokens';
 import { PortalViewType } from '@/store/chat/slices/portal/initialState';
@@ -19,7 +18,7 @@ export const PORTAL_CONVERSATION_VIEW_TYPE = 'conversation';
 /**
  * Persisted portal widths, keyed by `PortalViewType`. Each view remembers the
  * width the user dragged it to, so resizing the task detail pane no longer
- * shrinks the acceptance report the next time it opens. Side conversations
+ * shrinks another view the next time it opens. Side conversations
  * (`PORTAL_CONVERSATION_VIEW_TYPE`) share the same memory map.
  */
 export type PortalWidths = Partial<Record<PortalViewType, number>> & Record<string, number>;
@@ -29,8 +28,6 @@ export type PortalWidths = Partial<Record<PortalViewType, number>> & Record<stri
  * code, tool UI, tables or nested conversations.
  */
 const VIEW_MIN_WIDTH: PortalWidths = {
-  [PortalViewType.Acceptance]: CHAT_PORTAL_TOOL_UI_WIDTH,
-  [PortalViewType.AcceptanceCheck]: CHAT_PORTAL_TOOL_UI_WIDTH,
   [PortalViewType.AgentDetail]: CHAT_PORTAL_TOOL_UI_WIDTH,
   [PortalViewType.Artifact]: CHAT_PORTAL_TOOL_UI_WIDTH,
   [PortalViewType.GoalMetric]: CHAT_PORTAL_TOOL_UI_WIDTH,
@@ -48,8 +45,6 @@ const VIEW_MIN_WIDTH: PortalWidths = {
  * the portal narrow still get a readable pane the first time they open it.
  */
 const VIEW_DEFAULT_WIDTH: PortalWidths = {
-  [PortalViewType.Acceptance]: CHAT_PORTAL_WIDE_WIDTH,
-  [PortalViewType.AcceptanceCheck]: CHAT_PORTAL_WIDE_WIDTH,
   // Task / goal-node detail pack status, instruction, sub-tasks and the
   // activity feed into one column — wider than the reading column, but the
   // full document width crowds the page it sits next to.

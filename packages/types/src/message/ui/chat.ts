@@ -33,7 +33,6 @@ export type UIMessageRoleType =
   | 'agentCouncil'
   | 'compressedGroup'
   | 'compareGroup'
-  | 'verify'
   | 'taskCallback';
 
 export interface ChatFileItem {

@@ -123,7 +123,7 @@ interface TaskWorkTargetCandidate {
  *   batch still registers its winners (top-level `success` is `false`, so this
  *   is gated per item, not on the whole result).
  * - Single create (`createTask`): `result.state.taskId` / `result.state.identifier`.
- * - Single update (`editTask` / `setTaskSchedule` / `setTaskVerify`): the
+ * - Single update (`editTask` / `setTaskSchedule`): the
  *   `identifier` is a required manifest param, so it falls back to
  *   `args.identifier` when the server runtime returns no state.
  *

@@ -664,7 +664,7 @@ export class AiAgentService {
       disableSelfFeedbackIntentTool,
       disableTools,
       signal,
-      skipTaskVerification,
+
       parentMessageId,
       parentOperationId,
       requiredToolIds,
@@ -1057,7 +1057,7 @@ export class AiAgentService {
         requestTrigger: requestTriggerMetadata.trigger,
         runAttachments,
         selfMessageIds,
-        skipTaskVerification,
+
         topicStartOwnerOperationId: params.topicStartOwnerOperationId,
         userAgent,
         userInterventionConfig: params.userInterventionConfig,

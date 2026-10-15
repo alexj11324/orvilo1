@@ -44,7 +44,7 @@ export const requestReviewerAssignment = async (
       agentId,
       appContext: { taskId: task.id },
       autoStart: true,
-      skipTaskVerification: true,
+
       prompt: `Issue ${task.identifier} delivered and is waiting for a reviewer Agent. Call viewTask to read it and the usable reviewer Agents. For automatic assignment, choose an Agent with canReviewIssues=true when one is available, including yourself if appropriate, then call editTask with reviewerAgentId. Unsupported choices wait for a person. Do not rerun the delivered task.`,
       userInterventionConfig: { approvalMode: 'headless' },
     });
@@ -61,7 +61,7 @@ export const requestReviewerAssignment = async (
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    // This explanation must not overwrite a concurrent manual assignment or acceptance.
+    // This explanation must not overwrite a concurrent manual assignment or status change.
     try {
       await model.updateWithLog(
         current.id,

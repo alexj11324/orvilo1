@@ -9,18 +9,14 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import type { OperationGoal } from './deriveOperationGoals';
 import GoalElapsedTime from './GoalElapsedTime';
 import GoalStatusLine from './GoalStatusLine';
-import type { GoalTaskPhase } from './goalTaskProgress';
 import { useGoalTaskStatus } from './useGoalTaskStatus';
-
-const ACTIVE_PHASES = new Set<GoalTaskPhase>(['repairing', 'running', 'verifying']);
 
 const GoalCard = memo<{ goal: OperationGoal }>(({ goal }) => {
   const navigate = useWorkspaceAwareNavigate();
   const { agentId, progress, startedAt, title } = useGoalTaskStatus({
-    criteriaCount: goal.criteriaCount,
     goalId: goal.goalId,
   });
-  const isActive = ACTIVE_PHASES.has(progress.phase);
+  const isActive = progress.phase === 'running';
   const openGoal = () => {
     if (agentId) navigate(`/agent/${agentId}/goal/${goal.goalId}`);
   };

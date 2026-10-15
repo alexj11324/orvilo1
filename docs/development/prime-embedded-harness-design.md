@@ -95,7 +95,7 @@ assertMayCommit` semantics.
 - `coreRuntimeHost.ts` — `CanonicalCoreRuntimeHost`: opt-in composition binding
   `CanonicalRunBinding` (registered run) → `PrimeExecutionRuntime` →
   `DockerProcessTreeSupervisor` → `ActionGateway(file.write)` +
-  `CanonicalSessionSnapshots` + `CanonicalVerifyCompletion`. Currently
+  `CanonicalSessionSnapshots` + `CanonicalIssueCompletion`. Currently
   referenced only by its own acceptance tests — no production dispatch path
   wires it yet.
 - `canonicalRun.ts` — `CanonicalRunAuthority`, the row-locked fence resolver.

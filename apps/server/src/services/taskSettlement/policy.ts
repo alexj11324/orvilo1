@@ -2,15 +2,14 @@ import type {
   ExecutionOutcome,
   TaskAttentionReason,
   TaskItem,
-  TaskVerifyConfig,
   TaskWorkflowCategory,
 } from '@orvilo/types';
 import { isAutomationRunTrigger } from '@orvilo/types';
 
-import type { SettlementContext, SettlementPlan, VerifySettlementOutcome } from './types';
+import type { SettlementContext, SettlementPlan } from './types';
 
 /**
- * Centralized settlement policy — the only place an execution/verify outcome
+ * Centralized settlement policy — the only place an execution outcome
  * is turned into a task state. The table it implements lives in
  * `docs/development/state-model.md`; the highlights:
  *
@@ -21,13 +20,10 @@ import type { SettlementContext, SettlementPlan, VerifySettlementOutcome } from 
  * | execution failed             | in_progress  | failed    | execution_failed | paused¹     |
  * | success, no review required  | done         | succeeded | none             | completed   |
  * | success, review required     | in_review    | succeeded | review_required  | paused      |
- * | verify passed                | done         | succeeded | none             | completed²  |
- * | verify failed + auto repair  | in_progress  | queued    | needs_changes    | running     |
- * | verify failed, no repair     | in_review    | succeeded | needs_changes    | paused      |
  * | user cancels issue           | canceled     | canceled  | none             | canceled    |
  *
  * ¹ automation tasks keep their resting `scheduled` state (a fuse blow pauses).
- * ² automation tasks keep their resting `scheduled` state unless the run cap
+ * Automation tasks keep their resting `scheduled` state unless the run cap
  *   was reached.
  *
  * Invariants the mapping keeps distinct (never collapses one into another):
@@ -42,7 +38,6 @@ export interface SettlementPlanContext {
   reviewRequired: boolean;
   runStarted?: boolean;
   task: TaskItem;
-  verifyOutcome?: VerifySettlementOutcome;
 }
 
 const KEEP_OPEN_WORKFLOW: Readonly<Set<TaskWorkflowCategory>> = new Set([
@@ -65,16 +60,14 @@ const plan = (p: SettlementPlan): SettlementPlan => p;
  *
  * - the task's checkpoint requires review (`checkpoint.topic.after`),
  * - the owning project's `orchestrationPolicy.requireHumanReview` is `true`,
- * - an explicit verify gate is enabled on the (ancestor-resolved) config.
  *
- * Project policy and the resolved verify config are resolved by the caller —
+ * Project policy is resolved by the caller —
  * this function is synchronous so the model layer can reuse it.
  */
 export const resolveTaskReviewRequirement = (
   task: Pick<TaskItem, 'config'>,
   options?: {
     projectRequireHumanReview?: boolean;
-    verifyConfig?: TaskVerifyConfig | null;
   },
 ): boolean => {
   if (options?.projectRequireHumanReview === true) return true;
@@ -82,24 +75,7 @@ export const resolveTaskReviewRequirement = (
     ((task.config as Record<string, unknown> | undefined)?.checkpoint as
       { topic?: { after?: boolean } } | undefined) ?? {};
   if (checkpoint.topic?.after) return true;
-  return options?.verifyConfig?.enabled === true;
-};
-
-/** Map the non-pass verify outcomes to their attention reason. */
-const verifyAttention = (outcome: VerifySettlementOutcome): TaskAttentionReason => {
-  switch (outcome) {
-    case 'failed': {
-      return 'needs_changes';
-    }
-    case 'aegis_evidence_required': {
-      return 'review_required';
-    }
-    default: {
-      // errored / review_errored / unjudgeable / integration_blocked — an
-      // external gate could not evaluate or publish the delivery.
-      return 'blocked';
-    }
-  }
+  return false;
 };
 
 /** Resolve the settlement plan for one settle event. Pure — no I/O. */
@@ -109,7 +85,6 @@ export const resolveSettlementPlan = ({
   reviewRequired,
   runStarted,
   task,
-  verifyOutcome,
 }: SettlementPlanContext): SettlementPlan => {
   const isAutomation = Boolean(task.automationMode);
   const isAutomationTick =
@@ -146,55 +121,6 @@ export const resolveSettlementPlan = ({
       execution: 'failed',
       legacyStatus: 'paused',
       workflowCategory: task.workflowCategory === 'done' ? 'todo' : task.workflowCategory,
-    });
-  }
-
-  // ── Verify-driven settles ──
-  if (verifyOutcome) {
-    if (verifyOutcome === 'passed') {
-      if (isAutomation && !context?.scheduleCapReached) {
-        return plan({
-          attention: 'none',
-          decision: { type: 'keep_open' },
-          execution: 'succeeded',
-          legacyStatus: 'scheduled',
-          workflowCategory: workflowAfterRun,
-        });
-      }
-      return plan({
-        attention: 'none',
-        decision: { type: 'complete' },
-        execution: 'succeeded',
-        legacyStatus: 'completed',
-        workflowCategory: 'done',
-      });
-    }
-    if (verifyOutcome === 'failed' && context?.repairSpawned) {
-      return plan({
-        attention: 'needs_changes',
-        decision: { type: 'retry' },
-        execution: 'queued',
-        legacyStatus: 'running',
-        workflowCategory: 'in_progress',
-      });
-    }
-    // Non-pass outcomes route the task to a person (verify judges the run,
-    // not the lifetime schedule — recurring tasks keep their cadence).
-    if (isAutomation) {
-      return plan({
-        attention: verifyAttention(verifyOutcome),
-        decision: { type: 'keep_open', attention: verifyAttention(verifyOutcome) },
-        execution: 'succeeded',
-        legacyStatus: 'scheduled',
-        workflowCategory: workflowAfterRun,
-      });
-    }
-    return plan({
-      attention: verifyAttention(verifyOutcome),
-      decision: { type: 'review' },
-      execution: 'succeeded',
-      legacyStatus: 'paused',
-      workflowCategory: 'in_review',
     });
   }
 
@@ -249,27 +175,6 @@ export const resolveSettlementPlan = ({
           execution: 'succeeded',
           legacyStatus: 'paused',
           workflowCategory: workflowAfterRun,
-        });
-      }
-      // A confirmed verify plan owns delivery acceptance — verify's settle
-      // drives this task; the run callback must not advance it. An automation
-      // task still re-arms to its resting 'scheduled' state (the cadence
-      // survives the pending verdict), while a non-automation task holds its
-      // current status until Verify lands.
-      if (context?.verifyBound) {
-        if (isAutomation) {
-          return plan({
-            attention: 'none',
-            decision: { type: 'keep_open' },
-            execution: 'succeeded',
-            legacyStatus: 'scheduled',
-            workflowCategory: workflowAfterRun,
-          });
-        }
-        return plan({
-          attention: 'none',
-          decision: { type: 'hold' },
-          execution: 'succeeded',
         });
       }
       if (isAutomation) {

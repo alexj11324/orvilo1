@@ -2,7 +2,6 @@ import type { AssistantContentBlock } from '@orvilo/types';
 import { safeParseJSON } from '@orvilo/utils';
 
 export interface OperationGoal {
-  criteriaCount: number;
   /** The `goals` row the tool created — the card's pointer and its link target. */
   goalId: string;
   name: string;
@@ -36,9 +35,8 @@ export const deriveOperationGoals = (blocks: AssistantContentBlock[] = []): Oper
       const parsedArgs = safeParseJSON(tool.arguments);
       const args = isRecord(parsedArgs) ? parsedArgs : undefined;
       const name = nonEmptyString(tool.result.state.name) ?? nonEmptyString(args?.name) ?? goalId;
-      const criteriaCount = Array.isArray(args?.criteria) ? args.criteria.length : 0;
 
-      return [{ criteriaCount, goalId, name }];
+      return [{ goalId, name }];
     }),
   );
 

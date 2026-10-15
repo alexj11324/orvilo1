@@ -40,7 +40,6 @@ import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
-import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import { translation } from '@/libs/i18n/serverTranslation';
@@ -346,19 +345,12 @@ export class TaskLifecycleService {
       return result;
     };
 
-    let verifyBound = false;
-    let verifySettled = false;
     let lifecycleFailed = false;
     let enrichTopic: (() => Promise<void>) | undefined;
     try {
       const { TaskIntegrationService } = await import('@/server/services/taskIntegration');
       const integrationService = new TaskIntegrationService(this.db, this.userId, this.workspaceId);
 
-      // Whether a confirmed verify plan owns this run's delivery acceptance. Set in
-      // the 'done' branch; gates both the pause-for-review skip and (below) the
-      // creator callback — for verify-bound runs the callback is deferred to the
-      // verify settle path (driveTaskFromVerify) so the creator never consumes an
-      // output before verify has accepted it.
       if (reason === 'done') {
         try {
           if (!(await integrationService.captureRemoteIdentityOnComplete(currentTask, topicId))) {
@@ -409,62 +401,18 @@ export class TaskLifecycleService {
           }
         }
 
-        // Resolve Verify ownership before any irreversible delivery action. A
-        // confirmed plan must judge the exact run before its branch is merged.
-        // A failed read is a gate failure, not evidence that verification is
-        // absent.
-        try {
-          const verifyRun = currentTask.automationMode
-            ? await new VerifyRunModel(this.db, this.userId, this.workspaceId).findByOperation(
-                params.operationId,
-              )
-            : null;
-          verifyBound = Boolean(verifyRun?.planConfirmedAt);
-          verifySettled =
-            verifyRun?.status === 'passed' ||
-            verifyRun?.status === 'failed' ||
-            verifyRun?.status === 'errored';
-        } catch (error) {
-          log('verify-bound check failed for op=%s: %O', params.operationId, error);
-          await settleOwned({
-            context: {
-              blocked: true,
-              error: 'Could not determine the delivery verification state',
-              expectedStatus: claimedTaskStatus,
-              reservationId: claimed,
-              runTrigger: params.runTrigger,
-            },
-            outcome: 'succeeded',
-          });
-          return;
-        }
-
         // 2c. Workspace-integration gate (CAID merge-back): a provisioned run's
         //    task branch must land on its base before the task may settle. A
         //    merge conflict holds the transition open (task stays 'running')
         //    while a corrective run resolves it in the integration worktree;
         //    exhausted attempts park the task 'paused'. Unprovisioned runs pass
         //    straight through.
-        if (topicId && !verifyBound) {
+        if (topicId) {
           const integrationOutcome = await integrationService.integrateOnComplete({
             completionReservationId: claimed,
             task: currentTask,
             taskTopicId: topicId,
           });
-
-          if (integrationOutcome !== 'hold') {
-            const integration = (await this.taskTopicModel.findByTopicId(topicId))?.integration;
-            if (integration?.verifyOperationId) {
-              const { driveTaskFromVerify } = await import('../verify/settle');
-              await driveTaskFromVerify(
-                this.db,
-                this.userId,
-                integration.verifyOperationId,
-                this.workspaceId,
-              );
-              return;
-            }
-          }
 
           if (integrationOutcome === 'blocked') {
             await settleOwned({
@@ -516,31 +464,8 @@ export class TaskLifecycleService {
           enrichTopic = undefined;
         }
 
-        // 5. Default post-tick transition.
-        //    - Schedule-mode task that just consumed its final allowed run
-        //      (count ≥ maxExecutions) → park at 'completed' so the UI reflects
-        //      the cap immediately. Without this, a daily cron with
-        //      maxExecutions=1 would advertise itself as 'scheduled' for
-        //      another 24h before the pre-tick check in runScheduleTick
-        //      noticed.
-        //    - Other automation tasks (heartbeat, schedule under cap) loop
-        //      running ↔ scheduled, so a successful tick parks them at
-        //      'scheduled' to wait for the next tick. They never auto-pause
-        //      on success — only `reason === 'error'` below puts them in
-        //      'paused' for human attention.
-        //    - Goal-owned root tasks complete immediately. The Goal coordinator
-        //      owns the broader delivery decision and cannot consume a task that
-        //      merely stays running after its topic has already finished.
-        //    - Subtasks complete immediately. Their parent owns the broader
-        //      delivery decision, so pausing every successful child for a second
-        //      user review stalls an otherwise autonomous task graph. Completing
-        //      the child also unlocks its downstream siblings.
-        //    - Root non-automation tasks keep the legacy "pause for user review"
-        //      behavior: their result is the user-facing delivery boundary.
-        // "Let go" for verify-bound runs: when a confirmed verify plan exists for
-        // this op, delivery acceptance is decided asynchronously by Verify
-        // (driveTaskFromVerify completes / pauses the task on settle), so we must
-        // NOT pause-for-review here — the task stays running until verify settles.
+        // Successful automation runs return to their cadence unless capped.
+        // Ordinary Issue deliveries enter review through the shared settlement.
         if (currentTask) {
           const completionRequestedByCurrentOperation =
             (
@@ -550,7 +475,7 @@ export class TaskLifecycleService {
             )?.completion?.requestedByOperationId === params.operationId;
 
           const scheduleCapReached =
-            currentTask.automationMode === 'schedule' && !verifyBound
+            currentTask.automationMode === 'schedule'
               ? await this.scheduleCapReached(currentTask)
               : false;
           if (scheduleCapReached) {
@@ -562,16 +487,10 @@ export class TaskLifecycleService {
           // it, stamp a durable recovery marker + reset the failure fuse so the
           // recovery is auditable and a later query can still tell the task once
           // failed — the live `error` alone would silently self-heal.
-          if (currentTask.automationMode && !verifyBound && !scheduleCapReached) {
+          if (currentTask.automationMode && !scheduleCapReached) {
             await this.recordAutomationRecovery(currentTask, claimed);
           }
 
-          // The settlement policy owns every 'done' transition now:
-          // verify-bound → hold (verify drives it later), capped schedule →
-          // complete, automation tick → keep_open at 'scheduled', agent /
-          // goal self-complete → complete, explicit review gate → in_review,
-          // otherwise → complete to 'done'. `resolveTaskReviewRequirement`
-          // replaces the retired default-pause.
           const settlement = await settleOwned({
             context: {
               completionRequestedByOperation: completionRequestedByCurrentOperation,
@@ -580,7 +499,6 @@ export class TaskLifecycleService {
               reservationId: claimed,
               runTrigger: params.runTrigger,
               scheduleCapReached,
-              verifyBound,
             },
             outcome: 'succeeded',
           });
@@ -868,28 +786,16 @@ export class TaskLifecycleService {
       // silently drop the only callback for automation tasks that become terminal
       // in this path (e.g. a scheduled task hitting its execution cap).
       //
-      // Verify-bound runs DEFER the callback to the verify settle path
-      // (driveTaskFromVerify): the delivery isn't accepted until verify settles, so
-      // the creator must not receive/act on the output here — if verify later fails,
-      // the unaccepted output would already have been consumed.
-      if (verifyBound && verifySettled) {
-        const { driveTaskFromVerify } = await import('../verify/settle');
-        await driveTaskFromVerify(this.db, this.userId, params.operationId, this.workspaceId);
-      }
-      // Ordinary Issue enrichment must not hold settlement or the caller's Verify scheduling.
       if (enrichTopic) after(enrichTopic);
-      if (!verifyBound) {
-        await this.markAutomationResultReady(params);
-        await this.persistAutomationResult(params);
-        if (currentTask.automationMode || reason !== 'done')
-          await this.bridgeResultToCreator(params);
-      }
+      await this.markAutomationResultReady(params);
+      await this.persistAutomationResult(params);
+      if (currentTask.automationMode || reason !== 'done') await this.bridgeResultToCreator(params);
 
       // Heartbeat re-arm: re-read task state (status / context may have just
       // been mutated by the branches above) and decide whether to publish the
       // next tick.
       const finalTask = await this.taskModel.findById(taskId);
-      if (finalTask && (!verifyBound || verifySettled)) {
+      if (finalTask) {
         await this.maybeRearmHeartbeat(finalTask, reason, claimed);
       }
     } catch (error) {
@@ -912,7 +818,6 @@ export class TaskLifecycleService {
             },
             outcome: 'succeeded',
           });
-          verifyBound = false;
           return;
         } catch (recoveryError) {
           lifecycleFailed = true;
@@ -922,11 +827,7 @@ export class TaskLifecycleService {
       lifecycleFailed = true;
       throw error;
     } finally {
-      // A confirmed Verify plan still owns this generation after the topic
-      // callback returns. Keep its completion lease until the verdict drives
-      // the task; otherwise a manual run or the next automation tick can replace
-      // currentTopicId and permanently strand that verdict.
-      if (!verifyBound && !lifecycleFailed) {
+      if (!lifecycleFailed) {
         await this.taskModel.releaseRunReservation(taskId, claimed);
       }
     }
@@ -1233,12 +1134,6 @@ export class TaskLifecycleService {
     }
   }
 
-  /** Re-arm a Verify-bound heartbeat only after Verify releases its completion lease. */
-  async rearmHeartbeatAfterVerify(taskId: string): Promise<void> {
-    const task = await this.taskModel.findById(taskId);
-    if (task && task.status === 'scheduled') await this.maybeRearmHeartbeat(task, 'done');
-  }
-
   /**
    * Generate handoff summary and update topic title via LLM.
    * Writes to task_topics handoff fields + updates topic title.
@@ -1346,14 +1241,9 @@ export class TaskLifecycleService {
     currentTask: TaskItem,
   ): Promise<void> {
     try {
-      const reviewConfig = this.taskModel.getReviewConfig(currentTask);
       const decisionInput = {
-        hasReviewConfigEnabled: !!reviewConfig?.enabled,
         isTrivialContent: isTrivialAssistantContent(lastAssistantContent),
         reason,
-        // We've already returned upstream when reviewTerminated was true; the
-        // remaining decision lives in shouldEmitTopicBrief itself.
-        reviewTerminated: false,
         task: currentTask,
       };
 

@@ -6,10 +6,10 @@ or production installation. The table is separate from Prime history files.
 
 Capture and inspection run through the actual canonical run guard in a serializable
 transaction. They bind the task, workspace, user, registered owner, lease, epoch,
-state/policy revisions, trusted host commitments, frozen Verify plan and decisions,
-dependency state, deletion records, explicit criterion-to-receipt mappings, and every
-receipt in the host namespace. Missing mappings or a foreign receipt fence deny;
-unmapped ambiguous receipts cannot be silently discarded. A saved snapshot never
+state/policy revisions, trusted host commitments, the current Issue description,
+reviewer Agent, review cycle and workflow state, dependency state, deletion records,
+and every receipt in the host namespace. A foreign receipt fence denies capture;
+pending or ambiguous receipts cannot be silently discarded. A saved snapshot never
 installs its old authority. Recovery must match the currently authorized canonical
 state and durable receipts; a changed state requires explicit fresh capture.
 

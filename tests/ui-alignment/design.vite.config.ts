@@ -14,6 +14,8 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
     alias: [
+      // Use the real SPA image adapter; Next's optimizer requires its compiler environment.
+      { find: /^next\/image$/, replacement: repository + '/src/libs/next/Image.tsx' },
       {
         find: /^@orvilo\/heterogeneous-agents$/,
         replacement: repository + '/packages/heterogeneous-agents/src/config.ts',

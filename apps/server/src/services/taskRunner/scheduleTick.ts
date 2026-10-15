@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { and, eq } from 'drizzle-orm';
 
+import { TaskDomainError } from '@/database/errors/task';
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
@@ -176,11 +177,14 @@ export async function runScheduleTick(
   } catch (e) {
     if (isTaskDependencyBlocked(e)) return { ran: false, reason: 'dependencies-blocked' };
     // Concurrent tick / manual run already running this task — graceful skip.
-    if (e instanceof TRPCError && e.code === 'CONFLICT') {
+    if ((e instanceof TRPCError || e instanceof TaskDomainError) && e.code === 'CONFLICT') {
       log('skip task=%s reason=in-flight', taskId);
       return { ran: false, reason: 'in-flight' };
     }
-    if (e instanceof TRPCError && e.code === 'PRECONDITION_FAILED') {
+    if (
+      (e instanceof TRPCError || e instanceof TaskDomainError) &&
+      e.code === 'PRECONDITION_FAILED'
+    ) {
       return { ran: false, reason: 'human-waiting' };
     }
     throw e;

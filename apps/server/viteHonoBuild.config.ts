@@ -22,6 +22,10 @@ export default defineConfig({
         chunkFileNames: 'chunks/[name]-[hash].js',
         entryFileNames: '[name].js',
         format: 'es',
+        // The backend's mutually dependent services must initialize together. Splitting
+        // that graph into lazy chunks can call module initializers before assignment.
+        manualChunks: (id) =>
+          [entry('index.ts'), entry('standalone.ts')].includes(id) ? undefined : 'runtime',
       },
     },
     ssr: true,
@@ -33,6 +37,9 @@ export default defineConfig({
   },
   root: serverRoot,
   ssr: {
+    // Keep OpenTelemetry singletons in their published runtime modules. Bundling their
+    // initializers across application chunks creates initialization-order cycles.
+    external: ['@opentelemetry/api'],
     noExternal: [/^@orvilo\//],
   },
 });

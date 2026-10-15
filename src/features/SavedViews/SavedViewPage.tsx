@@ -1,5 +1,4 @@
 'use client';
-
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import {
   normalizeWorkQuery,
@@ -20,7 +19,6 @@ import {
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
-import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
@@ -56,10 +54,10 @@ import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
-import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+import { useFetchUserWorkTeams } from '@/store/workTeam/hooks';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import SavedViewActionsMenu from './SavedViewActionsMenu';
@@ -277,12 +275,7 @@ const SavedViewPage = memo(() => {
   const evaluation = data?.data.evaluation;
   // A cross-team view can't guess which team a new card belongs to — pass the
   // caller's joined teams so the board's create entry asks exactly that.
-  const { data: teamsData } = useSWR(
-    // Neutral key shared with MyWorkPage — same fetcher, one cache entry.
-    workspaceId && currentUserId ? ['work-joined-teams', currentUserId, workspaceId] : null,
-    () => lambdaClient.team.teams.query(),
-    { revalidateOnFocus: false },
-  );
+  const { data: teamsData } = useFetchUserWorkTeams(currentUserId);
   const joinedTeamOptions = useMemo(
     () =>
       (teamsData?.data ?? [])

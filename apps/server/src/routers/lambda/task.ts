@@ -9,7 +9,7 @@ import type {
 } from '@orvilo/types';
 import { TASK_ATTENTION_REASONS } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { notifyTaskAssigned } from '@/business/server/task/notifyTaskAssigned';
@@ -17,20 +17,16 @@ import type { TaskCommentActivityRecipient } from '@/business/server/task/notify
 import { notifyTaskCommentActivity } from '@/business/server/task/notifyTaskCommentActivity';
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
+import { TaskDomainError } from '@/database/errors/task';
 import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
 import { CredentialModel } from '@/database/models/credential';
-import { linearBindingWriteEnabled, LinearSyncModel } from '@/database/models/linearSync';
 import {
   TaskHandoffRequiredError,
   TaskModel,
   TaskRevisionConflictError,
 } from '@/database/models/task';
-import {
-  TaskDependencyError,
-  type TaskRelationRejectionReason,
-} from '@/database/models/taskDependency';
-import { TaskDispatchModel } from '@/database/models/taskDispatch';
+import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
 import { TaskReminderModel } from '@/database/models/taskReminder';
 import { TaskSubscriptionModel } from '@/database/models/taskSubscription';
@@ -40,20 +36,13 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { resolveWorkflowCreatePreset } from '@/database/models/workflowMove';
 import { getActiveWorkspaceMembershipRole } from '@/database/models/workspace';
-import { agentOperations } from '@/database/schemas/agentOperations';
-import { automationResultDeliveries, tasks, taskTopics } from '@/database/schemas/task';
-import { topics } from '@/database/schemas/topic';
+import { automationResultDeliveries } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import { assertAgentVisibleTo } from '@/database/utils/agent-access';
-import {
-  lockTaskDependencyGraphForRows,
-  taskDependencyLockScopes,
-  taskDependencyRequestScope,
-  taskDependencyRowScope,
-} from '@/database/utils/taskDependencyLock';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { markSilentTRPCErrorLog } from '@/libs/trpc/utils/errorLogger';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import {
   ActionApprovalService,
   AgentDelegationService,
@@ -69,9 +58,15 @@ import { automationResultWebhookConfigSchema } from '@/server/services/automatio
 import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
+import {
+  assertTaskExecutionUse,
+  resolveActivityActor,
+  type TaskExecutionUseContext,
+} from '@/server/services/task/access';
 import { acceptancePolicyChanged } from '@/server/services/task/activityLogChange';
 import { mayTakeOverExecution } from '@/server/services/task/executionTakeover';
 import { TaskIntentService } from '@/server/services/task/intent';
+import { TaskMutationService } from '@/server/services/task/mutations';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { TaskRunnerService } from '@/server/services/taskRunner';
@@ -122,111 +117,6 @@ const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
 const taskProcedureWrite = taskProcedure.use(withScopedPermission('agent:update'));
 // Execution consumes Agent Use, independently of Agent configuration management.
 const taskExecutionProcedure = taskProcedure.use(withScopedPermission('ai_model:invoke'));
-
-interface TaskExecutionUseContext {
-  serverDB: OrviloDatabase;
-  taskModel: TaskModel;
-  taskTopicModel: TaskTopicModel;
-  userId: string;
-  workspaceId?: string | null;
-}
-
-/** Check stored and sealed incumbent executors before a user can stop or replace work. */
-async function assertTaskExecutionUse(
-  ctx: TaskExecutionUseContext,
-  targetTasks: Pick<TaskItem, 'id' | 'assigneeAgentId' | 'status'>[],
-  additionalAgentIds: Array<string | null | undefined> = [],
-  /** Waives Use on the incumbents only; their operations are still scope-checked. */
-  { waiveIncumbentUse = false }: { waiveIncumbentUse?: boolean } = {},
-) {
-  const taskIds = targetTasks.map((task) => task.id);
-  const [runningTopics, activeDispatches] = await Promise.all([
-    // These tasks were already resolved for this caller. Inspect only their sealed
-    // executor identity: historical topic visibility must not change stop authority.
-    taskIds.length
-      ? ctx.serverDB
-          .select({
-            agentId: topics.agentId,
-            operationId: taskTopics.operationId,
-            taskId: taskTopics.taskId,
-          })
-          .from(taskTopics)
-          .leftJoin(topics, eq(taskTopics.topicId, topics.id))
-          .where(
-            and(
-              inArray(taskTopics.taskId, taskIds),
-              eq(taskTopics.status, 'running'),
-              ctx.workspaceId
-                ? eq(taskTopics.workspaceId, ctx.workspaceId)
-                : and(isNull(taskTopics.workspaceId), eq(taskTopics.userId, ctx.userId)),
-            ),
-          )
-      : Promise.resolve([]),
-    Promise.all(
-      taskIds.map((id) =>
-        new TaskDispatchModel(ctx.serverDB, ctx.workspaceId ?? undefined).findActiveByTaskId(id),
-      ),
-    ),
-  ]);
-  const operationIds = [
-    ...new Set(
-      [
-        ...runningTopics.map((topic) => topic.operationId),
-        ...activeDispatches.map((dispatch) => dispatch?.operationId),
-      ].filter((id): id is string => Boolean(id)),
-    ),
-  ];
-  const operations = operationIds.length
-    ? await ctx.serverDB
-        .select({
-          id: agentOperations.id,
-          agentId: agentOperations.agentId,
-          workspaceId: agentOperations.workspaceId,
-        })
-        .from(agentOperations)
-        .where(inArray(agentOperations.id, operationIds))
-    : [];
-  if (operations.some((operation) => operation.workspaceId !== (ctx.workspaceId ?? null))) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation is outside the caller scope' });
-  }
-  const operationAgents = new Map(operations.map((operation) => [operation.id, operation.agentId]));
-  const agentIds = new Set(
-    [
-      ...(waiveIncumbentUse ? [] : targetTasks).flatMap((task, index) => {
-        const dispatch = activeDispatches[index];
-        const sealedExecutors = [
-          ...runningTopics
-            .filter((topic) => topic.taskId === task.id)
-            .flatMap((topic) => [
-              topic.agentId,
-              topic.operationId ? operationAgents.get(topic.operationId) : null,
-            ]),
-          dispatch?.agentId,
-          dispatch?.operationId ? operationAgents.get(dispatch.operationId) : null,
-        ].filter((id): id is string => Boolean(id));
-        // A delegated/current run may differ from the issue's assignee field.
-        return sealedExecutors.length
-          ? sealedExecutors
-          : ['running', 'scheduled'].includes(task.status)
-            ? [task.assigneeAgentId]
-            : [];
-      }),
-      ...additionalAgentIds,
-    ].filter((id): id is string => Boolean(id)),
-  );
-  await Promise.all(
-    [...agentIds].map((agentId) =>
-      ctx.workspaceId
-        ? assertCanUseWorkspaceAgent({
-            agentId,
-            db: ctx.serverDB,
-            userId: ctx.userId,
-            workspaceId: ctx.workspaceId,
-          })
-        : assertAgentVisibleTo(ctx.serverDB, agentId, { userId: ctx.userId }),
-    ),
-  );
-}
 
 /** Whether the caller may stop or replace this Issue's execution without Use on its agent. */
 async function callerMayTakeOver(
@@ -663,162 +553,10 @@ function notifyAssignedBestEffort(
   });
 }
 
-async function assertAssigneeAgentVisibleToCaller(
-  db: OrviloDatabase,
-  callerCtx: { userId: string; workspaceId?: string },
-  assigneeAgentId?: string | null,
-) {
-  if (!assigneeAgentId) return;
-
-  try {
-    await assertAgentVisibleTo(db, assigneeAgentId, callerCtx);
-  } catch (error) {
-    if (error instanceof TRPCError && error.code === 'NOT_FOUND') {
-      // Preserve the task-context message so the UI surfaces "Assignee agent
-      // not found" instead of the generic "Agent not found". Cross-user access
-      // to a private agent still resolves to NOT_FOUND, never FORBIDDEN, so we
-      // don't leak existence of someone else's private agent.
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Assignee agent not found' });
-    }
-    throw error;
-  }
-}
-
-/**
- * Who an activity row is attributed to.
- *
- * A server-side caller (the gateway task runtime) carries the agent in
- * `ctx.actingAgentId`, which no HTTP request can set — that is the trusted
- * path and always wins. The client-first runtime (gateway off, self-hosted)
- * has no such channel: its task tools are ordinary TRPC calls from the
- * browser, so it names the agent in the payload — the same contract
- * `addComment.authorAgentId` already uses — and the claim is honoured only
- * for an agent the caller can use. That bounds any misattribution to the
- * caller's own agents rather than letting a request pin a change on anyone.
- */
-async function resolveActivityActor(
-  ctx: {
-    actingAgentId?: string | null;
-    serverDB: OrviloDatabase;
-    userId: string;
-    workspaceId?: string | null;
-  },
-  claimedAgentId?: string,
-): Promise<{ agentId?: string | null; userId: string }> {
-  if (ctx.actingAgentId) return { agentId: ctx.actingAgentId, userId: ctx.userId };
-  if (claimedAgentId) {
-    await assertAgentVisibleTo(ctx.serverDB, claimedAgentId, {
-      userId: ctx.userId,
-      workspaceId: ctx.workspaceId ?? undefined,
-    });
-  }
-  if (ctx.workspaceId && claimedAgentId)
-    await assertCanUseWorkspaceAgent({
-      agentId: claimedAgentId,
-      db: ctx.serverDB,
-      userId: ctx.userId,
-      workspaceId: ctx.workspaceId,
-    });
-  return { agentId: claimedAgentId ?? null, userId: ctx.userId };
-}
-
 /** Upper bound for one "add existing sub-issues" submit. */
 const SET_PARENT_BATCH_MAX = 50;
 /** Longest task id or identifier the batch accepts per entry. */
 const TASK_REF_MAX_LENGTH = 128;
-/** A sub-issue tree deeper than this is treated as corrupt and never extended. */
-const PARENT_CHAIN_MAX_DEPTH = 200;
-
-/**
- * Set-level cycle guard for a batch parent write. `resolveSafeParentTaskId`
- * walks down from each child through the Issues the caller can read, so an
- * Issue hidden from the caller in the middle of the chain would hide a cycle.
- * This walks up from the parent over the raw rows instead: if any Issue about
- * to become a child is the parent or one of its ancestors, the batch is
- * refused. The walk is bounded by tree depth, and a chain that does not end
- * within the bound is refused rather than waved through.
- */
-async function assertParentChainExcludes(
-  db: Pick<OrviloDatabase, 'execute'>,
-  parentId: string,
-  childIds: string[],
-) {
-  if (childIds.includes(parentId)) {
-    throw new TRPCError({
-      cause: { data: { code: 'SELF' satisfies TaskRelationRejectionReason } },
-      code: 'BAD_REQUEST',
-      message: 'Task cannot be parented to itself',
-    });
-  }
-  const chain = await db.execute(sql`
-    WITH RECURSIVE chain(id, parent_task_id, depth) AS (
-      SELECT t.id, t.parent_task_id, 0 FROM tasks t WHERE t.id = ${parentId}
-      UNION ALL
-      SELECT p.id, p.parent_task_id, c.depth + 1 FROM tasks p
-      JOIN chain c ON p.id = c.parent_task_id
-      WHERE c.depth < ${PARENT_CHAIN_MAX_DEPTH}
-    )
-    SELECT id, parent_task_id, depth FROM chain
-  `);
-  const rows = chain.rows as { depth: number; id: string; parent_task_id: string | null }[];
-  const chainIds = new Set(rows.map((row) => row.id));
-  // The parent was resolved before the lock; it can have been deleted since.
-  if (!chainIds.has(parentId)) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
-  }
-  if (childIds.some((id) => chainIds.has(id))) {
-    throw new TRPCError({
-      cause: { data: { code: 'CYCLE' satisfies TaskRelationRejectionReason } },
-      code: 'BAD_REQUEST',
-      message: 'Task cannot be parented to its own descendant',
-    });
-  }
-  // No child is in the chain, but the chain itself is unusable: deeper than
-  // the bound, or looping without ever reaching a root. Refused all the same,
-  // under its own reason — the selection did not cause it.
-  if (!rows.some((row) => row.parent_task_id === null)) {
-    throw new TRPCError({
-      cause: { data: { code: 'BROKEN_PARENT_CHAIN' satisfies TaskRelationRejectionReason } },
-      code: 'BAD_REQUEST',
-      message: 'Parent task has a parent chain that is too deep or loops',
-    });
-  }
-}
-
-/**
- * Take the graph locks for a parent write, then confirm they are still the
- * right ones. The lock set comes from rows read before the transaction; a
- * workspace transfer could have moved one of them since, leaving this write
- * holding the wrong scope. Re-read the rows' scope columns under the lock and
- * refuse with CONFLICT if the set changed, so the caller retries on fresh rows.
- */
-async function lockParentWrite(
-  tx: OrviloDatabase,
-  request: { userId: string; workspaceId?: string | null },
-  rows: Pick<TaskItem, 'createdByUserId' | 'id' | 'workspaceId'>[],
-) {
-  const locked = await lockTaskDependencyGraphForRows(tx, request, rows);
-  const ids = [...new Set(rows.map((row) => row.id))];
-  const current = await tx
-    .select({
-      createdByUserId: tasks.createdByUserId,
-      id: tasks.id,
-      workspaceId: tasks.workspaceId,
-    })
-    .from(tasks)
-    .where(inArray(tasks.id, ids));
-  const now = taskDependencyLockScopes(
-    taskDependencyRequestScope(request.userId, request.workspaceId),
-    current,
-  );
-  if (current.length !== ids.length || now.join('\n') !== locked.join('\n')) {
-    throw new TRPCError({
-      code: 'CONFLICT',
-      message: 'An issue in this change was moved or deleted. Reload and try again.',
-    });
-  }
-}
-
 /**
  * Mutation context for a relation write. The agent is named only from
  * `ctx.actingAgentId` — set by trusted server callers, never by a request —
@@ -828,49 +566,6 @@ const relationMutation = (ctx: { actingAgentId?: string | null }) => ({
   ...(ctx.actingAgentId ? { actorAgentId: ctx.actingAgentId } : {}),
   source: 'user' as const,
 });
-
-async function resolveSafeParentTaskId(
-  model: TaskModel,
-  taskId: string,
-  parentTaskId: string | null,
-): Promise<string | null> {
-  if (parentTaskId === null) return null;
-
-  const parent = await resolveOrThrow(model, parentTaskId);
-  if (parent.id === taskId) {
-    throw new TRPCError({
-      cause: { data: { code: 'SELF' satisfies TaskRelationRejectionReason } },
-      code: 'BAD_REQUEST',
-      message: 'Task cannot be parented to itself',
-    });
-  }
-
-  // The cycle check is `assertParentChainExcludes`, run by every caller under
-  // the graph lock: proving the task is not among the parent's raw ancestors
-  // is the same fact as "the parent is not a descendant of the task", without
-  // loading the task's whole subtree.
-  const task = await resolveOrThrow(model, taskId);
-  // A sub-issue tree stays inside one scope — one workspace, or one person's
-  // unfiled Issues. That is what makes the two rows' scope locks cover the
-  // whole ancestor chain the cycle check reads. Links that already cross
-  // scopes are left alone; only new ones are refused.
-  if (taskDependencyRowScope(task) !== taskDependencyRowScope(parent)) {
-    throw new TRPCError({
-      cause: { data: { code: 'CROSS_SCOPE' satisfies TaskRelationRejectionReason } },
-      code: 'BAD_REQUEST',
-      message: 'Parent task must belong to the same workspace',
-    });
-  }
-  if (task.projectId !== parent.projectId) {
-    throw new TRPCError({
-      cause: { data: { code: 'CROSS_PROJECT' satisfies TaskRelationRejectionReason } },
-      code: 'BAD_REQUEST',
-      message: 'Parent task must belong to the same project',
-    });
-  }
-
-  return parent.id;
-}
 
 export const taskRouter = router({
   /**
@@ -1002,7 +697,7 @@ export const taskRouter = router({
           success: true,
         };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -1078,7 +773,7 @@ export const taskRouter = router({
         }
         return { data: comment, message: 'Comment added', success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -1108,7 +803,7 @@ export const taskRouter = router({
         }
         return { message: 'Comment deleted', success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -1177,7 +872,7 @@ export const taskRouter = router({
         }
         return { data: comment, message: 'Comment updated', success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -1206,7 +901,7 @@ export const taskRouter = router({
         await model.addDependency(task.id, dep.id, input.type, relationMutation(ctx));
         return { message: 'Dependency added', success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -1236,7 +931,7 @@ export const taskRouter = router({
         await ctx.taskService.cancelTopic(input.topicId, task.id);
         return { message: 'Topic canceled', success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -1256,7 +951,7 @@ export const taskRouter = router({
         await ctx.taskService.deleteTopic(input.topicId);
         return { message: 'Topic deleted', success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -1331,7 +1026,7 @@ export const taskRouter = router({
       notifyAssignedBestEffort(ctx, task);
       return { data: task, message: 'Task created', success: true };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:create]', error);
       const causeMessage = error instanceof Error ? error.message : String(error);
       throw new TRPCError({
@@ -1364,7 +1059,7 @@ export const taskRouter = router({
       const count = deletedIds.length;
       return { count, message: `${count} tasks deleted`, success: true };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       if (error instanceof TaskDependencyError) {
         throw new TRPCError({ cause: error, code: error.code, message: error.message });
       }
@@ -1391,7 +1086,7 @@ export const taskRouter = router({
       if (deleted) await ctx.taskIntegration.cleanupTaskWorktrees(task.id, snapshot);
       return { data: task, message: 'Task deleted', success: true };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       if (error instanceof TaskDependencyError) {
         throw new TRPCError({ cause: error, code: error.code, message: error.message });
       }
@@ -1462,7 +1157,11 @@ export const taskRouter = router({
     .input(z.object({ taskId: z.string() }))
     .query(async ({ ctx, input }) => {
       await resolveOrThrow(ctx.taskModel, input.taskId);
-      const model = new CredentialModel(ctx.serverDB, ctx.userId);
+      const model = new CredentialModel(
+        ctx.serverDB,
+        KeyVaultsGateKeeper.initWithEnvKey,
+        ctx.userId,
+      );
       const rows = ctx.workspaceId
         ? await model.listWorkspace(ctx.workspaceId)
         : await model.listPersonal();
@@ -1483,7 +1182,11 @@ export const taskRouter = router({
       assertWorkspaceRowManageable(ctx, task.createdByUserId, 'automation');
       if (!task.automationMode)
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Task is not an automation' });
-      const credentials = new CredentialModel(ctx.serverDB, ctx.userId);
+      const credentials = new CredentialModel(
+        ctx.serverDB,
+        KeyVaultsGateKeeper.initWithEnvKey,
+        ctx.userId,
+      );
       for (const destination of input.resultWebhooks) {
         if (!destination.credentialId) continue;
         const row = ctx.workspaceId
@@ -1567,7 +1270,7 @@ export const taskRouter = router({
         success: true,
       };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:contractContext]', error);
       throw new TRPCError({
         cause: error,
@@ -1586,7 +1289,7 @@ export const taskRouter = router({
 
       return { data: detail, success: true };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:detail]', error);
       throw new TRPCError({
         cause: error,
@@ -1602,7 +1305,7 @@ export const taskRouter = router({
       const task = await resolveOrThrow(model, input.id);
       return { data: (await withDerivedStatus(model, [task]))[0], success: true };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:find]', error);
       throw new TRPCError({
         cause: error,
@@ -1619,7 +1322,7 @@ export const taskRouter = router({
       const deps = await model.getDependencies(task.id);
       return { data: deps, success: true };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:getDependencies]', error);
       throw new TRPCError({
         cause: error,
@@ -1636,7 +1339,7 @@ export const taskRouter = router({
       const docs = await model.getPinnedDocuments(task.id);
       return { data: docs, success: true };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:getPinnedDocuments]', error);
       throw new TRPCError({
         cause: error,
@@ -1660,7 +1363,7 @@ export const taskRouter = router({
         success: true,
       };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:getTopics]', error);
       throw new TRPCError({
         cause: error,
@@ -1677,7 +1380,7 @@ export const taskRouter = router({
       const subtasks = await model.findSubtasks(task.id);
       return { data: await withDerivedStatus(model, subtasks), success: true };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:getSubtasks]', error);
       throw new TRPCError({
         cause: error,
@@ -1694,7 +1397,7 @@ export const taskRouter = router({
       const tree = await model.getTaskTree(task.id);
       return { data: await withDerivedStatus(model, tree), success: true };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:getTaskTree]', error);
       throw new TRPCError({
         cause: error,
@@ -1711,7 +1414,7 @@ export const taskRouter = router({
       await model.updateHeartbeat(task.id);
       return { message: 'Heartbeat updated', success: true };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:heartbeat]', error);
       throw new TRPCError({
         cause: error,
@@ -1776,7 +1479,7 @@ export const taskRouter = router({
         const result = await ctx.taskService.handoffTask(input);
         return { data: result, message: 'Task handed off', success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskRevisionConflictError) {
           throw new TRPCError({ code: 'CONFLICT', message: error.message });
         }
@@ -1909,7 +1612,7 @@ export const taskRouter = router({
 
       return { data, success: true, total: result.total };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:list]', error);
       throw new TRPCError({
         cause: error,
@@ -1975,7 +1678,7 @@ export const taskRouter = router({
           taskId: task.id,
         });
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2032,7 +1735,7 @@ export const taskRouter = router({
         await model.pinDocument(task.id, input.documentId, input.pinnedBy);
         return { message: 'Document pinned', success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2092,7 +1795,7 @@ export const taskRouter = router({
         await model.removeDependency(task.id, depId, relationMutation(ctx), input.type);
         return { message: 'Dependency removed', success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2114,7 +1817,7 @@ export const taskRouter = router({
         await model.unpinDocument(task.id, input.documentId);
         return { message: 'Document unpinned', success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2134,7 +1837,7 @@ export const taskRouter = router({
       const checkpoint = model.getCheckpointConfig(task);
       return { data: checkpoint, success: true };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:getCheckpoint]', error);
       throw new TRPCError({
         cause: error,
@@ -2181,7 +1884,7 @@ export const taskRouter = router({
           success: true,
         };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2200,7 +1903,7 @@ export const taskRouter = router({
       const task = await resolveOrThrow(model, input.id);
       return { data: model.getReviewConfig(task) || null, success: true };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:getReview]', error);
       throw new TRPCError({
         cause: error,
@@ -2252,7 +1955,7 @@ export const taskRouter = router({
           success: true,
         };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2280,7 +1983,7 @@ export const taskRouter = router({
         success: true,
       };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:getVerifyConfig]', error);
       throw new TRPCError({
         cause: error,
@@ -2364,7 +2067,7 @@ export const taskRouter = router({
           success: true,
         };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2393,7 +2096,7 @@ export const taskRouter = router({
         const result = await ctx.taskService.runReview(input);
         return { data: result, success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2409,250 +2112,25 @@ export const taskRouter = router({
   update: taskProcedureWrite
     .input(idInput.merge(updateSchema).extend({ actorAgentId: z.string().optional() }))
     .mutation(async ({ input, ctx }) => {
-      const {
-        actorAgentId,
-        afterId,
-        beforeId,
-        expectedDomainRevision,
-        id,
-        moveScope,
-        parentTaskId,
-        status,
-        ...data
-      } = input;
       try {
-        // Assignee edits are domain-critical: without a revision CAS a stale
-        // client silently overwrites a concurrent reassignment (lost update).
-        // Every first-party caller resolves `expectedDomainRevision` before
-        // writing; anything else must fetch the task and retry.
-        if (
-          (data.assigneeAgentId !== undefined || data.assigneeUserId !== undefined) &&
-          expectedDomainRevision === undefined
-        ) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'expectedDomainRevision is required when changing a task assignee',
-          });
-        }
-        const model = ctx.taskModel;
-        const actor = await resolveActivityActor(ctx, actorAgentId);
-        await assertAssigneeAgentVisibleToCaller(
-          ctx.serverDB,
-          { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
-          data.assigneeAgentId,
-        );
-        const resolved = await resolveOrThrow(model, id);
-        if (status !== undefined) {
-          await assertTaskExecutionUse(
-            ctx,
-            [resolved],
-            [
-              ...(['running', 'scheduled'].includes(status)
-                ? [data.assigneeAgentId ?? resolved.assigneeAgentId]
-                : []),
-            ],
-          );
-        }
-
-        let workflowPatch:
-          | {
-              workflowCategory: TaskWorkflowCategory;
-              workflowStateId?: string | null;
-              workflowStateRefId?: string | null;
-            }
-          | undefined;
-        if (data.workflowCategory !== undefined) {
-          const linearSyncModel = ctx.workspaceId
-            ? new LinearSyncModel(ctx.serverDB, ctx.workspaceId)
-            : null;
-          const issueLink = linearSyncModel
-            ? await linearSyncModel.findIssueLinkByTaskId(resolved.id)
-            : null;
-          const binding =
-            issueLink?.bindingId && linearSyncModel
-              ? await linearSyncModel.findBindingById(issueLink.bindingId)
-              : null;
-          if (issueLink && binding) {
-            if (!linearBindingWriteEnabled(binding)) {
-              throw new TRPCError({
-                code: 'PRECONDITION_FAILED',
-                message: 'Linear workflow writes are unavailable for this task',
-              });
-            }
-
-            const targetMappings = (binding.settings.statusMappings ?? []).filter(
-              (mapping) => mapping.workflowCategory === data.workflowCategory,
-            );
-            if (targetMappings.length === 0) {
-              throw new TRPCError({
-                code: 'PRECONDITION_FAILED',
-                message: `No Linear state is mapped to ${data.workflowCategory}`,
-              });
-            }
-            if (targetMappings.length > 1) {
-              throw new TRPCError({
-                code: 'PRECONDITION_FAILED',
-                message: `Multiple Linear states are mapped to ${data.workflowCategory}; choose one in workspace settings`,
-              });
-            }
-            workflowPatch = {
-              workflowCategory: data.workflowCategory,
-              workflowStateId: targetMappings[0].linearStateId,
-            };
-          } else if (issueLink?.linearTeamId && resolved.teamId && linearSyncModel) {
-            // Team-scope links carry no project binding — category moves resolve
-            // through the team's imported workflow states (lowest position wins).
-            const teamLink = await linearSyncModel.findTeamLinkByLinearTeamId(
-              issueLink.linearTeamId,
-            );
-            if (!teamLink || teamLink.syncState !== 'synced') {
-              throw new TRPCError({
-                code: 'PRECONDITION_FAILED',
-                message: 'Linear workflow writes are unavailable for this task',
-              });
-            }
-            const [targetState] = (await ctx.teamModel.listWorkflowStates(resolved.teamId))
-              .filter(
-                (state) => state.category === data.workflowCategory && state.remoteStateId !== null,
-              )
-              .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-            if (!targetState) {
-              throw new TRPCError({
-                code: 'PRECONDITION_FAILED',
-                message: `No Linear state is mapped to ${data.workflowCategory}`,
-              });
-            }
-            workflowPatch = {
-              workflowCategory: data.workflowCategory,
-              workflowStateId: targetState.remoteStateId!,
-              workflowStateRefId: targetState.id,
-            };
-          } else if (issueLink) {
-            throw new TRPCError({
-              code: 'PRECONDITION_FAILED',
-              message: 'Linear workflow writes are unavailable for this task',
-            });
-          } else {
-            // No Linear linkage — a plain workflow-category move. Local tasks
-            // carry no remote state ids; the category alone is the source of
-            // truth (same shape as workAttention.moveBoard's non-team path).
-            workflowPatch = { workflowCategory: data.workflowCategory };
-          }
-        }
-
-        // Collaborative edit lock: reject writes to a workspace task another member
-        // is actively editing. Inert until a client acquires the lock.
-        if (ctx.workspaceId) {
-          const blockedBy = await ctx.editLockService.getBlockingHolder('task', resolved.id);
-          if (blockedBy) {
-            throw new TRPCError({
-              cause: { data: { code: 'DocumentLocked' } },
-              code: 'CONFLICT',
-              message: 'Task is being edited by another user',
-            });
-          }
-        }
-
-        await ctx.taskService.assertAssigneeUserAssignable(data.reviewerUserId);
-
-        const resolvedParentTaskId =
-          parentTaskId === undefined
-            ? undefined
-            : await resolveSafeParentTaskId(model, resolved.id, parentTaskId);
-
-        const updateData = {
-          ...data,
-          ...workflowPatch,
-          ...(parentTaskId === undefined ? {} : { parentTaskId: resolvedParentTaskId }),
-        };
-        // `instruction` is the markdown source of truth while `editorData` is its
-        // rich-text mirror. Text-only callers (for example the editTask builtin)
-        // cannot produce Lexical JSON, so discard the stale mirror and let the
-        // editor rebuild from markdown. Callers that provide both fields keep
-        // their explicit editor state.
-        const normalizedUpdateData =
-          updateData.instruction !== undefined && updateData.editorData === undefined
-            ? { ...updateData, editorData: null }
-            : updateData;
-
-        // Kanban drop anchors resolve to a fractional position against the
-        // live rows (the board may have shifted while the drag was in flight).
-        // When both anchors vanished mid-drag the write keeps its explicit
-        // `position` (or none) rather than failing the whole update.
-        const movePosition =
-          beforeId || afterId
-            ? await model.computeMovePosition(
-                { afterId, beforeId },
-                moveScope ?? undefined,
-                resolved.id,
-              )
-            : null;
-        const finalUpdateData =
-          movePosition === null
-            ? normalizedUpdateData
-            : { ...normalizedUpdateData, position: movePosition };
-        // Agent attribution comes from `resolveActivityActor` above. The
-        // assignment activity is written inside this update's own transaction
-        // (see `TaskModel.updateWithLog`), so a concurrent reassignment cannot
-        // interleave between reading the old assignee and recording it.
-        const commit = (db: OrviloDatabase) =>
-          status
-            ? db.transaction(async (tx) => {
-                const taskService = new TaskService(tx, ctx.userId, ctx.workspaceId ?? undefined);
-                const updated = await taskService.updateTaskWithAssigneeLock(
-                  resolved.id,
-                  finalUpdateData,
-                  actor,
-                  { expectedDomainRevision },
-                );
-                if (!updated) return null;
-
-                const result = await taskService.updateStatus({ id: resolved.id, status }, actor);
-                return result.task;
-              })
-            : new TaskService(
-                db,
-                ctx.userId,
-                ctx.workspaceId ?? undefined,
-              ).updateTaskWithAssigneeLock(resolved.id, finalUpdateData, actor, {
-                expectedDomainRevision,
-              });
-        // Giving an Issue a parent re-validates under the scope's graph lock,
-        // in the transaction that writes it. The checks above ran on a snapshot
-        // a concurrent parent change could already have invalidated.
-        const parentRow = resolvedParentTaskId
-          ? await resolveOrThrow(model, resolvedParentTaskId)
-          : null;
-        const task = resolvedParentTaskId
-          ? await ctx.serverDB.transaction(async (tx) => {
-              // Lock order on every assignment path is member row, then graph:
-              // take the member row here before the graph lock, not after it.
-              await ctx.taskService.lockAssigneeUser(tx, data.assigneeUserId);
-              // Keyed by the rows' own scopes as well as the request's — see
-              // `taskDependencyRowScope`.
-              await lockParentWrite(tx, ctx, [resolved, ...(parentRow ? [parentRow] : [])]);
-              await resolveSafeParentTaskId(
-                new TaskModel(tx, ctx.userId, ctx.workspaceId ?? undefined),
-                resolved.id,
-                resolvedParentTaskId,
-              );
-              await assertParentChainExcludes(tx, resolvedParentTaskId, [resolved.id]);
-              return commit(tx);
-            })
-          : await commit(ctx.serverDB);
-        if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+        const { task, previousAssigneeUserId } = await new TaskMutationService({
+          actingAgentId: ctx.actingAgentId,
+          serverDB: ctx.serverDB,
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
+        }).update(input);
         // Only an actual assignee change notifies — re-saving the same assignee
         // stays silent (self-assignment is filtered inside the helper).
-        if (task.assigneeUserId !== resolved.assigneeUserId) {
+        if (task.assigneeUserId !== previousAssigneeUserId) {
           notifyAssignedBestEffort(ctx, task);
         }
         return {
-          data: (await withDerivedStatus(model, [task]))[0],
+          data: (await withDerivedStatus(ctx.taskModel, [task]))[0],
           message: 'Task updated',
           success: true,
         };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2693,63 +2171,19 @@ export const taskRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       try {
-        const actor = await resolveActivityActor(ctx);
-        const parent = await resolveOrThrow(ctx.taskModel, input.parentTaskId);
-        const children: TaskItem[] = [];
-        for (const taskId of input.taskIds) {
-          const child = await resolveOrThrow(ctx.taskModel, taskId);
-          if (children.some((task) => task.id === child.id)) continue;
-          children.push(child);
-        }
-        // Same collaborative edit lock `update` honours, per child.
-        if (ctx.workspaceId) {
-          for (const child of children) {
-            if (await ctx.editLockService.getBlockingHolder('task', child.id)) {
-              throw new TRPCError({
-                cause: { data: { code: 'DocumentLocked' } },
-                code: 'CONFLICT',
-                message: `${child.identifier} is being edited by another user`,
-              });
-            }
-          }
-        }
-
-        const updated = await ctx.serverDB.transaction(async (tx) => {
-          // Serialize with every other tree and graph write in this scope
-          // before reading: two requests that would each pass alone cannot
-          // both validate against the same stale tree and then both write.
-          // The rows' own scopes as well as the request's: the caller's unfiled
-          // Issues are writable from several contexts — see `taskDependencyRowScope`.
-          await lockParentWrite(tx, ctx, [parent, ...children]);
-          const model = new TaskModel(tx, ctx.userId, ctx.workspaceId ?? undefined);
-          const taskService = new TaskService(tx, ctx.userId, ctx.workspaceId ?? undefined);
-          const rows: TaskItem[] = [];
-          // Validate the selection as a set against the rows this transaction
-          // sees under that lock, before any of them is written.
-          await assertParentChainExcludes(
-            tx,
-            parent.id,
-            children.map((child) => child.id),
-          );
-          for (const child of children) {
-            const parentTaskId = await resolveSafeParentTaskId(model, child.id, parent.id);
-            const row = await taskService.updateTaskWithAssigneeLock(
-              child.id,
-              { parentTaskId },
-              actor,
-            );
-            if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
-            rows.push(row);
-          }
-          return rows;
-        });
+        const updated = await new TaskMutationService({
+          actingAgentId: ctx.actingAgentId,
+          serverDB: ctx.serverDB,
+          userId: ctx.userId,
+          workspaceId: ctx.workspaceId,
+        }).setParentBatch(input);
         return {
           data: await withDerivedStatus(ctx.taskModel, updated),
           message: 'Parent updated',
           success: true,
         };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2789,7 +2223,7 @@ export const taskRouter = router({
         if (!updated) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         return { data: updated, message: 'Task visibility updated', success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2887,7 +2321,7 @@ export const taskRouter = router({
         if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
         return { data: task, message: 'Config updated', success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2905,7 +2339,7 @@ export const taskRouter = router({
       const plan = await ctx.taskService.previewSubtaskLayers(input.id);
       return { data: plan, success: true };
     } catch (error) {
-      if (error instanceof TRPCError) throw error;
+      if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
       console.error('[task:previewSubtaskLayers]', error);
       throw new TRPCError({
         cause: error,
@@ -2940,7 +2374,7 @@ export const taskRouter = router({
         const result = await ctx.taskService.runReadySubtasks(input.id, input.requestId);
         return { data: result, success: result.failed.length === 0 };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         console.error('[task:runReadySubtasks]', error);
         throw new TRPCError({
           cause: error,
@@ -2984,7 +2418,7 @@ export const taskRouter = router({
           ...(allSubtasksDone && { allSubtasksDone: true, parentTaskId }),
         };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -3054,7 +2488,7 @@ export const taskRouter = router({
         );
         return { data: result, message: `Task family ${input.status}`, success: true };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }

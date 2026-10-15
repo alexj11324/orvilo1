@@ -1,14 +1,6 @@
-import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import { useClientDataSWR } from '@/libs/swr';
-import { lambdaClient } from '@/libs/trpc/client';
+import { useFetchTeamResources } from '@/store/workTeam/hooks';
 
-export const useTeamResources = (teamId: string) => {
-  const workspaceId = useActiveWorkspaceId();
-  return useClientDataSWR(
-    teamId && workspaceId ? ['team-resources', workspaceId, teamId] : null,
-    () => lambdaClient.teamResource.list.query({ teamId }),
-  );
-};
+export const useTeamResources = useFetchTeamResources;
 
 export type TeamResourcesData = NonNullable<ReturnType<typeof useTeamResources>['data']>['data'];
 export type TeamResource = TeamResourcesData['resources'][number];

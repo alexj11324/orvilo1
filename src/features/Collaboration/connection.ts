@@ -1,7 +1,7 @@
 import { isRecord } from '@orvilo/utils/object';
 
 import { WORKSPACE_LIST_KEY } from '@/business/client/hooks/useFetchWorkspaces';
-import { teammatesClient } from '@/features/Teammates/api/client';
+import { teammatesService } from '@/features/Teammates/api/client';
 import { teammatesKeys } from '@/features/Teammates/api/keys';
 import { mutate } from '@/libs/swr';
 import {
@@ -122,7 +122,7 @@ const syncRoomSnapshot = async (
   generation: number,
 ): Promise<void> => {
   try {
-    const snapshot = await teammatesClient.collaboration.snapshot.query({
+    const snapshot = await teammatesService.collaboration.snapshot({
       cursor: record.snapshotCursor,
       room: record.room,
     });
@@ -252,7 +252,7 @@ const connect = async (key: string, record: RoomConnection): Promise<void> => {
   store.setRoomStatus(key, record.attempt > 0 ? 'reconnecting' : 'connecting');
 
   try {
-    const ticket = await teammatesClient.collaboration.authorize.mutate({ room });
+    const ticket = await teammatesService.collaboration.authorize({ room });
     if (record.generation !== generation) return; // torn down while authorizing
 
     const params = new URLSearchParams({ room: key, token: ticket.token });

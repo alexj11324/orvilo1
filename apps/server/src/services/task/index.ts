@@ -47,7 +47,7 @@ import {
   workflowStatePayload,
 } from '@/database/models/workflowMove';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
-import type { TaskDispatchItem } from '@/database/schemas/task';
+import type { TaskDispatchItem, TaskTopicItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import { findUsableAgentExecutionBinding } from '@/database/utils/agent-access';
 import {
@@ -341,13 +341,66 @@ export class TaskService {
 
   private interruptTaskOperations = async (
     service: AiAgentService,
-    operationIds: Array<string | null | undefined>,
+    topics: TaskTopicItem[],
   ): Promise<Map<string, PromiseSettledResult<void>>> => {
-    const uniqueOperationIds = [...new Set(operationIds.filter((id): id is string => Boolean(id)))];
+    const operations = [
+      ...new Map(
+        topics.flatMap((topic) => (topic.operationId ? [[topic.operationId, topic] as const] : [])),
+      ),
+    ];
+    const dispatchModel = new TaskDispatchModel(this.db, this.workspaceId);
     const settled = await Promise.allSettled(
-      uniqueOperationIds.map((operationId) => this.interruptTaskOperation(service, operationId)),
+      operations.map(async ([operationId, topic]) => {
+        let stoppingDispatch;
+        if (
+          topic.dispatchId &&
+          topic.dispatchFence !== null &&
+          topic.executionGeneration !== null
+        ) {
+          stoppingDispatch = await dispatchModel.requestStop({
+            dispatchId: topic.dispatchId,
+            fence: topic.dispatchFence,
+            generation: topic.executionGeneration,
+            operationId,
+            reason: 'task_family_status',
+          });
+          if (!stoppingDispatch)
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Task dispatch changed before cancellation.',
+            });
+        }
+        await this.interruptTaskOperation(service, operationId);
+        if (stoppingDispatch) {
+          const stopped = stoppingDispatch;
+          // Keep the acknowledged execution consistent even if the later
+          // family status transaction rejects (for example, unaccepted Done).
+          await this.db.transaction(async (tx) => {
+            if (
+              !(await new TaskDispatchModel(tx, this.workspaceId).settle({
+                dispatchId: stopped.id,
+                expected: ['cancel_requested'],
+                fence: stopped.fence,
+                generation: stopped.generation,
+                operationId,
+                phase: 'canceled',
+              }))
+            )
+              throw new TRPCError({
+                code: 'CONFLICT',
+                message: 'Task cancellation lost dispatch ownership.',
+              });
+            // The Issue authorizes the stop; historical topic privacy must
+            // not prevent recording it on the exact execution owner's row.
+            await new TaskTopicModel(tx, topic.userId, this.workspaceId).cancelIfRunning(
+              topic.taskId,
+              topic.topicId,
+            );
+          });
+        }
+      }),
     );
-    return new Map(uniqueOperationIds.map((operationId, index) => [operationId, settled[index]!]));
+    return new Map(operations.map(([operationId], index) => [operationId, settled[index]!]));
   };
 
   /**
@@ -1040,7 +1093,44 @@ export class TaskService {
       workspaceId: this.workspaceId,
     });
 
-    const runningTopics = await this.taskTopicModel.findRunningByTaskIds(targetIds);
+    const dispatchModel = new TaskDispatchModel(this.db, this.workspaceId);
+    const activeDispatches = await Promise.all(
+      [resolved, ...subtasks].map((task) => dispatchModel.findActiveByTaskId(task.id)),
+    );
+    const dispatchTopics = await Promise.all(
+      activeDispatches
+        .flatMap((dispatch) => (dispatch ? [dispatch] : []))
+        .map(async (dispatch) => {
+          if (!dispatch.operationId)
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Active task dispatch has no operation identity.',
+            });
+          const topic = (await this.taskTopicModel.findByTaskId(dispatch.taskId)).find(
+            (candidate) => candidate.operationId === dispatch.operationId,
+          );
+          if (
+            !topic ||
+            topic.taskId !== dispatch.taskId ||
+            topic.dispatchId !== dispatch.id ||
+            topic.executionGeneration !== dispatch.generation ||
+            topic.dispatchFence === null
+          )
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Task dispatch no longer matches its execution.',
+            });
+          return topic;
+        }),
+    );
+    // A previous acknowledged stop may have canceled its Topic before settling the dispatch.
+    const runningTopics = [
+      ...new Map(
+        [...(await this.taskTopicModel.findRunningByTaskIds(targetIds)), ...dispatchTopics].map(
+          (topic) => [topic.topicId, topic] as const,
+        ),
+      ).values(),
+    ];
     if (runningTopics.length > 0) {
       if (runningTopics.some((topic) => !topic.operationId)) {
         throw new TRPCError({
@@ -1049,10 +1139,7 @@ export class TaskService {
             'Task interruption could not be confirmed because a running topic has no operation identity.',
         });
       }
-      const interruptionResults = await this.interruptTaskOperations(
-        aiAgentService,
-        runningTopics.map((topic) => topic.operationId),
-      );
+      const interruptionResults = await this.interruptTaskOperations(aiAgentService, runningTopics);
       const failure = [...interruptionResults.values()].find(
         (result) => result.status === 'rejected',
       );
@@ -1091,9 +1178,7 @@ export class TaskService {
     }
     const resnapshotResults = await this.interruptTaskOperations(
       aiAgentService,
-      resnapshotTopics
-        .filter((topic) => !confirmedOperationIds.has(topic.operationId ?? ''))
-        .map((topic) => topic.operationId),
+      resnapshotTopics.filter((topic) => !confirmedOperationIds.has(topic.operationId ?? '')),
     );
     const resnapshotFailure = [...resnapshotResults.values()].find(
       (result) => result.status === 'rejected',

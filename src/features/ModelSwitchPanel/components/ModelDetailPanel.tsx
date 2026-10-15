@@ -1,18 +1,17 @@
 import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  AccordionRoot,
-  AccordionTrigger,
-  Tag,
-  Text,
-} from '@lobehub/ui/base-ui';
-import { ArrowDownToDot, ArrowUpFromDot, CircleFadingArrowUp } from 'lucide-react';
-import type { FC } from 'react';
+import { Tag, Text } from '@lobehub/ui/base-ui';
+import { ArrowDownToDot, ArrowUpFromDot, CircleFadingArrowUp, Play } from 'lucide-react';
+import type { CSSProperties, FC, ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionHeader,
+  AccordionHeaderTrigger,
+  AccordionItem,
+} from '@/components/ui/accordion';
 import type { EnabledProviderWithModels } from '@/types/aiProvider';
 import { getModelDescriptionI18nKey } from '@/utils/modelDescriptionI18n';
 
@@ -42,6 +41,30 @@ const styles = {
   priceValue: 'inline-flex items-baseline gap-1',
   titleText: 'text-sm leading-5.5 font-normal text-muted-foreground',
 };
+
+// Borderless sections with an inline disclosure triangle: the header row
+// washes on hover and the panel content sits flush under it.
+const sectionStyles = {
+  content: 'pbe-0 [&_a]:hover:text-primary-text',
+  header:
+    'relative rounded-(--radius-button) transition-[background-color] duration-150 motion-reduce:transition-none [&:hover:not(:has([data-disabled]))]:bg-accent',
+  indicator:
+    'flex size-4.5 shrink-0 items-center justify-center -ms-1.5 text-foreground-description transition-transform duration-200 motion-reduce:transition-none group-data-panel-open/accordion-trigger:rotate-90',
+  item: 'flex flex-col not-last:border-be-0',
+  trigger:
+    'flex min-w-0 flex-1 cursor-pointer select-none items-center gap-2 rounded-[inherit] border-0 bg-transparent px-2 py-2 text-start text-sm text-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50 data-disabled:cursor-not-allowed data-disabled:text-foreground-quaternary',
+};
+
+const SECTION_TRIGGER_STYLE: CSSProperties = { paddingBlock: 6, paddingInline: 8 };
+
+const SectionTrigger = ({ children }: { children: ReactNode }) => (
+  <AccordionHeaderTrigger className={sectionStyles.trigger} style={SECTION_TRIGGER_STYLE}>
+    {children}
+    <span className={sectionStyles.indicator}>
+      <Play fill="currentColor" size={7} strokeWidth={1} />
+    </span>
+  </AccordionHeaderTrigger>
+);
 
 interface PriceValueProps {
   prefix?: string;
@@ -153,26 +176,26 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
         )}
         {/* Sections */}
         {(hasRating || hasPricing || contextWindowLabel || hasAbilities) && (
-          <AccordionRoot
-            indicatorPlacement="inline"
-            style={{ gap: 8 }}
+          <Accordion
+            multiple
+            className="gap-2"
             value={expandedKeys}
             onValueChange={handleExpandedChange}
           >
             {/* Benchmarks */}
             {hasRating && (
-              <AccordionItem value="rating">
-                <AccordionHeader>
-                  <AccordionTrigger style={{ paddingBlock: 6, paddingInline: 8 }}>
+              <AccordionItem className={sectionStyles.item} value="rating">
+                <AccordionHeader className={sectionStyles.header}>
+                  <SectionTrigger>
                     <Flexbox horizontal align={'center'} gap={8}>
                       <div className="h-3.5 w-px shrink-0 rounded-full bg-border" />
                       <span className={styles.titleText}>
                         {t('ModelSwitchPanel.detail.rating')}
                       </span>
                     </Flexbox>
-                  </AccordionTrigger>
+                  </SectionTrigger>
                 </AccordionHeader>
-                <AccordionPanel>
+                <AccordionContent className={sectionStyles.content}>
                   <Flexbox gap={4}>
                     {ratedDimensions.length >= RADAR_MIN_DIMENSIONS ? (
                       <Tooltip title={t('ModelSwitchPanel.detail.rating.clickHint')}>
@@ -217,14 +240,14 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                       </Flexbox>
                     )}
                   </Flexbox>
-                </AccordionPanel>
+                </AccordionContent>
               </AccordionItem>
             )}
 
             {/* Context Length */}
             {contextWindowLabel && (
-              <AccordionItem disabled value="context">
-                <AccordionHeader style={{ paddingBlock: 6, paddingInline: 8 }}>
+              <AccordionItem disabled className={sectionStyles.item} value="context">
+                <AccordionHeader className={sectionStyles.header} style={SECTION_TRIGGER_STYLE}>
                   <Flexbox horizontal align={'center'} flex={1} gap={8}>
                     <div className="h-3.5 w-px shrink-0 rounded-full bg-border" />
                     <span className={styles.titleText}>{t('ModelSwitchPanel.detail.context')}</span>
@@ -236,16 +259,16 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
 
             {/* Abilities */}
             {hasAbilities && (
-              <AccordionItem value="abilities">
-                <AccordionHeader>
-                  <AccordionTrigger style={{ paddingBlock: 6, paddingInline: 8 }}>
+              <AccordionItem className={sectionStyles.item} value="abilities">
+                <AccordionHeader className={sectionStyles.header}>
+                  <SectionTrigger>
                     <Flexbox horizontal align={'center'} gap={8}>
                       <div className="h-3.5 w-px shrink-0 rounded-full bg-border" />
                       <span className={styles.titleText}>
                         {t('ModelSwitchPanel.detail.abilities')}
                       </span>
                     </Flexbox>
-                  </AccordionTrigger>
+                  </SectionTrigger>
                   {!isAbilitiesExpanded && (
                     <Flexbox horizontal gap={2}>
                       {enabledAbilities.map((ability) => (
@@ -260,7 +283,7 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                     </Flexbox>
                   )}
                 </AccordionHeader>
-                <AccordionPanel>
+                <AccordionContent className={sectionStyles.content}>
                   <Flexbox gap={4}>
                     {enabledAbilities.map((ability) => (
                       <Flexbox
@@ -284,22 +307,22 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                       </Flexbox>
                     ))}
                   </Flexbox>
-                </AccordionPanel>
+                </AccordionContent>
               </AccordionItem>
             )}
 
             {/* Pricing */}
             {hasPricing && (formatPrice || approximatePriceLabel) && (
-              <AccordionItem value="pricing">
-                <AccordionHeader>
-                  <AccordionTrigger style={{ paddingBlock: 6, paddingInline: 8 }}>
+              <AccordionItem className={sectionStyles.item} value="pricing">
+                <AccordionHeader className={sectionStyles.header}>
+                  <SectionTrigger>
                     <Flexbox horizontal align={'center'} gap={8}>
                       <div className="h-3.5 w-px shrink-0 rounded-full bg-border" />
                       <span className={styles.titleText}>
                         {t('ModelSwitchPanel.detail.pricing')}
                       </span>
                     </Flexbox>
-                  </AccordionTrigger>
+                  </SectionTrigger>
                   {!isPricingExpanded &&
                     (approximatePriceLabel ? (
                       <span className={styles.actionText}>{approximatePriceLabel}</span>
@@ -333,7 +356,7 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                       </Flexbox>
                     ))}
                 </AccordionHeader>
-                <AccordionPanel>
+                <AccordionContent className={sectionStyles.content}>
                   <Flexbox gap={8}>
                     {approximatePriceLabel && (
                       <Flexbox className={`${styles.row} font-medium`}>
@@ -373,10 +396,10 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                       </Flexbox>
                     ))}
                   </Flexbox>
-                </AccordionPanel>
+                </AccordionContent>
               </AccordionItem>
             )}
-          </AccordionRoot>
+          </Accordion>
         )}
       </Flexbox>
     );

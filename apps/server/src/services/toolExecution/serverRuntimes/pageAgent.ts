@@ -17,8 +17,6 @@ import type { ServerRuntimeRegistration } from './types';
 
 type SerializedEditor = SerializedEditorState<SerializedLexicalNode>;
 
-type EditorRuntimeEditorParam = Parameters<EditorRuntime['setEditor']>[0];
-
 interface DocumentSnapshot {
   content: string;
   editorData: Record<string, unknown> | null;
@@ -140,11 +138,9 @@ const buildEnv = (snapshot: DocumentSnapshot, documentId: string): InvocationEnv
   // Otherwise leave the headless editor in its default empty state.
 
   const runtime = new EditorRuntime();
-  // `headless.kernel` is structurally `IEditor`; pnpm may resolve `@lobehub/editor`
-  // to a different copy here than `@orvilo/editor-runtime` does, making the two
-  // `IEditor` types nominally distinct. They are runtime-identical — bridge via
-  // unknown to keep the contract explicit.
-  runtime.setEditor(headless.kernel as unknown as EditorRuntimeEditorParam);
+  // Runtime accepts the owned value/command/Lexical protocol; both SDK public
+  // and headless declarations satisfy it without a private DataSource bridge.
+  runtime.setEditor(headless.kernel);
   runtime.setCurrentDocId(documentId);
   // `EditorRuntime` dispatches `LITEXML_*_COMMAND` (imported from the DOM-free
   // `@lobehub/editor/litexml-commands` subpath) straight onto the kernel. The

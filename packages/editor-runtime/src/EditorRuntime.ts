@@ -106,9 +106,20 @@ const sdkCommandBindings: EditorRuntimeCommandBindings = {
   modifyWithResults: LITEXML_MODIFY_WITH_RESULTS_COMMAND,
 };
 
+/** The Runtime consumes values, commands and a Lexical instance, not a vendor
+ * DataSource class. SDK public/headless declarations duplicate that protected
+ * class, so accepting their full IEditor creates an artificial nominal barrier.
+ * Keep the actual command/document-write/Lexical signatures unchanged. */
+export interface EditorRuntimePort extends Pick<
+  IEditor,
+  'dispatchCommand' | 'setDocument' | 'getLexicalEditor'
+> {
+  getDocument: (type: string) => unknown;
+}
+
 export class EditorRuntime {
   private commandBindings: EditorRuntimeCommandBindings = sdkCommandBindings;
-  private editor: IEditor | null = null;
+  private editor: EditorRuntimePort | null = null;
   private titleSetter: ((title: string) => void) | null = null;
   private titleGetter: (() => string) | null = null;
   private currentDocId: string | undefined = undefined;
@@ -119,7 +130,10 @@ export class EditorRuntime {
   /**
    * Set the current editor instance
    */
-  setEditor(editor: IEditor | null, commands: EditorRuntimeCommandBindings = sdkCommandBindings) {
+  setEditor(
+    editor: EditorRuntimePort | null,
+    commands: EditorRuntimeCommandBindings = sdkCommandBindings,
+  ) {
     this.editor = editor;
     this.commandBindings = commands;
     log('[EditorRuntime] setEditor', this.getDebugSnapshot());
@@ -261,7 +275,7 @@ export class EditorRuntime {
   /**
    * Get the current editor instance
    */
-  private getEditor(): IEditor {
+  private getEditor(): EditorRuntimePort {
     if (!this.editor) {
       throw new Error('Editor not initialized. Please set the editor instance first.');
     }

@@ -10,6 +10,7 @@ import { deserializeMcpIpcPayload, serializeMcpIpcPayload } from '@orvilo/utils/
 
 import { type MCPToolCallResult } from '@/libs/mcp';
 import { lambdaClient, toolsClient } from '@/libs/trpc/client';
+import { agentService } from '@/services/agent';
 import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import {
   TargetQueryFailedError,
@@ -34,11 +35,9 @@ import { discoverService } from './discover';
  *   the id matches this host's proven id; a foreign device goes through the
  *   server-side gateway RPC relay (`lambdaClient.device.*`) so the call lands
  *   on the machine the scope actually named.
- * - `{kind:'topic'}` — a run/conversation: the persisted device binding
- *   (`metadata.executionConfig.boundDeviceId`, legacy `metadata.boundDeviceId`)
- *   decides. Bound → that device; authoritatively unbound → the client-executor
- *   run's own proven local device; UNREADABLE (cache miss AND authoritative
- *   fetch failed) → `TARGET_QUERY_FAILED`, never "unbound".
+ * - `{kind:'topic'}` — the owning Agent's saved device decides. Topic metadata
+ *   never selects a device. Missing saved binding → `TARGET_REQUIRED`;
+ *   unreadable topic or Agent configuration → `TARGET_QUERY_FAILED`.
  */
 export type McpDeviceScope =
   { deviceId: string; kind: 'device' } | { kind: 'local' } | { kind: 'topic'; topicId: string };
@@ -111,9 +110,8 @@ const normalizeMcpScope = (
 };
 
 /**
- * The topic's persisted device binding as a tri-state — `unknown` means the
- * binding could not be read (cache miss AND authoritative fetch failed or
- * denied), which is NEVER "unbound": unbound is an explicit answer.
+ * The owning Agent's saved device binding: unreadable configuration is
+ * `unknown`, distinct from a verified missing device binding.
  */
 type TopicDeviceBinding =
   { deviceId: string; status: 'bound' } | { status: 'unbound' } | { status: 'unknown' };
@@ -156,15 +154,13 @@ const deviceMcpCallResult = (
 };
 
 /**
- * The scope named a conversation but its device binding could not be verified
- * (display-cache miss AND the authoritative `getTopicDetail` read failed or
- * denied). `TARGET_QUERY_FAILED` is the honest answer — retry the lookup —
- * never the local machine as a stand-in and never a fake success.
+ * The topic owner or its saved Agent configuration could not be read.
+ * Return `TARGET_QUERY_FAILED` without executing on another machine.
  */
 const mcpTargetQueryFailed = (identifier: string, operation: string): MCPToolCallResult => {
   const message =
     `The execution device for MCP server '${identifier}' could not be verified ` +
-    `for this ${operation}: the conversation's device binding is unreadable. ` +
+    `for this ${operation}: the owning Agent's saved device binding is unreadable. ` +
     'Retry once the binding resolves — no other machine may answer instead.';
   return {
     content: message,
@@ -188,33 +184,31 @@ class MCPService {
     return false;
   }
 
-  /**
-   * The execution device persisted on the conversation — the topic store is
-   * only a DISPLAY cache: a missing row or a thrown read is `unknown`, not
-   * "unbound". `unknown` escalates to the authoritative `getTopicDetail`
-   * query; only a verified bound / unbound answer ever comes back as such.
-   */
+  /** Resolve the topic owner, then read its saved Agent configuration. */
   async #topicDeviceBinding(topicId: string): Promise<TopicDeviceBinding> {
+    let agentId: string | null | undefined;
     try {
       const { topicSelectors } = await import('@/store/chat/selectors');
       const { getChatStoreState } = await import('@/store/chat/store');
-      const topic = topicSelectors.getTopicById(topicId)(getChatStoreState());
-      if (topic) {
-        const boundDeviceId =
-          topic.metadata?.executionConfig?.boundDeviceId ?? topic.metadata?.boundDeviceId;
-        return boundDeviceId ? { deviceId: boundDeviceId, status: 'bound' } : { status: 'unbound' };
-      }
+      agentId = topicSelectors.getTopicById(topicId)(getChatStoreState())?.agentId;
     } catch {
       // The display cache is unavailable — escalate to the authoritative read.
     }
 
     try {
-      const { lambdaClient } = await import('@/libs/trpc/client');
-      const detail = await lambdaClient.topic.getTopicDetail.query({ id: topicId });
-      if (!detail) return { status: 'unknown' };
-      const boundDeviceId =
-        detail.metadata?.executionConfig?.boundDeviceId ?? detail.metadata?.boundDeviceId;
-      return boundDeviceId ? { deviceId: boundDeviceId, status: 'bound' } : { status: 'unbound' };
+      if (!agentId) {
+        const detail = await lambdaClient.topic.getTopicDetail.query({ id: topicId });
+        agentId = detail?.agentId;
+      }
+      if (!agentId) return { status: 'unknown' };
+      const config = await agentService.getAgentFullConfigById(agentId);
+      if (!config) return { status: 'unknown' };
+      const agencyConfig = config.agencyConfig;
+      if (agencyConfig?.executionTarget === 'sandbox' || agencyConfig?.executionTarget === 'none') {
+        return { status: 'unbound' };
+      }
+      const deviceId = agencyConfig?.boundDeviceId;
+      return deviceId ? { deviceId, status: 'bound' } : { status: 'unbound' };
     } catch {
       return { status: 'unknown' };
     }
@@ -222,9 +216,8 @@ class MCPService {
 
   /**
    * Resolve the caller's explicit scope to a transport target. `topic` scope
-   * consults the persisted binding: bound → that device; authoritatively
-   * unbound → the client-executor run's own local device; unreadable →
-   * `query-failed` (never "unbound").
+   * consults the saved Agent binding: bound → that device; missing → unset;
+   * unreadable → `query-failed`.
    */
   async #resolveTarget(scope: McpDeviceScope | undefined): Promise<McpResolvedTarget> {
     if (!scope) return { kind: 'unset' };
@@ -232,7 +225,7 @@ class MCPService {
     if (scope.kind === 'device') return { deviceId: scope.deviceId, kind: 'device' };
     const binding = await this.#topicDeviceBinding(scope.topicId);
     if (binding.status === 'bound') return { deviceId: binding.deviceId, kind: 'device' };
-    if (binding.status === 'unbound') return { kind: 'local' };
+    if (binding.status === 'unbound') return { kind: 'unset' };
     return { kind: 'query-failed' };
   }
 
@@ -254,7 +247,7 @@ class MCPService {
     if (target.kind === 'query-failed') {
       throw new TargetQueryFailedError(
         operation,
-        "the conversation's device binding could not be read",
+        "the owning Agent's saved device binding could not be read",
       );
     }
     throw new TargetRequiredError(operation);

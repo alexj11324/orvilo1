@@ -186,7 +186,7 @@ describe('TaskWorkspaceService', () => {
       return mockTaskModel;
     });
     (AgentModel as any).mockImplementation(function () {
-      return mockAgentModel;
+      return { ...mockAgentModel, getAgentConfigForExecution: mockAgentModel.getAgentConfig };
     });
     (RepositoryModel as any).mockImplementation(function () {
       return mockRepositoryModel;
@@ -595,7 +595,7 @@ describe('TaskWorkspaceService', () => {
       expect(result?.branch).toBe('task/T-1-r3');
     });
 
-    it('prefers an explicit baseBranch and deviceId over inferred ones', async () => {
+    it('keeps the explicit baseBranch while using the Agent saved device', async () => {
       vi.mocked(deviceGateway.listGitRemoteBranches).mockResolvedValue([
         { isDefault: true, name: 'origin/main', sha: 'sha-base-1' },
         { isDefault: false, name: 'origin/canary', sha: 'sha-canary-1' },
@@ -609,10 +609,10 @@ describe('TaskWorkspaceService', () => {
       const result = await service.provision({ dispatchId: 'disp-1', generation: 1, seq: 1, task });
 
       expect(deviceGateway.addGitWorktree).toHaveBeenCalledWith(
-        expect.objectContaining({ deviceId: 'dev-explicit', ref: 'sha-canary-1' }),
+        expect.objectContaining({ deviceId: 'dev-1', ref: 'sha-canary-1' }),
       );
       expect(result?.baseBranch).toBe('canary');
-      expect(mockAgentModel.getAgentConfig).not.toHaveBeenCalled();
+      expect(mockAgentModel.getAgentConfig).toHaveBeenCalled();
     });
 
     it('returns undefined when the task has no workspace binding', async () => {

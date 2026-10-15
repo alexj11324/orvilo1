@@ -9,7 +9,7 @@ const legacy = { heterogeneousType: null, id: 'agt_legacy', type: 'agent' };
 const group = { id: 'grp_1', type: 'group' };
 
 describe('resolveDefaultAgent', () => {
-  it('prefers the saved default over the Orchestrator', () => {
+  it('prefers the configured Orchestrator over the saved personal default', () => {
     expect(
       resolveDefaultAgent({
         agents: [codex, claude],
@@ -17,7 +17,7 @@ describe('resolveDefaultAgent', () => {
         defaultAgentId: claude.id,
         orchestratorAgentId: codex.id,
       }),
-    ).toEqual({ agentId: claude.id, source: 'default' });
+    ).toEqual({ agentId: codex.id, source: 'orchestrator' });
   });
 
   it('falls back to the Orchestrator when no default is saved', () => {

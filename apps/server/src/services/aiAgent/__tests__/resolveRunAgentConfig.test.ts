@@ -107,24 +107,33 @@ describe('resolveRunAgentConfig', () => {
     expect(getInfoForAIGeneration).toHaveBeenCalledWith(expect.anything(), 'member-1');
   });
 
-  it('applies a saved member device override to a regular workspace agent', async () => {
+  it('ignores old member device and model choices for a regular workspace Agent', async () => {
     getPreference.mockResolvedValue({
       agentDeviceOverrides: {
-        'agent-regular': { boundDeviceId: 'dev-1', executionTarget: 'local' },
+        'agent-regular': { boundDeviceId: 'other-device', executionTarget: 'local' },
+      },
+      agentModelOverrides: {
+        'agent-regular': { model: 'other-model', provider: 'other-provider' },
       },
     });
-
-    const { agentConfig, memberDeviceOverride } = await resolveRunAgentConfig(
+    const { agentConfig } = await resolveRunAgentConfig(
       {
         ...deps,
         resolveAgentConfigOrThrow: async () =>
-          ({ ...(webOnboardingRow() as object), id: 'agent-regular', slug: null }) as never,
+          ({
+            ...(webOnboardingRow() as object),
+            id: 'agent-regular',
+            slug: null,
+            agencyConfig: { boundDeviceId: 'saved-device', executionTarget: 'device' },
+          }) as never,
       },
       { identifier: 'agent-regular', throwIfExecutionAborted: async () => {} },
     );
-
-    expect(memberDeviceOverride).toEqual({ boundDeviceId: 'dev-1', executionTarget: 'local' });
-    expect(agentConfig.agencyConfig?.executionTarget).toBe('local');
+    expect(agentConfig.agencyConfig).toMatchObject({
+      boundDeviceId: 'saved-device',
+      executionTarget: 'device',
+    });
+    expect(agentConfig).toMatchObject({ model: 'gpt-4', provider: 'openai' });
   });
 });
 

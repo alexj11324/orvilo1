@@ -169,8 +169,6 @@ export const PUBLIC_TOPIC_FIELDS = [
   'id',
   'metadata',
   'mode',
-  'model',
-  'provider',
   'sessionId',
   'status',
   'title',

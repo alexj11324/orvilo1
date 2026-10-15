@@ -209,38 +209,40 @@ describe('DeviceModel', () => {
       expect(personal.map((d) => d.deviceId)).toEqual(['p1']);
     });
 
-    it('detects whether a workspace device is referenced by a fixed agent', async () => {
-      await serverDB.insert(devices).values({
-        deviceId: 'fixed-device',
-        identitySource: 'machine-id',
-        userId,
-        visibility: 'public',
-        workspaceId: wsId,
-      });
-      await serverDB.insert(agents).values({
-        agencyConfig: {
-          boundDeviceId: 'fixed-device',
-          executionTargetSelectionPolicy: 'fixed',
-          executionTarget: 'device',
-        },
-        id: 'fixed-agent',
-        title: 'Fixed agent',
-        userId,
-        workspaceId: wsId,
-      });
+    it.each(['device', 'local'] as const)(
+      'detects a saved %s Agent device binding',
+      async (executionTarget) => {
+        await serverDB.insert(devices).values({
+          deviceId: 'fixed-device',
+          identitySource: 'machine-id',
+          userId,
+          visibility: 'public',
+          workspaceId: wsId,
+        });
+        await serverDB.insert(agents).values({
+          agencyConfig: {
+            boundDeviceId: 'fixed-device',
 
-      const wsModel = new DeviceModel(serverDB, userId, wsId);
-      expect(await wsModel.hasFixedAgentBinding('fixed-device')).toBe(true);
-      expect(await wsModel.hasFixedAgentBinding('other-device')).toBe(false);
-      expect(await deviceModel.hasFixedAgentBinding('fixed-device')).toBe(false);
-    });
+            executionTarget,
+          },
+          id: 'fixed-agent',
+          title: 'Fixed agent',
+          userId,
+          workspaceId: wsId,
+        });
+
+        const wsModel = new DeviceModel(serverDB, userId, wsId);
+        expect(await wsModel.hasFixedAgentBinding('fixed-device')).toBe(true);
+        expect(await wsModel.hasFixedAgentBinding('other-device')).toBe(false);
+        expect(await deviceModel.hasFixedAgentBinding('fixed-device')).toBe(false);
+      },
+    );
 
     it('ignores a stale device id on a fixed non-device target', async () => {
       await serverDB.insert(agents).values({
         agencyConfig: {
           boundDeviceId: 'stale-device',
           executionTarget: 'sandbox',
-          executionTargetSelectionPolicy: 'fixed',
         },
         id: 'fixed-sandbox-agent',
         title: 'Fixed sandbox agent',

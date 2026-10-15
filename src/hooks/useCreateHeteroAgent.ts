@@ -1,5 +1,6 @@
 import { isDesktop } from '@orvilo/const';
 import { type HeterogeneousAgentClientConfig } from '@orvilo/heterogeneous-agents/client';
+import { HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
 import { useCallback } from 'react';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -38,6 +39,7 @@ export const useCreateHeteroAgent = () => {
       const boundDeviceId = isDesktop
         ? (currentDeviceId ?? (await gatewayConnectionService.getDeviceInfo())?.deviceId)
         : undefined;
+      if (!boundDeviceId) throw new Error('FIRST_AGENT_DEVICE_REQUIRED');
       const result = await storeCreateAgent({
         config: {
           agencyConfig: {
@@ -45,6 +47,7 @@ export const useCreateHeteroAgent = () => {
             executionTarget: 'local' as const,
             heterogeneousProvider: {
               command: definition.defaultCommand,
+              model: HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
               type: definition.type,
             },
           },
@@ -52,8 +55,7 @@ export const useCreateHeteroAgent = () => {
           // Stamp the heterogeneous type as the agent's provider so every reader
           // (op rows, agent list, message tags) attributes the run to claude-code /
           // codex rather than the inherited default chat provider (e.g. orvilo).
-          // The real chat model is reported by the CLI at runtime, so `model` stays
-          // unset here and is backfilled per-run.
+          model: HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
           provider: definition.type,
           systemRole: '',
           title: definition.title,

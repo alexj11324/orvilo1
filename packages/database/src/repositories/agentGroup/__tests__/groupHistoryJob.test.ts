@@ -40,7 +40,7 @@ const wsDeviceId = 'ghj-ws-device';
 const seedRuntimeConfig = {
   boundDeviceId: wsDeviceId,
   executionTarget: 'device' as const,
-  heterogeneousProvider: { type: 'codex' as const },
+  heterogeneousProvider: { type: 'codex' as const, model: 'gpt-5.5' },
 };
 
 beforeEach(async () => {

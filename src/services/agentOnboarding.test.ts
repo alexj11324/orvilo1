@@ -1,3 +1,4 @@
+import { TRPCClientError } from '@trpc/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -18,7 +19,7 @@ const api = vi.hoisted(() => ({
   listWorkspace: vi.fn(),
   transfer: vi.fn(),
   devices: vi.fn(),
-  preference: vi.fn(),
+  saveAgent: vi.fn(),
   config: vi.fn(),
   sidebar: vi.fn(),
   listBindings: vi.fn(),
@@ -26,8 +27,10 @@ const api = vi.hoisted(() => ({
 vi.mock('@/libs/trpc/client', () => ({
   createWorkspaceLambdaClient: () => ({
     home: { getSidebarAgentList: { query: api.listWorkspace } },
-    workspaceUserSettings: { updatePreference: { mutate: api.preference } },
-    agent: { getAgentConfigById: { query: api.config } },
+    agent: {
+      getAgentConfigById: { query: api.config },
+      updateAgentConfig: { mutate: api.saveAgent },
+    },
   }),
   lambdaClient: {
     creds: {
@@ -114,9 +117,14 @@ describe('first agent workspace checkpoint', () => {
     await ensureFirstAgentInWorkspace('first-agent', 'new-workspace', chosenHost);
     expect(api.transfer).toHaveBeenCalledTimes(1);
     expect(api.create).not.toHaveBeenCalled();
-    expect(api.preference).toHaveBeenCalledWith({
-      agentDeviceOverrides: {
-        'first-agent': { executionTarget: 'device', boundDeviceId: 'chosen-device' },
+    expect(api.saveAgent).toHaveBeenCalledWith({
+      agentId: 'first-agent',
+      value: {
+        agencyConfig: {
+          heterogeneousProvider: { type: 'claude-code' },
+          executionTarget: 'device',
+          boundDeviceId: 'chosen-device',
+        },
       },
     });
   });
@@ -131,7 +139,7 @@ describe('first agent workspace checkpoint', () => {
     await expect(
       ensureFirstAgentInWorkspace('first-agent', 'new-workspace', chosenHost),
     ).rejects.toThrow('FIRST_AGENT_WORKSPACE_REQUIRED');
-    expect(api.preference).not.toHaveBeenCalled();
+    expect(api.saveAgent).not.toHaveBeenCalled();
   });
   it('rejects a missing, offline or unauthorized device before transferring or writing preferences', async () => {
     api.devices.mockResolvedValue([
@@ -141,7 +149,7 @@ describe('first agent workspace checkpoint', () => {
       ensureFirstAgentInWorkspace('first-agent', 'new-workspace', chosenHost),
     ).rejects.toThrow('FIRST_AGENT_DEVICE_REQUIRED');
     expect(api.transfer).not.toHaveBeenCalled();
-    expect(api.preference).not.toHaveBeenCalled();
+    expect(api.saveAgent).not.toHaveBeenCalled();
     await expect(verifyFirstAgentDevice('invented-device')).rejects.toThrow(
       'FIRST_AGENT_DEVICE_REQUIRED',
     );
@@ -158,10 +166,20 @@ describe('first agent workspace checkpoint', () => {
   });
   it('preserves a supported local CLI profile without requiring a gateway device', async () => {
     api.devices.mockResolvedValue([]);
-    await ensureFirstAgentInWorkspace('first-agent', 'new-workspace', { executionTarget: 'local' });
+    await ensureFirstAgentInWorkspace('first-agent', 'new-workspace', {
+      executionTarget: 'local',
+      boundDeviceId: 'chosen-device',
+    });
     expect(api.devices).not.toHaveBeenCalled();
-    expect(api.preference).toHaveBeenCalledWith({
-      agentDeviceOverrides: { 'first-agent': { executionTarget: 'local' } },
+    expect(api.saveAgent).toHaveBeenCalledWith({
+      agentId: 'first-agent',
+      value: {
+        agencyConfig: {
+          heterogeneousProvider: { type: 'claude-code' },
+          executionTarget: 'local',
+          boundDeviceId: 'chosen-device',
+        },
+      },
     });
   });
   it('rejects an unsupported local Prime target and a missing verified model route before completion', async () => {
@@ -176,7 +194,7 @@ describe('first agent workspace checkpoint', () => {
       ensureFirstAgentInWorkspace('first-agent', 'new-workspace', chosenHost),
     ).rejects.toThrow('PROVIDER_CHECK_UNAVAILABLE');
     expect(api.transfer).not.toHaveBeenCalled();
-    expect(api.preference).not.toHaveBeenCalled();
+    expect(api.saveAgent).not.toHaveBeenCalled();
   });
 });
 
@@ -208,6 +226,30 @@ describe('first agent create response reconciliation', () => {
     expect(resumed.config?.agencyConfig?.boundDeviceId).toBe('original-device');
     expect(create).toHaveBeenCalledTimes(1);
   });
+  it('unlocks a rejected create intent so corrected fields can be submitted', async () => {
+    const checkpoint = { requestId: 'rejected-intent', attempted: false };
+    const rejection = TRPCClientError.from({
+      error: {
+        message: 'Invalid Agent config',
+        code: -32600,
+        data: { code: 'BAD_REQUEST', httpStatus: 400 },
+      },
+    });
+    const create = vi
+      .fn()
+      .mockRejectedValueOnce(rejection)
+      .mockResolvedValueOnce({ agentId: 'corrected-agent' });
+    await expect(
+      createOnboardingAgentOnce(checkpoint, { config: { title: 'Original' } }, create),
+    ).rejects.toThrow('Invalid Agent config');
+    expect(checkpoint.attempted).toBe(false);
+    await expect(
+      createOnboardingAgentOnce(checkpoint, { config: { title: 'Corrected' } }, create),
+    ).resolves.toMatchObject({ agentId: 'corrected-agent', config: { title: 'Corrected' } });
+    expect(api.sidebar).not.toHaveBeenCalled();
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
   it('does not retry creation when the authoritative reconciliation request fails', async () => {
     api.sidebar.mockRejectedValue(new Error('cannot confirm existing rows'));
     const create = vi.fn();

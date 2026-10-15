@@ -98,6 +98,7 @@ const CreateAgentPanel = ({
       form.setApiKey('');
       await onCreated?.(saved.current.agentId, saved.current.config);
     } catch (cause) {
+      if (!saved.current && !checkpoint.current.attempted) intent.current = undefined;
       setError(cause);
     } finally {
       submitting.current = false;

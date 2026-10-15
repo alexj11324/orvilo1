@@ -5,7 +5,7 @@ import { resolveOwnerBinding } from './resolveOwnerBinding';
 /**
  * The conversation is the navigation unit: `/chat/:topicId` binds the topic's
  * owner agent — never a URL segment — and `/chat/new` binds nothing so the
- * composer falls back to the explicit-pick / last-used chain. A refactor that
+ * composer falls back to the explicit-pick / configured default chain. A refactor that
  * re-couples binding to the URL or the room's agent silently re-breaks the
  * handoff contract; these pins fail first.
  */
@@ -37,13 +37,13 @@ describe('resolveOwnerBinding', () => {
       });
     });
 
-    it('ignores composer pick and last-used on a topic route', () => {
+    it('ignores composer pick and configured default on a topic route', () => {
       // The composer chain belongs to the blank composer only — on a bound
       // conversation the topic's owner always wins.
       expect(
         resolveOwnerBinding({
           composerAgentId: 'agent-picked',
-          lastUsedAgentId: 'agent-last',
+          defaultAgentId: 'agent-orchestrator',
           routeTopicId: 'tpc_1',
           topicAgentId: 'agent-owner',
         }),
@@ -56,16 +56,18 @@ describe('resolveOwnerBinding', () => {
       expect(
         resolveOwnerBinding({
           composerAgentId: 'agent-picked',
-          lastUsedAgentId: 'agent-last',
+          defaultAgentId: 'agent-orchestrator',
           routeTopicId: null,
         }),
       ).toEqual({ activeAgentId: undefined, configAgentId: 'agent-picked' });
     });
 
-    it('falls back to lastUsedAgentId without an explicit pick', () => {
-      expect(resolveOwnerBinding({ lastUsedAgentId: 'agent-last', routeTopicId: null })).toEqual({
+    it('falls back to defaultAgentId without an explicit pick', () => {
+      expect(
+        resolveOwnerBinding({ defaultAgentId: 'agent-orchestrator', routeTopicId: null }),
+      ).toEqual({
         activeAgentId: undefined,
-        configAgentId: 'agent-last',
+        configAgentId: 'agent-orchestrator',
       });
     });
 

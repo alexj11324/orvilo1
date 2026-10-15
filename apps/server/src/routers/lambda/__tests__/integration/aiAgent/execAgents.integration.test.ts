@@ -211,19 +211,17 @@ describe('Batch Execution (execAgents)', () => {
     expect(createdTopics.map((t) => t.title).sort()).toEqual(['Topic 1 prompt', 'Topic 2 prompt']);
   });
 
-  it('should preserve deviceId bindings for batch tasks', async () => {
+  it('creates batch conversations without per-task device bindings', async () => {
     const caller = aiAgentRouter.createCaller(createTestContext());
 
     await caller.execAgents({
       tasks: [
         {
           agentId: testAgentId,
-          deviceId: 'device-batch-1',
           prompt: 'Device-bound task 1',
         },
         {
           agentId: testAgentId,
-          deviceId: 'device-batch-2',
           prompt: 'Device-bound task 2',
         },
       ],
@@ -235,10 +233,7 @@ describe('Batch Execution (execAgents)', () => {
       .where(eq(topics.agentId, testAgentId));
 
     expect(createdTopics).toHaveLength(2);
-    expect(createdTopics.map((topic) => topic.metadata?.boundDeviceId).sort()).toEqual([
-      'device-batch-1',
-      'device-batch-2',
-    ]);
+    expect(createdTopics.every((topic) => topic.metadata?.boundDeviceId === undefined)).toBe(true);
   });
 
   // ACP dispatch is the run start itself — autoStart=false has no deferred

@@ -21,8 +21,8 @@ interface ResolveDefaultAgentParams {
 }
 
 /**
- * The Agent an entry point opens when the user named none: the saved default,
- * else the Orchestrator, else the first listed Agent. A saved pointer is
+ * The Agent an entry point opens when the user named none: the Orchestrator,
+ * else the saved default, else the first listed Agent. A saved pointer is
  * honoured only while it names a listed Agent on an offered runtime, so a
  * deleted or withheld Agent falls through instead of opening a dead page.
  * `undefined` means there is nothing to open and the caller should prompt the
@@ -41,7 +41,7 @@ export const resolveDefaultAgent = ({
   );
   const listed = (id?: string | null) => !!id && offered.some((agent) => agent.id === id);
 
-  if (listed(defaultAgentId)) return { agentId: defaultAgentId!, source: 'default' };
   if (listed(orchestratorAgentId)) return { agentId: orchestratorAgentId!, source: 'orchestrator' };
+  if (listed(defaultAgentId)) return { agentId: defaultAgentId!, source: 'default' };
   return offered[0] && { agentId: offered[0].id, source: 'first' };
 };

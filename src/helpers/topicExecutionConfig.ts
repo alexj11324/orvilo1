@@ -53,12 +53,7 @@ export const resolveTopicAgencyConfig = (
     applyTopicExecutionConfig(defaults, execution),
     cloudSandboxAvailable,
   ),
-  workspaceScoped:
-    execution &&
-    !execution.inheritWorkspaceScope &&
-    defaults?.executionTargetSelectionPolicy !== 'fixed'
-      ? false
-      : workspaceScoped,
+  workspaceScoped,
 });
 
 /**

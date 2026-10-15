@@ -100,7 +100,7 @@ describe('Project and Issue collaboration boundaries', () => {
         agencyConfig: {
           boundDeviceId: 'collab-delete-host',
           executionTarget: 'device',
-          heterogeneousProvider: { type: 'codex' },
+          heterogeneousProvider: { type: 'codex', model: 'gpt-5.5' },
         },
         model: null,
         provider: null,
@@ -469,7 +469,7 @@ describe('Project and Issue collaboration boundaries', () => {
         agencyConfig: {
           boundDeviceId: 'collab-host',
           executionTarget: 'device',
-          heterogeneousProvider: { type: 'codex' },
+          heterogeneousProvider: { type: 'codex', model: 'gpt-5.5' },
         },
         model: null,
         provider: null,
@@ -501,7 +501,7 @@ describe('Project and Issue collaboration boundaries', () => {
       agencyConfig: {
         boundDeviceId: 'collab-private-request-host',
         executionTarget: 'device' as const,
-        heterogeneousProvider: { type: 'codex' as const },
+        heterogeneousProvider: { type: 'codex' as const, model: 'gpt-5.5' },
       },
       model: null,
       provider: null,

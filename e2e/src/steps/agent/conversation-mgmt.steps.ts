@@ -35,8 +35,8 @@ async function createConversationFromCommandMenu(world: CustomWorld) {
   await world.page.waitForURL((url) => /\/chat\/new$/.test(url.pathname));
   await expect(world.page.locator('[cmdk-root]')).toBeHidden();
   await expect(world.page.locator('.message-wrapper')).toHaveCount(0);
-  // The blank composer uses the last sent Agent, so the fixture must keep
-  // its Prime Agent rather than silently falling back to another provider.
+  // The fixture configures Prime as the Orchestrator, so blank Chat must
+  // select it through the saved default instead of the previous conversation.
   await expect(agentSelector).toBeVisible();
 }
 

@@ -65,8 +65,14 @@ const withRuntime = async (
     agencyConfig: {
       boundDeviceId,
       executionTarget: 'device' as const,
-      heterogeneousProvider: { type: 'orvilo' as const },
       ...config.agencyConfig,
+      heterogeneousProvider: {
+        model: config.model ?? 'gpt-4',
+        ...config.agencyConfig?.heterogeneousProvider,
+        type:
+          config.agencyConfig?.heterogeneousProvider?.type ??
+          (config.agencyConfig?.heterogeneousProvider?.command === 'codex' ? 'codex' : 'orvilo'),
+      },
     },
   };
 };
@@ -104,6 +110,30 @@ const fileList2 = [
 ];
 
 describe('agent runtime identity', () => {
+  it.each(['host', 'model'] as const)(
+    'rejects creating or saving an Agent without its %s',
+    async (missing) => {
+      const config = await withRuntime({
+        agencyConfig: { heterogeneousProvider: { type: 'opencode', model: 'default' } },
+      });
+      const agencyConfig: OrviloAgentAgencyConfig = config.agencyConfig;
+      if (missing === 'host') delete agencyConfig.boundDeviceId;
+      else delete agencyConfig.heterogeneousProvider!.model;
+      const message = missing === 'host' ? 'AGENT_HOST_REQUIRED' : 'AGENT_MODEL_REQUIRED';
+      await expect(agentModel.create(config)).rejects.toMatchObject({ message });
+      const [legacy] = await serverDB
+        .insert(agents)
+        .values({ ...config, userId })
+        .returning();
+      await expect(agentModel.update(legacy.id, { title: 'Renamed' })).rejects.toMatchObject({
+        message,
+      });
+      await expect(
+        agentModel.updateConfig(legacy.id, { description: 'Changed' }),
+      ).rejects.toMatchObject({ message });
+    },
+  );
+
   it('replaces a group supervisor runtime snapshot without carrying old provider or device settings', async () => {
     const coordinator = await agentModel.create(
       await withRuntime({
@@ -116,7 +146,6 @@ describe('agent runtime identity', () => {
             permission: { configId: 'approval', value: 'auto' },
           },
           workingDirByDevice: { 'creation-host-agent-model-test-user-id': '/old' },
-          modelSelectionPolicy: 'fixed',
         },
       }),
     );
@@ -131,7 +160,7 @@ describe('agent runtime identity', () => {
     ).agencyConfig;
     await agentModel.updateConfig(coordinator.id, { agencyConfig: nextAgency }, true);
     const updated = await serverDB.query.agents.findFirst({ where: eq(agents.id, coordinator.id) });
-    expect(updated?.agencyConfig).toEqual({ ...nextAgency, modelSelectionPolicy: 'fixed' });
+    expect(updated?.agencyConfig).toEqual(nextAgency);
     expect(updated?.model).toBeNull();
     expect(updated?.provider).toBeNull();
     const builtinRuntime = await withRuntime();
@@ -179,7 +208,7 @@ describe('agent runtime identity', () => {
   });
   it('binds an explicitly configured new agent to the builtin runtime', async () => {
     const agent = await agentModel.create(await withRuntime({ name: 'My assistant' }));
-    expect(agent.agencyConfig?.heterogeneousProvider).toEqual({ type: 'orvilo' });
+    expect(agent.agencyConfig?.heterogeneousProvider).toEqual({ type: 'orvilo', model: 'gpt-4' });
   });
 
   it.each([{}, { type: '' }, { type: null }, { type: 42 }, { type: 'invented-agent' }])(
@@ -1205,7 +1234,7 @@ describe('AgentModel', () => {
     it('should update agent fields and set updatedAt', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Original Title' })
+        .values({ ...(await withRuntime()), userId, title: 'Original Title' })
         .returning()
         .then((res) => res[0]);
 
@@ -1297,7 +1326,7 @@ describe('AgentModel', () => {
     it('should not strip identity fields for a regular agent whose slug happens to differ', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ slug: 'my-custom-agent', userId, title: 'Original' })
+        .values({ ...(await withRuntime()), slug: 'my-custom-agent', userId, title: 'Original' })
         .returning()
         .then((res) => res[0]);
 
@@ -1674,6 +1703,7 @@ describe('AgentModel', () => {
       const agent = await serverDB
         .insert(agents)
         .values({
+          ...(await withRuntime()),
           profile: { artworkStyle: 'anime', fullBodyArtwork: 'https://cdn/full-body.png' },
           userId,
         })
@@ -1720,7 +1750,7 @@ describe('AgentModel', () => {
     it('should update updatedAt even when only updating meta fields like avatar', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Test Agent', avatar: 'old-avatar' })
+        .values({ ...(await withRuntime()), userId, title: 'Test Agent', avatar: 'old-avatar' })
         .returning()
         .then((res) => res[0]);
 
@@ -1824,7 +1854,7 @@ describe('AgentModel', () => {
 
       await agentModel.updateConfig(agent.id, {
         agencyConfig: {
-          heterogeneousProvider: { command: 'claude', type: 'claude-code' },
+          heterogeneousProvider: { command: 'claude', type: 'claude-code', model: 'default' },
         },
         model: 'gpt-4', // non-protected field should still be applied
       } as any);
@@ -1849,7 +1879,7 @@ describe('AgentModel', () => {
 
       await agentModel.updateConfig(agent.id, {
         agencyConfig: {
-          heterogeneousProvider: { type: 'orvilo' },
+          heterogeneousProvider: { type: 'orvilo', model: 'gpt-4' },
         },
       } as any);
 
@@ -1857,7 +1887,7 @@ describe('AgentModel', () => {
         where: eq(agents.id, agent.id),
       });
 
-      expect((result?.agencyConfig as any)?.heterogeneousProvider).toEqual({
+      expect((result?.agencyConfig as any)?.heterogeneousProvider).toMatchObject({
         type: 'orvilo',
       });
     });
@@ -1877,7 +1907,7 @@ describe('AgentModel', () => {
 
       await agentModel.updateConfig(agent.id, {
         agencyConfig: {
-          heterogeneousProvider: { command: 'claude', type: 'claude-code' },
+          heterogeneousProvider: { command: 'claude', type: 'claude-code', model: 'default' },
         },
       } as any);
 
@@ -1887,6 +1917,7 @@ describe('AgentModel', () => {
 
       expect((result?.agencyConfig as any)?.heterogeneousProvider).toEqual({
         command: 'claude',
+        model: 'default',
         type: 'claude-code',
       });
     });
@@ -1940,7 +1971,7 @@ describe('AgentModel', () => {
       const seededAgencyConfig: OrviloAgentAgencyConfig = {
         boundDeviceId: `creation-host-${userId}`,
         executionTarget: 'device',
-        heterogeneousProvider: { command: 'claude', type: 'claude-code' },
+        heterogeneousProvider: { command: 'claude', type: 'claude-code', model: 'default' },
       };
       const agent = await serverDB
         .insert(agents)
@@ -2027,7 +2058,11 @@ describe('AgentModel', () => {
   it('guards direct Agent model config/delete calls with actual creator/Admin roles and Viewer ceiling', async () => {
     const [workspace] = await serverDB
       .insert(workspaces)
-      .values({ name: 'Model Manage', slug: 'model-manage', primaryOwnerId: userId })
+      .values({
+        name: 'Model Manage',
+        slug: 'model-manage',
+        primaryOwnerId: userId,
+      })
       .returning();
     await serverDB.insert(workspaceMembers).values([
       { userId, workspaceId: workspace.id, role: 'owner' },
@@ -2035,7 +2070,13 @@ describe('AgentModel', () => {
     ]);
     const [agent] = await serverDB
       .insert(agents)
-      .values({ userId, workspaceId: workspace.id, visibility: 'public', title: 'Shared Agent' })
+      .values({
+        ...(await withRuntime({}, userId, workspace.id)),
+        userId,
+        workspaceId: workspace.id,
+        visibility: 'public',
+        title: 'Shared Agent',
+      })
       .returning();
     const memberModel = new AgentModel(serverDB, userId2, workspace.id);
     await expect(memberModel.update(agent.id, { title: 'Changed' })).rejects.toMatchObject({
@@ -2089,19 +2130,17 @@ describe('AgentModel', () => {
       expect(workspaceAgent.agencyConfig).toEqual({
         boundDeviceId: `creation-host-${workspace.id}`,
         executionTarget: 'device',
-        executionTargetSelectionPolicy: 'member',
-        heterogeneousProvider: { type: 'orvilo' },
-        modelSelectionPolicy: 'member',
-        topicSharePolicy: 'member',
+
+        heterogeneousProvider: { type: 'orvilo', model: 'gpt-4' },
       });
       expect(personalAgent.agencyConfig).toEqual({
         boundDeviceId: `creation-host-${userId}`,
         executionTarget: 'device',
-        heterogeneousProvider: { type: 'orvilo' },
+        heterogeneousProvider: { type: 'orvilo', model: 'gpt-4' },
       });
     });
 
-    it('refuses new private workspace Agents and inactive/Viewer creation without inserting', async () => {
+    it('refuses inactive/Viewer creation and allows private creation for an active member', async () => {
       const [workspace] = await serverDB
         .insert(workspaces)
         .values({ name: 'Creator role floor', slug: 'creator-role-floor', primaryOwnerId: userId })
@@ -2121,12 +2160,8 @@ describe('AgentModel', () => {
         .update(workspaceMembers)
         .set({ suspendedAt: null })
         .where(eq(workspaceMembers.userId, userId));
-      await expect(model.create({ ...config, visibility: 'private' })).rejects.toMatchObject({
-        code: 'BAD_REQUEST',
-      });
-      expect(
-        await serverDB.select().from(agents).where(eq(agents.workspaceId, workspace.id)),
-      ).toEqual([]);
+      const privateAgent = await model.create({ ...config, visibility: 'private' });
+      expect(privateAgent.visibility).toBe('private');
       const created = await model.create(config);
       expect(created.visibility).toBe('public');
       expect(
@@ -2325,9 +2360,7 @@ describe('AgentModel', () => {
           agencyConfig: {
             boundDeviceId: `creation-host-${workspace.id}`,
             executionTarget: 'device',
-            heterogeneousProvider: { type: 'codex' },
-            executionTargetSelectionPolicy: 'fixed',
-            modelSelectionPolicy: 'member',
+            heterogeneousProvider: { type: 'codex', model: 'default' },
           },
           title: 'Custom Policies',
         },
@@ -2336,10 +2369,8 @@ describe('AgentModel', () => {
       expect(result.agencyConfig).toEqual({
         boundDeviceId: `creation-host-${workspace.id}`,
         executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
-        heterogeneousProvider: { type: 'codex' },
-        modelSelectionPolicy: 'member',
-        topicSharePolicy: 'member',
+
+        heterogeneousProvider: { type: 'codex', model: 'default' },
       });
     });
 
@@ -2648,10 +2679,7 @@ describe('AgentModel', () => {
         expect(result?.workspaceId).toBe(workspace.id);
         expect(result?.userId).toBe(userId);
         expect(result?.agencyConfig).toEqual({
-          executionTargetSelectionPolicy: 'member',
           heterogeneousProvider: { type: 'orvilo' },
-          modelSelectionPolicy: 'member',
-          topicSharePolicy: 'member',
         });
       });
 
@@ -3617,7 +3645,7 @@ describe('AgentModel', () => {
         agencyConfig: {
           boundDeviceId: 'ws-device-1',
           executionTarget: 'device',
-          heterogeneousProvider: { type: 'codex' },
+          heterogeneousProvider: { type: 'codex', model: 'default' },
         },
       } as any);
 
@@ -3653,7 +3681,7 @@ describe('AgentModel', () => {
         agencyConfig: {
           boundDeviceId: 'ws-device-1',
           executionTarget: 'device',
-          heterogeneousProvider: { type: 'codex' },
+          heterogeneousProvider: { type: 'codex', model: 'default' },
           workingDirByDevice: { 'stale-personal-device': '/Users/old/dir' },
         },
       } as any);
@@ -3738,6 +3766,7 @@ describe('AgentModel', () => {
       const [agent] = await serverDB
         .insert(agents)
         .values({
+          ...(await withRuntime()),
           chatConfig: { enableHistoryCount: true, historyCount: 10 },
           title: 'Chat Config Agent',
           userId,
@@ -3779,7 +3808,12 @@ describe('AgentModel', () => {
       const [agent] = await serverDB
         .insert(agents)
         .values({
-          agencyConfig: { enableGraphMode: true, graph: oldGraph },
+          ...(await withRuntime()),
+          agencyConfig: {
+            ...(await withRuntime()).agencyConfig,
+            enableGraphMode: true,
+            graph: oldGraph,
+          },
           title: 'Graph Agent',
           userId,
         } as NewAgent)
@@ -3789,7 +3823,7 @@ describe('AgentModel', () => {
 
       const result = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
 
-      expect(result?.agencyConfig).toEqual({
+      expect(result?.agencyConfig).toMatchObject({
         enableGraphMode: true,
         graph,
       });
@@ -3806,6 +3840,7 @@ describe('AgentModel', () => {
       const [agent] = await serverDB
         .insert(agents)
         .values({
+          ...(await withRuntime()),
           chatConfig: { enableGraphMode: true, graph },
           title: 'Legacy Graph Agent',
           userId,
@@ -3820,7 +3855,7 @@ describe('AgentModel', () => {
 
       const result = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
 
-      expect(result?.agencyConfig).toEqual({ enableGraphMode: true, graph });
+      expect(result?.agencyConfig).toMatchObject({ enableGraphMode: true, graph });
       expect(result?.chatConfig).not.toHaveProperty('graph');
       expect(result?.chatConfig).not.toHaveProperty('enableGraphMode');
     });
@@ -3836,6 +3871,7 @@ describe('AgentModel', () => {
       const [agent] = await serverDB
         .insert(agents)
         .values({
+          ...(await withRuntime()),
           chatConfig: { enableGraphMode: true, graph },
           title: 'Legacy Graph Agent',
           userId,
@@ -3860,6 +3896,7 @@ describe('AgentModel', () => {
       const [agent] = await serverDB
         .insert(agents)
         .values({
+          ...(await withRuntime()),
           userId,
           title: 'Params Agent',
           params: { temperature: 0.7, topP: 0.9 },
@@ -3883,6 +3920,7 @@ describe('AgentModel', () => {
       const [agent] = await serverDB
         .insert(agents)
         .values({
+          ...(await withRuntime()),
           userId,
           title: 'Params Agent',
           params: { temperature: 0.7 },
@@ -3905,9 +3943,11 @@ describe('AgentModel', () => {
       const [agent] = await serverDB
         .insert(agents)
         .values({
+          ...(await withRuntime()),
           userId,
           title: 'Cwd Agent',
           agencyConfig: {
+            ...(await withRuntime()).agencyConfig,
             executionTarget: 'local',
             workingDirByDevice: { 'device-a': '/a', 'device-b': '/b' },
           },
@@ -3931,9 +3971,13 @@ describe('AgentModel', () => {
       const [agent] = await serverDB
         .insert(agents)
         .values({
+          ...(await withRuntime()),
           userId,
           title: 'Cwd Agent',
-          agencyConfig: { workingDirByDevice: { 'device-a': '/a' } },
+          agencyConfig: {
+            ...(await withRuntime()).agencyConfig,
+            workingDirByDevice: { 'device-a': '/a' },
+          },
         } as NewAgent)
         .returning();
 

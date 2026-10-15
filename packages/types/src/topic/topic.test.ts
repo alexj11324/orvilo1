@@ -176,7 +176,7 @@ describe('parseTopicScheduledRun', () => {
   });
 });
 
-it('preserves execution selection alongside reasoning when creating a topic', () => {
+it('drops topic device routing while preserving reasoning', () => {
   const metadata = {
     executionConfig: {
       executionTarget: 'device',
@@ -185,20 +185,21 @@ it('preserves execution selection alongside reasoning when creating a topic', ()
     },
     reasoningConfig: { gpt5ReasoningEffort: 'high' },
   };
-  expect(chatTopicCreateMetadataSchema.parse(metadata)).toEqual(metadata);
+  expect(chatTopicCreateMetadataSchema.parse(metadata)).toEqual({
+    executionConfig: { inheritWorkspaceScope: false },
+    reasoningConfig: metadata.reasoningConfig,
+  });
 });
 
 // A permission pin belongs to a harness and remains independent of routing policy.
 describe('topic ACP permission persistence', () => {
   const defaults = {
     executionTarget: 'local' as const,
-    executionTargetSelectionPolicy: 'fixed' as const,
     heterogeneousProvider: { type: 'codex' as const },
   };
   it('applies a permission without overriding fixed execution routing', () => {
     expect(
       applyTopicExecutionConfig(defaults, {
-        executionTarget: 'sandbox',
         permission: { provider: 'codex', configId: 'approval', value: 'ask' },
       }),
     ).toEqual({

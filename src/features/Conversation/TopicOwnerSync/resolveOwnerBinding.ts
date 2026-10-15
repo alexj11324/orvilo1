@@ -10,16 +10,16 @@
  * - `/chat/:topicId` — `activeAgentId` tracks the topic's `agentId` (a
  *   still-loading row binds nothing yet; the deep-link effect resolves it).
  * - `/chat/new` — `activeAgentId` stays cleared; the composer's config
- *   agent falls back to the explicit pick, then `lastUsedAgentId`, exactly
+ *   agent falls back to the explicit pick, then the configured Orchestrator/default, exactly
  *   like a fresh room.
  */
 export const resolveOwnerBinding = (params: {
   composerAgentId?: string;
-  lastUsedAgentId?: string | null;
+  defaultAgentId?: string | null;
   routeTopicId: string | null;
   topicAgentId?: string | null;
 }): { activeAgentId?: string; configAgentId?: string } => {
-  const { composerAgentId, lastUsedAgentId, routeTopicId, topicAgentId } = params;
+  const { composerAgentId, defaultAgentId, routeTopicId, topicAgentId } = params;
 
   if (routeTopicId) {
     return { activeAgentId: topicAgentId ?? undefined, configAgentId: topicAgentId ?? undefined };
@@ -27,6 +27,6 @@ export const resolveOwnerBinding = (params: {
 
   return {
     activeAgentId: undefined,
-    configAgentId: composerAgentId ?? lastUsedAgentId ?? undefined,
+    configAgentId: composerAgentId ?? defaultAgentId ?? undefined,
   };
 };

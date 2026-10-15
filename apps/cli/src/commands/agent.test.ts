@@ -507,7 +507,7 @@ describe('agent command', () => {
     it('should merge graph flags into an agencyConfig supplied by --config-file', async () => {
       mockTrpcClient.agent.updateAgentConfig.mutate.mockResolvedValue({});
       const configFile = await writeGraphFixture({
-        agencyConfig: { modelSelectionPolicy: 'member' },
+        agencyConfig: { enableGraphMode: false },
       });
 
       const program = createProgram();
@@ -524,7 +524,7 @@ describe('agent command', () => {
 
       expect(mockTrpcClient.agent.updateAgentConfig.mutate).toHaveBeenCalledWith({
         agentId: 'a1',
-        value: { agencyConfig: { enableGraphMode: true, modelSelectionPolicy: 'member' } },
+        value: { agencyConfig: { enableGraphMode: true } },
       });
     });
 

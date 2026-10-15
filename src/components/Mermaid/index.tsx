@@ -1,5 +1,6 @@
 'use client';
 
+import { ThemeContext } from '@emotion/react';
 import { cn } from 'cn';
 import {
   ChevronDown,
@@ -12,7 +13,7 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import type { ComponentProps, CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from 'react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { use, useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Highlighter from '@/components/Highlighter';
@@ -66,12 +67,13 @@ export function Mermaid({
   shadow,
   showLanguage = true,
   styles,
-  theme = 'lobe-theme',
+  theme: diagramTheme = 'lobe-theme',
   variant = 'filled',
   ...props
 }: MermaidProps) {
   const { t } = useTranslation('common');
   const isDark = useIsDark();
+  const theme = use(ThemeContext) as { fontFamily: string };
   const id = useId().replaceAll(/[^\w-]/g, '');
   const host = useRef<HTMLDivElement>(null);
   const source = children.trim();
@@ -91,7 +93,7 @@ export function Mermaid({
   const drag = useRef<
     { id: number; x: number; y: number; originX: number; originY: number } | undefined
   >(undefined);
-  const currentTheme = `${theme}:${isDark}`;
+  const currentTheme = `${diagramTheme}:${isDark}`;
 
   useEffect(() => {
     let active = true;
@@ -100,13 +102,13 @@ export function Mermaid({
     setError(undefined);
     const style = host.current && getComputedStyle(host.current);
     const role = (name: string) => style?.getPropertyValue(name).trim() || undefined;
-    const palette = theme === 'lobe-theme' ? undefined : diagramThemes[theme];
+    const palette = diagramTheme === 'lobe-theme' ? undefined : diagramThemes[diagramTheme];
     void renderDiagram(
       `orvilo-mermaid-${id}`,
       source,
       {
         theme: 'base',
-        fontFamily: style?.fontFamily,
+        fontFamily: theme.fontFamily,
         themeVariables: {
           darkMode: isDark,
           background: palette?.bg ?? role('--card'),
@@ -140,7 +142,7 @@ export function Mermaid({
       active = false;
       cancellation.abort();
     };
-  }, [source, theme, isDark, id, currentTheme]);
+  }, [source, diagramTheme, theme.fontFamily, isDark, id, currentTheme]);
 
   const svg =
     rendered?.source === source && rendered.theme === currentTheme ? rendered.svg : undefined;

@@ -1,8 +1,9 @@
-import { ChatInput, Editor, SendButton, useEditor } from '@lobehub/editor/react';
+import { ChatInput, Editor, useEditor } from '@lobehub/editor/react';
 import { ChevronLeft } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { EditorSendButton } from '@/components/EditorSendButton';
 import { Button } from '@/components/ui/button';
 import { useEnterToSend } from '@/hooks/useEnterToSend';
 
@@ -52,11 +53,11 @@ const RunReplyEditor = memo<RunReplyEditorProps>(({ onSubmit, onCancel, placehol
             {<ChevronLeft size={14} />}
             {t('cancel', { ns: 'common' })}
           </Button>
-          <SendButton
+          <EditorSendButton
+            aria-label={t('taskDetail.runFollowUp')}
             loading={submitting}
-            shape={'round'}
             title={t('taskDetail.runFollowUp')}
-            type={'primary'}
+            variant="default"
             onClick={handleSubmit}
           />
         </div>

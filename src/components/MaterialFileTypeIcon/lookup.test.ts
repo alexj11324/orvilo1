@@ -14,7 +14,7 @@ describe('licensed material filename associations', () => {
     expect(getIconForFilePath('README.md')).not.toBe('file');
   });
   it('retains folder identity and open suffix', () => {
-    const args = { path: '.github', iconsUrl: '/assets', fallbackUnknownType: false };
+    const args = { path: '.github', iconsUrl: '/assets', fallbackUnknownType: false, open: false };
     expect(getIconForDirectoryPath('.github')).not.toBe('folder');
     expect(getIconUrlForDirectoryPath({ ...args, open: true })).toBe(
       `${getIconUrlForDirectoryPath(args).slice(0, -4)}-open.svg`,

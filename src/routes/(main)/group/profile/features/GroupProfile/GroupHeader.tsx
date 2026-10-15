@@ -195,7 +195,8 @@ const GroupHeader = memo(() => {
           },
         ]}
         popupProps={{
-          placement: 'bottomLeft',
+          side: 'bottom',
+          align: 'start',
         }}
         onChange={handleAvatarChange}
         onDelete={handleAvatarDelete}

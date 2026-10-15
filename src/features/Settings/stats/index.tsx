@@ -1,11 +1,11 @@
 'use client';
-import { ProviderIcon } from '@lobehub/ui/icons';
 import dayjs from 'dayjs';
 import { Brain, UserIcon } from 'lucide-react';
 import { createElement, memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import { ProviderIcon } from '@/components/ControlIcons';
 import DatePicker, { type DatePickerProps } from '@/components/DatePicker';
 import { FormGroup } from '@/components/GroupForm';
 import { Separator } from '@/components/ui/separator';

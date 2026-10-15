@@ -234,7 +234,8 @@ const AgentHeader = memo<AgentHeaderProps>(({ readOnly, disabled: disabledProp }
           },
         ]}
         popupProps={{
-          placement: 'bottomLeft',
+          side: 'bottom',
+          align: 'start',
         }}
         onChange={handleAvatarChange}
         onDelete={handleAvatarDelete}

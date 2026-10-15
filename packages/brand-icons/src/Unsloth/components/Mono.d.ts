@@ -1,4 +1,6 @@
-import type { IconType } from '../../types';
+import type { NamedExoticComponent } from 'react';
 
-declare const Icon: IconType;
+import type { IconProps } from '../../types';
+
+declare const Icon: NamedExoticComponent<IconProps>;
 export default Icon;

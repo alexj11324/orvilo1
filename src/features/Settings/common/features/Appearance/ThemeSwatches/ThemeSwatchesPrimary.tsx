@@ -1,20 +1,20 @@
-import { type PrimaryColors } from '@lobehub/ui';
-import { findCustomThemeName, primaryColors } from '@lobehub/ui';
+import type { UserPrimaryColor } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ColorSwatches } from '@/components/ColorSwatches';
+import { ColorSwatches, type ColorSwatchesProps } from '@/components/ColorSwatches';
+import { findPrimaryThemeName, primaryColors } from '@/styles/nativeThemeSwatches';
 
 interface IProps {
-  onChange?: (v: PrimaryColors) => void;
-  value?: PrimaryColors;
+  onChange?: (v: UserPrimaryColor | '') => void;
+  value?: UserPrimaryColor | '';
 }
 
 const ThemeSwatchesPrimary = memo<IProps>(({ onChange, value }) => {
   const { t } = useTranslation('color');
 
-  const handleSelect = (v: any) => {
-    const name = findCustomThemeName('primary', v) as PrimaryColors;
+  const handleSelect: ColorSwatchesProps['onChange'] = (v) => {
+    const name = findPrimaryThemeName(v);
     onChange?.(name || '');
   };
 

@@ -32,7 +32,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useIsDark } from '@/hooks/useIsDark';
 
-import { toc } from '../../../../packages/brand-icons/src/toc';
+import { toc } from '../../../packages/brand-icons/src/toc';
 import AvatarUploader from './AvatarUploader';
 import ThemedEmojiPicker from './ThemedEmojiPicker';
 import type { EmojiPickerProps } from './types';

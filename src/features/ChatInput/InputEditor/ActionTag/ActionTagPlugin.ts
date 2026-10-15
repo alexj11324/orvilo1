@@ -13,6 +13,7 @@ import {
   type SerializedActionTagNode,
 } from './ActionTagNode';
 import { registerActionTagCommand } from './command';
+import { registerActionTagDecorator } from './nativeDecorator';
 import { registerActionTagSelectionObserver } from './selectionObserver';
 import { type ActionTagCategory, type ActionTagType, GOAL_COMMAND_TYPE } from './types';
 
@@ -191,6 +192,12 @@ export class ActionTagPlugin {
   }
 
   onInit(editor: LexicalEditor): void {
+    this.clears.push(
+      registerActionTagDecorator(
+        editor,
+        (node, lexicalEditor) => this.config?.decorator?.(node, lexicalEditor) ?? null,
+      ),
+    );
     this.clears.push(registerActionTagCommand(editor));
     this.clears.push(registerActionTagSelectionObserver(editor));
     this.clears.push(this.registerTextTagTransform(editor));

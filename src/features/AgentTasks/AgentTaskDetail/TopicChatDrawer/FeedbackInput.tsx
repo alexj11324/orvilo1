@@ -1,9 +1,10 @@
-import { ChatInput, ChatInputActionBar, SendButton, useEditor } from '@lobehub/editor/react';
+import { ChatInput, ChatInputActionBar, useEditor } from '@lobehub/editor/react';
 import { $getRoot } from 'lexical';
 import { ChevronDownIcon, MessageCirclePlus } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { EditorSendButton } from '@/components/EditorSendButton';
 import { Button } from '@/components/ui/button';
 import { AttachmentUploadButton } from '@/features/AttachmentInput';
 import OpStatusTray from '@/features/Conversation/ChatInput/OpStatusTray';
@@ -136,12 +137,12 @@ const FeedbackInput = memo<FeedbackInputProps>(
                 </div>
               }
               right={
-                <SendButton
+                <EditorSendButton
+                  aria-label={t('taskDetail.replyInThread')}
                   disabled={!canSubmit && !submitting}
                   loading={submitting}
-                  shape={'round'}
                   title={t('taskDetail.replyInThread')}
-                  type={'primary'}
+                  variant="default"
                   onClick={handleSubmit}
                 />
               }

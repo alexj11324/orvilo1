@@ -1,4 +1,3 @@
-import { FileTypeIcon as FileTypeBadge } from '@lobehub/ui';
 import { classifyEditedFile, getBasename } from '@orvilo/builtin-tools/fileEditScan';
 import {
   type WorkListItem,
@@ -21,6 +20,7 @@ import type { JSXElementConstructor } from 'react';
 
 import { Github } from '@/components/BrandIcons';
 import { mimeTypeMap } from '@/components/FileIcon/config';
+import FileTypeBadge from '@/components/FileTypeIcon';
 
 import LinearIcon from './icons/LinearIcon';
 

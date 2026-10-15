@@ -373,9 +373,6 @@ importers:
       '@orvilo/utils':
         specifier: workspace:*
         version: link:../utils
-      antd:
-        specifier: ^6
-        version: 6.5.0(date-fns@4.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       lucide-react:
         specifier: '*'
         version: 1.33.0(react@19.2.7)
@@ -404,12 +401,6 @@ importers:
       '@orvilo/prompts':
         specifier: workspace:*
         version: link:../prompts
-      antd:
-        specifier: ^6
-        version: 6.5.0(date-fns@4.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.17)(antd@6.5.0(date-fns@4.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@9.4.0)
       lucide-react:
         specifier: '*'
         version: 1.33.0(react@19.2.7)
@@ -460,9 +451,6 @@ importers:
       '@orvilo/builtin-tool-agent-builder':
         specifier: workspace:*
         version: link:../builtin-tool-agent-builder
-      antd:
-        specifier: ^6
-        version: 6.5.0(date-fns@4.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       lucide-react:
         specifier: '*'
         version: 1.33.0(react@19.2.7)
@@ -508,9 +496,6 @@ importers:
       '@orvilo/prompts':
         specifier: workspace:*
         version: link:../prompts
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.17)(antd@6.5.0(date-fns@4.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@9.4.0)
       lucide-react:
         specifier: '*'
         version: 1.33.0(react@19.2.7)
@@ -533,9 +518,6 @@ importers:
       '@orvilo/shared-tool-ui':
         specifier: workspace:*
         version: link:../shared-tool-ui
-      antd:
-        specifier: ^6
-        version: 6.5.0(date-fns@4.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       lucide-react:
         specifier: '*'
         version: 1.33.0(react@19.2.7)
@@ -1024,9 +1006,6 @@ importers:
       anser:
         specifier: ^2.3.5
         version: 2.3.5
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.17)(antd@6.5.0(date-fns@4.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@9.4.0)
       lucide-react:
         specifier: '*'
         version: 1.33.0(react@19.2.7)

@@ -9,6 +9,8 @@ import type { ReactNode } from 'react';
 import type * as ReactRouterDom from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import errorLocale from '@/locales/default/error';
+
 import AgentDocumentsGroup from './AgentDocumentsGroup';
 
 const useClientDataSWR = vi.fn();
@@ -53,26 +55,31 @@ vi.mock('@/libs/swr', () => ({
   useClientDataSWR: (...args: unknown[]) => useClientDataSWR(...args),
 }));
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: { time?: string }) =>
-      (
-        ({
-          'workingPanel.resources.empty': 'No agent documents yet',
-          'workingPanel.resources.error': 'Failed to load resources',
-          'workingPanel.resources.filter.documents': 'Documents',
-          'workingPanel.resources.filter.skills': 'Skills',
-          'workingPanel.resources.filter.web': 'Web',
-          'workingPanel.resources.updatedAt': `Updated ${options?.time}`,
-          'workingPanel.skills.empty': 'No skills found',
-          'workingPanel.skills.section.agent': 'Agent skills',
-          'workingPanel.skills.section.device': 'Device skills',
-          'workingPanel.skills.section.project': 'Project skills',
-          'workingPanel.skills.section.user': 'User skills',
-        }) as Record<string, string>
-      )[key] || key,
-  }),
-}));
+vi.mock('react-i18next', async () => {
+  const { default: defaultErrorLocale } = await import('@/locales/default/error');
+  return {
+    useTranslation: () => ({
+      t: (key: string, options?: { time?: string; ns?: string }) =>
+        options?.ns === 'error'
+          ? ((defaultErrorLocale as Record<string, string>)[key] ?? key)
+          : (
+              {
+                'workingPanel.resources.empty': 'No agent documents yet',
+                'workingPanel.resources.error': 'Failed to load resources',
+                'workingPanel.resources.filter.documents': 'Documents',
+                'workingPanel.resources.filter.skills': 'Skills',
+                'workingPanel.resources.filter.web': 'Web',
+                'workingPanel.resources.updatedAt': `Updated ${options?.time}`,
+                'workingPanel.skills.empty': 'No skills found',
+                'workingPanel.skills.section.agent': 'Agent skills',
+                'workingPanel.skills.section.device': 'Device skills',
+                'workingPanel.skills.section.project': 'Project skills',
+                'workingPanel.skills.section.user': 'User skills',
+              } as Record<string, string>
+            )[key] || key,
+    }),
+  };
+});
 
 vi.mock('@/features/AgentDocumentsExplorer', () => ({
   DocumentExplorerTree: ({
@@ -488,7 +495,7 @@ describe('AgentDocumentsGroup', () => {
 
     render(<AgentDocumentsGroup activeFilter="documents" />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Render Error');
+    expect(screen.getByRole('alert')).toHaveTextContent(errorLocale['error.title']);
     expect(screen.getByRole('alert')).toHaveTextContent('document tree render failed');
   });
 

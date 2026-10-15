@@ -1,10 +1,11 @@
-import { SendButton, useEditor } from '@lobehub/editor/react';
+import { useEditor } from '@lobehub/editor/react';
 import { $getRoot } from 'lexical';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import Avatar from '@/components/Avatar';
+import { EditorSendButton } from '@/components/EditorSendButton';
 import { toast } from '@/components/toast';
 import { AttachmentUploadButton } from '@/features/AttachmentInput';
 import { mentionFilledClassName } from '@/features/ChatInput/InputEditor/mentionStyle';
@@ -132,12 +133,11 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
         </div>
         <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
           <AttachmentUploadButton onFiles={handleAttach} />
-          <SendButton
+          <EditorSendButton
             aria-label={t('taskDetail.sendComment')}
             disabled={!canEditTask || (!canSubmit && !submitting)}
             loading={submitting}
-            shape={'round'}
-            type={'text'}
+            variant="ghost"
             onClick={handleSubmit}
           />
         </div>

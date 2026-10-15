@@ -1,9 +1,10 @@
-import { ChatInput, ChatInputActionBar, SendButton } from '@lobehub/editor/react';
+import { ChatInput, ChatInputActionBar } from '@lobehub/editor/react';
 import { cn } from 'cn';
 import { memo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { EditorSendButton } from '@/components/EditorSendButton';
 import { toast } from '@/components/toast';
 import { useActiveConversationResourceAccess } from '@/features/Conversation/hooks/useConversationResourceAccess';
 import { useTopicCommentMutations } from '@/features/TopicComment/hooks';
@@ -77,12 +78,12 @@ const Composer = memo<ComposerProps>(
             <ChatInputActionBar
               justify={'flex-end'}
               right={
-                <SendButton
+                <EditorSendButton
+                  aria-label={t('input.send')}
                   disabled={creating || submitting || !content.trim()}
                   loading={creating || submitting}
-                  shape={'round'}
                   title={t('input.send')}
-                  type={'text'}
+                  variant="ghost"
                   onClick={submit}
                 />
               }

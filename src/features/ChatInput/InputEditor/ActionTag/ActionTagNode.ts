@@ -1,5 +1,4 @@
 import { addClassNamesToElement } from '@lexical/utils';
-import { getKernelFromEditor } from '@lobehub/editor';
 import type { HeadlessRenderableNode, HeadlessRenderContext } from '@lobehub/editor/renderer';
 import {
   $applyNodeReplacement,
@@ -15,6 +14,7 @@ import {
 import { createElement } from 'react';
 
 import { ActionMention } from './ActionMention';
+import { renderActionTagDecorator } from './nativeDecorator';
 import type { ActionTagCategory, ActionTagType } from './types';
 
 export type SerializedActionTagNode = Spread<
@@ -116,13 +116,7 @@ export class ActionTagNode extends DecoratorNode<any> implements HeadlessRendera
   }
 
   decorate(editor: LexicalEditor): any {
-    const decorator = getKernelFromEditor(editor)?.getDecorator(ActionTagNode.getType());
-    if (!decorator) return null;
-    if (typeof decorator === 'function') return decorator(this, editor);
-    return {
-      queryDOM: decorator.queryDOM,
-      render: decorator.render(this, editor),
-    };
+    return renderActionTagDecorator(editor, this);
   }
 
   renderHeadless({ key }: HeadlessRenderContext) {

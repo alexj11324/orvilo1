@@ -1,20 +1,20 @@
-import { type NeutralColors } from '@lobehub/ui';
-import { findCustomThemeName, neutralColors } from '@lobehub/ui';
+import type { UserNeutralColor } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ColorSwatches } from '@/components/ColorSwatches';
+import { ColorSwatches, type ColorSwatchesProps } from '@/components/ColorSwatches';
+import { findNeutralThemeName, neutralColors } from '@/styles/nativeThemeSwatches';
 
 interface IProps {
-  onChange?: (v: NeutralColors) => void;
-  value?: NeutralColors;
+  onChange?: (v: UserNeutralColor | '') => void;
+  value?: UserNeutralColor | '';
 }
 
 const ThemeSwatchesNeutral = memo<IProps>(({ value, onChange }) => {
   const { t } = useTranslation('color');
 
-  const handleSelect = (v: any) => {
-    const name = findCustomThemeName('neutral', v) as NeutralColors;
+  const handleSelect: ColorSwatchesProps['onChange'] = (v) => {
+    const name = findNeutralThemeName(v);
     onChange?.(name || '');
   };
 

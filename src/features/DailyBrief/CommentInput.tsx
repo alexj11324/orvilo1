@@ -1,8 +1,9 @@
-import { ChatInput, Editor, SendButton, useEditor } from '@lobehub/editor/react';
+import { ChatInput, Editor, useEditor } from '@lobehub/editor/react';
 import { ChevronLeft } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { EditorSendButton } from '@/components/EditorSendButton';
 import { Button } from '@/components/ui/button';
 import { useEnterToSend } from '@/hooks/useEnterToSend';
 
@@ -48,11 +49,11 @@ const CommentInput = memo<CommentInputProps>(({ onSubmit, onCancel }) => {
             <ChevronLeft data-icon="inline-start" />
             {t('cancel', { ns: 'common' })}
           </Button>
-          <SendButton
+          <EditorSendButton
+            aria-label={t('brief.commentSubmit')}
             loading={submitting}
-            shape={'round'}
             title={t('brief.commentSubmit')}
-            type={'primary'}
+            variant="default"
             onClick={handleSubmit}
           />
         </div>

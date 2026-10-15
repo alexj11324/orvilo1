@@ -204,3 +204,9 @@ export {
   type TraeAcpTextPromptBlock,
 } from './traeAcpSession';
 export type { AgentStreamEvent, AgentStreamEventType } from '@orvilo/agent-gateway-client';
+export {
+  type AcpTurnBindings,
+  createPersistentAcpAgent,
+  type PersistentAcpAgent,
+  type PersistentAcpAgentOptions,
+} from './persistentAcpAgent';

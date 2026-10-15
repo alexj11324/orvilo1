@@ -29,13 +29,17 @@ import type {
   UploadHeterogeneousImage,
 } from '@orvilo/heterogeneous-agents/spawn';
 import {
-  classifyHeteroProcessFailure,
-  createFileStoreImageUploader,
-  isHeteroStatusGuideErrorData,
-  spawnAgent,
-} from '@orvilo/heterogeneous-agents/spawn';
+  buildHeteroFinishError,
+  CoalescingBatchIngester,
+  consumeTurnEvents,
+  createOperationHeartbeat,
+  createOperationTokenRenewal,
+  deriveTurnOutcome,
+  looksLikeNeedsRetryWithoutResume,
+  TrpcIngestSink,
+} from '@orvilo/heterogeneous-agents/run';
+import { createFileStoreImageUploader, spawnAgent } from '@orvilo/heterogeneous-agents/spawn';
 import { AEGIS_PACK_ENV } from '@orvilo/types';
-import { isRecord } from '@orvilo/utils/object';
 import type { Command } from 'commander';
 
 import { createLambdaClient, getTrpcClient } from '../api/client';
@@ -44,13 +48,9 @@ import {
   persistChildResultInboxRecord,
   resolvePersistentToolCallId,
 } from '../utils/childResultInbox';
-import { CoalescingBatchIngester } from '../utils/CoalescingBatchIngester';
 import { HeteroTraceRecorder } from '../utils/HeteroTraceRecorder';
 import { log } from '../utils/logger';
-import { createOperationHeartbeat } from '../utils/OperationHeartbeat';
-import { createOperationTokenRenewal } from '../utils/OperationTokenRenewal';
 import { createLocalTraceStore } from '../utils/traceStore';
-import { TrpcIngestSink } from '../utils/TrpcIngestSink';
 
 // `orvilo` is the builtin agent bound to the Prime harness — the fixed
 // type→adapter map resolves it to 'prime' (see
@@ -64,50 +64,6 @@ const SUPPORTED_AGENT_COMMANDS = HETEROGENEOUS_AGENT_CONFIGS.map(
 ).join(', ');
 const CODEX_REASONING_EFFORT_CONFIG_KEY = 'model_reasoning_effort';
 const CODEX_SERVICE_TIER_CONFIG_KEY = 'service_tier';
-
-/**
- * Patterns that indicate a `--resume <sessionId>` run (an ACP `session/load`
- * request under the hood) should be retried without resuming.  Two classes of
- * failure:
- *
- *   1. Session file missing (sandbox recycled): the container is ephemeral
- *      (~1 h idle TTL), so a new sandbox has an empty session store and the
- *      stored session id is stale.
- *
- *   2. Context overflow (long conversation): the resumed session carries all
- *      accumulated history; when the combined token count exceeds the model's
- *      context window the agent rejects the request immediately after the
- *      session loads.  Starting fresh drops the old history and lets the agent
- *      respond to the new prompt alone.
- *
- * Checked against:
- *   - `error` stream events emitted by the session adapter (including ACP
- *     `session/load` RPC errors)
- *   - Accumulated stderr output (fallback when the agent exits without a
- *     structured result event)
- */
-const RESUME_RETRY_PATTERNS = [
-  // Session file missing — sandbox was recycled
-  /no conversation found/i,
-  /session.*not found/i,
-  /conversation.*not found/i,
-  /resume.*not found/i,
-  // Context overflow — API rejected the resumed session's accumulated history
-  /prompt.*too long/i,
-  /context.*too long/i,
-  /context window.*exceed/i,
-  /maximum.*context.*length/i,
-] as const;
-
-const looksLikeNeedsRetryWithoutResume = (text: string): boolean =>
-  RESUME_RETRY_PATTERNS.some((p) => p.test(text));
-
-const isMissingGrokResumeSession = (data: Record<string, unknown> | undefined): boolean => {
-  if (data?.agentType !== 'grok-build' || !isRecord(data.details)) return false;
-  const { details } = data;
-  const rpcData = details.data;
-  return details.method === 'session/load' && isRecord(rpcData) && rpcData.code === 'FS_NOT_FOUND';
-};
 
 interface ExecOptions {
   acpPermissionId?: string;
@@ -560,6 +516,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
           operationId,
           renew: async (id) =>
             (await getTrpcClient()).aiAgent.refreshHeteroOperationToken.mutate({ operationId: id }),
+          warn: (message) => log.warn(message),
         })
       : undefined;
 
@@ -804,20 +761,8 @@ const exec = async (options: ExecOptions): Promise<void> => {
    * surface through (`stream_error` for a spawn ENOENT reads wrong on a
    * "CLI not installed" error).
    */
-  const buildFinishError = (
-    message: string,
-    type: string,
-    errnoCode?: string,
-  ): { body?: Record<string, unknown>; message: string; type: string } => {
-    const classified = classifyHeteroProcessFailure({
-      agentType,
-      command: options.command,
-      detail: message,
-      errnoCode,
-    });
-    if (!classified) return { message, type };
-    return { body: { ...classified }, message: classified.message, type: 'AgentRuntimeError' };
-  };
+  const buildFinishError = (message: string, type: string, errnoCode?: string) =>
+    buildHeteroFinishError({ agentType, command: options.command }, message, type, errnoCode);
 
   /**
    * Spawn one agent process and stream all its events into the server ingester.
@@ -956,41 +901,23 @@ const exec = async (options: ExecOptions): Promise<void> => {
     let terminalErrorData: Record<string, unknown> | undefined;
     const ingestError = false;
     try {
-      for await (const event of handle.events) {
-        if (interceptResumeErrors && event.type === 'error') {
-          const data = event.data as Record<string, unknown> | undefined;
-          const msg = String(data?.message ?? data?.error ?? '');
-          if (looksLikeNeedsRetryWithoutResume(msg) || isMissingGrokResumeSession(data)) {
-            resumeNotFound = true;
-            // Emit to JSONL for observability but do NOT push to ingester —
-            // we are about to retry; the server must not see a terminal error.
-            // The local trace still records it: "attempt 1 could not resume" is
-            // the whole reason someone reads the trace back.
+      ({ resumeNotFound, sawTerminalError, terminalErrorData, terminalErrorMessage } =
+        await consumeTurnEvents(handle.events, {
+          interceptResumeErrors,
+          onEvent: (event) => {
+            if (emitJsonl) process.stdout.write(`${JSON.stringify(event)}\n`);
+            operationHeartbeat?.observe(event);
+            traceRecorder.observe(event);
+            serverIngester?.push(event);
+          },
+          // A withheld resume failure is about to be retried: the server must
+          // not see a terminal error, but JSONL and the local trace keep it —
+          // "attempt 1 could not resume" is why someone reads the trace back.
+          onWithheld: (event) => {
             if (emitJsonl) process.stdout.write(`${JSON.stringify(event)}\n`);
             traceRecorder.observe(event);
-            continue;
-          }
-        }
-        // A terminal `error` event (e.g. an API/rate-limit error relayed by CC)
-        // must mark the run as failed even when the child exits 0 — track it so
-        // the finish result is not derived from the exit code alone. Capture the
-        // message too, so the finish payload can surface it as the task-level
-        // error detail (CC relays these on stdout, not stderr).
-        if (event.type === 'error') {
-          sawTerminalError = true;
-          const data = event.data as Record<string, unknown> | undefined;
-          terminalErrorMessage = String(data?.message ?? data?.error ?? '') || undefined;
-          // Keep the adapter's already-classified status-guide payload
-          // (overloaded / rate_limit carry `agentType` + `code`) so the finish
-          // leg doesn't flatten it back to a bare string — the process-failure
-          // classifier there only knows cli_not_found / auth_required.
-          terminalErrorData = isHeteroStatusGuideErrorData(data) ? data : undefined;
-        }
-        if (emitJsonl) process.stdout.write(`${JSON.stringify(event)}\n`);
-        operationHeartbeat?.observe(event);
-        traceRecorder.observe(event);
-        serverIngester?.push(event);
-      }
+          },
+        }));
     } catch (err) {
       log.error(
         'Stream error from agent process:',
@@ -1173,42 +1100,12 @@ const exec = async (options: ExecOptions): Promise<void> => {
     }
   }
 
-  // CC relays API/rate-limit errors as an in-stream terminal `error` event but
-  // still exits 0, so the exit code alone would report `success`. Treat any
-  // pushed terminal error as a failed run so the topic/task is marked failed.
-  const exitedClean =
-    !result.cancelled &&
-    !result.ingestError &&
-    !result.sawTerminalError &&
-    (code === 0 || signal === 'SIGTERM');
-
-  // When the run failed, pass an error detail so the server surfaces a useful
-  // message instead of the generic "Agent execution failed" fallback. Prefer
-  // the in-stream terminal error (CC relays API/rate-limit errors here while
-  // exiting 0, so stderr is empty); otherwise fall back to the stderr tail.
-  // Trim to the last 1 KB — the tail is most informative and keeps the tRPC
-  // payload small.
-  const stderrTail = result.stderrContent.trim();
-  const errorDetail = result.terminalErrorMessage || stderrTail;
-  // The adapter's in-stream classification (overloaded / rate_limit) already
-  // carries the structured status-guide body — forward it verbatim instead of
-  // re-deriving from the flattened message via the process-only classifier,
-  // which would drop `agentType`/`code` and demote the client UI to the
-  // generic error card.
-  const finishError =
-    result.cancelled || exitedClean
-      ? undefined
-      : result.terminalErrorData
-        ? {
-            body: { ...result.terminalErrorData },
-            message: String(result.terminalErrorData.message ?? errorDetail ?? ''),
-            type: 'AgentRuntimeError',
-          }
-        : errorDetail
-          ? buildFinishError(errorDetail.slice(-1024), 'AgentRuntimeError')
-          : undefined;
-
-  const runResult = result.cancelled ? 'cancelled' : exitedClean ? 'success' : 'error';
+  // CC relays API/rate-limit errors in-stream while exiting 0, so the outcome
+  // also weighs terminal errors, not just the exit code.
+  const { error: finishError, result: runResult } = deriveTurnOutcome(
+    { agentType, command: options.command },
+    result,
+  );
 
   // Close the local trace for EVERY run — the outcome is derived above from the
   // same signals the server finish uses, so a standalone run records the same

@@ -98,6 +98,14 @@ export interface AcpAgentSessionOptions {
   requestTimeoutMs?: number;
   resumeSessionId?: string;
   sessionId: string;
+  /**
+   * How long a settled session keeps its child (and ACP connection) alive for
+   * the next turn on the same session. `0`/undefined exits at turn end as
+   * before. Cache keep-alive, when armed, already holds the child and takes
+   * precedence. A warm child is reused with {@link AcpAgentSession.runWarm},
+   * skipping `initialize` and `session/new|load`.
+   */
+  warmIdleMs?: number;
 }
 
 /** Per-agent invariants a subclass passes to the base constructor. */
@@ -129,11 +137,16 @@ export abstract class AcpAgentSession<
   TOptions extends AcpAgentSessionOptions = AcpAgentSessionOptions,
 > {
   protected readonly client: AcpStdioClient;
-  protected readonly pipeline: AgentStreamPipeline;
+  protected pipeline: AgentStreamPipeline;
   /** The agent-native session id, set as soon as session setup resolves it. */
   protected acpSessionId?: string;
 
+  private pipelineConfig: Omit<AgentStreamPipelineOptions, 'operationId'>;
   private cacheKeepalive?: CacheKeepaliveController;
+  /** The child is held (no keep-alive) between turns for {@link AcpAgentSessionOptions.warmIdleMs}. */
+  private warmHoldTimer?: ReturnType<typeof setTimeout>;
+  private keepaliveInFlight?: Promise<boolean>;
+  private adopting = false;
   private cacheKeepaliveStats?: HeterogeneousAgentCacheKeepaliveStatus;
   private readonly cancelGraceMs: number;
   private inInertTurnActive = false;
@@ -153,6 +166,7 @@ export abstract class AcpAgentSession<
   ) {
     this.cancelGraceMs = config.cancelGraceMs ?? DEFAULT_CANCEL_GRACE_MS;
     this.transport = config.transport;
+    this.pipelineConfig = config.pipeline;
     this.pipeline = new AgentStreamPipeline({
       ...config.pipeline,
       operationId: options.operationId,
@@ -170,12 +184,12 @@ export abstract class AcpAgentSession<
         if (this.titleLingering) return;
         return this.handleAgentMessage(message);
       },
-      onRawMessage: options.onRawMessage,
+      onRawMessage: (line) => this.options.onRawMessage(line),
       onServerRequest: (message) =>
         this.titleLingering
           ? this.refuseLingeringRequest(message)
           : this.handleServerRequest(message),
-      onStderr: options.onStderr,
+      onStderr: (data) => this.options.onStderr(data),
       processLabel: config.processLabel,
       requestTimeoutMs: options.requestTimeoutMs,
     });
@@ -188,6 +202,21 @@ export abstract class AcpAgentSession<
   /** True while the keep-alive scheduler holds the child alive post-turn. */
   get keepaliveArmed(): boolean {
     return this.cacheKeepalive?.armed === true;
+  }
+
+  /**
+   * True when the child survived its last settled turn (keep-alive armed or
+   * warm idle hold) and is still connected, so the next turn can skip process
+   * spawn, `initialize` and session setup.
+   */
+  get reusable(): boolean {
+    return (
+      !this.hostClosed &&
+      !this.interruptRequested &&
+      this.acpSessionId !== undefined &&
+      this.client.alive &&
+      (this.keepaliveArmed || this.warmHoldTimer !== undefined)
+    );
   }
 
   /** Keep-alive counters for run metadata; undefined when never armed. */
@@ -207,14 +236,68 @@ export abstract class AcpAgentSession<
 
   /** Run one full prompt turn. Resolves silently when the host closed the session mid-run. */
   async run(): Promise<void> {
+    return this.runTurn(false);
+  }
+
+  /**
+   * Run the next turn on the live child left by a previous turn: same
+   * connection and ACP session, only `session/prompt` is sent. `bindings`
+   * replaces the per-turn options (operation id, prompt, callbacks). Throws
+   * when the session is not {@link reusable} — callers fall back to a fresh
+   * session.
+   *
+   * Bindings named like pipeline options also rebind the turn's fresh
+   * pipeline: `uploadImage` (kept for later turns) and
+   * `initialCumulativeUsage` (this turn only — a cold turn's resume seed never
+   * carries over to a warm turn).
+   */
+  async runWarm(bindings: Partial<TOptions>): Promise<void> {
+    if (!this.reusable) throw new Error('ACP session is not reusable');
+    this.adopting = true;
+    try {
+      this.releaseWarmHold();
+      // Retire the keeper first so it schedules no further ping, then let an
+      // inert ping that is already mid-flight settle: one ACP session cannot
+      // take two concurrent `session/prompt`s.
+      this.cacheKeepalive?.dispose('activity');
+      await this.keepaliveInFlight;
+    } finally {
+      this.adopting = false;
+    }
+    if (this.hostClosed || !this.client.alive) throw new Error('ACP session is not reusable');
+
+    this.clearTitleLinger();
+    Object.assign(this.options, bindings);
+    const rebound = bindings as Partial<AgentStreamPipelineOptions>;
+    if ('uploadImage' in bindings) {
+      this.pipelineConfig = { ...this.pipelineConfig, uploadImage: rebound.uploadImage };
+    }
+    this.pipeline = new AgentStreamPipeline({
+      ...this.pipelineConfig,
+      initialCumulativeUsage: rebound.initialCumulativeUsage,
+      operationId: this.options.operationId,
+    });
+    this.interruptRequested = false;
+    this.titleWindowEnded = false;
+    return this.runTurn(true);
+  }
+
+  private async runTurn(warm: boolean): Promise<void> {
     let completedNormally = false;
-    this.emitStatus('starting');
+    this.emitStatus(warm ? 'running' : 'starting');
     try {
       await this.prepareRun?.();
-      const initialized = await this.initializeConnection();
-      const sessionId = await this.establishSession(initialized);
-      this.acpSessionId = sessionId;
-      this.emitStatus('running');
+      let sessionId: string;
+      if (warm) {
+        sessionId = this.acpSessionId as string;
+        this.emitStatus('running');
+        await this.onTurnReuse?.(sessionId);
+      } else {
+        const initialized = await this.initializeConnection();
+        sessionId = await this.establishSession(initialized);
+        this.acpSessionId = sessionId;
+        this.emitStatus('running');
+      }
       this.onBeforePrompt?.();
       this.promptStarted = true;
       const result = await this.client.request<unknown>(
@@ -228,6 +311,7 @@ export abstract class AcpAgentSession<
       await this.emitEvents(await this.pipeline.flush());
       if (this.hostClosed) return;
       const keepalive = this.armCacheKeepalive();
+      if (!keepalive && completedNormally) this.beginWarmHold();
       this.emitStatus(
         'idle',
         keepalive?.windowEndsAt === undefined
@@ -241,9 +325,9 @@ export abstract class AcpAgentSession<
       this.emitStatus('error');
       throw error;
     } finally {
-      // An armed keeper owns the child from here on — it disposes the client
-      // itself when the scheduler disarms.
-      if (!this.keepaliveArmed) {
+      // An armed keeper or a warm hold owns the child from here on — it
+      // disposes the client itself when it lets go.
+      if (!this.keepaliveArmed && this.warmHoldTimer === undefined) {
         if (completedNormally && this.shouldLingerForTitle()) this.beginTitleLinger();
         else {
           this.client.close();
@@ -252,6 +336,30 @@ export abstract class AcpAgentSession<
         }
       }
     }
+  }
+
+  /** Hold the child for the next turn when no keep-alive already does. */
+  private beginWarmHold(): void {
+    const ms = this.options.warmIdleMs;
+    if (!ms || ms <= 0 || this.hostClosed || this.interruptRequested || this.cacheKeepalive) return;
+    const timer = setTimeout(() => {
+      if (this.warmHoldTimer !== timer) return;
+      this.warmHoldTimer = undefined;
+      this.close();
+    }, ms);
+    timer.unref?.();
+    this.warmHoldTimer = timer;
+    // A child that dies while held idle ends the hold: report `closed` now
+    // instead of when the idle timer would have fired.
+    void this.client.exited.then(() => {
+      if (this.warmHoldTimer === timer) this.close();
+    });
+  }
+
+  private releaseWarmHold(): void {
+    if (this.warmHoldTimer === undefined) return;
+    clearTimeout(this.warmHoldTimer);
+    this.warmHoldTimer = undefined;
   }
 
   /**
@@ -269,6 +377,12 @@ export abstract class AcpAgentSession<
     this.interruptRequested = true;
     if (this.titleLingering) {
       this.close();
+      return this.waitForExit(this.cancelGraceMs);
+    }
+    if (this.warmHoldTimer !== undefined) {
+      this.close();
+      if (await this.waitForExit(this.cancelGraceMs)) return true;
+      this.client.signal('SIGKILL');
       return this.waitForExit(this.cancelGraceMs);
     }
     if (this.cacheKeepalive) {
@@ -309,6 +423,7 @@ export abstract class AcpAgentSession<
     if (this.hostClosed) return;
     this.hostClosed = true;
     this.clearTitleLinger();
+    this.releaseWarmHold();
     this.cacheKeepalive?.dispose('closed');
     this.onHostClose?.();
     this.client.close(signal);
@@ -425,6 +540,9 @@ export abstract class AcpAgentSession<
       disarmReason: reason,
       pings: controller.pings,
     };
+    // A real turn is taking over the live child: record the telemetry but
+    // keep the process and connection.
+    if (this.adopting && reason === 'activity') return;
     this.hostClosed = true;
     this.client.close();
     this.emitStatus('closed', { cacheKeepalive: this.cacheKeepaliveStats });
@@ -438,7 +556,16 @@ export abstract class AcpAgentSession<
    * while `inInertTurn` is set. Resolves false on any failure so the
    * scheduler disarms instead of burning retries on a dead session.
    */
-  private async sendKeepalivePing(): Promise<boolean> {
+  private sendKeepalivePing(): Promise<boolean> {
+    const ping = this.runKeepalivePing();
+    this.keepaliveInFlight = ping;
+    void ping.finally(() => {
+      if (this.keepaliveInFlight === ping) this.keepaliveInFlight = undefined;
+    });
+    return ping;
+  }
+
+  private async runKeepalivePing(): Promise<boolean> {
     const sessionId = this.acpSessionId;
     if (!sessionId || this.hostClosed) return false;
     this.inInertTurnActive = true;
@@ -521,7 +648,13 @@ export abstract class AcpAgentSession<
   }
 
   protected async emitEvents(events: AgentStreamEvent[]): Promise<void> {
-    if (!this.hostClosed && !this.cacheKeepalive && !this.titleLingering && events.length > 0) {
+    if (
+      !this.hostClosed &&
+      !this.cacheKeepalive &&
+      this.warmHoldTimer === undefined &&
+      !this.titleLingering &&
+      events.length > 0
+    ) {
       await this.options.onEvents(events);
     }
   }
@@ -587,6 +720,13 @@ export abstract class AcpAgentSession<
 
   /** Optional async setup that must precede spawning the child (e.g. prompt materialization). */
   protected prepareRun?(): Promise<void>;
+
+  /**
+   * Re-announce the live session to the fresh per-turn pipeline when a warm
+   * child is reused (the work `establishSession` does for the pipeline on a
+   * cold turn). Runs after `prepareRun`, before `session/prompt`.
+   */
+  protected onTurnReuse?(sessionId: string): Promise<void>;
 
   /** Invoked right before the `session/prompt` request is written. */
   protected onBeforePrompt?(): void;

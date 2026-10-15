@@ -30,7 +30,14 @@ standard way to give an ACP agent tools) and for `qoder`'s `ask_user_question`.
 | Item | Question |
 | --- | --- |
 | `qoder` `ask_user_question` MCP | Does `qoder --acp` emit `elicitation/create` for its ask tool? Closed-source CLI, not checked. If yes, drop the mount like `claude-code` |
-| Session-title linger (`SESSION_TITLE_LINGER_MS`) | Exists because the child is killed at turn end. ACP already delivers titles via `session_info_update`; a persistent child makes the linger unnecessary |
+| Session-title linger (`SESSION_TITLE_LINGER_MS`) | Exists because the child is killed at turn end. ACP already delivers titles via `session_info_update`; the gateway warm pool keeps the child (titles between turns go to the next turn), the renderer path still lingers |
 | `cursor` / `devin` / `droid` / `grok` / `trae` custom session classes | Each uses `session/load` and bespoke handling. Check whether each now offers a standard ACP entry (resume, elicitation, config options) and can be folded into `StandardAcpSession` |
 | `session/load` in the non-standard session classes | Same as the resume change above, per agent capability |
 | Permissions: `initialPermission` via `session/set_config_option` / modes | Already standard; confirm each bridge's mode vocabulary instead of the per-agent presets |
+
+## Process model
+
+ACP assumes a long-lived agent: `initialize` once, then many `session/prompt`s
+on one connection. The gateway warm pool (`gatewayAcpPool.ts`,
+`createPersistentAcpAgent`) follows that model; the CLI `hetero exec` and
+renderer paths still run one process per turn.

@@ -142,7 +142,11 @@ export interface OrviloBuiltinMcpServerOptions {
 }
 
 interface RegisteredOperation {
-  bridge: AskUserBridge;
+  /** Unset on a route between turns (see {@link OrviloBuiltinMcpServer.registerRoute}). */
+  bridge?: AskUserBridge;
+  /** The operation a route is currently bound to; a plain registration is keyed by its own id. */
+  operationId?: string;
+  route?: boolean;
 }
 
 interface SessionEntry {
@@ -309,10 +313,58 @@ export class OrviloBuiltinMcpServer {
     return created;
   }
 
+  /**
+   * Register a stable route for an agent process that outlives one operation.
+   * Its URL ({@link urlForOperation} with the route id) is handed to the agent
+   * once at `session/new`; each turn then {@link bindRoute}s its own operation
+   * and bridge, and {@link releaseRoute} ends the turn without dropping the
+   * agent's MCP sessions.
+   */
+  registerRoute(routeId: string): void {
+    if (this.operations.has(routeId)) {
+      throw new Error(`OrviloBuiltinMcpServer: route already registered: ${routeId}`);
+    }
+    this.operations.set(routeId, { route: true });
+  }
+
+  /** Bind the route to the turn's operation; tool calls resolve to it until released. */
+  bindRoute(routeId: string, operationId: string, bridge?: AskUserBridge): AskUserBridge {
+    const entry = this.operations.get(routeId);
+    if (!entry?.route) throw new Error(`OrviloBuiltinMcpServer: unknown route: ${routeId}`);
+    entry.bridge?.cancelAll('session_ended');
+    const created = bridge ?? new AskUserBridge(operationId);
+    this.operations.set(routeId, { bridge: created, operationId, route: true });
+    return created;
+  }
+
+  /** End the route's current turn: cancel its pendings, keep the route and its MCP sessions. */
+  releaseRoute(routeId: string): void {
+    const entry = this.operations.get(routeId);
+    if (!entry?.route) return;
+    entry.bridge?.cancelAll('session_ended');
+    this.operations.set(routeId, { route: true });
+  }
+
+  /**
+   * Resolve an MCP session's routing key to the live operation: a plain
+   * registration answers with its own id, a route with its bound operation,
+   * and a released route with nothing.
+   */
+  private resolveOperation(
+    key: string,
+  ): { bridge?: AskUserBridge; operationId: string } | undefined {
+    const entry = this.operations.get(key);
+    if (!entry) return undefined;
+    if (entry.route) {
+      return entry.operationId ? { bridge: entry.bridge, operationId: entry.operationId } : undefined;
+    }
+    return { bridge: entry.bridge, operationId: key };
+  }
+
   unregisterOperation(operationId: string): void {
     const entry = this.operations.get(operationId);
     if (!entry) return;
-    entry.bridge.cancelAll('session_ended');
+    entry.bridge?.cancelAll('session_ended');
     this.operations.delete(operationId);
     // Drop the reverse mapping for any sessions that were bound to this op.
     for (const [sid, oid] of this.sessionIdToOpId) {
@@ -425,10 +477,17 @@ export class OrviloBuiltinMcpServer {
       },
       async (args, extra) => {
         const sessionId = extra.sessionId;
-        const operationId = sessionId ? this.sessionIdToOpId.get(sessionId) : undefined;
-        if (!operationId) {
+        const routingKey = sessionId ? this.sessionIdToOpId.get(sessionId) : undefined;
+        if (!routingKey) {
           return errorResult(
             "Missing 'op' query parameter on MCP server URL — producer should append ?op=<operationId>",
+          );
+        }
+        const entry = this.operations.get(routingKey);
+        const operationId = entry ? this.resolveOperation(routingKey)?.operationId : routingKey;
+        if (!operationId) {
+          return errorResult(
+            `No active operation for route '${routingKey}'. The turn may have ended before the tool call landed.`,
           );
         }
         try {
@@ -460,8 +519,8 @@ export class OrviloBuiltinMcpServer {
             "Missing 'op' query parameter on MCP server URL — producer should append ?op=<operationId>",
           );
         }
-        const op = this.operations.get(operationId);
-        if (!op) {
+        const op = this.resolveOperation(operationId);
+        if (!op?.bridge) {
           return errorResult(
             `No active operation for id '${operationId}'. The op may have ended before the tool call landed.`,
           );

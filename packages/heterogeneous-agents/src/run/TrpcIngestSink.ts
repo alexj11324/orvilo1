@@ -1,12 +1,22 @@
-import type { LocalHeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
-import type { AgentStreamEvent } from '@orvilo/heterogeneous-agents/spawn';
-
-import type { TrpcClient } from '../api/client';
+import type { LocalHeterogeneousAgentType } from '../index';
+import type { AgentStreamEvent } from '../spawn';
 import type { IngestSink } from './BatchIngester';
 
 /** Producer labels the ingest contract admits beyond the scanned local
  * catalog — a device-hosted Prime run reports as 'orvilo'. */
 export type IngestAgentType = LocalHeterogeneousAgentType | 'orvilo';
+
+/**
+ * The two server procedures the sink calls. Structural, so the CLI's tRPC
+ * client and the desktop's in-process client both satisfy it without this
+ * package depending on the server router types.
+ */
+export interface HeteroIngestClient {
+  aiAgent: {
+    heteroFinish: { mutate: (input: any) => Promise<unknown> };
+    heteroIngest: { mutate: (input: any) => Promise<unknown> };
+  };
+}
 
 /**
  * `IngestSink` implementation that forwards batches to the server via tRPC
@@ -17,7 +27,7 @@ export type IngestAgentType = LocalHeterogeneousAgentType | 'orvilo';
  */
 export class TrpcIngestSink implements IngestSink {
   constructor(
-    private readonly client: TrpcClient,
+    private readonly client: HeteroIngestClient,
     private readonly agentType: IngestAgentType,
     private readonly operationId: string,
     private readonly topicId: string,

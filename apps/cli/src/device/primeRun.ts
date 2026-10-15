@@ -38,14 +38,13 @@ import {
   type PrimeStreamState,
   subagentContext,
 } from '@orvilo/agent-execution/controlPlane/primeStreamMapping';
+import { CoalescingBatchIngester, TrpcIngestSink } from '@orvilo/heterogeneous-agents/run';
 import { openPrimeDeviceRun, type PrimeDeviceRun } from '@orvilo/device-prime-host';
 import type { AgentStreamEvent } from '@orvilo/heterogeneous-agents/spawn';
 import type { AcpBuiltinToolSpec } from '@orvilo/types';
 
 import { createLambdaClient } from '../api/client';
 import { saveTask } from '../daemon/taskRegistry';
-import { CoalescingBatchIngester } from '../utils/CoalescingBatchIngester';
-import { TrpcIngestSink } from '../utils/TrpcIngestSink';
 import type { AgentRunAckResult, SpawnHeteroAgentRunParams } from './agentRun';
 import { registerAgentRun } from './agentRunRegistry';
 import { openPrimeBuiltinMcp } from './primeBuiltinMcp';

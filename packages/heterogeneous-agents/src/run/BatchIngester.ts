@@ -1,4 +1,4 @@
-import type { AgentStreamEvent } from '@orvilo/heterogeneous-agents/spawn';
+import type { AgentStreamEvent } from '../spawn';
 import type { AegisFinishReport } from '@orvilo/types';
 
 export interface IngestSink {

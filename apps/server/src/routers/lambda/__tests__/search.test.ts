@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserModel } from '@/database/models/user';
 import { DiscoverService } from '@/server/services/discover';
 import { createFtsSearchRepo } from '@/server/services/ftsSearch';
+import { assertMarketConfigured } from '@/server/services/market/availability';
 
 import { searchRouter } from '../search';
 
@@ -50,6 +51,7 @@ describe('searchRouter', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it('returns an empty community agent result when the market search succeeds with no matches', async () => {
@@ -105,6 +107,43 @@ describe('searchRouter', () => {
     );
     expect(UserModel.findById).not.toHaveBeenCalled();
     expect(getUserSettings).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, 'message'] as const)(
+    'searches local data without a configured marketplace (type: %s)',
+    async (type) => {
+      vi.stubEnv('MARKET_BASE_URL', undefined);
+      vi.mocked(DiscoverService).mockImplementation(function () {
+        assertMarketConfigured();
+        return {} as DiscoverService;
+      });
+      const localResult = { id: 'local-message', type: 'message' };
+      search.mockResolvedValue([localResult]);
+      const caller = searchRouter.createCaller({ userId: 'test-user' } as any);
+
+      await expect(
+        caller.query({ includeMarketplace: false, query: 'local message', type }),
+      ).resolves.toEqual([localResult]);
+      expect(DiscoverService).not.toHaveBeenCalled();
+      expect(UserModel.findById).not.toHaveBeenCalled();
+      expect(getUserSettings).not.toHaveBeenCalled();
+    },
+  );
+
+  it('reports an unconfigured marketplace when marketplace search is requested', async () => {
+    vi.stubEnv('MARKET_BASE_URL', undefined);
+    vi.mocked(DiscoverService).mockImplementation(function () {
+      assertMarketConfigured();
+      return {} as DiscoverService;
+    });
+    const caller = searchRouter.createCaller({ userId: 'test-user' } as any);
+
+    await expect(
+      caller.query({ query: 'assistant', type: 'communityAgent' }),
+    ).rejects.toMatchObject({
+      code: 'SERVICE_UNAVAILABLE',
+      message: 'Market is not configured for this deployment',
+    });
   });
 
   it('keeps untyped searches including the marketplace by default', async () => {

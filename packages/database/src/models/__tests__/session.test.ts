@@ -1557,26 +1557,19 @@ describe('SessionModel', () => {
   });
 
   describe('findSessionsByKeywords', () => {
-    it('should handle errors gracefully and return empty array', async () => {
-      // This test aims to cover the error-handling logic in findSessionsByKeywords
+    it('should propagate database search failures instead of returning no matches', async () => {
+      const databaseError = new Error('BM25 backend unavailable');
+      const searchSpy = vi
+        .spyOn(serverDB.query.agents, 'findMany')
+        .mockRejectedValue(databaseError);
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      // Mock the database query to throw an error
-      const originalFindMany = serverDB.query.agents.findMany;
-      serverDB.query.agents.findMany = vi.fn().mockRejectedValue(new Error('Database error'));
-
-      const result = await sessionModel.findSessionsByKeywords({ keyword: 'test' });
-
-      // Even when an error occurs, the method should return an empty array
-      expect(Array.isArray(result)).toBe(true);
-      expect(result).toEqual([]);
-      expect(consoleSpy).toHaveBeenCalledWith('findSessionsByKeywords error:', expect.any(Error), {
-        keyword: 'test',
-      });
-
-      // Restore original method
-      serverDB.query.agents.findMany = originalFindMany;
-      consoleSpy.mockRestore();
+      try {
+        await expect(sessionModel.queryByKeyword('test')).rejects.toBe(databaseError);
+      } finally {
+        searchSpy.mockRestore();
+        consoleSpy.mockRestore();
+      }
     });
 
     it('should return empty array for empty keyword', async () => {

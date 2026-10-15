@@ -43,16 +43,19 @@ const searchProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =
     { includeMarketplace?: unknown; type?: unknown } | undefined;
   // Marketplace identity is only needed when the marketplace will be queried;
   // DB-only searches skip the extra auth round-trip.
-  const marketContext = wantsMarketplace(rawInput)
+  const marketplaceEnabled = wantsMarketplace(rawInput);
+  const marketContext = marketplaceEnabled
     ? await resolveMarketUserContext(ctx)
     : { marketAccessToken: undefined, marketUserInfo: undefined };
 
   return opts.next({
     ctx: {
-      discoverService: new DiscoverService({
-        accessToken: marketContext.marketAccessToken ?? ctx.marketAccessToken,
-        userInfo: marketContext.marketUserInfo,
-      }),
+      discoverService: marketplaceEnabled
+        ? new DiscoverService({
+            accessToken: marketContext.marketAccessToken ?? ctx.marketAccessToken,
+            userInfo: marketContext.marketUserInfo,
+          })
+        : undefined,
     },
   });
 });
@@ -142,9 +145,7 @@ export const searchRouter = router({
 
       // Marketplace searches: see `includeMarketplace` on the input schema —
       // untyped searches include them by default, the command menu opts out.
-      const marketplaceEnabled = wantsMarketplace(input);
-
-      if (marketplaceEnabled && (!type || type === 'mcp')) {
+      if (ctx.discoverService && (!type || type === 'mcp')) {
         searchPromises.push(
           ctx.discoverService
             .getMcpList({
@@ -180,7 +181,7 @@ export const searchRouter = router({
         );
       }
 
-      if (marketplaceEnabled && (!type || type === 'plugin')) {
+      if (ctx.discoverService && (!type || type === 'plugin')) {
         searchPromises.push(
           ctx.discoverService
             .getPluginList({
@@ -212,7 +213,7 @@ export const searchRouter = router({
         );
       }
 
-      if (marketplaceEnabled && (!type || type === 'communityAgent')) {
+      if (ctx.discoverService && (!type || type === 'communityAgent')) {
         searchPromises.push(
           ctx.discoverService
             .getAssistantList(

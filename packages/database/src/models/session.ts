@@ -666,48 +666,42 @@ export class SessionModel {
         .filter((session): session is SessionItem => session !== undefined);
     }
 
-    try {
-      const bm25Query = sanitizeBm25Query(keyword);
+    const bm25Query = sanitizeBm25Query(keyword);
 
-      const results = await this.db.query.agents.findMany({
-        limit: pageSize,
-        offset,
-        // Keep deterministic ordering for keyword search results
-        orderBy: [asc(agents.id)],
-        where: and(
-          this.agentsOwnership(),
-          sql`(${agents.title} @@@ ${bm25Query} OR ${agents.description} @@@ ${bm25Query})`,
-        ),
-        with: { agentsToSessions: { columns: {}, with: { session: true } } },
-      });
+    const results = await this.db.query.agents.findMany({
+      limit: pageSize,
+      offset,
+      // Keep deterministic ordering for keyword search results
+      orderBy: [asc(agents.id)],
+      where: and(
+        this.agentsOwnership(),
+        sql`(${agents.title} @@@ ${bm25Query} OR ${agents.description} @@@ ${bm25Query})`,
+      ),
+      with: { agentsToSessions: { columns: {}, with: { session: true } } },
+    });
 
-      // Filter and map results, ensuring valid session associations
-      const matchedSessions = results
-        .filter((item) => item.agentsToSessions && item.agentsToSessions.length > 0)
-        .map(
-          (item) =>
-            (item.agentsToSessions as Array<{ session: SessionItem | null | undefined }>)[0]
-              ?.session,
-        )
-        .filter((session) => session !== null && session !== undefined);
-      if (matchedSessions.length === 0) return [];
-      const readableSessions = await this.db
-        .select({ id: sessions.id })
-        .from(sessions)
-        .where(
-          and(
-            this.readable(),
-            inArray(
-              sessions.id,
-              matchedSessions.map((session) => session.id),
-            ),
+    // Filter and map results, ensuring valid session associations
+    const matchedSessions = results
+      .filter((item) => item.agentsToSessions && item.agentsToSessions.length > 0)
+      .map(
+        (item) =>
+          (item.agentsToSessions as Array<{ session: SessionItem | null | undefined }>)[0]?.session,
+      )
+      .filter((session) => session !== null && session !== undefined);
+    if (matchedSessions.length === 0) return [];
+    const readableSessions = await this.db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(
+        and(
+          this.readable(),
+          inArray(
+            sessions.id,
+            matchedSessions.map((session) => session.id),
           ),
-        );
-      const readableIds = new Set(readableSessions.map(({ id }) => id));
-      return matchedSessions.filter((session) => readableIds.has(session.id));
-    } catch (e) {
-      console.error('findSessionsByKeywords error:', e, { keyword });
-      return [];
-    }
+        ),
+      );
+    const readableIds = new Set(readableSessions.map(({ id }) => id));
+    return matchedSessions.filter((session) => readableIds.has(session.id));
   };
 }

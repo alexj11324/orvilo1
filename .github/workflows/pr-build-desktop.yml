@@ -21,9 +21,8 @@ env:
 jobs:
   test:
     name: Code quality check
-    # 添加 PR label 或 release/* 分支触发：有 trigger:build-desktop 标签或 PR 源分支为 release/* 时触发。
-    # codex/architecture-boundaries 是 Issue #796 的一次性验收构建；构建完成后删掉这个分支条件。
-    if: contains(github.event.pull_request.labels.*.name, 'trigger:build-desktop') || startsWith(github.event.pull_request.head.ref, 'release/') || github.event.pull_request.head.ref == 'codex/architecture-boundaries'
+    # 添加 PR label 或 release/* 分支触发：有 trigger:build-desktop 标签或 PR 源分支为 release/* 时触发
+    if: contains(github.event.pull_request.labels.*.name, 'trigger:build-desktop') || startsWith(github.event.pull_request.head.ref, 'release/')
     runs-on: ubuntu-latest # 只在 ubuntu 上运行一次检查
     steps:
       - name: Checkout base
@@ -57,8 +56,8 @@ jobs:
 
   version:
     name: Determine version
-    # 与 test job 相同的触发条件，含 Issue #796 的一次性验收分支。
-    if: contains(github.event.pull_request.labels.*.name, 'trigger:build-desktop') || startsWith(github.event.pull_request.head.ref, 'release/') || github.event.pull_request.head.ref == 'codex/architecture-boundaries'
+    # 与 test job 相同的触发条件
+    if: contains(github.event.pull_request.labels.*.name, 'trigger:build-desktop') || startsWith(github.event.pull_request.head.ref, 'release/')
     runs-on: ubuntu-latest
     outputs:
       # 输出版本信息，供后续 job 使用

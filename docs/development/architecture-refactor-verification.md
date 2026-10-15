@@ -54,32 +54,43 @@ typecheck compiles against.
 
 ## Follow-up CI
 
-On `8865dc077`, before the canary merge, the Typecheck job, database lint (the
-same full typecheck), both server shards including the standalone `/health`
-deploy, app shard 2, package tests, desktop typecheck and tests, UI alignment,
-and E2E passed. App shard 1 passed 7,823 tests and failed
-`scripts/dockerWorkspaceManifests.test.ts`, which still looked for the old
-`pnpm i &&` line. That assertion now expects `pnpm i --frozen-lockfile`.
+On `c99f7a34a` the push [Test CI](https://github.com/alexj11324/orvilo1/actions/runs/38774449701)
+passed, including the full typecheck, both server shards and the standalone
+`/health` deploy, both app shards, package tests, desktop typecheck and tests,
+and the Required Quality Gate. [E2E](https://github.com/alexj11324/orvilo1/actions/runs/38774449688)
+and [UI alignment](https://github.com/alexj11324/orvilo1/actions/runs/38774450195)
+passed on the same commit. The pull-request merge ref `212a0c246` has the same
+tree as `c99f7a34a`.
 
-The branch was then merged with `canary` at `5e1dd5fdd`. Until that merge, GitHub
-could not create a pull-request merge ref, so `pull_request` workflows never
-started. Push and `pull_request_target` checks still ran.
+Earlier, on `8865dc077`, app shard 1 failed
+`scripts/dockerWorkspaceManifests.test.ts` because it still looked for
+`pnpm i &&`. That assertion now expects `pnpm i --frozen-lockfile`.
 
 ## Build acceptance
 
-`Release CLI` installs the isolated CLI workspace with
-`pnpm install --frozen-lockfile` and no `--ignore-scripts`, so pnpm's
-`allowBuilds` policy can run install scripts. `Docker PR Build` and
-`Desktop PR Build` also run for `codex/architecture-boundaries` while Issue #796
-is open, because this session cannot add `trigger:build-docker` or
-`trigger:build-desktop`. Remove those branch comparisons after the acceptance
-builds finish. The Docker supplemental project remains pinned to Hatchet
-1.33.1 and is copied over the app install.
+These builds used the merge ref above. Frozen installs did not rewrite the
+lockfile.
+
+- [Release CLI](https://github.com/alexj11324/orvilo1/actions/runs/38774454685)
+  installed the isolated CLI workspace with `pnpm install --frozen-lockfile`
+  and no `--ignore-scripts`, then packed the CLI and installed that package
+  outside the workspace.
+- [Docker PR Build](https://github.com/alexj11324/orvilo1/actions/runs/38774454809)
+  built and published linux/amd64 and linux/arm64 as
+  `ghcr.io/alexj11324/orvilo1:pr-codex-architecture-boundaries-212a0c24`.
+  The supplemental project remains pinned to Hatchet 1.33.1 and is copied over
+  the app install. Typecheck still compiles the workspace copy at 1.38.0.
+- [Desktop PR Build](https://github.com/alexj11324/orvilo1/actions/runs/38774454830)
+  installed with scripts enabled and packaged linux, macOS arm64, macOS Intel,
+  and Windows. The ASAR gate, macOS merge, and PR publish jobs passed.
+
+The one-off branch trigger used to start those PR builds has been removed.
+Later pushes do not rebuild the image or desktop packages.
 
 ## Coverage limits
 
 No production deployment or browser acceptance was performed. Package-level
 checks must not be represented as full application verification. `Skeleton
-requirement` still fails until the PR body contains `skeleton: no-change`; the
-UI edits route data through domain services and do not change loading
-skeletons. This token cannot edit that PR body.
+requirement` fails until the PR body contains `skeleton: no-change`. The UI
+edits route data through domain services and do not change loading skeletons.
+That check is not a required status check for `canary`.

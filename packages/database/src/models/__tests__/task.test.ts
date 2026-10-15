@@ -830,8 +830,9 @@ describe('TaskModel', () => {
         };
         await model.updateContext(task.id, { scheduler });
         await dispatchFixture(task.id, 'running');
+        expect((await model.findById(task.id))?.status).toBe('scheduled');
         await settleDispatches(task.id, 'canceled');
-        expect((await model.findById(task.id))?.status).toBe('paused');
+        expect((await model.findById(task.id))?.status).toBe('scheduled');
         const active = () =>
           model.list({ automated: true, statuses: ['backlog', 'running', 'scheduled'] });
         const paused = () => model.list({ automated: true, statuses: ['paused'] });

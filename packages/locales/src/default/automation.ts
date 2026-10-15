@@ -63,7 +63,7 @@ export default {
   'events.reason.DEVICE_SELECTION_REQUIRED': 'Choose an execution device, then check readiness.',
   'events.reason.EXECUTOR_UNVERIFIED': 'The device could not verify an unattended executor.',
   'events.reason.NATIVE_FULL_ACCESS_UNAVAILABLE':
-    'The device could not confirm a native full-access permission mode for this Agent.',
+    'The device could not confirm a native unattended permission mode for this Agent.',
   'events.reason.REQUIRED_TOOLS_UNSUPPORTED': 'Required tools are unavailable on this executor.',
   'events.reason.REPOSITORY_UNAVAILABLE':
     'The repository directory cannot be accessed on the device.',

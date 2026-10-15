@@ -35,7 +35,7 @@ beforeEach(() => {
 });
 
 describe('Issue Activity instruction target', () => {
-  it('continues the sealed original caller and topic after the human assignee changes', async () => {
+  it('continues the same Run on the saved Agent without the original caller credentials', async () => {
     await expect(
       resolveIssueInstructionTarget(ctx, task, {
         agentId: 'saved-agent',
@@ -43,7 +43,7 @@ describe('Issue Activity instruction target', () => {
       }),
     ).resolves.toEqual({
       agentId: 'saved-agent',
-      executionUserId: 'original-caller',
+      executionUserId: 'current-assignee',
       topicId: 'original-topic',
     });
     expect(assertCanUseOperationAgent).toHaveBeenCalledWith({

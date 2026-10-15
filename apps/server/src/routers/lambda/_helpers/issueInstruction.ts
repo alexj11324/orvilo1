@@ -7,7 +7,11 @@ import type { OrviloDatabase } from '@/database/type';
 import { assertIssueExecutionInput } from './issueExecutionInput';
 import { assertCanUseOperationAgent } from './nativeInterventionInput';
 
-/** Activity input follows current authorization but keeps the Run's sealed execution identity. */
+/**
+ * Activity input stays on the current Run's topic and saved Agent.
+ * The caller who has Agent Use supplies the execution identity. The original
+ * initiator's personal credentials are not transferred with the assignee.
+ */
 export const resolveIssueInstructionTarget = async (
   ctx: {
     serverDB: OrviloDatabase;
@@ -42,5 +46,5 @@ export const resolveIssueInstructionTarget = async (
       code: 'CONFLICT',
       message: 'The Issue executor changed; open its current Run',
     });
-  return { agentId: operation.agentId, executionUserId: operation.userId, topicId };
+  return { agentId: operation.agentId, executionUserId: ctx.userId, topicId };
 };

@@ -101,10 +101,26 @@ export const taskAttentionReasonExpr = sql<TaskAttentionReason>`CASE
   ELSE 'none'
 END`;
 
+/** The user paused the schedule. The current round may still be executing. */
+export const isAutomationPaused = sql`coalesce((${tasks.context} #>> '{scheduler,automationPaused}')::boolean, false)`;
+
 /**
- * Automation still armed for a future tick — canonical form of
- * `status = 'scheduled'`: automation mode set, the scheduler's tick token
- * armed in `context.scheduler`, no live run, not parked.
+ * The periodic Issue is still the schedule. A live or settled round does not
+ * flip this. A user pause or an explicit park does. Board status uses it.
+ * Tick admission stays on
+ * {@link isAutomationArmed}, which also requires a free execution slot.
+ */
+export const isAutomationScheduleOn = sql`(
+  ${tasks.automationMode} IS NOT NULL
+  AND coalesce(${tasks.context} #>> '{scheduler,tickToken}', '') <> ''
+  AND NOT ${isAutomationPaused}
+  AND NOT ${isParked}
+)`;
+
+/**
+ * Automation still armed for a future tick — admission, not the board label.
+ * Mode and tick token are set, no live run, not parked. A user pause is
+ * enforced by the tick itself; this predicate stays the execution-slot gate.
  */
 export const isAutomationArmed = sql`(
   ${tasks.automationMode} IS NOT NULL
@@ -124,20 +140,20 @@ export const isExecutionLive = hasActiveExecution;
 export const predicateForLegacyStatus = (status: string): SQL | undefined => {
   switch (status) {
     case 'backlog': {
-      return sql`${TASK_OPEN_WORKFLOW} AND NOT ${hasActiveExecution} AND NOT ${isExecutionParked} AND NOT ${isAutomationArmed}`;
+      return sql`${TASK_OPEN_WORKFLOW} AND NOT ${hasActiveExecution} AND NOT ${isExecutionParked} AND NOT ${isAutomationArmed} AND NOT ${isAutomationScheduleOn}`;
     }
     case 'scheduled': {
-      return isAutomationArmed;
+      return isAutomationScheduleOn;
     }
     case 'running': {
-      return sql`${hasActiveExecution} AND NOT ${isParked}`;
+      return sql`${hasActiveExecution} AND NOT ${isParked} AND NOT ${isAutomationScheduleOn}`;
     }
     case 'paused': {
-      return sql`(${isParked} AND NOT ${parkedIsFailed})
-        OR (NOT ${isParked} AND NOT ${hasActiveExecution} AND ${latestDispatchPhase} IN ('canceled', 'abandoned', 'outcome_unknown'))`;
+      return sql`${isAutomationPaused} OR (NOT ${isAutomationScheduleOn} AND ((${isParked} AND NOT ${parkedIsFailed})
+        OR (NOT ${isParked} AND NOT ${hasActiveExecution} AND ${latestDispatchPhase} IN ('canceled', 'abandoned', 'outcome_unknown'))))`;
     }
     case 'failed': {
-      return sql`${parkedIsFailed} OR (NOT ${isParked} AND NOT ${hasActiveExecution} AND ${latestDispatchPhase} = 'failed')`;
+      return sql`NOT ${isAutomationScheduleOn} AND (${parkedIsFailed} OR (NOT ${isParked} AND NOT ${hasActiveExecution} AND ${latestDispatchPhase} = 'failed'))`;
     }
     case 'completed': {
       return sql`${tasks.workflowCategory} = 'done'`;
@@ -159,6 +175,8 @@ export const predicateForLegacyStatus = (status: string): SQL | undefined => {
 export const legacyStatusExpr = sql`case
   when ${tasks.workflowCategory} = 'done' then 'completed'
   when ${tasks.workflowCategory} = 'canceled' then 'canceled'
+  when ${isAutomationPaused} then 'paused'
+  when ${isAutomationScheduleOn} then 'scheduled'
   when ${parkedIsFailed} then 'failed'
   when ${isParked} then 'paused'
   when ${hasActiveExecution} then 'running'

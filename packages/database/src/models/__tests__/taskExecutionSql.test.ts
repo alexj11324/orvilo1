@@ -79,6 +79,47 @@ describe('task execution SQL projection (tasks.status retired)', () => {
     expect(await derivedStatus(task.id)).toBe('running');
   });
 
+  it('keeps an armed periodic issue scheduled while its round runs or is canceled', async () => {
+    const model = new TaskModel(serverDB, userId);
+    const periodic = await model.create({
+      automationMode: 'schedule',
+      instruction: 'Nightly',
+      schedulePattern: '0 9 * * *',
+    });
+    await model.updateContext(periodic.id, {
+      scheduler: { automationPaused: false, tickToken: 'round-token' },
+    });
+    await dispatch(periodic.id, 'running');
+    expect(await derivedStatus(periodic.id)).toBe('scheduled');
+    expect(await matchingIds(predicateForLegacyStatus('scheduled'))).toContain(periodic.id);
+    expect(await matchingIds(predicateForLegacyStatus('running'))).not.toContain(periodic.id);
+
+    const oneShot = await model.create({ instruction: 'Once' });
+    await dispatch(oneShot.id, 'running');
+    expect(await derivedStatus(oneShot.id)).toBe('running');
+    expect(await matchingIds(predicateForLegacyStatus('running'))).toContain(oneShot.id);
+
+    const canceledRound = await model.create({
+      automationMode: 'heartbeat',
+      heartbeatInterval: 600,
+      instruction: 'Pulse',
+    });
+    await model.updateContext(canceledRound.id, {
+      scheduler: { automationPaused: false, tickToken: 'pulse-token' },
+    });
+    await dispatch(canceledRound.id, 'canceled');
+    expect(await derivedStatus(canceledRound.id)).toBe('scheduled');
+    expect(await matchingIds(predicateForLegacyStatus('paused'))).not.toContain(canceledRound.id);
+
+    await model.updateContext(canceledRound.id, {
+      scheduler: { automationPaused: true, tickToken: 'pulse-token' },
+    });
+    expect(await derivedStatus(canceledRound.id)).toBe('paused');
+    expect(await matchingIds(predicateForLegacyStatus('scheduled'))).not.toContain(
+      canceledRound.id,
+    );
+  });
+
   it('reads a waiting reservation as waiting without changing the execution ownership projection', async () => {
     const model = new TaskModel(serverDB, userId);
     const task = await model.create({ instruction: 'Waiting for project policy' });

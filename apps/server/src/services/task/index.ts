@@ -1440,7 +1440,7 @@ export class TaskService {
     return { failed, kickedOff, plan };
   }
 
-  /** Disabled drafts remain editable; arming a recurring Issue requires native full access. */
+  /** Disabled drafts remain editable; arming a recurring Issue requires an advertised unattended mode. */
   async assertNativeAutomationConfiguration(task: {
     assigneeAgentId?: string | null;
     automationMode?: string | null;
@@ -1458,7 +1458,7 @@ export class TaskService {
       new TRPCError({
         code: 'PRECONDITION_FAILED',
         message:
-          'NATIVE_FULL_ACCESS_UNAVAILABLE: The device could not confirm a native full-access permission mode for this Agent.',
+          'NATIVE_FULL_ACCESS_UNAVAILABLE: The device could not confirm a native unattended permission mode for this Agent.',
       });
     if (!task.assigneeAgentId) throw unavailable();
     const binding = await findUsableAgentExecutionBinding(this.db, task.assigneeAgentId, {

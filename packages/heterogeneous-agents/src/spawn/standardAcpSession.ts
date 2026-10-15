@@ -115,7 +115,7 @@ export interface StandardAcpSessionOptions extends AcpAgentSessionOptions {
   inputOptions?: BuildAgentInputOptions;
   /** `session/new` `mcpServers` entries (ACP shape). */
   mcpServers?: Record<string, unknown>[];
-  /** Automation requires the session to advertise a native full-access option. */
+  /** Automation requires the session to advertise a native unattended option. */
   nativeFullAccess?: boolean;
   /** Safe MCP boundary metadata; supplied only by opted-in diagnostic hosts. */
   onMcpMetadata?: (metadata: Record<string, unknown>) => void;
@@ -583,7 +583,7 @@ export class StandardAcpSession extends AcpAgentSession<
       ? resolveNativeFullAccessPermission(this.permissionCatalogs)
       : this.options.initialPermission;
     if (this.options.nativeFullAccess && !selected)
-      throw new Error(`${this.sessionConfig.spec.label} has no advertised native full-access mode`);
+      throw new Error(`${this.sessionConfig.spec.label} has no advertised native unattended mode`);
     if (!selected) return;
     if (this.options.nativeFullAccess) this.automationPermissionConfigId = selected.configId;
     const catalog = this.permissionCatalogs.find(({ configId }) => configId === selected.configId);
@@ -605,7 +605,9 @@ export class StandardAcpSession extends AcpAgentSession<
           },
         ])
       )
-        throw new Error(`${this.sessionConfig.spec.label} did not enable native full access`);
+        throw new Error(
+          `${this.sessionConfig.spec.label} did not enable its native unattended mode`,
+        );
     } else {
       const response = await this.client.request<StandardAcpSetConfigOptionResult>(
         'session/set_config_option',
@@ -620,7 +622,9 @@ export class StandardAcpSession extends AcpAgentSession<
       }).find(({ configId }) => configId === selected.configId);
       if (reported && reported.currentValue !== selected.value) {
         if (this.options.nativeFullAccess)
-          throw new Error(`${this.sessionConfig.spec.label} did not enable native full access`);
+          throw new Error(
+            `${this.sessionConfig.spec.label} did not enable its native unattended mode`,
+          );
         if (effective) await this.noteEffectivePermission(effective);
       } else if (effective) effective.currentValue = selected.value;
     }
@@ -647,7 +651,9 @@ export class StandardAcpSession extends AcpAgentSession<
         },
       ])
     )
-      throw new Error(`${this.sessionConfig.spec.label} native full access is no longer active`);
+      throw new Error(
+        `${this.sessionConfig.spec.label} native unattended mode is no longer active`,
+      );
   }
 
   /**

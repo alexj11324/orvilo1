@@ -1,6 +1,6 @@
 # Orvilo 产品边界
 
-> 本文件是 Orvilo 产品契约的唯一说明位置。当前版本：2026-10-14，来自 [Issue #784](https://github.com/alexj11324/orvilo1/issues/784) 的已确认架构访谈；冲突的旧 Issue、PR 和设计语义由此替代。
+> 本文件是 Orvilo 产品契约的唯一说明位置。当前版本：2026-10-15，来自 [Issue #784](https://github.com/alexj11324/orvilo1/issues/784)。2026-10-14 访谈仍然有效；2026-10-15 只修正无人值守权限、assignee 接续凭据和周期 Issue 看板状态。冲突的旧 Issue、PR 和设计语义由此替代。
 > 本文规定目标行为，不表示已经实现、通过验收、合并或部署。未冲突的共享能力继续复用；实现与运行证据须按具体 revision 核对。历史执行记录见 [task-first-rollout.md](./task-first-rollout.md)。
 
 ## 一句话定位
@@ -110,9 +110,10 @@ Checklist 是唯一维护验收标准的地方：Orchestrator 起草、用户确
 同一个 Issue 长期承载周期工作，每次触发产生新的 Run；各轮结果、PR、Reviewer 证据、人工接受记录分别保留。
 
 - 配置并启用时确认持续工作范围；后续在该范围内自动执行，不逐轮确认计划。改变目标或超出授权范围时再确认。
-- 所有自动化运行使用原生 Bypass / Full access，覆盖 Agent 保存的普通交互模式。
-- 实际 ACP Agent 没有可用原生全放行模式时，不允许用于自动化，配置时明确说明。不静默改为 Auto，也不以客户端自动允许权限请求冒充原生 Bypass。
-- Bypass 只改变原生工具权限处理，不取消 Agent Use 检查或每轮人工接受交付。
+- 周期 Issue 是日程。启用后看板保持 “自动化已启用”；每一轮是独立 Run。排队中的轮次不把父 Issue 改写成 Backlog、Running 或 Paused。
+- 自动化运行只使用该 Agent 通过 ACP 实际宣告的无人值守模式，名称以宣告为准，覆盖 Agent 保存的普通交互模式。
+- Agent 没有宣告无人值守模式时，配置阶段拒绝用于自动化。不静默改为 Auto，也不由客户端自动批准权限请求。
+- 无人值守模式只改变原生工具权限处理，不取消 Agent Use 检查或每轮人工接受交付。
 - 每轮代码交付仍需最终人工接受，再自动合并。PR 合并后本轮 Run 完成，周期 Issue 等待下次运行。
 - 同一周期 Issue 按触发顺序串行排队。上轮执行或待接受时保留新触发，交付完成后才开始下一轮；不跳过、不并行、不合并触发。用户已接受可能积压。
 - 用户结束整个周期 Issue 后停止后续触发。普通一次性 Issue 的 Done 规则不变。
@@ -124,7 +125,7 @@ Checklist 是唯一维护验收标准的地方：Orchestrator 起草、用户确
 - 共享 Agent 的一对一聊天默认仅创建者可见。Agent 使用权不自动授予他人聊天的读取权。
 - Issue 内会话遵循 Issue 权限。
 - Issue Activity 允许显式 @Agent 或回复 Agent 进入指令入口，普通评论仅讨论。追加执行指令按当前 Agent 授权与任务 assignee 范围检查；不能仅凭普通 Issue 编辑权执行，也不将 assignee 强行解释为单一人类审批人。
-- 当前 assignee 可以接续原发起人的同一运行，沿用该运行的执行身份、凭据与环境；负责人变更不自动改写运行身份。此决定针对 Orvilo Issue；Slack 不同成员仍按各自身份建立独立执行会话。
+- 同一 Run 在 Agent 已保存的设备和模型上继续，不改写该 Run 的身份。具备 Agent Use 且处于 assignee 范围的人可以追加指令；没有 Use 的人不能继续，也不能停止。接续不把原发起人的个人凭据交给新 assignee。Slack 仍由其他成员各自建立自己的会话。
 - Project 权限是其 Issue、Run、Checklist 证据的可见性上限；无权访问私有 Project 的成员不能访问其子对象。
 - 所有会话引用都遵守相应读取权限。
 

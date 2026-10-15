@@ -370,7 +370,7 @@ it('automation refuses before prompt when full access is unadvertised', async ()
       'codex',
       createSessionOptions({ args: [], nativeFullAccess: true }),
     ).run(),
-  ).rejects.toThrow('no advertised native full-access');
+  ).rejects.toThrow('no advertised native unattended mode');
   expect(fake.requests.some(({ method }) => method === 'session/prompt')).toBe(false);
 });
 
@@ -431,6 +431,41 @@ it('automation overrides the saved interactive permission with the advertised na
     sessionId: 'native-session',
     modeId: 'native-full',
   });
+});
+
+it('selects an advertised unattended mode and refuses an interactive-only catalog', () => {
+  const catalog = (options: Array<{ name: string; value: string }>) => [
+    {
+      configId: 'mode',
+      currentValue: options[0]!.value,
+      name: 'Mode',
+      options,
+    },
+  ];
+  expect(
+    resolveNativeFullAccessPermission(catalog([{ name: 'Autonomous', value: 'autonomous' }])),
+  ).toEqual({ configId: 'mode', value: 'autonomous' });
+  expect(
+    resolveNativeFullAccessPermission(
+      catalog([{ name: 'Run Everything', value: 'run-everything' }]),
+    ),
+  ).toEqual({ configId: 'mode', value: 'run-everything' });
+  expect(
+    resolveNativeFullAccessPermission(
+      catalog([
+        { name: 'Auto', value: 'auto' },
+        { name: 'Run Everything', value: 'run-everything' },
+      ]),
+    ),
+  ).toEqual({ configId: 'mode', value: 'run-everything' });
+  for (const option of [
+    { name: 'Auto', value: 'auto' },
+    { name: 'Smart', value: 'smart' },
+    { name: 'Accept edits', value: 'accept-edits' },
+    { name: 'Allowlist', value: 'allowlist' },
+  ]) {
+    expect(resolveNativeFullAccessPermission(catalog([option]))).toBeUndefined();
+  }
 });
 
 it('recognizes the installed Codex ACP full-access option verbatim', () => {
@@ -522,7 +557,7 @@ it('refuses an automation mode downgraded by the native set-mode notification be
       'codex',
       createSessionOptions({ args: [], nativeFullAccess: true }),
     ).run(),
-  ).rejects.toThrow('did not enable native full access');
+  ).rejects.toThrow('did not enable its native unattended mode');
   expect(fake.requests.some(({ method }) => method === 'session/prompt')).toBe(false);
 });
 
@@ -562,5 +597,5 @@ it('fails automation when native full access is withdrawn during the prompt', as
       'codex',
       createSessionOptions({ args: [], nativeFullAccess: true }),
     ).run(),
-  ).rejects.toThrow('native full access is no longer active');
+  ).rejects.toThrow('native unattended mode is no longer active');
 });

@@ -412,6 +412,62 @@ describe('dispatch admission while an Issue Reviewer is active', () => {
 });
 
 describe('TaskDispatchModel', () => {
+  it('keeps missing and JSON-null parent occurrences distinct from present parent IDs', async () => {
+    const task = await createTask('JSON-1', 1);
+    const occurrences = [
+      { occurrenceId: 'missing' },
+      { occurrenceId: 'null', parentDispatchId: null },
+      { occurrenceId: 'empty', parentDispatchId: '' },
+      { occurrenceId: 'child', parentDispatchId: 'parent-dispatch' },
+    ];
+    await db.insert(taskDispatches).values(
+      occurrences.map((occurrence, index) => ({
+        id: `json-parent-${index}`,
+        taskId: task.id,
+        workspaceId,
+        generation: index,
+        taskRevision: 1,
+        requirementRevision: 1,
+        policyRevision: 1,
+        idempotencyKey: occurrence.occurrenceId,
+        requestedBy: userId,
+        phase: 'succeeded' as const,
+        automationOccurrence: sql`${JSON.stringify(occurrence)}::jsonb`,
+      })),
+    );
+    const model = new TaskDispatchModel(db, workspaceId);
+    expect((await model.automationQueueSummary(task.id)).recent.map(({ id }) => id).sort()).toEqual(
+      ['json-parent-0', 'json-parent-1'],
+    );
+    expect(await model.countAutomationOccurrencesSince(task.id, new Date(0))).toBe(2);
+  });
+
+  it.each([
+    [{}, false],
+    [{ executionGeneration: null, dispatchId: null }, false],
+    [{ executionGeneration: 0 }, true],
+    [{ dispatchId: '' }, true],
+  ] as const)(
+    'preserves writer fencing for stored control context %j',
+    async (appContext, blocked) => {
+      const task = await createTask('JSON-2', 2);
+      await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+      await db.insert(agentOperations).values({
+        id: 'json-control',
+        taskId: task.id,
+        userId,
+        workspaceId,
+        status: 'running',
+        appContext: sql`${JSON.stringify(appContext)}::jsonb`,
+      });
+      const stopped = new TaskModel(db, userId, workspaceId).assertStoppedIssueWriters(
+        [task.id],
+        'json-control',
+      );
+      if (blocked) await expect(stopped).rejects.toMatchObject({ code: 'CONFLICT' });
+      else await expect(stopped).resolves.toBeUndefined();
+    },
+  );
   it('authorizes the current executor as the runner user, honoring delegation over assignee', async () => {
     const task = await createTask('AUTH-1', 1);
     await db.insert(agents).values([

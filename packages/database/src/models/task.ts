@@ -727,8 +727,8 @@ export class TaskModel {
       ) OR EXISTS (
         SELECT 1 FROM agent_operations op WHERE op.task_id = ${tasks.id} AND (op.status NOT IN ('done', 'error', 'interrupted') OR op.metadata #>> '{remoteCancel,state}' IN ('requested', 'unknown'))
         AND (op.id IS DISTINCT FROM ${controlOperationId ?? null}
-          OR op.app_context ->> 'executionGeneration' IS NOT NULL
-          OR op.app_context ->> 'dispatchId' IS NOT NULL
+          OR COALESCE(op.app_context -> 'executionGeneration', 'null'::jsonb) <> 'null'::jsonb
+          OR COALESCE(op.app_context -> 'dispatchId', 'null'::jsonb) <> 'null'::jsonb
           OR op.metadata #>> '{remoteCancel,state}' IN ('requested', 'unknown')
           OR EXISTS (SELECT 1 FROM task_topics writer_topic WHERE writer_topic.operation_id = op.id)
           OR EXISTS (SELECT 1 FROM task_dispatches writer_dispatch WHERE writer_dispatch.operation_id = op.id))

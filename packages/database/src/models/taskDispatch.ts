@@ -2996,7 +2996,7 @@ export class TaskDispatchModel {
         and(
           eq(taskDispatches.taskId, taskId),
           isNotNull(taskDispatches.automationOccurrence),
-          sql`${taskDispatches.automationOccurrence}->>'parentDispatchId' IS NULL`,
+          sql`COALESCE(${taskDispatches.automationOccurrence}->'parentDispatchId', 'null'::jsonb) = 'null'::jsonb`,
           this.scopeCondition(),
         ),
       )
@@ -3022,7 +3022,7 @@ export class TaskDispatchModel {
           gt(taskDispatches.createdAt, since),
           this.scopeCondition(),
           sql`${taskDispatches.automationOccurrence} is not null`,
-          sql`${taskDispatches.automationOccurrence}->>'parentDispatchId' is null`,
+          sql`COALESCE(${taskDispatches.automationOccurrence}->'parentDispatchId', 'null'::jsonb) = 'null'::jsonb`,
         ),
       );
     return row?.count ?? 0;

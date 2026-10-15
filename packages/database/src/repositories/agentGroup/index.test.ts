@@ -12,6 +12,7 @@ import {
   TopicCommentModel,
 } from '../../models/topicComment';
 import { UserModel } from '../../models/user';
+import { hasWorkspaceAdminAccess } from '../../models/workspace';
 import { WorkspaceUserSettingsModel } from '../../models/workspaceUserSettings';
 import { credentials, devices, workspaceMembers } from '../../schemas';
 import { agents } from '../../schemas/agent';
@@ -50,6 +51,12 @@ const seedRuntimeFixtures = async () => {
     null,
     ...(await serverDB.select({ id: workspaces.id }).from(workspaces)).map((scope) => scope.id),
   ];
+  for (const workspace of await serverDB.select().from(workspaces)) {
+    await serverDB
+      .insert(workspaceMembers)
+      .values({ workspaceId: workspace.id, userId: workspace.primaryOwnerId, role: 'owner' })
+      .onConflictDoNothing();
+  }
   for (const actor of actors) {
     const credentialId = `cred_runtime_${actor.id}`;
     await serverDB
@@ -123,6 +130,12 @@ const seedRuntimeFixtures = async () => {
         orchestratorAgentId: `runtime-fixture-${actor.id}-${scope ?? 'personal'}`,
       };
       if (scope) {
+        if (
+          (await serverDB.query.workspaces.findFirst({ where: eq(workspaces.id, scope) }))
+            ?.primaryOwnerId !== actor.id ||
+          !(await hasWorkspaceAdminAccess(serverDB, { userId: actor.id, workspaceId: scope }))
+        )
+          continue;
         await new WorkspaceUserSettingsModel(serverDB, actor.id, scope).updatePreference(
           preference,
         );

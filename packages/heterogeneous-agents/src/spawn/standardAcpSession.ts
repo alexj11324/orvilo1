@@ -248,6 +248,8 @@ export class StandardAcpSession extends AcpAgentSession<
   private permissionCatalogs: HeterogeneousAgentPermissionCatalog[] = [];
   private permissionUsesSessionMode = false;
   private resolvedPrompt: StandardAcpPromptBlock[] = [];
+  /** Model the pipeline was last configured with — replayed onto a warm turn's fresh pipeline. */
+  private currentModel?: string;
 
   constructor(
     options: StandardAcpSessionOptions,
@@ -395,11 +397,25 @@ export class StandardAcpSession extends AcpAgentSession<
     await this.applyInitialPermission(sessionId);
     await this.applyPromptCacheKey(sessionId);
     if (model) {
+      this.currentModel = model;
       this.pipeline.configureSession({ model });
       this.options.onModel?.(model);
     }
     await this.pushToPipeline({ model, sessionId, type: `${spec.eventPrefix}_session` });
     return sessionId;
+  }
+
+  protected override async onTurnReuse(sessionId: string): Promise<void> {
+    const model = this.currentModel;
+    if (model) {
+      this.pipeline.configureSession({ model });
+      this.options.onModel?.(model);
+    }
+    await this.pushToPipeline({
+      model,
+      sessionId,
+      type: `${this.sessionConfig.spec.eventPrefix}_session`,
+    });
   }
 
   protected onBeforePrompt(): void {
@@ -456,6 +472,7 @@ export class StandardAcpSession extends AcpAgentSession<
         configOptions: update.configOptions,
       })?.currentModelId;
       if (model) {
+        this.currentModel = model;
         this.pipeline.configureSession({ model });
         this.options.onModel?.(model);
       }

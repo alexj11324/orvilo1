@@ -1,5 +1,4 @@
 'use client';
-
 import type { DeviceListItem } from '@orvilo/types';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -17,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { lambdaQuery } from '@/libs/trpc/client';
+import { deviceQueries } from '@/services/reactQueryBindings';
 
 import { refreshDeviceList } from './const';
 import { getDeviceIcon } from './getDeviceIcon';
@@ -58,7 +57,7 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
   const canEdit = useCanEditDevice()(device);
 
   const onRemoveSuccess = () => refreshDeviceList();
-  const removePersonal = lambdaQuery.device.removeDevice.useMutation({
+  const removePersonal = deviceQueries.removeDevice.useMutation({
     onSuccess: onRemoveSuccess,
   });
   const removeDevice = removePersonal;
@@ -92,7 +91,7 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
       )}`
     : t('devices.lastSeen', { time: dayjs(device.lastSeen).fromNow() });
 
-  const handleRemove = () =>
+  const handleRemove = () => {
     confirmModal({
       content: isCurrent
         ? `${t('devices.remove.confirmDesc')}\n\n${t('devices.remove.currentSessionWarning')}`

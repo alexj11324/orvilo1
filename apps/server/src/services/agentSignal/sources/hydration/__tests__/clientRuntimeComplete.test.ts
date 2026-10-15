@@ -3,7 +3,7 @@ import type { AgentSignalSourceEvent } from '@orvilo/agent-signal/source';
 import { AGENT_SIGNAL_SOURCE_TYPES } from '@orvilo/agent-signal/source';
 import { messages, topics, users } from '@orvilo/database/schemas';
 import { getTestDB } from '@orvilo/database/test-utils';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { uuid } from '@/utils/uuid';
 
@@ -32,6 +32,11 @@ const createCompleteSource = (
 });
 
 describe('resolveClientRuntimeCompleteFeedbackSource', () => {
+  beforeAll(async () => {
+    // Cold database startup and migrations belong to the server project's hook budget.
+    await getTestDB();
+  });
+
   /**
    * @example
    * client.runtime.complete({ assistantMessageId }) hydrates a trusted parent user source with an assistant context boundary.

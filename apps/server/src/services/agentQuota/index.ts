@@ -20,6 +20,7 @@ import {
 } from '@/database/models/agentQuota';
 import type { OrviloDatabase } from '@/database/type';
 import { type QuotaAccountCredentialRef, QuotaCostSource } from '@/database/types/agentQuota';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 
 import { claudeModelPrice } from './pricing';
 
@@ -48,7 +49,12 @@ export class AgentQuotaService {
   private calibrations: AgentQuotaCalibrationModel;
 
   constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
-    this.accounts = new AgentProviderAccountModel(db, userId, workspaceId);
+    this.accounts = new AgentProviderAccountModel(
+      db,
+      KeyVaultsGateKeeper.initWithEnvKey,
+      userId,
+      workspaceId,
+    );
     this.snapshots = new AgentQuotaSnapshotModel(db, userId, workspaceId);
     this.ledger = new AgentQuotaUsageLedgerModel(db, userId, workspaceId);
     this.windows = new AgentQuotaWindowModel(db, userId, workspaceId);

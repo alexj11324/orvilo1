@@ -65,8 +65,7 @@ SignInPrompt.displayName = 'AcceptanceDiscussionSignInPrompt';
 
 const local = {
   empty: 'py-4 text-(length:--text-dense) text-foreground-tertiary',
-  signInPrompt:
-    'p-4 border border-sidebar-border rounded-(--ant-border-radius-lg) bg-fill-quaternary',
+  signInPrompt: 'p-4 border border-sidebar-border rounded-(--radius-overlay) bg-fill-quaternary',
 };
 
 /** A round landing or an approval — a dot on the rail and one line of text. */

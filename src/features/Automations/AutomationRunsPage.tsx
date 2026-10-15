@@ -139,7 +139,7 @@ const AutomationRunsPage = memo(() => {
         styles={{ left: { paddingLeft: 8 } }}
         left={
           <div className="flex items-center gap-2">
-            <HistoryIcon color={'var(--ant-color-text-tertiary)'} size={16} />
+            <HistoryIcon color={'var(--foreground-tertiary)'} size={16} />
             <div className="text-sm font-medium">{t('runs.title')}</div>
           </div>
         }

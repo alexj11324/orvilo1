@@ -78,7 +78,7 @@ const InstallInstructionsHover = memo<{
           <span onMouseEnter={scheduleOpen} onMouseLeave={scheduleClose}>
             <ActionIcon
               aria-label={t('download', { ns: 'common' })}
-              color={'var(--ant-color-text-description)'}
+              color={'var(--foreground-description)'}
               icon={DownloadIcon}
               size={'small'}
             />
@@ -171,19 +171,19 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
   const getPlatformIcon = (type: string) => {
     switch (type.toLowerCase()) {
       case 'macos': {
-        return <SiApple color={'var(--ant-color-text-description)'} size={16} />;
+        return <SiApple color={'var(--foreground-description)'} size={16} />;
       }
       case 'windows': {
-        return <Microsoft color={'var(--ant-color-text-description)'} size={16} />;
+        return <Microsoft color={'var(--foreground-description)'} size={16} />;
       }
       case 'linux_debian': {
-        return <SiLinux color={'var(--ant-color-text-description)'} size={16} />;
+        return <SiLinux color={'var(--foreground-description)'} size={16} />;
       }
       case 'manual': {
-        return <CodeIcon color={'var(--ant-color-text-description)'} size={16} />;
+        return <CodeIcon color={'var(--foreground-description)'} size={16} />;
       }
       default: {
-        return <CodeIcon color={'var(--ant-color-text-description)'} size={16} />;
+        return <CodeIcon color={'var(--foreground-description)'} size={16} />;
       }
     }
   };
@@ -297,7 +297,7 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                           <span
                             className={styles.code}
                             style={{
-                              color: 'var(--ant-gold)',
+                              color: 'var(--palette-gold-6)',
                             }}
                           >
                             {record.name}
@@ -324,7 +324,7 @@ const Deployment = memo<{ mobile?: boolean }>(({ mobile }) => {
                               height: '1em',
                               color: record.required
                                 ? 'var(--success)'
-                                : 'var(--ant-color-text-description)',
+                                : 'var(--foreground-description)',
                               fill: 'transparent',
                             })}
                           </span>

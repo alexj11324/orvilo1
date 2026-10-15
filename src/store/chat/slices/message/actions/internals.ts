@@ -26,9 +26,6 @@ type MessageDispatchContext = NonNullable<
   conversationContext?: ConversationContext;
 };
 
-export const messageInternals = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new MessageInternalsActionImpl(set, get, _api);
-
 export class MessageInternalsActionImpl {
   readonly #get: () => ChatStore;
   readonly #set: Setter;

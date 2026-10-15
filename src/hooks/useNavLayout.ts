@@ -50,7 +50,7 @@ export const useNavLayout = (): NavLayout => {
         ? `/agent/${defaultAgentState.agent.agentId}`
         : '/settings/agents';
 
-  // Fixed primary IA (see features/Navigation/sidebarContract): the header
+  // Fixed primary IA (see DEFAULT_SIDEBAR_ITEMS in systemStatus): the header
   // carries the workspace switcher and search; the body renders
   // issues/inbox/my-work/agent as core links (Agent is a flat row to /agent —
   // the workspace conversation; the /agents management directory stays a

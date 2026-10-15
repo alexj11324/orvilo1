@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { createDocumentModal } from '@/features/DocumentModal';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
-import { lambdaClient } from '@/libs/trpc/client';
+import { workTeamService } from '@/services/workTeam';
 
 import {
   openExistingDocumentPicker,
@@ -63,7 +63,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
     setPending(true);
     setWriteError(undefined);
     try {
-      const result = await lambdaClient.teamResource.createDocument.mutate({
+      const result = await workTeamService.createDocument({
         sectionId,
         teamId,
         title,
@@ -87,12 +87,12 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
         try {
           if (resource.kind === 'document') {
             if (resource.ownedByTeam) return;
-            await lambdaClient.teamResource.detachDocument.mutate({
+            await workTeamService.detachDocument({
               resourceId: resource.id,
               teamId,
             });
           } else {
-            await lambdaClient.teamResource.removeLink.mutate({ resourceId: resource.id, teamId });
+            await workTeamService.removeLink({ resourceId: resource.id, teamId });
           }
           await refresh();
         } catch (failure) {
@@ -110,7 +110,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
     );
     setWriteError(undefined);
     try {
-      await lambdaClient.teamResource.moveResource.mutate({
+      await workTeamService.moveResource({
         position: lastPosition + 1,
         resourceId: resource.id,
         sectionId,
@@ -378,7 +378,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                             okText: t('teams.resources.deleteSection'),
                             onOk: async () => {
                               try {
-                                await lambdaClient.teamResource.deleteSection.mutate({
+                                await workTeamService.deleteSection({
                                   sectionId: section.id,
                                   teamId,
                                 });

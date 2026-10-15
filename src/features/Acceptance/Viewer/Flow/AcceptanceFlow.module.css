@@ -3,7 +3,7 @@
    value, not a new fixed z-index or a copied theme palette. */
 .fullscreen {
   position: fixed;
-  z-index: var(--ant-z-index-popup-base);
+  z-index: var(--z-popup-base);
   inset: 0;
   background: var(--card);
 }

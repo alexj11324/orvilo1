@@ -10,7 +10,7 @@ import type { Plan } from '../../../types';
 
 const styles = {
   content:
-    'max-h-25 overflow-x-hidden overflow-y-auto rounded-(--ant-border-radius) bg-fill-quaternary p-3',
+    'max-h-25 overflow-x-hidden overflow-y-auto rounded-(--radius-card) bg-fill-quaternary p-3',
   header: 'cursor-pointer px-0 py-1 transition-opacity duration-200 ease-[ease] hover:opacity-80',
 };
 
@@ -34,7 +34,7 @@ const PlanCard = memo<PlanCardProps>(({ plan }) => {
         overflow: 'hidden',
         background: 'var(--card)',
         border: `1px solid var(--sidebar-border)`,
-        borderRadius: 'var(--ant-border-radius)',
+        borderRadius: 'var(--radius-card)',
       }}
     >
       {/* Header - clickable to open document */}

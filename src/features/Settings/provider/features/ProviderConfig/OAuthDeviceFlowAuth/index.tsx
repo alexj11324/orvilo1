@@ -1,5 +1,4 @@
 'use client';
-
 import { CopyButton } from '@lobehub/ui';
 import { Avatar, confirmModal, Modal } from '@lobehub/ui/base-ui';
 import { CircleCheckIcon, LogOutIcon, UnplugIcon } from 'lucide-react';
@@ -10,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
-import { lambdaQuery } from '@/libs/trpc/client';
+import { oauthDeviceFlowQueries, useOAuthDeviceFlowUtils } from '@/services/reactQueryBindings';
 
 import { useOAuthDeviceFlow } from './useOAuthDeviceFlow';
 
@@ -46,9 +45,9 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
     const { allowed: canManageProvider } = usePermission('manage_provider_key');
     const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-    const utils = lambdaQuery.useUtils();
+    const utils = useOAuthDeviceFlowUtils();
 
-    const { data: authStatus } = lambdaQuery.oauthDeviceFlow.getAuthStatus.useQuery(
+    const { data: authStatus } = oauthDeviceFlowQueries.getAuthStatus.useQuery(
       { providerId },
       { refetchOnWindowFocus: true },
     );
@@ -56,20 +55,20 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
     const username = authStatus?.username;
     const avatarUrl = authStatus?.avatarUrl;
 
-    const revokeAuth = lambdaQuery.oauthDeviceFlow.revokeAuth.useMutation({
+    const revokeAuth = oauthDeviceFlowQueries.revokeAuth.useMutation({
       onSuccess: () => {
-        utils.oauthDeviceFlow.getAuthStatus.invalidate({ providerId });
+        utils.getAuthStatus.invalidate({ providerId });
         onAuthChange?.();
       },
     });
 
     const handleSuccess = useCallback(async () => {
       // First invalidate and refetch the auth status
-      await utils.oauthDeviceFlow.getAuthStatus.invalidate({ providerId });
+      await utils.getAuthStatus.invalidate({ providerId });
       // Then notify parent and reset authenticating state
       onAuthChange?.();
       setIsAuthenticating(false);
-    }, [onAuthChange, providerId, utils.oauthDeviceFlow.getAuthStatus]);
+    }, [onAuthChange, providerId, utils.getAuthStatus]);
 
     const { state, deviceCodeInfo, error, startAuth, cancelAuth } = useOAuthDeviceFlow({
       onSuccess: handleSuccess,

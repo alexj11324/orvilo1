@@ -47,8 +47,8 @@ export const SocialConnectButton = memo<SocialConnectButtonProps>(
         <div
           className="flex items-center justify-between gap-3"
           style={{
-            background: 'var(--ant-color-fill-quaternary)',
-            borderRadius: 'var(--ant-border-radius-lg)',
+            background: 'var(--fill-quaternary)',
+            borderRadius: 'var(--radius-overlay)',
             padding: '8px 12px',
           }}
         >

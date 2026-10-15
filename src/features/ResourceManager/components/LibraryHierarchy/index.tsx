@@ -75,7 +75,7 @@ const LibraryHierarchy = memo(() => {
     >
       <span className="anticon" role="img">
         <FolderIcon
-          color={'var(--ant-color-text-quaternary)'}
+          color={'var(--foreground-quaternary)'}
           fill={'transparent'}
           height={36}
           size={36}

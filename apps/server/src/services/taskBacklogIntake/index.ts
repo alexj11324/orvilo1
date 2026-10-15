@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 
+import { TaskDomainError } from '@/database/errors/task';
 import { TaskModel } from '@/database/models/task';
 import { type TaskBacklogIntakeCandidate, TaskDispatchModel } from '@/database/models/taskDispatch';
 import type { OrviloDatabase } from '@/database/type';
@@ -90,14 +91,20 @@ const processBacklogIntake = async (input: {
   } catch (error) {
     // `runTask` surfaces a held dispatch as PRECONDITION_FAILED with the
     // typed cause preserved, and a lost reservation as CONFLICT.
-    if (error instanceof TRPCError && error.cause instanceof TaskDispatchWaitingError) {
+    if (
+      (error instanceof TRPCError || error instanceof TaskDomainError) &&
+      error.cause instanceof TaskDispatchWaitingError
+    ) {
       return {
         outcome: 'waiting',
         reason: error.cause.message.slice(0, 200),
         taskId: candidate.taskId,
       };
     }
-    if (error instanceof TRPCError && error.code === 'CONFLICT') {
+    if (
+      (error instanceof TRPCError || error instanceof TaskDomainError) &&
+      error.code === 'CONFLICT'
+    ) {
       return { outcome: 'blocked', reason: 'busy', taskId: candidate.taskId };
     }
     log('intake %s failed: %O', candidate.taskId, error);

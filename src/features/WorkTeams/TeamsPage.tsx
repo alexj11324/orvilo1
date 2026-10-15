@@ -1,4 +1,5 @@
 'use client';
+
 import { WORK_SEARCH_MAX_PER_TYPE } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { useDebounce } from 'ahooks';
@@ -23,8 +24,8 @@ import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
-import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
+import { useFetchWorkTeams } from '@/store/workTeam/hooks';
 
 import TeamIdentity from './TeamIdentity';
 
@@ -92,10 +93,7 @@ const TeamsPage = memo(() => {
     error: listError,
     isLoading: listLoading,
     mutate: revalidateList,
-  } = useClientDataSWR(
-    workspaceId && !searching ? workAttentionKeys.teams(workspaceId) : null,
-    () => lambdaClient.team.teams.query(),
-  );
+  } = useFetchWorkTeams(!searching);
   const {
     data: searchData,
     error: searchError,

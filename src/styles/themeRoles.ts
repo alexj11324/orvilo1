@@ -27,6 +27,23 @@ export const stateText = (
       getContrast(candidate, surface) >= 4.5,
   ) ?? readableColor(surface);
 
+const PALETTE_HUES = [
+  'red',
+  'volcano',
+  'orange',
+  'gold',
+  'yellow',
+  'lime',
+  'green',
+  'cyan',
+  'blue',
+  'geekblue',
+  'purple',
+  'magenta',
+  'pink',
+] as const;
+const PALETTE_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+
 const stopLocalMotion = `
   [data-slot],
   [data-slot]::before,
@@ -113,6 +130,15 @@ const createThemeRoleStyles = (theme: ResolvedDocumentTheme) => {
     `;
     })
     .join('');
+
+  // Raw hue steps for identity colors (authors, charts, categories). Not
+  // semantic roles: pick a semantic role whenever one fits.
+  const palette = PALETTE_HUES.flatMap((hue) =>
+    PALETTE_STEPS.map(
+      (step) =>
+        `--palette-${hue}-${step}: ${(theme as unknown as Record<string, string>)[`${hue}${step}`]};`,
+    ),
+  ).join('\n      ');
 
   return `
     ${
@@ -209,6 +235,29 @@ const createThemeRoleStyles = (theme: ResolvedDocumentTheme) => {
       --destructive-foreground: var(--destructive-text);
       --invert: ${theme.colorText};
       --invert-foreground: ${surface};
+
+      /* Roles that call sites read straight from engine variables until the
+         antd retirement (docs/development/antd-retirement-plan.md). */
+      --foreground-placeholder: ${theme.colorTextPlaceholder};
+      --foreground-icon: ${theme.colorIcon};
+      --fill: ${theme.colorFill};
+      --fill-content: ${theme.colorFillContent};
+      --link-hover: ${theme.colorLinkHover};
+      --primary-active: ${theme.colorPrimaryActive};
+      --primary-wash-hover: ${theme.colorPrimaryBgHover};
+      --success-hover: ${theme.colorSuccessHover};
+      --success-wash-hover: ${theme.colorSuccessBgHover};
+      --success-border-hover: ${theme.colorSuccessBorderHover};
+      --warning-wash-hover: ${theme.colorWarningBgHover};
+      --destructive-hover: ${theme.colorErrorHover};
+      --destructive-wash-hover: ${theme.colorErrorBgHover};
+      --destructive-border-hover: ${theme.colorErrorBorderHover};
+      --info-hover: ${theme.colorInfoHover};
+      --info-border-hover: ${theme.colorInfoBorderHover};
+      --shadow-elevated: ${theme.boxShadow};
+      --font-size-base: ${theme.fontSize}px;
+      --z-popup-base: ${theme.zIndexPopupBase};
+      ${palette}
       ${memoryCategories}
     }
 

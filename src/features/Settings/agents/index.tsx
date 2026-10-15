@@ -84,7 +84,7 @@ const AgentSettingsIndex = memo(() => {
             <div className="text-xl font-semibold">{t('tab.agents')}</div>
             <div
               className="text-(length:--text-dense)"
-              style={{ color: 'var(--ant-color-text-description)' }}
+              style={{ color: 'var(--foreground-description)' }}
             >
               {t('agentsIndexHint')}
             </div>

@@ -59,11 +59,11 @@ export const InitPageStreaming = memo<BuiltinStreamingProps<InitDocumentArgs>>((
             {title || t('builtins.orvilo-page-agent.apiName.initPage.creating')}
           </div>
           <div className={cn('flex', 'items-center', 'gap-2.5', styles.meta)}>
-            <span className="text-xs" style={{ color: 'var(--ant-color-text-description)' }}>
+            <span className="text-xs" style={{ color: 'var(--foreground-description)' }}>
               <ListTree size={12} /> <AnimatedNumber value={lines} />
               {t('builtins.orvilo-page-agent.apiName.initPage.lines')}
             </span>
-            <span className="text-xs" style={{ color: 'var(--ant-color-text-description)' }}>
+            <span className="text-xs" style={{ color: 'var(--foreground-description)' }}>
               <Hash size={12} /> <AnimatedNumber value={chars} />
               {t('builtins.orvilo-page-agent.apiName.initPage.chars')}
             </span>

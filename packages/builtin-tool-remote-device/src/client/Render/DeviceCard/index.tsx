@@ -10,10 +10,10 @@ import type { DeviceAttachment } from '../../../ExecutionRuntime/types';
 const styles = {
   activated: 'text-success bg-success-wash',
   badge:
-    'inline-flex gap-1 items-center py-0.5 ps-2 pe-2 rounded-(--ant-border-radius-sm) text-xs leading-4 whitespace-nowrap',
-  card: 'py-3 ps-3 pe-3 border border-sidebar-border rounded-(--ant-border-radius) bg-card',
+    'inline-flex gap-1 items-center py-0.5 ps-2 pe-2 rounded-(--radius-input) text-xs leading-4 whitespace-nowrap',
+  card: 'py-3 ps-3 pe-3 border border-sidebar-border rounded-(--radius-card) bg-card',
   details:
-    'truncate max-w-1/2 [font-family:var(--ant-font-family-code)] text-xs leading-[inherit] text-foreground-description text-end',
+    'truncate max-w-1/2 [font-family:var(--font-mono)] text-xs leading-[inherit] text-foreground-description text-end',
   hostname: 'truncate text-sm leading-[inherit] font-medium',
   icon: 'flex-none size-8 rounded-(--radius-card) text-muted-foreground bg-accent',
   listItem:
@@ -22,7 +22,7 @@ const styles = {
   status:
     'inline-flex flex-none gap-1.5 items-center text-xs leading-[inherit] text-muted-foreground',
   statusDot: 'size-1.75 border border-foreground-quaternary rounded-full',
-  statusDotOnline: 'border-0 bg-success shadow-[0_0_0_3px_var(--ant-color-success-bg)]',
+  statusDotOnline: 'border-0 bg-success shadow-[0_0_0_3px_var(--success-wash)]',
 };
 
 interface DeviceCardProps {

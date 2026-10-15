@@ -28,9 +28,4 @@ function createPanelSlideMotionVariants(horizontalSign: 1 | -1) {
  */
 export const panelSlideMotionVariantsLeft = createPanelSlideMotionVariants(1);
 
-/**
- * Right-docked panel (e.g. page editor side panel): same timing as left, horizontal slide mirrored.
- */
-export const panelSlideMotionVariantsRight = createPanelSlideMotionVariants(-1);
-
 export const isPanelLayerMotionDisabled = (animationMode?: string) => animationMode === 'disabled';

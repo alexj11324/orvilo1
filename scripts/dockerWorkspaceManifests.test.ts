@@ -8,7 +8,7 @@ const dockerfile = readFileSync(path.resolve(import.meta.dirname, '../Dockerfile
 describe('Docker workspace manifests', () => {
   it('copies the Workbench package manifest before pnpm i', () => {
     const copyIdx = dockerfile.indexOf('COPY apps/workbench/package.json');
-    const installIdx = dockerfile.indexOf('\n    pnpm i &&');
+    const installIdx = dockerfile.indexOf('\n    pnpm i --frozen-lockfile &&');
 
     expect(copyIdx).toBeGreaterThan(-1);
     expect(installIdx).toBeGreaterThan(-1);

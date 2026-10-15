@@ -10,7 +10,7 @@ const BrandWatermark = memo<Omit<HTMLAttributes<HTMLDivElement>, 'children'>>(
     return (
       <div
         className={'flex gap-1 items-center'}
-        style={{ flex: 'none', color: 'var(--ant-color-text-description)', fontSize: 12, ...style }}
+        style={{ flex: 'none', color: 'var(--foreground-description)', fontSize: 12, ...style }}
         {...rest}
       >
         <span>{t('poweredBy', { name: ORG_NAME })}</span>

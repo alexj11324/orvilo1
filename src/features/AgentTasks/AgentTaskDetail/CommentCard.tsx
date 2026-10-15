@@ -202,8 +202,8 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
       className={`relative flex flex-col gap-2 overflow-hidden rounded-(--radius-card) border px-2 py-3 transition-[box-shadow] duration-(--orvilo-motion-mid) motion-reduce:transition-none transition-orvilo-task-comment-highlight ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''}`}
       id={commentId ? commentAnchorId(commentId) : undefined}
       style={{
-        borderColor: 'var(--ant-color-border-secondary)',
-        background: 'var(--ant-color-bg-container)',
+        borderColor: 'var(--divider)',
+        background: 'var(--card)',
       }}
     >
       <div className="flex items-center gap-2">

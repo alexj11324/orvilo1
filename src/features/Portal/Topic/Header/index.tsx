@@ -26,7 +26,7 @@ const Header = memo(() => {
       style={{
         paddingBlock: 6,
         paddingInline: 8,
-        borderBottom: `1px solid ${'var(--ant-color-border-secondary)'}`,
+        borderBottom: `1px solid ${'var(--divider)'}`,
       }}
     />
   );

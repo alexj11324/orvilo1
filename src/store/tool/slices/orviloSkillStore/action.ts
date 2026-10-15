@@ -4,7 +4,7 @@ import { type SWRResponse } from 'swr';
 import useSWR from 'swr';
 
 import { toolKeys } from '@/libs/swr/keys';
-import { toolsClient } from '@/libs/trpc/client';
+import { skillConnectionService } from '@/services/skillConnection';
 import { type StoreSetter } from '@/store/types';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
@@ -55,7 +55,7 @@ export class OrviloSkillStoreActionImpl {
     );
 
     try {
-      const response = await toolsClient.market.connectCallTool.mutate({
+      const response = await skillConnectionService.connectCallTool({
         args,
         provider,
         toolName,
@@ -127,7 +127,7 @@ export class OrviloSkillStoreActionImpl {
     );
 
     try {
-      const response = await toolsClient.market.connectGetStatus.query({ provider });
+      const response = await skillConnectionService.connectGetStatus({ provider });
       // Get provider config from local definition for correct display name
       const providerConfig = getOrviloSkillProviderById(provider);
 
@@ -184,7 +184,7 @@ export class OrviloSkillStoreActionImpl {
     provider: string,
     options?: { redirectUri?: string; scopes?: string[] },
   ): Promise<{ authorizeUrl: string; code: string; expiresIn: number }> => {
-    const response = await toolsClient.market.connectGetAuthorizeUrl.query({
+    const response = await skillConnectionService.connectGetAuthorizeUrl({
       provider,
       redirectUri: options?.redirectUri,
       scopes: options?.scopes,
@@ -218,7 +218,7 @@ export class OrviloSkillStoreActionImpl {
 
   refreshOrviloSkillToken = async (provider: string): Promise<boolean> => {
     try {
-      const response = await toolsClient.market.connectRefresh.mutate({ provider });
+      const response = await skillConnectionService.connectRefresh({ provider });
 
       if (response.refreshed) {
         this.#get().internal_updateOrviloSkillServer(provider, {
@@ -236,7 +236,7 @@ export class OrviloSkillStoreActionImpl {
 
   refreshOrviloSkillTools = async (provider: string): Promise<void> => {
     try {
-      const response = await toolsClient.market.connectListTools.query({ provider });
+      const response = await skillConnectionService.connectListTools({ provider });
 
       this.#set(
         produce((draft: OrviloSkillStoreState) => {
@@ -263,7 +263,7 @@ export class OrviloSkillStoreActionImpl {
     );
 
     try {
-      await toolsClient.market.connectRevoke.mutate({ provider });
+      await skillConnectionService.connectRevoke({ provider });
 
       this.#set(
         produce((draft: OrviloSkillStoreState) => {
@@ -294,7 +294,7 @@ export class OrviloSkillStoreActionImpl {
     return useSWR<OrviloSkillServer[]>(
       enabled && isSignedIn ? toolKeys.orviloSkillConnections() : null,
       async () => {
-        const response = await toolsClient.market.connectListConnections.query();
+        const response = await skillConnectionService.connectListConnections();
 
         // Debug logging
 
@@ -345,7 +345,7 @@ export class OrviloSkillStoreActionImpl {
     return useSWR<OrviloSkillTool[]>(
       provider ? toolKeys.orviloSkillTools(provider) : null,
       async () => {
-        const response = await toolsClient.market.connectListTools.query({ provider: provider! });
+        const response = await skillConnectionService.connectListTools({ provider: provider! });
         return (response.tools || []).map((tool: any) => ({
           description: tool.description,
           inputSchema: tool.inputSchema,

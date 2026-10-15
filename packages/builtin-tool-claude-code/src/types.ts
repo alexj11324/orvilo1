@@ -288,7 +288,7 @@ export type {
   AskUserQuestionArgs,
   AskUserQuestionItem,
   AskUserQuestionOption,
-} from '@orvilo/shared-tool-ui/ask-user';
+} from '@orvilo/shared-tool-ui/ask-user/types';
 
 /**
  * Arguments for CC's built-in `WebSearch` tool. CC issues a web search via

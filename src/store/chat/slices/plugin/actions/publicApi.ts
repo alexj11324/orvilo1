@@ -11,8 +11,6 @@ import { displayMessageSelectors } from '../../message/selectors';
  */
 
 type Setter = StoreSetter<ChatStore>;
-export const pluginPublicApi = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new PluginPublicApiActionImpl(set, get, _api);
 
 export class PluginPublicApiActionImpl {
   readonly #get: () => ChatStore;

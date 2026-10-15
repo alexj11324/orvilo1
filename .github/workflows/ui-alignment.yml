@@ -1,19 +1,9 @@
 name: UI alignment
 
 on:
-  push:
-    paths:
-      - 'src/components/**'
-      - 'src/features/**'
-      - 'src/app/globals.css'
-      - 'tests/ui-alignment/**'
-      - 'postcss.config.mjs'
-      - 'package.json'
-      - 'pnpm-workspace.yaml'
-      - 'tsconfig.json'
-      - 'vitest.config.mts'
-      - '.github/actions/setup-env/**'
-      - '.github/workflows/ui-alignment.yml'
+  # Push path filters see only the last push. The cheap planner below uses the
+  # cumulative branch diff, so a docs follow-up cannot hide a broken UI change.
+  push: {}
   pull_request:
     paths:
       - 'src/components/**'
@@ -37,14 +27,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect browser geometry changes
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    outputs:
+      ui: ${{ steps.plan.outputs.ui }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - id: plan
+        env:
+          FORCE_UI: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          node .github/scripts/run-ci-plan.mjs
+          if [ "$FORCE_UI" = true ]; then echo 'ui=true' >> "$GITHUB_OUTPUT"; fi
   alignment:
-    name: Browser geometry
+    needs: changes
+    name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && 'Push owns browser geometry' || 'Browser geometry' }}
+    if: needs.changes.outputs.ui == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-env
-      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm install --frozen-lockfile
       - name: Build authorization SPA for Electron verification
         run: bun run build:spa:auth
       - name: Upload authorization SPA

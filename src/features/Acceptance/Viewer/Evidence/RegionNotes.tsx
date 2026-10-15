@@ -13,7 +13,7 @@ import type { DraftAnnotationEntry, RejectableEvidence } from '../Review/rejectD
 const styles = {
   index:
     'flex-none size-4.5 rounded-[50%] text-xs font-semibold leading-4.5 text-white text-center bg-destructive',
-  jump: 'cursor-pointer inline-flex gap-1.25 items-center self-start py-1.75 px-0.5 border-none text-(length:--text-dense) text-(--ant-color-link) bg-none bg-transparent active:opacity-60',
+  jump: 'cursor-pointer inline-flex gap-1.25 items-center self-start py-1.75 px-0.5 border-none text-(length:--text-dense) text-(--link) bg-none bg-transparent active:opacity-60',
 };
 
 interface RegionNoteRowProps {

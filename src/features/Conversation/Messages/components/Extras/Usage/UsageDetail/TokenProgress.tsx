@@ -24,7 +24,7 @@ const TokenProgress = memo<TokenProgressProps>(({ data, showIcon }) => {
           height: 6,
           width: '100%',
 
-          background: total === 0 ? 'var(--ant-color-fill)' : undefined,
+          background: total === 0 ? 'var(--fill)' : undefined,
           borderRadius: 3,
           overflow: 'hidden',
           position: 'relative',
@@ -53,7 +53,7 @@ const TokenProgress = memo<TokenProgressProps>(({ data, showIcon }) => {
                   }}
                 />
               )}
-              <div style={{ color: 'var(--ant-color-text-secondary)' }}>{item.title}</div>
+              <div style={{ color: 'var(--muted-foreground)' }}>{item.title}</div>
             </div>
             <div style={{ fontWeight: 500 }}>{formatUsageValue(item.value)}</div>
           </div>

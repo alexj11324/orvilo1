@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -28,6 +28,13 @@ const compose = parse(readFileSync(path.join(deployDirectory, 'docker-compose.ym
   volumes: Record<string, unknown>;
 };
 const dockerfile = readFileSync(path.resolve(import.meta.dirname, '../Dockerfile'), 'utf8');
+const runtimeDeps = JSON.parse(
+  readFileSync(path.resolve(import.meta.dirname, '../docker/runtime-deps/package.json'), 'utf8'),
+) as { dependencies: Record<string, string> };
+const runtimeDepsWorkspace = readFileSync(
+  path.resolve(import.meta.dirname, '../docker/runtime-deps/pnpm-workspace.yaml'),
+  'utf8',
+);
 const deployWorkflow = readFileSync(
   path.resolve(import.meta.dirname, '../.github/workflows/deploy-orvilo1.yml'),
   'utf8',
@@ -157,12 +164,64 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     // The sync bundle keeps drizzle-orm external, and drizzle-orm/neon-serverless requires
     // @neondatabase/serverless at load time even though DATABASE_DRIVER=node never uses it, so the
     // image must ship that package next to pg and drizzle-orm or the container crash-loops.
-    expect(dockerfile).toContain(
-      'pnpm add --allow-build=sharp --allow-build=@hatchet-dev/typescript-sdk --allow-build=protobufjs pg drizzle-orm @neondatabase/serverless sharp@0.34.5 @hatchet-dev/typescript-sdk@1.33.1 @grpc/grpc-js@1.14.4',
-    );
+    // Versions and native build scripts live in the frozen supplemental project, not an unpinned add.
+    expect(dockerfile).toContain('COPY docker/runtime-deps /deps');
+    expect(dockerfile).toContain('pnpm --dir /deps install --frozen-lockfile --prod');
+    expect(dockerfile).not.toContain('pnpm add ');
+    expect(runtimeDeps.dependencies).toEqual({
+      '@copilotkit/channels-core': '0.11.0',
+      '@grpc/grpc-js': '1.14.4',
+      '@hatchet-dev/typescript-sdk': '1.33.1',
+      '@neondatabase/serverless': '^1.1.0',
+      'drizzle-orm': '^0.45.2',
+      pg: '^8.23.0',
+      sharp: '0.34.5',
+    });
+    expect(runtimeDepsWorkspace).toContain('sharp: true');
+    expect(runtimeDepsWorkspace).toContain("'@hatchet-dev/typescript-sdk': true");
+    expect(runtimeDepsWorkspace).toContain('protobufjs: true');
     expect(dockerfile).toContain(
       'COPY --from=builder /deps/node_modules/@neondatabase /app/node_modules/@neondatabase',
     );
+  });
+
+  it('requires deployment-owned signing keys in both Compose templates', () => {
+    for (const file of ['.env.example', '.env.zh-CN.example']) {
+      const example = readFileSync(path.join(deployDirectory, file), 'utf8');
+      expect(example).toMatch(/^JWKS_KEY=$/m);
+      expect(example).toMatch(/^CLERK_SECRET_KEY=/m);
+      expect(example).not.toMatch(/^AUTH_SECRET=/m);
+    }
+  });
+
+  it('uses the current Clerk auth contract in the Grafana deployment recipe', () => {
+    const grafana = parse(
+      readFileSync(path.join(deployDirectory, '../production/grafana/docker-compose.yml'), 'utf8'),
+    );
+    expect(grafana.services.casdoor).toBeUndefined();
+    expect(grafana.services.orvilo.environment).toContain('KEY_VAULTS_SECRET=${KEY_VAULTS_SECRET}');
+    expect(grafana.services.orvilo.environment.join(' ')).not.toMatch(
+      /AUTH_SECRET|AUTH_SSO_PROVIDERS/,
+    );
+    expect(grafana.services.orvilo.entrypoint).not.toContain('AUTH_CASDOOR_ISSUER');
+    const grafanaDirectory = path.join(deployDirectory, '../production/grafana');
+    const composeSource = readFileSync(path.join(grafanaDirectory, 'docker-compose.yml'), 'utf8');
+    expect(composeSource).not.toContain('init_data.json');
+    expect(composeSource).not.toMatch(/casdoor/i);
+    expect(existsSync(path.join(grafanaDirectory, 'init_data.json'))).toBe(false);
+    for (const file of ['.env.example', '.env.zh-CN.example']) {
+      const example = readFileSync(path.join(grafanaDirectory, file), 'utf8');
+      expect(example).toMatch(/^CLERK_SECRET_KEY=/m);
+      expect(example).toMatch(/^AUTH_ACCOUNTS_URL=/m);
+      expect(example).not.toMatch(/^AUTH_URL=/m);
+      expect(example).not.toMatch(/casdoor/i);
+    }
+  });
+
+  it('delivers worker collaboration events over the internal gateway endpoint', () => {
+    const gateway = 'COLLABORATION_GATEWAY_URL=http://collaboration-gateway:3012';
+    expect(compose.services.orvilo.environment).toContain(gateway);
+    expect(compose.services['hatchet-worker'].environment).toContain(gateway);
   });
 
   it('packages the Hatchet worker in the deployment image and keeps it out of the web container', () => {
@@ -180,7 +239,7 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     expect(dockerfile).toContain('--external:sharp');
     expect(dockerfile).toContain('--external:@hatchet-dev/typescript-sdk');
     expect(dockerfile).toContain('--external:@copilotkit/channels-core');
-    expect(dockerfile).toContain('@copilotkit/channels-core@0.11.0');
+    expect(runtimeDeps.dependencies['@copilotkit/channels-core']).toBe('0.11.0');
     expect(dockerfile).toContain(
       '--banner:js=\'import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);\'',
     );

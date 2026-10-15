@@ -46,8 +46,3 @@ export interface MessageSyncSink {
 
 /** Cloud limit on one `message.batchMutate` call. */
 export const MAX_SYNC_BATCH = 200;
-
-/** Drops everything. For runs that deliberately keep no cloud replica. */
-export class NoopMessageSyncSink implements MessageSyncSink {
-  async flush(): Promise<void> {}
-}

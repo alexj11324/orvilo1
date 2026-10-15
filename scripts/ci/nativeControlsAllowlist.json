@@ -83,12 +83,6 @@
       },
       "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
     },
-    "src/features/AgentGoals/CreateGoalModal/CreateGoalContent.tsx": {
-      "counts": {
-        "native-control": 1
-      },
-      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
-    },
     "src/features/AgentTaskManager/AgentSelectorAction.tsx": {
       "counts": {
         "native-control": 1
@@ -282,12 +276,6 @@
       "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
     },
     "src/features/FloatingChatPanel/HoverExpandBar.tsx": {
-      "counts": {
-        "native-control": 1
-      },
-      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
-    },
-    "src/features/GlobalSearch/GlobalSearchResults.tsx": {
       "counts": {
         "native-control": 1
       },
@@ -553,12 +541,6 @@
       "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
     },
     "src/features/ResourceManager/components/Header/AddButton.tsx": {
-      "counts": {
-        "native-control": 2
-      },
-      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
-    },
-    "src/features/ResourceManager/components/LibraryHierarchy/FolderAddButton.tsx": {
       "counts": {
         "native-control": 2
       },

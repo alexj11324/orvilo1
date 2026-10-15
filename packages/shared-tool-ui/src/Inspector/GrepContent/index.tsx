@@ -90,7 +90,7 @@ export const createGrepContentInspector = ({
             ) : (
               <span
                 className="text-xs"
-                style={{ marginInlineStart: 4, color: 'var(--ant-color-text-description)' }}
+                style={{ marginInlineStart: 4, color: 'var(--foreground-description)' }}
               >
                 ({t(noResultsKey as any)})
               </span>

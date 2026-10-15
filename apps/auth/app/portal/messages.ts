@@ -1,5 +1,3 @@
-import { DEFAULT_PRERENDER_LOCALE } from '../lib/prerender';
-
 export type PortalMessages = typeof en;
 
 export const en = {
@@ -95,5 +93,3 @@ const zhHans: PortalMessages = {
 /** Portal ships en + zh-Hans only; every other document locale falls back to en. */
 export const messagesForLocale = (locale: string): PortalMessages =>
   locale.toLowerCase().startsWith('zh') ? zhHans : en;
-
-export const DEFAULT_MESSAGES_LOCALE = DEFAULT_PRERENDER_LOCALE;

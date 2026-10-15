@@ -46,7 +46,7 @@ const StatCards = memo<StatCardsProps>(({ summary, isLoading, rangeLabel }) => {
           precision: 2,
           prefix: '$',
           value: formatNumber(summary.cacheSavings, 2),
-          valueStyle: { color: 'var(--ant-color-success)' },
+          valueStyle: { color: 'var(--success)' },
         }}
       />
       <StatisticCard

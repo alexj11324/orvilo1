@@ -10,7 +10,7 @@ const styles = {
 };
 
 const colors = {
-  scope: 'var(--ant-color-text-tertiary)',
+  scope: 'var(--foreground-tertiary)',
   started: 'var(--warning)',
   completed: 'var(--primary)',
 };

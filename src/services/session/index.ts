@@ -17,6 +17,9 @@ import {
  * Mobile still uses this, but should migrate to agentService.
  */
 export class SessionService {
+  publishSessionGroupToWorkspace = (...args: Parameters<typeof lambdaClient.sessionGroup.publishSessionGroupToWorkspace.mutate>) =>
+    lambdaClient.sessionGroup.publishSessionGroupToWorkspace.mutate(...args);
+
   hasSessions = async (): Promise<boolean> => {
     const result = await this.countSessions();
     return result === 0;

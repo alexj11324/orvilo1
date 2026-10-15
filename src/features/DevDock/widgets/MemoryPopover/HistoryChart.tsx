@@ -17,11 +17,11 @@ interface Series {
 
 const SERIES: Series[] = [
   {
-    color: 'var(--ant-color-info)',
+    color: 'var(--info)',
     label: 'private',
     read: (s) => s.renderer?.privateBytes ?? null,
   },
-  { color: 'var(--ant-color-success)', label: 'JS heap', read: (s) => s.jsHeapUsedBytes },
+  { color: 'var(--success)', label: 'JS heap', read: (s) => s.jsHeapUsedBytes },
 ];
 
 const pathFor = (values: (number | null)[], max: number) => {
@@ -43,9 +43,7 @@ const HistoryChart = memo<{ history: MemorySample[] }>(({ history }) => {
   const spanSeconds = history.length > 1 ? (history.at(-1)!.at - history[0].at) / 1000 : 0;
 
   return (
-    <div
-      style={{ borderBlockEnd: `1px solid ${'var(--ant-color-border-secondary)'}`, flexShrink: 0 }}
-    >
+    <div style={{ borderBlockEnd: `1px solid ${'var(--divider)'}`, flexShrink: 0 }}>
       <svg
         aria-hidden
         height={HEIGHT}

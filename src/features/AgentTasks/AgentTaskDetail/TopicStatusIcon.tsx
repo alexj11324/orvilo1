@@ -11,12 +11,12 @@ const STATIC_META: Record<Exclude<TopicRunStatus, 'running'>, ExecutionStatusVis
   failed: EXECUTION_STATUS_VISUALS.failed,
   // Not-yet-started run: same glyph as a backlog task.
   pending: EXECUTION_STATUS_VISUALS.backlog,
-  timeout: { color: 'var(--ant-color-warning)', icon: CircleAlert },
+  timeout: { color: 'var(--warning)', icon: CircleAlert },
 };
 
 const RunningIcon = memo<{ size: number }>(({ size }) => {
-  const mainColor = 'var(--ant-color-warning)';
-  const ringColor = `color-mix(in srgb, ${'var(--ant-color-warning)'} 35%, transparent)`;
+  const mainColor = 'var(--warning)';
+  const ringColor = `color-mix(in srgb, ${'var(--warning)'} 35%, transparent)`;
   return (
     <svg aria-hidden fill="none" height={size} viewBox="0 0 16 16" width={size}>
       <circle cx="8" cy="8" r="6.5" stroke={ringColor} strokeWidth="1.5" />

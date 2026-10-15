@@ -17,7 +17,7 @@ interface DirIconProps {
  * which owns the branch glyph. Two identical branch icons side by side read as one
  * control repeated rather than "repo" followed by "branch". */
 const DirIcon = memo<DirIconProps>(({ repoType, size = 16 }) => {
-  const iconStyle = { color: 'var(--ant-color-text-tertiary)', flex: 'none' as const };
+  const iconStyle = { color: 'var(--foreground-tertiary)', flex: 'none' as const };
   if (repoType === 'github') return <Github size={size} style={iconStyle} />;
   return (
     <span className="anticon" role="img" style={iconStyle}>

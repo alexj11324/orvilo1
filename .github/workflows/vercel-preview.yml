@@ -1,84 +1,135 @@
+# Completion events reevaluate gates once. Pending checks release the runner.
+# Keep workflow_run names in sync when adding checks on commit SHAs.
 name: Vercel Preview (gated)
-
-# PR branches are disabled in vercel.json so the Git integration cannot create
-# a deployment before the checks finish. This privileged workflow reads only
-# GitHub metadata, waits for the exact PR head's gates, and then creates the
-# exact same commit through the Vercel API.
-#
-# The VERCEL_PREVIEW_DEPLOYMENT_GATE repository variable remains an explicit
-# quota circuit breaker. When it is closed, the gate still runs but the deploy
-# job is skipped; opening it never weakens the checks above.
-
-on:
+'on':
+  workflow_run:
+    workflows:
+      - Affected CI Plan
+      - Auto Tag Release
+      - Auto-close duplicate issues
+      - Build and deploy agent gateway
+      - Build and deploy device gateway
+      - Build and deploy orvilo1
+      - Bundle Analyzer
+      - Claude Auto E2E Testing
+      - Claude Auto Testing Coverage
+      - Claude Code
+      - Claude Issue Dedupe
+      - Claude Issue Triage
+      - Claude Migration Support
+      - Claude PR Assign
+      - Claude Translate Non-English Comments
+      - Claude Translator
+      - Daily i18n Update
+      - Database Schema Visualization CI
+      - Deploy Auth
+      - Deploy Workbench
+      - Desktop Manual Build
+      - Desktop PR Build
+      - Docker PR Build
+      - Documentation gate tests
+      - Documentation requirement
+      - E2E CI
+      - FTS Search Mapping History
+      - Issue Auto Comment
+      - Lighthouse Badger
+      - Linear tokens
+      - Lock Stale Issues
+      - MCP Submission Handler
+      - Publish Docker Image
+      - Release CI
+      - Release CLI
+      - Release Desktop Beta
+      - Release Desktop Canary
+      - Release Desktop Stable
+      - Release ModelBank
+      - Release SDK
+      - Revalidate Docs
+      - Skeleton requirement
+      - Test CI
+      - UI alignment
+      - Verify Auth
+      - Verify Share
+      - Verify Workbench
+      - "\U0001F504 Branch Synchronization"
+    types:
+      - completed
+  check_run:
+    types:
+      - completed
+  check_suite:
+    types:
+      - completed
+  status: {}
   pull_request_target:
-    types: [opened, reopened, synchronize, closed]
-
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
 permissions:
-  contents: read
   actions: read
   checks: read
+  contents: read
   statuses: read
   pull-requests: read
-
-concurrency:
-  group: vercel-preview-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
 jobs:
-  gate:
-    if: >-
-      github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository && github.actor == github.repository_owner && github.triggering_actor == github.repository_owner
-    name: Check all PR gates before Vercel
+  resolve:
+    name: Resolve Vercel deployment targets
+    if: github.event_name != 'status' || github.event.state != 'pending'
     runs-on: ubuntu-latest
-    timeout-minutes: 70
-    env:
-      GITHUB_TOKEN: ${{ github.token }}
-      GITHUB_REPOSITORY: ${{ github.repository }}
-      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-      REQUIRED_WORKFLOWS: Test CI,E2E CI
-      REQUIRED_CHECK_RUNS: GitGuardian Security Checks
-      IGNORED_CHECK_RUNS: Check Duplicate Run,Vercel Preview Comments,Check all PR gates before Vercel,Deploy Vercel Preview
-      IGNORED_STATUS_CONTEXTS: Vercel
-      REQUIRED_EVENT: push
-      GATE_TIMEOUT_MS: '3600000'
+    timeout-minutes: 3
+    outputs:
+      targets: ${{ steps.targets.outputs.targets }}
     steps:
-      - name: Checkout gate implementation
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
-          persist-credentials: false
           ref: ${{ github.event.repository.default_branch }}
-
-      - name: Wait for exact-head gates
-        run: node scripts/ci/vercelPreviewGate.mjs
-
+          persist-credentials: false
+      - name: Find current targets for the completed check
+        id: targets
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_MODE: preview
+        run: node scripts/ci/vercelGateTargets.mjs
   deploy:
-    needs: gate
-    if: >-
-      needs.gate.result == 'success' && github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository && github.actor == github.repository_owner && github.triggering_actor == github.repository_owner && vars.VERCEL_PREVIEW_DEPLOYMENT_GATE == 'open'
+    if: needs.resolve.outputs.targets != '[]' && vars.VERCEL_PREVIEW_DEPLOYMENT_GATE == 'open'
     name: Deploy Vercel Preview
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     environment:
       name: preview
       url: ${{ steps.deploy.outputs.deployment_url }}
     env:
       GITHUB_TOKEN: ${{ github.token }}
-      HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-      HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
+      HEAD_SHA: ${{ matrix.sha }}
+      HEAD_BRANCH: ${{ matrix.branch }}
+      PR_NUMBER: ${{ matrix.pr }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      REQUIRED_WORKFLOWS: Test CI,E2E CI
+      REQUIRED_CHECK_RUNS: GitGuardian Security Checks
+      IGNORED_CHECK_RUNS: Check Duplicate Run,Vercel Preview Comments,Check all PR gates before Vercel,Deploy Vercel Preview,Check all branch gates before Vercel,Deploy Vercel branch,Resolve Vercel deployment targets
+      IGNORED_STATUS_CONTEXTS: Vercel
+      REQUIRED_EVENT: push
+      GATE_SINGLE_PASS: 'true'
     steps:
-      - name: Checkout deployment helper
+      - name: Checkout trusted deployment helpers
         uses: actions/checkout@v6
         with:
           persist-credentials: false
           ref: ${{ github.event.repository.default_branch }}
-
+      - name: Evaluate exact-head gates once
+        id: gate
+        run: node scripts/ci/vercelPreviewGate.mjs
+      - name: Reuse an existing exact-head deployment
+        id: existing
+        if: steps.gate.outputs.ready == 'true'
+        run: node scripts/ci/findVercelDeployment.mjs
       - name: Setup environment
         uses: ./.github/actions/setup-env
-
+        if: steps.gate.outputs.ready == 'true' && steps.existing.outputs.exists != 'true'
       - name: Create exact Vercel Preview deployment
         id: deploy
         run: |
@@ -144,7 +195,7 @@ jobs:
           deployment_url=$(jq -er '.url // empty' <<< "$deployment")
           echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
           echo "deployment_url=https://$deployment_url" >> "$GITHUB_OUTPUT"
-
+        if: steps.gate.outputs.ready == 'true' && steps.existing.outputs.exists != 'true'
       - name: Publish deployment summary
         env:
           DEPLOYMENT_ID: ${{ steps.deploy.outputs.deployment_id }}
@@ -157,3 +208,12 @@ jobs:
             echo "- Deployment: ${DEPLOYMENT_ID}"
             echo "- URL: ${DEPLOYMENT_URL}"
           } >> "$GITHUB_STEP_SUMMARY"
+        if: steps.gate.outputs.ready == 'true' && steps.existing.outputs.exists != 'true'
+    needs: resolve
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.resolve.outputs.targets) }}
+    concurrency:
+      group: vercel-preview-${{ matrix.pr || matrix.branch }}
+      cancel-in-progress: false

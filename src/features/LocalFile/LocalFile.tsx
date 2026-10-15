@@ -11,7 +11,7 @@ import { useLocalFileActions } from './useLocalFileActions';
 
 const styles = {
   container:
-    'cursor-pointer py-0.5 ps-1 pe-2 rounded-(--radius-chip) text-foreground [&:hover]:text-foreground [&:hover]:bg-accent focus-visible:[outline:2px_solid_var(--ant-color-primary-border)] focus-visible:outline-offset-1',
+    'cursor-pointer py-0.5 ps-1 pe-2 rounded-(--radius-chip) text-foreground [&:hover]:text-foreground [&:hover]:bg-accent focus-visible:[outline:2px_solid_var(--primary-border)] focus-visible:outline-offset-1',
   segment:
     "cursor-pointer relative inline-flex gap-1.5 items-center py-1 px-3 border-0 border-none [font-family:inherit] text-sm leading-5.5 text-muted-foreground whitespace-nowrap bg-transparent [&+&::before]:content-[''] [&+&::before]:absolute [&+&::before]:inset-y-1.5 [&+&::before]:start-0 [&+&::before]:w-px [&+&::before]:bg-divider [&:hover]:text-foreground [&:hover]:bg-accent [&:hover::before]:bg-transparent [&:hover+&::before]:bg-transparent focus-visible:rounded-(--radius-button) focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-(color:--primary-border) focus-visible:-outline-offset-2 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11",
   segmented: 'overflow-hidden inline-flex items-stretch rounded-(--radius-overlay)',

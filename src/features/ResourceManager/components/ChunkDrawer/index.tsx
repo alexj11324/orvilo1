@@ -33,7 +33,7 @@ const ChunkDrawer = memo(() => {
           )}
           <div
             className="flex flex-col flex-1"
-            style={{ borderInlineStart: `1px solid var(--ant-color-split)` }}
+            style={{ borderInlineStart: `1px solid var(--split-divider)` }}
           >
             <Content />
           </div>

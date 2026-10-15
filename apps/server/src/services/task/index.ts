@@ -22,6 +22,7 @@ import { deriveLegacyTaskStatus } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import { TRPCError } from '@trpc/server';
 
+import { TaskDomainError } from '@/database/errors/task';
 import { AgentModel } from '@/database/models/agent';
 import { DeviceModel } from '@/database/models/device';
 import { ProjectModel } from '@/database/models/project';
@@ -57,10 +58,10 @@ import {
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 import { resolveDeviceWorkingDirectory } from '@/server/services/aiAgent/resolveDeviceWorkingDirectory';
 
-import { assertCanUseWorkspaceAgent } from '../../routers/lambda/_helpers/workspaceAgentGuard';
 import { AiAgentService } from '../aiAgent';
 import { extractFileIdsFromEditorData } from '../file/extractFileIdsFromEditorData';
 import { resolveAttachmentMetadata } from '../file/resolveAttachments';
+import { assertCanUseWorkspaceAgent } from '../resourcePermission/workspaceAgentGuard';
 import { type SubtaskGraphPlan, TaskGraphService } from '../taskGraph';
 import { TaskIntegrationService } from '../taskIntegration';
 import { type ReviewResult, TaskReviewService } from '../taskReview';
@@ -241,14 +242,14 @@ export class TaskService {
       if (
         taskDependencyRowScope(parent) !== taskDependencyRequestScope(this.userId, this.workspaceId)
       ) {
-        throw new TRPCError({
+        throw new TaskDomainError({
           cause: { data: { code: 'CROSS_SCOPE' } },
           code: 'BAD_REQUEST',
           message: 'Parent task must belong to the same workspace',
         });
       }
       if (createData.projectId && createData.projectId !== parent.projectId) {
-        throw new TRPCError({
+        throw new TaskDomainError({
           code: 'BAD_REQUEST',
           message: 'Subtask must belong to the same project as its parent',
         });
@@ -260,7 +261,7 @@ export class TaskService {
       const project = (await this.projectModel.getCapabilities(createData.projectId)).canEdit
         ? await this.projectModel.findById(createData.projectId)
         : null;
-      if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
+      if (!project) throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Project not found' });
       createData.identifierPrefix ??= project.identifier;
     }
 
@@ -308,7 +309,7 @@ export class TaskService {
         ? result.cancelState !== 'confirmed'
         : !result.success || result.deviceCancellationConfirmed === false;
     if (unconfirmed) {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'CONFLICT',
         // The leading code is what the client matches; by now the stop is
         // recorded on the dispatch and the cancellation sweep finishes it.
@@ -337,13 +338,13 @@ export class TaskService {
     const target = authorizedIssueId
       ? await this.taskTopicModel.findIssueTopicById(topicId)
       : await this.taskTopicModel.findByTopicId(topicId);
-    if (!target) throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found.' });
+    if (!target) throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Topic not found.' });
 
     if (authorizedIssueId && target.taskId !== authorizedIssueId)
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found.' });
+      throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Topic not found.' });
 
     if (target.status !== 'running') {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'BAD_REQUEST',
         message: `Topic is not running (current status: ${target.status}).`,
       });
@@ -359,7 +360,7 @@ export class TaskService {
         reason: 'user_cancel',
       });
       if (!stoppingDispatch) {
-        throw new TRPCError({
+        throw new TaskDomainError({
           code: 'CONFLICT',
           message: 'Task execution changed before cancellation could be fenced.',
         });
@@ -375,7 +376,7 @@ export class TaskService {
 
     if (authorizedIssueId) {
       if (!(await this.taskTopicModel.cancelIssueTopicIfRunning(target.taskId, topicId)))
-        throw new TRPCError({
+        throw new TaskDomainError({
           code: 'CONFLICT',
           message: 'Issue topic changed before cancellation.',
         });
@@ -392,7 +393,7 @@ export class TaskService {
         phase: 'canceled',
       });
       if (!settled) {
-        throw new TRPCError({
+        throw new TaskDomainError({
           code: 'CONFLICT',
           message: 'Task cancellation lost dispatch ownership before settlement.',
         });
@@ -412,7 +413,7 @@ export class TaskService {
    */
   async deleteTopic(topicId: string): Promise<void> {
     const target = await this.taskTopicModel.findByTopicId(topicId);
-    if (!target) throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found.' });
+    if (!target) throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Topic not found.' });
 
     if (target.status === 'running' && target.operationId) {
       const aiAgentService = new AiAgentService(this.db, this.userId, {
@@ -436,7 +437,7 @@ export class TaskService {
       this.workspaceId,
     ).cleanupTaskWorktrees(target.taskId);
     if (!cleanupComplete) {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'CONFLICT',
         message: 'Topic workspace cleanup is still active. Stop the run and try again.',
       });
@@ -459,7 +460,7 @@ export class TaskService {
 
     const reviewConfig = this.taskModel.getReviewConfig(task);
     if (!reviewConfig?.enabled) {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'BAD_REQUEST',
         message: 'Review is not enabled for this task',
       });
@@ -467,7 +468,7 @@ export class TaskService {
 
     const content = input.content;
     if (!content) {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'BAD_REQUEST',
         message: 'Content is required for review. Pass --content or run after a topic completes.',
       });
@@ -582,14 +583,14 @@ export class TaskService {
   ): Promise<UpdateStatusResult | null> {
     const { expectedContract, id, status, error: errorMsg } = input;
     if (options?.beforeMutation && !expectedContract) {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'CONFLICT',
         message: 'Atomic completion requires an execution contract',
       });
     }
 
     if (errorMsg && status !== 'failed') {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'BAD_REQUEST',
         message: 'Task error can only be provided when status is failed.',
       });
@@ -606,7 +607,7 @@ export class TaskService {
       (status === 'running' || status === 'completed') &&
       !(await this.taskModel.areAllDependenciesCompleted(resolved.id))
     ) {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'PRECONDITION_FAILED',
         message: 'Complete all prerequisite tasks before starting or completing this task.',
       });
@@ -632,7 +633,7 @@ export class TaskService {
             reason: `task_status:${status}`,
           });
           if (!stoppingDispatch) {
-            throw new TRPCError({
+            throw new TaskDomainError({
               code: 'CONFLICT',
               message: 'Task execution changed before the status transition could be fenced.',
             });
@@ -665,7 +666,7 @@ export class TaskService {
             phase: 'canceled',
           });
           if (!settled) {
-            throw new TRPCError({
+            throw new TaskDomainError({
               code: 'CONFLICT',
               message: 'Task execution changed before the status transition settled.',
             });
@@ -735,7 +736,7 @@ export class TaskService {
           : await this.taskModel.updateStatus(resolved.id, status, extra);
     if (!task) {
       if (guard) return null;
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: expectedContract ? 'CONFLICT' : 'NOT_FOUND',
         message: expectedContract
           ? 'Task execution contract changed before the status transition.'
@@ -915,7 +916,7 @@ export class TaskService {
       input.status === 'completed' &&
       (await this.taskModel.findBlockedTaskIds(targetIds)).length > 0
     ) {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'PRECONDITION_FAILED',
         message: 'Complete prerequisite tasks first, then complete their dependents.',
       });
@@ -928,7 +929,7 @@ export class TaskService {
     const runningTopics = await this.taskTopicModel.findRunningByTaskIds(targetIds);
     if (runningTopics.length > 0) {
       if (runningTopics.some((topic) => !topic.operationId)) {
-        throw new TRPCError({
+        throw new TaskDomainError({
           code: 'CONFLICT',
           message:
             'Task interruption could not be confirmed because a running topic has no operation identity.',
@@ -968,7 +969,7 @@ export class TaskService {
     // this pass is rejected inside the transaction below.
     const resnapshotTopics = await this.taskTopicModel.findRunningByTaskIds(targetIds);
     if (resnapshotTopics.some((topic) => !topic.operationId)) {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'CONFLICT',
         message:
           'Task interruption could not be confirmed because a running topic has no operation identity.',
@@ -1021,7 +1022,7 @@ export class TaskService {
       const locked = await taskModel.lockForStatusChange(targetIds);
       const transactionRunningTopics = await taskTopicModel.findRunningByTaskIds(targetIds);
       if (transactionRunningTopics.some((topic) => !topic.operationId)) {
-        throw new TRPCError({
+        throw new TaskDomainError({
           code: 'CONFLICT',
           message:
             'Task interruption could not be confirmed because a running topic has no operation identity.',
@@ -1032,7 +1033,7 @@ export class TaskService {
           (topic) => !confirmedOperationIds.has(topic.operationId ?? ''),
         )
       ) {
-        throw new TRPCError({
+        throw new TaskDomainError({
           code: 'CONFLICT',
           message: 'Task execution changed during cancellation. Retry to stop the current run.',
         });
@@ -1131,7 +1132,7 @@ export class TaskService {
     await Promise.allSettled(targetTasks.map((t) => integrationService.cleanupTaskWorktrees(t.id)));
 
     const task = updatedTasks.find(({ id }) => id === resolved.id);
-    if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+    if (!task) throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Task not found' });
 
     const unlocked: string[] = [];
     const paused: string[] = [];
@@ -1291,7 +1292,7 @@ export class TaskService {
     // FORBIDDEN) keeps every private-agent leak path returning the same code.
     const exists = await this.agentModel.existsById(assigneeAgentId);
     if (!exists) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Assignee agent not found' });
+      throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Assignee agent not found' });
     }
   }
 
@@ -1314,7 +1315,7 @@ export class TaskService {
 
     if (!this.workspaceId) {
       if (assigneeUserId !== this.userId) {
-        throw new TRPCError({
+        throw new TaskDomainError({
           code: 'NOT_FOUND',
           message: 'Assignee user not found',
         });
@@ -1327,7 +1328,7 @@ export class TaskService {
       ? await memberModel.getMemberForUpdate(this.workspaceId, assigneeUserId)
       : await memberModel.getMember(this.workspaceId, assigneeUserId);
     if (!member) {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'NOT_FOUND',
         message: 'Assignee user is not a member of this workspace',
       });
@@ -1338,7 +1339,7 @@ export class TaskService {
       { userId: assigneeUserId, workspaceId: this.workspaceId },
     );
     if (!canManageTasks) {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'NOT_FOUND',
         message: 'Assignee user cannot manage tasks in this workspace',
       });
@@ -1411,7 +1412,7 @@ export class TaskService {
   ): Promise<TaskItem | null> {
     if (data.projectId) {
       const project = await this.projectModel.findManageableById(data.projectId);
-      if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
+      if (!project) throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Project not found' });
     }
 
     if (
@@ -1491,13 +1492,13 @@ export class TaskService {
     const task = await this.resolveOrThrow(input.taskId);
 
     if (input.fromAgentId !== undefined && task.assigneeAgentId !== input.fromAgentId) {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'CONFLICT',
         message: 'Task assignee changed; reload before handing off.',
       });
     }
     if (task.assigneeAgentId === input.toAgentId) {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'BAD_REQUEST',
         message: 'Task is already assigned to this agent.',
       });
@@ -1519,7 +1520,7 @@ export class TaskService {
           source: 'user',
         },
       );
-      if (!updated) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      if (!updated) throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Task not found' });
       return { state: 'assigned', task: updated };
     }
 
@@ -1567,7 +1568,7 @@ export class TaskService {
           reason: 'handoff',
         });
         if (!stoppingDispatch) {
-          throw new TRPCError({
+          throw new TaskDomainError({
             code: 'CONFLICT',
             message: 'Task execution changed before the handoff could be fenced.',
           });
@@ -1595,7 +1596,7 @@ export class TaskService {
           reason: 'handoff',
         });
         if (!stopped) {
-          throw new TRPCError({
+          throw new TaskDomainError({
             code: 'CONFLICT',
             message: 'Task execution changed before the handoff could be fenced.',
           });
@@ -1632,7 +1633,7 @@ export class TaskService {
       },
     );
     if (!transferred) {
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'CONFLICT',
         message: 'Task changed while the handoff was in flight.',
       });
@@ -1651,7 +1652,7 @@ export class TaskService {
         phase: 'canceled',
       });
       if (!settled) {
-        throw new TRPCError({
+        throw new TaskDomainError({
           code: 'CONFLICT',
           message: 'Task execution changed before the handoff could settle.',
         });
@@ -1677,7 +1678,7 @@ export class TaskService {
 
   private async resolveOrThrow(idOrIdentifier: string): Promise<TaskItem> {
     const task = await this.taskModel.resolve(idOrIdentifier);
-    if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+    if (!task) throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Task not found' });
     return task;
   }
 

@@ -372,6 +372,15 @@ export class TaskService {
         }
         await this.interruptTaskOperation(service, operationId);
         if (stoppingDispatch) {
+          // task_topics.topic_id is nullable. Settling the dispatch without a
+          // topic would leave a canceled run that cancelIfRunning cannot record.
+          if (!topic.topicId) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Acknowledged task cancellation has no topic identity.',
+            });
+          }
+          const topicId = topic.topicId;
           const stopped = stoppingDispatch;
           // Keep the acknowledged execution consistent even if the later
           // family status transaction rejects (for example, unaccepted Done).
@@ -394,7 +403,7 @@ export class TaskService {
             // not prevent recording it on the exact execution owner's row.
             await new TaskTopicModel(tx, topic.userId, this.workspaceId).cancelIfRunning(
               topic.taskId,
-              topic.topicId,
+              topicId,
             );
           });
         }

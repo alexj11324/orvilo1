@@ -3057,6 +3057,48 @@ describe('TaskService', () => {
       expect(taskWorktreeCleanupMock).not.toHaveBeenCalled();
     });
 
+    it('refuses to settle an acknowledged family stop that has no topic identity', async () => {
+      const parent = baseTask({ id: 'task-p', identifier: 'P-1', status: 'running' });
+      mockTaskModel.resolve.mockResolvedValue(parent);
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskTopicModel.findRunningByTaskIds.mockResolvedValue([
+        {
+          dispatchFence: 0,
+          dispatchId: 'dispatch-1',
+          executionGeneration: 1,
+          operationId: 'op-stopped',
+          status: 'running',
+          taskId: 'task-p',
+          topicId: null,
+        },
+      ]);
+      requestDispatchStopMock.mockResolvedValue({
+        fence: 1,
+        generation: 1,
+        id: 'dispatch-1',
+      });
+      settleDispatchMock.mockResolvedValue({
+        dispatch: { id: 'dispatch-1' },
+        state: 'settled',
+      });
+      const previousTransaction = (db as { transaction?: unknown }).transaction;
+      (db as any).transaction = async (fn: (tx: unknown) => Promise<void>) => fn(db);
+
+      try {
+        await expect(
+          new TaskService(db, userId).updateStatusCascade({ id: 'P-1', status: 'canceled' }),
+        ).rejects.toThrow('no topic identity');
+
+        expect(settleDispatchMock).not.toHaveBeenCalled();
+        expect(mockTaskTopicModel.cancelIfRunning).not.toHaveBeenCalled();
+        expect(mockTaskModel.updateStatusForIds).not.toHaveBeenCalled();
+      } finally {
+        (db as { transaction?: unknown }).transaction = previousTransaction;
+        requestDispatchStopMock.mockReset();
+        settleDispatchMock.mockReset();
+      }
+    });
+
     it('preserves task state when a running cascade topic has no operation identity', async () => {
       const parent = baseTask({ id: 'task-p', identifier: 'P-1', status: 'running' });
       mockTaskModel.resolve.mockResolvedValue(parent);

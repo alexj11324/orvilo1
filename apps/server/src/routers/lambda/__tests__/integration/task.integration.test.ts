@@ -3571,10 +3571,12 @@ describe('Task Router Integration', () => {
         caller.updateStatusCascade({ id: parent.data.id, status: 'canceled' }),
       ).rejects.toThrow('Failed to update task family status');
 
-      // No status was cascaded — the family is untouched.
+      // The parent workflow is not cascaded, and the unconfirmed child stays
+      // running. The acknowledged child leaves running: its dispatch is settled,
+      // so the derived status is paused.
       expect((await caller.find({ id: parent.data.id })).data.status).toBe('backlog');
       expect((await caller.find({ id: subA.data.id })).data.status).toBe('running');
-      expect((await caller.find({ id: subB.data.id })).data.status).toBe('running');
+      expect((await caller.find({ id: subB.data.id })).data.status).toBe('paused');
 
       // But the interrupt that did succeed is persisted: B's topic is no
       // longer recorded as running, while A's (failed interrupt) still is.

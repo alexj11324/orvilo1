@@ -523,18 +523,17 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
     // tested seam: it still encodes that a deep-linked comment passes
     // through whatever filter is active.
     const filtered = filterActivitiesForFeed(activities, 'all', hash);
-    // Replies leave the flat list and nest under their thread root instead —
-    // they keep `activities` order (chronological) inside the thread while
-    // the top level below reverses to newest-first.
+    // Replies leave the flat list and nest under their thread root. Both the
+    // thread and the top-level feed keep `activities` order (oldest first).
     const { repliesByParent, topLevel } = splitCommentThreads(filtered);
     return {
-      items: topLevel
-        .map((act, i) => ({
-          activity: act,
-          brief: act.type === 'brief' ? toBriefItem(act) : null,
-          key: act.id ?? `activity-${i}`,
-        }))
-        .reverse(),
+      // Keep activities order (oldest first). Linear's Activity column reads
+      // down to the latest entry, and the composer sits under that entry.
+      items: topLevel.map((act, i) => ({
+        activity: act,
+        brief: act.type === 'brief' ? toBriefItem(act) : null,
+        key: act.id ?? `activity-${i}`,
+      })),
       repliesByParent,
     };
   }, [activities, hash]);

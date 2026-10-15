@@ -179,8 +179,10 @@ describe('TaskActivities', () => {
 
     const composer = screen.getByTestId('comment-input');
     const card = screen.getByTestId('comment-card');
-    // Newest first: the comment card precedes the "created" line, and the
-    // composer trails them both.
+    const created = screen.getByText('taskDetail.activities.fallback.created');
+    // Oldest first, matching Linear: the created line, then the later comment,
+    // then the composer under the latest entry.
+    expect(created.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(card.compareDocumentPosition(composer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const rail = container.querySelector('.before\\:bg-divider');
     expect(rail).not.toBeNull();

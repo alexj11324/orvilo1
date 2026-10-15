@@ -2,15 +2,7 @@ import { useEditor } from '@lobehub/editor/react';
 import { LexicalRenderer } from '@lobehub/editor/renderer';
 import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
-import {
-  CornerDownRight,
-  Link2,
-  MessageCircle,
-  MoreHorizontal,
-  Pencil,
-  Reply,
-  Trash,
-} from 'lucide-react';
+import { CornerDownRight, Link2, MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
@@ -325,47 +317,45 @@ const CommentCard = memo<CommentCardProps>(({ activity, nested, onReply, replies
         </div>
       )}
 
-      {!isEditing &&
-        commentId &&
-        !isOptimisticActivityId(commentId) &&
-        (canReply || menuItems.length > 0) && (
-          <div className={`${styles.commentActions} comment-actions flex items-center gap-0.5`}>
-            {canReply && (
-              <ActionIcon
-                aria-label={t('taskDetail.comment.reply')}
-                icon={Reply}
-                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                title={t('taskDetail.comment.reply')}
-                onClick={handleReply}
-              />
-            )}
-            {menuItems.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <ActionIcon
-                      aria-label={t('more', { ns: 'common' })}
-                      icon={MoreHorizontal}
-                      size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                    />
-                  }
+      {/* One placeholder per thread, under the replies. Nested cards skip it. */}
+      {canReply && !nested && !isEditing && (
+        <Button
+          className="self-start px-1 font-[450] text-[15px] leading-6 text-muted-foreground" // linear-token-override: Linear's "Leave a reply…" placeholder measures 15px/450 on a 24px row.
+          size="xs"
+          variant="ghost"
+          onClick={handleReply}
+        >
+          {t('taskDetail.comment.leaveReply')}
+        </Button>
+      )}
+
+      {!isEditing && commentId && !isOptimisticActivityId(commentId) && menuItems.length > 0 && (
+        <div className={`${styles.commentActions} comment-actions flex items-center gap-0.5`}>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <ActionIcon
+                  aria-label={t('more', { ns: 'common' })}
+                  icon={MoreHorizontal}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 />
-                <DropdownMenuContent align={'end'} className="min-w-40">
-                  {menuItems.map((item) => (
-                    <DropdownMenuItem
-                      key={item.key}
-                      variant={item.danger ? 'destructive' : 'default'}
-                      onClick={item.onClick}
-                    >
-                      <item.icon size={16} />
-                      <span className="flex-1">{item.label}</span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        )}
+              }
+            />
+            <DropdownMenuContent align={'end'} className="min-w-40">
+              {menuItems.map((item) => (
+                <DropdownMenuItem
+                  key={item.key}
+                  variant={item.danger ? 'destructive' : 'default'}
+                  onClick={item.onClick}
+                >
+                  <item.icon size={16} />
+                  <span className="flex-1">{item.label}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
     </div>
   );
 });

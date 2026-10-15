@@ -8,8 +8,8 @@ import { taskDetailLayoutStyles } from './taskDetailLayoutStyles';
 const readSource = (file: string) => readFileSync(path.join(__dirname, file), 'utf8');
 
 /**
- * Rail values keep DESIGN.md's scoped 13px role while the rail's group labels
- * carry Linear's measured 16px/400 muted heading line. The issue title
+ * Rail values and rail group labels share DESIGN.md's scoped 13px role. Group
+ * labels are weight 500, matching Linear's Properties / Related headings. The issue title
  * consumes the 24px/600 heading step on the control itself (Linear's
  * issue-title role, one step inside the 38/30/24/20/16 scale), including the
  * responsive override. Description keeps the scoped 15px/450 reading role,
@@ -52,14 +52,19 @@ describe('issue rail type scale', () => {
     expect(taskStyles.titleInput).not.toContain('.ant-input');
   });
 
-  it('keeps the rail group labels on the measured 16px/400 muted tier', () => {
+  it('keeps the rail group labels on the measured 13px/500 muted tier', () => {
     // Linear's rail section labels (Properties / Labels / Related) measure
-    // 16px at weight 400 on muted ink — a real heading line, not the compact
-    // 12px/500 the collapsible section headers keep.
+    // 13px at weight 500 on muted ink — the dense label, not a 16px heading
+    // and not the compact 12px/500 the collapsible section headers keep.
     const classes = taskDetailLayoutStyles.railSectionLabel.split(' ');
     expect(classes).toEqual(
-      expect.arrayContaining(['text-base', 'font-normal', 'text-muted-foreground']),
+      expect.arrayContaining([
+        'text-(length:--text-dense)',
+        'font-medium',
+        'text-muted-foreground',
+      ]),
     );
+    expect(classes).not.toContain('text-base');
   });
 
   it('keeps the top-level Activity band on the 15px/600 heading tier', () => {
@@ -122,6 +127,12 @@ describe('issue rail milestone date', () => {
   it('formats milestone dates through formatTaskItemDate, never raw', () => {
     expect(source).toContain('formatTaskItemDate');
     expect(source).not.toMatch(/\$\{(?:row|milestone)\.date\}/);
+  });
+
+  it('puts a Leave a reply placeholder on the parent comment card', () => {
+    const card = readSource('CommentCard.tsx');
+    expect(card).toContain('taskDetail.comment.leaveReply');
+    expect(card).toContain('canReply && !nested');
   });
 
   it('keeps the milestone date on a non-shrinking span', () => {

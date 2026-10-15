@@ -20,12 +20,12 @@ export const taskDetailLayoutStyles = {
   propertyGroups:
     'flex flex-wrap gap-2 items-center min-w-0 [&>div]:contents [@container_task-detail_(width>=720px)]:flex-col [@container_task-detail_(width>=720px)]:flex-nowrap [@container_task-detail_(width>=720px)]:gap-6 [@container_task-detail_(width>=720px)]:items-stretch [@container_task-detail_(width>=720px)]:[&>div]:flex',
   railSection: 'flex flex-col gap-2 min-w-0',
-  // Linear's rail group labels (Properties / Labels / Related) measure 16px
-  // at weight 400 on the muted ink — a real heading line, not the compact
-  // 12px/500 tier the collapsible section headers keep. They read as group
+  // Linear's rail group labels (Properties / Labels / Related) measure 13px
+  // at weight 500 on the muted ink — the dense label role, not a 16px heading
+  // and not the compact 12px/500 collapsible-section tier. They read as group
   // headers only in the wide rail — the narrow chip strip keeps them hidden.
   railSectionLabel:
-    'hidden text-base font-normal text-muted-foreground [@container_task-detail_(width>=720px)]:block',
+    'hidden text-(length:--text-dense) font-medium text-muted-foreground [@container_task-detail_(width>=720px)]:block',
   railRow:
     'w-fit max-w-full min-h-7 ps-2 pe-2.5 rounded-(--radius-input) whitespace-nowrap bg-muted [@container_task-detail_(width>=720px)]:w-full [@container_task-detail_(width>=720px)]:px-0 [@container_task-detail_(width>=720px)]:bg-transparent',
   properties:

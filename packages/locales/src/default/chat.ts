@@ -1778,6 +1778,7 @@ export default {
   'taskDetail.comment.edit': 'Edit',
   'taskDetail.comment.edited': 'edited',
   'taskDetail.comment.editedAt': 'Edited {{time}}',
+  'taskDetail.comment.leaveReply': 'Leave a reply…',
   'taskDetail.comment.reply': 'Reply',
   'taskDetail.comment.replyFallback': 'a comment',
   'taskDetail.comment.replyToRun': 'Reply to run #{{seq}}',

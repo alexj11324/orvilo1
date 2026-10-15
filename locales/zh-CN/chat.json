@@ -1892,6 +1892,7 @@
   "taskDetail.comment.edit": "编辑",
   "taskDetail.comment.edited": "已编辑",
   "taskDetail.comment.editedAt": "编辑于 {{time}}",
+  "taskDetail.comment.leaveReply": "留下回复…",
   "taskDetail.comment.reply": "回复",
   "taskDetail.comment.replyFallback": "一条评论",
   "taskDetail.comment.replyToRun": "回复第 {{seq}} 次运行",

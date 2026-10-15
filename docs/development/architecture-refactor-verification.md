@@ -54,18 +54,32 @@ typecheck compiles against.
 
 ## Follow-up CI
 
-On `8865dc077`, the Typecheck job, database lint (the same full typecheck),
-both server shards including the standalone `/health` deploy, app shard 2,
-package tests, desktop typecheck and tests, UI alignment, and E2E passed.
-App shard 1 passed 7,823 tests and failed
+On `8865dc077`, before the canary merge, the Typecheck job, database lint (the
+same full typecheck), both server shards including the standalone `/health`
+deploy, app shard 2, package tests, desktop typecheck and tests, UI alignment,
+and E2E passed. App shard 1 passed 7,823 tests and failed
 `scripts/dockerWorkspaceManifests.test.ts`, which still looked for the old
 `pnpm i &&` line. That assertion now expects `pnpm i --frozen-lockfile`.
 
+The branch was then merged with `canary` at `5e1dd5fdd`. Until that merge, GitHub
+could not create a pull-request merge ref, so `pull_request` workflows never
+started. Push and `pull_request_target` checks still ran.
+
+## Build acceptance
+
+`Release CLI` installs the isolated CLI workspace with
+`pnpm install --frozen-lockfile` and no `--ignore-scripts`, so pnpm's
+`allowBuilds` policy can run install scripts. `Docker PR Build` and
+`Desktop PR Build` also run for `codex/architecture-boundaries` while Issue #796
+is open, because this session cannot add `trigger:build-docker` or
+`trigger:build-desktop`. Remove those branch comparisons after the acceptance
+builds finish. The Docker supplemental project remains pinned to Hatchet
+1.33.1 and is copied over the app install.
+
 ## Coverage limits
 
-The full Docker image was not built on a CI runner. Desktop and Docker PR
-builds stay behind `trigger:build-desktop` and `trigger:build-docker`, and CLI
-release checks still install with `--ignore-scripts`. Those runs do not
-validate Electron native installation. No production deployment or browser
-acceptance was performed. Package-level checks must not be represented as full
-application verification.
+No production deployment or browser acceptance was performed. Package-level
+checks must not be represented as full application verification. `Skeleton
+requirement` still fails until the PR body contains `skeleton: no-change`; the
+UI edits route data through domain services and do not change loading
+skeletons. This token cannot edit that PR body.

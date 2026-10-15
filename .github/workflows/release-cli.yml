@@ -26,7 +26,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Install the isolated CLI workspace
         working-directory: apps/cli
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm install --frozen-lockfile
       - name: Set CLI version from the stable release tag
         if: github.event_name == 'release'
         working-directory: apps/cli

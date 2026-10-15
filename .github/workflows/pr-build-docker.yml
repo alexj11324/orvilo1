@@ -23,8 +23,9 @@ env:
 jobs:
   build:
     name: Build ${{ matrix.platform }} Docker Image
-    # 添加 PR label 或 release/* 分支触发：有 trigger:build-docker 标签或 PR 源分支为 release/* 时触发
-    if: contains(github.event.pull_request.labels.*.name, 'trigger:build-docker') || startsWith(github.event.pull_request.head.ref, 'release/')
+    # 添加 PR label 或 release/* 分支触发：有 trigger:build-docker 标签或 PR 源分支为 release/* 时触发。
+    # codex/architecture-boundaries 是 Issue #796 的一次性验收构建；构建完成后删掉这个分支条件。
+    if: contains(github.event.pull_request.labels.*.name, 'trigger:build-docker') || startsWith(github.event.pull_request.head.ref, 'release/') || github.event.pull_request.head.ref == 'codex/architecture-boundaries'
     strategy:
       matrix:
         include:

@@ -9,11 +9,19 @@
   "scripts": {
     "test": "vitest",
     "test:coverage": "vitest --coverage --silent='passed-only'",
-    "test:update": "vitest -u"
+    "test:update": "vitest -u",
+    "type-check": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@orvilo/const": "workspace:*",
     "@orvilo/prompts": "workspace:*",
     "@orvilo/types": "workspace:*"
+  },
+  "devDependencies": {
+    "type-fest": "^4.41.0"
+  },
+  "orviloTypecheck": {
+    "project": "tsconfig.json",
+    "mode": "check",
+    "coverage": "full"
   }
 }

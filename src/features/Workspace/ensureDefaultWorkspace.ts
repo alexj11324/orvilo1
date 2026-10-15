@@ -1,9 +1,9 @@
 'use client';
-
 import type { WorkspaceListItem } from '@/business/client/hooks/useActiveWorkspace';
 import { WORKSPACE_LIST_KEY } from '@/business/client/hooks/useFetchWorkspaces';
 import { mutate } from '@/libs/swr';
-import { lambdaClient } from '@/libs/trpc/client';
+import { workspaceService } from '@/services/workspace';
+
 
 let inflight: Promise<WorkspaceListItem> | null = null;
 
@@ -18,7 +18,7 @@ let inflight: Promise<WorkspaceListItem> | null = null;
 export const ensureDefaultWorkspace = (): Promise<WorkspaceListItem> => {
   if (inflight) return inflight;
   inflight = (async () => {
-    const workspace = await lambdaClient.workspace.ensureDefault.mutate();
+    const workspace = await workspaceService.ensureDefault();
     await mutate(WORKSPACE_LIST_KEY);
     return workspace as WorkspaceListItem;
   })().finally(() => {

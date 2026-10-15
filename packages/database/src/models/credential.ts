@@ -6,10 +6,9 @@ import type {
 } from '@orvilo/types';
 import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
 
-import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
-
 import { type CredentialItem, credentials, type NewCredentialItem, users } from '../schemas';
 import type { OrviloDatabase } from '../type';
+import type { SecretCipher, SecretCipherFactory } from '../utils/secretCipher';
 
 const toIso = (value: Date | null | undefined) => value?.toISOString();
 
@@ -67,9 +66,13 @@ export const toOwnCredSummary = (
 export class CredentialModel {
   private db: OrviloDatabase;
   private userId: string;
-  private gateKeeperPromise: Promise<KeyVaultsGateKeeper> | null = null;
+  private gateKeeperPromise: Promise<SecretCipher> | null = null;
 
-  constructor(db: OrviloDatabase, userId: string) {
+  constructor(
+    db: OrviloDatabase,
+    private readonly createCipher: SecretCipherFactory,
+    userId: string,
+  ) {
     this.db = db;
     this.userId = userId;
   }
@@ -95,7 +98,7 @@ export class CredentialModel {
 
   private getGateKeeper = () => {
     if (!this.gateKeeperPromise) {
-      this.gateKeeperPromise = KeyVaultsGateKeeper.initWithEnvKey();
+      this.gateKeeperPromise = this.createCipher();
     }
 
     return this.gateKeeperPromise;

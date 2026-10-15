@@ -1,9 +1,7 @@
 'use client';
-
 import type { TeamWorkflowStateItem } from '@orvilo/types';
 
-import { useClientDataSWR } from '@/libs/swr';
-import { lambdaClient } from '@/libs/trpc/client';
+import { useFetchWorkTeam } from '@/store/workTeam/hooks';
 
 /**
  * The team's workflow-state catalog — the `workflowStateRefId`/`category`/
@@ -13,9 +11,6 @@ import { lambdaClient } from '@/libs/trpc/client';
  * non-empty catalog arrives.
  */
 export const useTeamWorkflowStates = (teamId?: string | null): TeamWorkflowStateItem[] | null => {
-  const { data } = useClientDataSWR(teamId ? ['team:workflowStates', teamId] : null, async () => {
-    const result = await lambdaClient.team.team.query({ teamId: teamId! });
-    return result.data.workflowStates ?? [];
-  });
-  return data ?? null;
+  const { data } = useFetchWorkTeam(teamId ?? undefined);
+  return data ? (data.data.workflowStates ?? []) : null;
 };

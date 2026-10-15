@@ -1,5 +1,4 @@
 'use client';
-
 import {
   type MyWorkMode,
   normalizeWorkQuerySubGroupBy,
@@ -11,7 +10,6 @@ import { XIcon } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useSearchParams } from 'react-router';
-import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
@@ -46,7 +44,6 @@ import { usePermission } from '@/hooks/usePermission';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { useCacheScope } from '@/libs/swr/useCacheScope';
-import { lambdaClient } from '@/libs/trpc/client';
 import { taskService } from '@/services/task';
 import { workAttentionService } from '@/services/workAttention';
 import { useGlobalStore } from '@/store/global';
@@ -54,6 +51,7 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+import { useFetchUserWorkTeams } from '@/store/workTeam/hooks';
 
 import BulkActionsBar from './BulkActionsBar';
 import type { BulkSelectGesture } from './bulkSelection';
@@ -682,12 +680,7 @@ const MyWorkPage = memo(() => {
 
   // Cross-team create asks the one ambiguous choice — same pattern the saved
   // view board uses.
-  const { data: teamsData } = useSWR(
-    // Neutral key shared with SavedViewPage — same fetcher, one cache entry.
-    workspaceId && currentUserId ? ['work-joined-teams', currentUserId, workspaceId] : null,
-    () => lambdaClient.team.teams.query(),
-    { revalidateOnFocus: false },
-  );
+  const { data: teamsData } = useFetchUserWorkTeams(currentUserId);
   const joinedTeamOptions = useMemo(
     () =>
       (teamsData?.data ?? [])

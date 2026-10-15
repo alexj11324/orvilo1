@@ -1,12 +1,11 @@
 import { generateApiKey, isApiKeyExpired, validateApiKeyFormat } from '@orvilo/utils/apiKey';
-import { hashApiKey } from '@orvilo/utils/server';
+import { hashApiKey } from '@orvilo/utils/server/apiKeyHash';
 import { and, desc, eq, getTableColumns } from 'drizzle-orm';
-
-import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 
 import type { ApiKeyItem, NewApiKeyItem } from '../schemas';
 import { apiKeys, users } from '../schemas';
 import type { OrviloDatabase } from '../type';
+import type { SecretCipher, SecretCipherFactory } from '../utils/secretCipher';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export class ApiKeyModel {
@@ -24,10 +23,11 @@ export class ApiKeyModel {
   private db: OrviloDatabase;
   private workspaceId?: string;
   private canManageAll: boolean;
-  private gateKeeperPromise: Promise<KeyVaultsGateKeeper> | null = null;
+  private gateKeeperPromise: Promise<SecretCipher> | null = null;
 
   constructor(
     db: OrviloDatabase,
+    private readonly createCipher: SecretCipherFactory,
     userId: string,
     workspaceId?: string,
     options?: { canManageAll?: boolean },
@@ -53,7 +53,7 @@ export class ApiKeyModel {
 
   private async getGateKeeper() {
     if (!this.gateKeeperPromise) {
-      this.gateKeeperPromise = KeyVaultsGateKeeper.initWithEnvKey();
+      this.gateKeeperPromise = this.createCipher();
     }
 
     return this.gateKeeperPromise;

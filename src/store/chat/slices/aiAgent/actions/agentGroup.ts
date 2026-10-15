@@ -4,9 +4,9 @@ import { type ExecGroupAgentParams, type SendGroupMessageParams } from '@orvilo/
 import { nanoid } from '@orvilo/utils';
 import debug from 'debug';
 
-import { lambdaClient } from '@/libs/trpc/client';
 import { type StreamEvent } from '@/services/agentExecution';
 import { agentStreamClient } from '@/services/agentExecution';
+import { aiAgentService } from '@/services/aiAgent';
 import { type ChatStore } from '@/store/chat/store';
 import { snapshotAgentWorkingDirectory } from '@/store/chat/utils/snapshotAgentWorkingDirectory';
 import { type StoreSetter } from '@/store/types';
@@ -97,7 +97,7 @@ export class ChatGroupChatActionImpl {
       if (!topicId) {
         initialTopicMetadata = snapshotAgentWorkingDirectory(agentId);
       }
-      const result = await lambdaClient.aiAgent.execGroupAgent.mutate(
+      const result = await aiAgentService.execGroupAgent(
         {
           agentId,
           files: fileIds,

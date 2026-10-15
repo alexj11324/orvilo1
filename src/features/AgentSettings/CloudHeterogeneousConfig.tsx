@@ -1,5 +1,4 @@
 'use client';
-
 import { Github } from '@lobehub/icons';
 import { type HeterogeneousProviderConfig, type OwnCredSummary } from '@orvilo/types';
 import { clsx as cx } from 'cn';
@@ -17,7 +16,8 @@ import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/
 import { Spinner } from '@/components/ui/spinner';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
-import { lambdaClient, lambdaQuery } from '@/libs/trpc/client';
+import { credentialService } from '@/services/credential';
+import { credentialQueries } from '@/services/reactQueryBindings';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 // Fixed cred key for Claude Code OAuth token — never changes
@@ -67,7 +67,7 @@ const TokenSection = memo<TokenSectionProps>(({ existingCred, onSaved, onEnvChan
     if (!token) return;
     setSaving(true);
     try {
-      await lambdaClient.creds.createKV.mutate({
+      await credentialService.createKV({
         key: CLAUDE_TOKEN_CRED_KEY,
         name: 'Claude Code OAuth Token',
         type: 'kv-env',
@@ -242,7 +242,7 @@ const CloudHeterogeneousConfig = memo<CloudHeterogeneousConfigProps>(
       }
     })();
 
-    const { data: credsData, isLoading, refetch } = lambdaQuery.creds.list.useQuery(undefined);
+    const { data: credsData, isLoading, refetch } = credentialQueries.list.useQuery(undefined);
     const allCreds: OwnCredSummary[] = credsData?.data ?? [];
 
     const claudeTokenCred = allCreds.find((c) => c.key === CLAUDE_TOKEN_CRED_KEY);

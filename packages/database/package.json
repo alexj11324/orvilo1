@@ -5,6 +5,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./schemas": "./src/schemas/index.ts",
+    "./errors/task": "./src/errors/task.ts",
     "./connector-permission": "./src/connectorPermission.ts",
     "./test-utils": "./tests/test-utils.ts"
   },
@@ -12,7 +13,8 @@
     "test": "npm run test:client-db && npm run test:server-db",
     "test:client-db": "vitest run --silent='passed-only'",
     "test:coverage": "vitest --coverage --silent='passed-only' --config vitest.config.server.mts",
-    "test:server-db": "vitest run --config vitest.config.server.mts"
+    "test:server-db": "vitest run --config vitest.config.server.mts",
+    "type-check": "tsgo -p tsconfig.json"
   },
   "dependencies": {
     "@orvilo/agent-templates": "workspace:*",
@@ -21,6 +23,7 @@
     "@orvilo/business-model-bank": "workspace:*",
     "@orvilo/const": "workspace:*",
     "@orvilo/conversation-flow": "workspace:*",
+    "@orvilo/secret-cipher": "workspace:*",
     "@orvilo/types": "workspace:*",
     "@orvilo/utils": "workspace:*",
     "random-words": "^2.0.1",
@@ -42,5 +45,18 @@
     "nanoid": "*",
     "pg": "*",
     "zod": "^4.4.3"
-  }
+  },
+  "orviloTypecheck": [
+    {
+      "project": "tsconfig.json",
+      "mode": "check",
+      "compiler": "tsgo",
+      "coverage": "production"
+    },
+    {
+      "project": "tsconfig.cipher.json",
+      "mode": "build",
+      "coverage": "partial"
+    }
+  ]
 }

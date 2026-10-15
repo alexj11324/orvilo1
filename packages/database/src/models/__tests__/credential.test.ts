@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { createTestSecretCipher } from '../../../tests/secretCipher';
 import { getTestDB } from '../../core/getTestDB';
 import { credentials, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -19,9 +20,9 @@ const otherWorkspaceId = 'cred-model-other-workspace';
 // Generated per run instead of a checked-in fixture so no key material sits in the repo.
 const validKeyVaultsSecret = randomBytes(32).toString('base64');
 
-const ownerModel = new CredentialModel(serverDB, ownerId);
-const memberModel = new CredentialModel(serverDB, memberId);
-const outsiderModel = new CredentialModel(serverDB, outsiderId);
+const ownerModel = new CredentialModel(serverDB, createTestSecretCipher, ownerId);
+const memberModel = new CredentialModel(serverDB, createTestSecretCipher, memberId);
+const outsiderModel = new CredentialModel(serverDB, createTestSecretCipher, outsiderId);
 
 let originalKeyVaultsSecret: string | undefined;
 

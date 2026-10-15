@@ -1,11 +1,9 @@
 'use client';
-
 import { clsx as cx } from 'cn';
 import dayjs from 'dayjs';
 import { FilePenLineIcon, MessageCircleIcon, SquarePenIcon, Trash2Icon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import ActionIcon from '@/components/ActionIcon';
@@ -21,10 +19,10 @@ import { formatInboxAge } from '@/features/WorkInbox/inboxAge';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { mutate, useClientDataSWR } from '@/libs/swr';
-import { lambdaClient } from '@/libs/trpc/client';
 import { taskDraftKeys, taskDraftService } from '@/services/taskDraft';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+import { useFetchUserWorkTeams } from '@/store/workTeam/hooks';
 
 import { draftCardTitle, issueDraftCardTitle } from './draftCardTitle';
 import DraftContentPreview from './DraftContentPreview';
@@ -83,11 +81,7 @@ const TaskDraftsPage = () => {
   const issueDrafts = useTaskCreateDrafts(workspaceId);
   // Same key + fetcher as MyWorkPage — one shared cache entry — so a reopened
   // draft keeps its team editable in the composer's team picker.
-  const { data: teamsData } = useSWR(
-    workspaceId && currentUserId ? ['work-joined-teams', currentUserId, workspaceId] : null,
-    () => lambdaClient.team.teams.query(),
-    { revalidateOnFocus: false },
-  );
+  const { data: teamsData } = useFetchUserWorkTeams(currentUserId);
   const joinedTeamOptions = useMemo(
     () =>
       (teamsData?.data ?? [])

@@ -28,6 +28,7 @@ import { CredentialModel } from '@/database/models/credential';
 import { ProviderBindingModel } from '@/database/models/providerBinding';
 import { users } from '@/database/schemas/user';
 import type { OrviloDatabase } from '@/database/type';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 
 import type { ProviderConfigurationComposition } from './configuration';
 
@@ -59,7 +60,7 @@ export const resolveProviderCredentialHeaders = async (
   ownerId: string,
   secretReference: string,
 ): Promise<Record<string, string> | undefined> => {
-  const credentials = new CredentialModel(db, ownerId);
+  const credentials = new CredentialModel(db, KeyVaultsGateKeeper.initWithEnvKey, ownerId);
   const credential = await credentials.findPersonalById(
     secretReference.slice('credential:'.length),
   );

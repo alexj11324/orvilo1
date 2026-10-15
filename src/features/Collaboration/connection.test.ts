@@ -22,10 +22,10 @@ const { userState } = vi.hoisted(() => ({
 vi.mock('@/store/user', () => ({ getUserStoreState: () => userState }));
 
 vi.mock('@/features/Teammates/api/client', () => ({
-  teammatesClient: {
+  teammatesService: {
     collaboration: {
-      authorize: { mutate: authorize },
-      snapshot: { query: snapshotQuery },
+      authorize,
+      snapshot: snapshotQuery,
     },
   },
 }));

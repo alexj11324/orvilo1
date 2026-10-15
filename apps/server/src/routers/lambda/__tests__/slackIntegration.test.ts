@@ -39,8 +39,8 @@ vi.mock('@/server/services/slackIntegration', () => ({
     saveBinding: mocks.saveBinding,
   }),
 }));
-vi.mock('@/server/services/slackIntegration/channelsRuntime', () => ({
-  stopSlackChannelsRuntime: vi.fn(),
+vi.mock('@/server/services/slackIntegration/chatRuntime', () => ({
+  stopSlackChatRuntime: vi.fn(),
 }));
 vi.mock('@/server/services/slackIntegration/oauthState', () => ({ readOAuthResult: vi.fn() }));
 const caller = () => slackIntegrationRouter.createCaller({ userId: 'user', serverDB: {} } as never);

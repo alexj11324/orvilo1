@@ -39,7 +39,7 @@ export const slackWebhook = async (c: Context): Promise<Response> => {
     const installation = await service.getInstallationByTeamId(payload.teamId);
     if (!installation) return c.json({ error: 'Slack workspace is not connected' }, 404);
     // Await acceptance by the durable queue before acknowledging Slack. A queue
-    // failure leaves Slack free to retry, and Channels deduplicates delivery IDs.
+    // failure leaves Slack free to retry, and Chat SDK deduplicates delivery IDs.
     await enqueueHatchetTask(HATCHET_TASK_NAMES.slackIntegrationEvent, {
       body: payload.body,
       conversationKey: slackConversationLane(payload.teamId, payload.body),

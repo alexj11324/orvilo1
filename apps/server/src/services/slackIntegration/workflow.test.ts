@@ -1,8 +1,18 @@
+import { EventEmitter } from 'node:events';
+
+import type Redis from 'ioredis';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as ChatRuntime from './chatRuntime';
 import { runSlackIntegrationEvent } from './workflow';
 
-const mocks = vi.hoisted(() => ({ lookup: vi.fn(), runtime: vi.fn(), dispatch: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  lookup: vi.fn(),
+  runtime: vi.fn(),
+  dispatch: vi.fn(),
+  redis: null as Redis | null,
+}));
+vi.mock('@orvilo/openapi/src/services/responses.service', () => ({ ResponsesService: class {} }));
 vi.mock('@/database/server', () => ({ getServerDB: async () => ({}) }));
 vi.mock('.', () => ({
   createSlackIntegrationService: () => ({
@@ -10,12 +20,15 @@ vi.mock('.', () => ({
     getBotToken: async () => 'test-token',
   }),
 }));
-vi.mock('./channelsRuntime', () => ({ getSlackChannelsRuntime: mocks.runtime }));
+vi.mock('./chatRuntime', () => ({ getSlackChatRuntime: mocks.runtime }));
 vi.mock('./nativeReply', () => ({
   resolvePendingSlackReply: vi.fn(),
   submitPendingSlackReply: vi.fn(),
 }));
-vi.mock('./store', () => ({ createSlackChannelsStore: () => ({}) }));
+vi.mock('@/server/modules/AgentExecution/redis', () => ({
+  getAgentRuntimeRedisClient: () => mocks.redis,
+}));
+vi.mock('@/envs/slack', () => ({ slackEnv: { SLACK_SIGNING_SECRET: 'test-secret' } }));
 
 const input = {
   body: { team_id: 'T1' },
@@ -27,6 +40,7 @@ const input = {
 describe('queued Slack installation ownership', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.redis = Object.assign(new EventEmitter(), { status: 'ready' }) as Redis;
     mocks.runtime.mockResolvedValue({ dispatch: mocks.dispatch });
   });
   it.each([
@@ -41,9 +55,30 @@ describe('queued Slack installation ownership', () => {
       expect(mocks.runtime).not.toHaveBeenCalled();
     },
   );
-  it('dispatches through Channels only while the original grant exists', async () => {
+  it('dispatches through Chat SDK only while the original grant exists', async () => {
     mocks.lookup.mockResolvedValue({ id: 'install', slackTeamId: 'T1', tokenRevision: 'original' });
     expect(await runSlackIntegrationEvent(input)).toEqual({ success: true });
     expect(mocks.dispatch).toHaveBeenCalledWith(input.body);
+  });
+  it('reuses one native Redis adapter across 25 cached queued deliveries', async () => {
+    const actual = await vi.importActual<typeof ChatRuntime>('./chatRuntime');
+    const redis = Object.assign(new EventEmitter(), { status: 'ready' }) as Redis;
+    mocks.redis = redis;
+    mocks.lookup.mockResolvedValue({
+      id: 'install',
+      slackTeamId: 'T1',
+      botUserId: 'UBOT',
+      tokenRevision: 'original',
+    });
+    mocks.runtime.mockImplementation(actual.getSlackChatRuntime);
+    const listeners = redis.listenerCount('error');
+    try {
+      for (let index = 0; index < 25; index++)
+        expect(await runSlackIntegrationEvent(input)).toEqual({ success: true });
+      expect(redis.listenerCount('error')).toBe(listeners + 1);
+    } finally {
+      await actual.stopSlackChatRuntime('T1');
+      mocks.redis = null;
+    }
   });
 });

@@ -56,8 +56,8 @@ const readResponseBody = async (response: Response): Promise<JsonObject> => {
 export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
   const slackIntegrationEvent = hatchet.task({
     name: HATCHET_TASK_NAMES.slackIntegrationEvent,
-    // Channels' serial handler is process-local. Queue the whole conversation
-    // across workers before its durable delivery dedup marks the next event.
+    // Serialize the whole Slack conversation across workers before SDK deduplication.
+    // Keep every human input rather than collapsing messages with SDK queue/debounce.
     concurrency: {
       expression: 'input.conversationKey',
       limitStrategy: ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,

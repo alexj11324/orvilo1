@@ -4,11 +4,12 @@ import { z } from 'zod';
 import { WorkspaceModel } from '@/database/models/workspace';
 import { getServerDB } from '@/database/server';
 import { appEnv } from '@/envs/app';
+import { slackEnv } from '@/envs/slack';
 
 import { createSlackIntegrationService } from '.';
-import { getSlackChannelsRuntime } from './channelsRuntime';
+import { getSlackChatRuntime } from './chatRuntime';
 import { resolvePendingSlackReply, submitPendingSlackReply } from './nativeReply';
-import { createSlackChannelsStore } from './store';
+import { createSlackChatStore } from './store';
 
 export const slackEventInput = z.object({
   body: z.record(z.string(), z.unknown()),
@@ -29,14 +30,16 @@ export const runSlackIntegrationEvent = async (input: z.infer<typeof slackEventI
     installation.tokenRevision !== input.tokenRevision
   )
     return { skipped: true };
-  const runtime = await getSlackChannelsRuntime(
+  const runtime = await getSlackChatRuntime(
     {
       botToken: await service.getBotToken(installation),
+      botUserId: installation.botUserId,
+      signingSecret: slackEnv.SLACK_SIGNING_SECRET!,
       id: installation.id,
       teamId: installation.slackTeamId,
       tokenRevision: installation.tokenRevision,
     },
-    {
+    () => ({
       database,
       issueUrl: async ({ taskId, userId, workspaceId }) => {
         const workspace = await new WorkspaceModel(database, userId).findById(workspaceId);
@@ -61,8 +64,8 @@ export const runSlackIntegrationEvent = async (input: z.infer<typeof slackEventI
         const user = await service.resolveSlackUser(identity);
         return user ? { id: user.userId } : null;
       },
-      store: createSlackChannelsStore(installation.id),
-    },
+      store: createSlackChatStore(installation.id),
+    }),
   );
   await runtime.dispatch(input.body);
   return { success: true };

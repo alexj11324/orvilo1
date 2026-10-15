@@ -8,7 +8,7 @@ import { getSlackConfig } from '@/envs/slack';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { createSlackIntegrationService } from '@/server/services/slackIntegration';
-import { stopSlackChannelsRuntime } from '@/server/services/slackIntegration/channelsRuntime';
+import { stopSlackChatRuntime } from '@/server/services/slackIntegration/chatRuntime';
 import { readOAuthResult } from '@/server/services/slackIntegration/oauthState';
 
 const inputSchema = z.object({ workspaceId: z.string().min(1) });
@@ -46,7 +46,7 @@ export const slackIntegrationRouter = router({
   disconnect: adminProcedure.mutation(async ({ ctx }) => {
     const installation = await ctx.slackModel.installation();
     await ctx.slackModel.disconnect();
-    if (installation) await stopSlackChannelsRuntime(installation.slackTeamId);
+    if (installation) await stopSlackChatRuntime(installation.slackTeamId);
     return { success: true };
   }),
   disconnectPersonal: procedure.mutation(async ({ ctx }) => {

@@ -76,4 +76,27 @@ describe('Slack ingress', () => {
     mocks.enqueue.mockRejectedValueOnce(new Error('queue unavailable'));
     expect((await deliver({ team_id: 'T123', type: 'event_callback' })).status).toBe(503);
   });
+
+  it('waits for durable queue acceptance before acknowledging Slack', async () => {
+    let accept!: () => void;
+    let started!: () => void;
+    const queued = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    mocks.enqueue.mockImplementationOnce(() => {
+      started();
+      return new Promise<void>((resolve) => {
+        accept = resolve;
+      });
+    });
+    let responded = false;
+    const response = deliver({ team_id: 'T123', type: 'event_callback' }).then((result) => {
+      responded = true;
+      return result;
+    });
+    await queued;
+    expect(responded).toBe(false);
+    accept();
+    expect((await response).status).toBe(200);
+  });
 });

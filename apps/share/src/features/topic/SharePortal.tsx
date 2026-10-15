@@ -1,8 +1,8 @@
 'use client';
 
-import { DraggablePanel } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 
+import DraggablePanel from '@/components/DraggablePanel';
 import { CHAT_PORTAL_TOOL_UI_WIDTH } from '@/const/layoutTokens';
 import { PortalContent } from '@/features/Portal/router';
 import { useChatStore } from '@/store/chat';

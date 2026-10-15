@@ -1,7 +1,13 @@
 'use client';
 
-import { ErrorBoundary } from '@lobehub/ui';
-import { type ComponentType, memo, type ReactNode, useCallback } from 'react';
+import {
+  Component,
+  type ComponentType,
+  type ErrorInfo,
+  memo,
+  type ReactNode,
+  useCallback,
+} from 'react';
 
 import AlertFallback from './AlertFallback';
 import SilentFallback from './SilentFallback';
@@ -20,6 +26,44 @@ interface SafeBoundaryProps {
   onError?: (error: unknown, info: { componentStack?: string | null }) => void;
   resetKeys?: unknown[];
   variant?: ErrorBoundaryVariant;
+}
+
+interface NativeBoundaryProps {
+  children: ReactNode;
+  fallbackRender: (props: FallbackRenderProps) => ReactNode;
+  onError?: SafeBoundaryProps['onError'];
+  resetKeys?: unknown[];
+}
+class ErrorBoundary extends Component<NativeBoundaryProps, { failed: boolean; error?: unknown }> {
+  state: { failed: boolean; error?: unknown } = { failed: false };
+  static getDerivedStateFromError(error: unknown) {
+    return { failed: true, error };
+  }
+  componentDidCatch(error: unknown, info: ErrorInfo) {
+    this.props.onError?.(error, info);
+  }
+  componentDidUpdate(previous: NativeBoundaryProps, priorState: { failed: boolean }) {
+    const before = previous.resetKeys ?? [];
+    const after = this.props.resetKeys ?? [];
+    if (
+      this.state.failed &&
+      priorState.failed &&
+      (before.length !== after.length ||
+        before.some((value, index) => !Object.is(value, after[index])))
+    )
+      this.resetErrorBoundary();
+  }
+  resetErrorBoundary = () => {
+    this.setState({ failed: false, error: undefined });
+  };
+  render() {
+    return this.state.failed
+      ? this.props.fallbackRender({
+          error: this.state.error,
+          resetErrorBoundary: this.resetErrorBoundary,
+        })
+      : this.props.children;
+  }
 }
 
 const SafeBoundary = memo<SafeBoundaryProps>(

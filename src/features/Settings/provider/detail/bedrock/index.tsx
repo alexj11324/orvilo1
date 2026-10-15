@@ -1,12 +1,16 @@
 'use client';
 
-import { Select, Tabs, type TabsItem } from '@lobehub/ui/base-ui';
+import { X } from 'lucide-react';
 import { BedrockProviderCard } from 'model-bank/modelProviders';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useFormControlContext } from '@/components/FormControlContext';
 import { FormPassword } from '@/components/FormInput';
+import Select, { type SelectProps } from '@/components/Select';
 import { SkeletonInput } from '@/components/Skeleton';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePermission } from '@/hooks/usePermission';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { type GlobalLLMProviderKey } from '@/types/user/settings';
@@ -57,6 +61,38 @@ const AWS_REGIONS: string[] = [
   'cn-northwest-1',
 ];
 
+// Keep region clearing on the actual form-bound owner: the local single Select
+// intentionally has no embedded clear button, so compose a separate native action.
+const RegionSelect = ({ value, onChange, disabled, ...props }: SelectProps<string>) => {
+  const formControl = useFormControlContext();
+  const resolvedDisabled = disabled ?? formControl.disabled;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation(['modelProvider', 'common']);
+  return (
+    <div className="flex items-center gap-2" ref={containerRef}>
+      <Select {...props} disabled={resolvedDisabled} value={value ?? null} onChange={onChange} />
+      {typeof value === 'string' && value !== '' && (
+        <Button
+          aria-label={`${t('clear', { ns: 'common' })}: ${t('bedrock.region.title')}`}
+          disabled={resolvedDisabled}
+          size="icon-sm"
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            if (resolvedDisabled) return;
+            onChange?.(undefined);
+            containerRef.current
+              ?.querySelector<HTMLButtonElement>('[data-slot="select-trigger"]')
+              ?.focus();
+          }}
+        >
+          <X aria-hidden />
+        </Button>
+      )}
+    </div>
+  );
+};
+
 const useBedrockCard = (): ProviderItem => {
   const { t } = useTranslation('modelProvider');
   const { allowed: canManageProvider } = usePermission('manage_provider_key');
@@ -81,7 +117,9 @@ const useBedrockCard = (): ProviderItem => {
     setAuthMode(inferBedrockAuthMode(keyVaults));
   }, [isLoading, keyVaults]);
 
-  const authModeOptions = useMemo<TabsItem[]>(
+  const authModeOptions = useMemo<
+    Array<{ disabled: boolean; key: BedrockAuthMode; label: string }>
+  >(
     () => [
       {
         disabled: !canManageProvider,
@@ -178,15 +216,15 @@ const useBedrockCard = (): ProviderItem => {
         children: isLoading ? (
           <SkeletonInput />
         ) : (
-          <Tabs
-            activeKey={authMode}
-            items={authModeOptions}
-            styles={{
-              list: { display: 'flex', width: '100%' },
-              tab: { flex: 1 },
-            }}
-            onChange={handleAuthModeChange}
-          />
+          <Tabs value={authMode} onValueChange={(mode) => handleAuthModeChange(String(mode))}>
+            <TabsList className="w-full">
+              {authModeOptions.map((option) => (
+                <TabsTrigger disabled={option.disabled} key={option.key} value={option.key}>
+                  {option.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         ),
         desc: t(`${providerKey}.authMode.desc`),
         label: t(`${providerKey}.authMode.title`),
@@ -196,8 +234,7 @@ const useBedrockCard = (): ProviderItem => {
         children: isLoading ? (
           <SkeletonInput />
         ) : (
-          <Select
-            allowClear
+          <RegionSelect
             placeholder={AWS_REGIONS[0]}
             options={AWS_REGIONS.map((i) => ({
               label: i,

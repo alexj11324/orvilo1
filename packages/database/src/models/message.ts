@@ -1,4 +1,3 @@
-import type { HeatmapsProps } from '@lobehub/charts';
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import { parse } from '@orvilo/conversation-flow';
 import type {
@@ -95,6 +94,7 @@ import { inJsonStringArray } from '../utils/inJsonStringArray';
 import { searchableMessage } from '../utils/searchableMessage';
 import { notShareVisitorMessage, notShareVisitorTopicRef } from '../utils/shareVisitor';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
+import type { HeatmapActivity } from './messageActivity';
 import { recomputeTopicUsage } from './topicUsage';
 import { WorkModel } from './work';
 
@@ -3049,7 +3049,7 @@ export class MessageModel {
       .limit(limit);
   };
 
-  getHeatmaps = async (): Promise<HeatmapsProps['data']> => {
+  getHeatmaps = async (): Promise<HeatmapActivity[]> => {
     const startDate = today().subtract(1, 'year').startOf('day');
     const endDate = today().endOf('day');
 
@@ -3073,7 +3073,7 @@ export class MessageModel {
       .groupBy(sql`heatmaps_date`)
       .orderBy(desc(sql`heatmaps_date`));
 
-    const heatmapData: HeatmapsProps['data'] = [];
+    const heatmapData: HeatmapActivity[] = [];
     let currentDate = startDate.clone();
 
     const dateCountMap = new Map<string, number>();
@@ -3114,7 +3114,7 @@ export class MessageModel {
    * rows into JS. `level` is scaled relative to the busiest day so the heatmap
    * stays readable regardless of absolute token volume.
    */
-  getTokenHeatmaps = async (): Promise<HeatmapsProps['data']> => {
+  getTokenHeatmaps = async (): Promise<HeatmapActivity[]> => {
     const startDate = today().subtract(1, 'year').startOf('day');
     const endDate = today().endOf('day');
 
@@ -3154,7 +3154,7 @@ export class MessageModel {
       }
     }
 
-    const heatmapData: HeatmapsProps['data'] = [];
+    const heatmapData: HeatmapActivity[] = [];
     let currentDate = startDate.clone();
 
     while (currentDate.isBefore(endDate) || currentDate.isSame(endDate, 'day')) {

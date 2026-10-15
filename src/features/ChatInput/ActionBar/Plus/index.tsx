@@ -1,7 +1,6 @@
 'use client';
 
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { validateVideoFileSize } from '@orvilo/utils/client';
 import { cn } from 'cn';
 import {
@@ -23,6 +22,7 @@ import type { ComponentType, ReactNode } from 'react';
 import { createElement, memo, Suspense, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SkillsIcon } from '@/components/ControlIcons';
 import { Badge } from '@/components/reui/badge';
 import { toast } from '@/components/toast';
 import { POPUP_Z_CLASS } from '@/components/ui/zIndex';

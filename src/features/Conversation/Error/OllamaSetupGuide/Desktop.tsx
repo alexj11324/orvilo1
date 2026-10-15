@@ -1,7 +1,7 @@
-import { Ollama } from '@lobehub/icons';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { Ollama } from '@/components/BrandIcons';
 import { Button } from '@/components/ui/button';
 import { useConversationStore } from '@/features/Conversation/store';
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { McpIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { getConnectorCatalog } from '@orvilo/const';
 import { getActivePluginIds, upsertPluginMode } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -9,6 +8,7 @@ import React, { memo, Suspense, useCallback, useEffect, useMemo, useRef, useStat
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { McpIcon, SkillsIcon } from '@/components/ControlIcons';
 import type { ItemType } from '@/components/Menu';
 import { Button } from '@/components/ui/button';
 import { isDesktop } from '@/const/version';

@@ -1,15 +1,15 @@
-import { MaskShadow } from '@lobehub/ui';
 import { useSize } from 'ahooks';
 import { cn } from 'cn';
 import { ChevronsDownUpIcon, ChevronsUpDownIcon } from 'lucide-react';
 import { lazy, memo, Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { MaskShadow } from '@/components/MaskShadow';
 import { Button } from '@/components/ui/button';
 
 import { styles } from './style';
 
-const Markdown = lazy(() => import('@lobehub/ui/es/Markdown/index'));
+const Markdown = lazy(() => import('@/components/Markdown'));
 
 export const COLLAPSED_MAX_HEIGHT = 180;
 

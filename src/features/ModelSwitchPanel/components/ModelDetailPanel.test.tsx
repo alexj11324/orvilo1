@@ -2,12 +2,13 @@
  * @vitest-environment happy-dom
  */
 import { BRANDING_PROVIDER } from '@orvilo/business-const';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { ModelRating } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EnabledProviderWithModels } from '@/types/aiProvider';
 
+import { openBenchmarkModal } from './BenchmarkModal';
 import ModelDetailPanel from './ModelDetailPanel';
 
 vi.mock('antd-style', async (importOriginal) => ({
@@ -26,7 +27,7 @@ vi.mock('antd-style', async (importOriginal) => ({
 }));
 
 // recharts needs a measured container — stub the chart with its data flattened to text nodes
-vi.mock('@lobehub/charts', () => ({
+vi.mock('@/components/Charts', () => ({
   RadarChart: ({ data }: { data: Record<string, unknown>[] }) => (
     <svg data-testid={'radar-chart'}>
       {data.map((row, i) => (
@@ -383,6 +384,32 @@ describe('ModelDetailPanel rating', () => {
     expect(container).toHaveTextContent('100');
     // agentic has no data: the dimension is omitted from the radar entirely
     expect(container).not.toHaveTextContent('Agentic');
+  });
+
+  it('opens the benchmark from the focused radar using Enter and Space', () => {
+    mockRating = {
+      design: score(78),
+      intelligence: score(100),
+      price: score(35),
+      speed: score(60),
+      writing: score(88),
+    };
+    vi.mocked(openBenchmarkModal).mockClear();
+    render(
+      <ModelDetailPanel
+        enabledList={createEnabledList('orvilo', textPricing)}
+        model="test-model"
+        provider="orvilo"
+      />,
+    );
+    const trigger = screen.getByTestId('radar-chart').closest('[role="button"]');
+    expect(trigger).not.toBeNull();
+    fireEvent.keyDown(trigger!, { key: 'Enter' });
+    expect(openBenchmarkModal).toHaveBeenCalledWith({ modelId: 'test-model', provider: 'orvilo' });
+    fireEvent.keyDown(trigger!, { key: ' ' });
+    expect(openBenchmarkModal).toHaveBeenCalledTimes(2);
+    fireEvent.keyDown(trigger!, { key: 'a' });
+    expect(openBenchmarkModal).toHaveBeenCalledTimes(2);
   });
 
   it('renders a dimension list instead of the radar below five dimensions', () => {

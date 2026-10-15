@@ -1,9 +1,9 @@
-import type { IconType } from '@lobehub/icons';
 import { cn } from 'cn';
 import type { ReactElement, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { IconType } from '@/components/BrandIcons';
 import {
   getPriorityIconColor,
   PRIORITY_ICONS,

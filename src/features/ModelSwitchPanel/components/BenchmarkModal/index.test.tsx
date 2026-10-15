@@ -17,7 +17,7 @@ vi.mock('antd-style', async (importOriginal) => ({
 }));
 
 // recharts needs a measured container — stub the chart with its data flattened to text nodes
-vi.mock('@lobehub/charts', () => ({
+vi.mock('@/components/Charts', () => ({
   RadarChart: ({ data }: { data: Record<string, unknown>[] }) => (
     <svg data-testid={'radar-chart'}>
       {data.map((row, i) => (

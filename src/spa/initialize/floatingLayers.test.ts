@@ -1,6 +1,10 @@
-import { getFloatingCollisionPadding, setFloatingCollisionPadding } from '@lobehub/ui/base-ui';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { afterEach, describe, expect, it } from 'vitest';
+
+import {
+  getFloatingCollisionPadding,
+  setFloatingCollisionPadding,
+} from '@/libs/contextMenu/collisionPadding';
 
 import { reserveTitleBarForFloatingLayers } from './floatingLayers';
 

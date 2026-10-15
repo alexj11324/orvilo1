@@ -1,10 +1,10 @@
-import { Markdown } from '@lobehub/ui';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cn } from 'cn';
 import { SquareArrowOutUpRight } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
 import { ExperimentDetail } from '@/features/AgentGoals/Experiments/Detail';
@@ -174,7 +174,7 @@ const Body = memo(() => {
           // is load-bearing: Markdown's root is `overflow: hidden`, so as a flex
           // item its automatic minimum size collapses to 0 and a long handoff
           // would be squeezed (and clipped) to fit instead of scrolling the panel.
-          <Markdown fontSize={13} style={{ flexShrink: 0 }} variant={'chat'}>
+          <Markdown fontSize={14} style={{ flexShrink: 0 }} variant={'chat'}>
             {node.description}
           </Markdown>
         ) : (

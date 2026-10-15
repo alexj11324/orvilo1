@@ -10,4 +10,5 @@ if [ "$BRANCH" = "dev" ] || [ "$BRANCH" = "main" ]; then
   npm run type-check
 fi
 
-lint-staged
+# Bound memory when large migrations split the staged files into many task groups.
+lint-staged --concurrent 1

@@ -1,5 +1,4 @@
 'use client';
-import { Notion } from '@lobehub/icons';
 import {
   CUSTOM_DOCUMENT_FILE_TYPE,
   CUSTOM_FOLDER_FILE_TYPE,
@@ -10,6 +9,7 @@ import { type ChangeEvent } from 'react';
 import { useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Notion } from '@/components/BrandIcons';
 import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';

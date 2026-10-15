@@ -1,14 +1,15 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { cn } from 'cn';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import ActionIcon from '@/components/ActionIcon';
 import ContentLoading from '@/components/Loading/ContentLoading';
+import { Markdown } from '@/components/Markdown';
 import { Button } from '@/components/ui/button';
 import { agentDocumentService, agentDocumentSWRKeys } from '@/services/agentDocument';
 
@@ -26,13 +27,14 @@ interface AgentDocumentReaderProps {
 
 const AgentDocumentReader = memo<AgentDocumentReaderProps>(({ agentId, documentId }) => {
   const { t } = useTranslation('common');
+  const router = useRouter();
   const { data, error, isLoading, mutate } = useSWR(
     agentId && documentId ? agentDocumentSWRKeys.readerDocument(agentId, documentId) : null,
     () => agentDocumentService.getReaderDocument({ agentId, documentId }),
     { revalidateOnFocus: false },
   );
 
-  const backToAgent = () => window.location.assign(`/agent/${agentId}`);
+  const backToAgent = () => router.push(`/agent/${encodeURIComponent(agentId)}`);
   const title = data?.title || data?.filename || '';
 
   return (

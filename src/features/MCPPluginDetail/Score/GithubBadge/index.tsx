@@ -1,8 +1,8 @@
-import { Markdown } from '@lobehub/ui';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
+import { Markdown } from '@/components/Markdown';
 import { Badge } from '@/components/reui/badge';
 import { CodeBlock } from '@/components/reui/code-block/code-block';
 import Select from '@/components/Select';

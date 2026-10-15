@@ -1,9 +1,9 @@
 'use client';
 
-import { type IconType } from '@lobehub/icons';
 import { clsx as cx } from 'cn';
 import { useMediaQuery } from 'react-responsive';
 
+import { type IconType } from '@/components/BrandIcons';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 

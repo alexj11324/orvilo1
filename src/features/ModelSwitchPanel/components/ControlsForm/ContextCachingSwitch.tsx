@@ -1,5 +1,6 @@
-import { Switch } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
+
+import { Switch } from '@/components/ui/switch';
 
 interface ContextCachingSwitchProps {
   disabled?: boolean;
@@ -10,10 +11,10 @@ interface ContextCachingSwitchProps {
 const ContextCachingSwitch = memo<ContextCachingSwitchProps>(({ disabled, value, onChange }) => {
   return (
     <Switch
+      checked={!value}
       disabled={disabled}
-      size={'small'}
-      value={!value}
-      onChange={(checked) => {
+      size="sm"
+      onCheckedChange={(checked) => {
         onChange?.(!checked);
       }}
     />

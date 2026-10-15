@@ -1,12 +1,12 @@
 'use client';
 
-import { Image } from '@lobehub/ui';
 import type { AcceptanceAttachment } from '@orvilo/types';
 import { cn } from 'cn';
 import { ImagePlus, X } from 'lucide-react';
 import { type ClipboardEvent, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Image } from '@/components/ImagePreview';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';

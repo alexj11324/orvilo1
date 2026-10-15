@@ -1,8 +1,9 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { Markdown } from '@/components/Markdown';
 
 import type { UpdateAgentParams } from '../../../types';
 
@@ -56,7 +57,7 @@ export const UpdateAgentRender = memo<BuiltinRenderProps<UpdateAgentParams>>(({ 
             className="rounded-(--radius-card) border bg-card"
             style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}
           >
-            <Markdown fontSize={13} variant={'chat'}>
+            <Markdown fontSize={14} variant={'chat'}>
               {config.systemRole as string}
             </Markdown>
           </div>

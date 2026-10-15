@@ -1,8 +1,8 @@
-import type { MenuInfo } from '@lobehub/ui';
 import type { NativeContextMenuItemTemplate, SFSymbol } from '@orvilo/electron-client-ipc';
 
 import { isSubmenuShaped } from './canGoNative';
 import type { NativeContextMenuItem } from './types';
+import type { MenuInfo } from './webTypes';
 
 export interface ToNativeTemplateResult {
   handlers: Map<string, () => void>;

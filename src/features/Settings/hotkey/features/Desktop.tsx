@@ -1,10 +1,10 @@
 'use client';
-import { HotkeyInput } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Form, { type FormGroupItemType } from '@/components/GroupForm';
+import { HotkeyInput } from '@/components/HotkeyInput';
 import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { toast } from '@/components/toast';
 import { Spinner } from '@/components/ui/spinner';

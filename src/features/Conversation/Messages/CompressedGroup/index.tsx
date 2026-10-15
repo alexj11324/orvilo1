@@ -1,5 +1,4 @@
 'use client';
-import { Markdown } from '@lobehub/ui';
 import type { CompressionGroupMetadata, UIChatMessage } from '@orvilo/types';
 import { clsx as cx, cn } from 'cn';
 import isEqual from 'fast-deep-equal';
@@ -10,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from 'react-responsive';
 
 import ActionIcon from '@/components/ActionIcon';
+import { Markdown } from '@/components/Markdown';
 import { confirmModal } from '@/components/Modal';
 import StreamingMarkdown from '@/components/StreamingMarkdown';
 import { ScrollArea } from '@/components/ui/scroll-area';

@@ -1,10 +1,10 @@
 'use client';
 
-import { Github } from '@lobehub/icons';
 import { Mail } from 'lucide-react';
 import { memo } from 'react';
 
 import { useWorkspaces } from '@/business/client/hooks/useWorkspaces';
+import { Github } from '@/components/BrandIcons';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 

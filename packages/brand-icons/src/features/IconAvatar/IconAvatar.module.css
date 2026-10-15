@@ -1,0 +1,4 @@
+.square {
+  --brand-avatar-square-radius: min(var(--radius-card), 25%);
+  border-radius: var(--brand-avatar-square-radius);
+}

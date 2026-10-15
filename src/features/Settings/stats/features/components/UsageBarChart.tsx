@@ -1,6 +1,5 @@
-import { type BarChartProps } from '@lobehub/charts';
-import { BarChart, ChartTooltipFrame, ChartTooltipRow } from '@lobehub/charts';
-
+import { type BarChartProps } from '@/components/Charts';
+import { BarChart, ChartTooltipFrame, ChartTooltipRow } from '@/components/Charts';
 import { Separator } from '@/components/ui/separator';
 import { formatNumber, formatTokenNumber } from '@/utils/format';
 

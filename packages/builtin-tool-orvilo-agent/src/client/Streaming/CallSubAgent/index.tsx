@@ -1,8 +1,9 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { Markdown } from '@/components/Markdown';
 
 import type { CallSubAgentParams } from '../../../types';
 
@@ -21,7 +22,7 @@ export const CallSubAgentStreaming = memo<BuiltinStreamingProps<CallSubAgentPara
     <div className={styles.container}>
       {instruction && (
         <div className={styles.instruction}>
-          <Markdown animated variant={'chat'}>
+          <Markdown animated streaming variant={'chat'}>
             {instruction}
           </Markdown>
         </div>

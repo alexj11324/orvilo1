@@ -1,11 +1,14 @@
-import { Ollama } from '@lobehub/icons';
-import { Center, Flexbox } from '@lobehub/ui';
-import { Alert, Button, Input, Progress } from '@lobehub/ui/base-ui';
+import { X } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Ollama } from '@/components/BrandIcons';
 import FormAction from '@/components/FormAction';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Progress, ProgressValue } from '@/components/ui/progress';
 import { useActionSWR } from '@/libs/swr';
 import { ollamaKeys } from '@/libs/swr/keys';
 import { type ModelProgressInfo } from '@/services/models';
@@ -22,8 +25,9 @@ interface OllamaModelDownloaderProps {
 
 const OllamaModelDownloader = memo<OllamaModelDownloaderProps>(
   ({ model, onSuccessDownload, extraAction }) => {
-    const { t } = useTranslation(['modelProvider', 'error']);
+    const { t } = useTranslation(['modelProvider', 'error', 'common']);
 
+    const [dismissedError, setDismissedError] = useState<unknown>(null);
     const [modelToPull, setModelToPull] = useState(model);
     const [completed, setCompleted] = useState(0);
     const [total, setTotal] = useState(0);
@@ -58,7 +62,7 @@ const OllamaModelDownloader = memo<OllamaModelDownloaderProps>(
     );
 
     return (
-      <Center gap={16} paddingBlock={32} style={{ width: '100%' }}>
+      <div className="flex w-full flex-col items-center justify-center gap-4 py-8">
         <FormAction
           avatar={<Ollama color={'var(--ant-color-primary)'} size={64} />}
           description={isDownloading ? t('ollama.download.desc') : t('ollama.unlock.description')}
@@ -78,37 +82,42 @@ const OllamaModelDownloader = memo<OllamaModelDownloaderProps>(
           )}
         </FormAction>
         {isDownloading && (
-          <Flexbox flex={1} gap={8} style={{ maxWidth: 300 }} width={'100%'}>
-            <Progress showInfo percent={percent} strokeColor={'var(--ant-color-success)'} />
-            <Flexbox
-              horizontal
-              distribution={'space-between'}
-              style={{ color: 'var(--ant-color-text-description)', fontSize: 12 }}
-            >
+          <div className="flex w-full max-w-75 flex-1 flex-col gap-2">
+            <Progress className="[&_[data-slot=progress-indicator]]:bg-success" value={percent}>
+              <ProgressValue>{() => `${percent}%`}</ProgressValue>
+            </Progress>
+            <div className="flex justify-between text-xs text-foreground-description">
               <span>
                 {t('ollama.download.remainingTime')}: {remainingTime}
               </span>
               <span>
                 {t('ollama.download.speed')}: {downloadSpeed}
               </span>
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         )}
-        <Flexbox gap={12} style={{ maxWidth: 300 }} width={'100%'}>
-          {error?.message && (
-            <Alert
-              closable
-              description={error.message}
-              showIcon={false}
-              title={t('ollama.download.failed')}
-              type={'error'}
-            />
+        <div className="flex w-full max-w-75 flex-col gap-3">
+          {error?.message && dismissedError !== error && (
+            <Alert variant="destructive">
+              <AlertTitle>{t('ollama.download.failed')}</AlertTitle>
+              <AlertDescription>{error.message}</AlertDescription>
+              <AlertAction>
+                <Button
+                  aria-label={t('close', { ns: 'common' })}
+                  size="icon-sm"
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setDismissedError(error)}
+                >
+                  <X aria-hidden />
+                </Button>
+              </AlertAction>
+            </Alert>
           )}
           <Button
-            block
+            className="mt-2 w-full"
             loading={isDownloading}
-            style={{ marginTop: 8 }}
-            type={'primary'}
+            type="button"
             onClick={() => {
               mutate();
             }}
@@ -134,8 +143,8 @@ const OllamaModelDownloader = memo<OllamaModelDownloaderProps>(
           ) : (
             extraAction
           )}
-        </Flexbox>
-      </Center>
+        </div>
+      </div>
     );
   },
 );

@@ -1,8 +1,9 @@
 'use server';
 
-import { Image } from '@lobehub/ui/mdx';
 import { getPlaiceholder } from 'plaiceholder';
 import { type FC } from 'react';
+
+import { Image } from '@/components/ImagePreview';
 
 const DEFAULT_WIDTH = 800;
 

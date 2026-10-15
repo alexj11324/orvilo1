@@ -1,11 +1,11 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { cn } from 'cn';
 import { ChevronRight } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { useActivityTime } from '@/hooks/useActivityTime';
 
 import type { GoalGraphView, GoalNodeView } from './goalGraphViewModel';
@@ -74,7 +74,7 @@ const FindingRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeView
             {/* The description is the producing run's handoff — actual Markdown
                 (tables, code blocks), not plain text. Render it as such. */}
             {view.node.description && (
-              <Markdown fontSize={13} variant={'chat'}>
+              <Markdown fontSize={14} variant={'chat'}>
                 {view.node.description}
               </Markdown>
             )}

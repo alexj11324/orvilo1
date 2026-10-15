@@ -1,0 +1,12 @@
+import Avatar from './components/Avatar';
+import BrandMono from './components/BrandMono';
+import Mono from './components/Mono';
+import { COLOR_PRIMARY, TITLE } from './style';
+
+const Icons = Mono;
+Icons.Avatar = Avatar;
+Icons.Text = BrandMono;
+Icons.Brand = BrandMono;
+Icons.colorPrimary = COLOR_PRIMARY;
+Icons.title = TITLE;
+export default Icons;

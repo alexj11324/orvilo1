@@ -1,20 +1,20 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { closeContextMenu, registerNativeContextMenuInterceptor, showContextMenu } from './index';
+import type { NativeContextMenuItem } from './types';
 import {
   closeContextMenu as closeWebContextMenu,
   type ContextMenuInterceptor,
   setContextMenuInterceptor,
   showContextMenu as showWebContextMenu,
-} from '@lobehub/ui';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { closeContextMenu, registerNativeContextMenuInterceptor, showContextMenu } from './index';
-import type { NativeContextMenuItem } from './types';
+} from './webStore';
 
 const hostMenu = vi.hoisted(() => ({
   closePopupContextMenu: vi.fn(),
   popupContextMenu: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui', () => ({
+vi.mock('./webStore', () => ({
   closeContextMenu: vi.fn(),
   setContextMenuInterceptor: vi.fn(),
   showContextMenu: vi.fn(),

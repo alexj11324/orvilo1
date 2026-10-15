@@ -1,4 +1,3 @@
-import { type ChatItemProps } from '@lobehub/ui/chat';
 import { type LLMRoleType, type UIChatMessage } from '@orvilo/types';
 import { type FC, type ReactNode } from 'react';
 
@@ -90,7 +89,7 @@ export interface ActionsBarConfig {
 }
 
 export interface ListItemProps {
-  groupNav?: ChatItemProps['avatarAddon'];
+  groupNav?: ReactNode;
 
   renderItems?: {
     [role: RenderRole]: RenderItem;

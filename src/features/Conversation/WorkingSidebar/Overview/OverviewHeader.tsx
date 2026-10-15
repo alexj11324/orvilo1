@@ -1,8 +1,9 @@
-import { Github } from '@lobehub/icons';
 import { cn } from 'cn';
 import { FolderGit2Icon, FolderIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Github } from '@/components/BrandIcons';
 
 const styles = {
   dot: 'shrink-0 size-1.5 rounded-full bg-success',

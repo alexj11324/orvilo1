@@ -1,6 +1,5 @@
 'use client';
 
-import type { HtmlPreview } from '@lobehub/ui';
 import { extractHtmlTitle } from '@orvilo/html-artifact';
 import { exportFile } from '@orvilo/utils/client';
 import { Code2, Download, Eye, Maximize2, RotateCw } from 'lucide-react';
@@ -16,16 +15,23 @@ import {
 import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
 
 import InlineHtmlPreview from './InlinePreview';
+import type { HtmlPreview } from './NativePreview';
 import HtmlPreviewDrawer from './PreviewDrawer';
 
 interface ChatHtmlPreviewProps {
   animated?: boolean;
   content: string;
   previewProps?: Omit<ComponentProps<typeof HtmlPreview>, 'children'>;
+  streaming?: boolean;
 }
 
 /** Official WebPreview chrome around the existing isolated streaming HTML engine. */
-export function ChatHtmlPreview({ animated, content, previewProps }: ChatHtmlPreviewProps) {
+export function ChatHtmlPreview({
+  animated,
+  streaming,
+  content,
+  previewProps,
+}: ChatHtmlPreviewProps) {
   const { t } = useTranslation('components');
   const [source, setSource] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -62,7 +68,9 @@ export function ChatHtmlPreview({ animated, content, previewProps }: ChatHtmlPre
           <WebPreviewNavigationButton
             aria-label={t('fullscreen', { ns: 'common' })}
             tooltip={t('fullscreen', { ns: 'common' })}
-            onClick={() => setExpanded(true)}
+            onClick={() =>
+              previewProps?.onExpand ? previewProps.onExpand(content) : setExpanded(true)
+            }
           >
             <Maximize2 className="size-4" />
           </WebPreviewNavigationButton>
@@ -80,6 +88,7 @@ export function ChatHtmlPreview({ animated, content, previewProps }: ChatHtmlPre
             height="100%"
             key={revision}
             previewProps={previewProps}
+            streaming={streaming}
           />
         )}
       </WebPreview>

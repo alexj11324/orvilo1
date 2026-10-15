@@ -10,9 +10,8 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
-import { MAX_WIDTH } from '@/const/layoutTokens';
 
-const Highlighter = lazy(() => import('@lobehub/ui/es/Highlighter/index'));
+const Highlighter = lazy(() => import('@/components/Highlighter'));
 
 export type ErrorType = Error & { digest?: string };
 
@@ -29,29 +28,13 @@ const ErrorCapture = ({ error, resetPath = '/' }: ErrorCaptureProps) => {
   const [expandedKeys, setExpandedKeys] = useState<string[]>(defaultExpandedKeys);
 
   return (
-    <div
-      className={'flex flex-col items-center justify-center'}
-      style={{ minHeight: '100dvh', width: '100%' }}
-    >
-      <h1
-        style={{
-          filter: 'blur(8px)',
-          fontSize: `min(${MAX_WIDTH / 6}px, 25vw)`,
-          fontWeight: 900,
-          margin: 0,
-          opacity: 0.12,
-          position: 'absolute',
-          zIndex: 0,
-        }}
-      >
-        ERROR
-      </h1>
-      <span style={{ fontSize: 64, lineHeight: 1 }}>🤧</span>
-      <h2 style={{ fontWeight: 'bold', marginTop: '1em', textAlign: 'center' }}>
-        {t('error.title')}
-      </h2>
-      <p style={{ marginBottom: '2em' }}>{t('error.desc')}</p>
-      <div className={'flex gap-3'} style={{ marginBottom: '2em' }}>
+    <div className="relative flex min-h-dvh w-full flex-col items-center justify-center gap-4 p-4 text-foreground">
+      <span aria-hidden className="text-2xl">
+        🤧
+      </span>
+      <h1 className="m-0 text-center text-2xl font-semibold">{t('error.title')}</h1>
+      <p className="text-center text-sm text-muted-foreground">{t('error.desc')}</p>
+      <div className="flex flex-wrap justify-center gap-3">
         <Button variant="outline" onClick={() => window.location.reload()}>
           {t('error.retry')}
         </Button>
@@ -59,25 +42,14 @@ const ErrorCapture = ({ error, resetPath = '/' }: ErrorCaptureProps) => {
       </div>
       {hasStack && (
         <div
-          className={
-            expandedKeys.includes('stack')
-              ? 'rounded-(--radius-card) border border-border'
-              : 'rounded-(--radius-card) bg-secondary'
-          }
-          style={{
-            marginBottom: '1em',
-            maxWidth: '90vw',
-            overflow: 'hidden',
-            transition: 'background 0.2s, border-color 0.2s',
-            width: 560,
-          }}
+          className={`w-140 max-w-full overflow-hidden rounded-(--radius-card) border transition-[background-color,border-color] duration-(--orvilo-motion-mid) motion-reduce:transition-none ${expandedKeys.includes('stack') ? 'border-border' : 'border-transparent bg-secondary'}`}
         >
           <Accordion value={expandedKeys} onValueChange={setExpandedKeys}>
             <AccordionItem value="stack">
               <AccordionTrigger>{t('error.stack')}</AccordionTrigger>
               <AccordionContent>
                 <Suspense fallback={null}>
-                  <Highlighter language={'plaintext'} padding={12} variant={'borderless'}>
+                  <Highlighter className="p-3" language={'plaintext'} variant={'borderless'}>
                     {error.stack!}
                   </Highlighter>
                 </Suspense>

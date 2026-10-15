@@ -1,7 +1,7 @@
-import { Image } from '@lobehub/ui';
 import type { ComponentProps } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
 
+import { Image } from '@/components/ImagePreview';
 import { useClientDataSWR } from '@/libs/swr';
 import { localFileKeys } from '@/libs/swr/keys';
 import { type LocalFilePreview, projectFileService } from '@/services/projectFile';
@@ -64,15 +64,9 @@ const MarkdownImage = memo<MarkdownImageProps>(
       return (
         <span
           aria-label={alt}
+          className="inline-block min-h-30 w-80 max-w-full rounded-(--radius-input) bg-fill-quaternary"
           role={alt ? 'img' : undefined}
           title={markdownSrc}
-          style={{
-            background: 'var(--ant-color-fill-quaternary)',
-            borderRadius: 6,
-            display: 'inline-block',
-            minHeight: 120,
-            width: 'min(100%, 320px)',
-          }}
         />
       );
     }

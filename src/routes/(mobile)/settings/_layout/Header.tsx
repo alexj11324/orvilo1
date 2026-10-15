@@ -1,10 +1,10 @@
 'use client';
 
-import { ChatHeader } from '@lobehub/ui/mobile';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMatch, useParams, useSearchParams } from 'react-router';
 
+import { ChatHeader } from '@/components/ChatHeader';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useShowMobileWorkspace } from '@/hooks/useShowMobileWorkspace';
 import { SettingsTabs } from '@/store/global/initialState';

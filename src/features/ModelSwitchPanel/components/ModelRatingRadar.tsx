@@ -1,7 +1,8 @@
-import { RadarChart } from '@lobehub/charts';
 import type { ModelRating, ModelRatingSource } from 'model-bank';
 import type { FC } from 'react';
 import { memo } from 'react';
+
+import { RadarChart } from '@/components/Charts';
 
 /** display order around the hexagon, starting from the top vertex, clockwise */
 export const RATING_DIMENSION_ORDER = [

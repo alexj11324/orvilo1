@@ -1,6 +1,7 @@
-import { RadarChart } from '@lobehub/charts';
 import type { FC } from 'react';
 import { memo } from 'react';
+
+import { RadarChart } from '@/components/Charts';
 
 import { radarStyles } from '../ModelRatingRadar';
 
@@ -9,7 +10,12 @@ import { radarStyles } from '../ModelRatingRadar';
  * The series, legend dots and best-score tint share each slot's value. A
  * theme-aware categorical token audit is still required before replacing them.
  */
-export const COMPARE_SERIES_COLORS = ['#1677ff', '#fa8c16', '#13c2c2', '#eb2f96'] as const;
+export const COMPARE_SERIES_COLORS = [
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+] as const;
 
 export const MAX_COMPARE_MODELS = COMPARE_SERIES_COLORS.length;
 

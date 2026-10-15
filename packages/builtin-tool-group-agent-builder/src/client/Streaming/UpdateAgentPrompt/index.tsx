@@ -1,8 +1,9 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { Markdown } from '@/components/Markdown';
 
 import type { UpdateAgentPromptParams } from '../../../types';
 
@@ -13,8 +14,8 @@ export const UpdateAgentPromptStreaming = memo<BuiltinStreamingProps<UpdateAgent
     if (!prompt) return null;
 
     return (
-      <div className="w-full rounded-(--ant-border-radius) border border-sidebar-border bg-card px-3 py-2">
-        <Markdown animated variant={'chat'}>
+      <div className="w-full rounded-(--radius-card) border border-sidebar-border bg-card px-3 py-2">
+        <Markdown animated streaming variant={'chat'}>
           {prompt}
         </Markdown>
       </div>

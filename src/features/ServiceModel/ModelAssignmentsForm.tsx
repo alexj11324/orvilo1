@@ -1,6 +1,5 @@
 'use client';
 
-import { Tooltip } from '@lobehub/ui';
 import { memo } from 'react';
 import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +16,7 @@ import {
 } from '@/components/reui/number-field';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
 import { FieldError } from '@/components/ui/field';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import ModelSelect from '@/features/ModelSelect';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
@@ -65,8 +65,10 @@ const ModelAssignmentsForm = memo(() => {
 
   const defaultAgentItem: FormItemProps = {
     children: (
-      <Tooltip title={reason}>
-        <div className="flex w-[min(100%,448px)] flex-row items-center gap-3">
+      <Tooltip>
+        <TooltipTrigger
+          render={<div className="flex w-full max-w-112 flex-row items-center gap-3" />}
+        >
           <Controller
             control={control}
             name="defaultAgent.config"
@@ -82,7 +84,8 @@ const ModelAssignmentsForm = memo(() => {
               />
             )}
           />
-        </div>
+        </TooltipTrigger>
+        {reason && <TooltipContent>{reason}</TooltipContent>}
       </Tooltip>
     ),
     // Only this row carries a `desc`: "Default" is a model value an Agent can
@@ -95,8 +98,10 @@ const ModelAssignmentsForm = memo(() => {
   const systemModelItems: FormItemProps[] = SYSTEM_AGENT_MODEL_ITEMS.map(({ key }) => {
     return {
       children: (
-        <Tooltip title={reason}>
-          <div className="flex w-[min(100%,448px)] flex-row items-center gap-3">
+        <Tooltip>
+          <TooltipTrigger
+            render={<div className="flex w-full max-w-112 flex-row items-center gap-3" />}
+          >
             <Controller
               control={control}
               name={`systemAgent.${key}`}
@@ -112,7 +117,8 @@ const ModelAssignmentsForm = memo(() => {
                 />
               )}
             />
-          </div>
+          </TooltipTrigger>
+          {reason && <TooltipContent>{reason}</TooltipContent>}
         </Tooltip>
       ),
       // Only the planning row says more than its label: it also drives acceptance.
@@ -125,7 +131,7 @@ const ModelAssignmentsForm = memo(() => {
     ({ contextLimit, key, modelType }) => {
       return {
         children: (
-          <div className="flex w-[min(100%,448px)] flex-row items-center gap-3">
+          <div className="flex w-full max-w-112 flex-row items-center gap-3">
             <Controller
               control={control}
               name={`systemAgent.${key}`}

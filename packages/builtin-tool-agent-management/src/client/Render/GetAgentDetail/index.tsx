@@ -1,11 +1,11 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
 
 import Avatar from '@/components/Avatar';
+import { Markdown } from '@/components/Markdown';
 import { Badge as Tag } from '@/components/reui/badge';
 
 import type { GetAgentDetailParams, GetAgentDetailState } from '../../../types';
@@ -83,7 +83,7 @@ export const GetAgentDetailRender = memo<
             className="rounded-(--radius-card) border bg-card"
             style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}
           >
-            <Markdown fontSize={13} variant={'chat'}>
+            <Markdown fontSize={14} variant={'chat'}>
               {config.systemRole}
             </Markdown>
           </div>

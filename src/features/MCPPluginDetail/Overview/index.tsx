@@ -1,7 +1,7 @@
-import { Markdown } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import {
   Accordion,
   AccordionContent,

@@ -1,8 +1,8 @@
-import { Markdown } from '@lobehub/ui';
 import type { GoalGraphSnapshot } from '@orvilo/types';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { Badge } from '@/components/reui/badge';
 import {
   Accordion,
@@ -80,7 +80,7 @@ export const ExperimentDetail = ({
             <div className="flex flex-col gap-1.5" key={finding.id}>
               <div className="font-medium">{finding.title}</div>
               {finding.description && (
-                <Markdown fontSize={13} style={{ flexShrink: 0 }} variant={'chat'}>
+                <Markdown fontSize={14} style={{ flexShrink: 0 }} variant={'chat'}>
                   {finding.description}
                 </Markdown>
               )}

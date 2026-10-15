@@ -1,6 +1,5 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { AGENT_CHAT_URL } from '@orvilo/const';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { ArrowRight } from 'lucide-react';
@@ -8,6 +7,7 @@ import { memo, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 
 import Avatar from '@/components/Avatar';
+import { Markdown } from '@/components/Markdown';
 import { Badge as Tag } from '@/components/reui/badge';
 
 import type { CreateAgentParams, CreateAgentState } from '../../../types';
@@ -104,7 +104,7 @@ export const CreateAgentRender = memo<BuiltinRenderProps<CreateAgentParams, Crea
               className="rounded-(--radius-card) border bg-card"
               style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}
             >
-              <Markdown fontSize={13} variant={'chat'}>
+              <Markdown fontSize={14} variant={'chat'}>
                 {systemRole}
               </Markdown>
             </div>

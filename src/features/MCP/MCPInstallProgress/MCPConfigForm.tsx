@@ -1,4 +1,3 @@
-import { Markdown } from '@lobehub/ui';
 import * as m from 'motion/react-m';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +5,7 @@ import { useMediaQuery } from 'react-responsive';
 
 import Form from '@/components/GroupForm';
 import ItemRender from '@/components/JSONSchemaConfig/ItemRender';
+import { Markdown } from '@/components/Markdown';
 import { Button } from '@/components/ui/button';
 import { transformPluginSettings } from '@/features/PluginSettings';
 import { useToolStore } from '@/store/tool';

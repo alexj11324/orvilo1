@@ -1,7 +1,7 @@
-import { type BarChartProps } from '@lobehub/charts';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { type BarChartProps } from '@/components/Charts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { type UsageLog, type UsageRecordItem } from '@/types/usage/usageRecord';

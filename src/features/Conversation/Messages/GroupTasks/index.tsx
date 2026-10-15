@@ -1,11 +1,11 @@
 'use client';
-import { GroupAvatar } from '@lobehub/ui';
 import { type UIChatMessage } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { ListTodo } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { GroupAvatar } from '@/components/GroupAvatar';
 import { Badge } from '@/components/reui/badge';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import { useAgentGroupStore } from '@/store/agentGroup';
@@ -27,10 +27,7 @@ interface GroupTasksMessageProps {
 const GroupTasksAvatar = memo<{ avatars: { avatar?: string; background?: string }[] }>(
   ({ avatars }) => {
     return (
-      <div
-        className="flex flex-col"
-        style={{ flex: 'none', height: 28, width: 28, position: 'relative' }}
-      >
+      <div className="relative flex size-7 flex-none flex-col">
         <GroupAvatar
           avatarShape={'square'}
           cornerShape={'square'}
@@ -40,22 +37,8 @@ const GroupTasksAvatar = memo<{ avatars: { avatar?: string; background?: string 
             background: a.background,
           }))}
         />
-        <div
-          className="flex flex-col items-center justify-center"
-          style={{
-            flex: 'none',
-            height: 16,
-            border: `1px solid ${'var(--ant-color-border)'}`,
-
-            width: 16,
-
-            borderRadius: 4,
-            position: 'absolute',
-            right: -4,
-            top: -4,
-          }}
-        >
-          <ListTodo color={'var(--ant-color-text-description)'} size={10} />
+        <div className="absolute -end-1 -top-1 flex size-4 flex-none flex-col items-center justify-center rounded-(--radius-chip) border border-border bg-card">
+          <ListTodo className="size-2.5 text-foreground-description" />
         </div>
       </div>
     );
@@ -137,7 +120,7 @@ const GroupTasksMessage = memo<GroupTasksMessageProps>(({ id }) => {
       time={createdAt}
       titleAddon={<Badge>{t('task.groupTasks', { count: tasks.length })}</Badge>}
     >
-      <div className="flex flex-col gap-2" style={{ width: '100%' }}>
+      <div className="flex w-full flex-col gap-2">
         {tasks.map((task) => (
           <TaskItem item={task} key={task.id} />
         ))}

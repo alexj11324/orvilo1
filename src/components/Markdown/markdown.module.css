@@ -1,0 +1,59 @@
+/* DESIGN.md typography roles. Rem values follow the configured document root. */
+.root {
+  --markdown-heading-1: 2.375rem;
+  --markdown-heading-2: 1.875rem;
+  --markdown-heading-3: 1.5rem;
+  --markdown-heading-4: 1.25rem;
+  --markdown-heading-5: 1rem;
+}
+
+.root :is(p, li, td, th) {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.root h1 { font-size: var(--markdown-heading-1); }
+.root h2 { font-size: var(--markdown-heading-2); }
+.root h3 { font-size: var(--markdown-heading-3); }
+.root h4 { font-size: var(--markdown-heading-4); }
+.root :is(h5, h6) { font-size: var(--markdown-heading-5); }
+
+.root [data-slot='code-block'] pre {
+  overflow: visible;
+  margin: 0;
+  font-size: var(--code-block-font-size);
+  line-height: var(--code-block-line-height);
+}
+
+.steps { counter-reset: markdown-step; }
+.steps::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 14px;
+  inset-block: 4px;
+  width: 1px;
+  background: var(--divider);
+}
+.steps h3 { counter-increment: markdown-step; }
+.steps h3::before {
+  content: counter(markdown-step);
+  position: absolute;
+  inset-inline-start: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  text-align: center;
+  color: var(--muted-foreground);
+  background: var(--popover);
+}
+
+/* Mask alpha is coverage, not a paint color; the surface retains semantic ink. */
+.mask {
+  scrollbar-width: none;
+  mask-image: linear-gradient(var(--markdown-mask-angle), #000 calc(100% - var(--markdown-mask-extent)), transparent);
+}
+.mask::-webkit-scrollbar { display: none; }

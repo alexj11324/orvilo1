@@ -1,10 +1,10 @@
 'use client';
 
-import { Tooltip } from '@lobehub/ui';
-import { Select } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Select from '@/components/Select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useReasoningEffortControl } from '@/features/ChatInput/hooks/useReasoningEffortControl';
 import { useAiInfraStore } from '@/store/aiInfra';
 
@@ -46,13 +46,13 @@ const ReasoningEffortSelect = memo<ReasoningEffortSelectProps>(({ disabled, mode
   if (!hasReasoningParams) return null;
 
   return (
-    <Tooltip title={t('settingAgent.runtimeConfig.reasoningEffortHint', { ns: 'setting' })}>
-      <div style={{ display: 'flex', gap: 8 }}>
+    <Tooltip>
+      <TooltipTrigger render={<div className="flex gap-2" />}>
         {effortKey && (
           <Select
             disabled={disabled || updating}
             placeholder={t('reasoningEffort.title', { ns: 'chat' })}
-            popupMatchSelectWidth={false}
+            popupClassName="w-auto min-w-(--anchor-width)"
             value={effortValue}
             options={effortLevels.map((level) => ({
               label: t(`reasoningEffort.levels.${level}`, { ns: 'chat' }),
@@ -66,7 +66,7 @@ const ReasoningEffortSelect = memo<ReasoningEffortSelectProps>(({ disabled, mode
         {hasReasoningMode && (
           <Select
             disabled={disabled || updating}
-            popupMatchSelectWidth={false}
+            popupClassName="w-auto min-w-(--anchor-width)"
             value={modeValue}
             options={modeLevels.map((mode) => ({
               label: t(`reasoningEffort.mode.${mode}`, { ns: 'chat' }),
@@ -77,7 +77,10 @@ const ReasoningEffortSelect = memo<ReasoningEffortSelectProps>(({ disabled, mode
             }}
           />
         )}
-      </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        {t('settingAgent.runtimeConfig.reasoningEffortHint', { ns: 'setting' })}
+      </TooltipContent>
     </Tooltip>
   );
 });

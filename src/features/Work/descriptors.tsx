@@ -1,4 +1,3 @@
-import { Github } from '@lobehub/icons';
 import { FileTypeIcon as FileTypeBadge } from '@lobehub/ui';
 import { classifyEditedFile, getBasename } from '@orvilo/builtin-tools/fileEditScan';
 import {
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 
+import { Github } from '@/components/BrandIcons';
 import { mimeTypeMap } from '@/components/FileIcon/config';
 
 import LinearIcon from './icons/LinearIcon';

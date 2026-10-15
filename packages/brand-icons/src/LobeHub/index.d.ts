@@ -1,0 +1,18 @@
+import type Avatar from './components/Avatar';
+import type Color from './components/Color';
+import type Combine from './components/Combine';
+import type Mono from './components/Mono';
+import type Morden from './components/Morden';
+import type Text from './components/Text';
+
+export type CompoundedIcon = typeof Mono & {
+  Avatar: typeof Avatar;
+  Color: typeof Color;
+  Combine: typeof Combine;
+  Morden: typeof Morden;
+  Text: typeof Text;
+  colorPrimary: string;
+  title: string;
+};
+declare const Icons: CompoundedIcon;
+export default Icons;

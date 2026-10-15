@@ -1,5 +1,4 @@
 'use client';
-import { Notion } from '@lobehub/icons';
 import {
   CUSTOM_DOCUMENT_FILE_TYPE,
   CUSTOM_FOLDER_FILE_TYPE,
@@ -11,6 +10,7 @@ import { memo, useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { Notion } from '@/components/BrandIcons';
 import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 import { toast } from '@/components/toast';
 import { Upload } from '@/components/Upload';

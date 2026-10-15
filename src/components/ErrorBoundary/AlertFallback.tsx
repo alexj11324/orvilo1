@@ -5,8 +5,9 @@ import { lazy, memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
-const Highlighter = lazy(() => import('@lobehub/ui/es/Highlighter/index'));
+const Highlighter = lazy(() => import('@/components/Highlighter'));
 
 interface AlertFallbackProps {
   error: Error;
@@ -17,25 +18,32 @@ interface AlertFallbackProps {
 const AlertFallback = memo<AlertFallbackProps>(({ error, resetErrorBoundary, title }) => {
   const { t } = useTranslation();
   return (
-    <Alert style={{ overflow: 'hidden', position: 'relative', width: '100%' }}>
-      <CircleAlert size={16} />
-      <AlertTitle>{title || 'Render Error'}</AlertTitle>
-      <AlertDescription>{error?.message || 'An unknown error occurred'}</AlertDescription>
+    <Alert className="relative w-full overflow-hidden">
+      <CircleAlert className="size-4" />
+      <AlertTitle>{title || t('error.title', { ns: 'error' })}</AlertTitle>
+      <AlertDescription>{error?.message || t('error.desc', { ns: 'error' })}</AlertDescription>
       {error?.stack ? (
         <Suspense fallback={null}>
-          <Highlighter actionIconSize="small" language="plaintext" padding={8} variant="borderless">
+          <Highlighter
+            actionIconSize="small"
+            className="p-2"
+            language="plaintext"
+            variant="borderless"
+          >
             {error.stack}
           </Highlighter>
         </Suspense>
       ) : undefined}
-      <button
+      <Button
         aria-label={t('close', { ns: 'common' })}
-        style={{ position: 'absolute', right: 8, top: 8 }}
+        className="absolute end-2 top-2"
+        size="icon-sm"
         type="button"
+        variant="ghost"
         onClick={resetErrorBoundary}
       >
-        <X size={16} />
-      </button>
+        <X className="size-4" />
+      </Button>
     </Alert>
   );
 });

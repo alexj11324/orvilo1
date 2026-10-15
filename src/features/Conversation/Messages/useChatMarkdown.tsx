@@ -1,9 +1,10 @@
 'use client';
 
-import { type MarkdownProps } from '@lobehub/ui';
 import { type ReactNode, useMemo, useState } from 'react';
 
 import { HtmlPreviewDrawer } from '@/components/HtmlPreview';
+import { allowedMarkdownTags } from '@/components/Markdown';
+import { type MarkdownProps } from '@/components/Markdown';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
@@ -66,6 +67,7 @@ export const useChatMarkdown = ({
             onExpand: (content: string) => setDrawerContent(content),
           },
         },
+        allowedTags: allowedMarkdownTags(assistantMarkdownElements.map((element) => element.tag)),
         components,
         enableCustomFootnotes: true,
         enableHtmlPreview: true,

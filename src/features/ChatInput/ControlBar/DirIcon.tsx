@@ -1,6 +1,7 @@
-import { Github } from '@lobehub/icons';
 import { FolderGit2Icon, FolderIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
+
+import { Github } from '@/components/BrandIcons';
 
 interface DirIconProps {
   /** Detected repo type — drives the glyph: GitHub mark, a git-tracked folder, or

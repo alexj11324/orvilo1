@@ -1,8 +1,8 @@
-import { Exa, Google } from '@lobehub/icons';
 import { Search } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Exa, Google } from '@/components/BrandIcons';
 import { Switch } from '@/components/ui/switch';
 import { useAgentStore } from '@/store/agent';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';

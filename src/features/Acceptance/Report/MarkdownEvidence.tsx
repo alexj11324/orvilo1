@@ -1,12 +1,12 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { clsx } from 'cn';
 import { ChevronRight, FileText } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Loading from '@/components/Loading/BrandTextLoading';
+import { Markdown } from '@/components/Markdown';
 import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 import { useTextFileLoader } from '@/features/FileViewer/hooks/useTextFileLoader';
 import { getLanguageFromFilename } from '@/utils/fileLanguage';
@@ -153,7 +153,7 @@ export const CollapsibleMarkdownEvidence = memo<{
     [children, title],
   );
   const body = markdown ? (
-    <Markdown fontSize={14} headerMultiple={0.1} lineHeight={22 / 14} variant={'chat'}>
+    <Markdown fontSize={14} lineHeight={22 / 14} variant={'chat'}>
       {children}
     </Markdown>
   ) : (

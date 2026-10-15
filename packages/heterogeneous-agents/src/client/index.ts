@@ -1,4 +1,4 @@
-import type { IconType } from '@lobehub/icons';
+import type { IconType } from '../../../brand-icons/src';
 import {
   Amp,
   ClaudeCode,
@@ -13,8 +13,7 @@ import {
   Pi,
   Qoder,
   Trae,
-} from '@lobehub/icons';
-
+} from '../../../brand-icons/src';
 import {
   getHeterogeneousAgentConfig,
   HETEROGENEOUS_AGENT_CONFIGS,

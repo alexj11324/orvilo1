@@ -1,8 +1,3 @@
-import {
-  closeContextMenu as closeWebContextMenu,
-  setContextMenuInterceptor,
-  showContextMenu as showWebContextMenu,
-} from '@lobehub/ui';
 import { isHostUnsupportedResult } from '@orvilo/types';
 import debug from 'debug';
 
@@ -12,6 +7,11 @@ import { canGoNative } from './canGoNative';
 import { isDarwinDesktop } from './platform';
 import { toNativeTemplate } from './toNativeTemplate';
 import type { NativeContextMenuItem, ShowContextMenuOptions } from './types';
+import {
+  closeContextMenu as closeWebContextMenu,
+  setContextMenuInterceptor,
+  showContextMenu as showWebContextMenu,
+} from './webStore';
 
 const log = debug('orvilo-client:context-menu');
 

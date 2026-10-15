@@ -1,10 +1,10 @@
-import { type IconType } from '@lobehub/icons';
 import { type LobeChatProps } from '@lobehub/ui/brand';
 import { BRANDING_LOGO_URL, BRANDING_NAME } from '@orvilo/business-const';
 import { cn } from 'cn';
 import { type HTMLAttributes, type ReactNode } from 'react';
 import { memo } from 'react';
 
+import { type IconType } from '@/components/BrandIcons';
 import { type ImageProps } from '@/libs/next/Image';
 import Image from '@/libs/next/Image';
 

@@ -1,11 +1,11 @@
-import { Typography } from '@lobehub/ui';
-import { Image } from '@lobehub/ui/mdx';
 import { Fragment, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type Components } from 'react-markdown';
 import useSWR from 'swr';
 import urlJoin from 'url-join';
 
+import { Image } from '@/components/ImagePreview';
+import { Typography } from '@/components/Markdown';
 import { CustomMDX } from '@/components/mdx';
 import CollapsibleSection from '@/components/mdx/CollapsibleSection';
 import remarkCollapsibleSections from '@/components/mdx/remarkCollapsibleSections';
@@ -37,7 +37,7 @@ const PostItem = ({ id, versionRange, locale, showDivider = true }: PostItemProp
   return (
     <>
       {showDivider && <Separator />}
-      <Typography headerMultiple={0.2}>
+      <Typography>
         <a
           href={urlJoin(OFFICIAL_SITE, '/changelog', id)}
           rel="noopener noreferrer"

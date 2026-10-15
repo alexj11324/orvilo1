@@ -1,11 +1,11 @@
 'use client';
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { PanelRight, PanelRightClose } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { Markdown } from '@/components/Markdown';
 import IssueStatusPicker from '@/features/AgentTasks/features/IssueStatusPicker';
 import TaskPriorityTag from '@/features/AgentTasks/features/TaskPriorityTag';
 import { useChatStore } from '@/store/chat';

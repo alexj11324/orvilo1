@@ -1,7 +1,8 @@
-import { isFullHtmlDocument, type MarkdownProps, Mermaid } from '@lobehub/ui';
 import { type ComponentProps, createContext, use } from 'react';
 
 import { ChatHtmlPreview } from '@/components/HtmlPreview/ChatPreview';
+import { isFullHtmlDocument, type MarkdownProps } from '@/components/Markdown';
+import { Mermaid } from '@/components/Mermaid';
 import {
   CodeBlock,
   CodeBlockCopyButton,
@@ -52,7 +53,12 @@ export default function ChatCodeBlock(props: ComponentProps<'pre'>) {
   }
   if (enableHtmlPreview && language === 'html' && isFullHtmlDocument(code)) {
     return (
-      <ChatHtmlPreview animated={animated} content={code} previewProps={componentProps?.html} />
+      <ChatHtmlPreview
+        animated={animated}
+        content={code}
+        previewProps={componentProps?.html}
+        streaming={streaming}
+      />
     );
   }
 
@@ -65,7 +71,7 @@ export default function ChatCodeBlock(props: ComponentProps<'pre'>) {
       language={language ?? 'text'}
       maxLines={16}
       streaming={streaming}
-      themes={theme && theme !== 'lobe-theme' ? { dark: theme, light: theme } : undefined}
+      themes={{ dark: theme ?? 'lobe-theme', light: theme ?? 'lobe-theme' }}
     >
       <CodeBlockHeader>
         <CodeBlockLanguage />

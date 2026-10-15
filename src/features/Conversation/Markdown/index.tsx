@@ -1,7 +1,7 @@
-import { type MarkdownProps } from '@lobehub/ui';
-import { Markdown } from '@lobehub/ui';
 import { memo, useMemo } from 'react';
 
+import { type MarkdownProps } from '@/components/Markdown';
+import { Markdown } from '@/components/Markdown';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
@@ -40,7 +40,6 @@ const MarkdownMessage = memo<MarkdownMessageProps>(
       >
         <Markdown
           fontSize={fontSize}
-          marginMultiple={2}
           variant="chat"
           {...rest}
           componentProps={resolvedComponentProps}

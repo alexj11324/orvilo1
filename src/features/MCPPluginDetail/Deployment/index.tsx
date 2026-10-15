@@ -1,5 +1,4 @@
 import { SiApple, SiLinux } from '@icons-pack/react-simple-icons';
-import { Microsoft } from '@lobehub/icons';
 import { startCase } from 'es-toolkit/compat';
 import {
   CheckIcon,
@@ -14,6 +13,7 @@ import { createElement, memo, type ReactNode, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { Microsoft } from '@/components/BrandIcons';
 import Descriptions from '@/components/Descriptions';
 import InlineTable from '@/components/InlineTable';
 import { Badge } from '@/components/reui/badge';

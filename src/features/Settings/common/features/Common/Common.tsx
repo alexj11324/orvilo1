@@ -1,6 +1,5 @@
 'use client';
 
-import { ImageSelect } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { Ban, Gauge, Monitor, Moon, Mouse, Sun, Waves, XIcon } from 'lucide-react';
 import { useTheme as useNextThemesTheme } from 'next-themes';
@@ -9,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import Form, { type FormGroupItemType } from '@/components/GroupForm';
+import { ImageSelect } from '@/components/ImagePreview';
 import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { Button } from '@/components/ui/button';
 import {

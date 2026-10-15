@@ -1,7 +1,8 @@
 import { SiApple, SiLinux } from '@icons-pack/react-simple-icons';
-import { Microsoft } from '@lobehub/icons';
 import { MonitorIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
+
+import { Microsoft } from '@/components/BrandIcons';
 
 export const getDeviceIcon = (platform: string | null | undefined, size = 18): ReactNode => {
   switch (platform) {

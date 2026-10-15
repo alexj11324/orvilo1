@@ -1,12 +1,12 @@
 'use client';
 
-import { Github } from '@lobehub/icons';
 import type { WorkSummaryItem } from '@orvilo/types';
 import { cn } from 'cn';
 import { CheckCircle2Icon, GitPullRequestIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Github } from '@/components/BrandIcons';
 import { Badge } from '@/components/reui/badge';
 import { getWorkTypeDescriptor } from '@/features/Work/descriptors';
 import LinearIcon from '@/features/Work/icons/LinearIcon';

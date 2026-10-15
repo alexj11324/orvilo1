@@ -1,6 +1,5 @@
 'use client';
 
-import { ChatHeader } from '@lobehub/ui/mobile';
 import { AGENT_CHAT_URL } from '@orvilo/const';
 import { clsx as cx } from 'cn';
 import { MessageSquarePlus } from 'lucide-react';
@@ -10,6 +9,7 @@ import { useNavigate } from 'react-router';
 
 import ActionIcon from '@/components/ActionIcon';
 import { ProductLogo } from '@/components/Branding';
+import { ChatHeader } from '@/components/ChatHeader';
 import { MOBILE_HEADER_ICON_SIZE } from '@/const/layoutTokens';
 import { resolveInboxAgentRouteId } from '@/features/AgentRoute/useResolvedAgentRouteId';
 import { useLastUsedAgentId } from '@/features/MobileHome/TopicListContent/useMobileTopics';

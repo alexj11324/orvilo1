@@ -30,13 +30,14 @@ function ContextMenuContent({
   align = 'start',
   alignOffset = 4,
   anchor,
+  collisionPadding,
   side = 'right',
   sideOffset = 0,
   ...props
 }: ContextMenuPrimitive.Popup.Props &
   Pick<
     ContextMenuPrimitive.Positioner.Props,
-    'align' | 'alignOffset' | 'anchor' | 'side' | 'sideOffset'
+    'align' | 'alignOffset' | 'anchor' | 'collisionPadding' | 'side' | 'sideOffset'
   >) {
   return (
     <ContextMenuPrimitive.Portal>
@@ -45,6 +46,7 @@ function ContextMenuContent({
         alignOffset={alignOffset}
         anchor={anchor}
         className={cn('isolate outline-none', POPUP_Z_CLASS)}
+        collisionPadding={collisionPadding}
         side={side}
         sideOffset={sideOffset}
       >

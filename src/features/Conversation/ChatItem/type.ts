@@ -1,15 +1,26 @@
-import type { EditableMessageProps, MetaData } from '@lobehub/ui/chat';
 import type { ComponentProps, ReactNode } from 'react';
 
 import type { AvatarProps } from '@/components/Avatar';
 import type { ErrorAlertProps } from '@/features/Conversation/components/ErrorAlert';
 
-/**
- * `MetaData` from `@lobehub/ui/chat` predates the agent's `name`/`title` split, so
- * it only carries `title`. Every caller in this app passes an agent meta that also
- * has `name` (see `useAgentMeta`), which is what the author label resolves from.
- */
-export type ChatItemAvatarMeta = MetaData & { agentId?: string; name?: string | null };
+/** Identity metadata consumed by the native chat header and avatar owner. */
+export interface ChatItemAvatarMeta {
+  agentId?: string;
+  avatar?: ReactNode;
+  backgroundColor?: string;
+  description?: string;
+  name?: string | null;
+  tags?: string[];
+  title?: string;
+}
+
+/** Optional editor labels retained for existing chat-row callers. */
+export interface ChatItemEditorText {
+  cancel?: string;
+  confirm?: string;
+  edit?: string;
+  title?: string;
+}
 
 export interface ChatItemProps extends Omit<ComponentProps<'div'>, 'children' | 'onChange'> {
   aboveMessage?: ReactNode;
@@ -73,7 +84,7 @@ export interface ChatItemProps extends Omit<ComponentProps<'div'>, 'children' | 
    * @description Whether to show the title of the chat item
    */
   showTitle?: boolean;
-  text?: EditableMessageProps['text'];
+  text?: ChatItemEditorText;
   /**
    * @description The timestamp of the chat item
    */

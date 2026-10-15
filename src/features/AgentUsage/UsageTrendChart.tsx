@@ -1,9 +1,9 @@
 'use client';
 
-import { BarChart, ChartTooltipFrame, ChartTooltipRow } from '@lobehub/charts';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { BarChart, ChartTooltipFrame, ChartTooltipRow } from '@/components/Charts';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -16,7 +16,7 @@ enum ShowType {
 }
 
 // Uncached input (dark) / cached input / output / cache write (light).
-const COLORS = ['#1668dc', '#1677ff', '#4096ff', '#91caff'];
+const COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)'];
 
 interface UsageTrendChartProps {
   buckets?: AgentUsageBucket[];
@@ -97,7 +97,7 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
                     <div className="flex flex-col gap-1 py-2 px-4">
                       {visibleItems.map(({ color, name, value }) => (
                         <ChartTooltipRow
-                          color={color ?? '#1668dc'}
+                          color={color ?? 'var(--chart-1)'}
                           key={String(name)}
                           name={String(name ?? '')}
                           value={

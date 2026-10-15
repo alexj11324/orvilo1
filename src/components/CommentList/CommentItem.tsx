@@ -1,13 +1,13 @@
 'use client';
 
-import { AgentIcon } from '@lobehub/icons';
-import { Markdown } from '@lobehub/ui';
 import { formatAbsoluteDate } from '@orvilo/utils/time';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import AgentIcon from '@/components/BrandIcons/AgentIcon';
+import { Markdown } from '@/components/Markdown';
 import Rate from '@/components/RatingOverview/Rate';
 import { type SkillCommentItem } from '@/types/discover';
 

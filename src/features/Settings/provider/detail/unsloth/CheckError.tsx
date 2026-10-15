@@ -1,5 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { BASE_PROVIDER_DOC_URL } from '@orvilo/const';
 import { useTranslation } from 'react-i18next';
 
@@ -11,12 +9,12 @@ export const CheckError: CheckErrorRender = ({ defaultError, error }) => {
   if (!error) return defaultError;
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {defaultError}
-      <Text type={'secondary'}>{t('unsloth.checker.guidance')}</Text>
+      <span className="text-sm text-muted-foreground">{t('unsloth.checker.guidance')}</span>
       <a href={`${BASE_PROVIDER_DOC_URL}/unsloth`} rel={'noreferrer'} target={'_blank'}>
         {t('unsloth.checker.setupGuide')}
       </a>
-    </Flexbox>
+    </div>
   );
 };

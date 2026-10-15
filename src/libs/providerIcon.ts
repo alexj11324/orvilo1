@@ -1,5 +1,5 @@
-// eslint-disable-next-line no-restricted-imports -- the lazy wrapper in @/components/OrviloIcons is the only importer
-import { ProviderCombine, ProviderIcon, providerMappings, Unsloth } from '@lobehub/icons';
+import { Unsloth } from '@/components/BrandIcons';
+import { ProviderCombine, ProviderIcon, providerMappings } from '@/components/BrandIcons/catalog';
 
 /**
  * @lobehub/icons 5.18 exports Unsloth but omits its provider mapping. Register

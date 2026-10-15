@@ -1,3 +1,7 @@
+import type { LocalHeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
+import { HETEROGENEOUS_AGENT_CONFIGS } from '@orvilo/heterogeneous-agents';
+import { DroidIcon } from '@orvilo/heterogeneous-agents/client';
+
 import {
   Amp,
   ClaudeCode,
@@ -11,10 +15,7 @@ import {
   Pi,
   Qoder,
   Trae,
-} from '@lobehub/icons';
-import type { LocalHeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
-import { HETEROGENEOUS_AGENT_CONFIGS } from '@orvilo/heterogeneous-agents';
-import { DroidIcon } from '@orvilo/heterogeneous-agents/client';
+} from '@/components/BrandIcons';
 
 import {
   type HeterogeneousAgentGuideConfig,

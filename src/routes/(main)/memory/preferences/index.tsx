@@ -1,10 +1,10 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { BrainCircuitIcon } from 'lucide-react';
 import { type FC } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import { MemoryListBoundary, useResetMemoryList } from '@/features/Memory';
 import { useScopedMemoryEditor } from '@/features/Memory/useScopedMemoryEditor';
 import NavHeader from '@/features/NavHeader';

@@ -1,10 +1,9 @@
 'use client';
 
-import { type GroupAvatarProps } from '@lobehub/ui';
-import { GroupAvatar } from '@lobehub/ui';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 
+import { GroupAvatar, type GroupAvatarProps } from '@/components/GroupAvatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import { useUserStore } from '@/store/user';
@@ -47,7 +46,7 @@ const GroupAvatarComponent = memo<GroupAvatarComponentProps>(
       return [
         {
           avatar: userAvatar || nickName || username,
-          style: { color: 'var(--ant-color-text)' },
+          style: { color: 'var(--foreground)' },
         },
         ...displayAvatars,
       ];

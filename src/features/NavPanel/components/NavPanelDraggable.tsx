@@ -1,11 +1,11 @@
 'use client';
 
-import { DraggablePanel } from '@lobehub/ui/base-ui';
 import { cn } from 'cn';
 import { type ReactNode } from 'react';
 import { Activity, memo, Suspense, useMemo, useRef } from 'react';
 
 import NavPanelUpgradeEntry from '@/business/client/features/NavPanelUpgradeEntry';
+import { DraggablePanel } from '@/components/DraggablePanel';
 import { isDesktop } from '@/const/version';
 import Footer from '@/features/HomeSidebar/Footer';
 import { useGlobalStore } from '@/store/global';

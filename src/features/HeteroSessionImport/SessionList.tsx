@@ -1,4 +1,3 @@
-import { ClaudeCode, Codex } from '@lobehub/icons';
 import type { HeteroSessionDigest } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cn } from 'cn';
@@ -6,6 +5,7 @@ import { Check, RotateCcw, X } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ClaudeCode, Codex } from '@/components/BrandIcons';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { Badge as Tag } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';

@@ -1,9 +1,8 @@
-import { Flexbox } from '@lobehub/ui';
-import { InputNumber } from '@lobehub/ui/base-ui';
 import { memo, useMemo } from 'react';
 import useMergeState from 'use-merge-value';
 
 import DiscreteSlider from '@/components/DiscreteSlider';
+import InputNumber from '@/components/InputNumber';
 
 const Kibi = 1024;
 const MAX_VALUE = 64 * Kibi; // 65536
@@ -57,17 +56,17 @@ const ReasoningTokenSlider = memo<MaxTokenSliderProps>(({ value, onChange, defau
   }, [token]);
 
   return (
-    <Flexbox horizontal align={'center'} gap={12} paddingInline={'4px 0'}>
-      <Flexbox flex={1}>
+    <div className="flex items-center gap-3 ps-1">
+      <div className="flex-1">
         <DiscreteSlider options={options} value={powValue} onChange={updateWithPowValue} />
-      </Flexbox>
+      </div>
       <div>
         <InputNumber
           changeOnWheel
+          className="w-20"
           max={MAX_VALUE}
           min={0}
           step={step}
-          style={{ width: 80 }}
           value={token}
           onChange={(e) => {
             if (!e && e !== 0) return;
@@ -75,7 +74,7 @@ const ReasoningTokenSlider = memo<MaxTokenSliderProps>(({ value, onChange, defau
           }}
         />
       </div>
-    </Flexbox>
+    </div>
   );
 });
 export default ReasoningTokenSlider;

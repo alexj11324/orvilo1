@@ -1,32 +1,30 @@
-import { type TypographyProps } from '@lobehub/ui';
-import { Typography as Typo } from '@lobehub/ui';
-import { mdxComponents } from '@lobehub/ui/mdx';
 import { type FC } from 'react';
-import Markdown, { type Components, type Options } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { type Components, type Options } from 'react-markdown';
+
+import {
+  allowedMarkdownTags,
+  Markdown,
+  type MarkdownProps,
+  Typography as NativeTypography,
+  type TypographyProps,
+} from '@/components/Markdown';
+import { mdxElements } from '@/components/Markdown/mdxElements';
 
 import CodeBlock from './CodeBlock';
 import Image from './Image';
 import Link from './Link';
 
 export const Typography = ({
-  children,
   mobile,
-  style,
-  ...rest
-}: { mobile?: boolean } & TypographyProps) => {
-  const headerMultiple = mobile ? 0.2 : 0.4;
-  return (
-    <Typo
-      fontSize={14}
-      headerMultiple={headerMultiple}
-      style={{ width: '100%', ...style }}
-      {...rest}
-    >
-      {children}
-    </Typo>
-  );
-};
+  className,
+  ...props
+}: { mobile?: boolean } & TypographyProps) => (
+  <NativeTypography
+    {...props}
+    className={className ? `w-full ${className}` : 'w-full'}
+    data-mdx-layout={mobile ? 'mobile' : 'document'}
+  />
+);
 
 interface CustomMDXProps {
   components?: Components;
@@ -39,19 +37,27 @@ export const CustomMDX: FC<CustomMDXProps> = ({
   mobile,
   source,
   components: extraComponents,
-  remarkPlugins: extraRemarkPlugins,
+  remarkPlugins,
 }) => {
-  const components: Components = {
-    ...(mdxComponents as Components),
-    a: Link as Components['a'],
-    img: Image as Components['img'],
-    pre: CodeBlock as Components['pre'],
+  // Both engines pass the same intrinsic props + HAST node to these actual owners.
+  const components = {
+    ...mdxElements,
+    a: Link,
+    img: Image,
+    pre: CodeBlock,
     ...extraComponents,
-  };
-
+  } as unknown as NonNullable<MarkdownProps['components']>;
   return (
     <Typography mobile={mobile}>
-      <Markdown components={components} remarkPlugins={[remarkGfm, ...(extraRemarkPlugins ?? [])]}>
+      <Markdown
+        components={components}
+        enableStream={false}
+        remarkPlugins={remarkPlugins}
+        allowedTags={allowedMarkdownTags([
+          ...Object.keys(mdxElements),
+          ...Object.keys(extraComponents ?? {}),
+        ])}
+      >
         {source}
       </Markdown>
     </Typography>

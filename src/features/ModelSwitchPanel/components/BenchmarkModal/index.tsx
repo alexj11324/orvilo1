@@ -1,5 +1,3 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { DropdownMenu } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { ChevronDownIcon, ChevronUpIcon, InfoIcon, PlusIcon, XIcon } from 'lucide-react';
 import type { ModelRating } from 'model-bank';
@@ -10,6 +8,13 @@ import { useTranslation } from 'react-i18next';
 import { useBusinessModelRating } from '@/business/client/hooks/useBusinessModelRating';
 import { createModal } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { SimpleTooltip as Tooltip } from '@/components/ui/tooltip';
 import { useEnabledChatModels } from '@/hooks/useEnabledChatModels';
 
 import type { RatingDimensionKey } from '../ModelRatingRadar';
@@ -155,15 +160,15 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
       type={'button'}
       variant="ghost"
     >
-      <Icon className="size-4" icon={PlusIcon} size={16} />
+      <PlusIcon aria-hidden="true" className="size-4" />
       {t('ModelSwitchPanel.detail.rating.modal.compare.add')}
     </Button>
   );
 
   return (
-    <Flexbox gap={16} paddingBlock={'0 8px'}>
+    <div className="flex flex-col gap-4 pb-2">
       {/* selected model chips + compare picker */}
-      <Flexbox horizontal align={'center'} gap={8} style={{ flexWrap: 'wrap' }}>
+      <div className="flex flex-wrap items-center gap-2">
         {selected.map((model) => (
           <span className={styles.chip} key={model.id}>
             <span className={styles.colorDot} style={{ background: model.color }} />
@@ -177,21 +182,32 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
                 variant="ghost"
                 onClick={() => setSelectedIds((prev) => prev.filter((id) => id !== model.id))}
               >
-                <Icon className="size-4" icon={XIcon} size={16} />
+                <XIcon aria-hidden="true" className="size-4" />
               </Button>
             )}
           </span>
         ))}
         {candidates.length > 0 &&
           (canAdd ? (
-            <DropdownMenu
-              items={candidates.map((model) => ({
-                key: model.id,
-                label: model.displayName,
-                onClick: () => setSelectedIds((prev) => [...prev, model.id]),
-              }))}
-            >
-              {addButton}
+            <DropdownMenu>
+              <DropdownMenuTrigger render={addButton} />
+              <DropdownMenuContent>
+                {candidates.map((model) => (
+                  <DropdownMenuItem
+                    className="min-h-8"
+                    key={model.id}
+                    onClick={() =>
+                      setSelectedIds((prev) =>
+                        prev.includes(model.id) || prev.length >= MAX_COMPARE_MODELS
+                          ? prev
+                          : [...prev, model.id],
+                      )
+                    }
+                  >
+                    {model.displayName}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <Tooltip
@@ -202,7 +218,7 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
               {addButton}
             </Tooltip>
           ))}
-      </Flexbox>
+      </div>
 
       <CompareRadar dimensions={dimensions} series={series} />
 
@@ -305,20 +321,26 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
       )}
 
       {/* scoring rules & caveats — collapsed footer entry */}
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         <Button
+          aria-controls="model-benchmark-rules"
+          aria-expanded={rulesOpen}
           className={styles.rulesToggle}
           size="normal"
           type={'button'}
           variant="ghost"
           onClick={() => setRulesOpen((prev) => !prev)}
         >
-          <Icon className="size-4" icon={InfoIcon} size={16} />
+          <InfoIcon aria-hidden="true" className="size-4" />
           {t('ModelSwitchPanel.detail.rating.modal.rules.title')}
-          <Icon className="size-4" icon={rulesOpen ? ChevronUpIcon : ChevronDownIcon} size={16} />
+          {rulesOpen ? (
+            <ChevronUpIcon aria-hidden="true" className="size-4" />
+          ) : (
+            <ChevronDownIcon aria-hidden="true" className="size-4" />
+          )}
         </Button>
         {rulesOpen && (
-          <ul className={styles.rulesList}>
+          <ul className={styles.rulesList} id="model-benchmark-rules">
             {RULE_KEYS.map((key) => (
               <li className={styles.ruleItem} key={key}>
                 {t(`ModelSwitchPanel.detail.rating.modal.rules.${key}`)}
@@ -326,8 +348,8 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
             ))}
           </ul>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

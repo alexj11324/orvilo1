@@ -1,9 +1,9 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
 import { type SuggestMode } from '@/features/SuggestQuestions';

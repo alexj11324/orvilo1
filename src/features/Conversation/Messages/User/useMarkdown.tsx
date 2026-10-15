@@ -1,6 +1,8 @@
-import { type MarkdownProps } from '@lobehub/ui';
 import { type ReactNode } from 'react';
 import { useMemo } from 'react';
+
+import { allowedMarkdownTags } from '@/components/Markdown';
+import { type MarkdownProps } from '@/components/Markdown';
 
 import { markdownElements } from '../../Markdown/plugins';
 import ContentPreview from './components/ContentPreview';
@@ -30,12 +32,12 @@ export const useMarkdown = (id: string): Partial<MarkdownProps> => {
   return useMemo(
     () =>
       ({
-        components: Object.fromEntries(
-          markdownElements.map((element) => {
-            const Component = element.Component;
-            return [element.tag, (props: any) => <Component {...props} id={id} />];
-          }),
-        ) as any,
+        components,
+        allowedTags: allowedMarkdownTags(
+          markdownElements
+            .filter((element) => element.scope !== 'assistant')
+            .map((element) => element.tag),
+        ),
         customRender: (dom: ReactNode, { text }: { text: string }) => {
           if (text.length > 30_000) return <ContentPreview content={text} id={id} />;
           return dom;
@@ -44,6 +46,6 @@ export const useMarkdown = (id: string): Partial<MarkdownProps> => {
         rehypePlugins,
         remarkPlugins,
       }) satisfies Partial<MarkdownProps>,
-    [components],
+    [components, id],
   );
 };

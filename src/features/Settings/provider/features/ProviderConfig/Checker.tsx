@@ -1,6 +1,5 @@
 'use client';
 
-import { Highlighter } from '@lobehub/ui';
 import { type ChatMessageError } from '@orvilo/types';
 import { TraceNameMap } from '@orvilo/types';
 import { isRecord, pickTrimmedString } from '@orvilo/utils/object';
@@ -9,6 +8,7 @@ import { type ReactNode } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Highlighter } from '@/components/Highlighter';
 import { ModelIcon } from '@/components/OrviloIcons';
 import { Badge } from '@/components/reui/badge';
 import Select from '@/components/Select';

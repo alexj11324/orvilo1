@@ -1,6 +1,5 @@
 'use client';
 
-import { HotkeyInput } from '@lobehub/ui';
 import { HotkeyGroupEnum } from '@orvilo/const/hotkeys';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
@@ -8,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import Form, { type FormGroupItemType } from '@/components/GroupForm';
+import { HotkeyInput } from '@/components/HotkeyInput';
 import SettingsSectionSkeleton from '@/components/Skeleton/Settings/Section';
 import { toast } from '@/components/toast';
 import { HOTKEYS_REGISTRATION } from '@/const/hotkeys';

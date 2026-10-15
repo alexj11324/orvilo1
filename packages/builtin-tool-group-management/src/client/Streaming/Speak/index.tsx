@@ -1,8 +1,9 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { Markdown } from '@/components/Markdown';
 
 import type { SpeakParams } from '../../../types';
 
@@ -14,7 +15,7 @@ export const SpeakStreaming = memo<BuiltinStreamingProps<SpeakParams>>(({ args }
   return (
     <div className="rounded-(--radius-card) bg-fill-quaternary p-3">
       <div className="text-(length:--text-dense) text-muted-foreground">
-        <Markdown animated variant={'chat'}>
+        <Markdown animated streaming variant={'chat'}>
           {instruction}
         </Markdown>
       </div>

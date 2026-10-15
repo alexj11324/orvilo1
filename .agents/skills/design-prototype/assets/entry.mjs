@@ -4,7 +4,6 @@
 // single IIFE global. Bundled from THIS repo's node_modules, so versions match
 // production exactly. Missing a component? Add it below and rebuild (~2s):
 //   bash .agents/skills/design-prototype/scripts/build-runtime.sh
-import { Amp, ClaudeCode, Codex, HermesAgent, OpenClaw, OpenCode } from '@lobehub/icons';
 import {
   ActionIcon,
   Alert,
@@ -65,6 +64,15 @@ import * as react from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
 import * as reactDom from 'react-dom';
 import * as reactDomClient from 'react-dom/client';
+
+import {
+  Amp,
+  ClaudeCode,
+  Codex,
+  HermesAgent,
+  OpenClaw,
+  OpenCode,
+} from '../../../../packages/brand-icons/src';
 
 export default {
   '@lobehub/ui': {

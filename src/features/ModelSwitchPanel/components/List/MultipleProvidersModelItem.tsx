@@ -1,24 +1,18 @@
-import {
-  DropdownMenuGroup,
-  DropdownMenuGroupLabel,
-  DropdownMenuItem,
-  DropdownMenuItemIcon,
-  DropdownMenuItemLabel,
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  DropdownMenuSubmenuRoot,
-  DropdownMenuSubmenuTrigger,
-  Flexbox,
-  menuSharedStyles,
-} from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import { cn } from 'cn';
 import { Check } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelItemRender, ProviderItemRender } from '@/components/ModelSelect';
+import { Badge } from '@/components/reui/badge';
+import {
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+} from '@/components/ui/dropdown-menu';
 
 import { styles } from '../../styles';
 import { type ModelWithProviders } from '../../types';
@@ -76,15 +70,15 @@ export const MultipleProvidersModelItem = memo<MultipleProvidersModelItemProps>(
     };
 
     return (
-      <DropdownMenuSubmenuRoot
+      <DropdownMenuSub
         open={submenuOpen}
         onOpenChange={(open) => {
           if (allRestricted && open) return;
           setSubmenuOpen(open);
         }}
       >
-        <DropdownMenuSubmenuTrigger
-          className={cn(menuSharedStyles.item, styles.menuRow, isActive && styles.menuItemActive)}
+        <DropdownMenuSubTrigger
+          className={cn(styles.menuRow, isActive && styles.menuItemActive)}
           onClick={() => {
             if (defaultProviderRestricted) {
               onRestrictedModelClick?.();
@@ -105,66 +99,66 @@ export const MultipleProvidersModelItem = memo<MultipleProvidersModelItemProps>(
             proBadgeLabel={defaultProviderRestricted ? proLabel : undefined}
             showInfoTag={showInfoTag}
           />
-        </DropdownMenuSubmenuTrigger>
-        <DropdownMenuPortal>
-          <DropdownMenuPositioner anchor={null} placement="right" sideOffset={12}>
-            <DropdownMenuPopup className={cn(styles.detailPopup, styles.dropdownMenu)}>
-              <ModelDetailPanel
-                model={data.model.id}
-                provider={(activeProvider ?? data.providers[0]).id}
-              />
-              <DropdownMenuGroup>
-                <DropdownMenuGroupLabel className={styles.groupCaption}>
-                  {t('ModelSwitchPanel.useModelFrom')}
-                </DropdownMenuGroupLabel>
-                {data.providers.map((p) => {
-                  const key = menuKey(p.id, data.model.id);
-                  const isProviderActive = isActive ? activeKey === key : p.id === 'orvilo';
-                  const providerRestricted = isModelRestricted?.(data.model.id, p.id);
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent
+          className={cn(styles.detailPopup, styles.dropdownMenu)}
+          side="right"
+          sideOffset={12}
+        >
+          <ModelDetailPanel
+            model={data.model.id}
+            provider={(activeProvider ?? data.providers[0]).id}
+          />
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className={styles.groupCaption}>
+              {t('ModelSwitchPanel.useModelFrom')}
+            </DropdownMenuLabel>
+            {data.providers.map((p) => {
+              const key = menuKey(p.id, data.model.id);
+              const isProviderActive = isActive ? activeKey === key : p.id === 'orvilo';
+              const providerRestricted = isModelRestricted?.(data.model.id, p.id);
 
-                  return (
-                    <DropdownMenuItem
-                      className={styles.menuRow}
-                      key={key}
-                      onClick={() => {
-                        if (providerRestricted) {
-                          onRestrictedModelClick?.();
-                          onClose();
-                          return;
-                        }
-                        void selectModel(p.id);
-                      }}
-                    >
-                      <DropdownMenuItemIcon className={styles.menuGlyph}>
-                        {isProviderActive ? <Check size={16} /> : null}
-                      </DropdownMenuItemIcon>
-                      <DropdownMenuItemLabel>
-                        <Flexbox horizontal align="center" gap={8}>
-                          <Flexbox horizontal align="center" className="flex-none">
-                            <ProviderItemRender
-                              logo={p.logo}
-                              name={p.name}
-                              provider={p.id}
-                              size={20}
-                              source={p.source}
-                              type={'avatar'}
-                            />
-                          </Flexbox>
-                          {providerRestricted && proLabel && (
-                            <Tag color="gold" size="small">
-                              {proLabel}
-                            </Tag>
-                          )}
-                        </Flexbox>
-                      </DropdownMenuItemLabel>
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuGroup>
-            </DropdownMenuPopup>
-          </DropdownMenuPositioner>
-        </DropdownMenuPortal>
-      </DropdownMenuSubmenuRoot>
+              return (
+                <DropdownMenuItem
+                  className={styles.menuRow}
+                  key={key}
+                  onClick={() => {
+                    if (providerRestricted) {
+                      onRestrictedModelClick?.();
+                      onClose();
+                      return;
+                    }
+                    void selectModel(p.id);
+                  }}
+                >
+                  <span className={styles.menuGlyph}>
+                    {isProviderActive ? <Check size={16} /> : null}
+                  </span>
+                  <span className="flex flex-1">
+                    <span className="flex items-center gap-2">
+                      <span className="flex flex-none items-center">
+                        <ProviderItemRender
+                          logo={p.logo}
+                          name={p.name}
+                          provider={p.id}
+                          size={20}
+                          source={p.source}
+                          type={'avatar'}
+                        />
+                      </span>
+                      {providerRestricted && proLabel && (
+                        <Badge size="sm" variant="warning-light">
+                          {proLabel}
+                        </Badge>
+                      )}
+                    </span>
+                  </span>
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuGroup>
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
     );
   },
 );

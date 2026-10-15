@@ -1,11 +1,11 @@
 'use client';
 
-import { Image, PreviewGroup } from '@lobehub/ui';
 import type { BuiltinRender, BuiltinRenderProps } from '@orvilo/types';
 import { cn } from 'cn';
 import { Globe } from 'lucide-react';
 import { memo } from 'react';
 
+import { Image, PreviewGroup } from '@/components/ImagePreview';
 import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 import {
@@ -96,9 +96,9 @@ const Screenshot = memo<BrowserMcpRenderProps>(({ content, pluginState }) => {
                 width either: upscaling a narrow capture just makes it blurry. */}
             <Image
               alt={'Browser screenshot'}
+              className="max-w-full"
               maxHeight={600}
               src={image.url}
-              style={{ maxWidth: '100%' }}
             />
           </div>
         ))}

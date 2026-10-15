@@ -1,10 +1,8 @@
-import {
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  stopPropagation,
-} from '@lobehub/ui';
+import { Menu } from '@base-ui/react/menu';
 import { memo } from 'react';
+
+import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
+import { getFloatingCollisionPadding } from '@/libs/contextMenu/collisionPadding';
 
 import { PanelContent } from './components/PanelContent';
 import { styles } from './styles';
@@ -24,18 +22,29 @@ interface ModelSwitchSubmenuPopupProps {
  */
 export const ModelSwitchSubmenuPopup = memo<ModelSwitchSubmenuPopupProps>(
   ({ model, onModelChange, onOpenChange, provider }) => (
-    <DropdownMenuPortal>
-      <DropdownMenuPositioner alignOffset={-4} anchor={null} placement="right" sideOffset={8}>
-        <DropdownMenuPopup className={styles.container} onKeyDown={stopPropagation}>
+    <Menu.Portal>
+      <Menu.Positioner
+        align="center"
+        alignOffset={-4}
+        anchor={null}
+        className={POPUP_Z_CLASS}
+        collisionPadding={getFloatingCollisionPadding()}
+        side="right"
+        sideOffset={8}
+      >
+        <Menu.Popup
+          className={`${POPUP_Z_CLASS} rounded-(--radius-overlay) bg-popover text-popover-foreground shadow-(--shadow-popover) outline-none ${styles.container}`}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
           <PanelContent
             model={model}
             provider={provider}
             onModelChange={onModelChange}
             onOpenChange={onOpenChange}
           />
-        </DropdownMenuPopup>
-      </DropdownMenuPositioner>
-    </DropdownMenuPortal>
+        </Menu.Popup>
+      </Menu.Positioner>
+    </Menu.Portal>
   ),
 );
 

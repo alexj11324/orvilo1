@@ -1,9 +1,9 @@
-import { Markdown } from '@lobehub/ui';
 import { type ToolManifestSettings } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
 import Form from '@/components/GroupForm';
+import { Markdown } from '@/components/Markdown';
 import { useToolStore } from '@/store/tool';
 import { pluginSelectors } from '@/store/tool/selectors';
 

@@ -1,9 +1,9 @@
 'use client';
 
-import { DraggablePanel, type DraggablePanelProps } from '@lobehub/ui/base-ui';
 import { type PropsWithChildren } from 'react';
 import { Activity, memo, useState } from 'react';
 
+import { DraggablePanel, type DraggablePanelProps } from '@/components/DraggablePanel';
 import { usePortalPanelWidth } from '@/features/Portal/usePortalPanelWidth';
 import { useIsLargeViewport } from '@/hooks/useIsMobile';
 import { useChatStore } from '@/store/chat';

@@ -1,8 +1,9 @@
-import { type DropdownMenuPlacement } from '@lobehub/ui';
 import { type AiModelForSelect } from 'model-bank';
 import { type ComponentType } from 'react';
 
 import { type EnabledProviderWithModels } from '@/types/aiProvider';
+
+import { type DropdownPlacement as NativeDropdownPlacement } from './menuPlacement';
 
 export type GroupMode = 'byModel' | 'byProvider';
 
@@ -45,7 +46,7 @@ export type ListItem =
       type: 'no-provider';
     };
 
-export type DropdownPlacement = DropdownMenuPlacement;
+export type DropdownPlacement = NativeDropdownPlacement;
 
 /**
  * One row of a flat, non-model-bank model list (Prime's provider-binding routes

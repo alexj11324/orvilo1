@@ -1,12 +1,12 @@
 'use client';
 
-import { Github } from '@lobehub/icons';
 import { cn } from 'cn';
 import { CircleIcon, DotIcon, DownloadIcon, ScaleIcon, StarIcon } from 'lucide-react';
 import { memo, useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Github } from '@/components/BrandIcons';
 import OfficialIcon from '@/components/OfficialIcon';
 import { Badge } from '@/components/reui/badge';
 import { buttonVariants } from '@/components/ui/button';

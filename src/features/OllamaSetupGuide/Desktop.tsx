@@ -1,15 +1,14 @@
-import { Ollama } from '@lobehub/icons';
-import { Center } from '@lobehub/ui';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { Ollama } from '@/components/BrandIcons';
 import FormAction from '@/components/FormAction';
 
 const OllamaDesktopSetupGuide = memo(() => {
   const { t } = useTranslation('components');
 
   return (
-    <Center gap={16} paddingBlock={32} style={{ maxWidth: 300, width: '100%' }}>
+    <div className="flex w-full max-w-75 flex-col items-center justify-center gap-4 py-8">
       <FormAction
         avatar={<Ollama color={'var(--ant-color-primary)'} size={64} />}
         title={t('OllamaSetupGuide.install.title')}
@@ -26,7 +25,7 @@ const OllamaDesktopSetupGuide = memo(() => {
           </span>
         }
       />
-    </Center>
+    </div>
   );
 });
 

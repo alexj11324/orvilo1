@@ -1,5 +1,4 @@
 'use client';
-import { Markdown } from '@lobehub/ui';
 import type { ProjectHealth, ProjectUpdate, ProjectUpdateKind } from '@orvilo/types';
 import { cn } from 'cn';
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- project-update composer affordance
@@ -9,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import Avatar from '@/components/Avatar';
+import { Markdown } from '@/components/Markdown';
 import { confirmModal } from '@/components/Modal';
 import { Badge } from '@/components/reui/badge';
 import { toast } from '@/components/toast';

@@ -1,4 +1,4 @@
-import { Flexbox } from '@lobehub/ui';
+import { cn } from 'cn';
 import { type ComponentType, type FC } from 'react';
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -106,13 +106,11 @@ export const List: FC<ListProps> = ({
   }, [listHeight, activeKey]);
 
   return (
-    <Flexbox
-      className={styles.list}
-      flex={1}
+    <div
+      className={cn('flex min-h-0 flex-1 flex-col', styles.list)}
       ref={listRef}
       // No fixed height: flex-shrink within the height-capped panel so the list
       // scrolls internally on short viewports while the toolbar stays pinned.
-      style={{ minHeight: 0 }}
       onScroll={handleListScroll}
     >
       {listItems.map((item, index) => {
@@ -168,6 +166,6 @@ export const List: FC<ListProps> = ({
           renderItem(itemKey)
         );
       })}
-    </Flexbox>
+    </div>
   );
 };

@@ -1,9 +1,9 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { memo } from 'react';
 
+import { Markdown } from '@/components/Markdown';
 import { Badge as Tag } from '@/components/reui/badge';
 
 import type { CreateAgentParams } from '../../../types';
@@ -57,7 +57,7 @@ export const CreateAgentStreaming = memo<BuiltinStreamingProps<CreateAgentParams
             className="rounded-(--radius-card) border bg-card"
             style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}
           >
-            <Markdown animated variant={'chat'}>
+            <Markdown animated streaming variant={'chat'}>
               {systemRole}
             </Markdown>
           </div>

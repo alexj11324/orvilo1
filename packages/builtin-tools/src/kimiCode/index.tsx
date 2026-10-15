@@ -1,6 +1,5 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import {
   createEditLocalFileInspector,
   createGlobLocalFilesInspector,
@@ -22,6 +21,7 @@ import path from 'path-browserify-esm';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { CodeBlock, CodeBlockCopyButton, parseUnifiedDiff } from '@/components/ui/code-block';
 import { Skeleton } from '@/components/ui/skeleton';
 

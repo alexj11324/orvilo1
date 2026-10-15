@@ -1,4 +1,3 @@
-import { Cursor } from '@lobehub/icons';
 import type { OpenInAppId } from '@orvilo/electron-client-ipc';
 import {
   AppleIcon,
@@ -12,6 +11,8 @@ import {
   TerminalIcon,
 } from 'lucide-react';
 import type { FC } from 'react';
+
+import { Cursor } from '@/components/BrandIcons';
 
 // Renderer-side mapping from AppId → icon component. The displayName comes from
 // the main-process detectApps result (the source of truth), so we only map icons here.

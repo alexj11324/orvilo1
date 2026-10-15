@@ -1,20 +1,24 @@
-import { Flexbox, Tooltip, TooltipGroup } from '@lobehub/ui';
-import { Button, Select, type SelectProps, Switch, Text, toast } from '@lobehub/ui/base-ui';
 import { clsx } from 'cn';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from 'react-responsive';
 
+import { useFormControlContext } from '@/components/FormControlContext';
 import { ModelItemRender, ProviderItemRender } from '@/components/ModelSelect';
 import { ModelIcon } from '@/components/OrviloIcons';
 import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { type EnabledProviderWithModels } from '@/types/aiProvider';
 
 import nativeStyles from './ModelSelect.module.css';
+import Select, { type ModelSelectControlProps as SelectProps } from './ModelSelectControl';
 import { resolveEnableTargetProviderId, resolveStaleModelState } from './resolveStaleModelState';
 
 /**
@@ -100,6 +104,8 @@ const ModelSelect = memo<ModelSelectProps>(
   }) => {
     const { t } = useTranslation('components');
     const enableSwitchId = useId();
+    const formControl = useFormControlContext();
+    const controlDisabled = disabled ?? formControl.disabled;
     const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
     const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
     const disableMotion = animationMode === 'disabled' || prefersReducedMotion;
@@ -187,6 +193,7 @@ const ModelSelect = memo<ModelSelectProps>(
     ]);
 
     const handleEnable = useCallback(async () => {
+      if (controlDisabled) return;
       // Prefer the provider the selection is persisted under so every surface
       // referencing `${provider}/${model}` recovers at once; the builtin-bank
       // provider is only a fallback for a persisted provider that no longer exists.
@@ -221,6 +228,7 @@ const ModelSelect = memo<ModelSelectProps>(
         setEnabling(false);
       }
     }, [
+      controlDisabled,
       enabledAiProviders,
       enabledList,
       modelType,
@@ -242,20 +250,18 @@ const ModelSelect = memo<ModelSelectProps>(
       // the hint stay out of it: a <button> inside the trigger <button> is invalid
       // HTML. They live on `popupLabel`, which only `optionRender` reads.
       const renderStaleLabel = (withPopupExtras: boolean) => (
-        <Flexbox className="w-full" gap={4}>
-          <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex w-full flex-col gap-1">
+          <div className="flex items-center gap-2">
             <ModelIcon model={value.model} size={20} />
-            <Text ellipsis fontSize={14} lineHeight={'22px'}>
-              {meta?.displayName || value.model}
-            </Text>
-            <Tooltip title={t(`ModelSelect.staleModel.${status}.tooltip`, { successorName })}>
+            <span className="min-w-0 truncate text-sm">{meta?.displayName || value.model}</span>
+            <SimpleTooltip title={t(`ModelSelect.staleModel.${status}.tooltip`, { successorName })}>
               <Badge
                 className={`${STALE_TAG_CLASSNAME} h-auto min-h-5 flex-none cursor-default text-xs leading-5`}
                 variant={status === 'removed' ? 'warning-light' : 'secondary'}
               >
                 {t(`ModelSelect.staleModel.${status}.tag`)}
               </Badge>
-            </Tooltip>
+            </SimpleTooltip>
             {withPopupExtras && status === 'notEnabled' && (
               <>
                 <span className="flex-1" />
@@ -278,23 +284,23 @@ const ModelSelect = memo<ModelSelectProps>(
                   </label>
                   <Switch
                     checked={false}
+                    disabled={enabling || controlDisabled}
                     id={enableSwitchId}
-                    loading={enabling}
-                    size={'small'}
-                    onChange={() => {
+                    size="sm"
+                    onCheckedChange={() => {
                       void handleEnable();
                     }}
                   />
                 </span>
               </>
             )}
-          </Flexbox>
+          </div>
           {withPopupExtras && (
             <span className="text-sm leading-5.5 whitespace-normal text-muted-foreground">
               {t(`ModelSelect.staleModel.${status}.hint`, { successorName })}
             </span>
           )}
-        </Flexbox>
+        </div>
       );
 
       const currentOption = {
@@ -317,16 +323,16 @@ const ModelSelect = memo<ModelSelectProps>(
         ? {
             __stale: true,
             label: (
-              <Flexbox horizontal>
+              <div className="flex">
                 {/* Visual-only button: the sentinel option row owns the click (via
                  * onChange), so pointer events are disabled to keep one hit target. */}
                 <Button
                   className={`pointer-events-none transition-orvilo-model-remedy ${nativeStyles.remedy}`}
-                  size={'middle'}
+                  size="normal"
                 >
                   {actionLabel}
                 </Button>
-              </Flexbox>
+              </div>
             ),
             value: STALE_ACTION_VALUE,
           }
@@ -339,14 +345,14 @@ const ModelSelect = memo<ModelSelectProps>(
         },
         ...(options ?? []),
       ] as SelectProps['options'];
-    }, [enableSwitchId, enabling, handleEnable, options, staleState, t, value]);
+    }, [controlDisabled, enableSwitchId, enabling, handleEnable, options, staleState, t, value]);
 
     return (
-      <TooltipGroup>
+      <>
         <Select
           allowClear={allowClear}
           defaultValue={value ? `${value.provider}/${value.model}` : null}
-          disabled={disabled}
+          disabled={controlDisabled}
           labelRender={labelRender}
           loading={loading || enabling}
           options={finalOptions}
@@ -413,7 +419,7 @@ const ModelSelect = memo<ModelSelectProps>(
             onChange?.({ model, provider: (option as unknown as ModelOption).provider });
           }}
         />
-      </TooltipGroup>
+      </>
     );
   },
 );

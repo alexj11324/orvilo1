@@ -1,11 +1,11 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { cn } from 'cn';
 import { memo } from 'react';
 
 import Avatar from '@/components/Avatar';
+import { Markdown } from '@/components/Markdown';
 import { Separator } from '@/components/ui/separator';
 import ToolTag from '@/features/ToolTag';
 
@@ -26,7 +26,7 @@ export const BatchCreateAgentsStreaming = memo<BuiltinStreamingProps<BatchCreate
     if (!agents || agents.length === 0) return null;
 
     return (
-      <div className="w-full rounded-(--ant-border-radius) border border-sidebar-border bg-card">
+      <div className="w-full rounded-(--radius-card) border border-sidebar-border bg-card">
         {agents.map((agent, index) => (
           <div className={cn('flex', 'items-start', 'gap-2', styles.item)} key={index}>
             <div className={styles.index}>{index + 1}.</div>
@@ -49,7 +49,7 @@ export const BatchCreateAgentsStreaming = memo<BuiltinStreamingProps<BatchCreate
               <Separator />
               {agent.systemRole && (
                 <div className={styles.systemRole}>
-                  <Markdown animated variant={'chat'}>
+                  <Markdown animated streaming variant={'chat'}>
                     {agent.systemRole}
                   </Markdown>
                 </div>

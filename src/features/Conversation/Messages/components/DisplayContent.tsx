@@ -1,7 +1,7 @@
-import { type MarkdownProps } from '@lobehub/ui';
 import { deserializeParts } from '@orvilo/utils';
 import { memo } from 'react';
 
+import { type MarkdownProps } from '@/components/Markdown';
 import { LOADING_FLAT } from '@/const/message';
 import MarkdownMessage from '@/features/Conversation/Markdown';
 

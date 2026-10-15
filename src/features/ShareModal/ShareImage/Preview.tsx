@@ -1,9 +1,9 @@
-import { Markdown } from '@lobehub/ui';
 import { agentDisplayName, type ConversationContext, type UIChatMessage } from '@orvilo/types';
 import { cn } from 'cn';
 import { memo } from 'react';
 
 import { ProductLogo } from '@/components/Branding';
+import { Markdown } from '@/components/Markdown';
 import { ModelTag } from '@/components/OrviloIcons';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import PluginTag from '@/features/PluginTag';

@@ -1,4 +1,3 @@
-import { Apple, Aws, Google, Microsoft } from '@lobehub/icons';
 import {
   Auth0,
   Authelia,
@@ -11,6 +10,8 @@ import {
   Zitadel,
 } from '@lobehub/ui/icons';
 import { User } from 'lucide-react';
+
+import { Apple, Aws, Google, Microsoft } from '@/components/BrandIcons';
 
 const iconComponents: { [key: string]: any } = {
   'apple': Apple,

@@ -1,3 +1,16 @@
+import type {
+  HeterogeneousAgentType,
+  LocalHeterogeneousAgentType,
+  RemoteHeterogeneousAgentType,
+} from '@orvilo/heterogeneous-agents';
+import {
+  isRemoteHeterogeneousType,
+  REMOTE_HETEROGENEOUS_AGENT_CONFIGS,
+} from '@orvilo/heterogeneous-agents';
+import { DroidIcon, HETEROGENEOUS_AGENT_CLIENT_CONFIGS } from '@orvilo/heterogeneous-agents/client';
+import type { HeterogeneousReasoningEffort } from '@orvilo/types';
+import { HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
+
 import {
   Amp,
   ClaudeCode,
@@ -13,19 +26,7 @@ import {
   Pi,
   Qoder,
   Trae,
-} from '@lobehub/icons';
-import type {
-  HeterogeneousAgentType,
-  LocalHeterogeneousAgentType,
-  RemoteHeterogeneousAgentType,
-} from '@orvilo/heterogeneous-agents';
-import {
-  isRemoteHeterogeneousType,
-  REMOTE_HETEROGENEOUS_AGENT_CONFIGS,
-} from '@orvilo/heterogeneous-agents';
-import { DroidIcon, HETEROGENEOUS_AGENT_CLIENT_CONFIGS } from '@orvilo/heterogeneous-agents/client';
-import type { HeterogeneousReasoningEffort } from '@orvilo/types';
-import { HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
+} from '@/components/BrandIcons';
 
 /**
  * One row in the connect wizard's agent inventory. `kind` mirrors the domain

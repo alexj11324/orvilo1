@@ -1,5 +1,4 @@
-import { type MermaidProps } from '@lobehub/ui';
-import { Mermaid } from '@lobehub/ui';
+import { Mermaid, type MermaidProps } from '@/components/Mermaid';
 
 const code = `sequenceDiagram
     Alice->>John: Hello John, how are you?
@@ -9,14 +8,8 @@ const code = `sequenceDiagram
 
 const MermaidPreview = ({ theme }: { theme?: MermaidProps['theme'] }) => {
   return (
-    <div
-      className={'flex min-w-0'}
-      style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
-    >
-      <div
-        className={'flex min-w-0'}
-        style={{ flexDirection: 'column', width: 480, maxWidth: '100%' }}
-      >
+    <div className="flex min-w-0 flex-col items-center justify-center">
+      <div className="flex w-120 max-w-full min-w-0 flex-col">
         <Mermaid theme={theme}>{code}</Mermaid>
       </div>
     </div>

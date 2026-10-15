@@ -1,4 +1,10 @@
 import {
+  DroidIcon,
+  type HeterogeneousAgentClientConfig,
+} from '@orvilo/heterogeneous-agents/client';
+import { createElement } from 'react';
+
+import {
   Amp,
   ClaudeCode,
   CodeBuddy,
@@ -11,12 +17,7 @@ import {
   Pi,
   Qoder,
   Trae,
-} from '@lobehub/icons';
-import {
-  DroidIcon,
-  type HeterogeneousAgentClientConfig,
-} from '@orvilo/heterogeneous-agents/client';
-import { createElement } from 'react';
+} from '@/components/BrandIcons';
 
 import type { RecommendedAction } from './types';
 

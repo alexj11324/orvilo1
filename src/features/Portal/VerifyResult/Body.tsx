@@ -1,4 +1,3 @@
-import { Markdown } from '@lobehub/ui';
 import type { VerifierType } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cn } from 'cn';
@@ -7,6 +6,7 @@ import type { ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { Button } from '@/components/ui/button';
 import {
   useVerifierTracing,

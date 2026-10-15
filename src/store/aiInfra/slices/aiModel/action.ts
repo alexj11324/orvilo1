@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
 import type {
@@ -10,6 +9,7 @@ import type {
 } from 'model-bank';
 import type { SWRResponse } from 'swr';
 
+import { toast } from '@/components/toast';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { aiModelKeys } from '@/libs/swr/keys';
 import { aiModelService } from '@/services/aiModel';

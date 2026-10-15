@@ -1,6 +1,5 @@
 'use client';
 
-import { Github } from '@lobehub/icons';
 import { type HeterogeneousProviderConfig, type OwnCredSummary } from '@orvilo/types';
 import { clsx as cx } from 'cn';
 import { CheckCircle2, KeyRound, X, XIcon } from 'lucide-react';
@@ -9,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
+import { Github } from '@/components/BrandIcons';
 import { Badge } from '@/components/reui/badge';
 import { selectItems, SelectOptionItems } from '@/components/SelectOptions';
 import { Button } from '@/components/ui/button';

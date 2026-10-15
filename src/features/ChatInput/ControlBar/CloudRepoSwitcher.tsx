@@ -1,11 +1,11 @@
 'use client';
 
-import { Github } from '@lobehub/icons';
 import { cn } from 'cn';
 import { CheckIcon, ChevronDownIcon, SquircleDashed } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Github } from '@/components/BrandIcons';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';

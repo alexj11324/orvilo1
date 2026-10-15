@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { type ComponentType, type FC, useMemo } from 'react';
 import { useState } from 'react';
 import { Rnd } from 'react-rnd';
@@ -122,10 +121,10 @@ export const PanelContent: FC<PanelContentProps> = ({
   }
 
   return (
-    <Flexbox
+    <div
+      className="relative flex flex-col"
       style={{
-        display: 'flex',
-        flexDirection: 'column',
+        width: DEFAULT_WIDTH,
         // Clamp the panel to the viewport space base-ui exposes via
         // `--available-height` (falling back to the natural height before it's
         // measured). The trigger usually sits at the page bottom and the popup
@@ -133,11 +132,9 @@ export const PanelContent: FC<PanelContentProps> = ({
         // search box + first items on short viewports. Keeping a *concrete*
         // height (not max-height) lets the inner list flex-shrink and scroll.
         height: `min(${panelHeight}px, var(--available-height, ${panelHeight}px))`,
-        position: 'relative',
-        width: DEFAULT_WIDTH,
       }}
     >
       {content}
-    </Flexbox>
+    </div>
   );
 };

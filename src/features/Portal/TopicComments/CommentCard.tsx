@@ -1,4 +1,3 @@
-import { Markdown } from '@lobehub/ui';
 import type { TopicCommentItem } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cn } from 'cn';
@@ -10,6 +9,7 @@ import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
 import type { DropdownItem } from '@/components/ItemsMenu';
 import { DropdownMenu } from '@/components/ItemsMenu';
+import { Markdown } from '@/components/Markdown';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';

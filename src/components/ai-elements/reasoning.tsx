@@ -1,17 +1,13 @@
 'use client';
 
 import { useControllableState } from '@radix-ui/react-use-controllable-state';
-import { cjk } from '@streamdown/cjk';
-import { code } from '@streamdown/code';
-import { math } from '@streamdown/math';
-import { mermaid } from '@streamdown/mermaid';
 import { cn } from 'cn';
 import { BrainIcon, ChevronDownIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
 import { createContext, memo, use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Streamdown } from 'streamdown';
 
+import { Markdown } from '@/components/Markdown';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 import { Shimmer } from './shimmer';
@@ -191,24 +187,25 @@ export type ReasoningContentProps = ComponentProps<typeof CollapsibleContent> & 
   children: ReactNode;
 };
 
-const streamdownPlugins = { cjk, code, math, mermaid };
-
-export const ReasoningContent = memo(({ className, children, ...props }: ReasoningContentProps) => (
-  <CollapsibleContent
-    className={cn(
-      'mt-4 text-sm',
-      'data-[closed]:fade-out-0 data-[closed]:slide-out-to-top-2 data-[open]:slide-in-from-top-2 text-muted-foreground outline-none data-[closed]:animate-out data-[open]:animate-in',
-      className,
-    )}
-    {...props}
-  >
-    {typeof children === 'string' ? (
-      <Streamdown plugins={streamdownPlugins}>{children}</Streamdown>
-    ) : (
-      children
-    )}
-  </CollapsibleContent>
-));
+export const ReasoningContent = memo(({ className, children, ...props }: ReasoningContentProps) => {
+  const { isStreaming } = useReasoning();
+  return (
+    <CollapsibleContent
+      className={cn(
+        'mt-4 text-sm',
+        'data-[closed]:fade-out-0 data-[closed]:slide-out-to-top-2 data-[open]:slide-in-from-top-2 text-muted-foreground outline-none data-[closed]:animate-out data-[open]:animate-in',
+        className,
+      )}
+      {...props}
+    >
+      {typeof children === 'string' ? (
+        <Markdown streaming={isStreaming}>{children}</Markdown>
+      ) : (
+        children
+      )}
+    </CollapsibleContent>
+  );
+});
 
 Reasoning.displayName = 'Reasoning';
 ReasoningTrigger.displayName = 'ReasoningTrigger';

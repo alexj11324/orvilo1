@@ -1,10 +1,10 @@
 'use client';
 
-import { Image, PreviewGroup } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import path from 'path-browserify-esm';
 import { memo, useMemo } from 'react';
 
+import { Image, PreviewGroup } from '@/components/ImagePreview';
 import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 interface ReadArgs {
@@ -61,14 +61,14 @@ const Read = memo<BuiltinRenderProps<ReadArgs, ReadPluginState>>(
     if (images.length > 0) {
       return (
         <PreviewGroup>
-          <div className="flex flex-row gap-2" style={{ flexWrap: 'wrap' }}>
+          <div className="flex flex-row flex-wrap gap-2">
             {images.map((image, index) => (
               <Image
                 alt={filePath || image.mediaType || ''}
+                className="rounded-(--radius-card)"
                 key={image.fileId || image.url || index}
                 maxHeight={600}
                 src={image.url}
-                style={{ borderRadius: 8 }}
               />
             ))}
           </div>

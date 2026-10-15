@@ -1,5 +1,4 @@
 'use client';
-import { Freeze } from '@lobehub/ui';
 import type { VerifyCodingScope } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cn } from 'cn';
@@ -15,6 +14,7 @@ import { createElement, memo, type PropsWithChildren, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Freeze } from '@/components/Freeze';
 import { ArticleSkeleton } from '@/components/Skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useClientDataSWR } from '@/libs/swr';

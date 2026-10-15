@@ -1,8 +1,8 @@
 'use client';
 
-import { ChatHeader } from '@lobehub/ui/mobile';
 import { memo, useState } from 'react';
 
+import { ChatHeader } from '@/components/ChatHeader';
 import TopicCommentButton from '@/features/TopicComment/TopicCommentButton';
 import { useQueryRoute } from '@/hooks/useQueryRoute';
 import ShareButton from '@/routes/(main)/agent/features/Conversation/Header/ShareButton';
@@ -17,7 +17,6 @@ const MobileHeader = memo(() => {
     <ChatHeader
       showBackButton
       center={<ChatHeaderTitle />}
-      style={{ width: '100%' }}
       right={
         <div className="flex items-center gap-1">
           <TopicCommentButton mobile />

@@ -1,11 +1,11 @@
 'use client';
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { LayersEnum } from '@orvilo/types';
 import type { LucideIcon } from 'lucide-react';
 import { Brain, ClipboardCheck } from 'lucide-react';
 import { memo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SkillsIcon } from '@/components/ControlIcons';
 import PortalResourceCard from '@/features/Conversation/components/PortalResourceCard';
 import { useStableNavigate } from '@/hooks/useStableNavigate';
 import { agentSignalService } from '@/services/agentSignal';

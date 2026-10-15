@@ -1,14 +1,4 @@
-import {
-  Block,
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  DropdownMenuSubmenuRoot,
-  DropdownMenuSubmenuTrigger,
-  Flexbox,
-  Icon,
-  menuSharedStyles,
-} from '@lobehub/ui';
+import { Menu } from '@base-ui/react/menu';
 import { cn } from 'cn';
 import { LucideArrowRight, LucideBolt } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
@@ -18,8 +8,10 @@ import urlJoin from 'url-join';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import ActionIcon from '@/components/ActionIcon';
 import { ModelItemRender, ProviderItemRender } from '@/components/ModelSelect';
+import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
+import { getFloatingCollisionPadding } from '@/libs/contextMenu/collisionPadding';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
@@ -76,33 +68,25 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
     switch (item.type) {
       case 'no-provider': {
         return (
-          <Block
-            clickable
-            horizontal
-            className={cn(styles.menuItem, styles.tertiaryText)}
-            gap={8}
+          <Menu.Item
+            className={cn('flex min-w-0 flex-row gap-2', styles.menuItem, styles.tertiaryText)}
             key="no-provider"
-            variant={'borderless'}
             onClick={() => {
               onClose();
               navigate('/settings/provider/all');
             }}
           >
             {t('ModelSwitchPanel.emptyProvider')}
-            <Icon icon={LucideArrowRight} size={16} />
-          </Block>
+            <LucideArrowRight aria-hidden className="size-4 shrink-0" />
+          </Menu.Item>
         );
       }
 
       case 'group-header': {
         return (
-          <Flexbox
-            horizontal
-            className={styles.groupHeader}
-            justify="space-between"
+          <div
+            className={cn('flex flex-row justify-between pt-3 pb-1 ps-3 pe-2', styles.groupHeader)}
             key={`header-${item.provider.id}`}
-            paddingBlock={'12px 4px'}
-            paddingInline={'12px 8px'}
           >
             <ProviderItemRender
               logo={item.provider.logo}
@@ -127,16 +111,14 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                 onClose();
               }}
             />
-          </Flexbox>
+          </div>
         );
       }
 
       case 'empty-model': {
         return (
-          <Flexbox
-            horizontal
-            className={cn(styles.menuItem, styles.tertiaryText)}
-            gap={8}
+          <Menu.Item
+            className={cn('flex min-w-0 flex-row gap-2', styles.menuItem, styles.tertiaryText)}
             key={`empty-${item.provider.id}`}
             onClick={() => {
               onClose();
@@ -144,8 +126,8 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
             }}
           >
             {t('ModelSwitchPanel.emptyModel')}
-            <Icon icon={LucideArrowRight} size={16} />
-          </Flexbox>
+            <LucideArrowRight aria-hidden className="size-4 shrink-0" />
+          </Menu.Item>
         );
       }
 
@@ -155,11 +137,11 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
         const restricted = isModelRestricted?.(item.model.id, item.provider.id);
 
         return (
-          <Flexbox className="my-px mx-1">
-            <DropdownMenuSubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
-              <DropdownMenuSubmenuTrigger
+          <div className="flex min-w-0 flex-col my-px mx-1">
+            <Menu.SubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
+              <Menu.SubmenuTrigger
                 className={cn(
-                  menuSharedStyles.item,
+                  'relative flex w-full min-h-9 min-w-0 select-none items-center overflow-hidden rounded-(--radius-button) px-3 py-1.5 text-sm text-foreground outline-none hover:bg-accent focus:bg-accent active:bg-selected',
                   styles.menuRow,
                   isActive && styles.menuItemActive,
                 )}
@@ -181,16 +163,29 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                   proBadgeLabel={restricted ? proLabel : undefined}
                   showInfoTag={isDevMode}
                 />
-              </DropdownMenuSubmenuTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuPositioner anchor={null} placement="right" sideOffset={12}>
-                  <DropdownMenuPopup className={styles.detailPopup}>
+              </Menu.SubmenuTrigger>
+              <Menu.Portal>
+                <Menu.Positioner
+                  align="center"
+                  anchor={null}
+                  className={POPUP_Z_CLASS}
+                  collisionPadding={getFloatingCollisionPadding()}
+                  side="right"
+                  sideOffset={12}
+                >
+                  <Menu.Popup
+                    className={cn(
+                      POPUP_Z_CLASS,
+                      'rounded-(--radius-overlay) bg-popover text-popover-foreground shadow-(--shadow-popover) outline-none',
+                      styles.detailPopup,
+                    )}
+                  >
                     <ModelDetailPanel model={item.model.id} provider={item.provider.id} />
-                  </DropdownMenuPopup>
-                </DropdownMenuPositioner>
-              </DropdownMenuPortal>
-            </DropdownMenuSubmenuRoot>
-          </Flexbox>
+                  </Menu.Popup>
+                </Menu.Positioner>
+              </Menu.Portal>
+            </Menu.SubmenuRoot>
+          </div>
         );
       }
 
@@ -201,11 +196,11 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
         const restricted = isModelRestricted?.(item.data.model.id, singleProvider.id);
 
         return (
-          <Flexbox className="my-px mx-1">
-            <DropdownMenuSubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
-              <DropdownMenuSubmenuTrigger
+          <div className="flex min-w-0 flex-col my-px mx-1">
+            <Menu.SubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
+              <Menu.SubmenuTrigger
                 className={cn(
-                  menuSharedStyles.item,
+                  'relative flex w-full min-h-9 min-w-0 select-none items-center overflow-hidden rounded-(--radius-button) px-3 py-1.5 text-sm text-foreground outline-none hover:bg-accent focus:bg-accent active:bg-selected',
                   styles.menuRow,
                   isActive && styles.menuItemActive,
                 )}
@@ -226,22 +221,35 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                   proBadgeLabel={restricted ? proLabel : undefined}
                   showInfoTag={isDevMode}
                 />
-              </DropdownMenuSubmenuTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuPositioner anchor={null} placement="right" sideOffset={16}>
-                  <DropdownMenuPopup className={styles.detailPopup}>
+              </Menu.SubmenuTrigger>
+              <Menu.Portal>
+                <Menu.Positioner
+                  align="center"
+                  anchor={null}
+                  className={POPUP_Z_CLASS}
+                  collisionPadding={getFloatingCollisionPadding()}
+                  side="right"
+                  sideOffset={16}
+                >
+                  <Menu.Popup
+                    className={cn(
+                      POPUP_Z_CLASS,
+                      'rounded-(--radius-overlay) bg-popover text-popover-foreground shadow-(--shadow-popover) outline-none',
+                      styles.detailPopup,
+                    )}
+                  >
                     <ModelDetailPanel model={item.data.model.id} provider={singleProvider.id} />
-                  </DropdownMenuPopup>
-                </DropdownMenuPositioner>
-              </DropdownMenuPortal>
-            </DropdownMenuSubmenuRoot>
-          </Flexbox>
+                  </Menu.Popup>
+                </Menu.Positioner>
+              </Menu.Portal>
+            </Menu.SubmenuRoot>
+          </div>
         );
       }
 
       case 'model-item-multiple': {
         return (
-          <Flexbox className="my-px mx-1" key={item.data.displayName}>
+          <div className="flex min-w-0 flex-col my-px mx-1" key={item.data.displayName}>
             <MultipleProvidersModelItem
               activeKey={activeKey}
               data={item.data}
@@ -254,7 +262,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
               onModelChange={onModelChange}
               onRestrictedModelClick={onRestrictedModelClick}
             />
-          </Flexbox>
+          </div>
         );
       }
 

@@ -1,5 +1,5 @@
 'use client';
-import { GroupBotIcon } from '@lobehub/ui/icons';
+import { GroupBotIcon } from '@orvilo/shared-tool-ui/components';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { cn } from 'cn';
 import { memo } from 'react';

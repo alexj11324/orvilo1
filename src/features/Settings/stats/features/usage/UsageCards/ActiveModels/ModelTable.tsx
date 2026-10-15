@@ -1,9 +1,9 @@
-import { CategoryBar, useThemeColorRange } from '@lobehub/charts';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
 import { remoteAvatarSrc } from '@/components/Avatar/fallback';
+import { CategoryBar, useThemeColorRange } from '@/components/Charts';
 import InlineTable from '@/components/InlineTable';
 import { ModelIcon, ProviderIcon } from '@/components/OrviloIcons';
 import { Badge } from '@/components/reui/badge';

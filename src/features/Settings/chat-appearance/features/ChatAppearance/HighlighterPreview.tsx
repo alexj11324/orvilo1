@@ -1,4 +1,4 @@
-import { Highlighter, type HighlighterProps } from '@lobehub/ui';
+import { Highlighter, type HighlighterProps } from '@/components/Highlighter';
 
 const code = `
 const person = { name: "Alice", age: 30 };

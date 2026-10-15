@@ -1,9 +1,9 @@
 'use client';
 
-import { McpIcon } from '@lobehub/ui/icons';
 import { createElement, memo } from 'react';
 
 import Avatar from '@/components/Avatar';
+import { McpIcon } from '@/components/ControlIcons';
 
 import ConnectorRow from './ConnectorRow';
 

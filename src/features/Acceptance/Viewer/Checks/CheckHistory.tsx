@@ -1,6 +1,5 @@
 'use client';
 
-import { Image } from '@lobehub/ui';
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cn } from 'cn';
@@ -8,6 +7,7 @@ import { BadgeCheck, Ban, MessageSquareX } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Image } from '@/components/ImagePreview';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import AudioPlayer from '@/features/AudioPlayer';
 import { useIsHydrated } from '@/hooks/useIsHydrated';

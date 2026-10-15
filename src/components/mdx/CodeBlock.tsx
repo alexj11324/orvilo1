@@ -1,49 +1,40 @@
 'use client';
 
-import { Mermaid } from '@lobehub/ui';
-import { Pre, PreSingleLine } from '@lobehub/ui/mdx';
-import { type FC, type PropsWithChildren } from 'react';
+import { type ComponentProps } from 'react';
 
-const countLines = (str: string): number => {
-  const regex = /\n/g;
-  const matches = str.match(regex);
-  return matches ? matches.length : 1;
-};
+import { Mermaid } from '@/components/Mermaid';
+import {
+  CodeBlock,
+  CodeBlockCopyButton,
+  CodeBlockDownloadButton,
+  CodeBlockExpandButton,
+  CodeBlockHeader,
+  CodeBlockLanguage,
+  CodeBlockWrapToggle,
+  markdownCodeProps,
+} from '@/components/ui/code-block';
 
-const useCode = (raw: any) => {
-  if (!raw) return;
-
-  const { children, className } = raw.props;
-
-  if (!children) return;
-
-  const content = (Array.isArray(children) ? (children[0] as string) : children).trim();
-
-  const lang = className?.replace('language-', '') || 'txt';
-
-  const isSingleLine = countLines(content) <= 1 && content.length <= 32;
-
-  return {
-    content,
-    isSingleLine,
-    lang,
-  };
-};
-
-const CodeBlock: FC<PropsWithChildren> = ({ children }) => {
-  const code = useCode(children);
-
-  if (!code) return;
-
-  if (code.isSingleLine) return <PreSingleLine language={code.lang}>{code.content}</PreSingleLine>;
-  if (code.lang === 'mermaid') {
-    return <Mermaid variant={'borderless'}>{code.content}</Mermaid>;
-  }
+export default function MDXCodeBlock(props: ComponentProps<'pre'>) {
+  const { code, language } = markdownCodeProps(props);
+  const single = !code.includes('\n') && code.length <= 32;
+  if (language === 'mermaid') return <Mermaid variant="borderless">{code}</Mermaid>;
   return (
-    <Pre fullFeatured allowChangeLanguage={false} language={code.lang}>
-      {code.content}
-    </Pre>
+    <CodeBlock
+      code={code}
+      language={language ?? 'text'}
+      maxLines={single ? undefined : 16}
+      themes={{ light: 'lobe-theme', dark: 'lobe-theme' }}
+      variant={single ? 'ghost' : 'default'}
+    >
+      <CodeBlockHeader>
+        <CodeBlockLanguage />
+        <div className="ml-auto flex items-center gap-1">
+          <CodeBlockWrapToggle />
+          <CodeBlockCopyButton />
+          <CodeBlockDownloadButton />
+        </div>
+      </CodeBlockHeader>
+      {!single && <CodeBlockExpandButton />}
+    </CodeBlock>
   );
-};
-
-export default CodeBlock;
+}

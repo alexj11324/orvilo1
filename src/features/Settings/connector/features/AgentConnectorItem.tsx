@@ -1,10 +1,10 @@
 'use client';
 
-import { McpIcon } from '@lobehub/ui/icons';
 import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
 import { createElement, memo } from 'react';
 
 import Avatar from '@/components/Avatar';
+import { McpIcon } from '@/components/ControlIcons';
 import { Badge } from '@/components/reui/badge';
 import type { AgentBoundConnector } from '@/store/tool/slices/connector/types';
 

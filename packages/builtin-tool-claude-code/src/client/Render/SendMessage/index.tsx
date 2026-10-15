@@ -1,11 +1,12 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { cn } from 'cn';
 import { CircleCheckBig, SendHorizontal } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Markdown } from '@/components/Markdown';
 
 import type { SendMessageArgs, SendMessageResult } from '../../../types';
 

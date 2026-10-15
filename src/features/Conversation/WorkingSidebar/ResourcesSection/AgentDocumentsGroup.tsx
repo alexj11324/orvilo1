@@ -1,4 +1,3 @@
-import { SkillsIcon } from '@lobehub/ui/icons';
 import {
   AGENT_DOCUMENT_CATEGORY,
   AGENT_DOCUMENT_WEB_CATEGORY,
@@ -17,6 +16,7 @@ import { useParams } from 'react-router';
 
 import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
+import { SkillsIcon } from '@/components/ControlIcons';
 import { withErrorBoundary } from '@/components/ErrorBoundary';
 import { confirmModal } from '@/components/Modal';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';

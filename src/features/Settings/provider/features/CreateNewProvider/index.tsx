@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { createModal, type ModalInstance } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { BrainIcon } from 'lucide-react';
+
+import { createModal, type ModalInstance } from '@/components/Modal';
 
 import CreateNewProviderContent from './Content';
 
@@ -16,10 +16,10 @@ export const createCreateNewProviderModal = (): ModalInstance =>
       content: { paddingBlock: 16, paddingInline: 24 },
     },
     title: (
-      <Flexbox horizontal align={'center'} gap={8}>
-        <Icon icon={BrainIcon} />
+      <div className="flex items-center gap-2">
+        <BrainIcon aria-hidden className="size-4" />
         {t('createNewAiProvider.title', { ns: 'modelProvider' })}
-      </Flexbox>
+      </div>
     ),
     width: 'min(90vw, 640px)',
   });

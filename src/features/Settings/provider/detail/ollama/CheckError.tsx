@@ -1,12 +1,12 @@
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { type ChatMessageError } from '@orvilo/types';
 import { type ReactNode } from 'react';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import dynamic from '@/libs/next/dynamic';
 
 import Container from './Container';
 
-const loading = () => <Skeleton style={{ width: 400 }} />;
+const loading = () => <Skeleton className="h-5 w-100 max-w-full" />;
 
 const OllamaSetupGuide = dynamic(() => import('@/features/OllamaSetupGuide'), {
   loading,

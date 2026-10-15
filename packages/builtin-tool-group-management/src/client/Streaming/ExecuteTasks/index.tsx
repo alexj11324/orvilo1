@@ -1,11 +1,11 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { AgentGroupMember, BuiltinStreamingProps } from '@orvilo/types';
 import { memo, useMemo } from 'react';
 
 import Avatar from '@/components/Avatar';
+import { Markdown } from '@/components/Markdown';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
@@ -49,7 +49,7 @@ export const ExecuteTasksStreaming = memo<BuiltinStreamingProps<ExecuteTasksPara
             </div>
             {task.instruction && (
               <div className="text-(length:--text-dense) text-muted-foreground">
-                <Markdown animated variant={'chat'}>
+                <Markdown animated streaming variant={'chat'}>
                   {task.instruction}
                 </Markdown>
               </div>

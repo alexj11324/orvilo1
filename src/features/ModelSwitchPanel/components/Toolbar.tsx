@@ -1,11 +1,11 @@
-import { Flexbox, Icon, stopPropagation, Tooltip } from '@lobehub/ui';
-import { Tabs } from '@lobehub/ui/base-ui';
-import { ProviderIcon } from '@lobehub/ui/icons';
 import { Brain } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ProviderIcon } from '@/components/BrandIcons/catalog';
 import SearchBar from '@/components/SearchBar';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { styles } from '../styles';
 import { type GroupMode } from '../types';
@@ -23,17 +23,8 @@ export const Toolbar = memo<ToolbarProps>(
     const { t } = useTranslation('components');
 
     return (
-      <Flexbox
-        horizontal
-        align="center"
-        className={styles.toolbar}
-        gap={4}
-        justify="space-between"
-        paddingBlock={8}
-        paddingInline={8}
-        width="100%"
-      >
-        <Flexbox flex={1} width="100%">
+      <div className={`${styles.toolbar} flex w-full items-center justify-between gap-1 px-2 py-2`}>
+        <div className="flex w-full min-w-0 flex-1 flex-col">
           <SearchBar
             className={styles.toolbarSearch}
             clearOnEscape={false}
@@ -41,41 +32,48 @@ export const Toolbar = memo<ToolbarProps>(
             value={searchKeyword}
             visualSize="compact"
             onChange={(e) => onSearchKeywordChange(e.target.value)}
-            onKeyDown={stopPropagation}
+            onKeyDown={(event) => event.stopPropagation()}
           />
-        </Flexbox>
+        </div>
         {showGroupModeSwitch && (
           <Tabs
-            activeKey={groupMode}
             className={styles.toolbarTabs}
-            size="small"
-            classNames={{
-              list: styles.toolbarTabList,
-              tab: styles.toolbarTab,
-              indicator: styles.toolbarIndicator,
-            }}
-            items={[
-              {
-                key: 'byModel',
-                label: (
-                  <Tooltip title={t('ModelSwitchPanel.byModel')}>
-                    <Icon icon={Brain} size={16} />
-                  </Tooltip>
-                ),
-              },
-              {
-                key: 'byProvider',
-                label: (
-                  <Tooltip title={t('ModelSwitchPanel.byProvider')}>
-                    <Icon icon={ProviderIcon} size={16} />
-                  </Tooltip>
-                ),
-              },
-            ]}
-            onChange={(key) => onGroupModeChange?.(key as GroupMode)}
-          />
+            value={groupMode}
+            onValueChange={(value) => onGroupModeChange?.(value as GroupMode)}
+          >
+            <TabsList className={styles.toolbarTabList}>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <TabsTrigger
+                      aria-label={t('ModelSwitchPanel.byModel')}
+                      className={styles.toolbarTab}
+                      value="byModel"
+                    >
+                      <Brain aria-hidden="true" className="size-4" />
+                    </TabsTrigger>
+                  }
+                />
+                <TooltipContent>{t('ModelSwitchPanel.byModel')}</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <TabsTrigger
+                      aria-label={t('ModelSwitchPanel.byProvider')}
+                      className={styles.toolbarTab}
+                      value="byProvider"
+                    >
+                      <ProviderIcon aria-hidden="true" className="size-4" />
+                    </TabsTrigger>
+                  }
+                />
+                <TooltipContent>{t('ModelSwitchPanel.byProvider')}</TooltipContent>
+              </Tooltip>
+            </TabsList>
+          </Tabs>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

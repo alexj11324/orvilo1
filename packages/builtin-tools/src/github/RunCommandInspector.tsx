@@ -1,12 +1,12 @@
 'use client';
 
-import { Github } from '@lobehub/icons';
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { clsx as cx } from 'cn';
 import { Check, X } from 'lucide-react';
 import { memo } from 'react';
 
+import { Github } from '../../../brand-icons/src';
 import { getGhSubcommand, type GithubRunCommandArgs, type GithubRunCommandState } from './utils';
 
 const styles = {

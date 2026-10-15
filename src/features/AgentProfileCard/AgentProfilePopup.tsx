@@ -1,7 +1,6 @@
 'use client';
 
 import { PreviewCard } from '@base-ui/react/preview-card';
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { agentDisplayName, type AgentItem } from '@orvilo/types';
 import { BookOpen, FileText, Settings } from 'lucide-react';
 import { memo, type PropsWithChildren, useState } from 'react';
@@ -9,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import ActionIcon from '@/components/ActionIcon';
+import { SkillsIcon } from '@/components/ControlIcons';
 import { ArticleSkeleton } from '@/components/Skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';

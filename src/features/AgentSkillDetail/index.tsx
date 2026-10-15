@@ -1,12 +1,12 @@
 'use client';
 
-import { Github } from '@lobehub/icons';
 import { type SkillResourceTreeNode } from '@orvilo/types';
 import { cn } from 'cn';
 import { DotIcon, ExternalLinkIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Github } from '@/components/BrandIcons';
 import PublishedTime from '@/components/PublishedTime';
 import { ArticleSkeleton } from '@/components/Skeleton';
 import SkillAvatar from '@/components/SkillAvatar';

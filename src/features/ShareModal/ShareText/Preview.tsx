@@ -1,6 +1,7 @@
-import { Markdown } from '@lobehub/ui';
 import { cn } from 'cn';
 import { memo } from 'react';
+
+import { Markdown } from '@/components/Markdown';
 
 import { containerStyles } from '../style';
 

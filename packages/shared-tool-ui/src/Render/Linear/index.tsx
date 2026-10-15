@@ -1,5 +1,4 @@
 'use client';
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { fromNow } from '@orvilo/utils/time';
 import { cn } from 'cn';
@@ -8,6 +7,7 @@ import type { ReactNode } from 'react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { Badge } from '@/components/reui/badge';
 import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
 

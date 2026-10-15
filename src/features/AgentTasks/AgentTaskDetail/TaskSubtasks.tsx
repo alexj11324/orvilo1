@@ -1,5 +1,3 @@
-import { type TreeDataNode } from '@lobehub/ui/base-ui';
-import { Tree } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask } from '@orvilo/types';
 import { ListTodoIcon, MoreHorizontal, PlayCircle, Plus } from 'lucide-react';
 import type { MouseEvent } from 'react';
@@ -10,6 +8,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import ActionIcon from '@/components/ActionIcon';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
+import { Tree, type TreeDataNode } from '@/components/Tree';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { SidebarContextMenuPopup } from '@/features/NavPanel/components/SidebarContextMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -187,6 +186,7 @@ const toTreeData = (
   return tree.map((node) => ({
     children: toTreeData(node.children, onOpenMenu),
     key: node.task.identifier,
+    label: node.task.name || node.task.identifier,
     title: <SubtaskTitle task={node.task} onOpenMenu={onOpenMenu} />,
   }));
 };

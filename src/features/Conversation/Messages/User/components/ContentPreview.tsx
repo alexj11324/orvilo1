@@ -1,6 +1,6 @@
-import { MaskShadow } from '@lobehub/ui';
 import { useTranslation } from 'react-i18next';
 
+import { MaskShadow } from '@/components/MaskShadow';
 import { Button } from '@/components/ui/button';
 import MarkdownMessage from '@/features/Conversation/Markdown';
 import { useChatStore } from '@/store/chat';

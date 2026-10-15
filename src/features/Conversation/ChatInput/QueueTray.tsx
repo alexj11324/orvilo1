@@ -1,5 +1,4 @@
 'use client';
-import { Image } from '@lobehub/ui';
 import { cn } from 'cn';
 import { ArrowUp, ListEnd, Pencil, Trash2 } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
@@ -20,6 +19,7 @@ import {
   QueueSectionTrigger,
 } from '@/components/ai-elements/queue';
 import FileIcon from '@/components/FileIcon';
+import { Image } from '@/components/ImagePreview';
 import { useSingleton } from '@/hooks/useSingleton';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
@@ -51,7 +51,7 @@ interface QueuedFilePreviewProps {
 
 const QueuedFilePreview = memo<QueuedFilePreviewProps>(({ file }) => {
   if (isImageFile(file)) {
-    // Use @lobehub/ui Image so click-to-zoom preview works. Lock both wrapper
+    // Use the local Image viewer so click-to-zoom preview works. Lock both wrapper
     // and inner <img> to PREVIEW_SIZE — `size` alone doesn't constrain the
     // intrinsic image dimensions inside a flex row.
     // Public Image has unlayered root width/radius and wrapper height rules.

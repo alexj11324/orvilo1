@@ -1,4 +1,3 @@
-import { McpIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
   BellIcon,
@@ -33,6 +32,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import Avatar from '@/components/Avatar';
+import { McpIcon } from '@/components/ControlIcons';
 import { isSettingsTabOffered } from '@/config/routes/settings';
 import { usePermission } from '@/hooks/usePermission';
 import { useElectronStore } from '@/store/electron';

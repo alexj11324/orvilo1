@@ -1,10 +1,10 @@
 'use client';
-import { Markdown } from '@lobehub/ui';
 import { type UISignalCallbacksBlock } from '@orvilo/types';
 import { Radio } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import {
   Accordion,
   AccordionContent,

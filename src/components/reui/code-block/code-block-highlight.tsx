@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { ShikiTransformer } from 'shiki';
+import { bundledThemes } from 'shiki/themes';
 
 /**
  * One themed slice of a line. `color`/`colorDark` emit as `--cb-c`/`--cb-cd`
@@ -169,6 +170,8 @@ const LANGUAGE_ALIASES: Record<string, string> = {
 };
 
 export const codeBlockThemes: Record<string, () => Promise<unknown>> = {
+  ...bundledThemes,
+  'lobe-theme': async () => (await import('@/components/Highlighter/theme')).lobeSyntaxTheme,
   'github-light': () => import('shiki/themes/github-light.mjs'),
   'github-dark': () => import('shiki/themes/github-dark.mjs'),
   /**

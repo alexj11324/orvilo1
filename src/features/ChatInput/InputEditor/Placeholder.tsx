@@ -1,4 +1,3 @@
-import { combineKeys } from '@lobehub/ui';
 import { KeyEnum } from '@orvilo/const/hotkeys';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -28,7 +27,7 @@ const Placeholder = memo<PlaceholderProps>(
     const useCmdEnterToSend = useUserStore(preferenceSelectors.useCmdEnterToSend);
     const wrapperShortcut = useCmdEnterToSend
       ? KeyEnum.Enter
-      : combineKeys([KeyEnum.Mod, KeyEnum.Enter]);
+      : [KeyEnum.Mod, KeyEnum.Enter].join('+');
     const showHotkeyHint = useComposerHotkeyHint();
     const { t } = useTranslation('chat');
 

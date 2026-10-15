@@ -1,7 +1,8 @@
 'use client';
 
-import { type IconType } from '@lobehub/icons';
 import { memo } from 'react';
+
+import { type IconType } from '@/components/BrandIcons';
 
 const OfficialIcon: IconType = memo(({ size = 18, style, fill = '#1d9bf0', ...rest }) => {
   return (

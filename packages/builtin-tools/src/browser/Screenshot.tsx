@@ -1,6 +1,7 @@
-import { Image } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { Image } from '@/components/ImagePreview';
 
 import { resolveScreenshotSrc } from './screenshotSrc';
 import type { BrowserScreenshotState } from './types';
@@ -12,16 +13,8 @@ const Screenshot = memo<BuiltinRenderProps<unknown, BrowserScreenshotState, stri
     if (!src) return null;
 
     return (
-      <div
-        style={{
-          overflow: 'hidden',
-          padding: 4,
-          background: 'var(--ant-color-bg-container)',
-          border: `1px solid ${'var(--ant-color-border-secondary)'}`,
-          borderRadius: 'var(--ant-border-radius)',
-        }}
-      >
-        <Image alt={'Browser screenshot'} src={src} style={{ borderRadius: 4, width: '100%' }} />
+      <div className="overflow-hidden rounded-(--radius-card) border border-divider bg-card p-1">
+        <Image alt={'Browser screenshot'} className="w-full rounded-(--radius-chip)" src={src} />
       </div>
     );
   },

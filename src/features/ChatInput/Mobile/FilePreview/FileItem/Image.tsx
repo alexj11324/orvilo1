@@ -1,4 +1,3 @@
-import { Image } from '@lobehub/ui';
 import { cn } from 'cn';
 import { RotateCw, Trash } from 'lucide-react';
 import { memo } from 'react';
@@ -6,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { FileUploadErrorActions } from '@/business/client/features/FileUploadErrorActions';
 import ActionIcon from '@/components/ActionIcon';
+import { Image } from '@/components/ImagePreview';
 
 import { MIN_IMAGE_SIZE } from './style';
 

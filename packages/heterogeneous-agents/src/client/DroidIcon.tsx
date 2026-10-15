@@ -1,6 +1,7 @@
-import type { IconType } from '@lobehub/icons';
 import type { ImgHTMLAttributes } from 'react';
 import { memo } from 'react';
+
+import type { IconType } from '../../../brand-icons/src';
 
 export const DROID_AVATAR_URL = 'https://factory.ai/favicon.svg';
 

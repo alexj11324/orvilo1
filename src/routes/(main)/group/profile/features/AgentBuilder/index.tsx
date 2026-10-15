@@ -1,7 +1,7 @@
-import { DraggablePanel } from '@lobehub/ui/base-ui';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { memo } from 'react';
 
+import { DraggablePanel } from '@/components/DraggablePanel';
 import ConversationSegmentSkeleton from '@/components/Skeleton/Conversation/Segment';
 import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors';
@@ -27,7 +27,7 @@ const AgentBuilder = memo(() => {
 
   return (
     <DraggablePanel
-      backgroundColor={'var(--ant-color-bg-container)'}
+      backgroundColor={'var(--card)'}
       expand={chatPanelExpanded}
       expandable={false}
       maxWidth={600}

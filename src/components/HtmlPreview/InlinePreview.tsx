@@ -1,10 +1,10 @@
-import { HtmlPreview } from '@lobehub/ui';
 import type { ComponentProps, CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
 
 import { WebPreview, WebPreviewBody } from '@/components/ai-elements/web-preview';
 
 import { applyHtmlPreviewBaseUrl } from './applyBaseUrl';
+import { HtmlPreview } from './NativePreview';
 
 const hideHtmlPreviewActions = () => null;
 
@@ -15,6 +15,7 @@ interface InlineHtmlPreviewProps {
   content: string;
   height?: CSSProperties['height'];
   previewProps?: Omit<ComponentProps<typeof HtmlPreview>, 'children'>;
+  streaming?: boolean;
   style?: CSSProperties;
   width?: CSSProperties['width'];
 }
@@ -22,6 +23,7 @@ interface InlineHtmlPreviewProps {
 const InlineHtmlPreview = memo<InlineHtmlPreviewProps>(
   ({
     animated,
+    streaming,
     baseUrl,
     className,
     content,
@@ -46,6 +48,7 @@ const InlineHtmlPreview = memo<InlineHtmlPreviewProps>(
             copyable={false}
             downloadable={false}
             shadow={false}
+            streaming={streaming}
             style={{ height, minHeight: 0, overflow: 'hidden', width, ...style }}
             variant={'borderless'}
             styles={{

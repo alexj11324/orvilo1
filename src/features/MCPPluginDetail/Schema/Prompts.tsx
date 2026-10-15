@@ -1,9 +1,9 @@
-import { Markdown } from '@lobehub/ui';
 import { CheckIcon, MinusIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import InlineTable from '@/components/InlineTable';
+import { Markdown } from '@/components/Markdown';
 import { CodeBlock } from '@/components/reui/code-block/code-block';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 

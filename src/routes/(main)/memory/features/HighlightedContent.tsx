@@ -1,5 +1,6 @@
-import { Markdown } from '@lobehub/ui';
 import { memo } from 'react';
+
+import { Markdown } from '@/components/Markdown';
 
 interface HighlightedContentProps {
   children?: string | null;
@@ -13,7 +14,6 @@ const HighlightedContent = memo<HighlightedContentProps>(({ title, children }) =
       fontSize={14}
       variant={'chat'}
       style={{
-        color: 'var(--ant-color-text)',
         overflow: 'visible',
       }}
     >

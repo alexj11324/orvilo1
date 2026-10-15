@@ -1,5 +1,3 @@
-import { type ImageProps } from '@lobehub/ui';
-import { Image } from '@lobehub/ui';
 import { clsx as cx } from 'cn';
 import { Trash } from 'lucide-react';
 import { type CSSProperties } from 'react';
@@ -7,6 +5,8 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { type ImageProps } from '@/components/ImagePreview';
+import { Image } from '@/components/ImagePreview';
 import { usePlatform } from '@/hooks/usePlatform';
 
 import { MIN_IMAGE_SIZE } from './style';

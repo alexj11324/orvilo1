@@ -1,4 +1,3 @@
-import { Markdown } from '@lobehub/ui';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { clsx, cn } from 'cn';
 import dayjs from 'dayjs';
@@ -6,6 +5,7 @@ import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Markdown } from '@/components/Markdown';
 import { Badge as Tag } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
 import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';

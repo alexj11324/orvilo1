@@ -1,8 +1,9 @@
 'use client';
 
-import type { IconType } from '@lobehub/icons';
 import type { ComponentProps } from 'react';
 import { memo } from 'react';
+
+import type { IconType } from '@/components/BrandIcons';
 
 export const PRIORITY_LEVELS = [0, 1, 2, 3, 4] as const;
 

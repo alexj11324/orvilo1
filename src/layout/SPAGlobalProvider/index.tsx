@@ -26,6 +26,7 @@ import StoreInitialization, {
   BuiltinAgentInitialization,
 } from '@/layout/GlobalProvider/StoreInitialization';
 import { registerNativeContextMenuInterceptor } from '@/libs/contextMenu';
+import { ContextMenuHost as NativeContextMenuHost } from '@/libs/contextMenu/ContextMenuHost';
 import { usePostRenderReady } from '@/spa/atoms/app';
 import { ServerConfigStoreProvider } from '@/store/serverConfig/Provider';
 import type { SPAServerConfig } from '@/types/spaServerConfig';
@@ -119,6 +120,7 @@ const SPAGlobalProvider = memo<PropsWithChildren>(({ children }) => {
                 <ReUIModalHost />
                 <ReUIToastHost />
                 <ContextMenuHost />
+                <NativeContextMenuHost />
                 <Suspense>
                   <TaskDock />
                   <ImperativeMountHost />

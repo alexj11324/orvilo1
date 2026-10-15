@@ -1,6 +1,5 @@
 'use client';
 
-import { McpIcon } from '@lobehub/ui/icons';
 import type { ComposioAppType, OrviloSkillProviderType } from '@orvilo/const';
 import { resolveConnectorCatalogItem } from '@orvilo/const';
 import { cn } from 'cn';
@@ -10,6 +9,7 @@ import React, { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { McpIcon } from '@/components/ControlIcons';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';

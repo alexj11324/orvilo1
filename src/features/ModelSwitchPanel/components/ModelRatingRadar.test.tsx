@@ -9,7 +9,7 @@ import ModelRatingRadar, { RATING_DIMENSION_ORDER } from './ModelRatingRadar';
 
 const { radarChartProps } = vi.hoisted(() => ({ radarChartProps: vi.fn() }));
 
-vi.mock('@lobehub/charts', () => ({
+vi.mock('@/components/Charts', () => ({
   RadarChart: (props: Record<string, unknown>) => {
     radarChartProps(props);
 

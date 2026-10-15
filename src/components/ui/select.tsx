@@ -130,7 +130,12 @@ function SelectLabel({ className, ...props }: SelectPrimitive.GroupLabel.Props) 
   );
 }
 
-function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Props) {
+function SelectItem({
+  className,
+  children,
+  indicatorClassName,
+  ...props
+}: SelectPrimitive.Item.Props & { indicatorClassName?: string }) {
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
@@ -144,6 +149,7 @@ function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Prop
         {children}
       </SelectPrimitive.ItemText>
       <SelectPrimitive.ItemIndicator
+        className={indicatorClassName}
         render={
           <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />
         }

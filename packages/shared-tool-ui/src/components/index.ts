@@ -7,6 +7,7 @@ export {
   LineStats,
 } from './FileChangeStats';
 export { FilePathDisplay, getFilePathDisplayInfo } from './FilePathDisplay';
+export { default as GroupBotIcon } from './GroupBotIcon';
 export { OptionCard, type OptionCardProps } from './OptionCard';
 export {
   TodoInspectorSummary,

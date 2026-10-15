@@ -1,6 +1,6 @@
-import { MCP } from '@lobehub/icons';
 import { memo } from 'react';
 
+import { MCP } from '@/components/BrandIcons';
 import { Badge } from '@/components/reui/badge';
 
 interface MCPTagProps {

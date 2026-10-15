@@ -1,12 +1,12 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { TaskTemplate } from '@orvilo/const';
 import { t } from 'i18next';
 import { Clock, X } from 'lucide-react';
 import { memo, useEffect, useMemo } from 'react';
 
 import ActionIcon from '@/components/ActionIcon';
+import { Markdown } from '@/components/Markdown';
 import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';

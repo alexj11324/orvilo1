@@ -1,4 +1,3 @@
-import { type IconAvatarProps } from '@lobehub/icons';
 import { type ChatModelCard } from '@orvilo/types';
 import { cn } from 'cn';
 import {
@@ -19,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from 'react-responsive';
 
 import Avatar from '@/components/Avatar';
+import { type IconAvatarProps } from '@/components/BrandIcons';
 import { ProductLogo } from '@/components/Branding';
 import { ModelIcon, ProviderIcon } from '@/components/OrviloIcons';
 import { Badge, type BadgeProps } from '@/components/reui/badge';

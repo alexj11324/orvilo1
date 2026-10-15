@@ -1,15 +1,14 @@
-import {
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-  stopPropagation,
-  TooltipGroup,
-} from '@lobehub/ui';
-import { memo, useCallback, useState } from 'react';
+import { Menu } from '@base-ui/react/menu';
+import { isValidElement, memo, useCallback, useState } from 'react';
+
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
+import { getFloatingCollisionPadding } from '@/libs/contextMenu/collisionPadding';
 
 import { PanelContent } from './components/PanelContent';
+import { resolveModelMenuPlacement } from './menuPlacement';
 import { styles } from './styles';
 import { type ModelSwitchPanelProps } from './types';
 
@@ -39,15 +38,37 @@ const ModelSwitchPanel = memo<ModelSwitchPanelProps>(
       [onOpenChange],
     );
 
+    const popupPlacement = resolveModelMenuPlacement(placement);
+
     return (
-      <TooltipGroup>
-        <DropdownMenuRoot open={isOpen} onOpenChange={handleOpenChange}>
-          <DropdownMenuTrigger className={styles.trigger} openOnHover={openOnHover}>
-            {children}
-          </DropdownMenuTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuPositioner hoverTrigger={openOnHover} placement={placement}>
-              <DropdownMenuPopup className={styles.container} onKeyDown={stopPropagation}>
+      <TooltipProvider>
+        <Menu.Root modal={false} open={isOpen} onOpenChange={handleOpenChange}>
+          <Menu.Trigger
+            className={styles.trigger}
+            openOnHover={openOnHover}
+            render={isValidElement(children) ? children : undefined}
+            nativeButton={
+              isValidElement(children)
+                ? children.type === 'button' ||
+                  children.type === Button ||
+                  children.type === ActionIcon
+                : undefined
+            }
+          >
+            {isValidElement(children) ? undefined : children}
+          </Menu.Trigger>
+          <Menu.Portal>
+            <Menu.Positioner
+              {...popupPlacement}
+              className={POPUP_Z_CLASS}
+              collisionPadding={getFloatingCollisionPadding()}
+              data-hover-trigger={openOnHover || undefined}
+              sideOffset={6}
+            >
+              <Menu.Popup
+                className={`${POPUP_Z_CLASS} rounded-(--radius-overlay) bg-popover text-popover-foreground shadow-(--shadow-popover) outline-none ${styles.container}`}
+                onKeyDown={(event) => event.stopPropagation()}
+              >
                 <PanelContent
                   ModelItemComponent={ModelItemComponent}
                   enabledList={enabledList}
@@ -58,11 +79,11 @@ const ModelSwitchPanel = memo<ModelSwitchPanelProps>(
                   onModelChange={onModelChange}
                   onOpenChange={handleOpenChange}
                 />
-              </DropdownMenuPopup>
-            </DropdownMenuPositioner>
-          </DropdownMenuPortal>
-        </DropdownMenuRoot>
-      </TooltipGroup>
+              </Menu.Popup>
+            </Menu.Positioner>
+          </Menu.Portal>
+        </Menu.Root>
+      </TooltipProvider>
     );
   },
 );

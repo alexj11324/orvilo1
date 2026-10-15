@@ -1,9 +1,9 @@
 import { Flexbox } from '@lobehub/ui';
-import { InputNumber } from '@lobehub/ui/base-ui';
 import { memo, useMemo } from 'react';
 import useMergeState from 'use-merge-value';
 
 import DiscreteSlider from '@/components/DiscreteSlider';
+import InputNumber from '@/components/InputNumber';
 
 const Kibi = 1024;
 const MAX_VALUE = 32 * Kibi; // 32768

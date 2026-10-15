@@ -8,20 +8,6 @@
   border-radius: var(--radius-overlay);
 }
 
-/* The inherited public duration is zero for nested/sideways menus. Its minimum
-   with our approved fast role keeps those instant paths and both user settings. */
-.container.container.container,
-.detailPopup.detailPopup.detailPopup {
-  transition-property: opacity, transform;
-  transition-duration: min(var(--orvilo-motion-fast), var(--lobe-dropdown-animation-duration));
-  transition-timing-function: var(--orvilo-motion-ease-out);
-}
-
-.container.container.container[data-closed],
-.detailPopup.detailPopup.detailPopup[data-closed] {
-  transition-timing-function: var(--lobe-dropdown-animation-ease-in);
-}
-
 .dropdownMenu {
   @apply select-none;
 }
@@ -115,13 +101,6 @@
   transition-timing-function: var(--orvilo-motion-ease-out);
 }
 
-.toolbarIndicator.toolbarIndicator {
-  border-radius: var(--radius-input);
-  transition-property: inset-inline-start, inset-block-start, width, height, transform;
-  transition-duration: var(--orvilo-motion-fast);
-  transition-timing-function: var(--orvilo-motion-ease-out);
-}
-
 .settingsAction {
   position: relative;
 }
@@ -154,8 +133,7 @@
   .menuRow.menuRow,
   .container.container [role^='menuitem'],
   .detailPopup.detailPopup [role^='menuitem'],
-  .toolbarTab.toolbarTab,
-  .toolbarIndicator.toolbarIndicator {
+  .toolbarTab.toolbarTab {
     transition: none;
   }
 }

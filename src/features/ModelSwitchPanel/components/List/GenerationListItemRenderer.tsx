@@ -1,15 +1,7 @@
 'use client';
 
-import {
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  DropdownMenuSubmenuRoot,
-  DropdownMenuSubmenuTrigger,
-  Flexbox,
-  Icon,
-  menuSharedStyles,
-} from '@lobehub/ui';
+import { Menu as MenuPrimitive } from '@base-ui/react/menu';
+import { Flexbox, Icon } from '@lobehub/ui';
 import { cn } from 'cn';
 import { LucideArrowRight, LucideBolt } from 'lucide-react';
 import type { ComponentType } from 'react';
@@ -20,8 +12,10 @@ import urlJoin from 'url-join';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import ActionIcon from '@/components/ActionIcon';
 import { ProviderItemRender } from '@/components/ModelSelect';
+import { DropdownMenuSub } from '@/components/ui/dropdown-menu';
 import type { PricingMode } from '@/features/ModelSwitchPanel/components/ModelDetailPanel';
 import ModelDetailPanel from '@/features/ModelSwitchPanel/components/ModelDetailPanel';
+import { menuItemClassName, MenuPanelPopup } from '@/features/ModelSwitchPanel/menu';
 import { styles as modelSwitchPanelStyles } from '@/features/ModelSwitchPanel/styles';
 import type { ListItem } from '@/features/ModelSwitchPanel/types';
 import { menuKey } from '@/features/ModelSwitchPanel/utils';
@@ -124,10 +118,10 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
         const isActive = key === activeKey;
         return (
           <Flexbox className="my-px mx-1">
-            <DropdownMenuSubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
-              <DropdownMenuSubmenuTrigger
+            <DropdownMenuSub open={detailOpen} onOpenChange={setDetailOpen}>
+              <MenuPrimitive.SubmenuTrigger
                 className={cn(
-                  menuSharedStyles.item,
+                  menuItemClassName,
                   modelSwitchPanelStyles.menuRow,
                   isActive && modelSwitchPanelStyles.menuItemActive,
                 )}
@@ -142,20 +136,20 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
                   providerId={item.provider.id}
                   showPopover={false}
                 />
-              </DropdownMenuSubmenuTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuPositioner anchor={null} placement="right" sideOffset={12}>
-                  <DropdownMenuPopup className={modelSwitchPanelStyles.detailPopup}>
-                    <ModelDetailPanel
-                      enabledList={enabledList}
-                      model={item.model.id}
-                      pricingMode={pricingMode}
-                      provider={item.provider.id}
-                    />
-                  </DropdownMenuPopup>
-                </DropdownMenuPositioner>
-              </DropdownMenuPortal>
-            </DropdownMenuSubmenuRoot>
+              </MenuPrimitive.SubmenuTrigger>
+              <MenuPanelPopup
+                className={modelSwitchPanelStyles.detailPopup}
+                placement="right"
+                sideOffset={12}
+              >
+                <ModelDetailPanel
+                  enabledList={enabledList}
+                  model={item.model.id}
+                  pricingMode={pricingMode}
+                  provider={item.provider.id}
+                />
+              </MenuPanelPopup>
+            </DropdownMenuSub>
           </Flexbox>
         );
       }
@@ -166,10 +160,10 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
         const isActive = key === activeKey;
         return (
           <Flexbox className="my-px mx-1">
-            <DropdownMenuSubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
-              <DropdownMenuSubmenuTrigger
+            <DropdownMenuSub open={detailOpen} onOpenChange={setDetailOpen}>
+              <MenuPrimitive.SubmenuTrigger
                 className={cn(
-                  menuSharedStyles.item,
+                  menuItemClassName,
                   modelSwitchPanelStyles.menuRow,
                   isActive && modelSwitchPanelStyles.menuItemActive,
                 )}
@@ -184,20 +178,20 @@ const GenerationListItemRenderer = memo<GenerationListItemRendererProps>(
                   providerId={singleProvider.id}
                   showPopover={false}
                 />
-              </DropdownMenuSubmenuTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuPositioner anchor={null} placement="right" sideOffset={12}>
-                  <DropdownMenuPopup className={modelSwitchPanelStyles.detailPopup}>
-                    <ModelDetailPanel
-                      enabledList={enabledList}
-                      model={item.data.model.id}
-                      pricingMode={pricingMode}
-                      provider={singleProvider.id}
-                    />
-                  </DropdownMenuPopup>
-                </DropdownMenuPositioner>
-              </DropdownMenuPortal>
-            </DropdownMenuSubmenuRoot>
+              </MenuPrimitive.SubmenuTrigger>
+              <MenuPanelPopup
+                className={modelSwitchPanelStyles.detailPopup}
+                placement="right"
+                sideOffset={12}
+              >
+                <ModelDetailPanel
+                  enabledList={enabledList}
+                  model={item.data.model.id}
+                  pricingMode={pricingMode}
+                  provider={singleProvider.id}
+                />
+              </MenuPanelPopup>
+            </DropdownMenuSub>
           </Flexbox>
         );
       }

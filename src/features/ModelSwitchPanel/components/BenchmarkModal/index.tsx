@@ -1,5 +1,4 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { DropdownMenu } from '@lobehub/ui/base-ui';
+import { Flexbox, Icon } from '@lobehub/ui';
 import { t } from 'i18next';
 import { ChevronDownIcon, ChevronUpIcon, InfoIcon, PlusIcon, XIcon } from 'lucide-react';
 import type { ModelRating } from 'model-bank';
@@ -8,8 +7,10 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBusinessModelRating } from '@/business/client/hooks/useBusinessModelRating';
+import { DropdownMenu } from '@/components/ItemsMenu';
 import { createModal } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEnabledChatModels } from '@/hooks/useEnabledChatModels';
 
 import type { RatingDimensionKey } from '../ModelRatingRadar';
@@ -78,8 +79,8 @@ const ScoreCell: FC<ScoreCellProps> = ({ best, color, score }) => {
     .join(' · ');
 
   return (
-    <Tooltip title={tooltip}>
-      <span className={styles.cell}>
+    <Tooltip>
+      <TooltipTrigger render={<span className={styles.cell} />}>
         {best ? (
           // series color + '26' alpha suffix ≈ 15% tint background
           <span className={styles.bestPill} style={{ background: `${color}26`, color }}>
@@ -88,7 +89,8 @@ const ScoreCell: FC<ScoreCellProps> = ({ best, color, score }) => {
         ) : (
           score.score
         )}
-      </span>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
     </Tooltip>
   );
 };
@@ -194,12 +196,14 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
               {addButton}
             </DropdownMenu>
           ) : (
-            <Tooltip
-              title={t('ModelSwitchPanel.detail.rating.modal.compare.limit', {
-                count: MAX_COMPARE_MODELS,
-              })}
-            >
-              {addButton}
+            <Tooltip>
+              {/* The disabled button swallows pointer events, so a wrapper hosts the hint. */}
+              <TooltipTrigger render={<span className="inline-flex" />}>{addButton}</TooltipTrigger>
+              <TooltipContent>
+                {t('ModelSwitchPanel.detail.rating.modal.compare.limit', {
+                  count: MAX_COMPARE_MODELS,
+                })}
+              </TooltipContent>
             </Tooltip>
           ))}
       </Flexbox>

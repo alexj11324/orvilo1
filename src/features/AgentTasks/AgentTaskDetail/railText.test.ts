@@ -8,11 +8,12 @@ import { taskDetailLayoutStyles } from './taskDetailLayoutStyles';
 const readSource = (file: string) => readFileSync(path.join(__dirname, file), 'utf8');
 
 /**
- * Rail values keep DESIGN.md's scoped 13px role. The issue title consumes the
- * 24px/600 heading step on the control itself (Linear's issue-title role, one
- * step inside the 38/30/24/20/16 scale), including the responsive override.
- * Description keeps the scoped 15px/450 reading role, and the top-level
- * Activity band carries the 15px/600 heading tier.
+ * Rail values keep DESIGN.md's scoped 13px role while the rail's group labels
+ * carry Linear's measured 16px/400 muted heading line. The issue title
+ * consumes the 24px/600 heading step on the control itself (Linear's
+ * issue-title role, one step inside the 38/30/24/20/16 scale), including the
+ * responsive override. Description keeps the scoped 15px/450 reading role,
+ * and the top-level Activity band carries the 15px/600 heading tier.
  */
 describe('issue rail type scale', () => {
   it('pins the shared rail value size to the measured step', () => {
@@ -51,12 +52,13 @@ describe('issue rail type scale', () => {
     expect(taskStyles.titleInput).not.toContain('.ant-input');
   });
 
-  it('keeps the rail group labels on the compact secondary-ink tier', () => {
-    // Linear's rail section labels (Properties / Labels / Project) read in the
-    // same muted 12px/500 as the collapsible section headers — never body ink.
+  it('keeps the rail group labels on the measured 16px/400 muted tier', () => {
+    // Linear's rail section labels (Properties / Labels / Related) measure
+    // 16px at weight 400 on muted ink — a real heading line, not the compact
+    // 12px/500 the collapsible section headers keep.
     const classes = taskDetailLayoutStyles.railSectionLabel.split(' ');
     expect(classes).toEqual(
-      expect.arrayContaining(['text-xs', 'font-medium', 'text-muted-foreground']),
+      expect.arrayContaining(['text-base', 'font-normal', 'text-muted-foreground']),
     );
   });
 

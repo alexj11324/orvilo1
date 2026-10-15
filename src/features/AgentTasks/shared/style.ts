@@ -7,7 +7,9 @@ export const styles = {
     'resize-none min-h-0 p-0 border-0 rounded-none text-2xl md:text-2xl leading-8 font-semibold bg-transparent dark:bg-transparent shadow-none focus:border-0 focus:outline-none focus:shadow-none focus-visible:border-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none disabled:cursor-text disabled:opacity-100 disabled:bg-transparent dark:disabled:bg-transparent',
   breadcrumb:
     'overflow-hidden min-w-0 [&_ol]:flex-nowrap [&_ol]:items-center [&_ol]:min-w-0 [&_ol]:m-0 [&_li]:overflow-hidden [&_li]:flex [&_li]:shrink [&_li]:items-center [&_li]:min-w-0 [&_li.ant-breadcrumb-separator]:overflow-visible [&_li.ant-breadcrumb-separator]:shrink-0 [&_li.ant-breadcrumb-separator]:min-w-auto [&_li.ant-breadcrumb-separator]:mx-0.5 [&_li[data-slot=breadcrumb-separator]]:overflow-visible [&_li[data-slot=breadcrumb-separator]]:shrink-0 [&_li[data-slot=breadcrumb-separator]]:min-w-auto [&_li[data-slot=breadcrumb-separator]]:mx-0.5 [&_.ant-breadcrumb-link]:overflow-hidden [&_.ant-breadcrumb-link]:flex [&_.ant-breadcrumb-link]:items-center [&_.ant-breadcrumb-link]:min-w-0 [&_.ant-breadcrumb-link]:py-0.5 [&_.ant-breadcrumb-link]:px-1.5 [&_.ant-breadcrumb-link]:rounded-(--radius-button) [&_.ant-breadcrumb-link>a]:overflow-hidden [&_.ant-breadcrumb-link>a]:flex [&_.ant-breadcrumb-link>a]:items-center [&_.ant-breadcrumb-link>a]:min-w-0 [&_.ant-breadcrumb-link>a]:py-0.5 [&_.ant-breadcrumb-link>a]:px-1.5 [&_.ant-breadcrumb-link>a]:rounded-(--radius-button)',
-  subtaskTreeTitle: 'text-muted-foreground',
+  // Sub-issue rows run on foreground ink in Linear — identifier and title
+  // both measure the same bright tone (255), not the muted rail tone.
+  subtaskTreeTitle: 'text-foreground',
   // Center the 1px timeline stroke in the 16px mark after its 12px inline inset.
   activityLine:
     "relative py-1.25 ps-3 before:content-[''] before:absolute before:inset-y-0 before:[inset-inline-start:calc(var(--spacing)*3_+_(var(--spacing)*4_-_1px)/2)] before:w-px before:bg-divider first:before:top-1/2 last:before:bottom-1/2 only:before:hidden",

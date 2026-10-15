@@ -103,12 +103,12 @@ const SubtaskTitle = memo<SubtaskTitleProps>(({ onOpenMenu, task }) => {
         <TaskPriorityTag priority={task.priority} size={14} taskIdentifier={task.identifier} />
       </span>
       {hasName && (
-        <div className="font-mono text-xs text-muted-foreground" style={{ flex: 'none' }}>
+        <div className="font-mono text-(length:--text-dense)" style={{ flex: 'none' }}>
           {task.identifier}
         </div>
       )}
-      <div className="truncate block text-sm" style={{ flex: 1, minWidth: 0 }}>
-        {task.name || task.identifier}
+      <div className="truncate block text-(length:--text-dense)" style={{ flex: 1, minWidth: 0 }}>
+        {task.name ? task.name : <span className="font-mono">{task.identifier}</span>}
       </div>
       {task.automationMode ? (
         <span

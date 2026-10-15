@@ -1,6 +1,15 @@
 import type { TaskWorkflowCategory } from '@orvilo/types';
 import { cn } from 'cn';
-import { CheckIcon, Flag, Link2, LinkIcon, MoreHorizontal, Plus, Search } from 'lucide-react';
+import {
+  CheckIcon,
+  ChevronDown,
+  Flag,
+  Link2,
+  LinkIcon,
+  MoreHorizontal,
+  Plus,
+  Search,
+} from 'lucide-react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -37,7 +46,6 @@ import {
   writeRelationsOneByOne,
 } from './issueRelationPicker';
 import PropertyGroup from './PropertyGroup';
-import { RAIL_PLACEHOLDER_CLASS } from './railControl';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import {
   collapseRelationRows,
@@ -430,7 +438,7 @@ export const TaskRelationFields = ({
                   const canUnlink = Boolean(edge.relationId || edge.id);
                   return (
                     <div
-                      className="group flex min-h-8 items-center gap-1 hover:bg-accent"
+                      className="group flex min-h-7 items-center gap-1 hover:bg-accent"
                       key={edge.relationId ?? `${kind}:${edge.dependsOn}:${index}`}
                       // On the row, not the button: a disabled button swallows
                       // the pointer, and an unavailable issue still needs its id.
@@ -439,33 +447,25 @@ export const TaskRelationFields = ({
                       <Button
                         className="min-w-0 flex-1 justify-start gap-2 border-0 px-1 font-normal"
                         disabled={unavailable}
-                        size="compact"
+                        size="sm"
                         variant="ghost"
                         onClick={() =>
                           navigate(taskDetailPath(edge.dependsOn, undefined, edge.name))
                         }
                       >
                         {workflowVisual ? (
-                          <workflowVisual.icon color={workflowVisual.color} size={16} />
+                          <workflowVisual.icon color={workflowVisual.color} size={14} />
                         ) : (
-                          <TaskStatusIcon size={16} status={toTaskStatus(edge.status)} />
+                          <TaskStatusIcon size={14} status={toTaskStatus(edge.status)} />
                         )}
+                        {/* Linear's related row is just icon + title; the
+                            identifier only stands in when the title is absent. */}
                         <span
-                          className="shrink-0 font-mono text-muted-foreground"
+                          className={cn('min-w-0 flex-1 truncate', edge.name ? null : 'font-mono')}
                           style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
                         >
-                          {edge.dependsOn}
+                          {edge.name || edge.dependsOn}
                         </span>
-                        {edge.name ? (
-                          <span
-                            className="min-w-0 flex-1 truncate"
-                            style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
-                          >
-                            {edge.name}
-                          </span>
-                        ) : (
-                          <span className="flex-1" />
-                        )}
                         {unavailable ? (
                           <span
                             className="truncate text-muted-foreground"
@@ -519,11 +519,12 @@ export const TaskRelationFields = ({
       })}
       {hiddenCount > 0 && (
         <Button
-          className={cn(styles.addProperty, RAIL_PLACEHOLDER_CLASS)}
+          className={styles.addProperty}
           size="sm"
           variant="ghost"
           onClick={() => setExpanded(true)}
         >
+          <ChevronDown data-icon="inline-start" />
           {t('taskDetail.relations.showMore', { count: hiddenCount })}
         </Button>
       )}

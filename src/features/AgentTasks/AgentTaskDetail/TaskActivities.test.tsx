@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,7 +7,9 @@ import TaskActivities from './TaskActivities';
 import { TaskDetailScope } from './TaskDetailScope';
 
 const mocks = vi.hoisted(() => ({
+  hash: '',
   refreshTaskDetail: vi.fn(),
+  scrollIntoView: vi.fn(),
   state: {
     activeTaskId: 'T-1',
     taskDetailMap: {} as Record<string, Record<string, unknown>>,
@@ -17,7 +19,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('react-router', () => ({
-  useLocation: () => ({ hash: '', search: '' }),
+  useLocation: () => ({ hash: mocks.hash, search: '' }),
 }));
 
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
@@ -49,10 +51,35 @@ vi.mock('@/components/toast', () => ({ toast: { error: vi.fn() } }));
 
 // Heavy feed children are stubbed to markers; the section chrome under test —
 // header, rail lines, time format, composer seat — renders for real.
-vi.mock('./CommentInput', () => ({ default: () => <div data-testid="comment-input" /> }));
+vi.mock('./CommentInput', () => ({
+  default: ({ replyTarget }: { replyTarget?: { commentId: string } | null }) => (
+    <div data-reply-to={replyTarget?.commentId ?? ''} data-testid="comment-input" />
+  ),
+}));
 vi.mock('./CommentCard', () => ({
-  default: ({ activity, replies }: { activity: { id?: string }; replies?: { id?: string }[] }) => (
-    <div data-comment-id={activity.id} data-testid="comment-card">
+  default: ({
+    activity,
+    onReply,
+    replies,
+  }: {
+    activity: { id?: string };
+    onReply?: (activity: { id?: string }) => void;
+    replies?: { id?: string }[];
+  }) => (
+    <div
+      data-comment-id={activity.id}
+      data-testid="comment-card"
+      id={activity.id ? `comment-${activity.id}` : undefined}
+    >
+      {onReply ? (
+        <button
+          data-testid={`reply-btn-${activity.id}`}
+          type="button"
+          onClick={() => onReply(activity)}
+        >
+          reply
+        </button>
+      ) : null}
       {(replies ?? []).map((reply) => (
         <div data-testid={`reply-${reply.id}`} key={reply.id} />
       ))}
@@ -93,7 +120,10 @@ const headerBand = () =>
 describe('TaskActivities', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.hash = '';
     setDetail({ isSubscribed: false });
+    // happy-dom has no layout — stub the scroll seam the deep-link path uses.
+    Element.prototype.scrollIntoView = mocks.scrollIntoView;
   });
   afterEach(cleanup);
 
@@ -187,5 +217,49 @@ describe('TaskActivities', () => {
     const composer = screen.getByTestId('comment-input');
     const empty = screen.getByText('taskDetail.activitiesEmpty');
     expect(empty.compareDocumentPosition(composer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('expands a folded feed for a comment deep link and scrolls after it opens', () => {
+    setDetail({
+      activities: [{ content: 'hi', id: 'c1', time: '2026-05-01T00:00:00Z', type: 'comment' }],
+    });
+    const { rerender } = renderFeed();
+    const toggle = screen.getByRole('button', { name: 'taskDetail.activities' });
+
+    // Fold the feed away, then arrive at the comment link: the card's own
+    // scroll ran while the panel was still hidden — a no-op.
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    mocks.hash = '#comment-c1';
+    rerender(
+      <TaskDetailScope taskId="T-1">
+        <TaskActivities />
+      </TaskDetailScope>,
+    );
+
+    // The section reopened and the linked card's scroll re-fired once visible.
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(mocks.scrollIntoView).toHaveBeenCalledWith({ block: 'center' });
+    expect(mocks.scrollIntoView.mock.instances[0]).toBe(document.getElementById('comment-c1'));
+  });
+
+  it('clears the reply chip when the feed rebinds to another issue', () => {
+    setDetail({
+      activities: [{ content: 'hi', id: 'c1', time: '2026-05-01T00:00:00Z', type: 'comment' }],
+    });
+    const { rerender } = renderFeed();
+
+    fireEvent.click(screen.getByTestId('reply-btn-c1'));
+    expect(screen.getByTestId('comment-input')).toHaveAttribute('data-reply-to', 'c1');
+
+    // The same feed host is re-bound to a different issue — the chip must not
+    // aim the new issue's composer at the previous issue's comment.
+    rerender(
+      <TaskDetailScope taskId="T-2">
+        <TaskActivities />
+      </TaskDetailScope>,
+    );
+
+    expect(screen.getByTestId('comment-input')).toHaveAttribute('data-reply-to', '');
   });
 });

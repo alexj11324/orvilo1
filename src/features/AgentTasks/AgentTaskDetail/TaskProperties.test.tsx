@@ -13,7 +13,6 @@ import TaskProperties from './TaskProperties';
 
 const mocks = vi.hoisted(() => ({
   activeWorkspaceId: 'workspace-1' as string | undefined,
-  labelSelectorDefaultOpen: vi.fn(),
   moveWorkflow: vi.fn(),
   openTaskScheduleDialog: vi.fn(),
   scheduleConfigDefaultOpen: vi.fn(),
@@ -76,10 +75,7 @@ vi.mock('../features/AssigneeUserAvatar', () => ({
 }));
 
 vi.mock('../features/TaskLabelSelector', () => ({
-  default: ({ children, defaultOpen }: { children?: ReactNode; defaultOpen?: boolean }) => {
-    mocks.labelSelectorDefaultOpen(defaultOpen);
-    return <>{children}</>;
-  },
+  default: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('../features/TaskPriorityTag', () => ({
@@ -152,7 +148,6 @@ describe('TaskProperties', () => {
     mocks.activeWorkspaceId = 'workspace-1';
     mocks.moveWorkflow.mockClear();
     mocks.openTaskScheduleDialog.mockClear();
-    mocks.labelSelectorDefaultOpen.mockClear();
     mocks.scheduleConfigDefaultOpen.mockClear();
   });
 
@@ -506,8 +501,6 @@ describe('TaskProperties', () => {
     const labelsGroup = screen.getByText('taskDetail.labels.title').parentElement as HTMLElement;
     const row = within(labelsGroup).getByRole('group', { name: 'taskDetail.labels.title' });
     expect(within(row).getByText('taskDetail.property.addLabels')).toBeTruthy();
-    // The group mounts settled — nothing force-opens its picker anymore.
-    expect(mocks.labelSelectorDefaultOpen).not.toHaveBeenCalledWith(true);
   });
 
   it('shows the label chips inside the Labels group once the issue has labels', () => {

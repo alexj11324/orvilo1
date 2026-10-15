@@ -2111,6 +2111,20 @@ describe('Task Router Integration', () => {
       expect(commentActivities?.[0].content).toBe('First comment');
     });
 
+    it('rejects an empty-string parentCommentId instead of storing it verbatim', async () => {
+      const task = await caller.create({ instruction: 'Test' });
+
+      // An empty parent id is a client bug, not "no parent" — it would land in
+      // the self-FK column as-is. Reject it like the sibling comment routers.
+      await expect(
+        caller.addComment({ content: 'Ghost reply', id: task.data.id, parentCommentId: '' }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      await expect(
+        caller.addComment({ content: 'Ghost reply', id: task.data.id, parentCommentId: '   ' }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      expect(await new TaskModel(serverDB, userId).getComments(task.data.id)).toHaveLength(0);
+    });
+
     it('attributes trusted server comments to the running Agent and preserves its requirement fence', async () => {
       const task = await caller.create({ instruction: 'Test' });
       const before = await new TaskModel(serverDB, userId).findById(task.data.id);

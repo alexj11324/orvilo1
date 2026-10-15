@@ -485,6 +485,13 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
     // Expand once for this link; a later manual collapse remains the user's choice.
     if (hasLinkedComment) setIsExpanded(true);
   }, [hasLinkedComment, hash]);
+  useEffect(() => {
+    // The card's own anchor scroll fires while a collapsed panel is still
+    // `hidden` — a no-op. Re-fire it now that the section is open; on an
+    // already-open feed this is the same scroll the card just ran.
+    if (!isExpanded || !hasLinkedComment) return;
+    document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'center' });
+  }, [isExpanded, hasLinkedComment, hash]);
 
   const refreshActiveTask = useCallback(async () => {
     if (activeTaskId) await refreshTaskDetail(activeTaskId);
@@ -496,6 +503,12 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
    * the same thread (the model normalizes the same way).
    */
   const [replyTarget, setReplyTarget] = useState<CommentReplyTarget | null>(null);
+  useEffect(() => {
+    // The chip names a comment on this issue — left set across a task switch
+    // it would aim the composer at the previous issue's thread and hit the
+    // cross-issue parent check on submit.
+    setReplyTarget(null);
+  }, [activeTaskId]);
   const handleReply = useCallback((activity: TaskDetailActivity) => {
     const commentId = activity.parentCommentId ?? activity.id;
     if (!commentId) return;

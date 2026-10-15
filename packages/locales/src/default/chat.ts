@@ -1628,7 +1628,6 @@ export default {
   'taskDetail.relations.blocking': 'Blocks',
   'taskDetail.relations.blockedBy': 'Blocked by',
   'taskDetail.relations.relates': 'Related',
-  'taskDetail.relations.none': 'None',
   'taskDetail.relations.search': 'Search issues',
   'taskDetail.relations.searching': 'Searching…',
   'taskDetail.relations.noMatches': 'No matching issues',

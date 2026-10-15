@@ -2194,7 +2194,6 @@
   "taskDetail.relations.blockedBy": "被阻塞",
   "taskDetail.relations.blocking": "阻塞",
   "taskDetail.relations.noMatches": "没有匹配的 Issue",
-  "taskDetail.relations.none": "无",
   "taskDetail.relations.relates": "相关",
   "taskDetail.relations.remove": "移除关联",
   "taskDetail.relations.search": "搜索 Issue",

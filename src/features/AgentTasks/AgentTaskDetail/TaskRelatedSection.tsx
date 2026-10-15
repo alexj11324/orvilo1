@@ -574,10 +574,10 @@ export const TaskRelationFields = ({
 
 /**
  * The rail's "Related" group — Linear lists every issue this one is linked to
- * as labelled kind groups (Blocked by → Blocks → Related) of status-dot +
- * identifier + title rows that navigate on click, folding long lists behind
- * "Show N more". The group's one add affordance mirrors Linear's "Mark
- * current issue as" menu.
+ * as labelled kind groups (Blocked by → Blocks → Related) of status-icon +
+ * title rows that navigate on click (the identifier stands in only for a
+ * nameless row), folding long lists behind "Show N more". The group's one
+ * add affordance mirrors Linear's "Mark current issue as" menu.
  */
 const TaskRelatedSection = memo(() => {
   const { t } = useTranslation('chat');

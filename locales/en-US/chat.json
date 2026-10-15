@@ -2195,7 +2195,6 @@
   "taskDetail.relations.blockedBy": "Blocked by",
   "taskDetail.relations.blocking": "Blocks",
   "taskDetail.relations.noMatches": "No matching issues",
-  "taskDetail.relations.none": "None",
   "taskDetail.relations.relates": "Related",
   "taskDetail.relations.remove": "Remove relation",
   "taskDetail.relations.search": "Search issues",

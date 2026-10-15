@@ -102,8 +102,9 @@ describe('the native agent settings page carries no profile chrome', () => {
     expect(exists('src/features/ProfileEditor/AgentUserTools'), 'AgentUserTools is back').toBe(
       false,
     );
-    // The shared AgentTool component must NOT be deleted — group MemberProfile
-    // still mounts it. Assert the settings surface never re-imports it.
+    // Group MemberProfile was the last mount of the shared profile tool editor.
+    // That profile route is gone, so the editor itself stays gone too.
+    expect(exists('src/features/ProfileEditor/AgentTool.tsx'), 'AgentTool is back').toBe(false);
     for (const file of SETTINGS_SURFACE_FILES) {
       expect(read(file), `${file} re-mounts tool management`).not.toContain('AgentUserTools');
       expect(read(file), `${file} re-mounts tool management`).not.toContain('ProfileEditor');
@@ -124,9 +125,9 @@ describe('retired vocabulary stays out of the user-facing surface', () => {
     const setting = read('packages/locales/src/default/setting.ts');
     const chat = read('packages/locales/src/default/chat.ts');
 
-    // `agentTools.*`/`userTools.*`/`runtimeConfig.*` stay — AgentSkillStore,
-    // PluginTag and ReasoningEffortSelect still consume them on non-settings
-    // surfaces. Only the retired keys + retired vocabulary are asserted gone.
+    // `agentTools.*`/`userTools.*`/`runtimeConfig.*` stay — AgentSkillStore and
+    // ReasoningEffortSelect still consume them on non-settings surfaces. Only
+    // the retired keys + retired vocabulary are asserted gone.
     for (const banned of [
       'agentEngine.',
       'runtimeEnv.',

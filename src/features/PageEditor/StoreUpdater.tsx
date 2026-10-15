@@ -1,5 +1,6 @@
 'use client';
 
+import { legacyEditorRuntimeCommands } from '@orvilo/editor-runtime/legacy';
 import { memo, useEffect } from 'react';
 import { createStoreUpdater } from 'zustand-utils';
 
@@ -106,7 +107,7 @@ const StoreUpdater = memo<StoreUpdaterProps>(
               throw new Error('Page no longer owns the active document');
             }
           };
-          pageAgentRuntime.setEditor(pageAgentEditor);
+          pageAgentRuntime.setEditor(pageAgentEditor, legacyEditorRuntimeCommands);
           pageAgentRuntime.setCurrentDocId(pageId);
           pageAgentRuntime.setTitleHandlers(
             (nextTitle) => {

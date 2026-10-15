@@ -3,147 +3,167 @@
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/litexml/command/symbols.d.ts",
     "sha256": "8fc9e5275d37ea3ed17e604499d6b4f550c65d467acf3bdc437f7e5e8478bea4",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/litexml/command/symbols.d.ts",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "8fc9e5275d37ea3ed17e604499d6b4f550c65d467acf3bdc437f7e5e8478bea4"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/litexml/command/symbols.js",
     "sha256": "68025af87173e62f147635d69e576f08785b240c91ad0b581312965b9f571427",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/litexml/command/symbols.js",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "68025af87173e62f147635d69e576f08785b240c91ad0b581312965b9f571427"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/headless.d.ts",
     "sha256": "5e5a95fba2372a121b9f4fdac95a9c141d49088d1aecf5220a9bdaa75477dc7e",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/headless.d.ts",
-    "transform": "original bytes preserved except trailing newline normalization; appended owned browser/CM identity exports or declarations only; append native upload plugin and actual command declarations; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only; native chat companion: exports actual local LiteXML/Markdown service IDs; JS appends namespaced SDK virtual-block key behavior using existing local closure symbols; native chat v2: live readonly guards on owned virtual/code-side navigation; structured raw Markdown writer/AST preservation; exact checklist/code/math toolbar exports; appended same-identity slash command exports/declarations; expose actual HeadlessEditor.kernel IEditorKernel contract including existing cloneNodeEditor implementation",
-    "localSHA256": "e6de031bf28cd5d8272115f3bd408f05e41e8c99dc60ddfe9fc9f1a4f8b37bb1",
+    "transform": "original bytes preserved except trailing newline normalization; appended owned browser/CM identity exports or declarations only; append native upload plugin and actual command declarations; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only; native chat companion: exports actual local LiteXML/Markdown service IDs; JS appends namespaced SDK virtual-block key behavior using existing local closure symbols; native chat v2: live readonly guards on owned virtual/code-side navigation; structured raw Markdown writer/AST preservation; exact checklist/code/math toolbar exports; appended same-identity slash command exports/declarations; expose actual HeadlessEditor.kernel IEditorKernel contract including existing cloneNodeEditor implementation; replace SDK service typeof imports with complete owned structural contracts",
+    "localSHA256": "89894de7c390a198a48a36145074f83ff37dc04a2a564aa74e0676e0ec7e9874",
     "mathCompanionBeforeSHA256": "27763c5ef4b282845554f970a0b73810656240837bf9f22372b5910944553551",
-    "ownedSHA256": "0666484988785038ff4efa50bed3edad422111283b7542c00c38020c25f65a93",
+    "ownedSHA256": "89894de7c390a198a48a36145074f83ff37dc04a2a564aa74e0676e0ec7e9874",
     "linkMentionCompanionBeforeSHA256": "849bc90352766b475f559d70a9c18be591eb84c7d8432e31abe503bca54e2516",
     "nativeChatBeforeSHA256": "4e65ee38c4c4cb4ba59d31f4d956fe044db0ab9bfeb25832b66e8cde9a99fb24",
     "nativeChatV2BeforeSHA256": "b3abcd43d9189fc6ae3d344a756ec949a828927b4edf4dd755e7220a0dac2549",
     "ownedBeforeIntegrationSHA256": [
       "a0f5f0a719f5f1f720e4eae3cd1f343719194cb7c0f083999180d9867c990720",
-      "e6de031bf28cd5d8272115f3bd408f05e41e8c99dc60ddfe9fc9f1a4f8b37bb1"
+      "e6de031bf28cd5d8272115f3bd408f05e41e8c99dc60ddfe9fc9f1a4f8b37bb1",
+      "0666484988785038ff4efa50bed3edad422111283b7542c00c38020c25f65a93"
     ]
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/common/node/node-id.d.ts",
     "sha256": "29e5f5415b192ba6c6ba1d6f0375b6fa4374e5a60917be035904cb08f2a87af4",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/common/node/node-id.d.ts",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "29e5f5415b192ba6c6ba1d6f0375b6fa4374e5a60917be035904cb08f2a87af4"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/symbols-Dyr9yyS0.d.ts",
     "sha256": "31f018728074499fd90ab7e5931a9b94682da86afb5a58eab19ccf44a1ef5957",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/symbols-Dyr9yyS0.d.ts",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "31f018728074499fd90ab7e5931a9b94682da86afb5a58eab19ccf44a1ef5957"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/i-node-identity-service-BBC_bg97.d.ts",
     "sha256": "615aaa1b7d0158cfa2e7d81d071cb32bd209267f3e8aadd930b497d215d8a76c",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/i-node-identity-service-BBC_bg97.d.ts",
     "transform": "original bytes preserved except trailing newline normalization; appended owned browser/CM identity exports or declarations only",
-    "localSHA256": "3d5a2e7d2efa7d9bf91b206a23693c28d32e08f5612e5d47cb2c8379119eed52"
+    "localSHA256": "3d5a2e7d2efa7d9bf91b206a23693c28d32e08f5612e5d47cb2c8379119eed52",
+    "ownedSHA256": "3d5a2e7d2efa7d9bf91b206a23693c28d32e08f5612e5d47cb2c8379119eed52"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/headless.js",
     "sha256": "119c4f3b9075380ebcd8af05f74963351167f59c04dbb69f305b70123d3b692f",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/headless.js",
     "transform": "original bytes preserved except trailing newline normalization; appended owned browser/CM identity exports or declarations only; append original installed UploadService/UploadPlugin/getDragSelection closure with same existing kernel/service identities; add live readonly guards for file/image/drop/paste and post-decode insertion; append existing upload command object exports; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only; native chat companion: exports actual local LiteXML/Markdown service IDs; JS appends namespaced SDK virtual-block key behavior using existing local closure symbols; native chat v2: live readonly guards on owned virtual/code-side navigation; structured raw Markdown writer/AST preservation; exact checklist/code/math toolbar exports; appended same-identity slash command exports/declarations; extracted unchanged pure table insertion callback for registered headless table insertion; DOM handlers remain guarded",
-    "localSHA256": "cb63d7decd1c0f02cfe0416733865792046756a2a4ba4a8b21298b6ad86bcc43",
+    "localSHA256": "ad43f3a0d5a3bd4fcb2685cc87882051d51188e0d82ab4268337177d376bc6a1",
     "mathCompanionBeforeSHA256": "af6f3d93ce9fb6827526766116164bb9b553de5523332aee1ea81c722c4d5392",
     "ownedSHA256": "ad43f3a0d5a3bd4fcb2685cc87882051d51188e0d82ab4268337177d376bc6a1",
     "linkMentionCompanionBeforeSHA256": "8dd905970751aa327b43c0f4dd5976c75c4bb36ca4045b75e451c385b43bb762",
     "nativeChatBeforeSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3",
     "nativeChatV2BeforeSHA256": "ee074368c1c3060357ea294ba2d42b8b546b98a76921104acfb6d0d8e181fe81",
     "ownedBeforeIntegrationSHA256": [
-      "c68b7c59af4211777dca65ead66d2c2e6c60d3d6512b6e0a1e6ac887119e7325"
+      "c68b7c59af4211777dca65ead66d2c2e6c60d3d6512b6e0a1e6ac887119e7325",
+      "cb63d7decd1c0f02cfe0416733865792046756a2a4ba4a8b21298b6ad86bcc43"
     ]
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/common/service/i-node-identity-service.js",
     "sha256": "e0ac6ea3b3a660b91f35a3e5948114b20dbaf1d6fc25b638710ff4a456fa718a",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/common/service/i-node-identity-service.js",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "e0ac6ea3b3a660b91f35a3e5948114b20dbaf1d6fc25b638710ff4a456fa718a"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/common/service/i-node-identity-service.d.ts",
     "sha256": "b116c3fa90a0caffea2e3a1330908d75c2422805e10669f773a0a5541c7b7623",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/common/service/i-node-identity-service.d.ts",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "b116c3fa90a0caffea2e3a1330908d75c2422805e10669f773a0a5541c7b7623"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/types/index.d.ts",
     "sha256": "34cbdb499cd4ca1976e98f92dd9a7d04e70d6e05b4e81ba63bf1795492cdc1c1",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/types/index.d.ts",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "34cbdb499cd4ca1976e98f92dd9a7d04e70d6e05b4e81ba63bf1795492cdc1c1"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/types/kernel.d.ts",
     "sha256": "57f9268b00f13c95050b64dfc4f5ce30a0c7c3c72af6d53b2bdc48a5791aa3a9",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/types/kernel.d.ts",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "57f9268b00f13c95050b64dfc4f5ce30a0c7c3c72af6d53b2bdc48a5791aa3a9"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/types/locale.d.ts",
     "sha256": "99ac3f3789abe22de0752b5a1af5ab4d5a999eaea81610f02cf2da695754af78",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/types/locale.d.ts",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "99ac3f3789abe22de0752b5a1af5ab4d5a999eaea81610f02cf2da695754af78"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/locale/index.d.ts",
     "sha256": "e6877391a772d0d41dbf8044635ea93611a819f39972e71ff8dbdb0442784346",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/locale/index.d.ts",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "e6877391a772d0d41dbf8044635ea93611a819f39972e71ff8dbdb0442784346"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/utils/hotkey/registerHotkey.d.ts",
     "sha256": "3a3c45f32288a5666e8817fb7c66a44c605aea974ae1311e4454b603b408d0f7",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/utils/hotkey/registerHotkey.d.ts",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "3a3c45f32288a5666e8817fb7c66a44c605aea974ae1311e4454b603b408d0f7"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/types/hotkey.d.ts",
     "sha256": "070067cce9d60bcb00f4f006546eb9d99dfcd232d2b865112b123ae1625d213c",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/types/hotkey.d.ts",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "070067cce9d60bcb00f4f006546eb9d99dfcd232d2b865112b123ae1625d213c"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/editor-kernel/data-source.d.ts",
     "sha256": "96643d2c9f8260df613e41c73636e9eed4d5caca7d486e092c9464c539a2a793",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/editor-kernel/data-source.d.ts",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "96643d2c9f8260df613e41c73636e9eed4d5caca7d486e092c9464c539a2a793"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/common/node/node-id.js",
     "sha256": "b897d9dbef72e8abf83d8eec037c2cd033a466ea168e1fa8199554e8f8bb72ae",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/common/node/node-id.js",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "b897d9dbef72e8abf83d8eec037c2cd033a466ea168e1fa8199554e8f8bb72ae"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/common/node/node-identity-policy.js",
     "sha256": "6a7ef599f9e89865515c4af0f77a96487a6ee5e9ed2b4120541fc95c18bb5911",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/common/node/node-identity-policy.js",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "6a7ef599f9e89865515c4af0f77a96487a6ee5e9ed2b4120541fc95c18bb5911"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/common/node/node-identity-policy.d.ts",
     "sha256": "3e3b72711746021400df7a076a48c50f28f6c949ee82547bd50819665d2195a4",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/common/node/node-identity-policy.d.ts",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "3e3b72711746021400df7a076a48c50f28f6c949ee82547bd50819665d2195a4"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/_virtual/_rolldown/runtime.js",
     "sha256": "4d1f973bf43c08c2ea00f49f991b9d7c103b00ffe2cc209a87cde58192ece33b",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/_virtual/_rolldown/runtime.js",
-    "transform": "none; exact bytes"
+    "transform": "none; exact bytes",
+    "ownedSHA256": "4d1f973bf43c08c2ea00f49f991b9d7c103b00ffe2cc209a87cde58192ece33b"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/upload/service/i-upload-service.js",
     "sha256": "fa66648922642da4363d43b5e182bb10fb063448c583bcdf4d065b3db07560dc",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/headless.js",
-    "localSHA256": "cb63d7decd1c0f02cfe0416733865792046756a2a4ba4a8b21298b6ad86bcc43",
+    "localSHA256": "ad43f3a0d5a3bd4fcb2685cc87882051d51188e0d82ab4268337177d376bc6a1",
     "transform": "append implementation region only; module imports rewired to existing lexical/rich-text dependencies and existing SAME IUploadService/KernelPlugin; original genServiceId declaration deliberately omitted; live lexical.isEditable guard added to upload command callbacks; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only; native chat companion: exports actual local LiteXML/Markdown service IDs; JS appends namespaced SDK virtual-block key behavior using existing local closure symbols; native chat v2: live readonly guards on owned virtual/code-side navigation; structured raw Markdown writer/AST preservation; exact checklist/code/math toolbar exports; appended same-identity slash command exports/declarations; extracted unchanged pure table insertion callback for registered headless table insertion; DOM handlers remain guarded",
     "mathCompanionBeforeSHA256": "af6f3d93ce9fb6827526766116164bb9b553de5523332aee1ea81c722c4d5392",
     "ownedSHA256": "ad43f3a0d5a3bd4fcb2685cc87882051d51188e0d82ab4268337177d376bc6a1",
@@ -151,14 +171,15 @@
     "nativeChatBeforeSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3",
     "nativeChatV2BeforeSHA256": "ee074368c1c3060357ea294ba2d42b8b546b98a76921104acfb6d0d8e181fe81",
     "ownedBeforeIntegrationSHA256": [
-      "c68b7c59af4211777dca65ead66d2c2e6c60d3d6512b6e0a1e6ac887119e7325"
+      "c68b7c59af4211777dca65ead66d2c2e6c60d3d6512b6e0a1e6ac887119e7325",
+      "cb63d7decd1c0f02cfe0416733865792046756a2a4ba4a8b21298b6ad86bcc43"
     ]
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/upload/utils/index.js",
     "sha256": "70be6e025d5de4a4d7f175359602f479feeceb988e0ef605594985856786df5b",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/headless.js",
-    "localSHA256": "cb63d7decd1c0f02cfe0416733865792046756a2a4ba4a8b21298b6ad86bcc43",
+    "localSHA256": "ad43f3a0d5a3bd4fcb2685cc87882051d51188e0d82ab4268337177d376bc6a1",
     "transform": "append implementation region only; module imports rewired to existing lexical/rich-text dependencies and existing SAME IUploadService/KernelPlugin; original genServiceId declaration deliberately omitted; live lexical.isEditable guard added to upload command callbacks; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only; native chat companion: exports actual local LiteXML/Markdown service IDs; JS appends namespaced SDK virtual-block key behavior using existing local closure symbols; native chat v2: live readonly guards on owned virtual/code-side navigation; structured raw Markdown writer/AST preservation; exact checklist/code/math toolbar exports; appended same-identity slash command exports/declarations; extracted unchanged pure table insertion callback for registered headless table insertion; DOM handlers remain guarded",
     "mathCompanionBeforeSHA256": "af6f3d93ce9fb6827526766116164bb9b553de5523332aee1ea81c722c4d5392",
     "ownedSHA256": "ad43f3a0d5a3bd4fcb2685cc87882051d51188e0d82ab4268337177d376bc6a1",
@@ -166,14 +187,15 @@
     "nativeChatBeforeSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3",
     "nativeChatV2BeforeSHA256": "ee074368c1c3060357ea294ba2d42b8b546b98a76921104acfb6d0d8e181fe81",
     "ownedBeforeIntegrationSHA256": [
-      "c68b7c59af4211777dca65ead66d2c2e6c60d3d6512b6e0a1e6ac887119e7325"
+      "c68b7c59af4211777dca65ead66d2c2e6c60d3d6512b6e0a1e6ac887119e7325",
+      "cb63d7decd1c0f02cfe0416733865792046756a2a4ba4a8b21298b6ad86bcc43"
     ]
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/upload/plugin/index.js",
     "sha256": "4abda5282484adf805469aff7080564d80a27e219c5baefbe55873f7fd789788",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/headless.js",
-    "localSHA256": "cb63d7decd1c0f02cfe0416733865792046756a2a4ba4a8b21298b6ad86bcc43",
+    "localSHA256": "ad43f3a0d5a3bd4fcb2685cc87882051d51188e0d82ab4268337177d376bc6a1",
     "transform": "append implementation region only; module imports rewired to existing lexical/rich-text dependencies and existing SAME IUploadService/KernelPlugin; original genServiceId declaration deliberately omitted; live lexical.isEditable guard added to upload command callbacks; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only; native chat companion: exports actual local LiteXML/Markdown service IDs; JS appends namespaced SDK virtual-block key behavior using existing local closure symbols; native chat v2: live readonly guards on owned virtual/code-side navigation; structured raw Markdown writer/AST preservation; exact checklist/code/math toolbar exports; appended same-identity slash command exports/declarations; extracted unchanged pure table insertion callback for registered headless table insertion; DOM handlers remain guarded",
     "mathCompanionBeforeSHA256": "af6f3d93ce9fb6827526766116164bb9b553de5523332aee1ea81c722c4d5392",
     "ownedSHA256": "ad43f3a0d5a3bd4fcb2685cc87882051d51188e0d82ab4268337177d376bc6a1",
@@ -181,7 +203,8 @@
     "nativeChatBeforeSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3",
     "nativeChatV2BeforeSHA256": "ee074368c1c3060357ea294ba2d42b8b546b98a76921104acfb6d0d8e181fe81",
     "ownedBeforeIntegrationSHA256": [
-      "c68b7c59af4211777dca65ead66d2c2e6c60d3d6512b6e0a1e6ac887119e7325"
+      "c68b7c59af4211777dca65ead66d2c2e6c60d3d6512b6e0a1e6ac887119e7325",
+      "cb63d7decd1c0f02cfe0416733865792046756a2a4ba4a8b21298b6ad86bcc43"
     ]
   },
   {
@@ -191,9 +214,22 @@
     "transform": "append namespaced functions; remove standalone imports/init/exports; bind existing local lexical/list/utils/debug/commands; preserve bodies; native chat v2: live readonly guards on owned virtual/code-side navigation; structured raw Markdown writer/AST preservation; exact checklist/code/math toolbar exports; appended same-identity slash command exports/declarations; extracted unchanged pure table insertion callback for registered headless table insertion; DOM handlers remain guarded",
     "nativeChatV2BeforeSHA256": "ee074368c1c3060357ea294ba2d42b8b546b98a76921104acfb6d0d8e181fe81",
     "ownedSHA256": "ad43f3a0d5a3bd4fcb2685cc87882051d51188e0d82ab4268337177d376bc6a1",
-    "localSHA256": "cb63d7decd1c0f02cfe0416733865792046756a2a4ba4a8b21298b6ad86bcc43",
+    "localSHA256": "ad43f3a0d5a3bd4fcb2685cc87882051d51188e0d82ab4268337177d376bc6a1",
     "ownedBeforeIntegrationSHA256": [
-      "c68b7c59af4211777dca65ead66d2c2e6c60d3d6512b6e0a1e6ac887119e7325"
+      "c68b7c59af4211777dca65ead66d2c2e6c60d3d6512b6e0a1e6ac887119e7325",
+      "cb63d7decd1c0f02cfe0416733865792046756a2a4ba4a8b21298b6ad86bcc43"
     ]
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/plugins/markdown/service/transformers.d.ts",
+    "sha256": "7a3c63cbe7de6ea91792cf13c5a36d7a12ff690986c6f13499f99d016e568924",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/markdown/service/transformers.d.ts",
+    "transform": "none; exact pure type declaration bytes",
+    "ownedSHA256": "7a3c63cbe7de6ea91792cf13c5a36d7a12ff690986c6f13499f99d016e568924"
+  },
+  {
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/native-service-contracts.d.ts",
+    "transform": "owned structural contracts traced to actual local service implementations; no SDK type aliases",
+    "ownedSHA256": "26fbfe4caacb4306a977dce3e02f81a806bb99816f36255cd9fe803e39f3fe81"
   }
 ]

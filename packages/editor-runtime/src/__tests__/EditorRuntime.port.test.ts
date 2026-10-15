@@ -2,7 +2,8 @@ import { CommonPlugin, Kernel, ListPlugin, LitexmlPlugin, MarkdownPlugin } from 
 import { createHeadlessEditor } from '@lobehub/editor/headless';
 import { describe, expect, it, vi } from 'vitest';
 
-import { EditorRuntime, type EditorRuntimePort } from '../EditorRuntime';
+import type { EditorRuntimePort } from '../EditorRuntime';
+import { LegacyEditorRuntime as EditorRuntime } from '../legacy';
 
 const fixtures = [
   {

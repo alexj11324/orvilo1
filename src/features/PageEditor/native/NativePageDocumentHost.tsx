@@ -15,6 +15,7 @@ import { useRegisterFilesHotkeys, useSaveDocumentHotkey } from '@/hooks/useHotke
 import { useDocumentStore } from '@/store/document';
 import { editorSelectors } from '@/store/document/slices/editor';
 
+import { registerNativeHistoryOwner } from './nativeHistoryOwner';
 import { bindNativePageRuntime, type NativePageRuntimePort } from './runtimeBinding';
 import { useNativeDocumentResource } from './useNativeDocumentResource';
 
@@ -164,6 +165,32 @@ function NativePageDocumentSession({
       setTitle: (title) => callbacks.current.setTitle(title),
     });
   }, [canWrite, documentId, ready, runtime]);
+
+  const historyState = useRef({
+    canWrite,
+    hydrated,
+    widgets: surface.widgets,
+    plugins: surface.plugins,
+  });
+  historyState.current = { canWrite, hydrated, widgets: surface.widgets, plugins: surface.plugins };
+  useEffect(() => {
+    if (!ready) return;
+    return registerNativeHistoryOwner({
+      documentId,
+      editor: ready.editor,
+      canRestore: () =>
+        historyState.current.canWrite &&
+        historyState.current.hydrated &&
+        ready.editor.getLexicalEditor()?.isEditable() === true,
+      beforeRestore: async () => {
+        await callbacks.current.beforeSave?.();
+      },
+      getRichDiff: () => ({
+        widgets: historyState.current.widgets,
+        plugins: historyState.current.plugins,
+      }),
+    });
+  }, [documentId, ready]);
 
   const save = useCallback(
     async (saveSource: 'manual' | 'system') => {

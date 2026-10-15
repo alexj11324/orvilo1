@@ -1,14 +1,12 @@
 'use client';
 
-import { ConfigProvider } from 'antd';
 import dayjs from 'dayjs';
 import type { ResourceLanguage } from 'i18next';
 import { memo, type PropsWithChildren, useEffect, useRef, useState } from 'react';
-import { isRtlLang } from 'rtl-detect';
 
+import { DocumentLocale } from '@/layout/GlobalProvider/DocumentLocale';
 import type { DayjsLocaleGlobEntry } from '@/utils/dayjsLocale';
 import { loadDayjsLocaleModule, normalizeDayjsLocale } from '@/utils/dayjsLocale';
-import { getAntdLocale } from '@/utils/locale';
 
 import { createWorkbenchI18n } from './createWorkbenchI18n';
 
@@ -49,7 +47,6 @@ interface WorkbenchLocaleProps extends PropsWithChildren {
 const WorkbenchLocale = memo<WorkbenchLocaleProps>(({ children, defaultLang, resources }) => {
   const [i18n] = useState(() => createWorkbenchI18n(defaultLang, resources));
   const [lang, setLang] = useState(defaultLang ?? 'en-US');
-  const [antdLocale, setAntdLocale] = useState<any>();
   const localeRequest = useRef(0);
 
   if (!i18n.instance.isInitialized) void i18n.init({ initAsync: !resources });
@@ -60,11 +57,7 @@ const WorkbenchLocale = memo<WorkbenchLocaleProps>(({ children, defaultLang, res
       const request = ++localeRequest.current;
       const isCurrent = () => active && localeRequest.current === request;
       setLang(nextLang);
-      const [nextAntdLocale] = await Promise.all([
-        getAntdLocale(nextLang),
-        updateDayjs(nextLang, isCurrent),
-      ]);
-      if (isCurrent()) setAntdLocale(nextAntdLocale);
+      await updateDayjs(nextLang, isCurrent);
     };
 
     void applyLocale(i18n.instance.language || defaultLang || 'en-US');
@@ -76,11 +69,7 @@ const WorkbenchLocale = memo<WorkbenchLocaleProps>(({ children, defaultLang, res
     };
   }, [defaultLang, i18n]);
 
-  return (
-    <ConfigProvider direction={isRtlLang(lang) ? 'rtl' : 'ltr'} locale={antdLocale}>
-      {children}
-    </ConfigProvider>
-  );
+  return <DocumentLocale language={lang}>{children}</DocumentLocale>;
 });
 
 WorkbenchLocale.displayName = 'WorkbenchLocale';

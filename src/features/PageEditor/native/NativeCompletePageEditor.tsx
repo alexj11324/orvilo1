@@ -35,6 +35,7 @@ import {
   type NativePageEditorAssemblerProps,
   type NativePageEditorPublicProps,
 } from './NativePageEditorAssembler';
+import { resolveNativePageHeader } from './nativePageHeader';
 import { withNativeRichFeedback } from './NativePageRichFeedbackChrome';
 
 type DocumentOptions = Omit<
@@ -57,6 +58,8 @@ export interface NativeCompletePageEditorProps extends NativePageEditorPublicPro
  * executor consumes this exact singleton, not an unreachable isolated Runtime. */
 export function NativeCompletePageEditor({
   mathRenderer,
+  nativeHeader,
+  header,
   documentOptions,
   label,
   mentionOptions,
@@ -106,6 +109,7 @@ export function NativeCompletePageEditor({
       <NativePageEditorAssembler
         {...publicProps}
         chrome={chrome}
+        header={resolveNativePageHeader({ header, nativeHeader })}
         contentLayout={(content, state) => (
           <NativeCompletePageLayout state={state}>{content}</NativeCompletePageLayout>
         )}

@@ -1,6 +1,5 @@
 'use client';
 import { type SlashOptions } from '@lobehub/editor';
-import { type ChatInputActionsProps } from '@lobehub/editor/react';
 import { classifyToolInterventionPresentation, type VoiceMessageRecording } from '@orvilo/types';
 import debug from 'debug';
 import { Info, X } from 'lucide-react';
@@ -18,6 +17,7 @@ import ChatbotComposer from '@/features/AIChatbot/Composer';
 import { useChatbotSurface } from '@/features/AIChatbot/context';
 import type { ActionKeys, ChatInputFeature } from '@/features/ChatInput';
 import { ChatInputProvider, DesktopChatInput } from '@/features/ChatInput';
+import type { ChatInputActionsProps } from '@/features/ChatInput/ActionBar/actionItems';
 import { type ActionDropdownMenu } from '@/features/ChatInput/ActionBar/components/ActionDropdown';
 import { conversationDraftKey } from '@/features/ChatInput/draftStorage';
 import {

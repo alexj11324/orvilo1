@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import InputEditor from './index';
@@ -14,6 +14,7 @@ const platform = vi.hoisted(() => ({
 type StoreSelector<T = unknown> = (state: Record<PropertyKey, unknown>) => T;
 
 const getEditorStyle = async () => {
+  await screen.findByTestId('mock-editor');
   const { Editor } = await import('@lobehub/editor/react');
   const props = vi.mocked(Editor).mock.lastCall?.[0] as
     { style?: { fontSize?: number } } | undefined;
@@ -168,16 +169,22 @@ describe('ChatInput InputEditor', () => {
     platform.isMobile = false;
   });
 
-  it('renders as read-only when create-content permission is denied', () => {
+  it('renders as read-only when create-content permission is denied', async () => {
     render(<InputEditor />);
+    await act(async () => {
+      await vi.dynamicImportSettled();
+    });
 
-    expect(screen.getByTestId('mock-editor')).toHaveAttribute('data-editable', 'false');
+    expect(await screen.findByTestId('mock-editor')).toHaveAttribute('data-editable', 'false');
   });
 
-  it('initializes the editor with content captured by a fallback input', () => {
+  it('initializes the editor with content captured by a fallback input', async () => {
     render(<InputEditor initialContent="typed before the editor loaded" />);
+    await act(async () => {
+      await vi.dynamicImportSettled();
+    });
 
-    expect(screen.getByTestId('mock-editor')).toHaveAttribute(
+    expect(await screen.findByTestId('mock-editor')).toHaveAttribute(
       'data-content',
       'typed before the editor loaded',
     );
@@ -188,6 +195,9 @@ describe('ChatInput InputEditor', () => {
     platform.isMobile = true;
 
     render(<InputEditor />);
+    await act(async () => {
+      await vi.dynamicImportSettled();
+    });
 
     expect((await getEditorStyle())?.fontSize).toBe(16);
   });
@@ -196,6 +206,9 @@ describe('ChatInput InputEditor', () => {
     permission.allowed = true;
 
     render(<InputEditor />);
+    await act(async () => {
+      await vi.dynamicImportSettled();
+    });
 
     expect((await getEditorStyle())?.fontSize).toBeUndefined();
   });

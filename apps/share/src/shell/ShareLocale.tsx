@@ -1,13 +1,11 @@
 'use client';
 
-import { ConfigProvider } from 'antd';
 import dayjs from 'dayjs';
 import { memo, type PropsWithChildren, useEffect, useRef, useState } from 'react';
-import { isRtlLang } from 'rtl-detect';
 
+import { DocumentLocale } from '@/layout/GlobalProvider/DocumentLocale';
 import type { DayjsLocaleGlobEntry } from '@/utils/dayjsLocale';
 import { loadDayjsLocaleModule, normalizeDayjsLocale } from '@/utils/dayjsLocale';
-import { getAntdLocale } from '@/utils/locale';
 
 import { createShareI18n, type ShareResources } from './createShareI18n';
 
@@ -48,7 +46,6 @@ interface ShareLocaleProps extends PropsWithChildren {
 const ShareLocale = memo<ShareLocaleProps>(({ children, defaultLang, resources }) => {
   const [i18n] = useState(() => createShareI18n(defaultLang, resources));
   const [lang, setLang] = useState(defaultLang ?? 'en-US');
-  const [antdLocale, setAntdLocale] = useState<any>();
   const localeRequest = useRef(0);
 
   if (!i18n.instance.isInitialized) void i18n.init({ initAsync: !resources });
@@ -59,11 +56,7 @@ const ShareLocale = memo<ShareLocaleProps>(({ children, defaultLang, resources }
       const request = ++localeRequest.current;
       const isCurrent = () => active && localeRequest.current === request;
       setLang(nextLang);
-      const [nextAntdLocale] = await Promise.all([
-        getAntdLocale(nextLang),
-        updateDayjs(nextLang, isCurrent),
-      ]);
-      if (isCurrent()) setAntdLocale(nextAntdLocale);
+      await updateDayjs(nextLang, isCurrent);
     };
 
     void applyLocale(i18n.instance.language || defaultLang || 'en-US');
@@ -75,11 +68,7 @@ const ShareLocale = memo<ShareLocaleProps>(({ children, defaultLang, resources }
     };
   }, [defaultLang, i18n]);
 
-  return (
-    <ConfigProvider direction={isRtlLang(lang) ? 'rtl' : 'ltr'} locale={antdLocale}>
-      {children}
-    </ConfigProvider>
-  );
+  return <DocumentLocale language={lang}>{children}</DocumentLocale>;
 });
 
 ShareLocale.displayName = 'ShareLocale';

@@ -1,2 +1,1 @@
-export { PageEditor } from './PageEditor';
-export { PageEditorProvider } from './PageEditorProvider';
+export { PageEditor, type PageEditorProps } from './PageEditor';

@@ -1,11 +1,17 @@
 'use client';
 
-import { ChatInput, ChatInputActionBar } from '@lobehub/editor/react';
 import { cn } from 'cn';
 import { memo } from 'react';
 
+import {
+  PromptInput,
+  PromptInputBody,
+  PromptInputFooter,
+  PromptInputHeader,
+} from '@/components/ai-elements/prompt-input';
 import ChatInputNotice from '@/features/ChatInput/ChatInputNotice';
 import ComposerExpandButton from '@/features/ChatInput/components/ComposerExpandButton';
+import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatInputResourceAccess';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import dynamic from '@/libs/next/dynamic';
 
@@ -25,6 +31,8 @@ const styles = {
 const DesktopChatInput = memo(() => {
   const [slashMenuRef, expand] = useChatInputStore((s) => [s.slashMenuRef, s.expand]);
   const leftActions = useChatInputStore((s) => s.leftActions);
+  const send = useChatInputStore((s) => s.handleSendButton);
+  const { canUseResource, isAccessLoading } = useChatInputResourceAccess();
 
   const fileNode = leftActions.flat().includes('fileUpload') && <FilePreview />;
 
@@ -32,43 +40,42 @@ const DesktopChatInput = memo(() => {
     <>
       {!expand && fileNode}
       <div
+        ref={slashMenuRef}
         className={cn(
           'flex flex-col gap-2 px-3 pb-3',
           cn(styles.container, expand && styles.fullscreen),
         )}
       >
-        <ChatInput
-          fullscreen={expand}
-          slashMenuRef={slashMenuRef}
-          classNames={{
-            body: '[&_[contenteditable]]:text-sm [&_[contenteditable]]:leading-5.5 [&_[contenteditable]]:[--lobe-markdown-font-size:var(--text-sm)] [&_[contenteditable]]:[--lobe-markdown-line-height:calc(22/14)] [&_[contenteditable]+div>span]:text-sm [&_[contenteditable]+div>span]:leading-5.5',
+        <PromptInput
+          className={expand ? 'flex h-full min-h-0 flex-1 flex-col' : undefined}
+          groupClassName="h-auto flex-col rounded-(--radius-card) border-border bg-card text-card-foreground"
+          externalEditor={{
+            onSubmit: (event) => {
+              event.preventDefault();
+              if (canUseResource && !isAccessLoading) send();
+            },
           }}
-          footer={
-            <ChatInputActionBar
-              left={<div />}
-              paddingInline="4px 8px"
-              right={<SendArea hideContextWindow={false} />}
-            />
-          }
-          header={
-            <ChatInputActionBar
-              left={
-                <div className={cn('flex flex-row items-center gap-1', styles.leftSlot)}>
-                  <div className="flex flex-row items-center flex-none gap-0.5">
-                    <div className={cn('flex flex-row items-center', styles.leftActions)}>
-                      <ActionBar disableCollapse />
-                    </div>
-                    <ComposerExpandButton />
-                  </div>
-                  <ChatInputNotice />
-                </div>
-              }
-            />
-          }
         >
-          {expand && fileNode}
-          <InputEditor defaultRows={1} />
-        </ChatInput>
+          <PromptInputHeader>
+            <div className={cn('flex flex-row items-center gap-1', styles.leftSlot)}>
+              <div className="flex flex-none flex-row items-center gap-0.5">
+                <div className={cn('flex flex-row items-center', styles.leftActions)}>
+                  <ActionBar disableCollapse />
+                </div>
+                <ComposerExpandButton />
+              </div>
+              <ChatInputNotice />
+            </div>
+          </PromptInputHeader>
+          <PromptInputBody className="[&_[contenteditable]]:text-sm [&_[contenteditable]]:leading-5.5 [&_[contenteditable]]:[--lobe-markdown-font-size:var(--text-sm)] [&_[contenteditable]]:[--lobe-markdown-line-height:calc(22/14)] [&_[contenteditable]+div>span]:text-sm [&_[contenteditable]+div>span]:leading-5.5">
+            {expand && fileNode}
+            <InputEditor defaultRows={1} />
+          </PromptInputBody>
+          <PromptInputFooter className="ps-1 pe-2">
+            <div />
+            <SendArea hideContextWindow={false} />
+          </PromptInputFooter>
+        </PromptInput>
       </div>
     </>
   );

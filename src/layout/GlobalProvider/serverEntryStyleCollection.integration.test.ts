@@ -5,11 +5,16 @@ import '../../../apps/auth/app/virtual-modules.d.ts';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { ThemeContext } from '@emotion/react';
 import { MaskShadow, ThemeProvider } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
-import { createElement } from 'react';
+import { createElement, use } from 'react';
 import type { EntryContext } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { renderNativeDocument } from '@/libs/ssr/renderNativeDocument';
+import { type NativeThemeOptions, resolveNativeTheme } from '@/styles/nativeTheme';
+import { neutralColors, primaryColors } from '@/styles/nativeThemeSwatches';
 
 import handleAuthRequest from '../../../apps/auth/app/entry.server';
 import handleShareRequest from '../../../apps/share/app/entry.server';
@@ -17,6 +22,7 @@ import ShareAppShell from '../../../apps/share/src/shell/ShareAppShell';
 import handleWorkbenchRequest from '../../../apps/workbench/app/entry.server';
 import WorkbenchShell from '../../../apps/workbench/src/shell/WorkbenchShell';
 import AntdStyleLayer from './AntdStyleLayer';
+import { NativeThemeProvider } from './NativeThemeProvider';
 
 const renderState = vi.hoisted(() => ({ primary: '#123456', request: 0 }));
 
@@ -211,4 +217,178 @@ describe('actual SSR entries and real Share/Workbench shells retain style output
       expect(second.html).toContain(`data-ssr-style-marker="${renderState.request}"`);
     });
   }
+});
+
+// A real SSR leaf reads the same Emotion context as the existing ThemeRoles.
+// No theme/token algorithm, provider, store or renderer is mocked here.
+function ResolvedSDKThemeReceipt({
+  receive,
+}: {
+  receive: (theme: Record<string, unknown>) => void;
+}) {
+  receive(Object.fromEntries(Object.entries(use(ThemeContext))));
+  return createElement('main', { 'data-resolved-sdk-theme': '' }, 'actual resolved SDK theme');
+}
+
+async function renderSDKThemeReceipt(options: NativeThemeOptions) {
+  let resolved: Record<string, unknown> | undefined;
+  const html = await renderNativeDocument(
+    createElement(
+      'html',
+      { lang: 'en-US' },
+      createElement('head', null, createElement('title', null, 'Resolved theme receipt')),
+      createElement(
+        'body',
+        null,
+        createElement(
+          ThemeProvider,
+          {
+            appearance: options.appearance,
+            defaultAppearance: options.appearance,
+            defaultThemeMode: options.appearance,
+            enableCustomFonts: false,
+            enableGlobalStyle: false,
+            customTheme: { primaryColor: options.primaryColor, neutralColor: options.neutralColor },
+            theme: {
+              components: { Popover: { zIndexPopup: 1300 } },
+              cssVar: { key: 'orvilo-parity-vars' },
+              token: {
+                fontFamily: options.fontFamily,
+                fontFamilyCode: options.fontFamilyCode,
+                motion: options.animationMode !== 'disabled',
+                motionUnit: options.animationMode === 'agile' ? 0.05 : 0.1,
+              },
+            },
+          },
+          createElement(ResolvedSDKThemeReceipt, {
+            receive: (value) => {
+              resolved = value;
+            },
+          }),
+        ),
+      ),
+    ),
+    (error) => {
+      throw error;
+    },
+  );
+  expect(html).toContain('<!DOCTYPE html><html lang="en-US">');
+  expect(html).toContain('actual resolved SDK theme');
+  expect(html).toContain('</body></html>');
+  expect(resolved).toBeDefined();
+  return resolved;
+}
+
+describe('actual installed SDK resolved-theme parity before default semantic cutover', () => {
+  const fonts = { fontFamily: 'Parity document font', fontFamilyCode: 'Parity code font' };
+  // The default palette names are not persisted UserPrimary/NeutralColor values.
+  // Enumerate the actual persisted options without introducing invalid gray/primary values.
+  for (const appearance of ['light', 'dark'] as const) {
+    it(`${appearance}: compares every one of 72 fields for the full legal primary/neutral matrix`, async () => {
+      let cases = 0;
+      for (const primaryColor of [
+        undefined,
+        'blue',
+        'cyan',
+        'geekblue',
+        'gold',
+        'green',
+        'lime',
+        'magenta',
+        'orange',
+        'purple',
+        'red',
+        'volcano',
+        'yellow',
+      ] as const) {
+        for (const neutralColor of [
+          undefined,
+          'mauve',
+          'olive',
+          'sage',
+          'sand',
+          'slate',
+        ] as const) {
+          const options = {
+            ...fonts,
+            appearance,
+            primaryColor,
+            neutralColor,
+            animationMode: 'elegant',
+          } as const;
+          const native = resolveNativeTheme(options);
+          const actual = await renderSDKThemeReceipt(options);
+          const keys = Object.keys(native);
+          expect(keys).toHaveLength(72);
+          expect(native, JSON.stringify(options)).toEqual(
+            Object.fromEntries(keys.map((key) => [key, actual?.[key]])),
+          );
+          cases += 1;
+        }
+      }
+      expect(cases).toBe(
+        (Object.keys(primaryColors).length + 1) * (Object.keys(neutralColors).length + 1),
+      );
+    }, 60_000);
+
+    for (const animationMode of ['agile', 'disabled'] as const) {
+      it(`${appearance}/${animationMode}: preserves all resolved motion and other fields`, async () => {
+        const options = { ...fonts, appearance, animationMode };
+        const native = resolveNativeTheme(options);
+        const actual = await renderSDKThemeReceipt(options);
+        expect(native).toEqual(
+          Object.fromEntries(Object.keys(native).map((key) => [key, actual?.[key]])),
+        );
+      });
+    }
+  }
+});
+
+describe('native complete document SSR output', () => {
+  it('keeps parallel request choices independent and emits both first-paint sheets', async () => {
+    const render = (primaryColor: 'purple' | 'green', fontFamily: string) =>
+      renderNativeDocument(
+        createElement(
+          'html',
+          { lang: 'en-US' },
+          createElement('head', null, createElement('title', null, 'Native')),
+          createElement(
+            'body',
+            null,
+            createElement(
+              NativeThemeProvider,
+              { appearance: 'light', primaryColor, fontFamily, fontFamilyCode: 'Geist Mono' },
+              createElement(
+                'main',
+                { className: 'bg-background text-foreground' },
+                'Native content',
+              ),
+            ),
+          ),
+        ),
+        (error) => {
+          throw error;
+        },
+      );
+    const [one, two] = await Promise.all([
+      render('purple', 'First font'),
+      render('green', 'Second font'),
+    ]);
+    expect(one).toContain('--font-sans: First font');
+    expect(one).not.toContain('--font-sans: Second font');
+    expect(two).toContain('--font-sans: Second font');
+    expect(two).not.toContain('--font-sans: First font');
+    for (const html of [one, two]) {
+      expect(html).toContain('<!DOCTYPE html><html lang="en-US">');
+      expect(html).toContain('<head><title>Native</title>');
+      expect(html).toContain('<main class="bg-background text-foreground">Native content</main>');
+      expect(html).toContain("html[data-theme='dark']");
+      expect(html).toContain("html:not([data-theme='dark'])");
+      expect(html).toContain('--background: #f8f8f8');
+      expect(html).toContain('--background: #000000');
+      expect(html).toContain('data-orvilo-native-theme');
+      expect(html).not.toContain('data-emotion=');
+      expect(html).toContain('</body></html>');
+    }
+  });
 });

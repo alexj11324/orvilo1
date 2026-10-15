@@ -180,8 +180,8 @@ export declare const UPDATE_LINK_TEXT_COMMAND: import("lexical").LexicalCommand<
 export declare const UNLINK_LINK_COMMAND: import("lexical").LexicalCommand<{ key: string }>;
 
 /** Actual local service IDs; SDK is a declaration-only contract during migration. */
-export declare const ILitexmlService: typeof import("@lobehub/editor").ILitexmlService;
-export declare const IMarkdownShortCutService: typeof import("@lobehub/editor").IMarkdownShortCutService;
+export declare const ILitexmlService: IServiceID<import("./native-service-contracts.js").NativeLiteXMLService>;
+export declare const IMarkdownShortCutService: IServiceID<import("./native-service-contracts.js").NativeMarkdownShortCutService>;
 export declare const NativeVirtualBlockPlugin: IEditorPluginConstructor<Record<string, unknown>>;
 
 export declare const INSERT_CHECK_LIST_COMMAND: import("lexical").LexicalCommand<void>;

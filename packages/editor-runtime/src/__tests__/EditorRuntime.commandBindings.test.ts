@@ -6,7 +6,7 @@ import {
 import { COMMAND_PRIORITY_EDITOR, type CommandPayloadType, createCommand } from 'lexical';
 import { describe, expect, it, vi } from 'vitest';
 
-import { EditorRuntime } from '../EditorRuntime';
+import { LegacyEditorRuntime as EditorRuntime } from '../legacy';
 import { createSDKPublicEditorFixture } from './sdkPublicEditorFixture';
 
 // Keep real SDK listeners: LiteXML handlers mutate then return false to allow

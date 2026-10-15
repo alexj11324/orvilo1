@@ -1,6 +1,5 @@
 'use client';
 
-import { type ChatInputActionsProps } from '@lobehub/editor/react';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
 import { TriangleAlertIcon } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
@@ -11,6 +10,7 @@ import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { isDesktop } from '@/const/version';
 import { type ActionKeys } from '@/features/ChatInput';
+import type { ChatInputActionsProps } from '@/features/ChatInput/ActionBar/actionItems';
 import HeteroControlBar from '@/features/ChatInput/ControlBar/HeteroControlBar';
 import { ChatInput } from '@/features/Conversation';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';

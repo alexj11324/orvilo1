@@ -1,0 +1,7 @@
+{
+  "license": "nativeThemePalettes.LICENSE",
+  "packageVersion": "5.56.0",
+  "reason": "Preserve actual resolved SDK token values; DESIGN role mapping still suppresses dark dialog shadow in resolvedThemeRoles.",
+  "sha256": "ec359d3d4b1218d4ec67a9dec3e98d1ae910e96a29063b24d8a7bfca6afbaf47",
+  "source": "@lobehub/ui/es/styles/theme/token/shadow.mjs"
+}

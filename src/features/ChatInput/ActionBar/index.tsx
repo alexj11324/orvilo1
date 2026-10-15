@@ -1,6 +1,4 @@
-import { type ChatInputActionsProps } from '@lobehub/editor/react';
-import { ChatInputActions } from '@lobehub/editor/react';
-import { type Key, memo, type ReactNode, useMemo } from 'react';
+import { memo, useMemo } from 'react';
 
 import { PromptInputTools } from '@/components/ai-elements/prompt-input';
 import { Separator } from '@/components/ui/separator';
@@ -11,13 +9,13 @@ import { type ActionKey, type ActionKeys } from '../ActionBar/config';
 import { actionMap } from '../ActionBar/config';
 import { useChatInputResourceAccess } from '../hooks/useChatInputResourceAccess';
 import { useChatInputStore } from '../store';
+import type { ChatActionItem, ChatInputActionsProps, ChatPlainAction } from './actionItems';
+import { ChatInputActions } from './ChatInputActions';
 import { type DropdownPlacement } from './context';
 import { ActionBarContext } from './context';
 import { filterChatOnlyActions } from './filterChatOnlyActions';
 
-type ActionItem = { children?: ReactNode; key?: Key; wrapper?: (node: ReactNode) => ReactNode };
-
-const mapActionToItem = (actionKey: ActionKey) => {
+const mapActionToItem = (actionKey: ActionKey): ChatPlainAction => {
   const Render = actionMap[actionKey];
 
   return {
@@ -31,7 +29,7 @@ const mapActionsToItems = (
   keys: ActionKeys[],
   { disableCollapse = false }: { disableCollapse?: boolean } = {},
 ): ChatInputActionsProps['items'] =>
-  keys.flatMap((actionKey, index) => {
+  keys.flatMap<ChatActionItem>((actionKey, index) => {
     if (typeof actionKey === 'string') {
       if (actionKey === '---') {
         return {
@@ -92,14 +90,11 @@ const ActionToolbar = memo<ActionToolbarProps>(
             {items?.map((item, index) =>
               item.type === 'divider' ? (
                 <Separator className="mx-1 h-4" key={`divider-${index}`} orientation="vertical" />
-              ) : item.type === 'collapse' ||
-                item.type === 'dropdown' ||
-                !(item as ActionItem).children ? (
+              ) : item.type === 'collapse' || item.type === 'dropdown' || !item.children ? (
                 <ChatInputActions items={[item]} key={`extra-${index}`} />
               ) : (
-                <div className="flex shrink-0 items-center" key={(item as ActionItem).key}>
-                  {(item as ActionItem).wrapper?.((item as ActionItem).children) ??
-                    (item as ActionItem).children}
+                <div className="flex shrink-0 items-center" key={item.key}>
+                  {item.wrapper?.(item.children) ?? item.children}
                 </div>
               ),
             )}

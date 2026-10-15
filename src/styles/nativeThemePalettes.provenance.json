@@ -1,0 +1,26 @@
+{
+  "files": [
+    "es/color/colors/blue.mjs",
+    "es/color/colors/cyan.mjs",
+    "es/color/colors/geekblue.mjs",
+    "es/color/colors/gold.mjs",
+    "es/color/colors/gray.mjs",
+    "es/color/colors/green.mjs",
+    "es/color/colors/lime.mjs",
+    "es/color/colors/magenta.mjs",
+    "es/color/colors/orange.mjs",
+    "es/color/colors/primary.mjs",
+    "es/color/colors/purple.mjs",
+    "es/color/colors/red.mjs",
+    "es/color/colors/volcano.mjs",
+    "es/color/colors/yellow.mjs",
+    "es/color/neutrals/mauve.mjs",
+    "es/color/neutrals/olive.mjs",
+    "es/color/neutrals/sage.mjs",
+    "es/color/neutrals/sand.mjs",
+    "es/color/neutrals/slate.mjs"
+  ],
+  "license": "MIT; nativeThemePalettes.LICENSE",
+  "reason": "Preserve persisted swatch identities without SDK runtime",
+  "source": "Installed @lobehub/ui immutable color scales"
+}

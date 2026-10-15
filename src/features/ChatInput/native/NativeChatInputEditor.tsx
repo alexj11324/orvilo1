@@ -34,7 +34,7 @@ export interface NativeChatInputEditorProps {
     | ((actions: { send: () => void; stop: () => void; editor: NativeIEditorKernel }) => ReactNode);
   className?: string;
   /** Real immutable conversation key; key this host on context change. */
-  draftKey: string;
+  draftKey?: string;
   editable: boolean;
   expanded: boolean;
   historyEnabled: boolean;
@@ -97,7 +97,8 @@ function NativeChatSession(props: NativeChatInputEditorProps) {
   historyCurrent.current = history;
   const persist = useCallback(
     (kernel: NativeIEditorKernel, removeEmpty: boolean) => {
-      if (!kernel.getLexicalEditor()) return;
+      const draftKey = props.draftKey;
+      if (!draftKey || !kernel.getLexicalEditor()) return;
       let markdown: string;
       let json: unknown;
       try {
@@ -107,12 +108,12 @@ function NativeChatSession(props: NativeChatInputEditorProps) {
         return;
       } // A detached editor must never erase a durable draft.
       if (!markdown.trim()) {
-        if (removeEmpty && removeDraftIfUnchanged(props.draftKey, loadedRevision.current))
+        if (removeEmpty && removeDraftIfUnchanged(draftKey, loadedRevision.current))
           loadedRevision.current = undefined;
         return;
       }
       if (jsonRecord(json)) {
-        const revision = saveDraft(props.draftKey, json);
+        const revision = saveDraft(draftKey, json);
         if (revision !== undefined) loadedRevision.current = revision;
       }
     },
@@ -250,7 +251,7 @@ function NativeChatSession(props: NativeChatInputEditorProps) {
         }}
         onBlur={() => flush()}
         onReady={(kernel) => {
-          const draft = getDraftEntry(props.draftKey);
+          const draft = props.draftKey ? getDraftEntry(props.draftKey) : undefined;
           loadedRevision.current = draft?.updatedAt;
           if (props.savedEditorData) kernel.setDocument('json', props.savedEditorData);
           else if (draft && kernel.isEmpty) kernel.setDocument('json', draft.json);

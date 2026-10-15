@@ -39,6 +39,8 @@ export interface NativePageEditorPublicProps {
   header?: ReactNode | null;
   knowledgeBaseId?: string;
   metaReadOnly?: boolean;
+  /** Actual custom header implemented against NativePageChromeContext. */
+  nativeHeader?: ReactNode | null;
   onBack?: () => void;
   onDelete?: () => void;
   onDocumentIdChange?: (newId: string) => void;

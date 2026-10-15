@@ -10,7 +10,7 @@ import {
 import type { Mock } from 'vitest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { EditorRuntime } from '../EditorRuntime';
+import { LegacyEditorRuntime as EditorRuntime } from '../legacy';
 import editAllFixture from './fixtures/edit-all.json';
 import removeFixture from './fixtures/remove.json';
 import removeThenAddFixture from './fixtures/remove-then-add.json';

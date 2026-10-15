@@ -14,7 +14,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useParams } from 'react-router';
 
@@ -28,8 +28,10 @@ import { DOCUMENT_HISTORY_QUERY_LIST_LIMIT } from '@/const/documentHistory';
 import { isDesktop } from '@/const/version';
 import { useAgentContext } from '@/features/Conversation/useAgentContext';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
-import { openDocumentCompareModal } from '@/features/PageEditor/History/CompareModal';
 import { formatHistoryAbsoluteTime } from '@/features/PageEditor/History/formatHistoryDate';
+import { getNativeHistoryOwner } from '@/features/PageEditor/native/nativeHistoryOwner';
+import { openOwnedHistoryCompare } from '@/features/PageEditor/native/openOwnedHistoryCompare';
+import { restoreExternalNativeHistory } from '@/features/PageEditor/native/restoreExternalNativeHistory';
 import type {
   DocumentHistoryListItem,
   DocumentHistorySaveSource,
@@ -89,6 +91,17 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
 
   const { docId } = useParams<{ docId?: string }>();
   const compareInstanceRef = useRef<ModalInstance | null>(null);
+  const liveDocumentId = useRef(docId);
+  liveDocumentId.current = docId;
+  const compareGeneration = useRef(0);
+  useEffect(
+    () => () => {
+      compareGeneration.current++;
+      compareInstanceRef.current?.destroy();
+      compareInstanceRef.current = null;
+    },
+    [docId],
+  );
 
   const saveSourceLabels = useMemo<Record<DocumentHistorySaveSource, string>>(
     () => ({
@@ -105,6 +118,7 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
     async (item: DocumentHistoryListItem, onSuccess?: () => void): Promise<void> => {
       if (!docId || item.isCurrent) return;
 
+      const nativeOwner = getNativeHistoryOwner(docId, useDocumentStore.getState());
       const { editor, markDirty, performSave } = useDocumentStore.getState();
       if (!editor) {
         toast.error(t('pageEditor.history.restoreError', { ns: 'file' }));
@@ -120,11 +134,37 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
         okText: t('pageEditor.history.restore', { ns: 'file' }),
         onOk: async () => {
           try {
+            if (nativeOwner) {
+              await restoreExternalNativeHistory({
+                owner: nativeOwner,
+                historyId: item.id,
+                getState: useDocumentStore.getState,
+                load: () =>
+                  documentService.getDocumentHistoryItem(
+                    { documentId: docId, historyId: item.id },
+                    `header-actions-history-${docId}`,
+                  ),
+              });
+              onSuccess?.();
+              return;
+            }
+            if (
+              liveDocumentId.current !== docId ||
+              useDocumentStore.getState().editor !== editor ||
+              useDocumentStore.getState().activeDocumentId !== docId
+            )
+              throw new Error('History restore document owner changed');
             const result = await documentService.getDocumentHistoryItem(
               { documentId: docId, historyId: item.id },
               `header-actions-history-${docId}`,
             );
 
+            if (
+              liveDocumentId.current !== docId ||
+              useDocumentStore.getState().editor !== editor ||
+              useDocumentStore.getState().activeDocumentId !== docId
+            )
+              throw new Error('History restore document owner changed');
             editor.setDocument('json', JSON.stringify(result.editorData));
             markDirty(docId);
             await performSave(docId, undefined, {
@@ -147,33 +187,48 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
   const openCompareModal = useCallback(async (): Promise<void> => {
     if (!docId) return;
 
+    const generation = ++compareGeneration.current;
     try {
-      const result = await documentService.listDocumentHistory({
-        documentId: docId,
-        includeCurrent: true,
-        limit: DOCUMENT_HISTORY_QUERY_LIST_LIMIT,
-      });
-      const items = result.items ?? [];
-
-      if (items.length === 0) {
-        toast.info(t('pageEditor.history.empty', { ns: 'file' }));
-        return;
-      }
-
-      const initialHistoryId = items.find((item) => !item.isCurrent)?.id ?? items[0].id;
-
-      compareInstanceRef.current?.destroy();
-      const instance = openDocumentCompareModal({
-        documentId: docId,
-        initialHistoryId,
-        items,
-        onRestore: (item) => {
-          void handleRestoreHistory(item, () => instance.close());
+      await openOwnedHistoryCompare({
+        isCurrent: () =>
+          generation === compareGeneration.current && liveDocumentId.current === docId,
+        loadItems: async () =>
+          (
+            await documentService.listDocumentHistory({
+              documentId: docId,
+              includeCurrent: true,
+              limit: DOCUMENT_HISTORY_QUERY_LIST_LIMIT,
+            })
+          ).items ?? [],
+        getOwner: () => getNativeHistoryOwner(docId, useDocumentStore.getState()),
+        loadRenderer: async (nativeOwner) =>
+          nativeOwner
+            ? import('@/features/PageEditor/native/openNativeExternalHistoryCompare').then(
+                (module) =>
+                  (props: Parameters<typeof module.openNativeExternalHistoryCompare>[0]) =>
+                    module.openNativeExternalHistoryCompare(props, nativeOwner),
+              )
+            : (await import('@/features/PageEditor/History/CompareModal')).openDocumentCompareModal,
+        onEmpty: () => {
+          toast.info(t('pageEditor.history.empty', { ns: 'file' }));
         },
-        saveSourceLabels,
+        open: (items, openCompare) => {
+          const initialHistoryId = items.find((item) => !item.isCurrent)?.id ?? items[0].id;
+          compareInstanceRef.current?.destroy();
+          const instance = openCompare({
+            documentId: docId,
+            initialHistoryId,
+            items,
+            onRestore: (item) => {
+              void handleRestoreHistory(item, () => instance.close());
+            },
+            saveSourceLabels,
+          });
+          compareInstanceRef.current = instance;
+        },
       });
-      compareInstanceRef.current = instance;
     } catch (error) {
+      if (generation !== compareGeneration.current || liveDocumentId.current !== docId) return;
       console.error('[HeaderActions] Failed to open document compare modal:', error);
       toast.error(t('pageEditor.history.compareError', { ns: 'file' }));
     }

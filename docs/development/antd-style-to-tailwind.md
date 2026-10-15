@@ -338,3 +338,30 @@ the original 440-scenario token acceptance scope. #690 still requires complete
 historical site/context CSS equivalence evidence; #691–#693, #696, and #697 retain
 their applicable Electron acceptance obligations. #694 must follow actual
 \#690–#693 completion, and the already closed #695 is not reopened by this work.
+
+### Native production wiring integration (2026-10-15)
+
+The runtime core now owns its structural interfaces and default native command
+identities. The explicit `/legacy` entry retains SDK bindings only for actual
+legacy consumers. Native/server import-boundary and real codec/mutation tests
+cover the separation; the optional legacy peer is not a dependency-removal claim.
+
+Chat and page production selectors now choose the native owner from the actual
+math-renderer context. The native provider no longer constructs an unused SDK
+editor, modal drafts without a persistence key stay transient, and custom page
+headers use their explicit native adapters. Local action controls preserve child
+state while collapsed. External history uses the mounted native owner, saves the
+current draft before restore, and rechecks ownership across asynchronous work.
+The default math owner remains pending its separately requested dependency approval.
+
+Native semantic theme resolution has been compared with the actual installed SDK
+in complete SSR responses: all 72 consumed fields across 156 palette combinations
+and four motion scenarios. Locale and SSR owners use local direction management
+and an explicit legacy style collector respectively. Existing SDK theme/context
+consumers still require that compatibility collector; transitive removal is not done.
+
+Focused Electron acceptance still has no passing receipt. Its latest failure was
+real nested CommonJS icon data loaded as ESM; the finite optimizer now includes
+62 verified nested leaves without restoring full UI barrels. The complete original
+440-case acceptance and whole 917-site CSS proof remain separate required gates.
+Neither completion nor merge is claimed by this integration.

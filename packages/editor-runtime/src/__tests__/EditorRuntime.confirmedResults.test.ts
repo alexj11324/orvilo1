@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { EditorRuntime } from '../EditorRuntime';
+import { LegacyEditorRuntime as EditorRuntime } from '../legacy';
 import { createSDKPublicEditorFixture } from './sdkPublicEditorFixture';
 
 // Real SDK parsing/preflight/listeners, not dispatch mocks or approximate XML checks.

@@ -1,10 +1,12 @@
 /**
  * @vitest-environment happy-dom
  */
-import { render, screen } from '@testing-library/react';
-import { createElement, type ReactNode } from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { createElement, type ReactNode, useEffect, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ChatActionItem } from './actionItems';
+import { ChatInputActions } from './ChatInputActions';
 import { filterChatOnlyActions } from './filterChatOnlyActions';
 import Token from './Token/TokenTag';
 
@@ -90,5 +92,40 @@ describe('Context window token', () => {
     expect(screen.getByText('6,000')).toBeInTheDocument();
     expect(screen.getByText('2,000')).toBeInTheDocument();
     expect(screen.getByText('1,500')).toBeInTheDocument();
+  });
+});
+
+describe('collapsed action group lifetime', () => {
+  it('preserves child state while making collapsed controls inaccessible', () => {
+    const cleanup = vi.fn();
+    function Control() {
+      const [count, setCount] = useState(0);
+      useEffect(() => cleanup, []);
+      return createElement('button', { onClick: () => setCount(count + 1) }, `Retained ${count}`);
+    }
+    const items: ChatActionItem[] = [
+      {
+        type: 'collapse',
+        key: 'group',
+        children: [{ key: 'control', children: createElement(Control) }],
+      },
+    ];
+    const view = render(
+      createElement(ChatInputActions, { items, autoCollapse: false, groupCollapse: false }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Retained 0' }));
+    const control = screen.getByRole('button', { name: 'Retained 1' });
+    view.rerender(
+      createElement(ChatInputActions, { items, autoCollapse: false, groupCollapse: true }),
+    );
+    expect(control.isConnected).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Retained 1' })).toBeNull();
+    expect(cleanup).not.toHaveBeenCalled();
+    view.rerender(
+      createElement(ChatInputActions, { items, autoCollapse: false, groupCollapse: false }),
+    );
+    expect(screen.getByRole('button', { name: 'Retained 1' })).toBe(control);
+    view.unmount();
+    expect(cleanup).toHaveBeenCalledTimes(1);
   });
 });

@@ -5,7 +5,7 @@ import { createElement, StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { composerJSON } from '../composerProtocol';
-import { getDraft, saveDraft } from '../draftStorage';
+import { CHAT_INPUT_DRAFTS_STORAGE_KEY, getDraft, saveDraft } from '../draftStorage';
 import { createStore } from '../store';
 import { bindNativeComposer } from './bindNativeComposer';
 import { NativeChatInputEditor, type NativeChatInputEditorProps } from './NativeChatInputEditor';
@@ -127,6 +127,24 @@ describe('mounted native chat durable draft lifecycle', () => {
     render(createElement(NativeChatInputEditor, options));
     expect(mirror).toHaveBeenCalledWith('Restored message');
     expect(store.getState().markdownContent).toBe('Restored message');
+  });
+
+  it('keeps a modal composer usable without inventing a durable draft key', () => {
+    const kernel = backend('Modal draft');
+    const store = createStore();
+    leaf.kernel = kernel;
+    const options: NativeChatInputEditorProps = { ...props('unused', store), draftKey: undefined };
+    const view = render(createElement(NativeChatInputEditor, options));
+    expect(store.getState().nativeComposer).toBe(kernel);
+    expect(String(kernel.getDocument('markdown')).trim()).toBe('Modal draft');
+    act(() => {
+      if (!leaf.publish) throw new Error('Actual change callback missing');
+      leaf.publish();
+    });
+    act(() => vi.advanceTimersByTime(600));
+    expect(localStorage.getItem(CHAT_INPUT_DRAFTS_STORAGE_KEY)).toBeNull();
+    view.unmount();
+    expect(localStorage.getItem(CHAT_INPUT_DRAFTS_STORAGE_KEY)).toBeNull();
   });
 
   it('flushes a pending empty deletion when unmounted before its 500ms save', () => {

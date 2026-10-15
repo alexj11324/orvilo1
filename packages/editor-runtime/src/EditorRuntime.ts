@@ -1,13 +1,13 @@
-import type { IEditor } from '@lobehub/editor';
+import type { PageContentContext } from '@orvilo/prompts';
+import debug from 'debug';
+import type { CommandPayloadType, LexicalCommand, LexicalEditor } from 'lexical';
+
 import {
   LITEXML_APPLY_COMMAND,
   LITEXML_MODIFY_COMMAND,
   LITEXML_MODIFY_WITH_RESULTS_COMMAND,
   type LiteXmlOperationResult,
-} from '@lobehub/editor/litexml-commands';
-import type { PageContentContext } from '@orvilo/prompts';
-import debug from 'debug';
-
+} from '../vendor/lobehub-editor-4.29.2/plugins/litexml/command/symbols.js';
 import type {
   EditTitleArgs,
   EditTitleRuntimeResult,
@@ -92,33 +92,39 @@ const hasDataSource = (editor: InspectableEditor, type: string) =>
  * - Text replacement
  */
 /** Command objects must come from the same module as the selected editor's
- * listeners. The default remains the currently shipped SDK backend; native
- * callers explicitly bind their owned symbols when attaching an editor. */
+ * listeners. The default is the owned native backend; retained SDK consumers
+ * must explicitly use the isolated legacy adapter or its command bindings. */
 export interface EditorRuntimeCommandBindings {
   apply: typeof LITEXML_APPLY_COMMAND;
   modify: typeof LITEXML_MODIFY_COMMAND;
   /** Backend-owned validation and applied-operation results; never infer from dispatch boolean. */
   modifyWithResults?: typeof LITEXML_MODIFY_WITH_RESULTS_COMMAND;
 }
-const sdkCommandBindings: EditorRuntimeCommandBindings = {
+const ownedCommandBindings: EditorRuntimeCommandBindings = {
   apply: LITEXML_APPLY_COMMAND,
   modify: LITEXML_MODIFY_COMMAND,
   modifyWithResults: LITEXML_MODIFY_WITH_RESULTS_COMMAND,
 };
 
-/** The Runtime consumes values, commands and a Lexical instance, not a vendor
- * DataSource class. SDK public/headless declarations duplicate that protected
- * class, so accepting their full IEditor creates an artificial nominal barrier.
- * Keep the actual command/document-write/Lexical signatures unchanged. */
-export interface EditorRuntimePort extends Pick<
-  IEditor,
-  'dispatchCommand' | 'setDocument' | 'getLexicalEditor'
-> {
+/** Structural host contract shared by native/browser/headless/legacy owners.
+ * No protected vendor DataSource class or SDK type import crosses this port. */
+export interface EditorRuntimeDocumentOptions {
+  [key: string]: unknown;
+  keepHistory?: boolean;
+  keepId?: boolean;
+}
+export interface EditorRuntimePort {
+  dispatchCommand: <TCommand extends LexicalCommand<unknown>>(
+    command: TCommand,
+    payload: CommandPayloadType<TCommand>,
+  ) => boolean;
   getDocument: (type: string) => unknown;
+  getLexicalEditor: () => LexicalEditor | null;
+  setDocument: (type: string, content: unknown, options?: EditorRuntimeDocumentOptions) => void;
 }
 
 export class EditorRuntime {
-  private commandBindings: EditorRuntimeCommandBindings = sdkCommandBindings;
+  private commandBindings: EditorRuntimeCommandBindings = ownedCommandBindings;
   private editor: EditorRuntimePort | null = null;
   private titleSetter: ((title: string) => void) | null = null;
   private titleGetter: (() => string) | null = null;
@@ -132,7 +138,7 @@ export class EditorRuntime {
    */
   setEditor(
     editor: EditorRuntimePort | null,
-    commands: EditorRuntimeCommandBindings = sdkCommandBindings,
+    commands: EditorRuntimeCommandBindings = ownedCommandBindings,
   ) {
     this.editor = editor;
     this.commandBindings = commands;

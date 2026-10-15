@@ -5,7 +5,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./headless": "./src/native-headless/index.ts",
-    "./native-browser": "./src/native-headless/browser.ts"
+    "./native-browser": "./src/native-headless/browser.ts",
+    "./legacy": "./src/legacy.ts"
   },
   "main": "./src/index.ts",
   "scripts": {
@@ -37,5 +38,10 @@
   "peerDependencies": {
     "@lobehub/editor": "^4.29.2",
     "debug": "*"
+  },
+  "peerDependenciesMeta": {
+    "@lobehub/editor": {
+      "optional": true
+    }
   }
 }

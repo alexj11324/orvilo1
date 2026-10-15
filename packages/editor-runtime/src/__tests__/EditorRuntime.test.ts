@@ -4,7 +4,7 @@ import { resetRandomKey } from 'lexical';
 import type { Mock } from 'vitest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { EditorRuntime } from '../EditorRuntime';
+import { LegacyEditorRuntime as EditorRuntime } from '../legacy';
 
 describe('EditorRuntime', () => {
   let runtime: EditorRuntime;

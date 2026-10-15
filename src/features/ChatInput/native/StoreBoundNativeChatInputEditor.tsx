@@ -77,10 +77,9 @@ export function StoreBoundNativeChatInputEditor(props: StoreBoundNativeChatInput
         : Boolean(live.sendButtonProps?.disabled))
     );
   };
-  // No invented fallback conversation key: durable writes must target the real
-  // current context. Callers without a draft key keep the legacy host until their
-  // actual context owner supplies it.
-  if (!state.draftKey) throw new Error('Native chat requires the real conversation draftKey');
+  // Some modal composers intentionally have no durable conversation key.
+  // Match the existing draft hook: preserve their mounted draft but never write
+  // it under an invented shared storage key.
   return (
     <NativeCompleteChatInputEditor
       bindEditor={bindEditor}

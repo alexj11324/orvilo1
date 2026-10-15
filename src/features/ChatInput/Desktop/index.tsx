@@ -1,6 +1,5 @@
 'use client';
 
-import { type ChatInputProps } from '@lobehub/editor/react';
 import { clsx as cx, cn } from 'cn';
 import { type ReactNode, use } from 'react';
 import { memo, useEffect } from 'react';
@@ -47,6 +46,14 @@ const styles = {
   fullscreen: 'absolute z-100 inset-0 w-full h-full mbs-0 bg-card',
 };
 
+interface InputContainerProps {
+  className?: string;
+  maxHeight?: number | string;
+  minHeight?: number | string;
+  resize?: boolean;
+  style?: React.CSSProperties;
+}
+
 interface DesktopChatInputProps extends ActionToolbarProps {
   actionBarStyle?: React.CSSProperties;
   /** Conversation-only busy effect; undefined leaves other editor surfaces unchanged. */
@@ -81,7 +88,7 @@ interface DesktopChatInputProps extends ActionToolbarProps {
   extentHeaderContent?: ReactNode;
   hidden?: boolean;
   initialContent?: string;
-  inputContainerProps?: ChatInputProps;
+  inputContainerProps?: InputContainerProps;
   /**
    * Swap the action bar and send area for skeleton placeholders while
    * the underlying agent / group / session config is still hydrating.

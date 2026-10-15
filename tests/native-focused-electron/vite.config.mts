@@ -8,6 +8,7 @@ import type { Plugin } from 'vite';
 import { defineConfig, mergeConfig } from 'vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
+import { nativeAntdNestedCjs } from './finite-antd-cjs';
 import desktopConfig from './product/apps/desktop/vite.renderer.config';
 import { orviloUiImports } from './product/plugins/vite/orviloUiImports';
 
@@ -242,8 +243,7 @@ export default defineConfig(async (env) => {
     'i18next',
     'react-i18next',
     'react-responsive',
-    'antd > @rc-component/util > react-is',
-    'antd > @rc-component/util > is-mobile',
+    ...nativeAntdNestedCjs,
     'zustand',
     'zustand/middleware',
     'swr',

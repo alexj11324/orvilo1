@@ -1,0 +1,7 @@
+{
+  "adaptation": "Replace FastColor hex/RGB parsing with existing polished parser; retain original hundredth-step loop, rounding, stable-channel check, alpha formatting, fallback.",
+  "license": "nativeThemeAlpha.LICENSE",
+  "packageVersion": "6.3.5",
+  "source": "antd/es/theme/util/getAlphaColor.js",
+  "sourceSha256": "9da4656fb5bc56051c11dbaf00f8a97dd73c3ed7fc0086852e56121ec9cc8a37"
+}

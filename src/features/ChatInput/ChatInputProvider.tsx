@@ -1,90 +1,46 @@
-import { useEditor } from '@lobehub/editor/react';
-import type { ReactNode } from 'react';
-import { memo, useRef } from 'react';
+'use client';
 
-import { createStore, Provider } from './store';
-import { DEFAULT_CHAT_INPUT_FEATURE } from './store/initialState';
+import { lazy, memo, type ReactNode, Suspense, use } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { Spinner } from '@/components/ui/spinner';
+
+import { NativeChatRuntimeContext } from './native/NativeChatRuntimeContext';
 import type { StoreUpdaterProps } from './StoreUpdater';
-import StoreUpdater from './StoreUpdater';
 
-interface ChatInputProviderProps extends StoreUpdaterProps {
+export interface ChatInputProviderProps extends StoreUpdaterProps {
   children: ReactNode;
 }
-
-export const ChatInputProvider = memo<ChatInputProviderProps>(
-  ({
-    agentId,
-    canRecordVoiceMessage,
-    children,
-    contextSelectionKey,
-    contextWindowMessages,
-    draftKey,
-    feature = DEFAULT_CHAT_INPUT_FEATURE,
-    leftActions,
-    rightActions,
-    mobile,
-    sendButtonProps,
-    onSend,
-    onVoiceMessageSend,
-    sendMenu,
-    chatInputEditorRef,
-    onMarkdownContentChange,
-    mentionItems,
-    allowExpand = true,
-    slashPlacement,
-    getMessages,
-    resolveSendBlocked,
-  }) => {
-    const editor = useEditor();
-    const slashMenuRef = useRef<HTMLDivElement>(null);
-
-    return (
-      <Provider
-        createStore={() =>
-          createStore({
-            allowExpand,
-            canRecordVoiceMessage,
-            contextSelectionKey,
-            contextWindowMessages,
-            draftKey,
-            editor,
-            feature,
-            leftActions,
-            mentionItems,
-            mobile,
-            rightActions,
-            onVoiceMessageSend,
-            sendButtonProps,
-            sendMenu,
-            slashMenuRef,
-            slashPlacement,
-          })
-        }
-      >
-        <StoreUpdater
-          agentId={agentId}
-          allowExpand={allowExpand}
-          canRecordVoiceMessage={canRecordVoiceMessage}
-          chatInputEditorRef={chatInputEditorRef}
-          contextSelectionKey={contextSelectionKey}
-          contextWindowMessages={contextWindowMessages}
-          draftKey={draftKey}
-          feature={feature}
-          getMessages={getMessages}
-          leftActions={leftActions}
-          mentionItems={mentionItems}
-          mobile={mobile}
-          resolveSendBlocked={resolveSendBlocked}
-          rightActions={rightActions}
-          sendButtonProps={sendButtonProps}
-          sendMenu={sendMenu}
-          slashPlacement={slashPlacement}
-          onMarkdownContentChange={onMarkdownContentChange}
-          onSend={onSend}
-          onVoiceMessageSend={onVoiceMessageSend}
-        />
-        {children}
-      </Provider>
-    );
-  },
+const LegacyProvider = lazy(() => import('./LegacyChatInputProvider'));
+const NativeProvider = lazy(() =>
+  import('./native/NativeChatInputProvider').then((module) => ({
+    default: module.NativeChatInputProvider,
+  })),
 );
+
+/** The actual provider follows explicit host ownership, before constructing an
+ * editor. A native host never allocates an unused SDK editor as a side effect. */
+export const ChatInputProvider = memo<ChatInputProviderProps>((props) => {
+  const renderer = use(NativeChatRuntimeContext);
+  const { t } = useTranslation('common');
+  return (
+    <Suspense
+      fallback={
+        <div
+          aria-busy="true"
+          className="flex min-h-11 items-center gap-2 text-sm text-muted-foreground"
+          role="status"
+        >
+          <Spinner aria-hidden="true" role="presentation" />
+          {t('loading')}
+        </div>
+      }
+    >
+      {renderer ? (
+        <NativeProvider {...props} mathRenderer={renderer} />
+      ) : (
+        <LegacyProvider {...props} />
+      )}
+    </Suspense>
+  );
+});

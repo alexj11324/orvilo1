@@ -214,7 +214,12 @@ export function NativeChatMenus({
             replaceableString: next.token,
           });
         const all = categories.flatMap((category) =>
-          category.items.map((item) => ({ ...item, key: String(item.key), group: category.label })),
+          category.items.map((item): Item => ({
+            key: String(item.key),
+            label: item.label,
+            metadata: item.metadata,
+            group: category.label,
+          })),
         );
         const ranked = next.query
           ? new Fuse(all, {
@@ -233,8 +238,9 @@ export function NativeChatMenus({
         const files = next.query ? await searchLocalFiles(next.query) : [];
         return [
           ...files.map((file) => ({
-            ...file,
             key: String(file.key),
+            label: file.label,
+            metadata: file.metadata,
             group: t('mention.category.files'),
           })),
           ...ranked,

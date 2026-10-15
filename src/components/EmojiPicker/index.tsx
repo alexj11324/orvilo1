@@ -22,7 +22,7 @@ export const EmojiPicker = memo<OrviloEmojiPickerProps>(
 
     return (
       <Suspense fallback={fallback ?? <Skeleton style={{ height: size, width: size }} />}>
-        <OrviloEmojiPicker shape={shape} {...rest} defaultAvatar={null} locale={locale} />
+        <OrviloEmojiPicker defaultAvatar={null} locale={locale} shape={shape} {...rest} />
       </Suspense>
     );
   },

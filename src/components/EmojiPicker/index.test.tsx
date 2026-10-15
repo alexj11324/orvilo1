@@ -21,7 +21,11 @@ vi.mock('./NativeEmojiPicker', async () => {
   return {
     default: (props: Record<string, unknown>) => {
       lazyPicker.rendered(props);
-      return <button type="button">{props.value as ReactNode}</button>;
+      return (
+        <button lang={props.locale as string} type="button">
+          {(props.value ?? props.defaultAvatar) as ReactNode}
+        </button>
+      );
     },
   };
 });
@@ -60,5 +64,17 @@ describe('EmojiPicker deferred trigger loading', () => {
       expect.objectContaining({ defaultAvatar: null, locale: 'en-US', onChange, shape: 'square' }),
     );
     expect(props).not.toHaveProperty('fallback');
+  });
+
+  it('honors a caller language and default avatar without reporting a selection', async () => {
+    const onChange = vi.fn();
+    render(<EmojiPicker defaultAvatar="🤖" locale="zh-CN" size={48} onChange={onChange} />);
+
+    await act(async () => {
+      lazyPicker.release();
+    });
+
+    expect(await screen.findByRole('button', { name: '🤖' })).toHaveAttribute('lang', 'zh-CN');
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

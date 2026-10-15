@@ -59,7 +59,7 @@ Select the appropriate type and follow its strict constraints:
 - **Syntax:** Functional components (Hooks allowed: \`useState\`, \`useEffect\`)
 - **Export:** Must use \`export default\`
 - **Props:** No required props (provide defaults)
-- **Styling:** Use Tailwind CSS. No arbitrary values (e.g., \`h-[50px]\`)
+- **Styling:** Use Tailwind CSS utilities supported by the artifact runtime. Avoid arbitrary values; choose an exact existing scale equivalent only when that runtime supports it. Never round dimensions to fit the scale or assume the parent application's CSS variables and configuration are available.
 - **Pre-installed Libraries:**
   - \`lucide-react\` - Icons (e.g., \`import { Camera } from "lucide-react"\`)
   - \`recharts\` - Charts (e.g., \`import { LineChart, XAxis } from "recharts"\`)

@@ -2,13 +2,8 @@
 
 import '@/styles/fonts.css';
 
-import {
-  ConfigProvider,
-  FontLoader,
-  type NeutralColors,
-  type PrimaryColors,
-  ThemeProvider,
-} from '@lobehub/ui';
+import { ConfigProvider, FontLoader, ThemeProvider } from '@lobehub/ui';
+import type { NeutralColorName, PrimaryColorName } from '@orvilo/types';
 import * as m from 'motion/react-m';
 import { type ReactNode } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
@@ -26,6 +21,7 @@ import { systemStatusSelectors } from '@/store/global/selectors';
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors, userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { BaseGlobalStyle, GlobalStyle } from '@/styles';
+import { generateEngineToken, generateTheme } from '@/styles/theme/generate';
 import { ThemeRoles } from '@/styles/themeRoles';
 import { setCookie } from '@/utils/client/cookie';
 
@@ -36,8 +32,8 @@ export interface AppThemeProps {
   children?: ReactNode;
   customFontFamily?: string;
   customFontURL?: string;
-  defaultNeutralColor?: NeutralColors;
-  defaultPrimaryColor?: PrimaryColors;
+  defaultNeutralColor?: NeutralColorName;
+  defaultPrimaryColor?: PrimaryColorName;
   enableCustomFonts?: boolean;
   globalCDN?: boolean;
 }
@@ -111,6 +107,21 @@ const AppTheme = memo<AppThemeProps>(
     }, [neutralColor]);
 
     const currentAppearence = isDark ? 'dark' : 'light';
+    const resolvedPrimaryColor = primaryColor ?? defaultPrimaryColor;
+    const resolvedNeutralColor = neutralColor ?? defaultNeutralColor;
+    // Engine-rendered components (and the editor's --ant-* variables) take the
+    // same generated colours as the semantic roles until P5 removes the engine.
+    const engineToken = useMemo(
+      () =>
+        generateEngineToken(
+          generateTheme({
+            accent: resolvedPrimaryColor,
+            base: resolvedNeutralColor,
+            mode: currentAppearence,
+          }),
+        ),
+      [currentAppearence, resolvedNeutralColor, resolvedPrimaryColor],
+    );
 
     return (
       <AntdStyleLayer>
@@ -133,8 +144,8 @@ const AppTheme = memo<AppThemeProps>(
             enableCustomFonts={enableCustomFonts}
             enableGlobalStyle={false}
             customTheme={{
-              neutralColor: neutralColor ?? defaultNeutralColor,
-              primaryColor: primaryColor ?? defaultPrimaryColor,
+              neutralColor: resolvedNeutralColor,
+              primaryColor: resolvedPrimaryColor,
             }}
             theme={{
               components: {
@@ -142,6 +153,7 @@ const AppTheme = memo<AppThemeProps>(
               },
               cssVar: { key: 'orvilo-vars' },
               token: {
+                ...engineToken,
                 fontFamily,
                 fontFamilyCode,
                 motion: animationMode !== 'disabled',
@@ -152,7 +164,16 @@ const AppTheme = memo<AppThemeProps>(
             {!!customFontURL && <FontLoader url={customFontURL} />}
             <BaseGlobalStyle />
             <GlobalStyle />
-            <ThemeRoles>{children}</ThemeRoles>
+            <ThemeRoles
+              animationMode={animationMode}
+              appearance={currentAppearence}
+              fontFamily={fontFamily}
+              fontFamilyCode={fontFamilyCode}
+              neutralColor={resolvedNeutralColor}
+              primaryColor={resolvedPrimaryColor}
+            >
+              {children}
+            </ThemeRoles>
           </ThemeProvider>
         </ConfigProvider>
       </AntdStyleLayer>

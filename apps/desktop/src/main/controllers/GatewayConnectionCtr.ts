@@ -337,6 +337,28 @@ export default class GatewayConnectionCtr extends ControllerModule {
       await this.waitForPlatformProcessTreeExit(existing.pid, PLATFORM_CANCEL_FORCE_MS);
     }
 
+    /** Register the run's process; returns the matching cleanup for its exit. */
+    const registerTask = (pid: number): (() => void) => {
+      this.platformTasks.set(taskId, {
+        agentType: request.agentType,
+        cwd: request.cwd,
+        operationId: request.operationId,
+        pid,
+        runGeneration: request.runGeneration,
+        topicId: request.topicId,
+        workspaceId: request.ingestWorkspaceId ?? request.workspaceId,
+      });
+      return () => {
+        // Only clear if this exit belongs to the current entry — a
+        // superseding run for the same operationId may have already
+        // replaced it.
+        const current = this.platformTasks.get(taskId);
+        if (current?.pid === pid) {
+          this.platformTasks.delete(taskId);
+        }
+      };
+    };
+
     try {
       const serverUrl = await this.remoteServerConfigCtr.getRemoteServerUrl();
       if (!serverUrl) {
@@ -392,24 +414,14 @@ export default class GatewayConnectionCtr extends ControllerModule {
         onChildSpawned: (child: ChildProcess) => {
           const pid = child.pid;
           if (pid === undefined) return;
-          this.platformTasks.set(taskId, {
-            agentType: request.agentType,
-            cwd: request.cwd,
-            operationId: request.operationId,
-            pid,
-            runGeneration: request.runGeneration,
-            topicId: request.topicId,
-            workspaceId: request.ingestWorkspaceId ?? request.workspaceId,
-          });
-          child.once('exit', () => {
-            // Only clear if this exit belongs to the current entry — a
-            // superseding run for the same operationId may have already
-            // replaced it.
-            const current = this.platformTasks.get(taskId);
-            if (current?.pid === pid) {
-              this.platformTasks.delete(taskId);
-            }
-          });
+          child.once('exit', registerTask(pid));
+        },
+        // Warm-pool (in-process) turns: the agent process outlives the turn,
+        // so the entry is turn-scoped — it is what dedupe and
+        // `getActiveWorktreeWriter` need ("a live run writes in this cwd").
+        // Cancellation goes through `cancelOrviloHeteroExec` first.
+        onInProcessTurnStarted: ({ exit, pid }) => {
+          void exit.then(registerTask(pid));
         },
       });
     } catch (err) {

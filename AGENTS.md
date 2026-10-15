@@ -40,43 +40,32 @@ Before changing SPA routes, read the `spa-routes` skill. Register common Web/Ele
 
 ## Development
 
-### Default: Electron with the cloud backend
+### Default: local Electron development
 
-Development and UI acceptance default to the real Electron app connected to
-`https://orvilo.aspectlylabs.com`. Preserve the existing cloud sign-in and workspace.
-A local Vite renderer is allowed; verify its API target is the cloud before collecting evidence.
-Perform cloud mutations only within the user-authorized action scope.
-
-**Never start a local backend by default.** Code changes, UI acceptance, a missing
-session, or a failed cloud connection do not authorize local Next.js/Hono servers,
-databases, gateways, migrations, seeds, or an automatic local fallback. Report the
-cloud blocker and continue independent work. Local seeded users, cookies, data and
-mocks are not cloud identity or cloud acceptance evidence.
-
-Record the local renderer commit and the cloud deployment commit separately. A local
-HEAD proves only the UI code it serves; it does not prove that backend changes are deployed.
+Development and UI acceptance use the real Electron app with the existing local
+development backend by default. Agents may start the local services and use the
+seed login workflow without asking the user to select a local backend each time.
+Use [docs/development/local-setup.md](./docs/development/local-setup.md) for
+Postgres/Redis, migrations, seeds and troubleshooting. Preserve existing `.env`
+configuration and unrelated running development environments.
 
 ```bash
-# Electron + its local Vite renderer; verify the selected server is the cloud
+# Local backend + isolated Electron profile, already signed in as the seed user
+bun run dev:desktop:skip-login
+
+# Electron renderer only, using its configured backend
 bun run dev:desktop
 
-# Optional Web frontend development against the cloud via the printed Debug Proxy URL
-bun run dev:spa
-```
-
-### Local backend development: explicit opt-in
-
-Only when the user explicitly requests a local backend, use
-[docs/development/local-setup.md](./docs/development/local-setup.md) for
-Postgres/Redis, migrations, seeds and troubleshooting.
-
-```bash
-# Opt-in full stack: Next.js + Vite SPA
+# Full local stack: Next.js + Vite SPA
 bun run dev
 
-# Opt-in standalone Hono backend
+# Standalone Hono backend
 pnpm --filter @orvilo/server dev
 ```
+
+For cloud-specific acceptance, use `https://orvilo.aspectlylabs.com` with the real
+cloud identity and workspace. Record the renderer and backend revisions and the
+actual environment used; local verification does not prove a cloud deployment.
 
 After `dev:spa` starts, the terminal prints a **Debug Proxy** URL:
 
@@ -93,7 +82,7 @@ Use Brave with a copy of the currently used Brave profile when comparing Orvilo 
 - Find the active profile under `~/Library/Application Support/BraveSoftware/Brave-Browser` (check `profile.last_used` in `Local State`). Copy the user-data directory to a private temporary directory outside the repository. Exclude `Singleton*` locks, `Crashpad/`, and `BrowserMetrics*`; set the copy's top directory to mode `700` after copying because `rsync -a` can restore its original mode. Never commit or upload the copy, which contains session data.
 - Start a separate Brave instance with `--user-data-dir=<copy> --profile-directory=<active-profile> --remote-debugging-address=127.0.0.1 --remote-debugging-port=<port> --no-first-run`. Do not restart the original Brave instance or point CDP at its live profile.
 - Verify the copied instance by reading `http://127.0.0.1:<port>/json/version` and `/json/list`, then navigate to the Linear workspace and confirm it is authenticated. Cookies in the copy alone do not prove login. Give agents the loopback endpoint only after these checks pass.
-- Run the Orvilo candidate in real Electron against the intended local renderer revision and the existing populated cloud workspace. Record the cloud deployment revision separately. Compare both pages through CDP using DOM, computed styles, real control clicks, persistence after reload, and screenshots before claiming parity. Local fixtures require explicit local-backend opt-in and prove only that local environment.
+- Run the Orvilo candidate in real Electron against the intended local renderer revision and the existing populated cloud workspace. Record the cloud deployment revision separately. Compare both pages through CDP using DOM, computed styles, real control clicks, persistence after reload, and screenshots before claiming parity. Local fixtures prove the selected local environment.
 
 ### Git Workflow
 
@@ -103,9 +92,10 @@ Use Brave with a copy of the currently used Brave profile when comparing Orvilo 
 - Commit messages: prefix with gitmoji
 - Branch format: `<type>/<feature-name>`
 - Both `canary` and `main` are protected — direct pushes are blocked and PRs are the only way in. GitHub Actions is exempt so release automation can write back.
+- **GitHub Actions automation**: Within the current task, agents may automatically trigger workflows, rerun failed or cancelled jobs, and cancel obsolete or duplicate runs belonging to that task without asking for confirmation each time. Use an already-authorized connector or credential with the required permissions and target the correct repository, workflow and revision. Existing authorization boundaries for deployment, releases and other external effects still apply; a workflow is not authorization to expand the task.
 - **GitHub API credentials (Devin sessions)** — **DO NOT hunt for another token**: the only GitHub credential on a Devin machine is the platform-issued file below. Stop searching elsewhere; if an endpoint fails, report the permission gap instead of looking for a second credential.
   - **File**: `~/.devin/.devin-integration-gh-credentials` (absolute path; line 1 = `github.com/<owner>` + space + token). `gh` is authenticated via `GH_TOKEN` read from it: `GH_TOKEN=$(awk '{print $2}' ~/.devin/.devin-integration-gh-credentials) gh <cmd> -R alexj11324/orvilo1`. Remotes point at the git proxy host, so always pass `-R alexj11324/orvilo1` (or run commands that don't derive the repo from the remote). The token is short-lived and refreshed by the platform — read it fresh per command, never copy it into files or logs.
-  - **Scope**: the `devin-ai-integration[bot]` GitHub App installation token — `contents`/`pull_requests` write (push, PRs, comments, merge-async), `actions`/`checks` **read only**. `actions:write` is **not** granted, so `POST .../dispatches`, `rerun-failed-jobs`, and `cancel` all 403 — those clicks are human-only; ask the user to rerun/dispatch in the GitHub UI or hand them a PAT.
+  - **Scope**: the `devin-ai-integration[bot]` GitHub App installation token — `contents`/`pull_requests` write (push, PRs, comments, merge-async), `actions`/`checks` **read only**. This token lacks `actions:write`, so workflow dispatch, rerun and cancellation requests using it return 403. This is a Devin credential limitation, not a human-approval requirement. Use an already-authorized connector with the required permission when available; otherwise report the permission gap without hunting for another token.
   - **Git protocol credentials** live separately in `~/.devin/.devin-integration-git-credentials` (`https://devin:<token>@git-manager.devin.ai`) — they authenticate the git proxy remote only, not the GitHub API.
 
 ### Cutting a Release

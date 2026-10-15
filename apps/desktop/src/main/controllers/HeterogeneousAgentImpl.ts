@@ -1124,12 +1124,11 @@ export default class HeterogeneousAgentCtr {
     mcpServers?: Record<string, unknown>[];
   }> {
     const provider = session.agentType as NonNullable<AskUserBridgeOptions['provider']>;
-    // claude-code / qoder mount the orvilo_cc MCP server for the
-    // `ask_user_question` tool (the builtin Orvilo claude-sdk engine resolves
-    // to the claude-code family, so it is covered here; the codex engine
-    // historically exposes no builtin tools). Other agents only need the
-    // native permission/elicitation bridge.
-    const mountsBuiltinMcp = session.agentType === 'claude-code' || session.agentType === 'qoder';
+    // qoder mounts the orvilo_cc MCP server for the `ask_user_question` tool.
+    // Other agents — claude-code included, whose bridge surfaces AskUserQuestion
+    // through ACP `elicitation/create` — only need the native
+    // permission/elicitation bridge.
+    const mountsBuiltinMcp = session.agentType === 'qoder';
     if (!mountsBuiltinMcp) {
       return this.setupAcpInterventionForOp(operationId, session.sessionId, provider);
     }

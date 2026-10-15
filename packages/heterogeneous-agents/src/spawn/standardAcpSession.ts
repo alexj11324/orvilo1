@@ -47,7 +47,7 @@ interface StandardAcpInitializeResult {
   agentCapabilities?: {
     loadSession?: boolean;
     promptCapabilities?: { image?: boolean };
-    sessionCapabilities?: { close?: unknown };
+    sessionCapabilities?: { close?: unknown; resume?: unknown };
   };
   protocolVersion?: number | string;
 }
@@ -366,12 +366,24 @@ export class StandardAcpSession extends AcpAgentSession<
     ) {
       throw new Error(`${spec.label} agent does not support image prompt blocks`);
     }
-    if (this.options.resumeSessionId && initialized?.agentCapabilities?.loadSession !== true) {
+    // Prefer the standard `session/resume` (restores context without replaying
+    // the whole history as updates) when the agent advertises it; fall back to
+    // `session/load` for agents that only implement that.
+    const canResume = initialized?.agentCapabilities?.sessionCapabilities?.resume !== undefined;
+    if (
+      this.options.resumeSessionId &&
+      !canResume &&
+      initialized?.agentCapabilities?.loadSession !== true
+    ) {
       throw new Error(`${spec.label} agent does not support loading sessions`);
     }
 
     const sessionResult = await this.client.request<StandardAcpSessionResult>(
-      this.options.resumeSessionId ? 'session/load' : 'session/new',
+      this.options.resumeSessionId
+        ? canResume
+          ? 'session/resume'
+          : 'session/load'
+        : 'session/new',
       {
         cwd: this.options.cwd,
         mcpServers: (this.options.mcpServers ?? []).map((server) =>
@@ -985,9 +997,14 @@ export class StandardAcpSession extends AcpAgentSession<
   }
 }
 
-/** True for the ACP `session/load` "session not found" failures that trigger a fresh-start retry. */
+/** True for the ACP `session/resume|load` "session not found" failures that trigger a fresh-start retry. */
 export const isStandardAcpSessionNotFoundError = (error: unknown): error is AcpRpcResponseError => {
-  if (!(error instanceof AcpRpcResponseError) || error.method !== 'session/load') return false;
+  if (
+    !(error instanceof AcpRpcResponseError) ||
+    (error.method !== 'session/load' && error.method !== 'session/resume')
+  ) {
+    return false;
+  }
   const message = error.rpcError.message ?? '';
   return /not found|no such session|unknown session|expired/i.test(message);
 };

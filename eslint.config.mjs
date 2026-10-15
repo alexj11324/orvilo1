@@ -150,6 +150,8 @@ export default eslint(
       // vendored upstream sources — upstream's own style, not this repo's
       'vendor',
       'packages/heterogeneous-agents/vendor',
+      // Exact upstream SDK engine bytes; authored adapters remain linted in src.
+      'packages/editor-runtime/vendor',
       '.agents/skills/design-system/**',
       // ci
       'coverage',

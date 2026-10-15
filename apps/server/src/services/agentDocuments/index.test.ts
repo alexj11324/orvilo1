@@ -1,7 +1,7 @@
 // @vitest-environment node
-import { createHeadlessEditor } from '@lobehub/editor/headless';
 import { AGENT_DOCUMENT_FILE_TYPE } from '@orvilo/const';
 import { DOCUMENT_FOLDER_TYPE } from '@orvilo/database/schemas';
+import { createHeadlessEditor } from '@orvilo/editor-runtime/headless';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentModel } from '@/database/models/agent';
@@ -53,7 +53,7 @@ vi.mock('../skill/resource', () => ({
   SkillResourceService: vi.fn(),
 }));
 
-vi.mock('@lobehub/editor/headless', () => ({
+vi.mock('@orvilo/editor-runtime/headless', () => ({
   createHeadlessEditor: vi.fn(() => {
     let markdown = '';
     let litexml = '<p id="node-1">content</p>';

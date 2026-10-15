@@ -1,5 +1,5 @@
-import type { HeadlessLiteXMLOperation } from '@lobehub/editor/headless';
-import { createHeadlessEditor } from '@lobehub/editor/headless';
+import type { HeadlessLiteXMLOperation } from '@orvilo/editor-runtime/headless';
+import { createHeadlessEditor } from '@orvilo/editor-runtime/headless';
 import type { SerializedEditorState, SerializedLexicalNode } from 'lexical';
 
 import { EMPTY_EDITOR_STATE } from '@/libs/editor/constants';
@@ -103,7 +103,7 @@ interface LoadEditorStateParams {
   fallbackContent?: string;
 }
 
-// @lobehub/editor's headless Lexical runtime keeps process-global node state while
+// The owned headless Lexical runtime keeps process-global node state while
 // hydrating snapshots with stable ids. Concurrent document reads can therefore
 // corrupt one another (or observe a partially initialized HeadlessEditor). Keep
 // the complete create/hydrate/export/destroy lifecycle serialized.

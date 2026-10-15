@@ -1,4 +1,3 @@
-import { createHeadlessEditor, type HeadlessEditor } from '@lobehub/editor/headless';
 import { PageAgentIdentifier } from '@orvilo/builtin-tool-page-agent';
 import {
   PageAgentExecutionRuntime,
@@ -6,6 +5,11 @@ import {
   type PageAgentRuntimeService,
 } from '@orvilo/builtin-tool-page-agent/executionRuntime';
 import { EditorRuntime } from '@orvilo/editor-runtime';
+import {
+  createHeadlessEditor,
+  type HeadlessEditor,
+  nativeEditorRuntimeCommands,
+} from '@orvilo/editor-runtime/headless';
 import type { SerializedEditorState, SerializedLexicalNode } from 'lexical';
 
 import { DocumentModel } from '@/database/models/document';
@@ -138,14 +142,12 @@ const buildEnv = (snapshot: DocumentSnapshot, documentId: string): InvocationEnv
   // Otherwise leave the headless editor in its default empty state.
 
   const runtime = new EditorRuntime();
-  // Runtime accepts the owned value/command/Lexical protocol; both SDK public
-  // and headless declarations satisfy it without a private DataSource bridge.
-  runtime.setEditor(headless.kernel);
+  // The owned Runtime port accepts this backend without a private DataSource
+  // bridge; command objects/results are explicitly bound to its local listeners.
+  runtime.setEditor(headless.kernel, nativeEditorRuntimeCommands);
   runtime.setCurrentDocId(documentId);
-  // `EditorRuntime` dispatches `LITEXML_*_COMMAND` (imported from the DOM-free
-  // `@lobehub/editor/litexml-commands` subpath) straight onto the kernel. The
-  // headless bundle's `LitexmlPlugin` registers its listeners against the same
-  // single command identities, so the dispatch lands without any adapter.
+  // This local backend's modifyWithResults reports actual applied/failed
+  // operations. The default SDK browser command identities remain separate.
   runtime.setTitleHandlers(
     (next) => {
       title = next;
@@ -390,7 +392,7 @@ const buildService = (
  *
  * Each tool invocation:
  *   1. loads the `documents` row,
- *   2. hydrates a `@lobehub/editor` HeadlessEditor from `editorData`/`content`,
+ *   2. hydrates the owned headless editor from `editorData`/`content`,
  *   3. runs the requested page-agent API via the shared `EditorRuntime`,
  *   4. exports the new Lexical state and writes it back via
  *      `DocumentService.updateDocument` (saveSource: 'llm_call' → also appends

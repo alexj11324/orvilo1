@@ -1,5 +1,4 @@
 'use client';
-import { PatchDiff } from '@lobehub/ui';
 import type { GitFileDiffStatus } from '@orvilo/electron-client-ipc';
 import { nanoid } from '@orvilo/utils';
 import { cn } from 'cn';
@@ -10,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { confirmModal } from '@/components/Modal';
+import { PatchDiff } from '@/components/PatchDiff';
 import { toast } from '@/components/toast';
 import { gitService } from '@/services/git';
 import { useFileStore } from '@/store/file';

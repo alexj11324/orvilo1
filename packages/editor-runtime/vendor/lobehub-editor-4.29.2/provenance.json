@@ -1,0 +1,122 @@
+[
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/plugins/litexml/command/symbols.d.ts",
+    "sha256": "8fc9e5275d37ea3ed17e604499d6b4f550c65d467acf3bdc437f7e5e8478bea4",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/litexml/command/symbols.d.ts",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/plugins/litexml/command/symbols.js",
+    "sha256": "68025af87173e62f147635d69e576f08785b240c91ad0b581312965b9f571427",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/litexml/command/symbols.js",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/headless.d.ts",
+    "sha256": "5e5a95fba2372a121b9f4fdac95a9c141d49088d1aecf5220a9bdaa75477dc7e",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/headless.d.ts",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/plugins/common/node/node-id.d.ts",
+    "sha256": "29e5f5415b192ba6c6ba1d6f0375b6fa4374e5a60917be035904cb08f2a87af4",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/common/node/node-id.d.ts",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/symbols-Dyr9yyS0.d.ts",
+    "sha256": "31f018728074499fd90ab7e5931a9b94682da86afb5a58eab19ccf44a1ef5957",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/symbols-Dyr9yyS0.d.ts",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/i-node-identity-service-BBC_bg97.d.ts",
+    "sha256": "615aaa1b7d0158cfa2e7d81d071cb32bd209267f3e8aadd930b497d215d8a76c",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/i-node-identity-service-BBC_bg97.d.ts",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/headless.js",
+    "sha256": "119c4f3b9075380ebcd8af05f74963351167f59c04dbb69f305b70123d3b692f",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/headless.js",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/plugins/common/service/i-node-identity-service.js",
+    "sha256": "e0ac6ea3b3a660b91f35a3e5948114b20dbaf1d6fc25b638710ff4a456fa718a",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/common/service/i-node-identity-service.js",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/plugins/common/service/i-node-identity-service.d.ts",
+    "sha256": "b116c3fa90a0caffea2e3a1330908d75c2422805e10669f773a0a5541c7b7623",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/common/service/i-node-identity-service.d.ts",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/types/index.d.ts",
+    "sha256": "34cbdb499cd4ca1976e98f92dd9a7d04e70d6e05b4e81ba63bf1795492cdc1c1",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/types/index.d.ts",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/types/kernel.d.ts",
+    "sha256": "57f9268b00f13c95050b64dfc4f5ce30a0c7c3c72af6d53b2bdc48a5791aa3a9",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/types/kernel.d.ts",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/types/locale.d.ts",
+    "sha256": "99ac3f3789abe22de0752b5a1af5ab4d5a999eaea81610f02cf2da695754af78",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/types/locale.d.ts",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/locale/index.d.ts",
+    "sha256": "e6877391a772d0d41dbf8044635ea93611a819f39972e71ff8dbdb0442784346",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/locale/index.d.ts",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/utils/hotkey/registerHotkey.d.ts",
+    "sha256": "3a3c45f32288a5666e8817fb7c66a44c605aea974ae1311e4454b603b408d0f7",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/utils/hotkey/registerHotkey.d.ts",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/types/hotkey.d.ts",
+    "sha256": "070067cce9d60bcb00f4f006546eb9d99dfcd232d2b865112b123ae1625d213c",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/types/hotkey.d.ts",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/editor-kernel/data-source.d.ts",
+    "sha256": "96643d2c9f8260df613e41c73636e9eed4d5caca7d486e092c9464c539a2a793",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/editor-kernel/data-source.d.ts",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/plugins/common/node/node-id.js",
+    "sha256": "b897d9dbef72e8abf83d8eec037c2cd033a466ea168e1fa8199554e8f8bb72ae",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/common/node/node-id.js",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/plugins/common/node/node-identity-policy.js",
+    "sha256": "6a7ef599f9e89865515c4af0f77a96487a6ee5e9ed2b4120541fc95c18bb5911",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/common/node/node-identity-policy.js",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/plugins/common/node/node-identity-policy.d.ts",
+    "sha256": "3e3b72711746021400df7a076a48c50f28f6c949ee82547bd50819665d2195a4",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/plugins/common/node/node-identity-policy.d.ts",
+    "transform": "none; exact bytes"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/_virtual/_rolldown/runtime.js",
+    "sha256": "4d1f973bf43c08c2ea00f49f991b9d7c103b00ffe2cc209a87cde58192ece33b",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/_virtual/_rolldown/runtime.js",
+    "transform": "none; exact bytes"
+  }
+]

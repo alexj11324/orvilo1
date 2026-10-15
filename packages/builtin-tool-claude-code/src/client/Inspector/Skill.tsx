@@ -1,11 +1,12 @@
 'use client';
 
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { SkillsIcon } from '@/components/icons';
 
 import { ClaudeCodeApiName, type SkillArgs } from '../../types';
 

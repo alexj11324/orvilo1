@@ -1,4 +1,3 @@
-import { BrainOffIcon } from '@lobehub/ui/icons';
 import { type UserMemoryEffort } from '@orvilo/types';
 import { cn } from 'cn';
 import { type LucideIcon } from 'lucide-react';
@@ -6,6 +5,7 @@ import { Brain } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { BrainOffIcon } from '@/components/icons';
 import LevelSlider from '@/components/LevelSlider';
 import { Separator } from '@/components/ui/separator';
 import { usePermission } from '@/hooks/usePermission';

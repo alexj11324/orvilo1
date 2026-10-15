@@ -1,6 +1,5 @@
 'use client';
 
-import { GroupBotIcon } from '@lobehub/ui/icons';
 import { AnimatedNumber } from '@orvilo/shared-tool-ui/components';
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
@@ -8,6 +7,7 @@ import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { GroupBotIcon } from '@/components/icons';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useChatStore } from '@/store/chat';
 import { threadSelectors } from '@/store/chat/selectors';

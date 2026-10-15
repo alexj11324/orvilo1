@@ -1,5 +1,4 @@
 'use client';
-import { ProviderIcon } from '@lobehub/ui/icons';
 import dayjs from 'dayjs';
 import { Brain, UserIcon } from 'lucide-react';
 import { createElement, memo, useEffect, useState } from 'react';
@@ -8,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import DatePicker, { type DatePickerProps } from '@/components/DatePicker';
 import { FormGroup } from '@/components/GroupForm';
+import { ProviderIcon } from '@/components/icons';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SettingHeader from '@/features/Settings/features/SettingHeader';

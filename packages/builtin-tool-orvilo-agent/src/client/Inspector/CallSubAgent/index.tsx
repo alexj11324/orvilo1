@@ -1,10 +1,10 @@
 'use client';
-import { GroupBotIcon } from '@lobehub/ui/icons';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { GroupBotIcon } from '@/components/icons';
 import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { CallSubAgentParams, CallSubAgentState } from '../../../types';

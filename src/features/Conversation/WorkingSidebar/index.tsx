@@ -1,4 +1,3 @@
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { getWorkingDirEffectivePath } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import { cn } from 'cn';
@@ -43,6 +42,7 @@ import { useMediaQuery } from 'react-responsive';
 import { useBusinessWorkingSidebarTabs } from '@/business/client/features/WorkingSidebarTabs';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import ActionIcon from '@/components/ActionIcon';
+import { SkillsIcon } from '@/components/icons';
 import type { DropdownItem } from '@/components/ItemsMenu';
 import { DropdownMenu } from '@/components/ItemsMenu';
 import { Skeleton } from '@/components/ui/skeleton';

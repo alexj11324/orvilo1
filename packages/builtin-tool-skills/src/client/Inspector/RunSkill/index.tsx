@@ -1,11 +1,11 @@
 'use client';
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { AGENT_SKILLS_IDENTIFIER_PREFIX } from '@orvilo/const';
 import { type BuiltinInspectorProps } from '@orvilo/types';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SkillsIcon } from '@/components/icons';
 import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { ActivateSkillParams, ActivateSkillSource, ActivateSkillState } from '../../../types';

@@ -61,9 +61,8 @@ vi.mock('@/business/client/hooks/useFetchWorkspaces', () => ({
   }),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Tree: ({
+vi.mock('@/components/Tree', () => ({
+  default: ({
     onRightClick,
     onSelect,
     treeData,

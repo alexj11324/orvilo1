@@ -4,7 +4,8 @@
   "private": true,
   "exports": {
     ".": "./src/index.ts",
-    "./headless": "./src/native-headless/index.ts"
+    "./headless": "./src/native-headless/index.ts",
+    "./native-browser": "./src/native-headless/browser.ts"
   },
   "main": "./src/index.ts",
   "scripts": {

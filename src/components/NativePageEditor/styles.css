@@ -1,0 +1,39 @@
+/* Consume approved document semantic roles. No new appearance/provider owner. */
+.native-editor-content {
+  min-height: calc(var(--spacing) * 9);
+  width: 100%;
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  outline: none;
+  overflow-wrap: anywhere;
+}
+.native-editor-content p { margin-block: 0; }
+.native-editor-content :is(ul, ol) { padding-inline-start: 1.5rem; }
+.native-editor-content ul { list-style: disc; }
+.native-editor-content ol { list-style: decimal; }
+.native-editor-content a { color: var(--primary); text-decoration: underline; }
+.native-editor-quote { border-inline-start: 2px solid var(--border); color: var(--muted-foreground); padding-inline-start: 0.75rem; }
+.native-editor-bold { font-weight: 600; }
+.native-editor-italic { font-style: italic; }
+.native-editor-strike { color: var(--muted-foreground); text-decoration: line-through; }
+.native-editor-underline { text-decoration: underline; }
+.native-editor-underline-strike { text-decoration: underline line-through; }
+.native-editor-code { background: var(--muted); border-radius: var(--radius-chip); font-family: var(--font-mono); }
+.native-editor-mention { background: var(--muted); border-radius: var(--radius-chip); color: var(--foreground); }
+.native-editor-content .ne-diff { border: 1px solid var(--border); border-radius: var(--radius-card); padding: 0.5rem; }
+.native-editor-content .ne-diff > .toolbar { margin-block-end: 0.5rem; }
+.native-editor-content [data-diff-content="old"] { background: var(--destructive-wash); color: var(--destructive-text); }
+.native-editor-content [data-diff-content="new"] { background: var(--success-wash); color: var(--success-text); }
+.native-editor-content .editor_table { border-collapse: collapse; width: max-content; min-width: 100%; }
+.native-editor-content .editor_table_cell { border: 1px solid var(--border); padding: 0.5rem; vertical-align: top; }
+.native-editor-content .editor_table_cell_header { background: var(--muted); }
+.native-editor-content .editor_table_cell_selected { outline: 2px solid var(--primary); outline-offset: -2px; }
+.native-editor-content .editor_table_scrollable_wrapper { max-width: 100%; overflow-x: auto; }
+.native-editor-content [data-collapsible-collapsed="true"] [data-collapsible-content] { display: none; }
+
+.native-editor-file { display: block; width: 100%; }
+.native-editor-file.selected { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: var(--radius-card); }
+.native-editor-inline-image { display: inline-block; max-width: 100%; }
+.native-editor-block-image { display: block; max-width: 100%; }

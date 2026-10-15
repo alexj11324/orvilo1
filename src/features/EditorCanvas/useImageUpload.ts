@@ -4,7 +4,7 @@ import { useFileStore } from '@/store/file';
 import type { FileUploadState, FileUploadStatus } from '@/types/files/upload';
 
 import { registerAttachment } from './attachmentRegistry';
-import { getExistingEditorAttachment } from './editorAttachments';
+import { getExistingEditorAttachment } from './editorAttachmentTransfer';
 
 export type EditorAttachmentUploadProgress = (
   status: FileUploadStatus,

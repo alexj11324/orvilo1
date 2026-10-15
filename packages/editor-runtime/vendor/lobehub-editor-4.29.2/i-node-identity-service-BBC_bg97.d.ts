@@ -520,3 +520,8 @@ interface INodeIdentityService {
 declare const INodeIdentityService: IServiceID<INodeIdentityService>;
 //#endregion
 export { IPlugin as a, IEditor as i, NodeIdentitySnapshot as n, IDocumentOptions as r, INodeIdentityService as t };
+
+// Owned type surface for the browser opt-in; same current kernel declarations.
+export type { IEditorKernel, IEditorPluginConstructor, IPlugin };
+
+export type { IServiceID };

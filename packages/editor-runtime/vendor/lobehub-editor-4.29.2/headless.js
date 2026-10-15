@@ -7768,6 +7768,7 @@ const logger$2 = createDebugLogger("plugin", "file");
 const INSERT_FILE_COMMAND = createCommand("INSERT_FILE_COMMAND");
 function registerFileCommand(editor, handleUpload) {
 	return editor.registerCommand(INSERT_FILE_COMMAND, (payload) => {
+		if (!editor.isEditable()) return false;
 		const { file } = payload;
 		editor.update(() => {
 			const fileNode = $createFileNode(file.name);
@@ -8368,6 +8369,7 @@ function isImageFile(file) {
 }
 function registerImageCommand(editor, handleUpload, defaultBlockImage = false) {
 	return editor.registerCommand(INSERT_IMAGE_COMMAND, (payload) => {
+		if (!editor.isEditable()) return false;
 		const { file, range, block, maxWidth } = payload;
 		const isBlock = block ?? defaultBlockImage;
 		if (!isImageFile(file)) return false;
@@ -8465,6 +8467,7 @@ const ImagePlugin = class extends KernelPlugin {
 		if (!this.config?.handleUpload) return;
 		uploadService.registerUpload(async (file, from, range) => {
 			const imageWidth = await this.config?.getImageWidth?.(file);
+			if (!editor.isEditable()) return false;
 			return editor.dispatchCommand(INSERT_IMAGE_COMMAND, {
 				block: this.config?.defaultBlockImage !== false,
 				file,
@@ -12498,3 +12501,96 @@ function createHeadlessEditor(options) {
 }
 //#endregion
 export { $getNodeById, $getNodeId, DEFAULT_HEADLESS_EDITOR_PLUGINS, HeadlessEditor, INodeIdentityService, createHeadlessEditor, extractMediaFromEditorState };
+
+// Owned browser opt-in exports. Kernel.setRootElement uses lexical.createEditor,
+// never a HeadlessEditor instance. No default browser business caller is changed.
+export { Kernel as NativeBrowserKernel, CommonPlugin, MarkdownPlugin, ListPlugin, LitexmlPlugin, TablePlugin, FilePlugin, ImagePlugin, CodemirrorPlugin, MathPlugin, LinkPlugin, MentionPlugin, TOGGLE_LINK_COMMAND, SELECT_TABLE_COMMAND, INSERT_TABLE_COLUMN_COMMAND, INSERT_TABLE_ROW_COMMAND, MOVE_TABLE_ROW_COMMAND, MOVE_TABLE_COLUMN_COMMAND, SYNC_TABLE_COLUMN_WIDTH_COMMAND, AUTO_FIT_TABLE_COLUMN_WIDTH_COMMAND, DISTRIBUTE_TABLE_COLUMN_WIDTH_COMMAND };
+
+// Exact current kernel-registered service/command objects for the code island.
+export { ICodemirrorEditLockService, SELECT_BEFORE_CODEMIRROR_COMMAND, SELECT_AFTER_CODEMIRROR_COMMAND };
+
+// Upload closure restored from installed SDK 4.29.2; IUploadService is the existing kernel identity.
+import { DROP_COMMAND, getDOMSelectionFromTarget } from "lexical";
+import { DRAG_DROP_PASTE } from "@lexical/rich-text";
+var UploadService = class {
+	constructor() {
+		this.uploadHandlers = [
+			[],
+			[],
+			[]
+		];
+	}
+	registerUpload(handler, priority = 2) {
+		this.uploadHandlers[priority].push(handler);
+	}
+	async uploadFile(file, from, range) {
+		for (const uploadHandlers of this.uploadHandlers) {
+			if (uploadHandlers.length === 0) continue;
+			for (const handler of uploadHandlers) {
+				const result = await handler(file, from, range);
+				if (result) return result;
+			}
+		}
+		throw new Error("No upload handler registered for this file type: " + file.type);
+	}
+};
+function getDragSelection(event) {
+	if (typeof document === "undefined") return null;
+	let range;
+	const domSelection = getDOMSelectionFromTarget(event.target);
+	if (document.caretRangeFromPoint) range = document.caretRangeFromPoint(event.clientX, event.clientY);
+	else if (event.rangeParent && domSelection !== null) {
+		domSelection.collapse(event.rangeParent, event.rangeOffset || 0);
+		range = domSelection.getRangeAt(0);
+	} else throw new Error(`Cannot get the selection when dragging`);
+	return range;
+}
+const UploadPlugin = class extends KernelPlugin {
+	static {
+		this.pluginName = "UploadPlugin";
+	}
+	constructor(kernel, config) {
+		super();
+		this.kernel = kernel;
+		this.config = config;
+		this.logger = createDebugLogger("plugin", "upload");
+		kernel.registerService(IUploadService, new UploadService());
+	}
+	onInit(editor) {
+		this.register(editor.registerCommand(DROP_COMMAND, (event) => {
+		if (!editor.isEditable()) return false;
+			const dataTransfer = event.dataTransfer;
+			if (dataTransfer && dataTransfer.files.length > 0) {
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				const file = dataTransfer.files[0];
+				const uploadService = this.kernel.requireService(IUploadService);
+				if (uploadService) uploadService.uploadFile(file, "drop", getDragSelection(event)).catch((error) => {
+					this.logger.error("Upload failed:", error);
+				});
+			}
+			return true;
+		}, COMMAND_PRIORITY_HIGH));
+		this.register(editor.registerCommand(DRAG_DROP_PASTE, (files) => {
+		if (!editor.isEditable()) return false;
+			for (const file of files) {
+				const uploadService = this.kernel.requireService(IUploadService);
+				if (uploadService) uploadService.uploadFile(file, "drag-drop-paste", null).catch((error) => {
+					this.logger.error("Upload failed:", error);
+				});
+			}
+			return true;
+		}, COMMAND_PRIORITY_HIGH));
+	}
+};
+
+export { UploadPlugin };
+
+// Same objects consumed by native upload plugins; never recreate a command.
+export { INSERT_FILE_COMMAND, INSERT_IMAGE_COMMAND };
+
+// Actual pure-node identities for the owned math decorator.
+export { MathInlineNode as NativeMathInlineNode, MathBlockNode as NativeMathBlockNode };
+
+// Existing listener-owned command identities; never recreate command objects.
+export { INSERT_MENTION_COMMAND, UPDATE_LINK_TEXT_COMMAND, UNLINK_LINK_COMMAND };

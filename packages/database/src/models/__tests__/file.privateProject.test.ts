@@ -128,16 +128,15 @@ describe('private Project file ceiling', () => {
         workspaceId,
       },
     ]);
-    const [privateMessage] = await serverDB
-      .insert(messages)
-      .values({
-        content: 'private attachment',
-        role: 'user',
-        topicId: 'file-private-topic',
-        userId: creator,
-        workspaceId,
-      })
-      .returning();
+    const privateMessageId = 'file-private-message';
+    await serverDB.insert(messages).values({
+      content: 'private attachment',
+      id: privateMessageId,
+      role: 'user',
+      topicId: 'file-private-topic',
+      userId: creator,
+      workspaceId,
+    });
     await serverDB.insert(files).values([
       {
         fileType: 'text/plain',
@@ -162,7 +161,7 @@ describe('private Project file ceiling', () => {
     ]);
     await serverDB.insert(messagesFiles).values({
       fileId: 'file-private-attachment',
-      messageId: privateMessage.id,
+      messageId: privateMessageId,
       userId: creator,
       workspaceId,
     });

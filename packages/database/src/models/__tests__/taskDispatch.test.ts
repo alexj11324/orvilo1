@@ -146,7 +146,7 @@ const reviewedTaskWithActiveReviewer = async () => {
     .update(agentOperations)
     .set({
       status: 'running',
-      appContext: { taskId: task.id, issueReviewCycleId: config.issueReview!.cycleId },
+      appContext: { issueReviewCycleId: config.issueReview!.cycleId },
     })
     .where(eq(agentOperations.id, reviewerOperationId));
   return { task: (await taskModel.findById(task.id))!, delivery, reviewerOperationId };

@@ -1,0 +1,176 @@
+name: Original 440 Electron acceptance
+on:
+  push:
+    branches: ['refactor/native-ui-sdk-removal-batch']
+    paths: ['.github/workflows/original440-electron.yml']
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: Exact clean candidate commit bound by the reviewed capsule
+        required: true
+        type: string
+      data_commit:
+        description: Immutable commit on the separate original440 harness data branch
+        required: true
+        type: string
+      capsule_sha256:
+        description: Exact SHA256 of the capsule reconstructed from that Git commit
+        required: true
+        type: string
+      overlay_commit:
+        description: Immutable small candidate source binding Git commit
+        required: true
+        type: string
+      overlay_sha256:
+        description: Exact SHA256 of the small candidate source binding capsule
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: original440-${{ inputs.revision || 'b866ddcddd57c11851525aec3d373916003dd2d7' }}
+  cancel-in-progress: false
+jobs:
+  original440:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 210
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.revision || 'b866ddcddd57c11851525aec3d373916003dd2d7' }}
+          persist-credentials: false
+      - name: Validate exact checked-out revision
+        env:
+          EXPECTED_REVISION: ${{ inputs.revision || 'b866ddcddd57c11851525aec3d373916003dd2d7' }}
+        run: |
+          [[ "$EXPECTED_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_REVISION"
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+      - uses: ./.github/actions/setup-env
+      - run: pnpm install --no-frozen-lockfile
+      - name: Install real isolated Desktop graph with normal lifecycle scripts
+        working-directory: apps/desktop
+        run: |
+          pnpm install --no-frozen-lockfile
+          node node_modules/electron/install.js
+      - name: Install real Linux display/runtime dependencies
+        run: pnpm exec playwright install-deps chromium
+      - name: Fetch and verify immutable comprehensive capsule
+        env:
+          DATA_COMMIT: ${{ inputs.data_commit || '5a8b702ad976dc5048d38a3e943f8f7b460c0342' }}
+          GH_TOKEN: ${{ github.token }}
+          CAPSULE_SHA256: ${{ inputs.capsule_sha256 || 'fed29de7714f3863ccc189181ac03619852e42755330534e04292e600d365083' }}
+          EXPECTED_REVISION: ${{ inputs.revision || 'b866ddcddd57c11851525aec3d373916003dd2d7' }}
+        run: |
+          python3 - <<'PY'
+          import os,pathlib,urllib.request,hashlib,tarfile,json
+          expected=os.environ['CAPSULE_SHA256'];commit=os.environ['DATA_COMMIT'];assert len(expected)==64 and all(c in '0123456789abcdef'for c in expected)
+          assert len(commit)==40 and all(c in '0123456789abcdef'for c in commit)
+          repo=os.environ['GITHUB_REPOSITORY'];headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github.raw+json','X-GitHub-Api-Version':'2022-11-28'}
+          def request(path):return urllib.request.urlopen(urllib.request.Request('https://api.github.com/repos/'+repo+'/'+path,headers=headers),timeout=60)
+          with request('contents/original440/manifest.json?ref='+commit)as response:manifest=json.load(response)
+          assert manifest['schema']=='original440-immutable-git-capsule-v1' and manifest['capsuleSHA256']==expected and manifest['capsuleBytes']<=1073741824
+          root=pathlib.Path(os.environ['RUNNER_TEMP']);archive=root/'original440-capsule.tar.gz';digest=hashlib.sha256();size=0
+          with archive.open('xb')as output:
+            for row in manifest['chunks']:
+              blob=row['gitBlob'];assert len(blob)==40 and all(c in '0123456789abcdef'for c in blob) and 0<row['bytes']<=50*1024*1024
+              part=hashlib.sha256();git=hashlib.sha1(('blob '+str(row['bytes'])+'\0').encode());part_size=0
+              with request('git/blobs/'+blob)as response:
+                while chunk:=response.read(1024*1024):
+                  size+=len(chunk);part_size+=len(chunk);assert size<=1073741824 and part_size<=row['bytes'];digest.update(chunk);part.update(chunk);git.update(chunk);output.write(chunk)
+              assert part_size==row['bytes'] and part.hexdigest()==row['sha256'] and git.hexdigest()==blob
+          assert size==manifest['capsuleBytes'] and digest.hexdigest()==expected
+          destination=root/'original440-capsule';destination.mkdir()
+          with tarfile.open(archive)as tar:
+            for member in tar.getmembers():
+              name=pathlib.PurePosixPath(member.name);assert member.isfile() and not name.is_absolute() and '..'not in name.parts
+              target=destination/member.name;assert not target.exists();target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(tar.extractfile(member).read());target.chmod(member.mode&0o777)
+          (root/'original440-capsule-receipt.json').write_text(__import__('json').dumps({'sha256':expected,'bytes':size,'dataCommit':commit,'sourceSealSHA256':manifest['sourceSealSHA256'],'workflowRevision':os.environ.get('GITHUB_SHA'),'candidateRevision':os.environ['EXPECTED_REVISION'],'priorRuntimeEvidenceReused':False},indent=2)+'\n')
+          PY
+      - name: Fetch and verify small candidate binding overlay
+        env:
+          DATA_COMMIT: ${{ inputs.overlay_commit || '8d5018eb94eaeab1491b50c5bd9be676f64722e1' }}
+          GH_TOKEN: ${{ github.token }}
+          CAPSULE_SHA256: ${{ inputs.overlay_sha256 || 'cb7eb0e195f80714fca21d6ce9e5846b80edeab0a7f88c338770e9d0149953e5' }}
+          EXPECTED_REVISION: ${{ inputs.revision || 'b866ddcddd57c11851525aec3d373916003dd2d7' }}
+        run: |
+          python3 - <<'PY'
+          import os,pathlib,urllib.request,hashlib,tarfile,json
+          expected=os.environ['CAPSULE_SHA256'];commit=os.environ['DATA_COMMIT'];assert len(expected)==64 and all(c in '0123456789abcdef'for c in expected)
+          assert len(commit)==40 and all(c in '0123456789abcdef'for c in commit)
+          repo=os.environ['GITHUB_REPOSITORY'];headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github.raw+json','X-GitHub-Api-Version':'2022-11-28'}
+          def request(path):return urllib.request.urlopen(urllib.request.Request('https://api.github.com/repos/'+repo+'/'+path,headers=headers),timeout=60)
+          with request('contents/original440/manifest.json?ref='+commit)as response:manifest=json.load(response)
+          assert manifest['schema']=='original440-immutable-git-capsule-v1' and manifest['capsuleSHA256']==expected and manifest['capsuleBytes']<=1073741824
+          root=pathlib.Path(os.environ['RUNNER_TEMP']);archive=root/'original440-overlay.tar.gz';digest=hashlib.sha256();size=0
+          with archive.open('xb')as output:
+            for row in manifest['chunks']:
+              blob=row['gitBlob'];assert len(blob)==40 and all(c in '0123456789abcdef'for c in blob) and 0<row['bytes']<=50*1024*1024
+              part=hashlib.sha256();git=hashlib.sha1(('blob '+str(row['bytes'])+'\0').encode());part_size=0
+              with request('git/blobs/'+blob)as response:
+                while chunk:=response.read(1024*1024):
+                  size+=len(chunk);part_size+=len(chunk);assert size<=1073741824 and part_size<=row['bytes'];digest.update(chunk);part.update(chunk);git.update(chunk);output.write(chunk)
+              assert part_size==row['bytes'] and part.hexdigest()==row['sha256'] and git.hexdigest()==blob
+          assert size==manifest['capsuleBytes'] and digest.hexdigest()==expected
+          destination=root/'original440-overlay';destination.mkdir()
+          with tarfile.open(archive)as tar:
+            for member in tar.getmembers():
+              name=pathlib.PurePosixPath(member.name);assert member.isfile() and not name.is_absolute() and '..'not in name.parts
+              target=destination/member.name;assert not target.exists();target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(tar.extractfile(member).read());target.chmod(member.mode&0o777)
+          (root/'original440-overlay-receipt.json').write_text(__import__('json').dumps({'sha256':expected,'bytes':size,'dataCommit':commit,'sourceSealSHA256':manifest['sourceSealSHA256'],'workflowRevision':os.environ.get('GITHUB_SHA'),'candidateRevision':os.environ['EXPECTED_REVISION'],'priorRuntimeEvidenceReused':False},indent=2)+'\n')
+          PY
+      - name: Verify and compose stable data with exact candidate overlay
+        run: |
+          python3 "$RUNNER_TEMP/original440-overlay/compose_overlay.py" --data-root "$RUNNER_TEMP/original440-capsule" --overlay-root "$RUNNER_TEMP/original440-overlay" --base-receipt "$RUNNER_TEMP/original440-capsule-receipt.json" --output-receipt "$RUNNER_TEMP/original440-split-composition.json"
+      - name: Pure source guard/matrix/path-port checks
+        run: |
+          python3 "$RUNNER_TEMP/original440-capsule/source_test.py"
+          python3 "$RUNNER_TEMP/original440-capsule/port_test.py"
+          python3 "$RUNNER_TEMP/original440-capsule/split_test.py"
+          python3 "$RUNNER_TEMP/original440-capsule/workflow_structure_test.py"
+          python3 tests/native-focused-electron/guard_resource_test.py
+      - name: Recompute original BEFORE unions from complete immutable artifacts
+        run: python3 "$RUNNER_TEMP/original440-capsule/materialize_baselines.py" --output "$RUNNER_TEMP/original440-before"
+      - name: Bind all actual current source and normally installed graphs
+        env:
+          EXPECTED_REVISION: ${{ inputs.revision || 'b866ddcddd57c11851525aec3d373916003dd2d7' }}
+        run: |
+          SEAL="$(sha256sum "$RUNNER_TEMP/original440-capsule/seal.json" | cut -d' ' -f1)"
+          python3 "$RUNNER_TEMP/original440-capsule/candidate_binding.py" --root "$GITHUB_WORKSPACE" --head "$EXPECTED_REVISION" --output "$RUNNER_TEMP/original440-current-binding.json" --expected-source-seal-sha256 "$SEAL"
+          python3 "$RUNNER_TEMP/original440-capsule/assemble_runtime.py" --root "$GITHUB_WORKSPACE" --binding "$RUNNER_TEMP/original440-current-binding.json" --baseline-root "$RUNNER_TEMP/original440-before" --output "$RUNNER_TEMP/original440-execution"
+          python3 "$RUNNER_TEMP/original440-capsule/hydrate_public_assets.py" --execution "$RUNNER_TEMP/original440-execution"
+      - name: Preserve Chromium setuid sandbox
+        run: |
+          ELECTRON_SANDBOX="$(realpath apps/desktop/node_modules/electron/dist/chrome-sandbox)"
+          sudo chown root:root "$ELECTRON_SANDBOX"
+          sudo chmod 4755 "$ELECTRON_SANDBOX"
+      - name: Run all original440 with unchanged per-run480 and1GiB limits
+        env:
+          ORVILO_PRODUCT_ROOT: ${{ github.workspace }}
+          EXPECTED_REVISION: ${{ inputs.revision || 'b866ddcddd57c11851525aec3d373916003dd2d7' }}
+        run: |
+          ELECTRON="$(realpath apps/desktop/node_modules/electron/dist/electron)"
+          PLAYWRIGHT="$(node -p 'require("node:path").join(require("node:path").dirname(require("node:module").createRequire(require.resolve("@playwright/test")).resolve("playwright/package.json")), "index.mjs")')"
+          NODE="$(command -v node)"
+          sudo systemd-run --scope --property=MemoryAccounting=yes --property=MemoryMax=12G \
+            runuser -u "$(id -un)" -- env \
+            PATH="$PATH" HOME="$HOME" ORVILO_PRODUCT_ROOT="$ORVILO_PRODUCT_ROOT" \
+            xvfb-run -a python3 "$RUNNER_TEMP/original440-capsule/run_complete440.py" \
+            --execution "$RUNNER_TEMP/original440-execution" --output "$RUNNER_TEMP/original440-results" \
+            --head "$EXPECTED_REVISION" --node "$NODE" --electron "$ELECTRON" --playwright "$PLAYWRIGHT" \
+            --lease "GH_ORIGINAL440_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}"
+      - name: Upload complete fresh evidence and binding even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: original440-${{ inputs.revision || 'b866ddcddd57c11851525aec3d373916003dd2d7' }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/original440-results/
+            ${{ runner.temp }}/original440-current-binding.json
+            ${{ runner.temp }}/original440-execution/source-operational-port-proof.json
+            ${{ runner.temp }}/original440-execution/fresh-public-registry-verification.json
+            ${{ runner.temp }}/original440-before/before-reverification.json
+            ${{ runner.temp }}/original440-capsule-receipt.json
+            ${{ runner.temp }}/original440-overlay-receipt.json
+            ${{ runner.temp }}/original440-split-composition.json
+          retention-days: 14

@@ -10,12 +10,6 @@ import { createEditorFileUploadTracker } from './editorFileUploadTracker';
 import InternalEditor from './InternalEditor';
 import { LinearFileCard } from './LinearFilePlugin';
 
-vi.mock('@lobehub/ui/base-ui', () => ({
-  ActionIcon: ({ onClick, title }: { onClick?: () => void; title?: string }) => (
-    <button aria-label={title} type="button" onClick={onClick} />
-  ),
-}));
-
 const editorProps = vi.hoisted(() => ({
   last: undefined as any,
   image: undefined as any,
@@ -115,8 +109,10 @@ describe('InternalEditor readonly state', () => {
 
   it('constrains the editor wrapper to its parent width', () => {
     const { container } = render(<InternalEditor editor={editor} />);
+    // The editor renders inside LobeThemeScope's box-less vendor root.
+    const wrapper = container.querySelector('#lobe-ui-theme-app')?.firstElementChild;
 
-    expect(container.firstElementChild).toHaveStyle({
+    expect(wrapper).toHaveStyle({
       maxWidth: '100%',
       overflow: 'hidden',
       width: '100%',

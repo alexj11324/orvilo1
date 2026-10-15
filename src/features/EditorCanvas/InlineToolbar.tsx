@@ -28,6 +28,8 @@ import { type CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
+
 export interface InlineToolbarProps {
   className?: string;
   editor?: IEditor;
@@ -206,27 +208,34 @@ const InlineToolbar = memo<InlineToolbarProps>(
     if (!editorState) return null;
 
     // Floating toolbar - just return the actions
-    if (floating) return <FloatActions className={className} items={items} style={style} />;
+    if (floating)
+      return (
+        <LobeThemeScope>
+          <FloatActions className={className} items={items} style={style} />
+        </LobeThemeScope>
+      );
 
     // Fixed toolbar - wrap in a styled container
     return (
-      <div
-        className={cn('flex flex-col p-1 shadow-md', className)}
-        style={{
-          border: `1px solid ${'var(--border)'}`,
+      <LobeThemeScope>
+        <div
+          className={cn('flex flex-col p-1 shadow-md', className)}
+          style={{
+            border: `1px solid ${'var(--border)'}`,
 
-          background: 'var(--popover)',
-          borderRadius: 8,
-          marginBottom: 16,
-          marginTop: 16,
-          position: 'sticky',
-          top: 12,
-          zIndex: 10,
-          ...style,
-        }}
-      >
-        <ChatInputActions items={items} />
-      </div>
+            background: 'var(--popover)',
+            borderRadius: 8,
+            marginBottom: 16,
+            marginTop: 16,
+            position: 'sticky',
+            top: 12,
+            zIndex: 10,
+            ...style,
+          }}
+        >
+          <ChatInputActions items={items} />
+        </div>
+      </LobeThemeScope>
     );
   },
 );

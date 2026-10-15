@@ -4,6 +4,7 @@ import { memo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { toast } from '@/components/toast';
 import { useActiveConversationResourceAccess } from '@/features/Conversation/hooks/useConversationResourceAccess';
 import { useTopicCommentMutations } from '@/features/TopicComment/hooks';
@@ -69,45 +70,47 @@ const Composer = memo<ComposerProps>(
     if (!workspaceId || !canUseResource) return null;
 
     return (
-      <div className={cn('flex flex-col', styles.composer)}>
-        <ChatInput
-          resize={false}
-          styles={{ body: { padding: 8 } }}
-          footer={
-            <ChatInputActionBar
-              justify={'flex-end'}
-              right={
-                <SendButton
-                  disabled={creating || submitting || !content.trim()}
-                  loading={creating || submitting}
-                  shape={'round'}
-                  title={t('input.send')}
-                  type={'text'}
-                  onClick={submit}
-                />
+      <LobeThemeScope>
+        <div className={cn('flex flex-col', styles.composer)}>
+          <ChatInput
+            resize={false}
+            styles={{ body: { padding: 8 } }}
+            footer={
+              <ChatInputActionBar
+                justify={'flex-end'}
+                right={
+                  <SendButton
+                    disabled={creating || submitting || !content.trim()}
+                    loading={creating || submitting}
+                    shape={'round'}
+                    title={t('input.send')}
+                    type={'text'}
+                    onClick={submit}
+                  />
+                }
+              />
+            }
+          >
+            <TopicCommentEditor
+              disabled={creating || submitting}
+              initialContent={content}
+              initialEditorData={draft?.editorData}
+              ref={editorRef}
+              placeholder={
+                parentCommentId
+                  ? t('topicComment.replyPlaceholder')
+                  : messageId
+                    ? t('topicComment.messagePlaceholder')
+                    : t('topicComment.placeholder')
+              }
+              onPressEnter={onPressEnter}
+              onChange={({ content: nextContent, editorData }) =>
+                setDraftContent(key, nextContent, editorData)
               }
             />
-          }
-        >
-          <TopicCommentEditor
-            disabled={creating || submitting}
-            initialContent={content}
-            initialEditorData={draft?.editorData}
-            ref={editorRef}
-            placeholder={
-              parentCommentId
-                ? t('topicComment.replyPlaceholder')
-                : messageId
-                  ? t('topicComment.messagePlaceholder')
-                  : t('topicComment.placeholder')
-            }
-            onPressEnter={onPressEnter}
-            onChange={({ content: nextContent, editorData }) =>
-              setDraftContent(key, nextContent, editorData)
-            }
-          />
-        </ChatInput>
-      </div>
+          </ChatInput>
+        </div>
+      </LobeThemeScope>
     );
   },
 );

@@ -2,6 +2,8 @@ import { ReactLinkPlugin, ReactListPlugin } from '@lobehub/editor';
 import { Editor, useEditor } from '@lobehub/editor/react';
 import { useEffect } from 'react';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
+
 import { useWhileMounted } from './useWhileMounted';
 
 const plugins = [ReactLinkPlugin, ReactListPlugin];
@@ -43,26 +45,28 @@ export function ProjectUpdateEditor({
   );
 
   return (
-    <Editor
-      autoFocus
-      className={styles.editor}
-      content={initialContent ?? ''}
-      debounceWait={0}
-      editable={!disabled}
-      editor={editor}
-      plugins={plugins}
-      type={initialContent ? 'markdown' : 'text'}
-      placeholder={
-        <span className="block pt-2.5 pr-3 pb-1 pl-3 text-sm leading-5.5">{placeholder}</span>
-      }
-      onChange={(current) => emitChange(String(current.getDocument('markdown') ?? ''))}
-      onPressEnter={({ event }) => {
-        if (!event.isComposing && (event.metaKey || event.ctrlKey)) {
-          event.preventDefault();
-          onSubmit();
-          return true;
+    <LobeThemeScope>
+      <Editor
+        autoFocus
+        className={styles.editor}
+        content={initialContent ?? ''}
+        debounceWait={0}
+        editable={!disabled}
+        editor={editor}
+        plugins={plugins}
+        type={initialContent ? 'markdown' : 'text'}
+        placeholder={
+          <span className="block pt-2.5 pr-3 pb-1 pl-3 text-sm leading-5.5">{placeholder}</span>
         }
-      }}
-    />
+        onChange={(current) => emitChange(String(current.getDocument('markdown') ?? ''))}
+        onPressEnter={({ event }) => {
+          if (!event.isComposing && (event.metaKey || event.ctrlKey)) {
+            event.preventDefault();
+            onSubmit();
+            return true;
+          }
+        }}
+      />
+    </LobeThemeScope>
   );
 }

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { Markdown } from '@/components/Markdown';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
@@ -249,162 +250,164 @@ const CommentCard = memo<CommentCardProps>(
     const attachmentState = getEditorAttachmentStateFromJson(editorData);
 
     return (
-      <div
-        className={cn('flex flex-col', styles.card, variant === 'reply' && styles.replyCard)}
-        data-document-comment-id={comment.id}
-        ref={cardRef}
-      >
-        <div className={cn('flex flex-row items-center gap-2', styles.header)}>
-          <Avatar
-            avatar={comment.author.avatar || authorName}
-            size={variant === 'reply' ? 28 : 32}
-          />
-          <div className="text-sm font-semibold">{authorName}</div>
-          {replyToName && (
-            <>
-              <ChevronRight aria-hidden className={styles.replyTargetIcon} size={16} />
-              <div className="text-sm font-semibold">{replyToName}</div>
-            </>
-          )}
-          {comment.author.status === 'former' && (
-            <div className={cn('text-xs', styles.meta)}>
-              {t('pageEditor.comments.author.former')}
-            </div>
-          )}
-          {time && (
-            <div className={cn('text-xs leading-5', styles.meta)} title={timeTitle}>
-              {time}
-            </div>
-          )}
-          {edited && !deleted && (
-            <div className={cn('text-xs', styles.meta)}>{t('pageEditor.comments.edited')}</div>
-          )}
-        </div>
-
-        <div className={cn(styles.body, variant === 'reply' && styles.replyBody)}>
-          {deleted ? (
-            <div className={cn(styles.deleted)}>{t('pageEditor.comments.deleted')}</div>
-          ) : editing ? (
-            <ChatInput
-              className={styles.editComposer}
-              header={showTypoBar ? <TypoBar editor={editEditor} /> : undefined}
-              maxHeight={COMMENT_INPUT_MAX_HEIGHT}
-              minHeight={64}
-              resize={false}
-              slashMenuRef={editInputRef}
-              footer={
-                <ChatInputActionBar
-                  style={{ paddingBlock: 4, paddingInline: 8 }}
-                  left={
-                    <AttachmentMenu
-                      disabled={mutating}
-                      formatEnabled={showTypoBar}
-                      onFiles={handleAttach}
-                      onFormatEnabledChange={setShowTypoBar}
-                      onLibraryFiles={(attachments) =>
-                        insertExistingAttachmentsIntoEditor(editEditor, attachments)
-                      }
-                    />
-                  }
-                  right={
-                    <div className="flex flex-row gap-2">
-                      <Button
-                        disabled={mutating}
-                        size="normal"
-                        variant="outline"
-                        onClick={() => setEditing(false)}
-                      >
-                        {t('pageEditor.comments.cancel')}
-                      </Button>
-                      <Button
-                        loading={mutating}
-                        size="normal"
-                        variant="default"
-                        disabled={
-                          attachmentState.hasIncompleteAttachments ||
-                          (!content.trim() && !attachmentState.hasCompletedAttachments)
-                        }
-                        onClick={handleUpdate}
-                      >
-                        {t('pageEditor.comments.save')}
-                      </Button>
-                    </div>
-                  }
-                />
-              }
-              onBodyClick={() => editEditor.focus()}
-            >
-              <DocumentCommentEditor
-                autoFocus
-                compact
-                disabled={mutating}
-                editor={editEditor}
-                entityId={comment.id}
-                getPopupContainer={() => editInputRef.current}
-                initialContent={content}
-                initialEditorData={editorData}
-                placeholder={t('pageEditor.comments.placeholder')}
-                ref={editorRef}
-                onChange={({ content: nextContent, editorData: nextEditorData }) => {
-                  setContent(nextContent);
-                  setEditorData(nextEditorData);
-                }}
-                onPressEnter={(event) => {
-                  // Same interaction as the composer: Enter saves (per the
-                  // global send preference), Shift+Enter inserts a newline.
-                  if (!shouldSendOnEnter(event)) return;
-                  void handleUpdate();
-                  return true;
-                }}
-              />
-            </ChatInput>
-          ) : (
-            <CommentContent content={comment.content} editorData={comment.editorData} />
-          )}
-        </div>
-
-        {!optimistic && !editing && (onReply || comment.canEdit || comment.canDelete) && (
-          <div
-            className={cn(
-              'flex flex-row gap-1',
-              styles.actions,
-              variant === 'reply' && styles.replyCardActions,
+      <LobeThemeScope>
+        <div
+          className={cn('flex flex-col', styles.card, variant === 'reply' && styles.replyCard)}
+          data-document-comment-id={comment.id}
+          ref={cardRef}
+        >
+          <div className={cn('flex flex-row items-center gap-2', styles.header)}>
+            <Avatar
+              avatar={comment.author.avatar || authorName}
+              size={variant === 'reply' ? 28 : 32}
+            />
+            <div className="text-sm font-semibold">{authorName}</div>
+            {replyToName && (
+              <>
+                <ChevronRight aria-hidden className={styles.replyTargetIcon} size={16} />
+                <div className="text-sm font-semibold">{replyToName}</div>
+              </>
             )}
-          >
-            {onReply && (
-              <ActionIcon
-                aria-label={t('pageEditor.comments.replyAction')}
-                aria-pressed={replying}
-                disabled={mutating}
-                icon={MessageCircle}
-                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                title={t('pageEditor.comments.replyAction')}
-                onClick={onReply}
-              />
+            {comment.author.status === 'former' && (
+              <div className={cn('text-xs', styles.meta)}>
+                {t('pageEditor.comments.author.former')}
+              </div>
             )}
-            {comment.canEdit && (
-              <ActionIcon
-                aria-label={t('pageEditor.comments.edit')}
-                disabled={mutating}
-                icon={Pencil}
-                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                title={t('pageEditor.comments.edit')}
-                onClick={handleEdit}
-              />
+            {time && (
+              <div className={cn('text-xs leading-5', styles.meta)} title={timeTitle}>
+                {time}
+              </div>
             )}
-            {comment.canDelete && (
-              <ActionIcon
-                aria-label={t('pageEditor.comments.delete')}
-                icon={Trash}
-                loading={mutating}
-                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                title={t('pageEditor.comments.delete')}
-                onClick={handleDelete}
-              />
+            {edited && !deleted && (
+              <div className={cn('text-xs', styles.meta)}>{t('pageEditor.comments.edited')}</div>
             )}
           </div>
-        )}
-      </div>
+
+          <div className={cn(styles.body, variant === 'reply' && styles.replyBody)}>
+            {deleted ? (
+              <div className={cn(styles.deleted)}>{t('pageEditor.comments.deleted')}</div>
+            ) : editing ? (
+              <ChatInput
+                className={styles.editComposer}
+                header={showTypoBar ? <TypoBar editor={editEditor} /> : undefined}
+                maxHeight={COMMENT_INPUT_MAX_HEIGHT}
+                minHeight={64}
+                resize={false}
+                slashMenuRef={editInputRef}
+                footer={
+                  <ChatInputActionBar
+                    style={{ paddingBlock: 4, paddingInline: 8 }}
+                    left={
+                      <AttachmentMenu
+                        disabled={mutating}
+                        formatEnabled={showTypoBar}
+                        onFiles={handleAttach}
+                        onFormatEnabledChange={setShowTypoBar}
+                        onLibraryFiles={(attachments) =>
+                          insertExistingAttachmentsIntoEditor(editEditor, attachments)
+                        }
+                      />
+                    }
+                    right={
+                      <div className="flex flex-row gap-2">
+                        <Button
+                          disabled={mutating}
+                          size="normal"
+                          variant="outline"
+                          onClick={() => setEditing(false)}
+                        >
+                          {t('pageEditor.comments.cancel')}
+                        </Button>
+                        <Button
+                          loading={mutating}
+                          size="normal"
+                          variant="default"
+                          disabled={
+                            attachmentState.hasIncompleteAttachments ||
+                            (!content.trim() && !attachmentState.hasCompletedAttachments)
+                          }
+                          onClick={handleUpdate}
+                        >
+                          {t('pageEditor.comments.save')}
+                        </Button>
+                      </div>
+                    }
+                  />
+                }
+                onBodyClick={() => editEditor.focus()}
+              >
+                <DocumentCommentEditor
+                  autoFocus
+                  compact
+                  disabled={mutating}
+                  editor={editEditor}
+                  entityId={comment.id}
+                  getPopupContainer={() => editInputRef.current}
+                  initialContent={content}
+                  initialEditorData={editorData}
+                  placeholder={t('pageEditor.comments.placeholder')}
+                  ref={editorRef}
+                  onChange={({ content: nextContent, editorData: nextEditorData }) => {
+                    setContent(nextContent);
+                    setEditorData(nextEditorData);
+                  }}
+                  onPressEnter={(event) => {
+                    // Same interaction as the composer: Enter saves (per the
+                    // global send preference), Shift+Enter inserts a newline.
+                    if (!shouldSendOnEnter(event)) return;
+                    void handleUpdate();
+                    return true;
+                  }}
+                />
+              </ChatInput>
+            ) : (
+              <CommentContent content={comment.content} editorData={comment.editorData} />
+            )}
+          </div>
+
+          {!optimistic && !editing && (onReply || comment.canEdit || comment.canDelete) && (
+            <div
+              className={cn(
+                'flex flex-row gap-1',
+                styles.actions,
+                variant === 'reply' && styles.replyCardActions,
+              )}
+            >
+              {onReply && (
+                <ActionIcon
+                  aria-label={t('pageEditor.comments.replyAction')}
+                  aria-pressed={replying}
+                  disabled={mutating}
+                  icon={MessageCircle}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                  title={t('pageEditor.comments.replyAction')}
+                  onClick={onReply}
+                />
+              )}
+              {comment.canEdit && (
+                <ActionIcon
+                  aria-label={t('pageEditor.comments.edit')}
+                  disabled={mutating}
+                  icon={Pencil}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                  title={t('pageEditor.comments.edit')}
+                  onClick={handleEdit}
+                />
+              )}
+              {comment.canDelete && (
+                <ActionIcon
+                  aria-label={t('pageEditor.comments.delete')}
+                  icon={Trash}
+                  loading={mutating}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                  title={t('pageEditor.comments.delete')}
+                  onClick={handleDelete}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </LobeThemeScope>
     );
   },
 );

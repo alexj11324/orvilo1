@@ -1,3 +1,6 @@
+// Must stay first: layers and scopes vendor antd-style rules before any vendor module loads.
+import '@/components/LobeThemeScope/installStyleLayer';
+
 import { startTransition, StrictMode } from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { HydratedRouter } from 'react-router/dom';

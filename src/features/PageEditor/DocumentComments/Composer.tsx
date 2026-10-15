@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import Avatar from '@/components/Avatar';
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { AttachmentMenu } from '@/features/AttachmentInput';
@@ -110,84 +111,86 @@ const Composer = memo<ComposerProps>(({ documentId, onSubmit, onSuccess, parentC
   const attachmentState = getEditorAttachmentStateFromJson(draft.editorData);
 
   return (
-    <div className="flex items-start gap-3">
-      <div className={cn('flex flex-col', styles.composerAvatar)}>
-        <Avatar avatar={avatar} size={parentCommentId ? 28 : 32} />
-      </div>
-      <ChatInput
-        className={styles.composer}
-        flex={1}
-        header={showTypoBar ? <TypoBar editor={editor} /> : undefined}
-        maxHeight={COMMENT_INPUT_MAX_HEIGHT}
-        minHeight={72}
-        resize={false}
-        slashMenuRef={inputRef}
-        footer={
-          <ChatInputActionBar
-            style={{ paddingBlock: 4, paddingInline: 8 }}
-            left={
-              <AttachmentMenu
-                disabled={submitting}
-                formatEnabled={showTypoBar}
-                onFiles={handleAttach}
-                onFormatEnabledChange={setShowTypoBar}
-                onLibraryFiles={(attachments) =>
-                  insertExistingAttachmentsIntoEditor(editor, attachments)
-                }
-              />
-            }
-            right={
-              <Button
-                loading={submitting}
-                size="normal"
-                type="button"
-                variant="default"
-                disabled={
-                  attachmentState.hasIncompleteAttachments ||
-                  (!draft.content.trim() && !attachmentState.hasCompletedAttachments)
-                }
-                title={
-                  parentCommentId
+    <LobeThemeScope>
+      <div className="flex items-start gap-3">
+        <div className={cn('flex flex-col', styles.composerAvatar)}>
+          <Avatar avatar={avatar} size={parentCommentId ? 28 : 32} />
+        </div>
+        <ChatInput
+          className={styles.composer}
+          flex={1}
+          header={showTypoBar ? <TypoBar editor={editor} /> : undefined}
+          maxHeight={COMMENT_INPUT_MAX_HEIGHT}
+          minHeight={72}
+          resize={false}
+          slashMenuRef={inputRef}
+          footer={
+            <ChatInputActionBar
+              style={{ paddingBlock: 4, paddingInline: 8 }}
+              left={
+                <AttachmentMenu
+                  disabled={submitting}
+                  formatEnabled={showTypoBar}
+                  onFiles={handleAttach}
+                  onFormatEnabledChange={setShowTypoBar}
+                  onLibraryFiles={(attachments) =>
+                    insertExistingAttachmentsIntoEditor(editor, attachments)
+                  }
+                />
+              }
+              right={
+                <Button
+                  loading={submitting}
+                  size="normal"
+                  type="button"
+                  variant="default"
+                  disabled={
+                    attachmentState.hasIncompleteAttachments ||
+                    (!draft.content.trim() && !attachmentState.hasCompletedAttachments)
+                  }
+                  title={
+                    parentCommentId
+                      ? t('pageEditor.comments.replyAction')
+                      : t('pageEditor.comments.publish')
+                  }
+                  onClick={() => void submit()}
+                >
+                  <ArrowUp className="size-4" />
+                  {parentCommentId
                     ? t('pageEditor.comments.replyAction')
-                    : t('pageEditor.comments.publish')
-                }
-                onClick={() => void submit()}
-              >
-                <ArrowUp className="size-4" />
-                {parentCommentId
-                  ? t('pageEditor.comments.replyAction')
-                  : t('pageEditor.comments.publish')}
-              </Button>
-            }
-          />
-        }
-        onBodyClick={() => editor.focus()}
-      >
-        <DocumentCommentEditor
-          autoFocus={Boolean(parentCommentId)}
-          disabled={submitting}
-          editor={editor}
-          entityId={draft.clientId}
-          getPopupContainer={() => inputRef.current}
-          initialContent={draft.content}
-          initialEditorData={draft.editorData}
-          ref={editorRef}
-          placeholder={
-            parentCommentId
-              ? t('pageEditor.comments.replyPlaceholder')
-              : t('pageEditor.comments.placeholder')
+                    : t('pageEditor.comments.publish')}
+                </Button>
+              }
+            />
           }
-          onChange={({ content, editorData }) => {
-            setDraft((current) => ({ ...current, content, editorData }));
-          }}
-          onPressEnter={(event) => {
-            if (!shouldSendOnEnter(event)) return;
-            void submit();
-            return true;
-          }}
-        />
-      </ChatInput>
-    </div>
+          onBodyClick={() => editor.focus()}
+        >
+          <DocumentCommentEditor
+            autoFocus={Boolean(parentCommentId)}
+            disabled={submitting}
+            editor={editor}
+            entityId={draft.clientId}
+            getPopupContainer={() => inputRef.current}
+            initialContent={draft.content}
+            initialEditorData={draft.editorData}
+            ref={editorRef}
+            placeholder={
+              parentCommentId
+                ? t('pageEditor.comments.replyPlaceholder')
+                : t('pageEditor.comments.placeholder')
+            }
+            onChange={({ content, editorData }) => {
+              setDraft((current) => ({ ...current, content, editorData }));
+            }}
+            onPressEnter={(event) => {
+              if (!shouldSendOnEnter(event)) return;
+              void submit();
+              return true;
+            }}
+          />
+        </ChatInput>
+      </div>
+    </LobeThemeScope>
   );
 });
 

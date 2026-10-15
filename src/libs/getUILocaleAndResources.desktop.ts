@@ -1,9 +1,9 @@
+/**
+ * Business UI strings (`locales/<lang>/ui.json`) for the lobehub components that
+ * vendor packages render. LobeThemeScope merges lobehub's built-in strings under them.
+ */
 import type { UILocaleResourceInput, UILocaleResources } from './getUILocaleAndResources.utils';
-import {
-  mergeUILocaleResources,
-  normalizeUILocaleResources,
-  resolveUILocale,
-} from './getUILocaleAndResources.utils';
+import { normalizeUILocaleResources, resolveUILocale } from './getUILocaleAndResources.utils';
 
 type UILocaleModule = { default: UILocaleResourceInput };
 type UILocaleLoaderMap = Record<string, () => Promise<UILocaleModule>>;
@@ -25,38 +25,15 @@ const loadBusinessResources = async (locale: string): Promise<UILocaleResources 
   }
 };
 
-const loadOrviloUIBuiltinResources = async (locale: string): Promise<UILocaleResources | null> => {
-  try {
-    const { en, zhCn } = await import('@lobehub/ui/es/i18n/resources/index');
-
-    if (locale.startsWith('zh')) return zhCn as UILocaleResources;
-    return en as UILocaleResources;
-  } catch {
-    return null;
-  }
-};
-
-const loadMergedResources = async (locale: string): Promise<UILocaleResources | null> => {
-  const [builtinResources, businessResources] = await Promise.all([
-    loadOrviloUIBuiltinResources(locale),
-    loadBusinessResources(locale),
-  ]);
-
-  return mergeUILocaleResources(builtinResources, businessResources);
-};
-
 export const getUILocaleAndResources = async (
   locale: string | 'auto',
 ): Promise<{ locale: string; resources: UILocaleResources }> => {
   const { normalizedLocale, uiLocale } = resolveUILocale(locale);
 
   const resources =
-    (await loadMergedResources(normalizedLocale)) ?? (await loadMergedResources('en-US'));
+    (await loadBusinessResources(normalizedLocale)) ?? (await loadBusinessResources('en-US'));
 
-  if (!resources)
-    throw new Error(
-      `Failed to load UI resources (business + @lobehub/ui builtin) for locale=${normalizedLocale}`,
-    );
+  if (!resources) throw new Error(`Failed to load UI resources for locale=${normalizedLocale}`);
 
   return {
     locale: uiLocale,

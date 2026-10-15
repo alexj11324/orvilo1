@@ -3,6 +3,7 @@ import { ChevronLeft } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { Button } from '@/components/ui/button';
 import { useEnterToSend } from '@/hooks/useEnterToSend';
 
@@ -29,51 +30,53 @@ const CommentInput = memo<CommentInputProps>(({ onSubmit, onCancel }) => {
   }, [editor, onSubmit, submitting]);
 
   return (
-    <ChatInput
-      gap={8}
-      maxHeight={100}
-      minHeight={30}
-      resize={false}
-      footer={
-        <div className="flex items-center gap-2 justify-between p-2">
-          <Button
-            disabled={submitting}
-            size="sm"
-            variant="ghost"
-            style={{
-              color: 'var(--foreground-description)',
-            }}
-            onClick={onCancel}
-          >
-            <ChevronLeft data-icon="inline-start" />
-            {t('cancel', { ns: 'common' })}
-          </Button>
-          <SendButton
-            loading={submitting}
-            shape={'round'}
-            title={t('brief.commentSubmit')}
-            type={'primary'}
-            onClick={handleSubmit}
-          />
-        </div>
-      }
-    >
-      <Editor
-        content={''}
-        editor={editor}
-        enablePasteMarkdown={false}
-        markdownOption={false}
-        placeholder={t('brief.commentPlaceholder')}
-        type={'text'}
-        variant={'chat'}
-        onPressEnter={({ event }) => {
-          if (shouldSendOnEnter(event)) {
-            handleSubmit();
-            return true;
-          }
-        }}
-      />
-    </ChatInput>
+    <LobeThemeScope>
+      <ChatInput
+        gap={8}
+        maxHeight={100}
+        minHeight={30}
+        resize={false}
+        footer={
+          <div className="flex items-center gap-2 justify-between p-2">
+            <Button
+              disabled={submitting}
+              size="sm"
+              variant="ghost"
+              style={{
+                color: 'var(--foreground-description)',
+              }}
+              onClick={onCancel}
+            >
+              <ChevronLeft data-icon="inline-start" />
+              {t('cancel', { ns: 'common' })}
+            </Button>
+            <SendButton
+              loading={submitting}
+              shape={'round'}
+              title={t('brief.commentSubmit')}
+              type={'primary'}
+              onClick={handleSubmit}
+            />
+          </div>
+        }
+      >
+        <Editor
+          content={''}
+          editor={editor}
+          enablePasteMarkdown={false}
+          markdownOption={false}
+          placeholder={t('brief.commentPlaceholder')}
+          type={'text'}
+          variant={'chat'}
+          onPressEnter={({ event }) => {
+            if (shouldSendOnEnter(event)) {
+              handleSubmit();
+              return true;
+            }
+          }}
+        />
+      </ChatInput>
+    </LobeThemeScope>
   );
 });
 

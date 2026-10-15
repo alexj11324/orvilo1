@@ -3,6 +3,7 @@ import { ReactLinkPlugin, ReactTablePlugin } from '@lobehub/editor';
 import { Editor } from '@lobehub/editor/react';
 import { type FC, useMemo } from 'react';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { createChatInputRichPlugins } from '@/features/ChatInput/InputEditor/plugins';
 import { TypoBar } from '@/features/EditorCanvas/TypoBar';
 
@@ -34,25 +35,27 @@ const EditorCanvas: FC<EditorCanvasProps> = ({ defaultValue, editor, editorData 
   }, [editorData, defaultValue]);
 
   return (
-    <>
-      <TypoBar editor={editor} />
-      <div
-        className="flex flex-col p-4"
-        style={{ cursor: 'text', maxHeight: '80vh', minHeight: '50vh', overflowY: 'auto' }}
-      >
-        <Editor
-          autoFocus
-          content={content}
-          editor={editor}
-          plugins={EDITOR_PLUGINS}
-          type={type}
-          variant={'chat'}
-          style={{
-            paddingBottom: 120,
-          }}
-        />
-      </div>
-    </>
+    <LobeThemeScope>
+      <>
+        <TypoBar editor={editor} />
+        <div
+          className="flex flex-col p-4"
+          style={{ cursor: 'text', maxHeight: '80vh', minHeight: '50vh', overflowY: 'auto' }}
+        >
+          <Editor
+            autoFocus
+            content={content}
+            editor={editor}
+            plugins={EDITOR_PLUGINS}
+            type={type}
+            variant={'chat'}
+            style={{
+              paddingBottom: 120,
+            }}
+          />
+        </div>
+      </>
+    </LobeThemeScope>
   );
 };
 

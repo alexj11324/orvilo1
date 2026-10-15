@@ -13,6 +13,7 @@ import ActionIcon from '@/components/ActionIcon';
 import CodeEditorPane from '@/components/CodeEditorPane';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import InfoTooltip from '@/components/InfoTooltip';
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { toast } from '@/components/toast';
 import { createChatInputRichPlugins } from '@/features/ChatInput/InputEditor/plugins';
 import { EditingIndicator } from '@/features/EditLock';
@@ -411,109 +412,111 @@ const AgentEditorCanvas = memo<AgentEditorCanvasProps>(({ agentId }) => {
   ]);
 
   return (
-    <div className={clsx('flex flex-col gap-4', styles.root)}>
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <div className={styles.title}>{t('settingAgent.prompt.title')}</div>
-            <InfoTooltip
-              iconStyle={{ cursor: 'help' }}
-              size={14}
-              title={t('settingAgent.prompt.desc')}
-            />
-          </div>
-          <div className="flex items-center gap-1">
-            {promptSaveStatus !== 'idle' && (
-              <AutoSaveHint
-                lastUpdatedTime={promptLastUpdatedTime}
-                saveStatus={promptSaveStatus}
-                onRetry={editable ? () => void retryPromptSave() : undefined}
+    <LobeThemeScope>
+      <div className={clsx('flex flex-col gap-4', styles.root)}>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <div className={styles.title}>{t('settingAgent.prompt.title')}</div>
+              <InfoTooltip
+                iconStyle={{ cursor: 'help' }}
+                size={14}
+                title={t('settingAgent.prompt.desc')}
               />
-            )}
-            <div
-              className="flex items-center gap-0.5"
-              // The profile content wrapper focuses the prompt editor on any
-              // bubbled click, and Lexical's focus() moves the caret to the
-              // document end when there is no selection — scrolling the page to
-              // the bottom. Toggling the view mode must not move the caret.
-              onClick={(e) => e.stopPropagation()}
-            >
-              <span className="inline-flex flex-none pointer-coarse:p-1.5">
-                <ActionIcon
-                  active={activeEditorMode === 'visual'}
-                  aria-label={t('settingAgent.prompt.mode.visual')}
-                  aria-pressed={activeEditorMode === 'visual'}
-                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-1.75 pointer-coarse:after:content-['']"
-                  icon={LetterTextIcon}
-                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                  title={t('settingAgent.prompt.mode.visual')}
-                  onClick={() => setEditorMode('visual')}
+            </div>
+            <div className="flex items-center gap-1">
+              {promptSaveStatus !== 'idle' && (
+                <AutoSaveHint
+                  lastUpdatedTime={promptLastUpdatedTime}
+                  saveStatus={promptSaveStatus}
+                  onRetry={editable ? () => void retryPromptSave() : undefined}
                 />
-              </span>
-              <span className="inline-flex flex-none pointer-coarse:p-1.5">
-                <ActionIcon
-                  active={activeEditorMode === 'source'}
-                  aria-label={t('settingAgent.prompt.mode.source')}
-                  aria-pressed={activeEditorMode === 'source'}
-                  className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-1.75 pointer-coarse:after:content-['']"
-                  icon={CodeXmlIcon}
-                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                  title={t('settingAgent.prompt.mode.source')}
-                  onClick={() => setEditorMode('source')}
-                />
-              </span>
+              )}
+              <div
+                className="flex items-center gap-0.5"
+                // The profile content wrapper focuses the prompt editor on any
+                // bubbled click, and Lexical's focus() moves the caret to the
+                // document end when there is no selection — scrolling the page to
+                // the bottom. Toggling the view mode must not move the caret.
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="inline-flex flex-none pointer-coarse:p-1.5">
+                  <ActionIcon
+                    active={activeEditorMode === 'visual'}
+                    aria-label={t('settingAgent.prompt.mode.visual')}
+                    aria-pressed={activeEditorMode === 'visual'}
+                    className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-1.75 pointer-coarse:after:content-['']"
+                    icon={LetterTextIcon}
+                    size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                    title={t('settingAgent.prompt.mode.visual')}
+                    onClick={() => setEditorMode('visual')}
+                  />
+                </span>
+                <span className="inline-flex flex-none pointer-coarse:p-1.5">
+                  <ActionIcon
+                    active={activeEditorMode === 'source'}
+                    aria-label={t('settingAgent.prompt.mode.source')}
+                    aria-pressed={activeEditorMode === 'source'}
+                    className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-1.75 pointer-coarse:after:content-['']"
+                    icon={CodeXmlIcon}
+                    size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                    title={t('settingAgent.prompt.mode.source')}
+                    onClick={() => setEditorMode('source')}
+                  />
+                </span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      <div
-        className={styles.editorShell}
-        style={
-          editable ? undefined : { cursor: 'not-allowed', opacity: 0.65, pointerEvents: 'none' }
-        }
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
-      >
-        <EditingIndicator
-          holderId={lockedByOther ? lockHolderId : null}
-          pending={canEdit && lockPending}
-        />
-        <div hidden={activeEditorMode !== 'visual'}>
-          <Editor
-            content={initialLoad}
-            editable={editable}
-            editor={editor!}
-            lineEmptyPlaceholder={t('settingAgent.prompt.editorPlaceholder')}
-            mentionOption={mentionOptions}
-            placeholder={t('settingAgent.prompt.editorPlaceholder')}
-            style={{ paddingBottom: 0 }}
-            plugins={[
-              ...createChatInputRichPlugins(),
-              ReactTablePlugin,
-              ReactMentionPlugin,
-              Editor.withProps(ReactToolbarPlugin, {
-                children: <TypoBar />,
-              }),
-            ]}
-            slashOption={{
-              items: slashItems,
-            }}
-            onInit={() => setEditorInit(true)}
-            onTextChange={handleChange}
+        <div
+          className={styles.editorShell}
+          style={
+            editable ? undefined : { cursor: 'not-allowed', opacity: 0.65, pointerEvents: 'none' }
+          }
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        >
+          <EditingIndicator
+            holderId={lockedByOther ? lockHolderId : null}
+            pending={canEdit && lockPending}
           />
+          <div hidden={activeEditorMode !== 'visual'}>
+            <Editor
+              content={initialLoad}
+              editable={editable}
+              editor={editor!}
+              lineEmptyPlaceholder={t('settingAgent.prompt.editorPlaceholder')}
+              mentionOption={mentionOptions}
+              placeholder={t('settingAgent.prompt.editorPlaceholder')}
+              style={{ paddingBottom: 0 }}
+              plugins={[
+                ...createChatInputRichPlugins(),
+                ReactTablePlugin,
+                ReactMentionPlugin,
+                Editor.withProps(ReactToolbarPlugin, {
+                  children: <TypoBar />,
+                }),
+              ]}
+              slashOption={{
+                items: slashItems,
+              }}
+              onInit={() => setEditorInit(true)}
+              onTextChange={handleChange}
+            />
+          </div>
+          {activeEditorMode === 'source' && contentInit && (
+            <CodeEditorPane
+              className={styles.sourceEditor}
+              language={'markdown'}
+              readOnly={!editable || streamingInProgress}
+              value={sourceMarkdown}
+              onChange={handleSourceChange}
+            />
+          )}
         </div>
-        {activeEditorMode === 'source' && contentInit && (
-          <CodeEditorPane
-            className={styles.sourceEditor}
-            language={'markdown'}
-            readOnly={!editable || streamingInProgress}
-            value={sourceMarkdown}
-            onChange={handleSourceChange}
-          />
-        )}
       </div>
-    </div>
+    </LobeThemeScope>
   );
 });
 

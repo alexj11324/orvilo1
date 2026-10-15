@@ -3,6 +3,8 @@ import type { ModelRating, ModelRatingSource } from 'model-bank';
 import type { FC } from 'react';
 import { memo } from 'react';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
+
 /** display order around the hexagon, starting from the top vertex, clockwise */
 export const RATING_DIMENSION_ORDER = [
   'intelligence',
@@ -58,26 +60,28 @@ const ModelRatingRadar: FC<ModelRatingRadarProps> = memo(({ dimensions }) => {
     .map((dimension) => ({ label: dimension.label, score: dimension.score! }));
 
   return (
-    <RadarChart
-      categories={['score']}
-      className={radarStyles.radar}
-      colors={['var(--primary)']}
-      data={data}
-      height={220}
-      index={'label'}
-      maxValue={100}
-      minValue={0}
-      showLegend={false}
-      showTooltip={false}
-      angleAxisLabelFormatter={(label, row) => (
-        <>
-          {label}{' '}
-          <tspan fill={'var(--foreground)'} fontWeight={600}>
-            {row?.score}
-          </tspan>
-        </>
-      )}
-    />
+    <LobeThemeScope>
+      <RadarChart
+        categories={['score']}
+        className={radarStyles.radar}
+        colors={['var(--primary)']}
+        data={data}
+        height={220}
+        index={'label'}
+        maxValue={100}
+        minValue={0}
+        showLegend={false}
+        showTooltip={false}
+        angleAxisLabelFormatter={(label, row) => (
+          <>
+            {label}{' '}
+            <tspan fill={'var(--foreground)'} fontWeight={600}>
+              {row?.score}
+            </tspan>
+          </>
+        )}
+      />
+    </LobeThemeScope>
   );
 });
 

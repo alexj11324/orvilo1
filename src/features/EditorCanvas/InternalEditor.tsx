@@ -16,6 +16,7 @@ import type { CSSProperties, RefObject } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { createChatInputRichPlugins } from '@/features/ChatInput/InputEditor/plugins';
 import { writeTopicCommentMentionMarkdown } from '@/features/Portal/TopicComments/editorUtils';
 
@@ -333,33 +334,35 @@ const InternalEditor = memo<InternalEditorProps>(
     }, [contentChangeLockRef, disabled, editor]); // Only depend on stable refs and editor
 
     return (
-      <div
-        className={className}
-        style={wrapperStyle}
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-        }}
-      >
-        <Editor
-          className={contentClassName}
-          content={''}
-          editable={editable && !disabled}
-          editor={editor}
-          getPopupContainer={getPopupContainer}
-          mentionOption={mentionOption}
-          placeholder={finalPlaceholder}
-          plugins={plugins}
-          slashOption={slashItems ? { items: slashItems } : undefined}
-          type={'text'}
-          style={{
-            paddingBottom: reserveDocumentFooter ? 32 : 0,
-            ...style,
-            ...contentStyle,
+      <LobeThemeScope>
+        <div
+          className={className}
+          style={wrapperStyle}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
           }}
-          {...(onPressEnter ? { onPressEnter } : {})}
-        />
-      </div>
+        >
+          <Editor
+            className={contentClassName}
+            content={''}
+            editable={editable && !disabled}
+            editor={editor}
+            getPopupContainer={getPopupContainer}
+            mentionOption={mentionOption}
+            placeholder={finalPlaceholder}
+            plugins={plugins}
+            slashOption={slashItems ? { items: slashItems } : undefined}
+            type={'text'}
+            style={{
+              paddingBottom: reserveDocumentFooter ? 32 : 0,
+              ...style,
+              ...contentStyle,
+            }}
+            {...(onPressEnter ? { onPressEnter } : {})}
+          />
+        </div>
+      </LobeThemeScope>
     );
   },
 );

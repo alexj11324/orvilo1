@@ -55,11 +55,3 @@ export const applyJsonPatch = (
 ): Record<string, any> => {
   return patchDelta(structuredClone(base), patch) as Record<string, any>;
 };
-
-export const isOversizedJsonPatch = (
-  patch: JsonPatchDelta,
-  snapshot: Record<string, any>,
-  threshold: number,
-) => {
-  return JSON.stringify(patch).length > JSON.stringify(snapshot).length * threshold;
-};

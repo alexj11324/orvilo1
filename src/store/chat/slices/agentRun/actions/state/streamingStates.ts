@@ -9,8 +9,6 @@ import { type StoreSetter } from '@/store/types';
  */
 
 type Setter = StoreSetter<ChatStore>;
-export const streamingStates = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new StreamingStatesActionImpl(set, get, _api);
 
 export class StreamingStatesActionImpl {
   readonly #get: () => ChatStore;

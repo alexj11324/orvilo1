@@ -1,6 +1,6 @@
 import { type EnabledProviderWithModels } from '@/types/aiProvider';
 
-import { type ListItem, type SimpleModelSource } from './types';
+import { type SimpleModelSource } from './types';
 
 /**
  * Adapt a flat `simpleSource` into the single-provider shape the list renders.
@@ -23,24 +23,3 @@ export const toSimpleEnabledList = (source: SimpleModelSource): EnabledProviderW
 ];
 
 export const menuKey = (provider: string, model: string) => `${provider}-${model}`;
-
-export const getListItemKey = (item: ListItem): string => {
-  switch (item.type) {
-    case 'model-item-single':
-    case 'model-item-multiple': {
-      return item.data.displayName;
-    }
-    case 'provider-model-item': {
-      return menuKey(item.provider.id, item.model.id);
-    }
-    case 'group-header': {
-      return `header-${item.provider.id}`;
-    }
-    case 'empty-model': {
-      return `empty-${item.provider.id}`;
-    }
-    case 'no-provider': {
-      return 'no-provider';
-    }
-  }
-};

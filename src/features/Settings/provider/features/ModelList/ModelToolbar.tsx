@@ -1,8 +1,9 @@
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { EllipsisVertical, LucideRefreshCcwDot, PlusIcon } from 'lucide-react';
 import { memo, type ReactNode, use, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';

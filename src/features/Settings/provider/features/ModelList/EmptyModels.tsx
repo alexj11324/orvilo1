@@ -1,8 +1,8 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { BrainIcon, LucideRefreshCcwDot, PlusIcon } from 'lucide-react';
 import { memo, type ReactNode, use, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePermission } from '@/hooks/usePermission';

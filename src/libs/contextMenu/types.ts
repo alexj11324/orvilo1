@@ -1,5 +1,6 @@
-import type { ContextMenuItem, showContextMenu as showWebContextMenu } from '@lobehub/ui';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
+
+import type { ContextMenuItem, ShowContextMenuOptions } from '@/components/ContextMenu';
 
 type NativeMenuIcon = {
   sfSymbol?: SFSymbol;
@@ -15,7 +16,7 @@ type WithSfSymbol<T> = T extends null
 
 export type NativeContextMenuItem = WithSfSymbol<ContextMenuItem>;
 
-export type ShowContextMenuOptions = NonNullable<Parameters<typeof showWebContextMenu>[1]>;
+export type { ShowContextMenuOptions };
 
 type AssertTrue<_T extends true> = never;
 

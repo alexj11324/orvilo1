@@ -1,7 +1,6 @@
 'use client';
 
-import { Tooltip } from '@lobehub/ui';
-import { memo } from 'react';
+import { memo, type ReactElement, type ReactNode } from 'react';
 import { Controller } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
@@ -17,6 +16,7 @@ import {
 } from '@/components/reui/number-field';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
 import { FieldError } from '@/components/ui/field';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import ModelSelect from '@/features/ModelSelect';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
@@ -28,6 +28,17 @@ import {
   SYSTEM_AGENT_MODEL_ITEMS,
   useModelAssignmentsForm,
 } from './useModelAssignmentsForm';
+
+/** Explains why the picker is read-only; renders the row bare when nothing blocks it. */
+const ReasonTooltip = ({ children, reason }: { children: ReactElement; reason?: ReactNode }) =>
+  reason ? (
+    <Tooltip>
+      <TooltipTrigger render={children} />
+      <TooltipContent>{reason}</TooltipContent>
+    </Tooltip>
+  ) : (
+    children
+  );
 
 const ModelAssignmentsForm = memo(() => {
   const { t } = useTranslation('setting');
@@ -65,7 +76,7 @@ const ModelAssignmentsForm = memo(() => {
 
   const defaultAgentItem: FormItemProps = {
     children: (
-      <Tooltip title={reason}>
+      <ReasonTooltip reason={reason}>
         <div className="flex w-[min(100%,448px)] flex-row items-center gap-3">
           <Controller
             control={control}
@@ -83,7 +94,7 @@ const ModelAssignmentsForm = memo(() => {
             )}
           />
         </div>
-      </Tooltip>
+      </ReasonTooltip>
     ),
     // Only this row carries a `desc`: "Default" is a model value an Agent can
     // pick, and the row is the only place that says what it resolves to. The
@@ -95,7 +106,7 @@ const ModelAssignmentsForm = memo(() => {
   const systemModelItems: FormItemProps[] = SYSTEM_AGENT_MODEL_ITEMS.map(({ key }) => {
     return {
       children: (
-        <Tooltip title={reason}>
+        <ReasonTooltip reason={reason}>
           <div className="flex w-[min(100%,448px)] flex-row items-center gap-3">
             <Controller
               control={control}
@@ -113,7 +124,7 @@ const ModelAssignmentsForm = memo(() => {
               )}
             />
           </div>
-        </Tooltip>
+        </ReasonTooltip>
       ),
       // Only the planning row says more than its label: it also drives acceptance.
       desc: key === 'goal' ? t('systemAgent.goal.modelDesc') : undefined,

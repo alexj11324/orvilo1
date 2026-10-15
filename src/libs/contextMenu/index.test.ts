@@ -1,12 +1,11 @@
-import {
-  closeContextMenu as closeWebContextMenu,
-  type ContextMenuInterceptor,
-  setContextMenuInterceptor,
-  showContextMenu as showWebContextMenu,
-} from '@lobehub/ui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { closeContextMenu, registerNativeContextMenuInterceptor, showContextMenu } from './index';
+import {
+  closeContextMenu as closeWebContextMenu,
+  showContextMenu as showWebContextMenu,
+} from '@/components/ContextMenu';
+
+import { closeContextMenu, showContextMenu, showContextMenuWithFallback } from './index';
 import type { NativeContextMenuItem } from './types';
 
 const hostMenu = vi.hoisted(() => ({
@@ -14,9 +13,8 @@ const hostMenu = vi.hoisted(() => ({
   popupContextMenu: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui', () => ({
+vi.mock('@/components/ContextMenu', () => ({
   closeContextMenu: vi.fn(),
-  setContextMenuInterceptor: vi.fn(),
   showContextMenu: vi.fn(),
 }));
 
@@ -43,7 +41,7 @@ afterEach(() => {
 describe('showContextMenu routing', () => {
   it('delegates to the web menu verbatim on non-darwin platforms', () => {
     const items: NativeContextMenuItem[] = [{ key: '1', label: 'Copy' }];
-    const options = { iconAlign: 'center' as const };
+    const options = { header: 'Header' };
 
     showContextMenu(items, options);
 
@@ -216,19 +214,13 @@ describe('closeContextMenu routing', () => {
   });
 });
 
-describe('registerNativeContextMenuInterceptor', () => {
-  const getInterceptor = (): ContextMenuInterceptor => {
-    registerNativeContextMenuInterceptor();
-    expect(setContextMenuInterceptor).toHaveBeenCalledTimes(1);
-    return vi.mocked(setContextMenuInterceptor).mock.calls[0][0] as ContextMenuInterceptor;
-  };
-
-  it('routes declarative shows to the native popup on darwin without touching the fallback', async () => {
+describe('showContextMenuWithFallback', () => {
+  it('goes native on darwin without touching the fallback', async () => {
     stubDarwin();
     vi.mocked(hostMenu.popupContextMenu).mockResolvedValue({ clickedId: null });
     const fallback = vi.fn();
 
-    getInterceptor().show?.([{ key: '1', label: 'Copy' }], undefined, fallback);
+    showContextMenuWithFallback([{ key: '1', label: 'Copy' }], undefined, fallback);
     await flush();
 
     expect(hostMenu.popupContextMenu).toHaveBeenCalledTimes(1);
@@ -237,41 +229,17 @@ describe('registerNativeContextMenuInterceptor', () => {
 
   it('invokes the fallback for native-unsafe items and off darwin', () => {
     const fallback = vi.fn();
-    const interceptor = getInterceptor();
 
-    interceptor.show?.([{ key: '1', label: 'Copy' }], undefined, fallback);
+    showContextMenuWithFallback([{ key: '1', label: 'Copy' }], undefined, fallback);
     expect(fallback).toHaveBeenCalledTimes(1);
 
     stubDarwin();
-    interceptor.show?.(
+    showContextMenuWithFallback(
       [{ extra: 'x', key: '1', label: 'Copy' }] as unknown as NativeContextMenuItem[],
       undefined,
       fallback,
     );
     expect(fallback).toHaveBeenCalledTimes(2);
     expect(hostMenu.popupContextMenu).not.toHaveBeenCalled();
-  });
-
-  it('routes close to the native IPC while a native popup is open, else to the fallback', async () => {
-    stubDarwin();
-    let resolvePopup: (value: { clickedId: string | null }) => void = () => {};
-    vi.mocked(hostMenu.popupContextMenu).mockImplementation(
-      () => new Promise((resolve) => (resolvePopup = resolve)),
-    );
-    const closeFallback = vi.fn();
-    const interceptor = getInterceptor();
-
-    interceptor.show?.([{ key: '1', label: 'Copy' }], undefined, vi.fn());
-    interceptor.close?.(closeFallback);
-
-    expect(hostMenu.closePopupContextMenu).toHaveBeenCalledTimes(1);
-    expect(closeFallback).not.toHaveBeenCalled();
-
-    resolvePopup({ clickedId: null });
-    await flush();
-    interceptor.close?.(closeFallback);
-
-    expect(closeFallback).toHaveBeenCalledTimes(1);
-    expect(hostMenu.closePopupContextMenu).toHaveBeenCalledTimes(1);
   });
 });

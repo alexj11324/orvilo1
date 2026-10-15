@@ -36,7 +36,10 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
       {title}
     </button>
   ),
-  FloatingSheet: ({
+}));
+
+vi.mock('@/components/FloatingSheet', () => ({
+  default: ({
     children,
     dismissible,
     headerActions,

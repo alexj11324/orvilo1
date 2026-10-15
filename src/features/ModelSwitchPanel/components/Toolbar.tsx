@@ -1,11 +1,12 @@
-import { Flexbox, Icon, stopPropagation, Tooltip } from '@lobehub/ui';
-import { Tabs } from '@lobehub/ui/base-ui';
+import { Flexbox, Icon, stopPropagation } from '@lobehub/ui';
 import { ProviderIcon } from '@lobehub/ui/icons';
 import { Brain } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import SearchBar from '@/components/SearchBar';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { styles } from '../styles';
 import { type GroupMode } from '../types';
@@ -46,34 +47,34 @@ export const Toolbar = memo<ToolbarProps>(
         </Flexbox>
         {showGroupModeSwitch && (
           <Tabs
-            activeKey={groupMode}
             className={styles.toolbarTabs}
-            size="small"
-            classNames={{
-              list: styles.toolbarTabList,
-              tab: styles.toolbarTab,
-              indicator: styles.toolbarIndicator,
-            }}
-            items={[
-              {
-                key: 'byModel',
-                label: (
-                  <Tooltip title={t('ModelSwitchPanel.byModel')}>
-                    <Icon icon={Brain} size={16} />
-                  </Tooltip>
-                ),
-              },
-              {
-                key: 'byProvider',
-                label: (
-                  <Tooltip title={t('ModelSwitchPanel.byProvider')}>
-                    <Icon icon={ProviderIcon} size={16} />
-                  </Tooltip>
-                ),
-              },
-            ]}
-            onChange={(key) => onGroupModeChange?.(key as GroupMode)}
-          />
+            value={groupMode}
+            onValueChange={(key) => onGroupModeChange?.(key as GroupMode)}
+          >
+            <TabsList className={styles.toolbarTabList}>
+              {(
+                [
+                  ['byModel', Brain],
+                  ['byProvider', ProviderIcon],
+                ] as const
+              ).map(([mode, icon]) => (
+                <Tooltip key={mode}>
+                  <TooltipTrigger
+                    render={
+                      <TabsTrigger
+                        aria-label={t(`ModelSwitchPanel.${mode}`)}
+                        className={styles.toolbarTab}
+                        value={mode}
+                      />
+                    }
+                  >
+                    <Icon icon={icon} size={16} />
+                  </TooltipTrigger>
+                  <TooltipContent>{t(`ModelSwitchPanel.${mode}`)}</TooltipContent>
+                </Tooltip>
+              ))}
+            </TabsList>
+          </Tabs>
         )}
       </Flexbox>
     );

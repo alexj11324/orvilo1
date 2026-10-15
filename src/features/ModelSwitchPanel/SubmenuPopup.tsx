@@ -1,12 +1,8 @@
-import {
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  stopPropagation,
-} from '@lobehub/ui';
+import { stopPropagation } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { PanelContent } from './components/PanelContent';
+import { MenuPanelPopup } from './menu';
 import { styles } from './styles';
 
 interface ModelSwitchSubmenuPopupProps {
@@ -20,22 +16,24 @@ interface ModelSwitchSubmenuPopupProps {
 /**
  * The model panel mounted as a nested submenu instead of its own dropdown, for
  * hosts that fold model selection into a larger menu (chat input model + effort).
- * The caller supplies the `DropdownMenuSubmenuRoot` and its trigger row.
+ * The caller supplies the submenu root (`DropdownMenuSub`) and its trigger row.
  */
 export const ModelSwitchSubmenuPopup = memo<ModelSwitchSubmenuPopupProps>(
   ({ model, onModelChange, onOpenChange, provider }) => (
-    <DropdownMenuPortal>
-      <DropdownMenuPositioner alignOffset={-4} anchor={null} placement="right" sideOffset={8}>
-        <DropdownMenuPopup className={styles.container} onKeyDown={stopPropagation}>
-          <PanelContent
-            model={model}
-            provider={provider}
-            onModelChange={onModelChange}
-            onOpenChange={onOpenChange}
-          />
-        </DropdownMenuPopup>
-      </DropdownMenuPositioner>
-    </DropdownMenuPortal>
+    <MenuPanelPopup
+      alignOffset={-4}
+      className={styles.container}
+      placement="right"
+      sideOffset={8}
+      onKeyDown={stopPropagation}
+    >
+      <PanelContent
+        model={model}
+        provider={provider}
+        onModelChange={onModelChange}
+        onOpenChange={onOpenChange}
+      />
+    </MenuPanelPopup>
   ),
 );
 

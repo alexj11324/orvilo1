@@ -1,14 +1,5 @@
-import {
-  Block,
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  DropdownMenuSubmenuRoot,
-  DropdownMenuSubmenuTrigger,
-  Flexbox,
-  Icon,
-  menuSharedStyles,
-} from '@lobehub/ui';
+import { Menu as MenuPrimitive } from '@base-ui/react/menu';
+import { Block, Flexbox, Icon } from '@lobehub/ui';
 import { cn } from 'cn';
 import { LucideArrowRight, LucideBolt } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
@@ -18,11 +9,13 @@ import urlJoin from 'url-join';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import ActionIcon from '@/components/ActionIcon';
 import { ModelItemRender, ProviderItemRender } from '@/components/ModelSelect';
+import { DropdownMenuSub } from '@/components/ui/dropdown-menu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
+import { menuItemClassName, MenuPanelPopup } from '../../menu';
 import { styles } from '../../styles';
 import { type ListItem } from '../../types';
 import { menuKey } from '../../utils';
@@ -156,13 +149,9 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
 
         return (
           <Flexbox className="my-px mx-1">
-            <DropdownMenuSubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
-              <DropdownMenuSubmenuTrigger
-                className={cn(
-                  menuSharedStyles.item,
-                  styles.menuRow,
-                  isActive && styles.menuItemActive,
-                )}
+            <DropdownMenuSub open={detailOpen} onOpenChange={setDetailOpen}>
+              <MenuPrimitive.SubmenuTrigger
+                className={cn(menuItemClassName, styles.menuRow, isActive && styles.menuItemActive)}
                 onClick={(e) => {
                   e.preventDefault();
                   setDetailOpen(false);
@@ -181,15 +170,11 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                   proBadgeLabel={restricted ? proLabel : undefined}
                   showInfoTag={isDevMode}
                 />
-              </DropdownMenuSubmenuTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuPositioner anchor={null} placement="right" sideOffset={12}>
-                  <DropdownMenuPopup className={styles.detailPopup}>
-                    <ModelDetailPanel model={item.model.id} provider={item.provider.id} />
-                  </DropdownMenuPopup>
-                </DropdownMenuPositioner>
-              </DropdownMenuPortal>
-            </DropdownMenuSubmenuRoot>
+              </MenuPrimitive.SubmenuTrigger>
+              <MenuPanelPopup className={styles.detailPopup} placement="right" sideOffset={12}>
+                <ModelDetailPanel model={item.model.id} provider={item.provider.id} />
+              </MenuPanelPopup>
+            </DropdownMenuSub>
           </Flexbox>
         );
       }
@@ -202,13 +187,9 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
 
         return (
           <Flexbox className="my-px mx-1">
-            <DropdownMenuSubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
-              <DropdownMenuSubmenuTrigger
-                className={cn(
-                  menuSharedStyles.item,
-                  styles.menuRow,
-                  isActive && styles.menuItemActive,
-                )}
+            <DropdownMenuSub open={detailOpen} onOpenChange={setDetailOpen}>
+              <MenuPrimitive.SubmenuTrigger
+                className={cn(menuItemClassName, styles.menuRow, isActive && styles.menuItemActive)}
                 onClick={(e) => {
                   e.preventDefault();
                   setDetailOpen(false);
@@ -226,15 +207,11 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                   proBadgeLabel={restricted ? proLabel : undefined}
                   showInfoTag={isDevMode}
                 />
-              </DropdownMenuSubmenuTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuPositioner anchor={null} placement="right" sideOffset={16}>
-                  <DropdownMenuPopup className={styles.detailPopup}>
-                    <ModelDetailPanel model={item.data.model.id} provider={singleProvider.id} />
-                  </DropdownMenuPopup>
-                </DropdownMenuPositioner>
-              </DropdownMenuPortal>
-            </DropdownMenuSubmenuRoot>
+              </MenuPrimitive.SubmenuTrigger>
+              <MenuPanelPopup className={styles.detailPopup} placement="right" sideOffset={16}>
+                <ModelDetailPanel model={item.data.model.id} provider={singleProvider.id} />
+              </MenuPanelPopup>
+            </DropdownMenuSub>
           </Flexbox>
         );
       }

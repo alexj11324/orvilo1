@@ -1,11 +1,11 @@
 'use client';
 
-import { Select } from '@lobehub/ui/base-ui';
 import { VertexAIProviderCard } from 'model-bank/modelProviders';
 import { useTranslation } from 'react-i18next';
 
 import { FormPassword } from '@/components/FormInput';
 import { Markdown } from '@/components/Markdown';
+import Select from '@/components/Select';
 import { SkeletonInput } from '@/components/Skeleton';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { type GlobalLLMProviderKey } from '@/types/user/settings';
@@ -94,6 +94,7 @@ const useProviderCard = (): ProviderItem => {
         ) : (
           <Select
             allowClear
+            className="w-full"
             placeholder={t('vertexai.region.placeholder')}
             options={VERTEX_AI_REGIONS.map((region) => ({
               label: region,

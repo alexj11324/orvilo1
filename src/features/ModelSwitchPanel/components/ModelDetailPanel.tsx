@@ -1,11 +1,10 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
+import { Flexbox, Icon } from '@lobehub/ui';
 import {
   AccordionHeader,
   AccordionItem,
   AccordionPanel,
   AccordionRoot,
   AccordionTrigger,
-  Tag,
   Text,
 } from '@lobehub/ui/base-ui';
 import { ArrowDownToDot, ArrowUpFromDot, CircleFadingArrowUp } from 'lucide-react';
@@ -13,6 +12,8 @@ import type { FC } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge, type BadgeProps } from '@/components/reui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { EnabledProviderWithModels } from '@/types/aiProvider';
 import { getModelDescriptionI18nKey } from '@/utils/modelDescriptionI18n';
 
@@ -28,6 +29,13 @@ import ModelRatingRadar, {
 } from './ModelRatingRadar';
 
 export type { PricingMode } from '../types';
+
+/** Ability colors from `useModelDetailPanel` mapped onto badge roles; others stay neutral. */
+const ABILITY_BADGE_VARIANTS: Record<string, BadgeProps['variant']> = {
+  gold: 'warning-light',
+  info: 'info-light',
+  success: 'success-light',
+};
 
 const styles = {
   actionText: 'text-sm leading-5.5 font-medium text-foreground',
@@ -175,17 +183,24 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                 <AccordionPanel>
                   <Flexbox gap={4}>
                     {ratedDimensions.length >= RADAR_MIN_DIMENSIONS ? (
-                      <Tooltip title={t('ModelSwitchPanel.detail.rating.clickHint')}>
-                        <div
-                          className={styles.radarClickable}
-                          role={'button'}
-                          tabIndex={0}
-                          onClick={() => {
-                            if (provider) openBenchmarkModal({ modelId: model.id, provider });
-                          }}
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <div
+                              className={styles.radarClickable}
+                              role={'button'}
+                              tabIndex={0}
+                              onClick={() => {
+                                if (provider) openBenchmarkModal({ modelId: model.id, provider });
+                              }}
+                            />
+                          }
                         >
                           <ModelRatingRadar dimensions={ratingDimensions} />
-                        </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {t('ModelSwitchPanel.detail.rating.clickHint')}
+                        </TooltipContent>
                       </Tooltip>
                     ) : (
                       <Flexbox gap={4}>
@@ -198,19 +213,24 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                             key={dimension.key}
                           >
                             <span>{dimension.label}</span>
-                            <Tooltip title={dimension.tooltip}>
-                              {dimension.sourceUrl ? (
-                                <a
-                                  className={styles.ratingScoreLink}
-                                  href={dimension.sourceUrl}
-                                  rel={'noreferrer'}
-                                  target={'_blank'}
-                                >
-                                  {dimension.score}
-                                </a>
-                              ) : (
-                                <span className={styles.ratingScoreLink}>{dimension.score}</span>
-                              )}
+                            <Tooltip>
+                              <TooltipTrigger
+                                render={
+                                  dimension.sourceUrl ? (
+                                    <a
+                                      className={styles.ratingScoreLink}
+                                      href={dimension.sourceUrl}
+                                      rel={'noreferrer'}
+                                      target={'_blank'}
+                                    />
+                                  ) : (
+                                    <span className={styles.ratingScoreLink} />
+                                  )
+                                }
+                              >
+                                {dimension.score}
+                              </TooltipTrigger>
+                              <TooltipContent>{dimension.tooltip}</TooltipContent>
                             </Tooltip>
                           </Flexbox>
                         ))}
@@ -249,13 +269,13 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                   {!isAbilitiesExpanded && (
                     <Flexbox horizontal gap={2}>
                       {enabledAbilities.map((ability) => (
-                        <Tag
-                          color={ability.color}
+                        <Badge
+                          className="min-w-0 px-1"
                           key={ability.key}
-                          style={{ borderRadius: 4, minWidth: 0, padding: '0 4px' }}
+                          variant={ABILITY_BADGE_VARIANTS[ability.color] ?? 'secondary'}
                         >
                           <Icon icon={ability.icon} style={{ fontSize: 12 }} />
-                        </Tag>
+                        </Badge>
                       ))}
                     </Flexbox>
                   )}
@@ -306,29 +326,33 @@ const ModelDetailPanel: FC<ModelDetailPanelProps> = memo(
                     ) : (
                       <Flexbox horizontal align={'center'} className={styles.actionText} gap={8}>
                         {hasCachedInputPricing && (
-                          <Tooltip
-                            title={getPricingTooltip(
-                              'cachedInput',
-                              formatPrice!.cachedInput.current,
-                            )}
-                          >
-                            <Flexbox horizontal align={'center'} gap={2}>
+                          <Tooltip>
+                            <TooltipTrigger render={<span className="flex items-center gap-0.5" />}>
                               <Icon icon={CircleFadingArrowUp} size={'small'} />
                               <PriceValue price={formatPrice!.cachedInput} />
-                            </Flexbox>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {getPricingTooltip('cachedInput', formatPrice!.cachedInput.current)}
+                            </TooltipContent>
                           </Tooltip>
                         )}
-                        <Tooltip title={getPricingTooltip('input', formatPrice!.input.current)}>
-                          <Flexbox horizontal align={'center'} gap={2}>
+                        <Tooltip>
+                          <TooltipTrigger render={<span className="flex items-center gap-0.5" />}>
                             <Icon icon={ArrowUpFromDot} size={'small'} />
                             <PriceValue price={formatPrice!.input} />
-                          </Flexbox>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {getPricingTooltip('input', formatPrice!.input.current)}
+                          </TooltipContent>
                         </Tooltip>
-                        <Tooltip title={getPricingTooltip('output', formatPrice!.output.current)}>
-                          <Flexbox horizontal align={'center'} gap={2}>
+                        <Tooltip>
+                          <TooltipTrigger render={<span className="flex items-center gap-0.5" />}>
                             <Icon icon={ArrowDownToDot} size={'small'} />
                             <PriceValue price={formatPrice!.output} />
-                          </Flexbox>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {getPricingTooltip('output', formatPrice!.output.current)}
+                          </TooltipContent>
                         </Tooltip>
                       </Flexbox>
                     ))}

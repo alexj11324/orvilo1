@@ -1,21 +1,19 @@
 'use client';
 
 import { Flexbox } from '@lobehub/ui';
-import {
-  Button,
-  Input,
-  InputPassword,
-  Select,
-  Text,
-  TextArea,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
+import { Text } from '@lobehub/ui/base-ui';
 import { AiProviderBaseURLSchema } from 'model-bank/aiProvider';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { FormPassword } from '@/components/FormInput';
 import Form from '@/components/GroupForm';
+import { useModalContext } from '@/components/Modal';
 import { ProviderIcon } from '@/components/OrviloIcons';
+import Select from '@/components/Select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useAiInfraStore } from '@/store/aiInfra/store';
 import { type CreateAiProviderParams } from '@/types/aiProvider';
 
@@ -71,15 +69,11 @@ const CreateNewProviderContent = memo(() => {
             },
           ]}
         >
-          <Input
-            autoFocus
-            placeholder={t('createNewAiProvider.id.placeholder')}
-            variant={'filled'}
-          />
+          <Input autoFocus placeholder={t('createNewAiProvider.id.placeholder')} />
         </Form.Item>
 
         <Form.Item label={t('createNewAiProvider.name.title')} name={'name'} style={itemStyle}>
-          <Input placeholder={t('createNewAiProvider.name.placeholder')} variant={'filled'} />
+          <Input placeholder={t('createNewAiProvider.name.placeholder')} />
         </Form.Item>
 
         <Form.Item
@@ -87,19 +81,14 @@ const CreateNewProviderContent = memo(() => {
           name={'description'}
           style={itemStyle}
         >
-          <TextArea
+          <Textarea
             placeholder={t('createNewAiProvider.description.placeholder')}
             style={{ minHeight: 72 }}
-            variant={'filled'}
           />
         </Form.Item>
 
         <Form.Item label={t('createNewAiProvider.logo.title')} name={'logo'} style={itemStyle}>
-          <Input
-            allowClear
-            placeholder={t('createNewAiProvider.logo.placeholder')}
-            variant={'filled'}
-          />
+          <Input placeholder={t('createNewAiProvider.logo.placeholder')} />
         </Form.Item>
 
         <div style={{ marginBlockStart: 8 }}>
@@ -113,9 +102,9 @@ const CreateNewProviderContent = memo(() => {
           style={itemStyle}
         >
           <Select
+            className="w-full"
             options={CUSTOM_PROVIDER_SDK_OPTIONS}
             placeholder={t('createNewAiProvider.sdkType.placeholder')}
-            variant={'filled'}
             optionRender={({ label, value }) => {
               const iconProvider = value === 'router' ? 'newapi' : (value as string);
               return (
@@ -142,11 +131,7 @@ const CreateNewProviderContent = memo(() => {
             },
           ]}
         >
-          <Input
-            allowClear
-            placeholder={t('createNewAiProvider.proxyUrl.placeholder')}
-            variant={'filled'}
-          />
+          <Input placeholder={t('createNewAiProvider.proxyUrl.placeholder')} />
         </Form.Item>
 
         <Form.Item
@@ -154,14 +139,13 @@ const CreateNewProviderContent = memo(() => {
           name={[KeyVaultsConfigKey, LLMProviderApiTokenKey]}
           style={itemStyle}
         >
-          <InputPassword
+          <FormPassword
             autoComplete={'new-password'}
             placeholder={t('createNewAiProvider.apiKey.placeholder')}
-            variant={'filled'}
           />
         </Form.Item>
 
-        <Button block htmlType={'submit'} loading={loading} type={'primary'}>
+        <Button className="w-full" loading={loading} type={'submit'}>
           {t('createNewAiProvider.confirm')}
         </Button>
       </Flexbox>

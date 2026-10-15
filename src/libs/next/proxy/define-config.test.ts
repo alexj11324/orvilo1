@@ -164,9 +164,10 @@ describe('defineConfig backend subtree pass-through', () => {
 });
 
 describe('OAuth provider callback routing', () => {
+  const originalResolve = vi.mocked(resolveAuthSessionFromHeaders).getMockImplementation()!;
   afterEach(() => {
     vi.mocked(resolveAuthSessionFromHeaders).mockReset();
-    vi.mocked(resolveAuthSessionFromHeaders).mockResolvedValue({ userId: 'user-1' });
+    vi.mocked(resolveAuthSessionFromHeaders).mockImplementation(originalResolve);
   });
 
   it.each(['slack', 'github', 'linear'])(

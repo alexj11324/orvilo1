@@ -1,6 +1,6 @@
 import type { TaskDetailData, TaskListItem } from '@orvilo/types';
 import i18next from 'i18next';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import {
   automationDetailNextRun,
@@ -78,6 +78,51 @@ describe('automationDetailTriggerSummary', () => {
 });
 
 describe('automation status', () => {
+  it('keeps the original next heartbeat after the current manual run was stopped', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-15T06:24:30Z'));
+    const context = {
+      scheduler: {
+        automationPaused: false,
+        scheduledAt: '2026-10-15T06:20:19.594Z',
+        tickRevision: 1,
+        tickToken: 'pending-heartbeat',
+      },
+    };
+    const task = {
+      ...heartbeatTask,
+      context,
+      heartbeatInterval: 600,
+      lastHeartbeatAt: null,
+      status: 'paused',
+      workflowCategory: 'in_progress',
+    } as TaskListItem;
+    const detail = {
+      ...scheduledDetail,
+      automationMode: 'heartbeat',
+      context,
+      dispatchPhase: 'canceled',
+      heartbeat: { interval: 600, scheduledAt: context.scheduler.scheduledAt },
+      status: 'paused',
+      workflowCategory: 'in_progress',
+    } as TaskDetailData;
+    try {
+      expect(automationStatusOf(task)).toBe('active');
+      expect(automationDetailNextRun(detail)?.toISOString()).toBe('2026-10-15T06:30:19.594Z');
+      expect(automationNextRun(task)?.toISOString()).toBe('2026-10-15T06:30:19.594Z');
+      for (const automationPaused of [true, undefined]) {
+        const paused = { ...detail, context: { scheduler: { automationPaused } } };
+        expect(automationStatusOf(paused)).toBe('paused');
+        expect(automationDetailNextRun(paused)).toBeNull();
+      }
+      expect(automationStatusOf({ ...detail, automationMode: null })).toBe('paused');
+      for (const status of ['completed', 'canceled', 'failed'])
+        expect(automationStatusOf({ ...detail, status })).toBe('inactive');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it.each(['schedule', 'heartbeat'] as const)(
     'shows a future-paused running %s automation as paused without a countdown',
     (automationMode) => {

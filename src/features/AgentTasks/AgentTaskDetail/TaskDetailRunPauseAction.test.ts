@@ -7,9 +7,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTaskStore } from '@/store/task';
 
 import TaskDetailPage from './TaskDetailPage';
-import { formatCountdown, shouldPersistFallbackAssignee } from './TaskDetailRunPauseAction';
+import TaskDetailRunPauseAction, {
+  formatCountdown,
+  shouldPersistFallbackAssignee,
+} from './TaskDetailRunPauseAction';
 import { TaskDetailScope } from './TaskDetailScope';
 import TaskExecutionSection from './TaskExecutionSection';
+import TaskScheduleConfig from './TaskScheduleConfig';
 
 const api = vi.hoisted(() => ({
   access: { canUseResource: true, isAccessResolved: true },
@@ -66,7 +70,9 @@ vi.mock('../features/ReviewerAgentSelector', () => ({
 vi.mock('@/features/ResourcePermission/useResourceAccess', () => ({
   useResourceAccess: () => api.access,
 }));
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ i18n: { language: 'en' }, t: (key: string) => key }),
+}));
 vi.mock('@/store/agent', () => ({ useAgentStore: () => undefined }));
 vi.mock('@/store/global', () => ({
   useGlobalStore: (selector: (state: { toggleTaskAgentPanel: () => void }) => unknown) =>
@@ -339,6 +345,58 @@ describe('Issue header run control', () => {
 });
 
 describe('Stop current periodic occurrence', () => {
+  it.each([
+    { status: 'backlog', armed: false },
+    { status: 'paused', armed: true },
+  ] as const)(
+    'offers first scheduling only for the unarmed $status heartbeat',
+    async ({ status, armed }) => {
+      seedTask({
+        automationMode: 'heartbeat',
+        context: armed ? { scheduler: { automationPaused: false, tickToken: 'pending-tick' } } : {},
+        dispatchPhase: armed ? 'canceled' : null,
+        heartbeat: { interval: 600 },
+        status,
+      });
+      render(
+        createElement(TaskDetailScope, {
+          children: createElement(TaskScheduleConfig, { defaultOpen: true }),
+          taskId: 'T-5',
+        }),
+      );
+      await screen.findByText('taskSchedule.heading');
+      if (armed) {
+        expect(screen.queryByRole('button', { name: 'taskSchedule.startScheduling' })).toBeNull();
+      } else {
+        await userEvent.click(
+          await screen.findByRole('button', { name: 'taskSchedule.startScheduling' }),
+        );
+        await waitFor(() =>
+          expect(api.updateStatus).toHaveBeenCalledWith({ id: 'T-5', status: 'scheduled' }),
+        );
+      }
+    },
+  );
+
+  it('keeps the future countdown after a manual heartbeat run stops', () => {
+    seedTask({
+      automationMode: 'heartbeat',
+      context: { scheduler: { automationPaused: false, tickToken: 'pending-tick' } },
+      dispatchPhase: 'canceled',
+      heartbeat: { interval: 600, scheduledAt: new Date().toISOString() },
+      status: 'paused',
+    });
+    render(
+      createElement(TaskDetailScope, {
+        children: createElement(TaskDetailRunPauseAction),
+        taskId: 'T-5',
+      }),
+    );
+    expect(screen.getByText('taskDetail.nextRunCountdown')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'taskDetail.cancelSchedule' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'taskDetail.stopTask' })).toBeNull();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     api.canEdit = true;

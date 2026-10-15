@@ -6,6 +6,7 @@ import { DropdownMenu } from '@/components/ItemsMenu';
 import StopLoadingIcon from '@/components/StopLoading';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
+import { automationStatusOf } from '@/features/Automations/shared';
 import { taskService } from '@/services/task';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
@@ -155,7 +156,12 @@ const TaskDetailRunPauseAction = memo(() => {
     }
   }, [canExecuteTask, taskId, setAutomationMode, updateTaskStatus, status]);
 
-  const isScheduled = status === 'scheduled';
+  const isScheduled =
+    !canPause &&
+    !!detail &&
+    (status === 'scheduled' || status === 'paused') &&
+    (automationMode === 'schedule' || automationMode === 'heartbeat') &&
+    automationStatusOf(detail) === 'active';
 
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {

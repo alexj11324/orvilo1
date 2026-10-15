@@ -21,12 +21,18 @@ export type AutomationStatus = 'active' | 'inactive' | 'paused';
 export const AUTOMATION_ACTIVE_STATUSES: TaskStatus[] = ['backlog', 'running', 'scheduled'];
 
 export const automationStatusOf = (task: {
+  automationMode?: TaskDetailData['automationMode'];
   context?: unknown;
   status: string;
 }): AutomationStatus => {
-  if (task.status === 'paused') return 'paused';
+  const futurePaused = (task.context as TaskContext | null)?.scheduler?.automationPaused;
+  if (task.status === 'paused')
+    return (task.automationMode === 'schedule' || task.automationMode === 'heartbeat') &&
+      futurePaused === false
+      ? 'active'
+      : 'paused';
   if (!AUTOMATION_ACTIVE_STATUSES.includes(task.status as TaskStatus)) return 'inactive';
-  return (task.context as TaskContext | null)?.scheduler?.automationPaused ? 'paused' : 'active';
+  return futurePaused ? 'paused' : 'active';
 };
 
 /** Statuses the page's All/Active/Paused filter translates to server-side. */
@@ -102,7 +108,8 @@ export const automationNextRun = (task: TaskListItem): Dayjs | null => {
   }
   if (task.automationMode === 'heartbeat' && task.heartbeatInterval) {
     return nextHeartbeatFiring(
-      task.lastHeartbeatAt ? dayjs(task.lastHeartbeatAt).toISOString() : null,
+      (task.context as TaskContext | null)?.scheduler?.scheduledAt ??
+        (task.lastHeartbeatAt ? dayjs(task.lastHeartbeatAt).toISOString() : null),
       task.heartbeatInterval,
     );
   }

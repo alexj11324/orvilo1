@@ -205,7 +205,7 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
     ((automationMode === 'schedule' && !!schedulePattern) ||
       (automationMode === 'heartbeat' && finalCurrentInterval > 0)) &&
     !!finalTaskId &&
-    (futureStatus === 'paused' || (status !== 'scheduled' && status !== 'running'));
+    (futureStatus !== 'active' || status === 'backlog');
 
   const summary = useMemo<{ primary: string; secondary?: string } | null>(() => {
     if (automationMode === 'heartbeat' && finalCurrentInterval > 0) {

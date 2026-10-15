@@ -2541,10 +2541,17 @@ export class TaskModel {
               : undefined,
             statuses.includes('paused') ? sql`NOT (${eventEnabled})` : undefined,
           );
-          const automationPaused = sql`coalesce((${tasks.context} #>> '{scheduler,automationPaused}')::boolean, false)`;
+          const automationPaused = sql`${tasks.context} #>> '{scheduler,automationPaused}'`;
+          const activePeriodicStatuses = statuses.filter((status) => status !== 'paused');
+          if (statuses.some((status) => ['backlog', 'running', 'scheduled'].includes(status)))
+            activePeriodicStatuses.push('paused');
           const periodicStatus = or(
-            and(sql`NOT ${automationPaused}`, statusesPredicate),
-            statuses.includes('paused') ? automationPaused : undefined,
+            and(sql`${automationPaused} IS NULL`, statusesPredicate),
+            and(
+              sql`${automationPaused} = 'false'`,
+              predicateForLegacyStatuses(activePeriodicStatuses) ?? sql`false`,
+            ),
+            statuses.includes('paused') ? sql`${automationPaused} = 'true'` : undefined,
           );
           conditions.push(
             or(

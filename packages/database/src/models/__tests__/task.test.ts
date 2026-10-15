@@ -812,6 +812,40 @@ describe('TaskModel', () => {
       },
     );
 
+    it.each(['schedule', 'heartbeat'] as const)(
+      'keeps a stopped manual %s run only in Active while its next tick remains armed',
+      async (automationMode) => {
+        const model = new TaskModel(serverDB, userId);
+        const task = await model.create({
+          automationMode,
+          heartbeatInterval: 600,
+          instruction: 'Stop current run, keep future scheduling',
+          schedulePattern: '0 9 * * *',
+        });
+        const scheduler = {
+          automationPaused: false,
+          scheduledAt: '2026-10-15T06:20:19.594Z',
+          tickRevision: 1,
+          tickToken: 'original-pending-tick',
+        };
+        await model.updateContext(task.id, { scheduler });
+        await dispatchFixture(task.id, 'running');
+        await settleDispatches(task.id, 'canceled');
+        expect((await model.findById(task.id))?.status).toBe('paused');
+        const active = () =>
+          model.list({ automated: true, statuses: ['backlog', 'running', 'scheduled'] });
+        const paused = () => model.list({ automated: true, statuses: ['paused'] });
+        expect((await active()).tasks.map((row) => row.id)).toEqual([task.id]);
+        expect((await paused()).tasks).toEqual([]);
+        expect((await model.findById(task.id))?.context).toEqual({ scheduler });
+        await model.updateContext(task.id, { scheduler: { ...scheduler, automationPaused: true } });
+        expect((await active()).tasks).toEqual([]);
+        expect((await paused()).tasks.map((row) => row.id)).toEqual([task.id]);
+        await model.updateContext(task.id, { scheduler: { tickToken: scheduler.tickToken } });
+        expect((await paused()).tasks.map((row) => row.id)).toEqual([task.id]);
+      },
+    );
+
     it('should keep event automation filters governed by enabled tenant triggers and parking', async () => {
       const workspaceId = 'event-automation-filter-workspace';
       await serverDB.insert(workspaces).values({

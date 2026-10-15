@@ -27,6 +27,7 @@ import { Badge } from '@/components/reui/badge';
 import { toast } from '@/components/toast';
 import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 import { Upload } from '@/components/Upload';
+import { activeComposer } from '@/features/ChatInput/composerProtocol';
 import { openAttachKnowledgeModal } from '@/features/LibraryModal';
 import { useIsDark } from '@/hooks/useIsDark';
 import { useMediaUploadAbility } from '@/hooks/useMediaUploadAbility';
@@ -258,7 +259,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
 
   const isMemoryEnabled = useMemoryEnabled(agentId);
   const [showTypoBar, setShowTypoBar] = useChatInputStore((s) => [s.showTypoBar, s.setShowTypoBar]);
-  const editor = useChatInputStore((s) => s.editor);
+  const editor = useChatInputStore((s) => activeComposer(s));
   const { canUploadImage, canUploadVideo, canUploadAudio } = useMediaUploadAbility(
     model,
     provider,

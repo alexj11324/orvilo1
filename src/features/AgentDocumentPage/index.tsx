@@ -1,10 +1,11 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router';
 
 import AsyncError from '@/components/AsyncError';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
+import { Skeleton } from '@/components/ui/skeleton';
 import { type ComposerTarget, createComposerTarget } from '@/features/Conversation/types';
 import FloatingChatPanel from '@/features/FloatingChatPanel';
 import { useDocumentChatTopic } from '@/features/FloatingChatPanel/useDocumentChatTopic';
@@ -16,6 +17,10 @@ import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import Header from './Header';
 import { buildAgentDocumentsPath } from './navigation';
 import { useAgentDocumentItem } from './useAgentDocumentItem';
+
+const NativeHeader = lazy(() =>
+  import('./Header/NativeHeader').then((module) => ({ default: module.NativeAgentDocumentHeader })),
+);
 
 interface AgentDocumentPageProps {
   /** Full `documents` table id, e.g. `docs_MWkYMvbvzssoyWZ9`. */
@@ -114,6 +119,24 @@ const AgentDocumentPage = memo<AgentDocumentPageProps>(({ documentId }) => {
     [agentId, backToChat, backToDocs, documentId, item?.id, item?.updatedAt, itemError, title],
   );
 
+  const nativeHeader = useMemo(
+    () => (
+      <Suspense fallback={<Skeleton className="h-11 w-full" />}>
+        <NativeHeader
+          agentDocumentId={item?.id}
+          agentId={agentId}
+          documentId={documentId}
+          itemError={itemError}
+          title={title}
+          updatedAt={item?.updatedAt}
+          onBack={backToChat}
+          onDeleted={backToDocs}
+        />
+      </Suspense>
+    ),
+    [agentId, backToChat, backToDocs, documentId, item?.id, item?.updatedAt, itemError, title],
+  );
+
   // Genuinely-absent doc (deleted or bad deep link): render nothing while the
   // redirect effect above sends the user to the docs index, instead of flashing
   // a 404 for a doc that simply moved to the empty-state landing.
@@ -136,6 +159,7 @@ const AgentDocumentPage = memo<AgentDocumentPageProps>(({ documentId }) => {
           // title save would overwrite the `SKILL.md` filename and desync the
           // bundle (and the bundle rename API rejects managed skill docs anyway).
           metaReadOnly={isSkillIndex}
+          nativeHeader={nativeHeader}
           pageId={documentId}
           rightPanel={false}
           syncPageAgentActiveState={false}

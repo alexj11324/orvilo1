@@ -15,7 +15,9 @@ import { $getNearestNodeFromDOMNode } from 'lexical';
  *    `editorState.read(...)`. The former installs the active-editor context
  *    that `$getNearestNodeFromDOMNode` needs when multiple editors coexist.
  */
-export const registerAttachmentClickOpen = (editor: IEditor): (() => void) | undefined => {
+export const registerAttachmentClickOpen = (
+  editor: Pick<IEditor, 'getLexicalEditor'>,
+): (() => void) | undefined => {
   const lexicalEditor = editor.getLexicalEditor?.();
   if (!lexicalEditor) return;
 

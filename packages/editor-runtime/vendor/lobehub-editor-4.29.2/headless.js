@@ -4410,6 +4410,10 @@ function registerMarkdownCommand(editor, kernel, service) {
 }
 //#endregion
 //#region src/plugins/markdown/data-source/markdown-writer-context.ts
+class NativeRawMarkdownLine {
+  constructor(value) { this.value = value; }
+  toString() { return this.value; }
+}
 var MarkdownWriterContext = class MarkdownWriterContext {
 	constructor(markdownService) {
 		this.before = "";
@@ -4419,6 +4423,9 @@ var MarkdownWriterContext = class MarkdownWriterContext {
 	}
 	appendLine(line) {
 		this.children.push(line);
+	}
+	appendRawLine(line) {
+		this.children.push(new NativeRawMarkdownLine(line));
 	}
 	newChild() {
 		const child = new MarkdownWriterContext(this.markdownService);
@@ -4432,9 +4439,11 @@ var MarkdownWriterContext = class MarkdownWriterContext {
 	addProcessor(processor) {
 		this.processor = processor;
 	}
-	toString() {
-		const content = this.before + this.children.map((child) => child.toString()).join("") + this.after;
-		return this.processor ? this.processor(this.before, this.children.map((child) => child.toString()).join(""), this.after) : content;
+	toString(rawWriter) {
+		const inner = this.children.map((child) => child instanceof NativeRawMarkdownLine
+      ? (rawWriter ? rawWriter(child.value) : child.value)
+      : child instanceof MarkdownWriterContext ? child.toString(rawWriter) : child.toString()).join("");
+		return this.processor ? this.processor(this.before, inner, this.after) : this.before + inner + this.after;
 	}
 	processChild(parentCtx, child) {
 		const writer = this.markdownService.markdownWriters[child.getType()];
@@ -4449,9 +4458,31 @@ var MarkdownWriterContext = class MarkdownWriterContext {
 //#endregion
 //#region src/plugins/markdown/data-source/markdown-data-source.ts
 var MarkdownDataSource = class extends DataSource {
-	formatMarkdown(markdown) {
+  formatContext(context) {
+    const plain = context.toString();
+    let serial = 0;
+    let prefix = "<!--orvilo-native-raw-";
+    while (plain.includes(prefix)) prefix = `<!--orvilo-native-raw-${++serial}-`;
+    const raw = new Map();
+    const marked = context.toString((value) => {
+      const token = `${prefix}${raw.size}-->`;
+      raw.set(token, value);
+      return token;
+    });
+    return this.formatMarkdown(marked, raw, plain);
+  }
+	formatMarkdown(markdown, rawMarkup, fallbackMarkdown = markdown) {
 		try {
-			const result = remark().use([[remarkGfm, { singleTilde: false }]]).data("settings", {
+			const result = remark().use([[remarkGfm, { singleTilde: false }]]).use(() => (tree) => {
+        if (!rawMarkup?.size) return;
+        const restore = (node) => {
+          if (node.type === "html" && typeof node.value === "string") {
+            for (const [token, value] of rawMarkup) node.value = node.value.split(token).join(value);
+          }
+          if (Array.isArray(node.children)) node.children.forEach(restore);
+        };
+        restore(tree);
+      }).data("settings", {
 				bullet: "-",
 				emphasis: "*",
 				fences: true,
@@ -4462,7 +4493,7 @@ var MarkdownDataSource = class extends DataSource {
 			return String(result);
 		} catch (error) {
 			logger$5.error("Failed to format markdown:", error);
-			return markdown;
+			return fallbackMarkdown;
 		}
 	}
 	constructor(dataType, markdownService, getService) {
@@ -4561,7 +4592,7 @@ var MarkdownDataSource = class extends DataSource {
 				const rootCtx = new MarkdownWriterContext(this.markdownService);
 				return editorState.read(() => {
 					lexicalRootNode.getChildren().forEach((child) => rootCtx.processChild(rootCtx, child));
-					return this.formatMarkdown(rootCtx.toString());
+					return this.formatContext(rootCtx);
 				});
 			} else if ($isTableSelection(selection)) {}
 			const rootNode = INodeHelper.createRootNode();
@@ -4582,7 +4613,7 @@ var MarkdownDataSource = class extends DataSource {
 			const rootNode = $getRoot();
 			const rootCtx = new MarkdownWriterContext(this.markdownService);
 			rootNode.getChildren().forEach((child) => rootCtx.processChild(rootCtx, child));
-			return this.formatMarkdown(rootCtx.toString());
+			return this.formatContext(rootCtx);
 		});
 	}
 };
@@ -6982,6 +7013,7 @@ function registerCodeMirrorCommand(editor) {
 		});
 		return true;
 	}, COMMAND_PRIORITY_EDITOR), editor.registerCommand(SELECT_BEFORE_CODEMIRROR_COMMAND, (payload) => {
+		if (!editor.isEditable()) return true;
 		editor.update(() => {
 			const node = $getNodeByKey(payload.key);
 			if (!node) return;
@@ -6993,6 +7025,7 @@ function registerCodeMirrorCommand(editor) {
 		});
 		return false;
 	}, COMMAND_PRIORITY_EDITOR), editor.registerCommand(SELECT_AFTER_CODEMIRROR_COMMAND, (payload) => {
+		if (!editor.isEditable()) return true;
 		editor.update(() => {
 			const node = $getNodeByKey(payload.key);
 			if (!node) return;
@@ -11325,8 +11358,8 @@ const getRangeFromSelection = (selection, table, targetIndex, direction, crossAx
 		to: Math.max(to, targetIndex)
 	};
 };
-function registerTableCommand(editor) {
-	return mergeRegister(editor.registerCommand(INSERT_TABLE_COMMAND, ({ rows, columns, includeHeaders }) => {
+function registerTableInsertCommand(editor) {
+	return editor.registerCommand(INSERT_TABLE_COMMAND, ({ rows, columns, includeHeaders }) => {
 		const selection = $getSelection() || $getPreviousSelection();
 		if (!selection || !$isRangeSelection(selection)) return false;
 		const anchorNode = $getNodeByKey(selection.anchor.key);
@@ -11341,7 +11374,10 @@ function registerTableCommand(editor) {
 		const firstDescendant = tableNode.getFirstDescendant();
 		if ($isTextNode(firstDescendant)) firstDescendant.select();
 		return true;
-	}, COMMAND_PRIORITY_EDITOR), editor.registerCommand(INSERT_TABLE_COLUMN_COMMAND, ({ table, columnIndex, insertAfter = true }) => {
+	}, COMMAND_PRIORITY_EDITOR);
+}
+function registerTableCommand(editor) {
+	return mergeRegister(editor.registerCommand(INSERT_TABLE_COLUMN_COMMAND, ({ table, columnIndex, insertAfter = true }) => {
 		const tableNode = $getNodeByKey(table);
 		if (!tableNode || !$isTableNode(tableNode)) return false;
 		const [tableMap] = $computeTableMapSkipCellCheck(tableNode, null, null);
@@ -11782,6 +11818,8 @@ const TablePlugin = class extends KernelPlugin {
 	onInit(editor) {
 		this.register(registerTableCellUnmergeTransform(editor));
 		this.register(registerSingleCellTablePaste(editor));
+		// Pure insertion uses registered nodes/selection only; DOM controllers stay below.
+		this.register(registerTableInsertCommand(editor));
 		if (!isHeadlessEditor(editor)) {
 			setScrollableTablesActive(editor, true);
 			this.register(registerTablePlugin(editor));
@@ -12644,6 +12682,7 @@ function $isNativeVirtualListBoundary(selection, isBackward) {
 function registerNativeVirtualBlockKeys(editor, kernel) {
 	let needRemoveOnFocusNode = null;
 	return mergeRegister(editor.registerUpdateListener((payload) => {
+		if (!editor.isEditable()) return;
 		const { mutatedNodes } = payload;
 		if (needRemoveOnFocusNode) {
 			if (mutatedNodes?.get(ParagraphNode)?.get(needRemoveOnFocusNode.getKey()) === "destroyed") {
@@ -12652,6 +12691,7 @@ function registerNativeVirtualBlockKeys(editor, kernel) {
 				return;
 			}
 			editor.update(() => {
+			if (!editor.isEditable()) return;
 				try {
 					const selection = $getSelection();
 					if ($isRangeSelection(selection)) {
@@ -12677,6 +12717,7 @@ function registerNativeVirtualBlockKeys(editor, kernel) {
 			});
 		}
 	}), kernel.registerHighCommand(KEY_ARROW_UP_COMMAND, (event) => {
+		if (!editor.isEditable()) return false;
 		const selection = $getSelection();
 		if (event.shiftKey) return false;
 		if ($isNodeSelection(selection)) {
@@ -12705,6 +12746,7 @@ function registerNativeVirtualBlockKeys(editor, kernel) {
 		}
 		return false;
 	}, COMMAND_PRIORITY_NORMAL), kernel.registerHighCommand(KEY_ARROW_DOWN_COMMAND, (event) => {
+		if (!editor.isEditable()) return false;
 		const selection = $getSelection();
 		if ($isNodeSelection(selection)) {
 			const nodes = selection.getNodes();
@@ -12734,7 +12776,10 @@ function registerNativeVirtualBlockKeys(editor, kernel) {
 		}
 		return false;
 	}, COMMAND_PRIORITY_NORMAL), editor.registerCommand(SELECT_BEFORE_CODEMIRROR_COMMAND, (payload) => {
+		if (!editor.isEditable()) return true;
+		if (!editor.isEditable()) return false;
 		editor.update(() => {
+			if (!editor.isEditable()) return;
 			const node = $getNodeByKey(payload.key);
 			if (!node) return;
 			const p = $createParagraphNode();
@@ -12746,7 +12791,10 @@ function registerNativeVirtualBlockKeys(editor, kernel) {
 		});
 		return true;
 	}, COMMAND_PRIORITY_NORMAL), editor.registerCommand(SELECT_AFTER_CODEMIRROR_COMMAND, (payload) => {
+		if (!editor.isEditable()) return true;
+		if (!editor.isEditable()) return false;
 		editor.update(() => {
+			if (!editor.isEditable()) return;
 			const node = $getNodeByKey(payload.key);
 			if (!node) return;
 			const p = $createParagraphNode();
@@ -12767,3 +12815,9 @@ class NativeVirtualBlockPlugin extends KernelPlugin {
   onInit(editor) { this.register(registerNativeVirtualBlockKeys(editor, this.kernel)); }
 }
 export { NativeVirtualBlockPlugin, ILitexmlService, IMarkdownShortCutService };
+
+// Exact actual native toolbar command identities, never recreated by label.
+export { INSERT_CHECK_LIST_COMMAND, INSERT_CODEMIRROR_COMMAND, INSERT_MATH_COMMAND };
+
+// Exact registered native page slash command identities.
+export { INSERT_HEADING_COMMAND, INSERT_HORIZONTAL_RULE_COMMAND, INSERT_TABLE_COMMAND };

@@ -1,14 +1,16 @@
 import { type IEditor, type SlashOptions } from '@lobehub/editor';
 import { type ChatInputProps } from '@lobehub/editor/react';
+import type { NativeIEditorKernel } from '@orvilo/editor-runtime/native-browser';
 import { type OpenAIChatMessage, type VoiceMessageRecording } from '@orvilo/types';
 
 import { type ActionKeys } from '@/features/ChatInput';
 
 import type { ActionDropdownMenu } from '../ActionBar/components/ActionDropdown';
+import type { ComposerProtocol } from '../composerProtocol';
 
 export type SendButtonHandler = (params: {
   clearContent: () => void;
-  editor: IEditor;
+  editor: ComposerProtocol;
   getEditorData: () => Record<string, any> | undefined;
   getMarkdownContent: () => string;
   /** Recover a cleared send draft without replacing newer input or another conversation. */
@@ -20,7 +22,7 @@ export type VoiceMessageSendHandler = (recording: VoiceMessageRecording) => bool
 export interface SendButtonProps {
   disabled?: boolean;
   generating: boolean;
-  onStop: (params: { editor: IEditor }) => void;
+  onStop: (params: { editor: ComposerProtocol }) => void;
   shape?: 'round' | 'default';
   size?: number;
 }
@@ -90,6 +92,8 @@ export interface State extends PublicState {
   editor?: IEditor;
   isContentEmpty: boolean;
   markdownContent: string;
+  /** Explicit native backend; legacy SDK editor remains available until cutover. */
+  nativeComposer?: NativeIEditorKernel;
   slashMenuRef: ChatInputProps['slashMenuRef'];
 }
 

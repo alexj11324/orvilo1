@@ -1,4 +1,4 @@
-import type { IEditor } from '@lobehub/editor';
+import type { ComposerProtocol as IEditor } from './composerProtocol';
 
 // A kernel registers its data sources when its root mounts and drops them again
 // on destroy, so a debounced handler landing mid route switch can reach one that

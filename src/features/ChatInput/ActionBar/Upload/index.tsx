@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import TipGuide from '@/components/TipGuide';
 import { toast } from '@/components/toast';
 import { Upload } from '@/components/Upload';
+import { activeComposer } from '@/features/ChatInput/composerProtocol';
 import { useMediaUploadAbility } from '@/hooks/useMediaUploadAbility';
 import { usePermission } from '@/hooks/usePermission';
 import { useFileStore } from '@/store/file';
@@ -31,7 +32,7 @@ const FileUpload = memo(() => {
   );
 
   const upload = useFileStore((s) => s.uploadChatFiles);
-  const editor = useChatInputStore((s) => s.editor);
+  const editor = useChatInputStore((s) => activeComposer(s));
 
   const agentId = useAgentId();
   const { model, provider } = useEffectiveModel(agentId);

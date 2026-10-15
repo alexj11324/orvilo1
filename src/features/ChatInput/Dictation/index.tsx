@@ -7,6 +7,7 @@ import { memo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Spinner } from '@/components/ui/spinner';
+import { activeComposer } from '@/features/ChatInput/composerProtocol';
 import { useServerConfigStore } from '@/store/serverConfig';
 
 import { ChatInputAction } from '../ActionBar/components/ChatInputAction';
@@ -47,7 +48,7 @@ const Dictation = memo(() => {
   const [activeAudioInputMode, editor, mobile, generating, setActiveAudioInputMode] =
     useChatInputStore((s) => [
       s.activeAudioInputMode,
-      s.editor,
+      activeComposer(s),
       s.mobile,
       Boolean(s.sendButtonProps?.generating),
       s.setActiveAudioInputMode,

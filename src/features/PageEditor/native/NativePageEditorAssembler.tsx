@@ -117,6 +117,8 @@ export interface NativePageChrome {
 }
 export interface NativePageEditorAssemblerProps extends NativePageEditorPublicProps {
   chrome: NativePageChrome;
+  /** Private layout adapter for full/native assembly; public page props stay unchanged. */
+  contentLayout?: (content: ReactNode, state: NativePageChromeState) => ReactNode;
   /** All existing widgets/media owners/runtime remain mandatory. */
   document: Omit<
     NativeCollaborativePageDocumentHostProps,
@@ -354,6 +356,29 @@ function NativeAssembledSession(props: NativePageEditorAssemblerProps & { docume
       if (isHostUnsupportedResult(result)) throw new Error('Markdown export unavailable');
     },
   };
+  const documentContent = (
+    <>
+      {props.chrome.titleAndEmoji(controls)}
+      <NativeCollaborativePageDocumentHost
+        {...props.document}
+        beforeSave={metadata.flush}
+        documentId={props.documentId}
+        getTitle={() => metadata.title}
+        metadataDirty={metadata.dirty}
+        setTitle={metadata.setTitle}
+        footer={
+          <>
+            {props.chrome.likes(controls)}
+            {props.chrome.comments(controls)}
+          </>
+        }
+        onInit={setEditor}
+        onSave={props.onSave}
+      >
+        {props.chrome.bodyTools(controls)}
+      </NativeCollaborativePageDocumentHost>
+    </>
+  );
   const header = props.header === undefined ? props.chrome.header(controls) : props.header;
   const panel =
     props.rightPanel === false || (!canEdit && rightPanelMode === 'copilot')
@@ -367,25 +392,9 @@ function NativeAssembledSession(props: NativePageEditorAssemblerProps & { docume
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {!props.fullWidthHeader && header}
             <div className="min-h-0 flex-1 overflow-auto">
-              {props.chrome.titleAndEmoji(controls)}
-              <NativeCollaborativePageDocumentHost
-                {...props.document}
-                beforeSave={metadata.flush}
-                documentId={props.documentId}
-                getTitle={() => metadata.title}
-                metadataDirty={metadata.dirty}
-                setTitle={metadata.setTitle}
-                footer={
-                  <>
-                    {props.chrome.likes(controls)}
-                    {props.chrome.comments(controls)}
-                  </>
-                }
-                onInit={setEditor}
-                onSave={props.onSave}
-              >
-                {props.chrome.bodyTools(controls)}
-              </NativeCollaborativePageDocumentHost>
+              {props.contentLayout
+                ? props.contentLayout(documentContent, controls)
+                : documentContent}
             </div>
           </div>
           {panel}

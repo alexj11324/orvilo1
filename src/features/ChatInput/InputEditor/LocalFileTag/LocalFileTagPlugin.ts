@@ -11,10 +11,10 @@ import {
   $insertNodes,
   $isRootOrShadowRoot,
   COMMAND_PRIORITY_HIGH,
-  createCommand,
   type LexicalEditor,
 } from 'lexical';
 
+import { INSERT_LOCAL_FILE_TAG_COMMAND } from './command';
 import { registerLocalFileTagDecorator } from './LocalFileTagNode';
 import {
   $createLocalFileTagNode,
@@ -23,15 +23,7 @@ import {
   type SerializedLocalFileTagNode,
 } from './LocalFileTagNode';
 
-export interface InsertLocalFileTagPayload {
-  isDirectory?: boolean;
-  name: string;
-  path: string;
-}
-
-export const INSERT_LOCAL_FILE_TAG_COMMAND = createCommand<InsertLocalFileTagPayload>(
-  'INSERT_LOCAL_FILE_TAG_COMMAND',
-);
+export { INSERT_LOCAL_FILE_TAG_COMMAND, type InsertLocalFileTagPayload } from './command';
 
 type IEditorKernel = ReturnType<typeof getKernelFromEditor>;
 

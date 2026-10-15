@@ -7,6 +7,7 @@ import { escapeXml } from '@orvilo/prompts';
 import { isCommandPressed } from '@orvilo/utils';
 import { cn } from 'cn';
 import Fuse from 'fuse.js';
+import { use } from 'react';
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -26,6 +27,8 @@ import { useChatInputDraft } from '../hooks/useChatInputDraft';
 import { useChatInputHistory } from '../hooks/useChatInputHistory';
 import { useChatInputResourceAccess } from '../hooks/useChatInputResourceAccess';
 import { useEffectiveModel } from '../hooks/useEffectiveModel';
+import { NativeChatRuntimeContext } from '../native/NativeChatRuntimeContext';
+import { StoreBoundNativeChatInputEditor } from '../native/StoreBoundNativeChatInputEditor';
 import { useChatInputStore, useStoreApi } from '../store';
 import {
   INSERT_ACTION_TAG_COMMAND,
@@ -50,7 +53,7 @@ const ghostClassName = 'block overflow-hidden text-ellipsis whitespace-nowrap';
 
 type MentionOption = ISlashMenuOption | ISlashSectionOption;
 
-const InputEditor = memo<{
+const LegacyInputEditor = memo<{
   defaultRows?: number;
   initialContent?: string;
   placeholder?: ReactNode;
@@ -414,6 +417,13 @@ const InputEditor = memo<{
   );
 });
 
-InputEditor.displayName = 'InputEditor';
+LegacyInputEditor.displayName = 'LegacyInputEditor';
 
-export default InputEditor;
+export default function InputEditor(props: Parameters<typeof LegacyInputEditor>[0]) {
+  const renderer = use(NativeChatRuntimeContext);
+  return renderer ? (
+    <StoreBoundNativeChatInputEditor {...props} mathRenderer={renderer} />
+  ) : (
+    <LegacyInputEditor {...props} />
+  );
+}

@@ -39,7 +39,7 @@ const HEADER_ACTION_SIZE = {
   blockSize: 32,
   borderRadius: 'var(--radius-button)',
 } as const;
-export function NativePageHeader({ state }: { state: NativePageChromeState }) {
+export function useNativePageHeaderMenu(state: NativePageChromeState) {
   const { t } = useTranslation(['file', 'common', 'chat']);
   const panel = usePageAgentPanelControl();
   const [error, setError] = useState<unknown>();
@@ -173,6 +173,12 @@ export function NativePageHeader({ state }: { state: NativePageChromeState }) {
         ]
       : []),
   ];
+  return { menuItems, run, busy, error, retry, panel, canExpand };
+}
+
+export function NativePageHeader({ state }: { state: NativePageChromeState }) {
+  const { t } = useTranslation(['file', 'common', 'chat']);
+  const { menuItems, run, busy, error, retry, panel, canExpand } = useNativePageHeaderMenu(state);
   return (
     <>
       <NavHeader

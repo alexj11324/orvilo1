@@ -67,6 +67,7 @@
   "nativeImage.resize": "Resize image",
   "nativeImage.uploadFailed": "Image upload failed. Try replacing it again.",
   "nativeImage.url": "Image URL",
+  "nativeSlash.insertFailed": "Could not insert this content. Your text was preserved; please try again.",
   "skillFrontmatter.edit": "Edit metadata",
   "skillFrontmatter.empty": "No metadata",
   "skillFrontmatter.invalid.descriptionInvalid": "Description must be single-line text.",

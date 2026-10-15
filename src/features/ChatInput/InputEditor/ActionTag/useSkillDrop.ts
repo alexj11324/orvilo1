@@ -2,6 +2,8 @@ import { SKILL_DRAG_MIME } from '@orvilo/const';
 import type React from 'react';
 import { useCallback } from 'react';
 
+import { activeComposer } from '@/features/ChatInput/composerProtocol';
+
 import { useChatInputStore } from '../../store';
 import { INSERT_ACTION_TAG_COMMAND, type InsertActionTagPayload } from './command';
 import { readSkillDragData } from './skillDragData';
@@ -20,7 +22,7 @@ interface UseSkillDropResult {
  * from the `/` menu.
  */
 export const useSkillDrop = (): UseSkillDropResult => {
-  const editor = useChatInputStore((s) => s.editor);
+  const editor = useChatInputStore((s) => activeComposer(s));
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     if (!event.dataTransfer.types.includes(SKILL_DRAG_MIME)) return;

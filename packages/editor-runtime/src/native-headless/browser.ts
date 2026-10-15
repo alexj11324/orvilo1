@@ -47,6 +47,16 @@ export {
   IMarkdownShortCutService,
   NativeVirtualBlockPlugin,
 } from '../../vendor/lobehub-editor-4.29.2/headless.js';
+export {
+  INSERT_CHECK_LIST_COMMAND,
+  INSERT_CODEMIRROR_COMMAND,
+  INSERT_MATH_COMMAND,
+} from '../../vendor/lobehub-editor-4.29.2/headless.js';
+export {
+  INSERT_HEADING_COMMAND,
+  INSERT_HORIZONTAL_RULE_COMMAND,
+  INSERT_TABLE_COMMAND,
+} from '../../vendor/lobehub-editor-4.29.2/headless.js';
 export type {
   IEditorKernel as NativeIEditorKernel,
   IPlugin as NativeIPlugin,
@@ -63,11 +73,13 @@ export {
   $insertGeneratedNodes,
 } from '@lexical/clipboard';
 export {
+  $isListNode,
   INSERT_ORDERED_LIST_COMMAND,
   INSERT_UNORDERED_LIST_COMMAND,
   REMOVE_LIST_COMMAND,
 } from '@lexical/list';
-export { DRAG_DROP_PASTE } from '@lexical/rich-text';
+export { $createQuoteNode, $isQuoteNode, DRAG_DROP_PASTE } from '@lexical/rich-text';
+export { $setBlocksType } from '@lexical/selection';
 export {
   $deleteTableColumnAtSelection,
   $deleteTableRowAtSelection,

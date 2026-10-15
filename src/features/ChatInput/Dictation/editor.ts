@@ -1,4 +1,3 @@
-import type { IEditor } from '@lobehub/editor';
 import {
   $createTextNode,
   $getNodeByKey,
@@ -9,6 +8,8 @@ import {
   $setSelection,
   type RangeSelection,
 } from 'lexical';
+
+import type { ComposerProtocol as IEditor } from '../composerProtocol';
 
 export const DICTATION_UPDATE_TAG = 'realtime-dictation';
 

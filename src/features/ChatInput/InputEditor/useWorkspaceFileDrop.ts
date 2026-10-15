@@ -2,6 +2,8 @@ import { WORKSPACE_FILE_DRAG_MIME } from '@orvilo/const';
 import type React from 'react';
 import { useCallback } from 'react';
 
+import { activeComposer } from '@/features/ChatInput/composerProtocol';
+
 import { useChatInputStore } from '../store';
 import { INSERT_LOCAL_FILE_TAG_COMMAND } from './LocalFileTag';
 import { readWorkspaceFileDragData } from './workspaceFileDragData';
@@ -24,7 +26,7 @@ interface UseWorkspaceFileDropResult {
  * (e.g. the web client with no other mention categories).
  */
 export const useWorkspaceFileDrop = (): UseWorkspaceFileDropResult => {
-  const editor = useChatInputStore((s) => s.editor);
+  const editor = useChatInputStore((s) => activeComposer(s));
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     if (!event.dataTransfer.types.includes(WORKSPACE_FILE_DRAG_MIME)) return;

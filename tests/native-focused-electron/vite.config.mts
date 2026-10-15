@@ -242,6 +242,7 @@ export default defineConfig(async (env) => {
     'i18next',
     'react-i18next',
     'react-responsive',
+    'antd > @rc-component/util > react-is',
     'zustand',
     'zustand/middleware',
     'swr',

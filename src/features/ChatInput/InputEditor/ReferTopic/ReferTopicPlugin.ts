@@ -10,10 +10,10 @@ import {
   $insertNodes,
   $isRootOrShadowRoot,
   COMMAND_PRIORITY_HIGH,
-  createCommand,
   type LexicalEditor,
 } from 'lexical';
 
+import { INSERT_REFER_TOPIC_COMMAND } from './command';
 import { registerReferTopicDecorator } from './ReferTopicNode';
 import {
   $createReferTopicNode,
@@ -22,9 +22,7 @@ import {
   type SerializedReferTopicNode,
 } from './ReferTopicNode';
 
-export const INSERT_REFER_TOPIC_COMMAND = createCommand<{ topicId: string; topicTitle: string }>(
-  'INSERT_REFER_TOPIC_COMMAND',
-);
+export { INSERT_REFER_TOPIC_COMMAND } from './command';
 
 type IEditorKernel = ReturnType<typeof getKernelFromEditor>;
 

@@ -62,6 +62,7 @@ export interface NativeEditorSurfaceProps {
   children?: ReactNode;
   className?: string;
   content: unknown;
+  contentClassName?: string;
   debounceWait?: number;
   editable?: boolean;
   editor: NativeIEditorKernel;
@@ -73,6 +74,7 @@ export interface NativeEditorSurfaceProps {
   onPressEnter?: (event: KeyboardEvent) => boolean | void;
   onTextChange?: (editor: NativeIEditorKernel) => void;
   placeholder?: ReactNode;
+  readOnlyPresentation?: boolean;
   style?: CSSProperties;
   type?: 'json' | 'markdown' | 'text' | 'litexml';
 }
@@ -127,9 +129,10 @@ export function NativeEditorSurface(props: NativeEditorSurfaceProps) {
     setEmpty(editor.isEmpty);
     const detach = lexical.registerDecoratorListener<NativeDecoration>(setDecorators);
     let timer: ReturnType<typeof setTimeout> | undefined;
-    let previous = JSON.stringify(editor.getDocument('json'));
+    let previous = callbacks.current.onTextChange ? JSON.stringify(editor.getDocument('json')) : '';
     const publish = () => {
       callbacks.current.onChange?.(editor);
+      if (!callbacks.current.onTextChange) return;
       const current = JSON.stringify(editor.getDocument('json'));
       if (current !== previous) {
         previous = current;
@@ -184,12 +187,15 @@ export function NativeEditorSurface(props: NativeEditorSurfaceProps) {
           spellCheck
           suppressContentEditableWarning
           aria-label={label}
-          aria-multiline="true"
-          className="native-editor-content min-h-9 w-full whitespace-pre-wrap break-words text-sm text-foreground outline-none"
+          aria-multiline={props.readOnlyPresentation ? undefined : true}
           contentEditable={editable}
           data-native-editor="true"
           ref={attach}
-          role="textbox"
+          role={props.readOnlyPresentation ? 'document' : 'textbox'}
+          className={cn(
+            'native-editor-content min-h-9 w-full whitespace-pre-wrap break-words text-sm text-foreground outline-none',
+            props.contentClassName,
+          )}
           onBlur={() => callbacks.current.onBlur?.()}
           onFocus={() => callbacks.current.onFocus?.()}
         />

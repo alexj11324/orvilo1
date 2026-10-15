@@ -69,7 +69,7 @@ interface HeadlessLiteXMLBatchOperation {
 type HeadlessLiteXMLOperation = HeadlessLiteXMLBatchOperation | HeadlessLiteXMLInsertOperation | HeadlessLiteXMLRemoveOperation | HeadlessLiteXMLReplaceOperation;
 declare const DEFAULT_HEADLESS_EDITOR_PLUGINS: ReadonlyArray<IPlugin>;
 declare class HeadlessEditor {
-  readonly kernel: IEditor;
+  readonly kernel: IEditorKernel;
   constructor(options?: HeadlessEditorOptions);
   hydrate(input: HeadlessEditorHydrationInput): this;
   hydrateEditorData(editorData: SerializedEditorState<SerializedLexicalNode> | string, options?: IDocumentOptions): this;
@@ -183,3 +183,11 @@ export declare const UNLINK_LINK_COMMAND: import("lexical").LexicalCommand<{ key
 export declare const ILitexmlService: typeof import("@lobehub/editor").ILitexmlService;
 export declare const IMarkdownShortCutService: typeof import("@lobehub/editor").IMarkdownShortCutService;
 export declare const NativeVirtualBlockPlugin: IEditorPluginConstructor<Record<string, unknown>>;
+
+export declare const INSERT_CHECK_LIST_COMMAND: import("lexical").LexicalCommand<void>;
+export declare const INSERT_CODEMIRROR_COMMAND: import("lexical").LexicalCommand<void>;
+export declare const INSERT_MATH_COMMAND: import("lexical").LexicalCommand<{ code: string }>;
+
+export declare const INSERT_HEADING_COMMAND: import('lexical').LexicalCommand<{ tag: import('@lexical/rich-text').HeadingTagType }>;
+export declare const INSERT_HORIZONTAL_RULE_COMMAND: import('lexical').LexicalCommand<unknown>;
+export declare const INSERT_TABLE_COMMAND: import('lexical').LexicalCommand<{ columns: string; rows: string; includeHeaders?: import('@lexical/table').InsertTableCommandPayloadHeaders }>;

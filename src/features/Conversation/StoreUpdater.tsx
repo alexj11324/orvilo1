@@ -7,6 +7,7 @@ import { createStoreUpdater } from 'zustand-utils';
 
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 
+import { registerComposerFocus } from './composerFocus';
 import { useConversationStoreApi } from './store';
 import { createEphemeralResetState } from './store/initialState';
 import {
@@ -79,6 +80,40 @@ const StoreUpdater = memo<StoreUpdaterProps>(
     useStoreUpdater('actionsBar', actionsBar);
     useStoreUpdater('composerTarget', resolvedComposerTarget);
     useStoreUpdater('context', context);
+
+    // Register the actual live editor, not a global DOM selector or SDK facade.
+    useEffect(() => {
+      let release: (() => void) | undefined;
+      const refresh = () => {
+        release?.();
+        release = undefined;
+        const state = storeApi.getState();
+        const target = state.composerTarget;
+        const editor = state.editor;
+        if (!target.writable || !editor || typeof editor.focus !== 'function') return;
+        release = registerComposerFocus(target.contextKey, {
+          focus: () => editor.focus(),
+          isCurrent: () => {
+            const current = storeApi.getState();
+            return (
+              current.editor === editor &&
+              current.composerTarget.writable &&
+              current.composerTarget.contextKey === target.contextKey
+            );
+          },
+        });
+      };
+      refresh();
+      const unsubscribe = storeApi.subscribe((state, previous) => {
+        if (state.editor !== previous.editor || state.composerTarget !== previous.composerTarget)
+          refresh();
+      });
+      return () => {
+        unsubscribe();
+        release?.();
+      };
+    }, [storeApi]);
+
     useStoreUpdater('hooks', hooks!);
     useStoreUpdater('onMessagesChange', onMessagesChange);
     useStoreUpdater('operationState', operationState!);

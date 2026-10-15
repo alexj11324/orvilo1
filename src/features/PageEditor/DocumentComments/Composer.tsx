@@ -1,4 +1,3 @@
-import { ChatInput, ChatInputActionBar, useEditor } from '@lobehub/editor/react';
 import type { DocumentCommentJson } from '@orvilo/types';
 import { cn } from 'cn';
 import { ArrowUp } from 'lucide-react';
@@ -11,18 +10,22 @@ import Avatar from '@/components/Avatar';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { AttachmentMenu } from '@/features/AttachmentInput';
-import { TypoBar } from '@/features/EditorCanvas';
-import {
-  getEditorAttachmentStateFromJson,
-  insertExistingAttachmentsIntoEditor,
-  insertFilesIntoEditor,
-} from '@/features/EditorCanvas/editorAttachments';
+import { getEditorAttachmentStateFromJson } from '@/features/EditorCanvas/editorAttachmentState';
 import { useEnterToSend } from '@/hooks/useEnterToSend';
 import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 import { usePermission } from '@/hooks/usePermission';
 import { useUserAvatar } from '@/hooks/useUserAvatar';
 
-import DocumentCommentEditor, { type DocumentCommentEditorRef } from './DocumentCommentEditor';
+import {
+  CommentFormattingToolbar as TypoBar,
+  CommentInput as ChatInput,
+  CommentInputActionBar as ChatInputActionBar,
+  useDocumentCommentEditor as useEditor,
+} from './editorKit';
+import {
+  CommentEditorView as DocumentCommentEditor,
+  type DocumentCommentEditorRef,
+} from './editorKit';
 import type { DocumentCommentSubmitInput } from './optimistic';
 import { COMMENT_INPUT_MAX_HEIGHT, styles } from './styles';
 
@@ -100,7 +103,7 @@ const Composer = memo<ComposerProps>(({ documentId, onSubmit, onSuccess, parentC
 
   const handleAttach = useCallback(
     (files: File[]) => {
-      insertFilesIntoEditor(editor, files);
+      editor.insertFiles(files);
     },
     [editor],
   );
@@ -131,9 +134,7 @@ const Composer = memo<ComposerProps>(({ documentId, onSubmit, onSuccess, parentC
                 formatEnabled={showTypoBar}
                 onFiles={handleAttach}
                 onFormatEnabledChange={setShowTypoBar}
-                onLibraryFiles={(attachments) =>
-                  insertExistingAttachmentsIntoEditor(editor, attachments)
-                }
+                onLibraryFiles={(attachments) => editor.insertExisting(attachments)}
               />
             }
             right={

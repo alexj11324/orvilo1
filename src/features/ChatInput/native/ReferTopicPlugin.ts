@@ -1,0 +1,127 @@
+import { $wrapNodeInElement } from '@lexical/utils';
+import {
+  ILitexmlService,
+  IMarkdownShortCutService,
+  type NativeIEditorKernel,
+} from '@orvilo/editor-runtime/native-browser';
+import { escapeXml } from '@orvilo/prompts';
+import {
+  $createParagraphNode,
+  $insertNodes,
+  $isRootOrShadowRoot,
+  COMMAND_PRIORITY_HIGH,
+  type LexicalEditor,
+} from 'lexical';
+
+import { registerReferTopicDecorator } from '@/features/ChatInput/InputEditor/ReferTopic/ReferTopicNode';
+import {
+  $createReferTopicNode,
+  $isReferTopicNode,
+  ReferTopicNode,
+  type SerializedReferTopicNode,
+} from '@/features/ChatInput/InputEditor/ReferTopic/ReferTopicNode';
+
+import { INSERT_REFER_TOPIC_COMMAND } from '../InputEditor/ReferTopic/command';
+
+export { INSERT_REFER_TOPIC_COMMAND } from '../InputEditor/ReferTopic/command';
+
+type IEditorKernel = NativeIEditorKernel;
+
+export interface ReferTopicPluginOptions {
+  decorator: (node: ReferTopicNode, editor: LexicalEditor) => any;
+  theme?: { referTopic?: string };
+}
+
+export class ReferTopicPlugin {
+  static pluginName = 'ReferTopicPlugin';
+
+  config?: ReferTopicPluginOptions;
+  private kernel: IEditorKernel;
+  private unregisterNativeDecorator?: () => void;
+
+  constructor(kernel: IEditorKernel, config?: ReferTopicPluginOptions) {
+    this.kernel = kernel;
+    this.config = config;
+
+    kernel.registerNodes([ReferTopicNode]);
+
+    if (config?.theme) {
+      kernel.registerThemes(config.theme);
+    }
+
+    kernel.registerDecorator(ReferTopicNode.getType(), (node, editor) => {
+      return config?.decorator ? config.decorator(node as ReferTopicNode, editor) : null;
+    });
+  }
+
+  onInit(editor: LexicalEditor): void {
+    this.unregisterNativeDecorator?.();
+    this.unregisterNativeDecorator = registerReferTopicDecorator(
+      editor,
+      (node, lexicalEditor) => this.config?.decorator?.(node, lexicalEditor) ?? null,
+    );
+    this.registerMarkdown();
+    this.registerLiteXml();
+    this.registerCommand(editor);
+  }
+
+  private registerMarkdown(): void {
+    const mdService = this.kernel.requireService(IMarkdownShortCutService);
+
+    mdService?.registerMarkdownWriter(ReferTopicNode.getType(), (ctx: any, node: any) => {
+      if ($isReferTopicNode(node)) {
+        ctx.appendRawLine(
+          `<refer_topic name="${escapeXml(node.topicTitle)}" id="${escapeXml(node.topicId)}" />`,
+        );
+      }
+    });
+  }
+
+  private registerCommand(editor: LexicalEditor): void {
+    editor.registerCommand(
+      INSERT_REFER_TOPIC_COMMAND,
+      (payload) => {
+        if (!editor.isEditable()) return true;
+        editor.update(() => {
+          if (!editor.isEditable()) return;
+          const node = $createReferTopicNode(payload.topicId, payload.topicTitle);
+          $insertNodes([node]);
+          if ($isRootOrShadowRoot(node.getParentOrThrow())) {
+            $wrapNodeInElement(node, $createParagraphNode).selectEnd();
+          }
+        });
+        return true;
+      },
+      COMMAND_PRIORITY_HIGH,
+    );
+  }
+
+  private registerLiteXml(): void {
+    const xmlService = this.kernel.requireService(ILitexmlService);
+
+    xmlService?.registerXMLWriter(ReferTopicNode.getType(), (node: any, ctx: any) => {
+      if ($isReferTopicNode(node)) {
+        return ctx.createXmlNode('referTopic', {
+          topicId: node.topicId,
+          name: node.topicTitle,
+        });
+      }
+      return false;
+    });
+
+    xmlService?.registerXMLReader('referTopic', (xmlElement: any) => {
+      return {
+        topicId: xmlElement.getAttribute('topicId') || xmlElement.getAttribute('id') || '',
+        topicTitle: xmlElement.getAttribute('name') || '',
+        type: ReferTopicNode.getType(),
+        version: 1,
+      } satisfies SerializedReferTopicNode;
+    });
+  }
+
+  destroy(): void {
+    this.unregisterNativeDecorator?.();
+    this.unregisterNativeDecorator = undefined;
+    this.kernel.unregisterDecorator?.(ReferTopicNode.getType());
+  }
+}

@@ -1,7 +1,7 @@
-import type { IEditor } from '@lobehub/editor';
 import { $getRoot, $getSelection, $isRangeSelection } from 'lexical';
 
 import type { DroppedLocalPath } from '@/components/DragUploadZone';
+import type { ComposerProtocol as IEditor } from '@/features/ChatInput/composerProtocol';
 
 import { INSERT_LOCAL_FILE_TAG_COMMAND } from './LocalFileTag';
 

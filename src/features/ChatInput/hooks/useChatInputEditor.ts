@@ -1,7 +1,8 @@
-import { type IEditor } from '@lobehub/editor';
 import { useMemo } from 'react';
 
 import { useChatInputStore } from '@/features/ChatInput/store';
+
+import { activeComposer, type ComposerProtocol as IEditor } from '../composerProtocol';
 
 export interface ChatInputEditor {
   clearContent: () => void;
@@ -16,7 +17,7 @@ export interface ChatInputEditor {
 export const useChatInputEditor = () => {
   const [editor, getMarkdownContent, getJSONState, setExpand, setJSONState, setDocument] =
     useChatInputStore((s) => [
-      s.editor,
+      activeComposer(s),
       s.getMarkdownContent,
       s.getJSONState,
       s.setExpand,

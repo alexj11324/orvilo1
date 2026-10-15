@@ -11,11 +11,13 @@ import { useTranslation } from 'react-i18next';
 import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
+import { requestComposerFocus } from '@/features/Conversation/composerFocus';
 import {
   getRangeFirstLineRect,
   getSelectionToolbarPosition,
 } from '@/features/Conversation/Messages/components/TextSelectionActionLayer/helpers';
 import { useConversationStore, useConversationStoreApi } from '@/features/Conversation/store';
+import type { ComposerTarget } from '@/features/Conversation/types';
 import { usePermission } from '@/hooks/usePermission';
 import { useFileStore } from '@/store/file';
 
@@ -31,15 +33,17 @@ export function NativeAskCopilotSelection({
   editor,
   documentId,
   onOpenCopilot,
+  composerTarget,
 }: {
   editor: NativeIEditorKernel;
   documentId: string;
   onOpenCopilot: () => void;
+  composerTarget?: ComposerTarget;
 }) {
   const { t } = useTranslation(['common', 'editor']);
   const { allowed } = usePermission('edit_own_content');
-  const target = useConversationStore((s) => s.composerTarget);
-  const composerEditor = useConversationStore((s) => s.editor);
+  const providerTarget = useConversationStore((s) => s.composerTarget);
+  const target = composerTarget ?? providerTarget;
   const store = useConversationStoreApi();
   const { toggle } = usePageAgentPanelControl();
   const toolbar = useRef<HTMLDivElement>(null);
@@ -52,18 +56,12 @@ export function NativeAskCopilotSelection({
   const [focusContext, setFocusContext] = useState<string>();
   useEffect(() => {
     if (!focusContext) return;
-    const current = store.getState();
-    if (!current.composerTarget.writable || current.composerTarget.contextKey !== focusContext) {
+    if (!target.writable || target.contextKey !== focusContext) {
       setFocusContext(undefined);
       return;
     }
-    // Conversation owns this actual editor registration. No global DOM query,
-    // arbitrary timeout or shared ChatStore editor can focus a different thread.
-    if (composerEditor && typeof composerEditor.focus === 'function') {
-      composerEditor.focus();
-      setFocusContext(undefined);
-    }
-  }, [composerEditor, focusContext, store, target]);
+    return requestComposerFocus(focusContext, () => setFocusContext(undefined));
+  }, [focusContext, target]);
   useEffect(() => {
     setSelection(undefined);
     const lexical = editor.getLexicalEditor();
@@ -160,7 +158,7 @@ export function NativeAskCopilotSelection({
         variant="ghost"
         onPointerDown={(event) => event.preventDefault()}
         onClick={() => {
-          const currentTarget = store.getState().composerTarget;
+          const currentTarget = composerTarget ?? store.getState().composerTarget;
           if (!currentTarget.writable || currentTarget.contextKey !== target.contextKey) return;
           const current = useFileStore.getState();
           const duplicate = (

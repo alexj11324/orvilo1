@@ -5,11 +5,14 @@ import { bindNativePageRuntime, type NativePageRuntimePort } from './runtimeBind
 
 const mocks = vi.hoisted(() => ({
   getState: vi.fn(),
+  subscribe: vi.fn(() => () => {}),
   enqueueEditorSnapshot: vi.fn(),
   flush: vi.fn(),
   meaningful: vi.fn(),
 }));
-vi.mock('@/store/document', () => ({ useDocumentStore: { getState: mocks.getState } }));
+vi.mock('@/store/document', () => ({
+  useDocumentStore: { getState: mocks.getState, subscribe: mocks.subscribe },
+}));
 vi.mock('@/services/documentHistoryQueue', () => ({ documentHistoryQueueService: mocks }));
 vi.mock('@/libs/editor/hasMeaningfulEditorContent', () => ({
   hasMeaningfulEditorContent: mocks.meaningful,

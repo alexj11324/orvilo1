@@ -86,6 +86,7 @@ export interface SidebarDropdownMenuProps {
   onOpenChange?: (open: boolean) => void;
   open?: boolean;
   placement?: string;
+  popupClassName?: string;
   portalProps?: { container?: HTMLElement | null };
 }
 
@@ -270,6 +271,7 @@ const SidebarDropdownMenu = memo<SidebarDropdownMenuProps>(
     onOpenChange,
     open,
     placement = 'bottomLeft',
+    popupClassName,
     portalProps: _portalProps,
   }) => {
     const resolvedItems = typeof items === 'function' ? items() : items;
@@ -290,7 +292,7 @@ const SidebarDropdownMenu = memo<SidebarDropdownMenuProps>(
     return (
       <DropdownMenu open={open} onOpenChange={onOpenChange}>
         <DropdownMenuTrigger render={children} />
-        <DropdownMenuContent align={align} side={side}>
+        <DropdownMenuContent align={align} className={popupClassName} side={side}>
           {renderSidebarMenuItems(resolvedItems)}
         </DropdownMenuContent>
       </DropdownMenu>

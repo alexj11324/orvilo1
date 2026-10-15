@@ -1,4 +1,3 @@
-import { ChatInput, ChatInputActionBar, useEditor } from '@lobehub/editor/react';
 import type { DocumentCommentItem } from '@orvilo/types';
 import { cn } from 'cn';
 import { ChevronRight, MessageCircle, Pencil, Trash } from 'lucide-react';
@@ -7,18 +6,11 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
-import { Markdown } from '@/components/Markdown';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { AttachmentMenu } from '@/features/AttachmentInput';
-import RichTextMessage from '@/features/Conversation/Messages/User/components/RichTextMessage';
-import { TypoBar } from '@/features/EditorCanvas';
-import {
-  getEditorAttachmentStateFromJson,
-  insertExistingAttachmentsIntoEditor,
-  insertFilesIntoEditor,
-} from '@/features/EditorCanvas/editorAttachments';
+import { getEditorAttachmentStateFromJson } from '@/features/EditorCanvas/editorAttachmentState';
 import { useActivityTime } from '@/hooks/useActivityTime';
 import { useEnterToSend } from '@/hooks/useEnterToSend';
 import { useLocalStorageState } from '@/hooks/useLocalStorageState';
@@ -26,10 +18,18 @@ import { documentCommentService } from '@/services/documentComment';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selectors';
 
-import DocumentCommentEditor, {
+import {
+  CommentFormattingToolbar as TypoBar,
+  CommentInput as ChatInput,
+  CommentInputActionBar as ChatInputActionBar,
+  CommentPublishedContent as CommentContent,
+  useDocumentCommentEditor as useEditor,
+} from './editorKit';
+import {
+  CommentEditorView as DocumentCommentEditor,
   type DocumentCommentEditorRef,
   type DocumentCommentEditorValue,
-} from './DocumentCommentEditor';
+} from './editorKit';
 import type { DocumentCommentUpdateHandler } from './optimistic';
 import { isOptimisticDocumentComment } from './optimistic';
 import { COMMENT_INPUT_MAX_HEIGHT, styles } from './styles';
@@ -44,35 +44,6 @@ interface CommentCardProps {
   replying?: boolean;
   variant?: 'reply' | 'root';
 }
-
-const hasDocumentCommentEditorData = (editorData: DocumentCommentItem['editorData']) =>
-  Boolean(
-    editorData &&
-    typeof editorData === 'object' &&
-    !Array.isArray(editorData) &&
-    Object.keys(editorData).length > 0,
-  );
-
-const CommentContent = memo<Pick<DocumentCommentItem, 'content' | 'editorData'>>(
-  ({ content, editorData }) => (
-    <div className={styles.commentContent}>
-      {hasDocumentCommentEditorData(editorData) ? (
-        <RichTextMessage
-          editorState={editorData}
-          fontSize={14}
-          lineHeight={22 / 14}
-          variant={'default'}
-        />
-      ) : (
-        <Markdown fontSize={14} lineHeight={22 / 14} variant={'chat'}>
-          {content}
-        </Markdown>
-      )}
-    </div>
-  ),
-);
-
-CommentContent.displayName = 'DocumentCommentContent';
 
 const CommentCard = memo<CommentCardProps>(
   ({ comment, focusToken, onMutated, onReply, onUpdate, replying, variant = 'root' }) => {
@@ -242,7 +213,7 @@ const CommentCard = memo<CommentCardProps>(
 
     const handleAttach = useCallback(
       (files: File[]) => {
-        insertFilesIntoEditor(editEditor, files);
+        editEditor.insertFiles(files);
       },
       [editEditor],
     );
@@ -301,9 +272,7 @@ const CommentCard = memo<CommentCardProps>(
                       formatEnabled={showTypoBar}
                       onFiles={handleAttach}
                       onFormatEnabledChange={setShowTypoBar}
-                      onLibraryFiles={(attachments) =>
-                        insertExistingAttachmentsIntoEditor(editEditor, attachments)
-                      }
+                      onLibraryFiles={(attachments) => editEditor.insertExisting(attachments)}
                     />
                   }
                   right={

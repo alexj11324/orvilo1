@@ -17,6 +17,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import ChatInputNotice from '@/features/ChatInput/ChatInputNotice';
 import ComposerExpandButton from '@/features/ChatInput/components/ComposerExpandButton';
+import { activeComposer } from '@/features/ChatInput/composerProtocol';
 import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatInputResourceAccess';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { LayoutContainerContext } from '@/features/DesktopLayoutContainer/LayoutContainerContext';
@@ -137,7 +138,7 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
       s.slashMenuRef,
       s.expand,
       s.showTypoBar,
-      s.editor,
+      activeComposer(s),
       s.leftActions,
     ]);
 

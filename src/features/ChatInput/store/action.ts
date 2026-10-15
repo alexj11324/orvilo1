@@ -5,6 +5,7 @@ import { getFileStoreState } from '@/store/file/store';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
+import { activeComposer, composerJSON } from '../composerProtocol';
 import { removeDraft, saveDraft } from '../draftStorage';
 import { canSerialize, readDocument, writeDocument } from '../editorDocument';
 import { addInputHistory } from '../inputHistoryStorage';
@@ -43,14 +44,15 @@ export const store: CreateStore = (publicState) => (set, get) => ({
   rightActions: publicState?.rightActions ?? initialState.rightActions,
 
   getJSONState: () => {
-    return readDocument(get().editor, 'json') as Record<string, any> | undefined;
+    return composerJSON(readDocument(activeComposer(get()), 'json'));
   },
   getMarkdownContent: () => {
-    return String(readDocument(get().editor, 'markdown') || '').trimEnd();
+    return String(readDocument(activeComposer(get()), 'markdown') || '').trimEnd();
   },
   handleSendButton: () => {
-    const editor = get().editor;
+    const editor = activeComposer(get());
     if (!editor) return;
+    if (get().nativeComposer && !editor.isEditable()) return;
 
     const { resolveSendBlocked, sendButtonProps } = get();
     if (resolveSendBlocked ? resolveSendBlocked() : sendButtonProps?.disabled) return;
@@ -103,14 +105,14 @@ export const store: CreateStore = (publicState) => (set, get) => ({
         // belongs to this composer; never put it into a newer conversation.
         if (
           !clearedDraft ||
-          get().editor !== editor ||
+          activeComposer(get()) !== editor ||
           get().draftKey !== sentDraftKey ||
           get().contextSelectionKey !== contextSelectionKey
         )
           return;
 
         if (canSerialize(editor) && !get().getMarkdownContent().trim() && clearedDraft.json) {
-          writeDocument(editor, 'json', clearedDraft.json);
+          writeDocument(editor, 'json', clearedDraft.json, { keepId: true });
           if (sentDraftKey) saveDraft(sentDraftKey, clearedDraft.json);
         }
         // Keep uploads and selections added while the failed preflight awaited.
@@ -147,9 +149,9 @@ export const store: CreateStore = (publicState) => (set, get) => ({
   },
 
   handleStop: () => {
-    if (!get().editor) return;
+    if (!activeComposer(get())) return;
 
-    get().sendButtonProps?.onStop?.({ editor: get().editor! });
+    get().sendButtonProps?.onStop?.({ editor: activeComposer(get())! });
   },
 
   setActiveAudioInputMode: (activeAudioInputMode) => {
@@ -157,17 +159,17 @@ export const store: CreateStore = (publicState) => (set, get) => ({
   },
 
   setDocument: (type, content, options) => {
-    writeDocument(get().editor, type, content, options);
+    writeDocument(activeComposer(get()), type, content, options);
   },
 
   setExpand: (expand) => {
-    const editor = get().editor;
-    const _savedEditorState = readDocument(editor, 'json') as Record<string, any> | undefined;
+    const editor = activeComposer(get());
+    const _savedEditorState = composerJSON(readDocument(editor, 'json'));
     set({ _savedEditorState, expand });
   },
 
   setJSONState: (content) => {
-    writeDocument(get().editor, 'json', content);
+    writeDocument(activeComposer(get()), 'json', content);
   },
 
   setShowTypoBar: (showTypoBar) => {

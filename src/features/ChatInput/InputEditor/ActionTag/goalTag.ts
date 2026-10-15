@@ -1,4 +1,3 @@
-import type { IEditor } from '@lobehub/editor';
 import {
   $createParagraphNode,
   $createRangeSelection,
@@ -13,6 +12,8 @@ import {
   type ElementNode,
   type LexicalNode,
 } from 'lexical';
+
+import type { ComposerProtocol as IEditor } from '@/features/ChatInput/composerProtocol';
 
 import { $createActionTagNode, $isActionTagNode } from './ActionTagNode';
 import { GOAL_COMMAND_TYPE } from './types';

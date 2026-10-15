@@ -126,4 +126,6 @@ export default {
   'nativeDocument.unavailableWithEdits':
     'This document is unavailable. Your unsaved edits remain open for copying or recovery.',
   'table.select': 'Select rows or columns',
+  'nativeSlash.insertFailed':
+    'Could not insert this content. Your text was preserved; please try again.',
 };

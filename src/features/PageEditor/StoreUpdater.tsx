@@ -8,6 +8,7 @@ import { documentHistoryQueueService } from '@/services/documentHistoryQueue';
 import { useDocumentStore } from '@/store/document';
 import { pageAgentRuntime } from '@/store/tool/slices/builtin/executors/pageAgentRuntime';
 
+import { bindActivePageRuntimeOwner } from './activePageRuntimeOwner';
 import { type PublicState } from './store';
 import { usePageEditorStore, useStoreApi } from './store';
 import { useDocumentLock } from './useDocumentLock';
@@ -89,56 +90,61 @@ const StoreUpdater = memo<StoreUpdaterProps>(
       initMeta(title, emoji);
     }, [pageId, title, emoji, initMeta]);
 
-    // Connect editor to page agent runtime
+    // Both legacy and native pages arbitrate the same production Runtime using
+    // the exact document/editor pair currently owned by DocumentStore.
     useEffect(() => {
-      if (pageAgentEditor) {
-        pageAgentRuntime.setEditor(pageAgentEditor);
-      }
-      return () => {
-        pageAgentRuntime.setEditor(null);
-      };
-    }, [pageAgentEditor]);
-
-    // Connect title handlers and document ID to page agent runtime
-    useEffect(() => {
-      const titleGetter = () => {
-        return storeApi.getState().title || '';
-      };
-
-      pageAgentRuntime.setCurrentDocId(pageId);
-      pageAgentRuntime.setTitleHandlers(storeApi.getState().setTitle, titleGetter);
-      pageAgentRuntime.setBeforeMutateHandler(() => {
-        const editor = storeApi.getState().editor;
-        const editorData = editor?.getDocument('json');
-
-        if (!hasMeaningfulEditorContent(editorData)) {
-          return;
-        }
-
-        documentHistoryQueueService.enqueueEditorSnapshot({
-          documentId: pageId,
-          editor,
-          // Forward the page lock owner so the holder's pre-mutation snapshot
-          // isn't rejected by its own lease (see saveDocumentHistory guard).
-          lockOwnerId: pageId
-            ? useDocumentStore.getState().documents[pageId]?.lockOwnerId
-            : undefined,
-        });
+      if (!pageAgentEditor) return;
+      return bindActivePageRuntimeOwner({
+        runtime: pageAgentRuntime,
+        editor: pageAgentEditor,
+        documentId: pageId,
+        source: useDocumentStore,
+        bind: () => {
+          const assertOwner = () => {
+            const state = useDocumentStore.getState();
+            if (state.editor !== pageAgentEditor || state.activeDocumentId !== pageId) {
+              throw new Error('Page no longer owns the active document');
+            }
+          };
+          pageAgentRuntime.setEditor(pageAgentEditor);
+          pageAgentRuntime.setCurrentDocId(pageId);
+          pageAgentRuntime.setTitleHandlers(
+            (nextTitle) => {
+              assertOwner();
+              storeApi.getState().setTitle(nextTitle);
+            },
+            () => storeApi.getState().title || '',
+          );
+          pageAgentRuntime.setBeforeMutateHandler(() => {
+            assertOwner();
+            const editorData = pageAgentEditor.getDocument('json');
+            if (!hasMeaningfulEditorContent(editorData)) return;
+            documentHistoryQueueService.enqueueEditorSnapshot({
+              documentId: pageId,
+              editor,
+              lockOwnerId: pageId
+                ? useDocumentStore.getState().documents[pageId]?.lockOwnerId
+                : undefined,
+            });
+          });
+          pageAgentRuntime.setAfterMutateHandler(async () => {
+            assertOwner();
+            if (!pageId) return;
+            await useDocumentStore
+              .getState()
+              .commitEditorMutation(pageId, { saveSource: 'llm_call' });
+          });
+          return () => {
+            pageAgentRuntime.setEditor(null);
+            pageAgentRuntime.setCurrentDocId(undefined);
+            pageAgentRuntime.setAfterMutateHandler(null);
+            pageAgentRuntime.setTitleHandlers(null, null);
+            pageAgentRuntime.setBeforeMutateHandler(null);
+            void documentHistoryQueueService.flush();
+          };
+        },
       });
-      pageAgentRuntime.setAfterMutateHandler(async () => {
-        if (!pageId) return;
-
-        await useDocumentStore.getState().commitEditorMutation(pageId, { saveSource: 'llm_call' });
-      });
-
-      return () => {
-        pageAgentRuntime.setCurrentDocId(undefined);
-        pageAgentRuntime.setAfterMutateHandler(null);
-        pageAgentRuntime.setTitleHandlers(null, null);
-        pageAgentRuntime.setBeforeMutateHandler(null);
-        void documentHistoryQueueService.flush();
-      };
-    }, [pageId, storeApi]);
+    }, [editor, pageAgentEditor, pageId, storeApi]);
 
     return null;
   },

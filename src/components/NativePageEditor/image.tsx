@@ -50,7 +50,10 @@ export function isNativeImage(node: LexicalNode | null): node is NativeImageNode
 }
 
 /** Use the application's real attachment adapter; no simulated upload or SDK UI. */
-export function createNativeImageOwner(handleUpload: EditorAttachmentUpload) {
+export function createNativeImageOwner(
+  handleUpload: EditorAttachmentUpload,
+  options?: { maxUnresizedHeight?: number },
+) {
   return {
     defaultBlockImage: true,
     getImageWidth: nativeImageWidth,
@@ -61,7 +64,14 @@ export function createNativeImageOwner(handleUpload: EditorAttachmentUpload) {
       if (!isNativeImage(node)) throw new Error('Native image owner received a non-image node');
       const editor = kernel.getLexicalEditor();
       if (!editor) throw new Error('Native image editor is unavailable');
-      return <NativeImage editor={editor} handleUpload={handleUpload} nodeKey={node.getKey()} />;
+      return (
+        <NativeImage
+          editor={editor}
+          handleUpload={handleUpload}
+          maxUnresizedHeight={options?.maxUnresizedHeight}
+          nodeKey={node.getKey()}
+        />
+      );
     },
   };
 }
@@ -71,10 +81,12 @@ function NativeImage({
   editor,
   handleUpload,
   nodeKey,
+  maxUnresizedHeight,
 }: {
   editor: LexicalEditor;
   handleUpload: EditorAttachmentUpload;
   nodeKey: string;
+  maxUnresizedHeight?: number;
 }) {
   const { t } = useTranslation(['editor', 'common']);
   const [revision, setRevision] = useState(0);
@@ -276,7 +288,7 @@ function NativeImage({
   return (
     <div className="flex max-w-full flex-col gap-2" contentEditable={false}>
       <div
-        className="relative max-w-full rounded-(--radius-card) data-[selected=true]:outline-2 data-[selected=true]:outline-primary"
+        className={`relative max-w-full rounded-(--radius-card) data-[selected=true]:outline-2 data-[selected=true]:outline-primary ${maxUnresizedHeight ? 'w-fit' : ''}`}
         data-selected={state.selected}
         ref={wrapper}
         style={{
@@ -296,13 +308,20 @@ function NativeImage({
       >
         <Image
           alt={state.alt}
-          className="w-full"
+          className={maxUnresizedHeight ? undefined : 'w-full'}
           draggable={false}
           height={typeof state.height === 'number' ? state.height : undefined}
           objectFit="contain"
           preview={false}
           src={state.src}
-          width="100%"
+          maxHeight={
+            typeof state.width === 'number' || width !== undefined ? undefined : maxUnresizedHeight
+          }
+          width={
+            typeof state.width === 'number' || width !== undefined || !maxUnresizedHeight
+              ? '100%'
+              : 'auto'
+          }
           onLoad={(event) => {
             naturalWidth.current = event.currentTarget.naturalWidth;
             setLoadedImage({ source: state.src, element: event.currentTarget });

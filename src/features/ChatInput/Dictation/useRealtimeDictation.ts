@@ -1,8 +1,8 @@
 'use client';
 
-import type { IEditor } from '@lobehub/editor';
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 
+import type { ComposerProtocol as IEditor } from '../composerProtocol';
 import { BrowserAudioWorkletCapture, requestDictationMicrophone } from './audio';
 import { RealtimeDictationClient } from './client';
 import { LexicalDictationEditor } from './editor';

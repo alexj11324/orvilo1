@@ -70,7 +70,7 @@ const styles = {
 
 const overrideStyles = { editorContent: editorStyles.editorContent };
 
-interface PageEditorProps {
+export interface PageEditorProps {
   /** Composer that receives selections created by the Ask Copilot toolbar item. */
   askCopilotTarget?: ComposerTarget;
   emoji?: string;
@@ -88,6 +88,8 @@ interface PageEditorProps {
    * index — see {@link PublicState.metaReadOnly}).
    */
   metaReadOnly?: boolean;
+  /** Explicit equivalent implemented against NativePageChromeContext. */
+  nativeHeader?: PageEditorHeader;
   onBack?: () => void;
   onDelete?: () => void;
   onDocumentIdChange?: (newId: string) => void;

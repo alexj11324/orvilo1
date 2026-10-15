@@ -2,11 +2,12 @@
 
 import { memo } from 'react';
 
-import { createModal } from '@/components/Modal';
+import { createModal, useModalContext } from '@/components/Modal';
 import { PageAgentPanelOverrideProvider } from '@/features/PageEditor/RightPanel/OverrideContext';
 import PageExplorer from '@/features/PageExplorer';
 
 import DocumentModalHeader from './Header';
+import NativeDocumentModalHeader from './NativeHeader';
 
 interface DocumentModalContentProps {
   documentId: string;
@@ -14,12 +15,18 @@ interface DocumentModalContentProps {
 }
 
 const DocumentModalContent = memo<DocumentModalContentProps>(({ documentId, onDeleted }) => {
+  const { close } = useModalContext();
   return (
     <PageAgentPanelOverrideProvider defaultExpand={false}>
       <PageExplorer
         fullWidthHeader
         header={<DocumentModalHeader onDeleted={onDeleted} />}
+        nativeHeader={<NativeDocumentModalHeader />}
         pageId={documentId}
+        onDelete={() => {
+          close();
+          onDeleted?.();
+        }}
       />
     </PageAgentPanelOverrideProvider>
   );

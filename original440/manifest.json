@@ -1,0 +1,17 @@
+{
+  "schema": "original440-immutable-git-capsule-v1",
+  "capsuleSHA256": "cb7eb0e195f80714fca21d6ce9e5846b80edeab0a7f88c338770e9d0149953e5",
+  "capsuleBytes": 3683675,
+  "chunkMaximumBytes": 16777216,
+  "chunks": [
+    {
+      "path": "original440/part-000.bin",
+      "gitBlob": "be262b0f92ed43e0c3f8135b9b73897edcfc553a",
+      "sha256": "cb7eb0e195f80714fca21d6ce9e5846b80edeab0a7f88c338770e9d0149953e5",
+      "bytes": 3683675
+    }
+  ],
+  "sourceSealSHA256": "2d576a2af3236a58b07502b6de58a4942a3545ae9ccd607f0ae3dd7298f84087",
+  "runtimeAccepted": false,
+  "newCandidateRuntimeEvidence": false
+}

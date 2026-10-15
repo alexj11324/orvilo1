@@ -1,5 +1,6 @@
 import { TRPCError } from '@trpc/server';
 
+import { TaskDomainError } from '@/database/errors/task';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import {
   TaskDispatchModel,
@@ -61,7 +62,10 @@ export const processPlanningTaskDispatchStart = async (input: {
       workspaceId,
     });
   } catch (error) {
-    if (!(error instanceof TRPCError) || (error.code !== 'FORBIDDEN' && error.code !== 'NOT_FOUND'))
+    if (
+      !(error instanceof TRPCError || error instanceof TaskDomainError) ||
+      (error.code !== 'FORBIDDEN' && error.code !== 'NOT_FOUND')
+    )
       throw error;
     return { dispatchId: candidate.dispatchId, outcome: 'waiting', reason: 'agent_use_denied' };
   }

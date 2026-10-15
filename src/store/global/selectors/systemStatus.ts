@@ -222,8 +222,8 @@ export const DEFAULT_SIDEBAR_ITEMS: string[] = [
 
 /**
  * Sidebar keys whose product surface has been withdrawn by the task-first
- * convergence and the Linear IA swap. See docs/development/product-scope.md
- * and src/features/Navigation/sidebarContract.ts.
+ * convergence and the Linear IA swap. See docs/development/product-scope.md.
+ * The canonical order is `DEFAULT_SIDEBAR_ITEMS` in this file.
  *
  * Retired keys can never resurface: `sidebarItems` ignores stored order
  * entirely, and `hiddenSidebarSections` / `sidebarExpandedKeys` strip these
@@ -383,7 +383,7 @@ export const reorderSidebarItems = (items: string[], from: number, to: number): 
 };
 
 /**
- * The primary IA is a fixed contract (see `features/Navigation/sidebarContract`):
+ * The primary IA is a fixed contract (`DEFAULT_SIDEBAR_ITEMS` above):
  * stored or workspace-synced preferences may hide optional sections via
  * `hiddenSidebarSections`, but they can never reorder the core structure or
  * resurrect retired keys — the read path always yields the canonical order.

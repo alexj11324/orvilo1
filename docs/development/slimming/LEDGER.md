@@ -21,7 +21,7 @@
 | Collaboration / presence / shared conversations      | collaboration-gateway、share host                                                                  | `collaboration`             |
 | GitHub / Linear integration                          | connector/linearSync/repository routers 与 services、Connectors UI                                 | `github-linear-integration` |
 | Conversation / activity UI                           | Conversation/ChatInput/activity/intervention 展示面（见 §3 REWRITE）                               | `conversation-surface`      |
-| Auth / DB / storage / observability                  | better-auth/OIDC、credential vault、database/trpc/types/utils                                      | `auth-infra` / `data-infra` |
+| Auth / DB / storage / observability                  | Clerk accounts portal / app sessions / OIDC、credential vault、database/trpc/types/utils           | `auth-infra` / `data-infra` |
 | Harness-native agent tools                           | builtin-tool-\* / builtin-skills / builtin-agents、editor-runtime、web-crawler、python-interpreter | `agent-tools`               |
 | Documents / Pages                                    | AgentDocument\*、PageEditor、Portal、ResourceManager                                               | `documents-pages`           |
 | Desktop / mobile / share hosts                       | apps/desktop、apps/workbench、apps/share                                                           | `desktop-mobile-shell`      |

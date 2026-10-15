@@ -117,6 +117,9 @@ export interface GlobalSearchAllResponse {
 }
 
 class GlobalSearchService {
+  queryFts = (...args: Parameters<typeof lambdaClient.search.query.query>) =>
+    lambdaClient.search.query.query(...args);
+
   /**
    * Search everything the caller can see. Work results lead (Linear-parity
    * surfaces put issues/projects/views first), then FTS content results.

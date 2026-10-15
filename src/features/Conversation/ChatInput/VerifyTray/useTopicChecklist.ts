@@ -10,7 +10,6 @@ import { verifyKeys } from '@/libs/swr/keys';
 import { mutate as scopedMutate } from '@/libs/swr/mutate';
 import { verifyService } from '@/services/verify';
 
-import { openGoalModal } from './GoalModal';
 import type { TrayCheck } from './types';
 
 /**
@@ -91,32 +90,6 @@ const persistGoal = (topicId: string, orchestrationWorkflow: string, checks: Tra
   commit(topicId, { checks, orchestrationWorkflow }, () =>
     verifyService.saveAcceptanceGoal('topic', topicId, orchestrationWorkflow),
   );
-
-/**
- * Set the topic's Goal without a mounted tray (used by the composer "+" →
- * "Goal" entry). Reads the current state, writes the goal, and revalidates
- * the shared SWR key so the tray reflects it.
- */
-export const setTopicGoal = async (topicId: string, orchestrationWorkflow: string) => {
-  const current = await read(topicId);
-  await persistGoal(topicId, orchestrationWorkflow, current.checks);
-};
-
-/**
- * Open the "set goal" modal for a topic from outside a mounted tray (the
- * composer "+" menu), prefilled with the current goal so an existing one is
- * edited rather than silently overwritten.
- */
-export const openTopicGoalModal = async (topicId: string) => {
-  const current = await read(topicId);
-  openGoalModal({
-    initialOrchestrationWorkflow: current.orchestrationWorkflow || undefined,
-    // Only offer delete when there's an existing goal to clear. Clearing writes
-    // an empty requirement, which hides the tray (checks kept).
-    onDelete: current.orchestrationWorkflow ? () => setTopicGoal(topicId, '') : undefined,
-    onSubmit: (orchestrationWorkflow) => setTopicGoal(topicId, orchestrationWorkflow),
-  });
-};
 
 /**
  * The topic's Goal + tracking checks, persisted on the verify aggregate — not

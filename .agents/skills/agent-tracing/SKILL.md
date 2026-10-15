@@ -10,11 +10,16 @@ user-invocable: false
 
 ## How It Works
 
-In `NODE_ENV=development`, `AgentRuntimeService.executeStep()` automatically records each step to `.agent-tracing/` as partial snapshots. When the operation completes, the partial is finalized into a complete `ExecutionSnapshot` JSON file.
+Current server-side heterogeneous execution records through
+`apps/server/src/services/heterogeneousAgent/index.ts` and `HeteroTraceRecorder`.
+The store is selected by `createDefaultSnapshotStore`; do not assume every host
+writes local files or emits context-engine fields.
 
-**Data flow**: executeStep loop -> build `StepPresentationData` -> write partial snapshot to disk -> on completion, finalize to `.agent-tracing/{timestamp}_{traceId}.json`
+**Current data flow**: heterogeneous stream events → `heteroIngest` →
+`HeteroTraceRecorder.appendBatch` → partial store → completion/finalize →
+`ExecutionSnapshot`. The local CLI can inspect snapshots available to its store.
 
-**Context engine capture**: In `RuntimeExecutors.ts`, the `call_llm` executor calls `ctx.tracingContextEngine(input, output)` after `serverMessagesEngine()` processes messages. `AgentRuntimeService.executeStep` buffers the call per step and forwards it to `OperationTraceRecorder.appendStep` as the typed `contextEngine` field. CE flows through this side channel rather than the `events` array so its heavy payload (agentDocuments, systemRole, …) never enters the Redis state pipeline (ORVILO-9110).
+**Context engine capture in historical operation snapshots**: `OperationTraceRecorder` retains the typed `contextEngine` field separately from the `events` array. The old `RuntimeExecutors` / `AgentRuntimeService.executeStep` producer was removed. Current heterogeneous runs use `HeteroTraceRecorder`; inspect their actual ingest path before expecting legacy context-engine fields.
 
 ## Package Location
 
@@ -371,6 +376,13 @@ When using `--messages`, the output shows three sections (if context engine data
 
 ## Integration Points
 
-- **Recording**: `apps/server/src/services/agentRuntime/AgentRuntimeService.ts` — in the `executeStep()` method, after building `stepPresentationData`, writes partial snapshot in dev mode
-- **Context engine capture**: `apps/server/src/modules/AgentRuntime/RuntimeExecutors.ts` — in `call_llm` executor, after `serverMessagesEngine()` returns, calls `ctx.tracingContextEngine(input, output)`. `AgentRuntimeService.executeStep` buffers it per step and passes it to `traceRecorder.appendStep` as the typed `contextEngine` field (kept off the `events` array to stay out of Redis state).
-- **Store**: `FileSnapshotStore` reads/writes to `.agent-tracing/` relative to `process.cwd()`
+- **Current heterogeneous execution**: `apps/server/src/services/heterogeneousAgent/index.ts`
+  calls `HeteroTraceRecorder.appendBatch` on ingest and finalizes the trace on completion.
+  The recorder is `apps/server/src/services/heterogeneousAgent/HeteroTraceRecorder.ts`.
+- **Retained operation snapshots**: `apps/server/src/services/agentExecution/OperationTraceRecorder.ts`
+  owns the legacy operation snapshot format; `AbandonOperationService.ts` still finalizes it.
+  The old server `AgentRuntimeService.executeStep` / `RuntimeExecutors` recording
+  path was removed. Do not recreate it or assume every current run supplies its
+  context-engine fields.
+- **Store**: `FileSnapshotStore` reads/writes `.agent-tracing/` relative to `process.cwd()`.
+  Select the actual producer before interpreting absent fields as a regression.

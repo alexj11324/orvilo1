@@ -16,6 +16,7 @@ import {
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { createTestSecretCipher } from '../../../tests/secretCipher';
 import { getTestDB } from '../../core/getTestDB';
 import { users } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -45,7 +46,7 @@ afterEach(async () => {
 
 describe('quota fossilization pipeline', () => {
   it('goes identity → account → snapshots → windows → ledger → calibration', async () => {
-    const accounts = new AgentProviderAccountModel(serverDB, userId);
+    const accounts = new AgentProviderAccountModel(serverDB, createTestSecretCipher, userId);
     const snapshots = new AgentQuotaSnapshotModel(serverDB, userId);
     const windows = new AgentQuotaWindowModel(serverDB, userId);
     const ledger = new AgentQuotaUsageLedgerModel(serverDB, userId);

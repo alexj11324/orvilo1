@@ -1,11 +1,6 @@
 import pagePresentation from '../PageEditor.module.css';
 import imagePresentation from './CommentImages.module.css';
 
-/** Max rendered height of an image inside the comment composer / edit box. */
-export const COMMENT_EDITOR_IMAGE_MAX_HEIGHT = 400;
-/** Max rendered height of an image inside a published comment. */
-export const COMMENT_CONTENT_IMAGE_MAX_HEIGHT = 480;
-
 /**
  * Comment boxes grow with their content indefinitely (Yuque-style) — the page
  * scrolls, the box never scrolls internally. `ChatInput` applies a 320px cap

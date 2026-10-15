@@ -159,8 +159,6 @@ i18n-unused-keys-report.json
 .vitest-reports
 .vitest/
 
-pnpm-lock.yaml
-!apps/desktop/pnpm-lock.yaml
 .turbo
 spaHtmlTemplates.ts
 

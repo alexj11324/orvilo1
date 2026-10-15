@@ -1,4 +1,5 @@
 'use client';
+
 import { InboxIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,8 +18,8 @@ import { WorkSurface, WorkSurfaceCollection } from '@/features/WorkSurface';
 import { useSearchParams } from '@/libs/router/navigation';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
-import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
+import { useFetchWorkTeam, useFetchWorkTeams } from '@/store/workTeam/hooks';
 
 import { otherTeamOptions } from './otherTeamOptions';
 import TeamHome from './TeamHome';
@@ -38,17 +39,8 @@ const TeamPage = memo(() => {
   // Linear's per-team sub-navigation lands here: home is the team context
   // surface; triage, issues, projects and views each get their own tab.
   const teamTab = searchParams.get('tab') ?? 'home';
-  const {
-    data: teamData,
-    error: teamError,
-    mutate: revalidateTeam,
-  } = useClientDataSWR(teamId && workspaceId ? ['team', workspaceId, teamId] : null, () =>
-    lambdaClient.team.team.query({ teamId: teamId! }),
-  );
-  const { data: teamsData } = useClientDataSWR(
-    workspaceId ? workAttentionKeys.teams(workspaceId) : null,
-    () => lambdaClient.team.teams.query(),
-  );
+  const { data: teamData, error: teamError, mutate: revalidateTeam } = useFetchWorkTeam(teamId);
+  const { data: teamsData } = useFetchWorkTeams();
   // Triage is a per-team capability — a team that turned intake off shows
   // no triage surface, and a `?tab=triage` deep link falls back to home.
   const triageCapable = teamData?.data.team.orchestrationPolicy?.triageEnabled !== false;

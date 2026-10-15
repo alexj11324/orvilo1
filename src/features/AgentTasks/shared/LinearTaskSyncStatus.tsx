@@ -1,5 +1,4 @@
 'use client';
-
 import type { LinearIssueLinkSyncState } from '@orvilo/types';
 import { CircleCheck, CircleDashed, CircleMinus, CircleX, TriangleAlert } from 'lucide-react';
 import { createContext, createElement, memo, type PropsWithChildren, use, useMemo } from 'react';
@@ -9,7 +8,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { Badge as Tag } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useClientDataSWR } from '@/libs/swr';
-import { lambdaClient } from '@/libs/trpc/client';
+import { linearSyncService } from '@/services/linearSync';
 import { useTaskStore } from '@/store/task';
 import { taskListSelectors } from '@/store/task/selectors';
 
@@ -89,7 +88,7 @@ export const LinearTaskSyncProvider = ({
       ? `linear-sync/issue-links/${workspaceId}/${taskIdsKey}`
       : null,
     async () => {
-      const response = await lambdaClient.linearSync.issueLinks.query({ taskIds });
+      const response = await linearSyncService.issueLinks({ taskIds });
       return (response?.data ?? []) as LinearIssueLinkView[];
     },
     { dedupingInterval: 30_000, refreshInterval: 30_000 },

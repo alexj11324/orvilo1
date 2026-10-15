@@ -6,8 +6,6 @@ import type {
 } from '@orvilo/types';
 import type { PartialDeep } from 'type-fest';
 
-export const ORVILO_HETEROGENEOUS_TYPE = 'orvilo' satisfies BuiltinHeterogeneousAgentType;
-
 /**
  * The builtin Orvilo agent's harness is fixed to Prime — never a selectable
  * engine — and it resolves a device like every other agent type

@@ -1,0 +1,87 @@
+{
+  "areas": {
+    "documentation": {
+      "M": 353,
+      "=": 106,
+      "A": 1062,
+      "D": 216
+    },
+    "other": {
+      "M": 93,
+      "=": 213,
+      "A": 600,
+      "D": 37
+    },
+    "tests": {
+      "A": 938,
+      "M": 1380,
+      "=": 1592,
+      "D": 549
+    },
+    "configuration-tooling": {
+      "=": 111,
+      "A": 117,
+      "M": 102,
+      "D": 22
+    },
+    "skills": {
+      "D": 51,
+      "A": 147,
+      "M": 122,
+      "=": 134
+    },
+    "cli": {
+      "=": 52,
+      "D": 19,
+      "A": 7,
+      "M": 71
+    },
+    "desktop": {
+      "=": 161,
+      "M": 162,
+      "A": 2,
+      "D": 22
+    },
+    "backend": {
+      "M": 415,
+      "A": 256,
+      "=": 298,
+      "D": 326
+    },
+    "localization": {
+      "M": 532,
+      "=": 390,
+      "D": 114,
+      "A": 4
+    },
+    "shared-packages": {
+      "=": 1818,
+      "M": 1027,
+      "A": 218,
+      "D": 246
+    },
+    "database": {
+      "=": 437,
+      "M": 177,
+      "A": 189,
+      "D": 14
+    },
+    "web": {
+      "=": 1760,
+      "M": 2321,
+      "D": 1252,
+      "A": 1053
+    }
+  },
+  "base": "cfa85e6deea45a9a8a4971003ee2f659eff0b4b3",
+  "counts": {
+    "M": 6755,
+    "=": 7072,
+    "A": 4593,
+    "D": 2868
+  },
+  "currentSkills": 59,
+  "environmentNames": 799,
+  "head": "6996af3d3c27f590220902e0fbda261b18e6b6c8",
+  "scope": "Immutable tracked trees, including unchanged paths. Renames are A+D. Environment inventory covers literal process.env/import.meta.env references in JS/TS, excluding test files and tests/e2e/vendor roots; comments may match. Dynamic names, destructuring, shell variables and semantic correctness require manual review. Values are never exported. Working-tree fixes are not part of this historical snapshot."
+}

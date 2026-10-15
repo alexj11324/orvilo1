@@ -112,7 +112,9 @@ const startServer = async () => {
 
   process.title = `orvilo-dev-hono-${port}`;
   server.listen(port, host, () => {
-    console.info(`Hono runtime ready at http://${host}:${port}`);
+    const address = server.address();
+    const listeningPort = address && typeof address !== 'string' ? address.port : port;
+    console.info(`Hono runtime ready at http://${host}:${listeningPort}`);
   });
 };
 

@@ -2,6 +2,7 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { createTestSecretCipher } from '../../../tests/secretCipher';
 import { getTestDB } from '../../core/getTestDB';
 import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agentProviderAccounts, agents, users, workspaces } from '../../schemas';
@@ -48,8 +49,17 @@ afterEach(async () => {
 
 describe('Agent quota workspace scope', () => {
   it('isolates accounts and bindings between personal and workspace mode', async () => {
-    const personalAccounts = new AgentProviderAccountModel(serverDB, userId);
-    const workspaceAccounts = new AgentProviderAccountModel(serverDB, userId, workspaceId);
+    const personalAccounts = new AgentProviderAccountModel(
+      serverDB,
+      createTestSecretCipher,
+      userId,
+    );
+    const workspaceAccounts = new AgentProviderAccountModel(
+      serverDB,
+      createTestSecretCipher,
+      userId,
+      workspaceId,
+    );
 
     const personal = await personalAccounts.create({
       credentialMode: 'referenced',
@@ -100,14 +110,26 @@ describe('Agent quota workspace scope', () => {
     expect((await teammateBindings.listByAgent(wsAgentId)).map((b) => b.accountId)).toEqual([
       shared.id,
     ]);
-    const teammateAccounts = new AgentProviderAccountModel(serverDB, teammateId, workspaceId);
+    const teammateAccounts = new AgentProviderAccountModel(
+      serverDB,
+      createTestSecretCipher,
+      teammateId,
+      workspaceId,
+    );
     expect((await teammateAccounts.list()).map((a) => a.id)).toEqual([shared.id]);
     // the teammate still cannot reach the owner's personal account
-    expect(await new AgentProviderAccountModel(serverDB, teammateId).list()).toEqual([]);
+    expect(
+      await new AgentProviderAccountModel(serverDB, createTestSecretCipher, teammateId).list(),
+    ).toEqual([]);
   });
 
   it('scopes the observation tables (snapshots, ledger, windows, calibrations)', async () => {
-    const workspaceAccounts = new AgentProviderAccountModel(serverDB, userId, workspaceId);
+    const workspaceAccounts = new AgentProviderAccountModel(
+      serverDB,
+      createTestSecretCipher,
+      userId,
+      workspaceId,
+    );
     const account = await workspaceAccounts.create({
       credentialMode: 'referenced',
       provider: 'claude-code',
@@ -162,8 +184,17 @@ describe('Agent quota workspace scope', () => {
 
   it('lets the same external identity exist once per scope', async () => {
     const identity = { externalAccountId: 'ext-acc-1', email: 'a@b.com' };
-    const personalAccounts = new AgentProviderAccountModel(serverDB, userId);
-    const workspaceAccounts = new AgentProviderAccountModel(serverDB, userId, workspaceId);
+    const personalAccounts = new AgentProviderAccountModel(
+      serverDB,
+      createTestSecretCipher,
+      userId,
+    );
+    const workspaceAccounts = new AgentProviderAccountModel(
+      serverDB,
+      createTestSecretCipher,
+      userId,
+      workspaceId,
+    );
 
     const personal = await personalAccounts.upsertByIdentity('claude-code', identity);
     const shared = await workspaceAccounts.upsertByIdentity('claude-code', identity);
@@ -178,7 +209,12 @@ describe('Agent quota workspace scope', () => {
     // …and so does a teammate observing it from their own device: one real
     // account must stay ONE row per workspace, or the load balancer would count
     // its capacity twice.
-    const teammateAccounts = new AgentProviderAccountModel(serverDB, teammateId, workspaceId);
+    const teammateAccounts = new AgentProviderAccountModel(
+      serverDB,
+      createTestSecretCipher,
+      teammateId,
+      workspaceId,
+    );
     const fromTeammate = await teammateAccounts.upsertByIdentity('claude-code', identity);
     expect(fromTeammate.id).toBe(shared.id);
     expect(await workspaceAccounts.list()).toHaveLength(1);

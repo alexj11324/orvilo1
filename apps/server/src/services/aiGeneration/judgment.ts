@@ -122,12 +122,6 @@ export class AcpJudgmentValidationError extends Error {
   }
 }
 
-export const isAcpJudgmentValidationError = (error: unknown): error is AcpJudgmentValidationError =>
-  error instanceof AcpJudgmentValidationError ||
-  (typeof error === 'object' &&
-    error !== null &&
-    (error as { code?: unknown }).code === 'ACP_JUDGMENT_SCHEMA_MISMATCH');
-
 /**
  * The binding a consumer offers for one judgment. `agentId` pins a user agent
  * (the run keeps that agent's own runtime config); `slug` names a builtin

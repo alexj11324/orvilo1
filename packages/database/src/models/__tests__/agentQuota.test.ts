@@ -2,6 +2,7 @@
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { createTestSecretCipher } from '../../../tests/secretCipher';
 import { getTestDB } from '../../core/getTestDB';
 import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agentProviderAccounts, agents, users } from '../../schemas';
@@ -39,7 +40,7 @@ beforeEach(async () => {
     .insert(agents)
     .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
 
-  accounts = new AgentProviderAccountModel(serverDB, userId);
+  accounts = new AgentProviderAccountModel(serverDB, createTestSecretCipher, userId);
   bindings = new AgentAccountBindingModel(serverDB, userId);
   snapshots = new AgentQuotaSnapshotModel(serverDB, userId);
   ledger = new AgentQuotaUsageLedgerModel(serverDB, userId);

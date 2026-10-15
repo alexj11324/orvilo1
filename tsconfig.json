@@ -1,18 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "target": "ESNext",
     "lib": ["dom", "dom.iterable", "dom.asynciterable", "esnext", "webworker"],
     "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
     "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
     "types": ["vitest/globals"],
@@ -53,6 +44,7 @@
     "tests/ui-alignment/playwright.config.ts",
     "knip.ts"
   ],
+  "extends": "./tsconfig.base.json",
   "include": [
     "src/**/*.d.ts",
     "src/**/*.ts",

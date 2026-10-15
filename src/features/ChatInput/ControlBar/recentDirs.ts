@@ -1,5 +1,4 @@
 export const RECENT_DIRS_KEY = 'orvilo-recent-working-directories';
-export const MAX_RECENT_DIRS = 20;
 
 export interface RecentDirEntry {
   path: string;
@@ -20,19 +19,6 @@ export const getRecentDirs = (): RecentDirEntry[] => {
   } catch {
     return [];
   }
-};
-
-export const addRecentDir = (entry: RecentDirEntry): RecentDirEntry[] => {
-  const dirs = getRecentDirs().filter((d) => d.path !== entry.path);
-  const updated = [entry, ...dirs].slice(0, MAX_RECENT_DIRS);
-  localStorage.setItem(RECENT_DIRS_KEY, JSON.stringify(updated));
-  return updated;
-};
-
-export const removeRecentDir = (path: string): RecentDirEntry[] => {
-  const updated = getRecentDirs().filter((d) => d.path !== path);
-  localStorage.setItem(RECENT_DIRS_KEY, JSON.stringify(updated));
-  return updated;
 };
 
 /**

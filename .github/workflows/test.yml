@@ -20,158 +20,41 @@ env:
   CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
 jobs:
-  # Check for duplicate runs
-  check-duplicate-run:
-    name: Check Duplicate Run
-    runs-on: ubuntu-latest
-    outputs:
-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
-      # The action's output is `reason` — `skip_reason` would always read
-      # empty and fail closed even for legitimate completed duplicates.
-      skip_reason: ${{ steps.skip_check.outputs.reason }}
-    steps:
-      - id: skip_check
-        uses: fkirc/skip-duplicate-actions@v5
-        with:
-          concurrent_skipping: 'same_content_newer'
-          skip_after_successful_duplicate: 'true'
-          # Push runs are the canonical owner: when a PR run and a push run
-          # for the same head SHA start within seconds of each other,
-          # `same_content_newer` on the push run sees the PR run as the newer
-          # sibling and cancels itself — while the PR run also skips its
-          # leafs and only mirrors a verdict. Both runs then die untested and
-          # the PR gate mirrors the cancelled owner's failure. Pinning push to
-          # do_not_skip gives the pair a deterministic owner: the push run
-          # always executes, the PR run always mirrors it.
-          do_not_skip: '["push", "workflow_dispatch", "schedule"]'
-          # `do_not_skip` only stops THIS run from self-skipping — the action
-          # still cancels the older sibling run (the push-run owner) when the
-          # newer PR run proceeds. `cancel_others: false` keeps sibling runs
-          # alive so the owner verdict always lands.
-          cancel_others: 'false'
-
-  # Path triage — one cheap job diffs the PR and reports which test areas
-  # actually need to run. Leaf jobs skip when their area is untouched, and the
-  # quality gate accepts a *filter* skip while still failing on any other.
+  # Same-repository PRs use the push check on their head SHA. Do not create a
+  # second Required Quality Gate on the merge SHA: even a skipped check would
+  # take precedence over the real head check in branch protection.
   changes:
     name: Detect changed areas
-    needs: check-duplicate-run
-    if: needs.check-duplicate-run.outputs.should_skip != 'true'
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     outputs:
-      app: ${{ steps.filter.outputs.app }}
-      code: ${{ steps.filter.outputs.code }}
-      database: ${{ steps.filter.outputs.database }}
-      desktop: ${{ steps.filter.outputs.desktop }}
-      packages: ${{ steps.filter.outputs.packages }}
-      server: ${{ steps.filter.outputs.server }}
-      windows_shell: ${{ steps.filter.outputs.windows_shell }}
+      app: ${{ steps.plan.outputs.app }}
+      code: ${{ steps.plan.outputs.code }}
+      typecheck: ${{ steps.plan.outputs.typecheck }}
+      database: ${{ steps.plan.outputs.database }}
+      desktop: ${{ steps.plan.outputs.desktop }}
+      packages: ${{ steps.plan.outputs.packages }}
+      server: ${{ steps.plan.outputs.server }}
+      windows_shell: ${{ steps.plan.outputs.windows_shell }}
+      test_packages: ${{ steps.plan.outputs.test_packages }}
+      cli: ${{ steps.plan.outputs.cli }}
+      coverage: ${{ steps.plan.outputs.coverage }}
     steps:
-      # paths-filter runs `git` to resolve the current ref and, on push runs,
-      # diffs the before..after SHAs locally — a checkout with full history is
-      # required. A tag/first push with no resolvable base reports every area
-      # changed (full coverage).
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
-
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            code:
-              - '.github/workflows/test.yml'
-              - '.github/actions/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
-              - 'bunfig.toml'
-              - 'tsconfig.json'
-              - 'vitest.config.mts'
-              - 'scripts/**'
-              - '**/*.ts'
-              - '**/*.tsx'
-              - '**/*.mts'
-              - '**/*.cts'
-              - '**/*.sql'
-            packages:
-              - '.github/workflows/test.yml'
-              - '.github/actions/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
-              - 'bunfig.toml'
-              - 'tsconfig.json'
-              - 'vitest.config.mts'
-              - 'scripts/**'
-              - 'packages/**'
-            app:
-              - '.github/workflows/test.yml'
-              - '.github/actions/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
-              - 'bunfig.toml'
-              - 'tsconfig.json'
-              - 'vitest.config.mts'
-              - 'scripts/**'
-              - 'packages/**'
-              - 'src/**'
-              - 'apps/server/**'
-              - 'public/**'
-              - 'locales/**'
-            server:
-              - '.github/workflows/test.yml'
-              - '.github/actions/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
-              - 'bunfig.toml'
-              - 'tsconfig.json'
-              - 'vitest.config.mts'
-              - 'scripts/**'
-              - 'packages/**'
-              - 'apps/server/**'
-            desktop:
-              - '.github/workflows/test.yml'
-              - '.github/actions/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
-              - 'bunfig.toml'
-              - 'tsconfig.json'
-              - 'vitest.config.mts'
-              - 'scripts/**'
-              - 'packages/**'
-              - 'apps/desktop/**'
-            windows_shell:
-              - '.github/workflows/test.yml'
-              - '.github/actions/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
-              - 'bunfig.toml'
-              - 'tsconfig.json'
-              - 'vitest.config.mts'
-              - 'scripts/**'
-              - 'packages/local-file-shell/**'
-            database:
-              - '.github/workflows/test.yml'
-              - '.github/actions/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
-              - 'bunfig.toml'
-              - 'tsconfig.json'
-              - 'vitest.config.mts'
-              - 'scripts/**'
-              - 'packages/database/**'
+      - name: Verify CI planning and gate contracts
+        run: node --test .github/scripts/plan-affected-checks.test.mjs .github/scripts/run-ci-plan.test.mjs scripts/ci/vercelGateEvents.test.mjs
+      - name: Plan affected checks
+        id: plan
+        run: node .github/scripts/run-ci-plan.mjs
 
   # Full-repo type-check - CI-only; scripts/type-check.mjs fails fast locally
   # because root `tsgo --noEmit` OOMs developer machines.
   typecheck:
-    needs: [check-duplicate-run, changes]
-    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.code == 'true'
+    needs: changes
+    if: needs.changes.outputs.typecheck == 'true'
     name: Typecheck
     runs-on: ubuntu-latest
     steps:
@@ -189,7 +72,24 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Check architecture boundaries
+        run: |
+          node scripts/architecture/check-database-boundaries.mjs
+          node scripts/architecture/check-runtime-boundaries.mjs
+          node --test scripts/architecture/check-runtime-boundaries.test.mjs
+          node --test scripts/architecture/check-shared-resolutions.test.mjs
+          node scripts/ci/checkFrontendDataBoundaries.mjs
+
+      - name: Build independent type boundaries
+        run: |
+          node --test scripts/type-check-affected.test.mjs
+          pnpm exec tsc -b tsconfig.packages.json
+          node scripts/type-check-affected.mjs --all
+
+      - name: Check authentication tooling
+        run: node --test scripts/dockerPrebuild.test.mjs scripts/generate-oidc-jwk.test.mjs
 
       - name: Typecheck
         # Two runs lost their runner during tsgo without a TypeScript diagnostic.
@@ -211,8 +111,8 @@ jobs:
   # inbound dependency (i.e. live code importing a retired surface).
   # Pure Node script: no dependency install needed.
   slimming-boundary:
-    needs: [check-duplicate-run, changes]
-    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.code == 'true'
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     name: Slimming Boundary
     runs-on: ubuntu-latest
     steps:
@@ -225,6 +125,11 @@ jobs:
           git remote add origin "https://github.com/${REPOSITORY}.git"
           git fetch --no-tags --depth=1 origin "${REF_SHA}"
           git checkout --force FETCH_HEAD
+
+      - name: Check current repository contracts
+        run: |
+          node scripts/ci/checkRepositoryContracts.mjs
+          node --test scripts/ci/checkRepositoryContracts.test.mjs scripts/repositoryAudit.test.mjs
 
       - name: Check slimming boundary
         run: node scripts/slimming/census.mjs --check
@@ -240,8 +145,8 @@ jobs:
   # system (ReUI). Exemptions live in scripts/ci/nativeControlsAllowlist.json.
   # Pure Node script: no dependency install needed.
   native-controls:
-    needs: [check-duplicate-run, changes]
-    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.code == 'true'
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     name: Native Controls
     runs-on: ubuntu-latest
     steps:
@@ -270,8 +175,8 @@ jobs:
   # impls, the web entry closure must not pull exec builtins, server/CLI must
   # not reach apps/desktop. See scripts/ci/checkHostDeviceBoundaries.mjs.
   host-device-boundaries:
-    needs: [check-duplicate-run, changes]
-    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.code == 'true'
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     name: Host Device Boundaries
     runs-on: ubuntu-latest
     steps:
@@ -324,12 +229,12 @@ jobs:
         # protection. Vercel deploys run outside Actions and are untouched.
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   test-packages:
-    needs: [check-duplicate-run, changes]
-    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.packages == 'true'
+    needs: changes
+    if: needs.changes.outputs.packages == 'true'
     runs-on: ubuntu-latest
     name: Test Packages
     env:
-      PACKAGES: '@orvilo/file-loaders @orvilo/prompts @orvilo/model-runtime @orvilo/web-crawler @orvilo/electron-server-ipc @orvilo/utils @orvilo/context-engine @orvilo/agent-execution @orvilo/conversation-flow @orvilo/ssrf-safe-fetch @orvilo/memory-user-memory @orvilo/types @orvilo/trpc @orvilo/app-config @orvilo/locales @orvilo/env @orvilo/builtin-tool-orvilo-agent model-bank @orvilo/agent-gateway-client @orvilo/agent-manager-runtime @orvilo/device-gateway-client @orvilo/device-identity @orvilo/device-prime-host @orvilo/eval-dataset-parser @orvilo/eval-rubric @orvilo/fetch-sse @orvilo/heterogeneous-agents'
+      PACKAGES: ${{ needs.changes.outputs.test_packages }}
 
     steps:
       - name: Checkout
@@ -346,48 +251,36 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Install CLI deps
-        run: pnpm install
+        if: needs.changes.outputs.cli == 'true'
+        run: pnpm install --frozen-lockfile
         working-directory: apps/cli
 
       - name: Test CLI build configuration
+        if: needs.changes.outputs.cli == 'true'
         run: bunx vitest run --config vitest.config.mts --silent='passed-only' tsdown.config.test.ts
         working-directory: apps/cli
 
-      - name: Test packages with coverage
+      - name: Test affected packages
         run: |
           for package in $PACKAGES; do
             echo "::group::Testing $package"
-            bun run --filter $package test:coverage
+            pnpm --filter "$package" exec vitest run --coverage=${{ needs.changes.outputs.coverage }} --silent='passed-only'
             echo "::endgroup::"
           done
 
       - name: Upload coverage to Codecov
-        if: ${{ always() && env.CODECOV_TOKEN != '' }}
+        if: ${{ always() && needs.changes.outputs.coverage == 'true' && env.CODECOV_TOKEN != '' }}
         run: |
           curl -Os https://cli.codecov.io/latest/linux/codecov
           chmod +x codecov
 
-          # Build common args
-          COMMON_ARGS="--git-service github"
-
-          # PR args setup
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            COMMON_ARGS="$COMMON_ARGS --pr ${{ github.event.pull_request.number }}"
-            COMMON_ARGS="$COMMON_ARGS --sha ${{ github.event.pull_request.head.sha }}"
-            # Fork PR needs username:branch format for tokenless upload
-            if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
-              COMMON_ARGS="$COMMON_ARGS --branch ${{ github.event.pull_request.head.label }}"
-            else
-              COMMON_ARGS="$COMMON_ARGS --branch ${{ github.event.pull_request.head.ref }}"
-            fi
-          fi
-
-          # Token (if available)
+          # Coverage is only uploaded for protected-branch pushes.
+          COMMON_ARGS=(--git-service github)
           if [ -n "$CODECOV_TOKEN" ]; then
-            COMMON_ARGS="$COMMON_ARGS -t $CODECOV_TOKEN"
+            COMMON_ARGS+=(-t "$CODECOV_TOKEN")
           fi
 
           for package in $PACKAGES; do
@@ -407,8 +300,8 @@ jobs:
 
               echo "Uploading coverage for $dir as $flag..."
               ./codecov upload-coverage \
-                $COMMON_ARGS \
-                --file ./packages/$dir/coverage/lcov.info \
+                "${COMMON_ARGS[@]}" \
+                --file "./packages/$dir/coverage/lcov.info" \
                 --flag "$flag" \
                 --disable-search
             fi
@@ -426,8 +319,8 @@ jobs:
         # protection. Vercel deploys run outside Actions and are untouched.
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   test-app:
-    needs: [check-duplicate-run, changes]
-    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.app == 'true'
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     strategy:
       # `env` is not available here; same switch as CI_RUN_ALL.
       fail-fast: ${{ !(github.event_name == 'push' && contains(github.event.head_commit.message, '[ci full]')) }}
@@ -450,7 +343,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Enforce original Chinese UI font
         if: matrix.shard == 1
@@ -459,10 +352,10 @@ jobs:
           node --test scripts/ci/checkChineseUiFont.test.mjs
 
       - name: Run tests
-        run: bunx vitest --coverage --silent='passed-only' --reporter=default --reporter=blob --project app --shard=${{ matrix.shard }}/2
+        run: bunx vitest --coverage=${{ needs.changes.outputs.coverage }} --silent='passed-only' --reporter=default ${{ needs.changes.outputs.coverage == 'true' && '--reporter=blob' || '' }} --project app --shard=${{ matrix.shard }}/2
 
       - name: Upload blob report
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.changes.outputs.coverage == 'true' }}
         uses: actions/upload-artifact@v6
         with:
           name: blob-report-${{ matrix.shard }}
@@ -482,8 +375,8 @@ jobs:
         # protection. Vercel deploys run outside Actions and are untouched.
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   merge-app-coverage:
-    needs: test-app
-    if: ${{ !cancelled() && needs.test-app.result == 'success' }}
+    needs: [changes, test-app]
+    if: ${{ !cancelled() && needs.changes.outputs.coverage == 'true' && needs.test-app.result == 'success' }}
     name: Merge and Upload App Coverage
     runs-on: ubuntu-latest
     steps:
@@ -501,7 +394,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Download blob reports
         uses: actions/download-artifact@v7
@@ -514,7 +407,7 @@ jobs:
         run: bunx vitest --merge-reports --reporter=default --coverage
 
       - name: Upload App Coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
+        if: ${{ needs.changes.outputs.coverage == 'true' && env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -528,8 +421,8 @@ jobs:
   # detection cascade against real install paths. The driver script only needs
   # node builtins, so this job skips the monorepo install entirely.
   test-windows-shell:
-    needs: [check-duplicate-run, changes]
-    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.windows_shell == 'true'
+    needs: changes
+    if: needs.changes.outputs.windows_shell == 'true'
     name: Test Windows Shell
 
     runs-on: windows-latest
@@ -557,8 +450,8 @@ jobs:
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
 
   test-desktop:
-    needs: [check-duplicate-run, changes]
-    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.desktop == 'true'
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
     name: Test Desktop App
 
     runs-on: ubuntu-latest
@@ -578,7 +471,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
         working-directory: apps/desktop
         env:
           NODE_OPTIONS: --max-old-space-size=8192
@@ -587,7 +480,7 @@ jobs:
       # workspace root (../../packages/*). Installing the root workspace relinks them so
       # tsgo can resolve sibling packages from source.
       - name: Relink root workspace members
-        run: pnpm install --ignore-scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
         env:
           NODE_OPTIONS: --max-old-space-size=8192
 
@@ -596,11 +489,11 @@ jobs:
         working-directory: apps/desktop
 
       - name: Test Desktop Client
-        run: pnpm test
+        run: pnpm test --coverage=${{ needs.changes.outputs.coverage }}
         working-directory: apps/desktop
 
       - name: Upload Desktop App Coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
+        if: ${{ needs.changes.outputs.coverage == 'true' && env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -618,8 +511,8 @@ jobs:
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
 
   test-server:
-    needs: [check-duplicate-run, changes]
-    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.server == 'true'
+    needs: changes
+    if: needs.changes.outputs.server == 'true'
     strategy:
       # `env` is not available here; same switch as CI_RUN_ALL.
       fail-fast: ${{ !(github.event_name == 'push' && contains(github.event.head_commit.message, '[ci full]')) }}
@@ -634,10 +527,7 @@ jobs:
         ports:
           - 6379:6379
         options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
     env:
       SLACK_REDIS_TEST_URL: redis://127.0.0.1:6379
 
@@ -656,13 +546,20 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify standalone production deployment
+        if: matrix.shard == 1
+        run: |
+          pnpm --filter @orvilo/server build
+          pnpm --filter @orvilo/server check:dependencies
+          pnpm --filter @orvilo/server smoke:deployment
 
       - name: Test Server Coverage
-        run: bunx vitest --coverage --silent='passed-only' --reporter=default --reporter=blob --coverage.reportsDirectory=./apps/server/coverage --project server --shard=${{ matrix.shard }}/2
+        run: bunx vitest --coverage=${{ needs.changes.outputs.coverage }} --silent='passed-only' --reporter=default ${{ needs.changes.outputs.coverage == 'true' && '--reporter=blob' || '' }} --coverage.reportsDirectory=./apps/server/coverage --project server --shard=${{ matrix.shard }}/2
 
       - name: Upload blob report
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.changes.outputs.coverage == 'true' }}
         uses: actions/upload-artifact@v6
         with:
           name: server-blob-report-${{ matrix.shard }}
@@ -682,8 +579,8 @@ jobs:
         # protection. Vercel deploys run outside Actions and are untouched.
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   merge-server-coverage:
-    needs: test-server
-    if: ${{ !cancelled() && needs.test-server.result == 'success' }}
+    needs: [changes, test-server]
+    if: ${{ !cancelled() && needs.changes.outputs.coverage == 'true' && needs.test-server.result == 'success' }}
     name: Merge and Upload Server Coverage
     runs-on: ubuntu-latest
     steps:
@@ -701,7 +598,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Download blob reports
         uses: actions/download-artifact@v7
@@ -714,7 +611,7 @@ jobs:
         run: bunx vitest --merge-reports --reporter=default --coverage --coverage.reportsDirectory=./apps/server/coverage
 
       - name: Upload Server coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
+        if: ${{ needs.changes.outputs.coverage == 'true' && env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -722,8 +619,8 @@ jobs:
           flags: server
 
   test-database:
-    needs: [check-duplicate-run, changes]
-    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.database == 'true'
+    needs: changes
+    if: needs.changes.outputs.database == 'true'
     name: Test Database
 
     runs-on: ubuntu-latest
@@ -755,7 +652,7 @@ jobs:
         uses: ./.github/actions/setup-env
 
       - name: Install deps
-        run: pnpm i
+        run: pnpm i --frozen-lockfile
 
       # The service container runs a stock ParadeDB config; on CI runners its
       # checkpoints degrade into multi-minute write storms that starve queries.
@@ -783,7 +680,7 @@ jobs:
         run: bun run lint
 
       - name: Test Coverage
-        run: pnpm --filter @orvilo/database test:coverage
+        run: pnpm --filter @orvilo/database exec vitest run --config vitest.config.server.mts --coverage=${{ needs.changes.outputs.coverage }} --silent='passed-only'
         env:
           DATABASE_TEST_URL: postgresql://postgres:postgres@localhost:5432/postgres
           DATABASE_DRIVER: node
@@ -792,7 +689,7 @@ jobs:
           APP_URL: https://home.com
 
       - name: Upload Database coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
+        if: ${{ needs.changes.outputs.coverage == 'true' && env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -817,9 +714,8 @@ jobs:
         # protection. Vercel deploys run outside Actions and are untouched.
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
   required-quality-gate:
-    name: Required Quality Gate
+    name: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && 'Push owns quality checks' || 'Required Quality Gate' }}
     needs:
-      - check-duplicate-run
       - changes
       - typecheck
       - slimming-boundary
@@ -835,91 +731,19 @@ jobs:
       - merge-server-coverage
     # always(): a failed upstream must not skip this job — its result IS the
     # failure signal branch protection and the deploy pipeline read.
-    if: always()
+    if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository)
     runs-on: ubuntu-latest
     steps:
       - name: Verify every required job succeeded for this commit
         env:
           NEEDS: ${{ toJson(needs) }}
           GH_TOKEN: ${{ github.token }}
-          # How long a duplicate-skipped gate waits for the owning run's
-          # verdict before failing closed. Must exceed the full test suite.
-          GATE_MIRROR_TIMEOUT: '2700'
-          # pull_request runs evaluate the merge ref — gate check runs for the
-          # owning push run live on the head SHA.
-          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
-          # Only `skip_after_successful_duplicate` may turn the gate green: it
-          # means an identical tree already produced a genuinely-executed green
-          # run, whose check run covers this SHA. Concurrent skips
-          # (`same_content*`/`outdated_*`) mean a newer in-flight run owns the
-          # gate — failing here would leave a permanent red check run on this
-          # SHA that outlives the owner's green (required checks take the
-          # latest completed run per name), and a synthetic success would let a
-          # later `skip_after_successful_duplicate` reuse it even if the real
-          # run then fails. So wait for the owner's verdict and mirror it:
-          # green mirrors green, red mirrors red, no verdict in time fails.
-          if [ "$(echo "$NEEDS" | jq -r '.["check-duplicate-run"].outputs.should_skip')" = "true" ]; then
-            reason="$(echo "$NEEDS" | jq -r '.["check-duplicate-run"].outputs.skip_reason')"
-            echo "Duplicate skip reason: ${reason:-unknown}"
-            if [ "$reason" = "skip_after_successful_duplicate" ]; then
-              echo "An identical run already executed green for this SHA's tree — reusing its gate."
-              exit 0
-            fi
-            echo "Concurrent duplicate skip — waiting for the owning run's Required Quality Gate verdict."
-            deadline=$(( $(date +%s) + GATE_MIRROR_TIMEOUT ))
-            while :; do
-              # This job's own check run is still in_progress (conclusion null)
-              # and never matches the filter. A 'cancelled'/'neutral' verdict
-              # is not a verdict — it usually means an even newer run started,
-              # so keep waiting rather than mirroring a non-answer.
-              if ! verdict=$(gh api \
-                "repos/${{ github.repository }}/commits/${HEAD_SHA}/check-runs?per_page=100" \
-                --jq '[.check_runs[] | select(.name == "Required Quality Gate" and .conclusion != null)]
-                      | map(select(.conclusion == "success" or .conclusion == "failure"
-                          or .conclusion == "timed_out" or .conclusion == "action_required"))
-                      | sort_by(.completed_at) | last | .conclusion // ""' 2>&1); then
-                echo "Check-runs API call failed; retrying in 30s: $verdict"
-                verdict=''
-              fi
-              case "$verdict" in
-                success)
-                  echo "Owning run's gate succeeded — mirroring green."
-                  exit 0
-                  ;;
-                failure|timed_out|action_required)
-                  echo "::error::Owning run's gate concluded '${verdict}' — mirroring the failure."
-                  exit 1
-                  ;;
-              esac
-              # The owner's gate check run stays 'cancelled' forever when the
-              # push run itself was cancelled — fail-fast sibling cancel, a
-              # racing push on the same branch, or a manual cancel. No verdict
-              # can ever land for this SHA, so fail fast and point at the
-              # owner instead of hanging for the whole mirror timeout. A rerun
-              # resets the newest run's conclusion to null, which keeps waiting.
-              if owner=$(gh api \
-                "repos/${{ github.repository }}/actions/workflows/test.yml/runs?event=push&head_sha=${HEAD_SHA}&per_page=5" \
-                --jq '.workflow_runs[0] | {conclusion, html_url} | @json' 2>&1); then
-                owner_conclusion=$(echo "$owner" | jq -r '.conclusion // ""')
-                if [ "$owner_conclusion" = "cancelled" ]; then
-                  owner_url=$(echo "$owner" | jq -r '.html_url // ""')
-                  echo "::error::Owning push run was cancelled — no gate verdict can land for this SHA. The real failure (or cancel) lives in the owning run: ${owner_url}"
-                  exit 1
-                fi
-              else
-                echo "Owning-run lookup failed; continuing to wait: $owner"
-              fi
-              if [ "$(date +%s)" -ge "$deadline" ]; then
-                echo "::error::Timed out waiting for the owning run's Required Quality Gate verdict — failing closed."
-                exit 1
-              fi
-              echo "Owning run's gate not concluded yet; waiting 30s…"
-              sleep 30
-            done
+          if [ "$(echo "$NEEDS" | jq -r '.changes.result')" != success ]; then
+            echo '::error::Affected check planning did not succeed'
+            exit 1
           fi
-
           required=(
             typecheck
             slimming-boundary
@@ -937,7 +761,7 @@ jobs:
           # A job skipped because its area filter did not match is a pass —
           # any other non-success keeps the gate red.
           declare -A area_of=(
-            [typecheck]=code [slimming-boundary]=code [native-controls]=code [host-device-boundaries]=code [test-packages]=packages [test-app]=app
+            [typecheck]=typecheck [slimming-boundary]=code [native-controls]=code [host-device-boundaries]=code [test-packages]=packages [test-app]=app
             [merge-app-coverage]=app [test-windows-shell]=windows_shell
             [test-desktop]=desktop [test-server]=server
             [merge-server-coverage]=server [test-database]=database
@@ -947,6 +771,9 @@ jobs:
             result=$(echo "$NEEDS" | jq -r ".[\"$job\"].result")
             area=${area_of[$job]}
             filter=$(echo "$NEEDS" | jq -r ".changes.outputs.${area} // \"\"")
+            if [[ "$job" == merge-*-coverage ]] && [ "$(echo "$NEEDS" | jq -r '.changes.outputs.coverage')" = false ]; then
+              filter=false
+            fi
             if [ "$result" != "success" ] && ! { [ "$result" = "skipped" ] && [ "$filter" = "false" ]; }; then
               echo "::error::$job: $result (filter ${area}=${filter})"
               failed=1

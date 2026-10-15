@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { OrchestrationWorkflowModel } from '@/database/models/orchestrationWorkflow';
+import { TaskDomainError } from '@/database/errors/task';
 import { heteroAuthedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import {
@@ -49,7 +50,7 @@ const orchestrationWorkflowWriteProcedure = orchestrationWorkflowProcedure.use(
 const idInput = z.object({ id: z.string() });
 
 function mapOrchestrationWorkflowError(error: unknown, operation: string): never {
-  if (error instanceof TRPCError) throw error;
+  if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
   console.error(`[orchestration workflow:${operation}]`, error);
   throw new TRPCError({
     cause: error,

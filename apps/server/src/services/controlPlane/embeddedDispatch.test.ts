@@ -56,6 +56,7 @@ import {
 } from '@/database/schemas';
 import { TASK_EXECUTION_CONTROL_CANDIDATE_SQL } from '@/database/schemas/taskExecutionControl';
 import type { OrviloDatabase } from '@/database/type';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import {
   cleanupTestUser,
   createTestUser,
@@ -548,7 +549,7 @@ const seedEmbeddedRun = async (init: { delegateGrant?: boolean } = {}) => {
 };
 
 const seedBinding = async (userId: string) => {
-  const cred = await new CredentialModel(db, userId).create({
+  const cred = await new CredentialModel(db, KeyVaultsGateKeeper.initWithEnvKey, userId).create({
     key: `key_${randomBytes(4).toString('hex')}`,
     name: 'Fixture credential',
     payload: { values: { PROVIDER_KEY: 'env-secret-7' } },

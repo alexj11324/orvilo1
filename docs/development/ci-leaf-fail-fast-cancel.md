@@ -1,3 +1,7 @@
+> Current ownership: same-repository PRs use the push run's head-SHA check directly.
+> The PR mirror described below was removed by the [CI load reduction](./ci-load-reduction.md).
+> Leaf self-cancellation still applies; inspect the owning push run for its first failure.
+
 # CI leaf fail-fast hides the real failure
 
 When a `test.yml` leaf job fails, its trailing `Fail fast — cancel sibling

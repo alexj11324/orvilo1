@@ -188,8 +188,6 @@ interface OptimisticTopicPlaceholder {
  */
 
 type Setter = StoreSetter<ChatStore>;
-export const conversationLifecycle = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new ConversationLifecycleActionImpl(set, get, _api);
 
 const isAbortError = (error: unknown, abortController?: AbortController) =>
   !!abortController?.signal.aborted ||

@@ -22,6 +22,7 @@ import { getTestDB } from '@/database/core/getTestDB';
 import { CredentialModel } from '@/database/models/credential';
 import { credentials, providerBindings, taskDispatches, workspaces } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { cleanupTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 
 import type { CanonicalRunBinding } from './canonicalRun';
@@ -133,7 +134,7 @@ const insertBinding = async (userId: string, config: ProviderBindingConfig) =>
   (await db.insert(providerBindings).values({ config, userId }).returning())[0]!;
 
 const createCredential = (userId: string, values: Record<string, string>) =>
-  new CredentialModel(db, userId).create({
+  new CredentialModel(db, KeyVaultsGateKeeper.initWithEnvKey, userId).create({
     key: `key_${randomBytes(4).toString('hex')}`,
     name: 'Fixture credential',
     payload: { values },

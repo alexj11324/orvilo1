@@ -29,13 +29,6 @@ Orvilo delegates sign-in to a Clerk-powered accounts portal. The variables below
 - Default: `-`
 - Example: `.aspectlylabs.com`
 
-#### `AUTH_COOKIE_PREFIX`
-
-- Type: Optional
-- Description: Namespace of the legacy Better Auth cookie (`<prefix>.session_token`), retained for cleanup only. Legacy and unbound sessions require signing in again. Has no effect on the new `orvilo_auth` cookie.
-- Default: `better-auth`
-- Example: `my-orvilo`
-
 #### `AUTH_SESSION_TTL_SECONDS`
 
 - Type: Optional
@@ -53,7 +46,7 @@ Orvilo delegates sign-in to a Clerk-powered accounts portal. The variables below
 #### `AUTH_EMAIL_VERIFICATION`
 
 - Type: Optional
-- Description: Set to `1` to require email verification on the portal.
+- Description: Set to `1` to expose email-verification presentation metadata. This flag does not enforce server-side authentication; configure verification policy in Clerk.
 - Default: `0`
 - Example: `1`
 
@@ -181,3 +174,9 @@ Transactional email (workspace invitations, notifications) supports two provider
 
 - Type: Optional
 - Description: Sender address for Resend mail.
+
+## Retired configuration
+
+`AUTH_COOKIE_PREFIX`, `AUTH_SECRET`, `AUTH_SSO_PROVIDERS` and provider-specific
+Better Auth variables are no longer consumed by the current authentication runtime.
+Legacy cookies are not accepted. Configure sign-in and registration policies in Clerk.

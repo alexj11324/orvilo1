@@ -17,8 +17,6 @@ import { type StoreSetter } from '@/store/types';
  */
 
 type Setter = StoreSetter<ChatStore>;
-export const pluginInternals = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new PluginInternalsActionImpl(set, get, _api);
 
 export class PluginInternalsActionImpl {
   constructor(set: Setter, get: () => ChatStore, _api?: unknown) {

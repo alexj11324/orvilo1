@@ -1,7 +1,5 @@
 import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 
-import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
-
 import type {
   AgentProviderAccountItem,
   NewAgentAccountBinding,
@@ -24,6 +22,7 @@ import {
   QuotaBindingRole,
   QuotaCredentialMode,
 } from '../types/agentQuota';
+import type { SecretCipher, SecretCipherFactory } from '../utils/secretCipher';
 import {
   buildStrictWorkspaceWhere,
   buildWorkspacePayload,
@@ -54,16 +53,21 @@ export class AgentProviderAccountModel {
   private userId: string;
   private db: OrviloDatabase;
   private workspaceId?: string;
-  private gateKeeperPromise: Promise<KeyVaultsGateKeeper> | null = null;
+  private gateKeeperPromise: Promise<SecretCipher> | null = null;
 
-  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
+  constructor(
+    db: OrviloDatabase,
+    private readonly createCipher: SecretCipherFactory,
+    userId: string,
+    workspaceId?: string,
+  ) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
   }
 
   private async getGateKeeper() {
-    if (!this.gateKeeperPromise) this.gateKeeperPromise = KeyVaultsGateKeeper.initWithEnvKey();
+    if (!this.gateKeeperPromise) this.gateKeeperPromise = this.createCipher();
     return this.gateKeeperPromise;
   }
 

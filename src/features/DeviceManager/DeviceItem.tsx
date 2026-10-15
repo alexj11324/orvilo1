@@ -1,5 +1,4 @@
 'use client';
-
 import type { DeviceListItem } from '@orvilo/types';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -27,7 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';
-import { lambdaQuery } from '@/libs/trpc/client';
+import { deviceQueries } from '@/services/reactQueryBindings';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
@@ -75,10 +74,10 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
   // server; personal devices stay userId-scoped. Route by the device's own
   // scope.
   const onRemoveSuccess = () => refreshDeviceList();
-  const removePersonal = lambdaQuery.device.removeDevice.useMutation({
+  const removePersonal = deviceQueries.removeDevice.useMutation({
     onSuccess: onRemoveSuccess,
   });
-  const removeWorkspace = lambdaQuery.device.removeWorkspaceDevice.useMutation({
+  const removeWorkspace = deviceQueries.removeWorkspaceDevice.useMutation({
     onSuccess: onRemoveSuccess,
   });
   const removeDevice = device.scope === 'workspace' ? removeWorkspace : removePersonal;
@@ -116,7 +115,7 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
   // shared visibility-confirm body so the consequences copy matches agents /
   // files. Success feedback is the row itself moving to the other tab after
   // the list refresh.
-  const setVisibility = lambdaQuery.device.setWorkspaceDeviceVisibility.useMutation({
+  const setVisibility = deviceQueries.setWorkspaceDeviceVisibility.useMutation({
     onSuccess: () => refreshDeviceList(),
   });
 

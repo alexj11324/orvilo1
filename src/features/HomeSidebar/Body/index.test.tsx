@@ -70,12 +70,6 @@ vi.mock('@/utils/navigation', () => ({
   isModifierClick: () => false,
 }));
 
-vi.mock('./Agent', () => ({
-  default: ({ itemKey, open }: { itemKey: string; open: boolean }) => (
-    <div data-open={open} data-testid={`sidebar-item-${itemKey}`} />
-  ),
-}));
-
 vi.mock('./WorkFavorites', () => ({
   default: ({ itemKey, open }: { itemKey: string; open: boolean }) => (
     <div data-open={open} data-testid={`sidebar-item-${itemKey}`} />

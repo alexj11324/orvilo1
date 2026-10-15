@@ -1,5 +1,9 @@
 # Task-First 产品收敛・实施记录
 
+> 历史实施记录：文中的 “当前”、路径和保留清单对应各段记录的提交，不能作为现阶段实现约定。
+> 当前认证、队列和技能入口及本轮校正见 [仓库差异审计](./repository-audit/README.md)。
+> 不要根据本记录恢复已删除实现；现行代码与 `AGENTS.md` 的归属规则优先。
+
 > 本文是 \[Orvilo_Task_First_Codex_Implementation_Plan] 的执行记录：当前 SHA、依赖清单、
 > 各工作包状态、验证证据与未解决项。产品边界见 [product-scope.md](./product-scope.md)。
 >

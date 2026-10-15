@@ -52,6 +52,7 @@ const otherUserId = 'work-query-other';
 const workspaceId = 'work-query-ws';
 
 beforeEach(async () => {
+  await serverDB.delete(tasksTable);
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: otherUserId }]);
   await serverDB.insert(workspaces).values({
@@ -70,6 +71,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await serverDB.delete(tasksTable);
   await serverDB.delete(users);
 });
 

@@ -1,11 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { TrpcClient } from '../api/client';
-import { TrpcIngestSink } from './TrpcIngestSink';
+import { type HeteroIngestClient, TrpcIngestSink } from './TrpcIngestSink';
 
 const setup = () => {
   const mutate = vi.fn();
-  const client = { aiAgent: { heteroFinish: { mutate } } } as unknown as TrpcClient;
+  const client = { aiAgent: { heteroFinish: { mutate } } } as unknown as HeteroIngestClient;
   return { mutate, sink: new TrpcIngestSink(client, 'kimi-code', 'owned-op', 'owned-topic') };
 };
 afterEach(() => vi.useRealTimers());

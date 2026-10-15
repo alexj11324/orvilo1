@@ -1,4 +1,4 @@
-import type { AgentStreamEvent } from '@orvilo/heterogeneous-agents/spawn';
+import type { AgentStreamEvent } from '../spawn';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createOperationHeartbeat } from './OperationHeartbeat';

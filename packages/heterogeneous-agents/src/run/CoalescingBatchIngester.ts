@@ -1,4 +1,4 @@
-import type { AgentStreamEvent } from '@orvilo/heterogeneous-agents/spawn';
+import type { AgentStreamEvent } from '../spawn';
 
 import { BatchIngester, type IngestSink } from './BatchIngester';
 

@@ -2,8 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createOperationTokenRenewal } from './OperationTokenRenewal';
 
-vi.mock('./logger', () => ({ log: { warn: vi.fn() } }));
-
 const HOUR = 60 * 60 * 1000;
 const NOW = new Date('2026-09-14T00:00:00.000Z').getTime();
 
@@ -15,6 +13,7 @@ const operationToken = (expiresAt: number) =>
 const originalJwt = process.env.ORVILO_JWT;
 
 beforeEach(() => {
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
 });

@@ -1,4 +1,4 @@
-import type { AgentStreamEvent } from '@orvilo/heterogeneous-agents/spawn';
+import type { AgentStreamEvent } from '../spawn';
 
 const DEFAULT_OPERATION_HEARTBEAT_INTERVAL_MS = 30_000;
 

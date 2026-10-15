@@ -32,6 +32,7 @@
     "@lobehub/icons": "^5.15.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@orvilo/agent-gateway-client": "workspace:*",
+    "@orvilo/local-file-shell": "workspace:*",
     "@orvilo/prime-harness": "workspace:*",
     "@orvilo/types": "workspace:*",
     "@orvilo/utils": "workspace:*",

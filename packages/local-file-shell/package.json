@@ -11,7 +11,8 @@
     "./git": "./src/git/index.ts",
     "./logger": "./src/logger.ts",
     "./shell": "./src/shell/index.ts",
-    "./types": "./src/types.ts"
+    "./types": "./src/types.ts",
+    "./fileMutex": "./src/git/registryFile.ts"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",

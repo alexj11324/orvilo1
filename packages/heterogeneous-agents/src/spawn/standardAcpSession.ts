@@ -1,3 +1,8 @@
+import { mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import path from 'node:path';
+
+import { withRepoFileMutex } from '@orvilo/local-file-shell/fileMutex';
 import type { HeterogeneousAgentModel } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 
@@ -242,6 +247,25 @@ export class StandardAcpSession extends AcpAgentSession<
       },
       processLabel: sessionConfig.spec.label,
       transport: sessionConfig.spec.transport,
+    });
+  }
+
+  protected override async initializeConnection(): Promise<StandardAcpInitializeResult> {
+    if (this.sessionConfig.agentType !== 'opencode') return super.initializeConnection();
+
+    // ponytail: serialize only Orvilo's OpenCode startup while native WAL setup
+    // precedes busy_timeout; remove when upstream fixes that initialization order.
+    const target = path.join(homedir(), '.cache', 'orvilo', 'opencode-startup', 'initialize');
+    await mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
+    return withRepoFileMutex(target, async () => {
+      try {
+        return await super.initializeConnection();
+      } catch (error) {
+        this.client.close('SIGKILL');
+        this.client.signal('SIGKILL');
+        await this.client.exited;
+        throw error;
+      }
     });
   }
 

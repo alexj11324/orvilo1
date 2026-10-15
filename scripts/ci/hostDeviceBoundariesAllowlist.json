@@ -336,6 +336,46 @@
     },
     {
       "rule": "web-closure",
+      "importer": "packages/heterogeneous-agents/src/spawn/standardAcpSession.ts",
+      "target": "builtin:fs/promises",
+      "scope": "closure",
+      "owner": "issue784",
+      "issue": "https://github.com/alexj11324/orvilo1/issues/784",
+      "reason": "Native OpenCode startup mutex is reached only through the existing TRPC AppRouter type-only backend scan closure, not a web runtime import.",
+      "exit": "Native execution graph is no longer scanned through the AppRouter type edge, or the upstream WAL initialization fix removes the startup guard."
+    },
+    {
+      "rule": "web-closure",
+      "importer": "packages/heterogeneous-agents/src/spawn/standardAcpSession.ts",
+      "target": "builtin:os",
+      "scope": "closure",
+      "owner": "issue784",
+      "issue": "https://github.com/alexj11324/orvilo1/issues/784",
+      "reason": "Native OpenCode startup mutex is reached only through the existing TRPC AppRouter type-only backend scan closure, not a web runtime import.",
+      "exit": "Native execution graph is no longer scanned through the AppRouter type edge, or the upstream WAL initialization fix removes the startup guard."
+    },
+    {
+      "rule": "web-closure",
+      "importer": "packages/local-file-shell/src/git/registryFile.ts",
+      "target": "builtin:fs/promises",
+      "scope": "closure",
+      "owner": "issue784",
+      "issue": "https://github.com/alexj11324/orvilo1/issues/784",
+      "reason": "Native OpenCode startup mutex is reached only through the existing TRPC AppRouter type-only backend scan closure, not a web runtime import.",
+      "exit": "Native execution graph is no longer scanned through the AppRouter type edge, or the upstream WAL initialization fix removes the startup guard."
+    },
+    {
+      "rule": "web-closure",
+      "importer": "packages/local-file-shell/src/git/registryFile.ts",
+      "target": "builtin:os",
+      "scope": "closure",
+      "owner": "issue784",
+      "issue": "https://github.com/alexj11324/orvilo1/issues/784",
+      "reason": "Native OpenCode startup mutex is reached only through the existing TRPC AppRouter type-only backend scan closure, not a web runtime import.",
+      "exit": "Native execution graph is no longer scanned through the AppRouter type edge, or the upstream WAL initialization fix removes the startup guard."
+    },
+    {
+      "rule": "web-closure",
       "importer": "packages/heterogeneous-agents/src/spawn/acpRuntime.ts",
       "target": "builtin:os",
       "scope": "closure",

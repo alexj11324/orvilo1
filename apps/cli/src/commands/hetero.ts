@@ -673,8 +673,9 @@ const exec = async (options: ExecOptions): Promise<void> => {
   // browser-tools HTTP server mounted for agents that speak MCP over ACP.
   let askMcpServers: Record<string, unknown>[] | undefined;
   const askPollAbort = new AbortController();
+  // claude-code is not listed: claude-agent-acp surfaces AskUserQuestion through
+  // ACP `elicitation/create` natively, so it needs no `ask_user_question` MCP tool.
   const askSupported =
-    agentType === 'claude-code' ||
     agentType === 'cursor' ||
     agentType === 'droid' ||
     agentType === 'devin' ||

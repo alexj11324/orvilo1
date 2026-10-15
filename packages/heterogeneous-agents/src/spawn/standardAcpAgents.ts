@@ -1,11 +1,21 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+
 import type { HeterogeneousAgentModel } from '@orvilo/types';
 
 import type { HeterogeneousAgentPermissionCatalog } from '../types';
+import {
+  detectManagedAcpBridgeCommand,
+  onManagedAcpBridgeInstalled,
+  resolveAcpBridgeRoot,
+  scheduleManagedAcpBridgeInstall,
+} from './acpBridgeInstall';
 import {
   buildAcpBridgeNotFoundError,
   detectAcpBridgeCommand,
   detectAcpBridgeRunner,
   getAcpAgentRuntime,
+  readAcpBridgeOverrideEnv,
 } from './acpRuntime';
 import type { StandardAcpConfigOption, StandardAcpSessionOptions } from './standardAcpSession';
 import { StandardAcpSession } from './standardAcpSession';
@@ -47,14 +57,58 @@ export interface ResolveAcpSpawnTargetOptions {
   allowPackageRunner?: boolean;
 }
 
+/** Spawn-relevant part of a resolution; `env` is rebuilt from each caller's env. */
+interface ResolvedAcpBridgeLaunch {
+  commandArgs: string[];
+  commandPath: string;
+  resolvedPathEnv?: string;
+}
+
+/**
+ * How long a bridge resolution is reused. A warm conversation sends a message
+ * every few seconds; without the cache each one re-runs the `--version`
+ * probes (and, when the bridge is absent, the runner probes).
+ */
+const ACP_SPAWN_TARGET_CACHE_TTL_MS = 60_000;
+
+const acpSpawnTargetCache = new Map<
+  string,
+  { expiresAt: number; launch: ResolvedAcpBridgeLaunch }
+>();
+
+// A managed install that lands makes every cached runner fallback obsolete.
+onManagedAcpBridgeInstalled(() => acpSpawnTargetCache.clear());
+
+/** Test hook: drop every cached bridge resolution. */
+export const resetAcpSpawnTargetCache = (): void => acpSpawnTargetCache.clear();
+
+const readCachedLaunch = (key: string): ResolvedAcpBridgeLaunch | undefined => {
+  const entry = acpSpawnTargetCache.get(key);
+  if (!entry) return undefined;
+  const { commandPath } = entry.launch;
+  if (
+    entry.expiresAt <= Date.now() ||
+    (path.isAbsolute(commandPath) && !existsSync(commandPath))
+  ) {
+    acpSpawnTargetCache.delete(key);
+    return undefined;
+  }
+  return entry.launch;
+};
+
 /**
  * Resolve the process to spawn for `agentType`'s ACP endpoint.
  *
- * Native runtimes return the vendor command unchanged; bridge agents probe
- * for the bridge binary (env override → PATH → well-known global bins) and
- * forward the resolved vendor command to the bridge through
- * `spec.bridge.nativeCommandEnv`, so the bridge drives the exact CLI install
- * the host detected.
+ * Native runtimes return the vendor command unchanged. Bridge agents resolve,
+ * in order: the bridge binary (env override → PATH → well-known global bins)
+ * → the Orvilo-managed install (`acpBridgeInstall`) → a package runner
+ * (`bunx`/`npx`). Falling back to the runner also starts a background managed
+ * install so the next run launches the binary directly. The resolved vendor
+ * command is forwarded to the bridge through `spec.bridge.nativeCommandEnv`,
+ * so the bridge drives the exact CLI install the host detected.
+ *
+ * Successful resolutions are cached in-process for a short TTL (or until the
+ * resolved executable disappears) so consecutive messages skip the probes.
  */
 export const resolveAcpSpawnTarget = async (
   agentType: string,
@@ -64,42 +118,75 @@ export const resolveAcpSpawnTarget = async (
 ): Promise<AcpSpawnTarget> => {
   const spec = getAcpAgentRuntime(agentType);
   if (!spec) throw new Error(`No ACP runtime is registered for agent type "${agentType}"`);
-  if (!spec.bridge) {
+  const bridge = spec.bridge;
+  if (!bridge) {
     return { commandArgs: [], commandPath: vendorCommand, env };
   }
 
-  const status = await detectAcpBridgeCommand(spec.bridge, env);
-  if (!status.available || !status.path) {
-    // Rollout-compatible fallback: installs that predate the bridge
-    // requirement can still launch through an on-machine package runner
-    // (bunx/npx fetches and caches the pinned bridge package) instead of
-    // failing every prompt until the user hand-installs the bridge.
-    const runner =
-      options.allowPackageRunner === false
-        ? undefined
-        : await detectAcpBridgeRunner(spec.bridge, env);
-    if (!runner) throw buildAcpBridgeNotFoundError(agentType);
-
-    return {
-      commandArgs: runner.args,
-      commandPath: runner.commandPath,
-      env: {
-        ...env,
-        [spec.bridge.nativeCommandEnv]: vendorCommand,
-        ...(runner.resolvedPathEnv ? { PATH: runner.resolvedPathEnv } : {}),
-      },
-    };
-  }
-
-  return {
-    commandArgs: [],
-    commandPath: status.path,
+  const toTarget = (launch: ResolvedAcpBridgeLaunch): AcpSpawnTarget => ({
+    commandArgs: launch.commandArgs,
+    commandPath: launch.commandPath,
     env: {
       ...env,
-      [spec.bridge.nativeCommandEnv]: vendorCommand,
-      ...(status.resolvedPathEnv ? { PATH: status.resolvedPathEnv } : {}),
+      [bridge.nativeCommandEnv]: vendorCommand,
+      ...(launch.resolvedPathEnv ? { PATH: launch.resolvedPathEnv } : {}),
     },
+  });
+
+  const allowRunner = options.allowPackageRunner !== false;
+  const cacheKey = JSON.stringify([
+    agentType,
+    vendorCommand,
+    env.PATH ?? process.env.PATH ?? '',
+    readAcpBridgeOverrideEnv(bridge, env) ?? '',
+    resolveAcpBridgeRoot(env),
+  ]);
+  const cached = readCachedLaunch(cacheKey);
+  // A runner launch cached by a run must not leak into a caller that forbids it.
+  if (cached && (allowRunner || cached.commandArgs.length === 0)) return toTarget(cached);
+
+  const remember = (launch: ResolvedAcpBridgeLaunch) => {
+    acpSpawnTargetCache.set(cacheKey, {
+      expiresAt: Date.now() + ACP_SPAWN_TARGET_CACHE_TTL_MS,
+      launch,
+    });
+    return toTarget(launch);
   };
+
+  const status = await detectAcpBridgeCommand(bridge, env);
+  if (status.available && status.path) {
+    return remember({
+      commandArgs: [],
+      commandPath: status.path,
+      resolvedPathEnv: status.resolvedPathEnv,
+    });
+  }
+
+  const managed = await detectManagedAcpBridgeCommand(bridge, env);
+  if (managed.available && managed.path) {
+    return remember({
+      commandArgs: [],
+      commandPath: managed.path,
+      resolvedPathEnv: managed.resolvedPathEnv,
+    });
+  }
+
+  // Rollout-compatible fallback: installs that predate the bridge requirement
+  // can still launch through an on-machine package runner (bunx/npx fetches
+  // and caches the pinned bridge package) instead of failing every prompt
+  // until the user hand-installs the bridge.
+  const runner = allowRunner ? await detectAcpBridgeRunner(bridge, env) : undefined;
+  if (!runner) throw buildAcpBridgeNotFoundError(agentType);
+
+  // Install the pinned bridge in the background so the next run skips the
+  // runner's per-launch package resolution. Never awaited, never throws.
+  scheduleManagedAcpBridgeInstall(bridge, runner, env);
+
+  return remember({
+    commandArgs: runner.args,
+    commandPath: runner.commandPath,
+    resolvedPathEnv: runner.resolvedPathEnv,
+  });
 };
 
 export interface StandardAcpSelectors {

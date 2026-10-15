@@ -38,6 +38,14 @@ vi.mock('node:os', async () => {
   return { ...actual, platform: vi.fn(() => 'linux') };
 });
 
+// The Orvilo-managed bridge install would otherwise probe the real home dir and
+// spawn a background `bun add` through the mocked `spawn` above.
+vi.mock('./acpBridgeInstall', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./acpBridgeInstall')>()),
+  detectManagedAcpBridgeCommand: vi.fn(async () => ({ available: false })),
+  scheduleManagedAcpBridgeInstall: vi.fn(),
+}));
+
 vi.mock('./resolveCliCommand', async () => {
   const actual = await vi.importActual<typeof resolveCliCommand>('./resolveCliCommand');
   return {
@@ -146,8 +154,11 @@ const createStandardAcpProc = ({
   modelOptions,
   promptAutoComplete = true,
   responseText = 'ACP response',
+  resumeCapability = false,
   sessionId = 'acp-session-1',
 }: {
+  /** Advertise the standard `session/resume` capability (agents without it fall back to `session/load`). */
+  resumeCapability?: boolean;
   /** Additional advertised `configOptions` entries (e.g. `effort`, `reasoning_effort`). */
   extraConfigOptions?: Record<string, unknown>[];
   loadError?: boolean;
@@ -194,10 +205,15 @@ const createStandardAcpProc = ({
                 agentCapabilities: {
                   loadSession: true,
                   promptCapabilities: { image: true },
+                  ...(resumeCapability ? { sessionCapabilities: { resume: {} } } : {}),
                 },
                 protocolVersion: 1,
               },
             });
+            return;
+          }
+          case 'session/resume': {
+            send({ id: message.id, result: {} });
             return;
           }
           case 'session/new': {
@@ -348,7 +364,10 @@ describe('spawnAgent', () => {
     expect(spawnCalls).toHaveLength(0);
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Bridge resolutions are cached per process; each test re-mocks detection.
+    const { resetAcpSpawnTargetCache } = await import('./standardAcpAgents');
+    resetAcpSpawnTargetCache();
     spawnCalls.length = 0;
     nextFakeProc = null;
     platformMock.mockReturnValue('linux');
@@ -650,6 +669,34 @@ describe('spawnAgent', () => {
 
       const loadRequest = fake.requests.find(({ method }) => method === 'session/load');
       expect(loadRequest?.params).toMatchObject({ sessionId: 'cc-prev-123' });
+      expect(handle.sessionId).toBe('cc-prev-123');
+    } finally {
+      processKill.mockRestore();
+    }
+  });
+
+  it('resumes through the standard session/resume when the agent advertises it', async () => {
+    const fake = createStandardAcpProc({ resumeCapability: true });
+    nextFakeProc = fake.proc;
+    const processKill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+
+    try {
+      const { spawnAgent } = await import('./spawnAgent');
+      const handle = await spawnAgent({
+        agentType: 'claude-code',
+        operationId: 'op-1',
+        prompt: 'continue',
+        resumeSessionId: 'cc-prev-123',
+      });
+      for await (const _event of handle.events) {
+        // drain
+      }
+      await handle.exit;
+
+      expect(fake.requests.find(({ method }) => method === 'session/load')).toBeUndefined();
+      expect(fake.requests.find(({ method }) => method === 'session/resume')?.params).toMatchObject(
+        { sessionId: 'cc-prev-123' },
+      );
       expect(handle.sessionId).toBe('cc-prev-123');
     } finally {
       processKill.mockRestore();

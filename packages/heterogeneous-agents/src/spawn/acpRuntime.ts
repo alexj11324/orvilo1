@@ -207,7 +207,8 @@ const getWellKnownBridgeCommandPaths = (command: string): string[] => {
   ];
 };
 
-const BRIDGE_VERSION_PATTERN = /v?\d+\.\d+\.\d+/;
+/** `--version` banner check shared by every bridge candidate (PATH, well-known, managed). */
+export const BRIDGE_VERSION_PATTERN = /v?\d+\.\d+\.\d+/;
 
 /**
  * Read the bridge-command override env var, preferring the `ORVILO_*` name
@@ -261,7 +262,7 @@ export const detectAcpBridgeCommand = async (
  * (vendor CLI present, bridge absent): the runner fetches and caches the
  * pinned bridge package instead of failing every launch.
  */
-const pinnedBridgePackage = (spec: AcpBridgeSpec) => `${spec.package}@${spec.packageVersion}`;
+export const pinnedBridgePackage = (spec: AcpBridgeSpec) => `${spec.package}@${spec.packageVersion}`;
 
 const ACP_BRIDGE_RUNNERS: ReadonlyArray<{
   args: (spec: AcpBridgeSpec) => string[];

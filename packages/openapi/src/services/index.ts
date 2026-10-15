@@ -3,7 +3,6 @@ export * from './agent-group.service';
 export * from './api-key.service';
 export * from './eval.service';
 export * from './file.service';
-export * from './mcp-server.service';
 export * from './message.service';
 export * from './message-translations.service';
 export * from './model.service';

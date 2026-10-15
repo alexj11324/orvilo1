@@ -176,49 +176,6 @@ const resourceSchemas: Record<string, SchemaObject> = {
     required: ['id', 'role', 'createdAt', 'updatedAt'],
     type: 'object',
   },
-  McpServer: {
-    additionalProperties: false,
-    properties: {
-      createdAt: dateTime,
-      description: nullableString,
-      hasCredentials: { type: 'boolean' },
-      id: { format: 'uuid', type: 'string' },
-      identifier: { type: 'string' },
-      isEnabled: { type: 'boolean' },
-      name: { type: 'string' },
-      serverUrl: { format: 'uri', type: 'string' },
-      status: { enum: ['connected', 'disconnected', 'error'], type: 'string' },
-      tools: {
-        items: {
-          additionalProperties: false,
-          properties: {
-            description: nullableString,
-            id: { format: 'uuid', type: 'string' },
-            inputSchema: nullableObject,
-            name: { type: 'string' },
-            permission: { enum: ['auto', 'needs_approval', 'disabled'], type: 'string' },
-          },
-          required: ['id', 'name', 'permission'],
-          type: 'object',
-        },
-        type: 'array',
-      },
-      updatedAt: dateTime,
-    },
-    required: [
-      'id',
-      'identifier',
-      'name',
-      'serverUrl',
-      'status',
-      'isEnabled',
-      'hasCredentials',
-      'tools',
-      'createdAt',
-      'updatedAt',
-    ],
-    type: 'object',
-  },
   Model: {
     additionalProperties: false,
     properties: {
@@ -381,7 +338,6 @@ const groupResources: Record<string, { listKey: string; schema: string }> = {
   'files': { listKey: 'files', schema: 'File' },
   'knowledge-bases': { listKey: 'knowledgeBases', schema: 'KnowledgeBase' },
   'messages': { listKey: 'messages', schema: 'Message' },
-  'mcp-servers': { listKey: 'mcpServers', schema: 'McpServer' },
   'models': { listKey: 'models', schema: 'Model' },
   'permissions': { listKey: 'permissions', schema: 'Permission' },
   'roles': { listKey: 'roles', schema: 'Role' },
@@ -489,7 +445,7 @@ const getSuccessSchema = (group: string, rest: string, method: string): SchemaOb
 
   const isRootList = method === 'get' && rest === '';
   if (isRootList) {
-    if (group === 'agent-groups' || group === 'api-keys' || group === 'mcp-servers') {
+    if (group === 'agent-groups' || group === 'api-keys') {
       return successEnvelope({ items: ref(resource.schema), type: 'array' });
     }
 
@@ -523,19 +479,6 @@ const getSuccessSchema = (group: string, rest: string, method: string): SchemaOb
       additionalProperties: false,
       properties: { ...apiKey.properties, key: { type: 'string' } },
       required: ['id', 'name', 'key', 'createdAt', 'updatedAt'],
-      type: 'object',
-    });
-  }
-
-  if (group === 'mcp-servers' && method === 'post' && rest.endsWith('/sync')) {
-    return successEnvelope({
-      additionalProperties: false,
-      properties: {
-        id: { format: 'uuid', type: 'string' },
-        status: { const: 'connected', type: 'string' },
-        toolCount: { minimum: 0, type: 'integer' },
-      },
-      required: ['id', 'status', 'toolCount'],
       type: 'object',
     });
   }
@@ -722,7 +665,7 @@ export const buildSpecDocument = async (app: GenerateSpecsApp) => {
         group === 'eval' && method === 'post' && rest === 'runs'
           ? 202
           : method === 'post' &&
-              ((['agent-groups', 'api-keys', 'mcp-servers'].includes(group) && rest === '') ||
+              ((['agent-groups', 'api-keys'].includes(group) && rest === '') ||
                 (group === 'agents' && rest === '{id}/duplicate') ||
                 (group === 'eval' &&
                   ['benchmarks', 'datasets', 'datasets/{datasetId}/test-cases'].includes(rest)))

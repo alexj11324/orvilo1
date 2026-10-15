@@ -51,8 +51,11 @@ describe('generate-openapi', () => {
     expect(Object.keys(spec.paths['/api/v1/message-translations/{messageId}'])).not.toContain(
       'post',
     );
-    expect(spec.components.schemas.McpServer.properties).not.toHaveProperty('credentials');
-    expect(spec.components.schemas.McpServer.properties).not.toHaveProperty('oidcConfig');
+    // Platform third-party MCP management belongs to the saved Agent's native Harness.
+    expect(spec.components.schemas.McpServer).toBeUndefined();
+    expect(
+      Object.keys(spec.paths).filter((route) => route.startsWith('/api/v1/mcp-servers')),
+    ).toEqual([]);
     expect(spec.components.schemas.ApiKey.properties.scopes.items.enum).toEqual(
       expect.arrayContaining(['mcp:read', 'mcp:write', 'usage:read']),
     );

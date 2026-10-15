@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('getServerConfig', () => {
   beforeEach(() => {
@@ -7,40 +7,24 @@ describe('getServerConfig', () => {
     vi.resetModules();
   });
 
-  describe('index url', () => {
-    it('should return default URLs when no environment variables are set', async () => {
-      const { getAppConfig } = await import('../app');
-      const config = getAppConfig();
-      expect(config.AGENTS_INDEX_URL).toBe(
-        'https://registry.npmmirror.com/@lobehub/agents-index/v1/files/public',
-      );
-      expect(config.PLUGINS_INDEX_URL).toBe(
-        'https://registry.npmmirror.com/@lobehub/plugins-index/v1/files/public',
-      );
-    });
+  describe('retired catalog index URLs', () => {
+    afterEach(() => vi.unstubAllEnvs());
 
-    it('should return custom URLs when environment variables are set', async () => {
-      process.env.AGENTS_INDEX_URL = 'https://custom-agents-url.com';
-      process.env.PLUGINS_INDEX_URL = 'https://custom-plugins-url.com';
-      const { getAppConfig } = await import('../app');
-      const config = getAppConfig();
-      expect(config.AGENTS_INDEX_URL).toBe('https://custom-agents-url.com');
-      expect(config.PLUGINS_INDEX_URL).toBe('https://custom-plugins-url.com');
-    });
-
-    it('should return default URLs when environment variables are empty string', async () => {
-      process.env.AGENTS_INDEX_URL = '';
-      process.env.PLUGINS_INDEX_URL = '';
-
-      const { getAppConfig } = await import('../app');
-      const config = getAppConfig();
-      expect(config.AGENTS_INDEX_URL).toBe(
-        'https://registry.npmmirror.com/@lobehub/agents-index/v1/files/public',
-      );
-      expect(config.PLUGINS_INDEX_URL).toBe(
-        'https://registry.npmmirror.com/@lobehub/plugins-index/v1/files/public',
-      );
-    });
+    it.each([
+      ['unset', undefined],
+      ['empty', ''],
+      ['configured', 'https://retired-catalog.example.com'],
+    ] as const)(
+      'does not expose catalog indexes when environment variables are %s',
+      async (_label, value) => {
+        vi.stubEnv('AGENTS_INDEX_URL', value);
+        vi.stubEnv('PLUGINS_INDEX_URL', value);
+        const { getAppConfig } = await import('../app');
+        const config = getAppConfig();
+        expect(config).not.toHaveProperty('AGENTS_INDEX_URL');
+        expect(config).not.toHaveProperty('PLUGINS_INDEX_URL');
+      },
+    );
   });
 
   describe('INTERNAL_APP_URL', () => {

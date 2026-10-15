@@ -1972,22 +1972,16 @@ describe('Task Router Integration', () => {
       }
     });
 
-    it('lets the creator take the Issue over, to an agent the creator may use only', async () => {
-      const { creatorAgent, creatorId, handoff, memberAgent, memberId, taskId } = await setup();
+    it('refuses the creator who cannot use the incumbent, including a successor they can use', async () => {
+      const { creatorAgent, creatorId, handoff, memberId } = await setup();
       try {
-        await expect(handoff(creatorId, memberAgent)).rejects.toMatchObject({ code: 'FORBIDDEN' });
-        await handoff(creatorId, creatorAgent);
-        const [row] = await serverDB
-          .select({ assigneeAgentId: tasks.assigneeAgentId })
-          .from(tasks)
-          .where(eq(tasks.id, taskId));
-        expect(row.assigneeAgentId).toBe(creatorAgent);
+        await expect(handoff(creatorId, creatorAgent)).rejects.toMatchObject({ code: 'FORBIDDEN' });
       } finally {
         await cleanupTestUser(serverDB, memberId);
       }
     });
 
-    it('lets the creator, and not another member, stop a run of an agent neither may use', async () => {
+    it('refuses a stop when neither the member nor the creator can use the incumbent', async () => {
       const { creatorId, memberId, taskId } = await setup('outcome_unknown');
       const workspaceId = 'task-handoff-takeover-workspace';
       const topicId = await createTestTopic(serverDB, creatorId, 'tpc_takeover_stop');
@@ -2000,24 +1994,41 @@ describe('Task Router Integration', () => {
       const callerFor = (id: string) =>
         taskRouter.createCaller({ ...createTestContext(id), workspaceId });
       try {
-        await expect(callerFor(memberId).cancelTopic({ topicId })).rejects.toMatchObject({
-          code: 'FORBIDDEN',
-        });
-        await callerFor(creatorId).cancelTopic({ topicId });
-        const [row] = await serverDB
+        const [before] = await serverDB
           .select({ status: taskTopics.status })
           .from(taskTopics)
           .where(eq(taskTopics.topicId, topicId));
-        expect(row.status).toBe('canceled');
+        await expect(callerFor(memberId).cancelTopic({ topicId })).rejects.toMatchObject({
+          code: 'FORBIDDEN',
+        });
+        await expect(callerFor(creatorId).cancelTopic({ topicId })).rejects.toMatchObject({
+          code: 'FORBIDDEN',
+        });
+        const [after] = await serverDB
+          .select({ status: taskTopics.status })
+          .from(taskTopics)
+          .where(eq(taskTopics.topicId, topicId));
+        expect(after).toEqual(before);
       } finally {
         await cleanupTestUser(serverDB, memberId);
       }
     });
 
     it('says the last run is unconfirmed when there is no running process to fence', async () => {
-      const { creatorAgent, creatorId, handoff, memberId } = await setup('outcome_unknown');
+      const { memberId, taskId } = await setup('outcome_unknown');
+      const callerFor = (id: string) =>
+        taskRouter.createCaller({
+          ...createTestContext(id),
+          workspaceId: 'task-handoff-takeover-workspace',
+        });
       try {
-        await expect(handoff(creatorId, creatorAgent)).rejects.toMatchObject({
+        await expect(
+          callerFor(userId).handoff({
+            expectedDomainRevision: (await revisionOf(taskId))!,
+            taskId,
+            toAgentId: null,
+          }),
+        ).rejects.toMatchObject({
           code: 'CONFLICT',
           message: expect.stringMatching(/^EXECUTION_UNSETTLED/),
         });

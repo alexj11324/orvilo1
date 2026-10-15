@@ -74,7 +74,6 @@ import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
 import { acceptancePolicyChanged } from '@/server/services/task/activityLogChange';
 import { IssueChecklistService } from '@/server/services/task/checklist';
-import { mayTakeOverExecution } from '@/server/services/task/executionTakeover';
 import { TaskIntentService } from '@/server/services/task/intent';
 import { TaskPlanService } from '@/server/services/task/plan';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
@@ -146,13 +145,11 @@ interface TaskExecutionUseContext {
   workspaceId?: string | null;
 }
 
-/** Check stored and sealed incumbent executors before a user can stop or replace work. */
+/** Check stored and sealed executors before a user can continue, stop, or replace work. */
 async function assertTaskExecutionUse(
   ctx: TaskExecutionUseContext,
   targetTasks: Pick<TaskItem, 'id' | 'assigneeAgentId' | 'status'>[],
   additionalAgentIds: Array<string | null | undefined> = [],
-  /** Waives Use on the incumbents only; their operations are still scope-checked. */
-  { waiveIncumbentUse = false }: { waiveIncumbentUse?: boolean } = {},
 ) {
   const taskIds = targetTasks.map((task) => task.id);
   const [runningTopics, activeDispatches] = await Promise.all([
@@ -207,7 +204,7 @@ async function assertTaskExecutionUse(
   const operationAgents = new Map(operations.map((operation) => [operation.id, operation.agentId]));
   const agentIds = new Set(
     [
-      ...(waiveIncumbentUse ? [] : targetTasks).flatMap((task, index) => {
+      ...targetTasks.flatMap((task, index) => {
         const dispatch = activeDispatches[index];
         const sealedExecutors = [
           ...runningTopics
@@ -241,18 +238,6 @@ async function assertTaskExecutionUse(
         : assertAgentVisibleTo(ctx.serverDB, agentId, { userId: ctx.userId }),
     ),
   );
-}
-
-/** Whether the caller may stop or replace this Issue's execution without Use on its agent. */
-async function callerMayTakeOver(
-  ctx: TaskExecutionUseContext,
-  task: Pick<TaskItem, 'createdByUserId' | 'workspaceId'>,
-) {
-  const workspaceId = task.workspaceId ?? ctx.workspaceId;
-  const role = workspaceId
-    ? await getActiveWorkspaceMembershipRole(ctx.serverDB, { userId: ctx.userId, workspaceId })
-    : undefined;
-  return mayTakeOverExecution({ issue: task, role, userId: ctx.userId });
 }
 
 // All procedures that take an id accept either raw id (task_xxx) or identifier (TASK-1)
@@ -1317,10 +1302,7 @@ export const taskRouter = router({
         const target = await ctx.taskTopicModel.findIssueTopicById(input.topicId);
         if (!target) throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found.' });
         const task = await resolveOrThrow(ctx.taskModel, target.taskId);
-        // Stopping a run is the smaller half of taking the Issue over.
-        await assertTaskExecutionUse(ctx, [task], [], {
-          waiveIncumbentUse: await callerMayTakeOver(ctx, task),
-        });
+        await assertTaskExecutionUse(ctx, [task]);
         await ctx.taskService.cancelTopic(input.topicId, task.id);
         return { message: 'Topic canceled', success: true };
       } catch (error) {
@@ -1839,11 +1821,7 @@ export const taskRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const task = await resolveOrThrow(ctx.taskModel, input.taskId);
-        // Taking over skips the check on the incumbent only; the successor is
-        // always checked.
-        await assertTaskExecutionUse(ctx, [task], [input.toAgentId], {
-          waiveIncumbentUse: await callerMayTakeOver(ctx, task),
-        });
+        await assertTaskExecutionUse(ctx, [task], [input.toAgentId]);
         const result = await ctx.taskService.handoffTask(input);
         return { data: result, message: 'Task handed off', success: true };
       } catch (error) {

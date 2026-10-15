@@ -112,7 +112,7 @@ const Image = memo<ImageProps>(
     const group = usePreviewGroup();
     const id = useId();
     const imgRef = useRef<HTMLImageElement>(null);
-    const [failedSrc, setFailedSrc] = useState<string>();
+    const [failedSrc, setFailedSrc] = useState<ImageProps['src']>();
     const [viewer, setViewer] = useState<{ index: number; items: ViewerItem[] } | null>(null);
 
     const resolvedWidth = width ?? size;
@@ -196,6 +196,12 @@ const Image = memo<ImageProps>(
             height={resolvedHeight}
             loading={loading}
             ref={imgRef}
+            width={resolvedWidth}
+            className={cn(
+              'flex h-auto w-auto items-center justify-center',
+              previewOptions && 'cursor-zoom-in',
+              classNames?.image,
+            )}
             src={
               failedSrc !== undefined && failedSrc === src
                 ? isDark
@@ -203,12 +209,6 @@ const Image = memo<ImageProps>(
                   : FALLBACK_LIGHT
                 : src
             }
-            width={resolvedWidth}
-            className={cn(
-              'flex h-auto w-auto items-center justify-center',
-              previewOptions && 'cursor-zoom-in',
-              classNames?.image,
-            )}
             style={{
               ...boxStyle,
               height: resolvedHeight,

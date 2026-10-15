@@ -22,6 +22,7 @@ for (const source of ['absent', 'shell', 'dotenv', 'cached', 'generator-failure'
     try {
       process.chdir(dir);
       delete process.env.CLERK_SECRET_KEY;
+      delete process.env.DEBUG;
       delete process.env.NODE_ENV;
       delete process.env.JWKS_KEY;
       Object.assign(process.env, {
@@ -125,6 +126,7 @@ for (const source of ['absent', 'shell', 'dotenv', 'cached', 'generator-failure'
       assert.equal(server.env.DEVICE_GATEWAY_SERVICE_TOKEN, 'fixture-service-token');
       const desktop = launches.find(({ args }) => args.includes('dev:desktop'));
       assert.equal(desktop.env.DEVICE_GATEWAY_URL, 'http://localhost:8787');
+      assert.equal(desktop.env.DEBUG, 'services:GatewayConnectionSrv');
       assert.ok(launches.every(({ env: childEnv }) => childEnv.JWKS_KEY === jwks));
       assert.equal(generations, source === 'absent' ? 1 : 0);
       if (source === 'absent' || source === 'cached') {

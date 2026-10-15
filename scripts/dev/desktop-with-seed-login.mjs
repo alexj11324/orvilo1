@@ -119,6 +119,22 @@ function stop(code = 0) {
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => stop());
 
 const desktopLog = { text: '' };
+const GATEWAY_CONNECTION_LOG = 'services:GatewayConnectionSrv';
+
+// Main-process info goes through the `debug` package and stays silent unless this
+// namespace is enabled. The ready check reads that line from the desktop output.
+function desktopDebug(existing = '') {
+  const parts = existing
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (
+    parts.some((part) => part === '*' || part === GATEWAY_CONNECTION_LOG || part === 'services:*')
+  ) {
+    return existing;
+  }
+  return [...parts, GATEWAY_CONNECTION_LOG].join(',');
+}
 
 function start(script, env = {}, command = ['bun', 'run', script], { capture = false } = {}) {
   const child = spawn(command[0], command.slice(1), {
@@ -195,6 +211,7 @@ const desktopChild = closing
   : start(
       'dev:desktop',
       {
+        DEBUG: desktopDebug(process.env.DEBUG),
         DEVICE_GATEWAY_URL: gatewayUrl,
         ORVILO_DESKTOP_AUTH_URL_FILE: authUrlFile,
         ORVILO_DESKTOP_CDP_PORT: cdpPort,

@@ -6,61 +6,40 @@ import { createServerConfigStore } from '@/store/serverConfig/store';
 import { resolveExecutionTarget } from './executionTarget';
 import { getTopicAgencyConfig, resolveTopicAgencyConfig } from './topicExecutionConfig';
 
-describe('Topic execution isolation', () => {
-  it('keeps A on its device when B or the Agent default switches to sandbox', () => {
-    const defaults = { executionTarget: 'local' as const, boundDeviceId: 'device-a' };
-    const topicA = snapshotTopicExecutionConfig(defaults);
-    const changedDefaults = { executionTarget: 'sandbox' as const, boundDeviceId: 'device-b' };
-    expect(applyTopicExecutionConfig(changedDefaults, topicA)).toMatchObject(defaults);
-    expect(applyTopicExecutionConfig(defaults, { executionTarget: 'sandbox' })).toMatchObject({
-      executionTarget: 'sandbox',
-      boundDeviceId: undefined,
+describe('Agent owns topic execution identity', () => {
+  it('uses saved routing after the Agent configuration changes', () => {
+    const previous = snapshotTopicExecutionConfig({
+      executionTarget: 'device',
+      boundDeviceId: 'previous',
     });
-    expect(defaults.boundDeviceId).toBe('device-a');
+    const saved = { executionTarget: 'device' as const, boundDeviceId: 'saved' };
+    expect(applyTopicExecutionConfig(saved, previous)).toEqual(saved);
+    expect(
+      applyTopicExecutionConfig(saved, {
+        executionTarget: 'sandbox',
+        boundDeviceId: 'stale',
+      } as any),
+    ).toEqual(saved);
   });
-  it('does not inherit stale device or sandbox flags into an explicit Topic selection', () => {
+  it('keeps permission mode scoped to the conversation', () => {
     expect(
       applyTopicExecutionConfig(
-        { boundDeviceId: 'a', localSandbox: true },
         {
-          executionTarget: 'auto',
+          executionTarget: 'device',
+          boundDeviceId: 'saved',
+          heterogeneousProvider: { type: 'codex' },
         },
+        { permission: { provider: 'codex', configId: 'permission', value: 'acceptEdits' } },
       ),
-    ).toEqual({
-      executionTarget: 'auto',
-      boundDeviceId: undefined,
-      localSandbox: undefined,
-      localSandboxNetwork: undefined,
+    ).toMatchObject({
+      executionTarget: 'device',
+      boundDeviceId: 'saved',
+      heterogeneousProvider: { permission: { configId: 'permission', value: 'acceptEdits' } },
     });
-  });
-  it('keeps fixed policy authoritative and preserves legacy defaults', () => {
-    const fixed = {
-      executionTarget: 'device' as const,
-      boundDeviceId: 'fixed',
-      executionTargetSelectionPolicy: 'fixed' as const,
-    };
-    expect(applyTopicExecutionConfig(fixed, { executionTarget: 'sandbox' })).toBe(fixed);
-    expect(applyTopicExecutionConfig(fixed, undefined)).toBe(fixed);
   });
 });
 
 vi.mock('@/store/chat', () => ({ useChatStore: { getState: () => ({}) } }));
-
-it('uses Topic scope for a workspace member without an Agent override', () => {
-  const selection = resolveTopicAgencyConfig(
-    { executionTarget: 'sandbox' },
-    {
-      executionTarget: 'local',
-      boundDeviceId: 'this-machine',
-    },
-    true,
-  );
-  expect(selection.workspaceScoped).toBe(false);
-  expect(selection.agencyConfig).toMatchObject({
-    executionTarget: 'local',
-    boundDeviceId: 'this-machine',
-  });
-});
 
 it.each([undefined, 'local'] as const)(
   'keeps an inherited %s workspace target from becoming local execution',
@@ -94,9 +73,9 @@ it('keeps a stored cloud sandbox selection pending while its flag is disabled', 
   ).toBe('sandbox');
   expect(defaults.executionTarget).toBe('sandbox');
   expect(
-    resolveTopicAgencyConfig(defaults, { executionTarget: 'local' }, false, false).agencyConfig
-      ?.executionTarget,
-  ).toBe('local');
+    resolveTopicAgencyConfig(defaults, { executionTarget: 'local' } as any, false, false)
+      .agencyConfig?.executionTarget,
+  ).toBe('none');
 });
 
 it('reads cloud availability through the real imperative server config API during dispatch', () => {

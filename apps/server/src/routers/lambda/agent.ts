@@ -182,17 +182,6 @@ export const agentRouter = router({
         ? await ctx.agentModel.getAssignableSessionGroupVisibility(input.groupId)
         : undefined;
 
-      if (
-        ctx.workspaceId &&
-        (folderVisibility === 'private' ||
-          input.visibility === 'private' ||
-          input.config?.visibility === 'private')
-      )
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'New workspace Agents must be public',
-        });
-
       if (folderVisibility && input.visibility && input.visibility !== folderVisibility)
         throw new TRPCError({
           code: 'BAD_REQUEST',

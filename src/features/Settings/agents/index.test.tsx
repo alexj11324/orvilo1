@@ -104,7 +104,9 @@ vi.mock('@/features/Setting/SettingContainer', () => ({
   default: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 vi.mock('@/features/AgentOnboarding', () => ({ AgentSetupPrompt: () => null }));
-vi.mock('@/features/DefaultAgent/DefaultAgentSetting', () => ({ default: () => null }));
+vi.mock('@/features/DefaultAgent/DefaultAgentSetting', () => ({
+  default: () => <div aria-label="Personal default Agent picker" />,
+}));
 vi.mock('./AgentSettingsList', () => ({ AgentSettingsList: () => null }));
 vi.mock('./AgentSettingsDetailPage', () => ({ default: () => null }));
 vi.mock('@/store/agent', () => ({
@@ -152,6 +154,11 @@ describe('Settings Agent creation authority', () => {
     publishRole('viewer');
   });
   afterEach(cleanup);
+
+  it('does not offer a personal default picker that conflicts with the Chat Orchestrator', () => {
+    mountSettings();
+    expect(screen.queryByLabelText('Personal default Agent picker')).toBeNull();
+  });
 
   it('disables New Agent for a viewer while preserving the shared no-create guard', async () => {
     const user = userEvent.setup();

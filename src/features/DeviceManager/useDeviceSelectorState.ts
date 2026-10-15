@@ -21,7 +21,7 @@ export interface DeviceSelectorState {
    * - `pending` — inventory still resolving; the caller must not judge yet
    */
   bindingState: 'unset' | 'valid' | 'invalid' | 'pending';
-  /** Whether the caller may change the device (permission + policy not `fixed`). */
+  /** Whether the caller may manage the Agent's device. */
   canSelectDevice: boolean;
   /** `useDeviceList` settled successfully. Loading/failed is never 0 or 1. */
   deviceInventoryComplete: boolean;
@@ -56,13 +56,10 @@ export interface UseDeviceSelectorStateOptions {
   canSelectDevice: boolean;
   /** Authority to choose the caller's personal pool for a workspace Agent. */
   canSelectPersonalDevice?: boolean;
-  /** Caller-owned device explicitly selected in the workspace member override. */
-  memberSelectedDeviceId?: string;
   /**
    * Which legal pool to select from. `personal` agents may only bind the
-   * caller's own devices; `workspace` agents use workspace-scope devices plus
-   * the caller's exact personal member override. Authorized private owners and
-   * member-selectable callers may also choose a new caller-personal device.
+   * caller's own devices; `workspace` agents use workspace-scope devices.
+   * Authorized managers may also choose a caller-personal device.
    */
   scope: 'personal' | 'workspace';
 }
@@ -79,7 +76,6 @@ export const useDeviceSelectorState = ({
   boundDeviceId,
   canSelectDevice,
   canSelectPersonalDevice = false,
-  memberSelectedDeviceId,
   permissionsLoaded = true,
   scope,
 }: UseDeviceSelectorStateOptions & { permissionsLoaded?: boolean }): DeviceSelectorState => {
@@ -108,10 +104,7 @@ export const useDeviceSelectorState = ({
     const personal =
       scope === 'workspace'
         ? (devices ?? []).filter(
-            (device) =>
-              device.scope === 'personal' &&
-              ((canSelectDevice && canSelectPersonalDevice) ||
-                (device.deviceId === boundDeviceId && memberSelectedDeviceId === boundDeviceId)),
+            (device) => device.scope === 'personal' && canSelectDevice && canSelectPersonalDevice,
           )
         : [];
     const authorized = [...scoped, ...personal];
@@ -136,7 +129,6 @@ export const useDeviceSelectorState = ({
     canSelectDevice,
     canSelectPersonalDevice,
     devices,
-    memberSelectedDeviceId,
     scope,
   ]);
 

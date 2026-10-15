@@ -24,7 +24,7 @@ const withRuntime = (archive: ImportPgDataStructure): ImportPgDataStructure => (
       agencyConfig: {
         boundDeviceId: 'import-host',
         executionTarget: 'device',
-        heterogeneousProvider: { type: 'codex' },
+        heterogeneousProvider: { type: 'codex', model: 'default' },
       },
     })),
   },
@@ -152,6 +152,8 @@ describe('DataImporter', () => {
       const data = agentsData as ImportPgDataStructure;
       const result = await importer.importPgData(withRuntime(data));
       expect(result.success).toBe(true);
+      expect(result.results.agents).toMatchObject({ added: 1, errors: 0, skips: 0 });
+      expect(await clientDB.select().from(Schema.agents)).toHaveLength(1);
 
       // Same clientId resolves to a skip before insertion — a metadata-only
       // legacy row (no runtime) must not abort the whole table.

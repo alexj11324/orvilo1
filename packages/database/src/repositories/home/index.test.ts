@@ -483,7 +483,7 @@ describe('HomeRepository', () => {
         agencyConfig: {
           boundDeviceId: `creation-host-${workspaceId}`,
           executionTarget: 'device',
-          heterogeneousProvider: { type: 'codex' },
+          heterogeneousProvider: { model: 'default', type: 'codex' },
         },
         title: 'Transferred Private Agent',
         virtual: false,

@@ -203,12 +203,6 @@
       },
       "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
     },
-    "src/features/ChatInput/ControlBar/HeteroDeviceSwitcher.tsx": {
-      "counts": {
-        "native-control": 1
-      },
-      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
-    },
     "src/features/ChatInput/VoiceMessage/index.tsx": {
       "counts": {
         "native-control": 2

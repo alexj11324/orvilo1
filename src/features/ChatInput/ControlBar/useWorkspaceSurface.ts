@@ -18,7 +18,7 @@ import { agentByIdSelectors } from '@/store/agent/selectors';
 export type WorkspaceSurface = 'cloudRepo' | 'workingDirectory' | undefined;
 
 export interface ResolveWorkspaceSurfaceParams {
-  /** The EFFECTIVE config — shared row merged with this member's device override. */
+  /** The Agent's saved execution config. */
   agencyConfig: OrviloAgentAgencyConfig | undefined;
   /** Heterogeneous agents always run inside a working directory. */
   alwaysShowWorkspace: boolean;
@@ -61,16 +61,7 @@ export const resolveWorkspaceSurface = ({
   return undefined;
 };
 
-/**
- * The workspace surface for an agent, resolved from the EFFECTIVE execution
- * target (shared row + this member's per-user device override).
- *
- * Deliberately not `chatConfigByIdSelectors.getRuntimeModeById`: that store
- * selector only sees the workspace-shared row and treats every workspace agent
- * as workspace-scoped, so a member's "Local device" pick — which lives solely
- * in `agentDeviceOverrides` — never resolves to `local` there. The device chip
- * would say "Local device" while the directory picker stayed hidden.
- */
+/** Workspace controls follow the Agent's saved run device. */
 export const useWorkspaceSurface = (
   agentId: string,
   alwaysShowWorkspace = false,

@@ -60,7 +60,7 @@ afterEach(() => {
 });
 
 describe('canSendVoiceMessage', () => {
-  it('rechecks the transaction topic capability without depending on the mounted chat input', () => {
+  it('rechecks the saved Agent capability while ignoring stale transaction topic models', () => {
     const agentId = 'voice-agent';
     const topicId = 'voice-topic';
     const audioModel = {
@@ -102,6 +102,14 @@ describe('canSendVoiceMessage', () => {
         [`agent_${agentId}`]: {
           items: [{ id: topicId, model: textModel.id, provider: ModelProvider.Google }],
         },
+      },
+    } as any);
+
+    expect(canSendVoiceMessage(context)).toBe(true);
+
+    useAgentStore.setState({
+      agentMap: {
+        [agentId]: { chatConfig: {}, model: textModel.id, provider: ModelProvider.Google },
       },
     } as any);
 

@@ -170,19 +170,17 @@ export class TaskWorkspaceService {
         const repository = await repositoryModel.findById(resolution.repositoryId);
         if (!repository) return undefined;
 
-        const automationDeviceId = (task.config as { automationDeviceId?: string } | null)
-          ?.automationDeviceId;
-        const boundDeviceId =
-          automationDeviceId ??
-          (task.assigneeAgentId
-            ? (await this.agentModel.getAgentConfig(task.assigneeAgentId))?.agencyConfig
-                ?.boundDeviceId
-            : undefined);
+        const boundDeviceId = task.assigneeAgentId
+          ? (
+              await (this.workspaceId
+                ? this.agentModel.getAgentConfigForExecution(task.assigneeAgentId)
+                : this.agentModel.getAgentConfig(task.assigneeAgentId))
+            )?.agencyConfig?.boundDeviceId
+          : undefined;
         const checkouts = await repositoryModel.listCheckouts(repository.id);
-        const checkout =
-          checkouts.find(
-            (candidate) => boundDeviceId !== undefined && candidate.deviceId === boundDeviceId,
-          ) ?? (!automationDeviceId && checkouts.length === 1 ? checkouts[0] : undefined);
+        const checkout = checkouts.find(
+          (candidate) => boundDeviceId !== undefined && candidate.deviceId === boundDeviceId,
+        );
         if (checkout) {
           return {
             baseBranch: repository.coordinate.defaultBranch ?? undefined,
@@ -217,26 +215,19 @@ export class TaskWorkspaceService {
     const { task, seq, dispatchId, generation } = params;
     let config = await this.resolveWorkspaceConfig(task);
     if (!config) return undefined;
-    const automationDeviceId = (task.config as { automationDeviceId?: string } | null)
-      ?.automationDeviceId;
-    if (automationDeviceId) {
-      if (config.deviceId && config.deviceId !== automationDeviceId)
-        throw new Error('Workspace Device conflicts with the bound automation Device');
-      config = { ...config, deviceId: automationDeviceId };
-    }
-
     if (config.repo && !parseGithubRepo(config.repo)) {
       throw new Error(`Workspace repository is not a valid GitHub coordinate: ${config.repo}`);
     }
 
-    const needsAgent = !config.deviceId || !!config.repo;
-    const agent =
-      needsAgent && task.assigneeAgentId
-        ? await this.agentModel.getAgentConfig(task.assigneeAgentId)
-        : null;
-    const deviceId = config.deviceId ?? agent?.agencyConfig?.boundDeviceId;
+    const agent = task.assigneeAgentId
+      ? await (this.workspaceId
+          ? this.agentModel.getAgentConfigForExecution(task.assigneeAgentId)
+          : this.agentModel.getAgentConfig(task.assigneeAgentId))
+      : null;
+    const deviceId = agent?.agencyConfig?.boundDeviceId;
+    config = { ...config, deviceId };
 
-    if (config.repo && runsInSandbox(agent?.agencyConfig ?? undefined, config.deviceId)) {
+    if (config.repo && runsInSandbox(agent?.agencyConfig ?? undefined)) {
       return this.provisionOnRemote({
         config,
         credKey: agent?.agencyConfig?.heterogeneousProvider?.env?.GITHUB_CRED_KEY,
@@ -787,10 +778,7 @@ const parseWorkspaceConfig = (config: unknown): TaskWorkspaceConfig | undefined 
 const taskBranchName = (identifier: string, seq: number): string =>
   seq > 1 ? `task/${identifier}-r${seq}` : `task/${identifier}`;
 
-const runsInSandbox = (
-  agencyConfig: OrviloAgentAgencyConfig | undefined,
-  requestedDeviceId?: string,
-): boolean => {
+const runsInSandbox = (agencyConfig: OrviloAgentAgencyConfig | undefined): boolean => {
   const heteroType = agencyConfig?.heterogeneousProvider?.type;
   if (!heteroType || !supportsCloudHeterogeneousSandbox(heteroType)) return false;
   return (
@@ -798,7 +786,6 @@ const runsInSandbox = (
       agencyConfig,
       clientExecutionAvailable: false,
       isHetero: true,
-      requestedDeviceId,
       sandboxExecutionAvailable: supportsCloudHeterogeneousSandbox(heteroType),
     }).kind === 'sandbox'
   );

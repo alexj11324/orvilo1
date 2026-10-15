@@ -146,26 +146,16 @@ export async function checkMcpAutomationReadiness(input: {
     : null;
   const agent =
     agentBinding && task.assigneeAgentId
-      ? await new AgentModel(db, trigger.userId, trigger.workspaceId).getAgentConfig(
+      ? await new AgentModel(db, trigger.userId, trigger.workspaceId).getAgentConfigForExecution(
           task.assigneeAgentId,
         )
       : null;
   if (!agent) reasons.push('AUTH_REQUIRED');
   const agency = agent?.agencyConfig;
-  const pinned =
-    typeof config.automationDeviceId === 'string'
-      ? config.automationDeviceId
-      : typeof workspace.deviceId === 'string'
-        ? workspace.deviceId
-        : agency?.boundDeviceId;
-  // A pinned target is never replaced by another available machine.
-  const deviceId = pinned ?? input.deviceId ?? (devices.length === 1 ? devices[0].id : undefined);
-  if (pinned && input.deviceId && pinned !== input.deviceId) reasons.push('CONFIGURATION_INVALID');
+  const deviceId = agency?.boundDeviceId;
   if (!deviceId)
     reasons.push(devices.length > 1 ? 'DEVICE_SELECTION_REQUIRED' : 'DEVICE_UNAVAILABLE');
   else if (!devices.some((device) => device.id === deviceId)) reasons.push('DEVICE_UNAVAILABLE');
-  if (agency?.executionTargetSelectionPolicy === 'fixed' && agency.boundDeviceId !== deviceId)
-    reasons.push('CONFIGURATION_INVALID');
 
   if (
     agent &&

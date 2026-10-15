@@ -1,6 +1,12 @@
 # Local setup
 
-The one supported way to run Orvilo on your machine. A repo-root `.env` always
+Development and UI acceptance default to real Electron with the existing local
+backend. Use `bun run dev:desktop:skip-login` for an isolated Electron profile
+already signed in as the seed user; no repeated local-backend selection is needed.
+Local verification proves the selected local environment. Cloud-specific acceptance
+uses real cloud identity and records the cloud deployment revision separately.
+
+The supported way to run Orvilo on your machine. A repo-root `.env` always
 wins — if one exists, `init-dev-env.sh` refuses to run; use the existing config
 and start normally (`bun run dev`).
 

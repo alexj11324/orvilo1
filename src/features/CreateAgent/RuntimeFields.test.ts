@@ -122,6 +122,7 @@ describe('shared Agent runtime form', () => {
   });
   it('clears incompatible effort after choosing a different model', async () => {
     const { result } = renderHook(() => useAgentRuntimeForm({ initialType: 'codex' }));
+    act(() => result.current.setModel('gpt-6-astra'));
     await waitFor(() => expect(result.current.ready).toBe(true));
     act(() => {
       result.current.setModel('gpt-6-astra');
@@ -130,6 +131,26 @@ describe('shared Agent runtime form', () => {
     expect(result.current.effort).toBe('max');
     act(() => result.current.setModel('gpt-5.4-mini'));
     expect(result.current.effort).toBe('default');
+  });
+  it('requires a saved device and model for a public Agent', async () => {
+    const { result, rerender } = renderHook(() =>
+      useAgentRuntimeForm({ initialType: 'codex', visibility: 'public' }),
+    );
+    await waitFor(() => expect(state.scan).toHaveBeenCalled());
+    act(() => result.current.setModel(''));
+    expect(result.current.ready).toBe(false);
+    act(() => result.current.setModel('default'));
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    await expect(result.current.prepare()).resolves.toMatchObject({
+      model: 'default',
+      agencyConfig: { boundDeviceId: 'local-device' },
+    });
+    act(() => result.current.setModel('gpt-6-astra'));
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    state.host = { deviceId: undefined as unknown as string, isLocal: true, loading: false };
+    rerender();
+    expect(result.current.ready).toBe(false);
+    await expect(result.current.prepare()).rejects.toThrow('FIRST_AGENT_REQUIRED');
   });
   it('blocks creation while the selected execution host is still resolving', () => {
     state.host = { deviceId: 'local-device', isLocal: true, loading: true };

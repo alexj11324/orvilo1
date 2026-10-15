@@ -1,8 +1,8 @@
 import { resolveSubAgentChatConfig } from '@orvilo/const';
 import type { OrviloDatabase } from '@orvilo/database';
 import { type AgentConfigSnapshot, resolveAgentConfig } from '@orvilo/mecha';
-import type { AgentModelOverride, MessageMapScope, OrviloAgentAgencyConfig } from '@orvilo/types';
-import { getDisabledPluginIds, resolveAgentAgencyConfig } from '@orvilo/types';
+import type { MessageMapScope } from '@orvilo/types';
+import { getDisabledPluginIds, normalizeAgencyConfigHeterogeneousProvider } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 
@@ -29,8 +29,6 @@ export interface ResolveRunAgentConfigInput {
   /** Agent id or slug (agentId takes precedence at the call site). */
   identifier: string;
   instructions?: string;
-  modelOverride?: string;
-  providerOverride?: string;
   throwIfExecutionAborted: (stage: string) => Promise<void>;
   toolModeOverride?: InternalExecAgentParams['toolModeOverride'];
 }
@@ -53,50 +51,34 @@ export interface ResolvedRunAgentConfig {
   groupSystemContext?: string;
   isGroupSupervisor: boolean;
   isPublicWorkspaceAgent: boolean;
-  memberDeviceOverride?: Pick<OrviloAgentAgencyConfig, 'boundDeviceId' | 'executionTarget'>;
   /** Persistence-attribution agent id (Agent Signal marker aware). */
   persistAgentId: string;
   /** The actual executing agent row id resolved from id/slug. */
   resolvedAgentId: string;
 }
 
-interface WorkspaceMemberOverrides {
-  device?: Pick<OrviloAgentAgencyConfig, 'boundDeviceId' | 'executionTarget'>;
-  mode?: boolean;
-  model?: AgentModelOverride;
-}
-
-/**
- * This caller's workspace-scoped execution / model / mode preferences for the
- * agent. They live in the dedicated per-(workspace, user) settings row and
- * never mutate the shared Agent config. Losing them is non-fatal: execution
- * falls back to the shared row.
- */
-const loadWorkspaceMemberOverrides = async (
+/** Load only the caller's workspace-scoped mode preference. */
+const loadWorkspaceMemberMode = async (
   deps: ResolveRunAgentConfigDeps,
   agentId: string,
-): Promise<WorkspaceMemberOverrides> => {
-  if (!deps.workspaceId) return {};
+): Promise<boolean | undefined> => {
+  if (!deps.workspaceId) return undefined;
   try {
     const preference = await new WorkspaceUserSettingsModel(
       deps.db,
       deps.userId,
       deps.workspaceId,
     ).getPreference();
-    return {
-      device: preference.agentDeviceOverrides?.[agentId],
-      mode: preference.agentModeOverrides?.[agentId],
-      model: preference.agentModelOverrides?.[agentId],
-    };
+    return preference.agentModeOverrides?.[agentId];
   } catch (error) {
     log('execAgent: failed to load caller workspace_user_settings preferences: %O', error);
-    return {};
+    return undefined;
   }
 };
 
 /**
  * Author-or-admin, NOT the configuration flag: this value decides whether the
- * run ignores the member's own model / device / mode overrides, and a
+ * run ignores the member's own mode override, and a
  * collaborative builtin must keep honoring them — the client runtime resolves
  * the same distinction from authorship. Permission lookup failure is
  * fail-closed: applying member policy is safer than accidentally granting
@@ -146,10 +128,10 @@ const loadUserInfoForAIGeneration = async (
  * configuration for this run.
  *
  * Gathers what the shared rules need from the server's own sources (the agent
- * row, the caller's workspace member overrides, author-or-admin access, the
+ * row, the caller's workspace mode preference, author-or-admin access, the
  * user's reply language), runs `resolveAgentConfig` from `@orvilo/mecha` —
  * the same rules the client runtime applies — and then layers the per-call
- * intents only a run knows about: the member device override, callSubAgent
+ * intents only a run knows about: callSubAgent
  * chatConfig patches, the IM `/mode` override, the persistence-attribution
  * agent ids and the per-call `instructions` systemRole append.
  */
@@ -162,8 +144,6 @@ export const resolveRunAgentConfig = async (
     chatConfigOverride,
     identifier,
     instructions,
-    modelOverride,
-    providerOverride,
     throwIfExecutionAborted,
     toolModeOverride,
   } = input;
@@ -184,21 +164,13 @@ export const resolveRunAgentConfig = async (
   const agentWorkspaceId = row.workspaceId ?? deps.workspaceId;
   const isPublicWorkspaceAgent = !!agentWorkspaceId && row.visibility !== 'private';
 
-  const [overrides, canManageAgent, userInfo] = await Promise.all([
-    loadWorkspaceMemberOverrides(deps, resolvedAgentId),
+  const [memberModeOverride, canManageAgent, userInfo] = await Promise.all([
+    loadWorkspaceMemberMode(deps, resolvedAgentId),
     resolveCanManage(deps, row, agentWorkspaceId, isPublicWorkspaceAgent),
     loadUserInfoForAIGeneration(deps, deps.userId),
   ]);
 
-  // The caller's device preference layers onto the shared row BEFORE the
-  // shared rules run, so a builtin runtime that pins its own execution target
-  // (the onboarding agents set `executionTarget: 'none'`) still wins over a
-  // saved member override when its `agencyConfig` is merged on top.
-  row.agencyConfig = resolveAgentAgencyConfig(row.agencyConfig, overrides.device, {
-    canManage: canManageAgent,
-    visibility: row.visibility,
-    workspaceId: agentWorkspaceId,
-  });
+  row.agencyConfig = normalizeAgencyConfigHeterogeneousProvider(row.agencyConfig);
 
   const snapshot: AgentConfigSnapshot = {
     agent: {
@@ -215,8 +187,7 @@ export const resolveRunAgentConfig = async (
     chatConfig: row.chatConfig,
     group: groupRun?.group,
     groupMembers: groupRun?.groupMembers,
-    memberModeOverride: overrides.mode,
-    memberModelOverride: overrides.model,
+    memberModeOverride,
     slug: row.slug ?? undefined,
     userLocale: userInfo.userLocale,
     userTimezone: userInfo.userTimezone,
@@ -228,10 +199,6 @@ export const resolveRunAgentConfig = async (
       agentId: resolvedAgentId,
       groupId: appContext?.groupId ?? undefined,
       isSubAgent: appContext?.isSubAgent,
-      modelOverride: {
-        ...(modelOverride ? { model: modelOverride } : {}),
-        ...(providerOverride ? { provider: providerOverride } : {}),
-      },
       scope: (groupRun ? 'group' : (appContext?.scope ?? undefined)) as MessageMapScope | undefined,
     },
     snapshot,
@@ -334,7 +301,6 @@ export const resolveRunAgentConfig = async (
       ]
         .filter(Boolean)
         .join('\n\n') || undefined,
-    memberDeviceOverride: overrides.device,
     persistAgentId,
     resolvedAgentId,
   };

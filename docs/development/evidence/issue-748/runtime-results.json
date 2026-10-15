@@ -1,0 +1,79 @@
+{
+  "agents": [
+    {
+      "id": "agt_QvYHszHCOOX3",
+      "title": "Issue 748 OpenCode Copy",
+      "visibility": "private",
+      "workspaceId": "issue748-qa-20261012",
+      "runtime": {
+        "type": "opencode",
+        "target": "local",
+        "deviceId": "QA_HOST_A",
+        "model": "opencode/mimo-v2.6-flash-free"
+      }
+    },
+    {
+      "id": "agt_ayukCmkRyg9F",
+      "title": "Issue 748 OpenCode QA",
+      "visibility": "private",
+      "workspaceId": "issue748-qa-20261012",
+      "runtime": {
+        "type": "opencode",
+        "target": "local",
+        "deviceId": "QA_HOST_A",
+        "model": "opencode/mimo-v2.6-flash-free"
+      }
+    }
+  ],
+  "deviceEvidence": {
+    "deviceAlias": "QA_HOST_A",
+    "transport": "real local Go device gateway \u2192 real Electron main process",
+    "agentType": "opencode",
+    "capabilityStatus": "verified",
+    "inventoryComplete": true,
+    "checkedAt": "2026-10-12T23:18:55.043Z",
+    "selectedRuntimeProbeMs": 4330
+  },
+  "environment": "local real Electron + local backend + real Go gateways",
+  "operations": [
+    {
+      "id": "op_1791845816773_agt_ayukCmkRyg9F_tpc_ei5NyStX12DR_fv02nRhJ",
+      "agent_id": "agt_ayukCmkRyg9F",
+      "topic_id": "tpc_ei5NyStX12DR",
+      "task_id": null,
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "provider": "opencode",
+      "trigger": "chat",
+      "started_at": "2026-10-12T22:56:56.776Z",
+      "completed_at": "2026-10-12T22:57:25.211Z",
+      "sourceSha": "cb72d1326f3b8b93b13232cd20ffea5cb619d83d"
+    },
+    {
+      "id": "op_1791847343738_agt_QvYHszHCOOX3_tpc_Ueg08h6PsHv6_DY3bjg7F",
+      "agent_id": "agt_QvYHszHCOOX3",
+      "topic_id": "tpc_Ueg08h6PsHv6",
+      "task_id": null,
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "provider": "opencode",
+      "trigger": "chat",
+      "started_at": "2026-10-12T23:22:23.741Z",
+      "completed_at": "2026-10-12T23:22:55.928Z",
+      "sourceSha": "486b0c5c0f68b3646f49dad480500f4778a87b75"
+    },
+    {
+      "id": "op_1791847425726_agt_ayukCmkRyg9F_tpc_uGwQjld7CC9k_mEE3UiR6",
+      "agent_id": "agt_ayukCmkRyg9F",
+      "topic_id": "tpc_uGwQjld7CC9k",
+      "task_id": "task_a3rQMKiyoSA9",
+      "status": "done",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "provider": "opencode",
+      "trigger": "task",
+      "started_at": "2026-10-12T23:23:45.744Z",
+      "completed_at": "2026-10-12T23:24:09.209Z",
+      "sourceSha": "486b0c5c0f68b3646f49dad480500f4778a87b75"
+    }
+  ]
+}

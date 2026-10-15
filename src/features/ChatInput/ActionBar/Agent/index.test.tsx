@@ -122,9 +122,22 @@ vi.mock('@/hooks/useEffectiveAgencyConfig', () => ({
   useEffectiveAgencyConfig: () => mocks.effectiveConfig,
 }));
 vi.mock('@/features/DeviceManager/useDeviceList', () => ({
-  // This row supplies no Agent ID, so the runtime query remains disabled.
-  useAgentDeviceCandidates: () => ({
-    data: undefined,
+  useAgentDeviceCandidates: (agentId?: string) => ({
+    data: agentId
+      ? {
+          inventoryComplete: true,
+          candidates: mocks.devices.map((entry) => {
+            const device = entry as { deviceId: string; online: boolean };
+            return {
+              deviceId: device.deviceId,
+              online: device.online,
+              scopeOk: true,
+              capabilityOk: true,
+              versionOk: true,
+            };
+          }),
+        }
+      : undefined,
     error: undefined,
     isLoading: false,
     mutate: vi.fn(),
@@ -240,7 +253,6 @@ describe('Agent action', () => {
       {
         composerAgentId: 'agt_other',
         composerHeteroEffort: undefined,
-        composerModelSelection: undefined,
       },
       false,
       'selectAgent/explicit',
@@ -258,7 +270,6 @@ describe('Agent action', () => {
       {
         composerAgentId: 'agt_other',
         composerHeteroEffort: undefined,
-        composerModelSelection: undefined,
       },
       false,
       'selectAgent/explicit',
@@ -359,6 +370,39 @@ describe('Agent action', () => {
     fireEvent.click(getByRole('button', { name: 'agentPicker.configure' }));
     expect(onConfigure).toHaveBeenCalledWith('deleted');
     expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('offers a configured private workspace Agent on its authorized personal host', async () => {
+    const { ConfiguredAgentRow } = await vi.importActual<{
+      ConfiguredAgentRow: typeof RealConfiguredAgentRow;
+    }>('@/features/Home/AgentSelect/ConfiguredAgentRow');
+    const agencyConfig = {
+      executionTarget: 'local',
+      boundDeviceId: 'personal-host',
+      heterogeneousProvider: { type: 'opencode', model: 'mimo-v2-pro' },
+    };
+    mocks.agentMap['private-workspace-agent'] = {
+      workspaceId: 'workspace',
+      visibility: 'private',
+      agencyConfig,
+    };
+    mocks.profile.data = { agencyConfig };
+    mocks.effectiveConfig = { agencyConfig, isPreferenceLoading: false, workspaceScoped: true };
+    mocks.devices = [{ deviceId: 'personal-host', online: true, scope: 'personal' }];
+    const onSelect = vi.fn();
+    const { getByRole, queryByText } = render(
+      <ConfiguredAgentRow
+        active
+        row={{ id: 'private-workspace-agent', title: 'QA OpenCode' }}
+        onConfigure={vi.fn()}
+        onSelect={onSelect}
+      />,
+    );
+    const button = getByRole('button', { name: 'QA OpenCode' });
+    expect(button).toBeEnabled();
+    expect(queryByText('agentPicker.status.configure')).toBeNull();
+    fireEvent.click(button);
+    expect(onSelect).toHaveBeenCalledWith('private-workspace-agent');
   });
 
   it('shows offline reason and prevents selection of a configured offline Agent', async () => {

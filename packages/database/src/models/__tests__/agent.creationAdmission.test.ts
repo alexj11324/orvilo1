@@ -175,7 +175,7 @@ describe('Agent creation admission', () => {
       agencyConfig: {
         boundDeviceId: 'saved-host',
         executionTarget: 'local',
-        heterogeneousProvider: { type: 'pi' },
+        heterogeneousProvider: { type: 'pi', model: 'default' },
       },
     });
     await expect(
@@ -214,7 +214,7 @@ describe('Agent creation admission', () => {
       agencyConfig: {
         boundDeviceId: 'saved-host',
         executionTarget: 'local',
-        heterogeneousProvider: { command: 'codex', type: 'codex' },
+        heterogeneousProvider: { command: 'codex', type: 'codex', model: 'default' },
       },
       title: 'My Codex',
     });
@@ -260,22 +260,29 @@ describe('Agent creation admission', () => {
     await expect(scoped.create({ ...prime, visibility: 'public' })).rejects.toMatchObject({
       code: 'FORBIDDEN',
     });
-    await expect(scoped.create({ ...prime, visibility: 'private' })).rejects.toMatchObject({
-      code: 'BAD_REQUEST',
-      message: 'New workspace Agents must be public',
-    });
     expect(await db.select().from(agents)).toHaveLength(0);
+    const created = await scoped.create({ ...prime, visibility: 'private' });
+    const [saved] = await db.select().from(agents).where(eq(agents.id, created.id));
+    expect(saved).toMatchObject({
+      visibility: 'private',
+      workspaceId,
+      model: 'executable-model',
+      agencyConfig: prime.agencyConfig,
+    });
   });
 
-  it('refuses legacy metadata-only duplication while leaving existing name edits available', async () => {
-    const [legacy] = await db.insert(agents).values({ title: 'Legacy', userId }).returning();
-    await model.updateConfig(legacy.id, { name: 'My legacy name' });
+  it('refuses saving and duplicating legacy metadata-only Agents', async () => {
+    const [legacy] = await db
+      .insert(agents)
+      .values({ title: 'Legacy', name: 'Legacy', userId })
+      .returning();
+    await expect(model.updateConfig(legacy.id, { name: 'My legacy name' })).rejects.toMatchObject({
+      message: 'AGENT_RUNTIME_REQUIRED',
+    });
     await expect(model.duplicate(legacy.id)).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
     });
-    expect((await db.select().from(agents).where(eq(agents.id, legacy.id)))[0].name).toBe(
-      'My legacy name',
-    );
+    expect((await db.select().from(agents).where(eq(agents.id, legacy.id)))[0].name).toBe('Legacy');
     expect(await db.select().from(agents)).toHaveLength(1);
   });
 });

@@ -3522,25 +3522,26 @@ describe('Task Router Integration', () => {
       expect(task.data.config).toEqual({});
     });
 
-    it('preserves the snapshotted model when the agent default changes later', async () => {
+    it('runs the saved Agent without forwarding an older task model snapshot', async () => {
       await setAgentModel('claude-sonnet-4-6', 'anthropic');
       const task = await caller.create({
         assigneeAgentId: testAgentId,
         instruction: 'Snapshot then drift',
       });
 
-      // User flips the agent to an expensive chat model.
+      // The saved Agent model changes after the task was created.
       await setAgentModel('gpt-5.4-pro', 'openai');
 
       await caller.run({ id: task.data.id });
 
-      expect(mockExecAgent).toHaveBeenCalledWith(
-        expect.objectContaining({ model: 'claude-sonnet-4-6', provider: 'anthropic' }),
-      );
+      const [execution] = mockExecAgent.mock.calls.at(-1)!;
+      expect(execution.agentId).toBe(testAgentId);
+      expect(execution).not.toHaveProperty('model');
+      expect(execution).not.toHaveProperty('provider');
     });
 
-    it('backfills the snapshot on first run for tasks without config.model', async () => {
-      // Simulate a task that pre-dates this fix: no snapshot yet.
+    it('runs the assigned Agent without requiring a task model snapshot', async () => {
+      // An older task has no model snapshot.
       await setAgentModel(null, null);
       const task = await caller.create({
         assigneeAgentId: testAgentId,
@@ -3554,13 +3555,11 @@ describe('Task Router Integration', () => {
       await caller.run({ id: task.data.id });
 
       const after = await caller.find({ id: task.data.id });
-      expect(after.data.config).toMatchObject({
-        model: 'claude-sonnet-4-6',
-        provider: 'anthropic',
-      });
-      expect(mockExecAgent).toHaveBeenCalledWith(
-        expect.objectContaining({ model: 'claude-sonnet-4-6', provider: 'anthropic' }),
-      );
+      expect(after.data.assigneeAgentId).toBe(testAgentId);
+      const [execution] = mockExecAgent.mock.calls.at(-1)!;
+      expect(execution.agentId).toBe(testAgentId);
+      expect(execution).not.toHaveProperty('model');
+      expect(execution).not.toHaveProperty('provider');
     });
   });
 

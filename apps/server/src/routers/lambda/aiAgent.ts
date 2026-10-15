@@ -18,6 +18,7 @@ import {
   RequestTrigger,
   ThreadStatus,
   ThreadType,
+  topicExecutionConfigSchema,
   UserInterventionConfigSchema,
   workingDirConfigSchema,
 } from '@orvilo/types';
@@ -1020,6 +1021,10 @@ const ExecAgentSchema = z
         groupId: z.string().nullish(),
         initialTopicMetadata: z
           .object({
+            executionConfig: topicExecutionConfigSchema.optional(),
+            heteroEffort: z
+              .custom<HeterogeneousReasoningEffort>((value) => typeof value === 'string')
+              .optional(),
             repos: z.array(z.string()).optional(),
             workingDirectory: z.string().optional(),
             workingDirectoryConfig: workingDirConfigSchema.optional(),
@@ -1066,32 +1071,12 @@ const ExecAgentSchema = z
         userMessageId: z.string().regex(entityIdPattern('messages')).optional(),
       })
       .optional(),
-    /** Explicit device ID to bind to the topic and activate for this run */
-    deviceId: z.string().optional(),
     /** Current desktop device hint, honored only for an effective local target */
     localDeviceId: z.string().optional(),
     /** Optional existing message IDs to include in context */
     existingMessageIds: z.array(z.string()).optional().default([]),
     /** File IDs of already-uploaded attachments to attach to the new user message */
     fileIds: z.array(z.string()).optional(),
-    /**
-     * Model / provider / reasoning effort picked in a blank composer before the
-     * conversation existed (`composerModelSelection` / `composerHeteroEffort`
-     * client-side). Written onto the topic THIS run creates and never onto the
-     * agent row — a chat-side pick is conversation-scoped
-     * (docs/development/chat-agent-model-ia.md §5.2). Ignored when the run reuses
-     * an existing topic; absent for every non-composer caller, which leaves the
-     * agent-config topic snapshot exactly as before.
-     */
-    newTopicPins: z
-      .object({
-        effort: z
-          .custom<HeterogeneousReasoningEffort>((value) => typeof value === 'string')
-          .optional(),
-        model: z.string().optional(),
-        provider: z.string().optional(),
-      })
-      .optional(),
     /** Parent message ID for regeneration/continue (skip user message creation, branch from this message) */
     parentMessageId: z.string().optional(),
     /** Existing gateway operation this fresh turn atomically supersedes. */
@@ -1323,12 +1308,8 @@ const ScheduleAgentRunSchema = z
     fileIds: z.array(z.string()).optional(),
     /** Group to file the topic under, when scheduling from a group conversation */
     groupId: z.string().nullish(),
-    /** Override the agent's default model */
-    model: z.string().optional(),
     /** The user input/prompt, replayed verbatim when the run comes due */
     prompt: z.string().min(1),
-    /** Override the agent's default provider */
-    provider: z.string().optional(),
     /**
      * When to run. UTC ISO-8601 (`…Z`) — the dispatcher's due query compares it
      * as text, so a zoned offset would break the ordering.
@@ -1364,14 +1345,10 @@ const ExecSubAgentTaskSchema = z.object({
   isSubAgent: z.boolean().optional(),
   /** Task instruction/prompt for the SubAgent */
   instruction: z.string(),
-  /** Sub-agent model override resolved at the spawn site */
-  model: z.string().optional(),
   /** The parent message ID (Supervisor's tool call message or task message) */
   parentMessageId: z.string(),
   /** Parent operation ID for dispatching callAgent hooks */
   parentOperationId: z.string().optional(),
-  /** Provider for {@link model} */
-  provider: z.string().optional(),
   /** Timeout in milliseconds (optional) */
   timeout: z.number().optional(),
   /** Task title (shown in UI, used as thread title) */
@@ -2174,12 +2151,10 @@ export const aiAgentRouter = router({
       prompt,
       appContext,
       autoStart = true,
-      deviceId,
       localDeviceId,
       existingMessageIds = [],
       fileIds,
       mentionedAgents,
-      newTopicPins,
       parentMessageId,
       resumeApproval,
       resumeApprovals,
@@ -2378,12 +2353,10 @@ export const aiAgentRouter = router({
         // attribution. These are server-derived from the tRPC context and are
         // intentionally not part of the client-passable input schema.
         clientIp: ctx.clientIp ?? undefined,
-        deviceId,
         localDeviceId,
         existingMessageIds,
         fileIds,
         mentionedAgents,
-        newTopicPins,
         parentMessageId,
         prompt,
         // When parentMessageId is provided, this is a regeneration/continue or a
@@ -2501,7 +2474,6 @@ export const aiAgentRouter = router({
         prompt,
         appContext,
         autoStart = true,
-        deviceId,
         existingMessageIds = [],
         parentMessageId,
         trigger,
@@ -2532,7 +2504,6 @@ export const aiAgentRouter = router({
           agentId,
           appContext,
           autoStart,
-          deviceId,
           existingMessageIds,
           parentMessageId,
           prompt,
@@ -2669,10 +2640,8 @@ export const aiAgentRouter = router({
         inheritMessages,
         instruction,
         isSubAgent,
-        model,
         parentMessageId,
         parentOperationId,
-        provider,
         title,
         topicId,
         timeout,
@@ -2704,10 +2673,8 @@ export const aiAgentRouter = router({
           inheritMessages,
           instruction,
           isSubAgent,
-          model,
           parentMessageId,
           ...(parentOperationId && { parentOperationId }),
-          provider,
           timeout,
           title,
           topicId,

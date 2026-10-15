@@ -89,13 +89,7 @@ const HeterogeneousChatInput = memo(() => {
   const { isConfigured, goToConfig } = useHeteroAgentCloudConfig(agentId);
   const navigate = useWorkspaceAwareNavigate();
 
-  // Effective config = shared row + this member's per-agent device override
-  // — the raw shared `agencyConfig` may carry another member's
-  // device pick, which would drive the guard/model-selector gates off the
-  // wrong machine.
-  // While the preference is loading, the merged config may still reflect only
-  // the shared row — hold the input closed (below) instead of gating device
-  // runs off a value that can flip once the override arrives.
+  // Guards follow the Agent's saved runtime configuration.
   const { agencyConfig, isPreferenceLoading, workspaceScoped } = useTopicAgencyConfig(agentId);
   const heterogeneousProvider = agencyConfig?.heterogeneousProvider;
   const providerType = heterogeneousProvider?.type;
@@ -194,8 +188,6 @@ const HeterogeneousChatInput = memo(() => {
   };
 
   const renderCloudConfigGuard = () => {
-    // Until the override loads, `isDeviceExecution` may be a false negative —
-    // don't flash the cloud-config prompt for what turns out to be a device run.
     if (isPreferenceLoading || deviceSelectionRequired || isDeviceExecution || isConfigured) {
       return null;
     }
@@ -265,9 +257,7 @@ const HeterogeneousChatInput = memo(() => {
   };
 
   // Device execution doesn't use the cloud sandbox, so it doesn't need cloud
-  // credentials — only the sandbox path gates on `isConfigured`. While the
-  // workspace preference loads, keep send disabled: the effective target isn't
-  // known yet, so neither guard can vouch for the run.
+  // credentials — only the sandbox path gates on `isConfigured`.
   const inputDisabled =
     isPreferenceLoading ||
     deviceSelectionRequired ||

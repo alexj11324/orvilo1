@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { heterogeneousAgentCatalogService } from './heterogeneousAgent';
 
 const mocks = vi.hoisted(() => ({
+  localDeviceId: 'local-device' as string | undefined,
   electronListModels: vi.fn(),
   electronListPermissions: vi.fn(),
   remoteListPermissions: vi.fn(),
@@ -35,12 +36,13 @@ vi.mock('@/services/electron/heterogeneousAgent', () => ({
 // Stand in for a host whose handshake proved a local device id — the IPC leg
 // is the desktop-local transport it authorizes.
 vi.mock('@/services/localExecutionIdentity', () => ({
-  resolveLocalExecutionIdentity: vi.fn(async () => ({ localDeviceId: 'local-device' })),
+  resolveLocalExecutionIdentity: vi.fn(async () => ({ localDeviceId: mocks.localDeviceId })),
 }));
 
 describe('heterogeneousAgentCatalogService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.localDeviceId = 'local-device';
   });
 
   it('returns the advertised permission catalog from the selected transport', async () => {
@@ -77,6 +79,54 @@ describe('heterogeneousAgentCatalogService', () => {
     await expect(heterogeneousAgentCatalogService.listModels(params)).resolves.toEqual(catalog);
     expect(mocks.electronListModels).toHaveBeenCalledWith(params);
     expect(mocks.remoteListModels).not.toHaveBeenCalled();
+  });
+
+  it('discovers models on the explicitly saved host when its identity matches this Desktop', async () => {
+    const catalog = { models: [{ id: 'mimo-v2-pro' }], status: 'success', updatedAt: 1 };
+    mocks.electronListModels.mockResolvedValue(catalog);
+    await expect(
+      heterogeneousAgentCatalogService.listModels({
+        deviceId: 'local-device',
+        cwd: '/repo',
+        type: 'opencode',
+      }),
+    ).resolves.toEqual(catalog);
+    expect(mocks.electronListModels).toHaveBeenCalledWith({ cwd: '/repo', type: 'opencode' });
+    expect(mocks.remoteListModels).not.toHaveBeenCalled();
+  });
+
+  it('discovers permissions on the explicitly saved host when its identity matches this Desktop', async () => {
+    const catalog = [
+      {
+        configId: 'permission_mode',
+        currentValue: 'default',
+        name: 'Permission mode',
+        options: [{ name: 'Default', value: 'default' }],
+      },
+    ];
+    mocks.electronListPermissions.mockResolvedValue(catalog);
+    await expect(
+      heterogeneousAgentCatalogService.listPermissions({
+        deviceId: 'local-device',
+        type: 'opencode',
+      }),
+    ).resolves.toEqual(catalog);
+    expect(mocks.electronListPermissions).toHaveBeenCalledWith({ type: 'opencode' });
+    expect(mocks.remoteListPermissions).not.toHaveBeenCalled();
+  });
+
+  it('does not treat a named host as local when its identity cannot be proven', async () => {
+    mocks.localDeviceId = undefined;
+    const catalog = { models: [], status: 'success', updatedAt: 1 };
+    mocks.remoteListModels.mockResolvedValue(catalog);
+    await expect(
+      heterogeneousAgentCatalogService.listModels({ deviceId: 'local-device', type: 'opencode' }),
+    ).resolves.toEqual(catalog);
+    expect(mocks.electronListModels).not.toHaveBeenCalled();
+    await expect(
+      heterogeneousAgentCatalogService.listModels({ type: 'opencode' }),
+    ).rejects.toMatchObject({ code: 'TARGET_REQUIRED' });
+    expect(mocks.electronListModels).not.toHaveBeenCalled();
   });
 
   it('uses the device RPC for a bound execution target', async () => {

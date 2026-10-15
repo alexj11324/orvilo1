@@ -40,8 +40,6 @@ interface TranscriptMessage {
 interface TopicDetail {
   favorite?: boolean | null;
   id: string;
-  model?: string | null;
-  provider?: string | null;
   status?: string | null;
   title?: string | null;
   updatedAt?: Date | string | null;
@@ -214,10 +212,6 @@ const renderTopicHeader = (topic: TopicDetail) => {
   if (topic.favorite) console.log(`${pc.bold('Favorite:')} ★`);
   if (topic.updatedAt) console.log(`${pc.bold('Updated:')}  ${timeAgo(topic.updatedAt)}`);
   if (topic.status) console.log(`${pc.bold('Status:')}   ${formatSingleLine(topic.status)}`);
-  if (topic.model) {
-    const provider = topic.provider ? ` (${formatSingleLine(topic.provider)})` : '';
-    console.log(`${pc.bold('Model:')}    ${formatSingleLine(topic.model)}${provider}`);
-  }
   console.log('');
 };
 

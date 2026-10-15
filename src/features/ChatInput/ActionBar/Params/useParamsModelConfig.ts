@@ -1,15 +1,9 @@
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
-import { useChatStore } from '@/store/chat';
-import { topicSelectors } from '@/store/chat/slices/topic/selectors';
 
-import { useAgentModelSelection } from '../../hooks/useAgentModelSelection';
+import { useEffectiveModel } from '../../hooks/useEffectiveModel';
 
 export const useParamsModelConfig = (agentId: string) => {
-  const { model: selectedAgentModel, provider: selectedAgentProvider } =
-    useAgentModelSelection(agentId);
-  const topicModel = useChatStore(topicSelectors.activeTopicModel);
-  const model = topicModel?.model ?? selectedAgentModel;
-  const provider = topicModel?.model ? topicModel.provider : selectedAgentProvider;
+  const { model, provider } = useEffectiveModel(agentId);
 
   const hasModelConfig = useAiInfraStore(aiModelSelectors.isModelHasExtendParams(model, provider));
   const disabledParams = useAiInfraStore(aiModelSelectors.modelDisabledParams(model, provider));

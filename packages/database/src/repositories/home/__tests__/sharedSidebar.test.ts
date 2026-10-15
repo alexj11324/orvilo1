@@ -53,7 +53,7 @@ const withRuntime = (config: any = {}, workspaceId?: string) => ({
   agencyConfig: {
     boundDeviceId: `creation-host-${workspaceId ?? memberA}`,
     executionTarget: 'device' as const,
-    heterogeneousProvider: { type: 'codex' as const },
+    heterogeneousProvider: { model: 'default', type: 'codex' as const },
     ...config.agencyConfig,
   },
 });

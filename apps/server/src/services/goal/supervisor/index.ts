@@ -264,7 +264,6 @@ export class GoalSupervisorService {
           // hard mount contract (unmountable → incident escalates).
           requiredToolIds: [GoalSupervisorIdentifier],
           maxSteps: 16,
-          model: runtime.model ?? undefined,
           prompt: buildGoalSupervisorPrompt({
             failedOperation: { error: failedOperation?.error, id: latest.operationId },
             goal: { requirement: graph.goal.requirement, title: graph.goal.title },
@@ -282,7 +281,6 @@ export class GoalSupervisorService {
               .map((run) => ({ handoff: run.handoff, topicId: run.topicId })),
             workVersions: graph.workVersions.filter((work) => work.nodeId === nodeId),
           }),
-          provider: runtime.provider ?? undefined,
           userInterventionConfig: { approvalMode: 'headless' },
         });
         await this.updateIncident(goalId, incident.id, {

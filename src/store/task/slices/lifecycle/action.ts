@@ -168,12 +168,17 @@ export class TaskLifecycleSliceActionImpl {
     const transitionVersion = ++this.#nextStatusTransitionVersion;
     this.#statusTransitionVersions.set(id, transitionVersion);
 
-    const previousStatusCandidate =
-      this.#get().taskDetailMap[id]?.status ??
-      this.#get().tasks.find((task) => task.identifier === id)?.status ??
+    const previousTask =
+      this.#get().taskDetailMap[id] ??
+      this.#get().tasks.find((task) => task.identifier === id) ??
       this.#get()
         .taskGroups.flatMap((group) => group.tasks)
-        .find((task) => task.identifier === id)?.status;
+        .find((task) => task.identifier === id);
+    const previousStatusCandidate = previousTask?.status;
+    const changesFutureScheduling =
+      (previousTask?.automationMode === 'schedule' ||
+        previousTask?.automationMode === 'heartbeat') &&
+      (status === 'paused' || status === 'scheduled');
     const previousStatus = isTaskStatus(previousStatusCandidate)
       ? previousStatusCandidate
       : undefined;
@@ -190,7 +195,7 @@ export class TaskLifecycleSliceActionImpl {
     // with the refetch below rather than as a guess in the retired vocabulary.
     const movesIssue = status === 'backlog' || status === 'canceled' || status === 'completed';
     const statusRow =
-      detail && previousStatus !== status && !movesIssue
+      !changesFutureScheduling && detail && previousStatus !== status && !movesIssue
         ? buildOptimisticPropertyActivity({
             actor: actorId
               ? {
@@ -204,18 +209,22 @@ export class TaskLifecycleSliceActionImpl {
             now: new Date().toISOString(),
           })
         : undefined;
-    this.#get().internal_dispatchTaskDetail({
-      id,
-      type: 'updateTaskDetail',
-      value: {
-        status,
-        ...extraUpdate,
-        ...(statusRow
-          ? { activities: appendOptimisticPropertyActivity(detail?.activities ?? [], statusRow) }
-          : {}),
-      },
-    });
-    this.#patchTaskCollectionsStatus(id, status);
+    // Periodic pause/resume changes future scheduling, not the running occurrence.
+    // Let the mutation's existing refetch supply the scheduler flag.
+    if (!changesFutureScheduling) {
+      this.#get().internal_dispatchTaskDetail({
+        id,
+        type: 'updateTaskDetail',
+        value: {
+          status,
+          ...extraUpdate,
+          ...(statusRow
+            ? { activities: appendOptimisticPropertyActivity(detail?.activities ?? [], statusRow) }
+            : {}),
+        },
+      });
+      this.#patchTaskCollectionsStatus(id, status);
+    }
 
     try {
       await runMutation(this.#set, this.#get, {
@@ -228,7 +237,8 @@ export class TaskLifecycleSliceActionImpl {
           console.error(`[TaskStore] Failed to transition task to ${status}:`, err);
           if (this.#statusTransitionVersions.get(id) !== transitionVersion) return;
 
-          if (previousStatus) this.#patchTaskCollectionsStatus(id, previousStatus);
+          if (previousStatus && !changesFutureScheduling)
+            this.#patchTaskCollectionsStatus(id, previousStatus);
           // The transition did not happen, so its row must go even when the
           // server-truth refetch below cannot run (offline).
           if (statusRow) {

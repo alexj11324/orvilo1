@@ -1,4 +1,10 @@
-import type { TaskDetailData, TaskListItem, TaskRunTrigger, TaskStatus } from '@orvilo/types';
+import type {
+  TaskContext,
+  TaskDetailData,
+  TaskListItem,
+  TaskRunTrigger,
+  TaskStatus,
+} from '@orvilo/types';
 import dayjs, { type Dayjs } from 'dayjs';
 import type { TFunction } from 'i18next';
 
@@ -9,22 +15,19 @@ import {
   nextScheduleFiring,
 } from '@/features/AgentTasks/AgentTaskDetail/scheduler/helpers';
 
-/**
- * Cordy automation status ↔ task status. An automation is "active" while its
- * schedule or heartbeat can still fire — the same set the server-side
- * `automated: true` filter keeps (`backlog` / `running` / `scheduled` /
- * `paused`); only `paused` is the user-visible off state.
- */
+/** Future periodic scheduling is independent from the current execution. */
 export type AutomationStatus = 'active' | 'inactive' | 'paused';
 
 export const AUTOMATION_ACTIVE_STATUSES: TaskStatus[] = ['backlog', 'running', 'scheduled'];
 
-export const automationStatusOf = (status: string): AutomationStatus =>
-  status === 'paused'
-    ? 'paused'
-    : AUTOMATION_ACTIVE_STATUSES.includes(status as TaskStatus)
-      ? 'active'
-      : 'inactive';
+export const automationStatusOf = (task: {
+  context?: unknown;
+  status: string;
+}): AutomationStatus => {
+  if (task.status === 'paused') return 'paused';
+  if (!AUTOMATION_ACTIVE_STATUSES.includes(task.status as TaskStatus)) return 'inactive';
+  return (task.context as TaskContext | null)?.scheduler?.automationPaused ? 'paused' : 'active';
+};
 
 /** Statuses the page's All/Active/Paused filter translates to server-side. */
 export const automationStatusesFor = (
@@ -93,7 +96,7 @@ export const automationTriggerSummary = (
 
 /** Next firing instant for a list row; null while unparseable or paused. */
 export const automationNextRun = (task: TaskListItem): Dayjs | null => {
-  if (automationStatusOf(task.status) !== 'active') return null;
+  if (automationStatusOf(task) !== 'active') return null;
   if (task.automationMode === 'schedule' && task.schedulePattern) {
     return nextScheduleFiring(task.schedulePattern, task.scheduleTimezone);
   }
@@ -216,7 +219,7 @@ export const automationDetailTriggerSummary = (
 
 /** Detail-page counterpart of `automationNextRun`. */
 export const automationDetailNextRun = (detail: TaskDetailData): Dayjs | null => {
-  if (automationStatusOf(detail.status) !== 'active') return null;
+  if (automationStatusOf(detail) !== 'active') return null;
   if (detail.automationMode === 'schedule' && detail.schedule?.pattern) {
     return nextScheduleFiring(detail.schedule.pattern, detail.schedule.timezone ?? null);
   }

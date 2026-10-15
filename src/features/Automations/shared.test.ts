@@ -78,10 +78,49 @@ describe('automationDetailTriggerSummary', () => {
 });
 
 describe('automation status', () => {
+  it.each(['schedule', 'heartbeat'] as const)(
+    'shows a future-paused running %s automation as paused without a countdown',
+    (automationMode) => {
+      const context = { scheduler: { automationPaused: true } };
+      const task = {
+        ...heartbeatTask,
+        ...scheduledTask,
+        automationMode,
+        context,
+        status: 'running',
+      } as TaskListItem;
+      const detail = {
+        ...scheduledDetail,
+        automationMode,
+        context,
+        heartbeat: { interval: 3600 },
+        status: 'running',
+      } as TaskDetailData;
+
+      expect(automationStatusOf(task)).toBe('paused');
+      expect(automationNextRun(task)).toBeNull();
+      expect(automationDetailNextRun(detail)).toBeNull();
+      expect(task.status).toBe('running');
+    },
+  );
+
+  it.each([undefined, false])(
+    'keeps running active when future pause is %s',
+    (automationPaused) => {
+      const task = {
+        ...scheduledTask,
+        context: { scheduler: { automationPaused } },
+        status: 'running',
+      } as TaskListItem;
+      expect(automationStatusOf(task)).toBe('active');
+      expect(automationNextRun(task)).not.toBeNull();
+    },
+  );
+
   it.each(['completed', 'failed', 'canceled'])(
     'does not present terminal task status %s as an active automation',
     (status) => {
-      expect(automationStatusOf(status)).toBe('inactive');
+      expect(automationStatusOf({ status })).toBe('inactive');
       expect(automationNextRun({ ...scheduledTask, status } as TaskListItem)).toBeNull();
       expect(
         automationDetailNextRun({ ...scheduledDetail, status } as unknown as TaskDetailData),

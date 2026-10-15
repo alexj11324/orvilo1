@@ -412,7 +412,13 @@ export class TaskService {
         });
     } else await this.taskTopicModel.updateStatus(target.taskId, topicId, 'canceled');
     const occurrence = stoppingDispatch?.automationOccurrence;
-    if (!occurrence || occurrence.parentDispatchId)
+    const task =
+      !occurrence && stoppingDispatch?.requestedBy.startsWith('manual:')
+        ? await this.taskModel.findById(target.taskId)
+        : null;
+    const manualPeriodicRun =
+      task?.automationMode === 'schedule' || task?.automationMode === 'heartbeat';
+    if ((!occurrence || occurrence.parentDispatchId) && !manualPeriodicRun)
       await this.taskModel.updateStatus(target.taskId, 'paused');
 
     if (stoppingDispatch) {

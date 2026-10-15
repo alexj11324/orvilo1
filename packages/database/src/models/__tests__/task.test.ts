@@ -14,6 +14,7 @@ import {
   agents,
   briefs,
   documents,
+  mcpEventTriggers,
   notifications,
   tasks,
   teamMembers,
@@ -779,6 +780,81 @@ describe('TaskModel', () => {
 
       // Omitting the flag must not narrow anything.
       expect((await model.list()).total).toBe(4);
+    });
+
+    it.each(['schedule', 'heartbeat'] as const)(
+      'should filter paused %s automation independently from a running execution',
+      async (automationMode) => {
+        const model = new TaskModel(serverDB, userId);
+        const config = { automationMode, heartbeatInterval: 3600, schedulePattern: '0 9 * * *' };
+        const paused = await model.create({ ...config, instruction: 'Paused while running' });
+        await model.updateContext(paused.id, { scheduler: { automationPaused: true } });
+        const active = await model.create({ ...config, instruction: 'Active while running' });
+        const manual = await model.create({ instruction: 'Ordinary running task' });
+        for (const task of [paused, active, manual]) await dispatchFixture(task.id, 'running');
+
+        const pausedList = await model.list({ automated: true, statuses: ['paused'] });
+        expect(pausedList.tasks.map((task) => task.id)).toEqual([paused.id]);
+        expect(pausedList.total).toBe(1);
+        const activeList = await model.list({
+          automated: true,
+          statuses: ['backlog', 'running', 'scheduled'],
+        });
+        expect(activeList.tasks.map((task) => task.id)).toEqual([active.id]);
+        expect(activeList.total).toBe(1);
+        expect((await model.list({ automated: true })).total).toBe(2);
+        expect(
+          (await model.list({ automated: false, statuses: ['running'] })).tasks.map(
+            (task) => task.id,
+          ),
+        ).toEqual([manual.id]);
+        expect((await model.list({ statuses: ['running'] })).total).toBe(3);
+      },
+    );
+
+    it('should keep event automation filters governed by enabled tenant triggers and parking', async () => {
+      const workspaceId = 'event-automation-filter-workspace';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Event filters',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await seedWorkspaceReaders();
+      const model = new TaskModel(serverDB, userId, workspaceId);
+      const eventIds: string[] = [];
+      for (const kind of ['enabled', 'disabled', 'parked', 'foreign-tenant']) {
+        const task = await model.create({ automationMode: 'event', instruction: kind });
+        eventIds.push(task.id);
+        await dispatchFixture(task.id, 'running');
+        await model.updateContext(task.id, { scheduler: { automationPaused: true } });
+        if (kind === 'parked') await model.updateStatus(task.id, 'paused');
+        await serverDB.insert(mcpEventTriggers).values({
+          enabled: kind !== 'disabled',
+          filters: [],
+          id: `trigger-${task.id}`,
+          sourceId: 'event-filter-source',
+          subscriptionId: 'event-filter-subscription',
+          taskId: task.id,
+          tenantId: kind === 'foreign-tenant' ? 'another-tenant' : workspaceId,
+          userId,
+          workspaceId,
+        });
+      }
+      try {
+        const active = await model.list({
+          automated: true,
+          statuses: ['backlog', 'running', 'scheduled'],
+        });
+        expect(active.tasks.map((task) => task.id)).toEqual([eventIds[0]]);
+        expect(active.total).toBe(1);
+        const paused = await model.list({ automated: true, statuses: ['paused'] });
+        expect(paused.tasks.map((task) => task.id).sort()).toEqual(eventIds.slice(1).sort());
+        expect(paused.total).toBe(3);
+      } finally {
+        for (const taskId of eventIds)
+          await serverDB.delete(mcpEventTriggers).where(eq(mcpEventTriggers.taskId, taskId));
+      }
     });
 
     it('should filter by projectId', async () => {

@@ -1,5 +1,5 @@
 import type { TaskDetailData } from '@orvilo/types';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createElement, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -16,6 +16,11 @@ const api = vi.hoisted(() => ({
   contractContext: vi.fn(),
   confirmModal: vi.fn((options: { onOk: () => void }) => options.onOk()),
   runMutation: vi.fn(),
+  cancelOccurrence: vi.fn(),
+  cancelTopic: vi.fn(),
+  getIssuePlan: vi.fn(),
+  updateStatus: vi.fn(),
+  toastError: vi.fn(),
   canEdit: true,
 }));
 
@@ -26,10 +31,15 @@ vi.mock('@/features/HeterogeneousAgent/builtinHarness', async (importOriginal) =
 vi.mock('@/features/DefaultAgent/useFallbackAgentId', () => ({
   useFallbackAgentId: () => undefined,
 }));
+vi.mock('@/components/toast', () => ({ toast: { error: api.toastError } }));
 vi.mock('@/libs/trpc/client', () => ({
   lambdaClient: {
     task: {
       contractContext: { query: api.contractContext },
+      cancelAutomationOccurrence: { mutate: api.cancelOccurrence },
+      cancelTopic: { mutate: api.cancelTopic },
+      getIssuePlan: { query: api.getIssuePlan },
+      updateStatus: { mutate: api.updateStatus },
       run: { mutate: api.runMutation },
     },
   },
@@ -325,5 +335,174 @@ describe('Issue header run control', () => {
     render(createElement(TaskDetailPage, { taskId: 'T-5' }));
 
     expect(screen.getByRole('button', { name: 'taskDetail.cancelSchedule' })).toBeTruthy();
+  });
+});
+
+describe('Stop current periodic occurrence', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    api.canEdit = true;
+    api.access = { canUseResource: true, isAccessResolved: true };
+    api.getIssuePlan.mockResolvedValue({
+      data: { automationQueue: { activeDispatchId: 'round-1' } },
+    });
+    api.cancelOccurrence.mockResolvedValue({ canceledDispatchId: 'round-1' });
+    api.cancelTopic.mockResolvedValue({ success: true });
+    api.updateStatus.mockResolvedValue({});
+  });
+
+  it.each(['schedule', 'heartbeat'] as const)(
+    'stops the running %s occurrence through its cancellation API and refreshes after acknowledgement',
+    async (automationMode) => {
+      let acknowledge!: (value: { canceledDispatchId: string }) => void;
+      api.cancelOccurrence.mockReturnValueOnce(
+        new Promise((resolve) => {
+          acknowledge = resolve;
+        }),
+      );
+      seedTask({ automationMode, dispatchPhase: 'running', status: 'running' });
+      render(createElement(TaskDetailPage, { taskId: 'T-5' }));
+      const stop = screen.getByRole('button', { name: 'taskDetail.stopTask' });
+      await userEvent.click(stop);
+
+      expect(api.getIssuePlan).toHaveBeenCalledWith({ id: 'T-5' });
+      expect(api.cancelOccurrence).toHaveBeenCalledWith({ id: 'T-5' });
+      expect(api.cancelTopic).not.toHaveBeenCalled();
+      expect(api.updateStatus).not.toHaveBeenCalled();
+      expect(stop).toBeDisabled();
+      expect(useTaskStore.getState().internal_refreshTaskDetail).not.toHaveBeenCalled();
+      expect(useTaskStore.getState().refreshTaskList).not.toHaveBeenCalled();
+      expect(useTaskStore.getState().taskDetailMap['T-5']?.status).toBe('running');
+
+      await act(async () => acknowledge({ canceledDispatchId: 'round-1' }));
+      await waitFor(() => {
+        expect(useTaskStore.getState().internal_refreshTaskDetail).toHaveBeenCalledWith('T-5');
+        expect(useTaskStore.getState().refreshTaskList).toHaveBeenCalledOnce();
+        expect(stop).toBeEnabled();
+      });
+      expect(api.toastError).not.toHaveBeenCalled();
+    },
+  );
+
+  it('reports an unconfirmed native stop without pausing future scheduling or claiming success', async () => {
+    const error = new Error('STOP_UNCONFIRMED');
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    api.cancelOccurrence.mockRejectedValueOnce(error);
+    seedTask({ automationMode: 'heartbeat', dispatchPhase: 'running', status: 'running' });
+    render(createElement(TaskDetailPage, { taskId: 'T-5' }));
+    await userEvent.click(screen.getByRole('button', { name: 'taskDetail.stopTask' }));
+
+    await waitFor(() =>
+      expect(api.toastError).toHaveBeenCalledWith('taskDetail.plan.stopRoundError'),
+    );
+    expect(api.updateStatus).not.toHaveBeenCalled();
+    expect(api.cancelTopic).not.toHaveBeenCalled();
+    expect(useTaskStore.getState().taskDetailMap['T-5']?.status).toBe('running');
+    expect(useTaskStore.getState().internal_refreshTaskDetail).not.toHaveBeenCalled();
+    expect(useTaskStore.getState().refreshTaskList).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'taskDetail.stopTask' })).toBeEnabled();
+    expect(log).toHaveBeenCalledWith(expect.any(String), error);
+    log.mockRestore();
+  });
+
+  it.each(['schedule', 'heartbeat'] as const)(
+    'stops a manual %s run through its actual root-owned Topic',
+    async (automationMode) => {
+      api.getIssuePlan.mockResolvedValueOnce({ data: { automationQueue: {} } });
+      seedTask({
+        id: 'task-root',
+        automationMode,
+        status: 'running',
+        activities: [
+          { type: 'topic', status: 'running', id: 'child-topic', sourceTaskId: 'task-child' },
+          { type: 'topic', status: 'completed', id: 'old-topic', sourceTaskId: 'task-root' },
+          { type: 'topic', status: 'running', id: 'manual-topic', sourceTaskId: 'task-root' },
+        ],
+      });
+      render(createElement(TaskDetailPage, { taskId: 'T-5' }));
+      await userEvent.click(screen.getByRole('button', { name: 'taskDetail.stopTask' }));
+
+      await waitFor(() =>
+        expect(api.cancelTopic).toHaveBeenCalledWith({ topicId: 'manual-topic' }),
+      );
+      expect(api.cancelOccurrence).not.toHaveBeenCalled();
+      expect(api.updateStatus).not.toHaveBeenCalled();
+      expect(useTaskStore.getState().internal_refreshTaskDetail).toHaveBeenCalledWith('T-5');
+      expect(useTaskStore.getState().refreshTaskList).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(['read', 'topic', 'missing', 'ambiguous'])(
+    'reports a failed %s route without another cancellation or status write',
+    async (failure) => {
+      const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+      api.getIssuePlan.mockResolvedValueOnce({ data: { automationQueue: {} } });
+      if (failure === 'read')
+        api.getIssuePlan.mockReset().mockRejectedValue(new Error('Read failed'));
+      if (failure === 'topic') api.cancelTopic.mockRejectedValueOnce(new Error('STOP_UNCONFIRMED'));
+      seedTask({
+        id: 'task-root',
+        automationMode: 'heartbeat',
+        status: 'running',
+        activities:
+          failure === 'missing'
+            ? []
+            : [
+                { type: 'topic', status: 'running', id: 'manual-topic', sourceTaskId: 'task-root' },
+                ...(failure === 'ambiguous'
+                  ? [
+                      {
+                        type: 'topic' as const,
+                        status: 'running',
+                        id: 'other-topic',
+                        sourceTaskId: 'task-root',
+                      },
+                    ]
+                  : []),
+              ],
+      });
+      render(createElement(TaskDetailPage, { taskId: 'T-5' }));
+      await userEvent.click(screen.getByRole('button', { name: 'taskDetail.stopTask' }));
+
+      await waitFor(() =>
+        expect(api.toastError).toHaveBeenCalledWith('taskDetail.plan.stopRoundError'),
+      );
+      expect(api.cancelTopic).toHaveBeenCalledTimes(failure === 'topic' ? 1 : 0);
+      expect(api.cancelOccurrence).not.toHaveBeenCalled();
+      expect(api.updateStatus).not.toHaveBeenCalled();
+      expect(useTaskStore.getState().taskDetailMap['T-5']?.status).toBe('running');
+      expect(useTaskStore.getState().internal_refreshTaskDetail).not.toHaveBeenCalled();
+      expect(useTaskStore.getState().refreshTaskList).not.toHaveBeenCalled();
+      log.mockRestore();
+    },
+  );
+
+  it('preserves an acknowledged stop when refreshing its detail fails', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const error = new Error('Readback unavailable');
+    seedTask({ automationMode: 'schedule', dispatchPhase: 'running', status: 'running' });
+    vi.mocked(useTaskStore.getState().internal_refreshTaskDetail).mockRejectedValueOnce(error);
+    render(createElement(TaskDetailPage, { taskId: 'T-5' }));
+    await userEvent.click(screen.getByRole('button', { name: 'taskDetail.stopTask' }));
+
+    await waitFor(() => expect(log).toHaveBeenCalledWith(expect.any(String), error));
+    expect(api.cancelOccurrence).toHaveBeenCalledOnce();
+    expect(api.cancelTopic).not.toHaveBeenCalled();
+    expect(api.updateStatus).not.toHaveBeenCalled();
+    expect(api.toastError).not.toHaveBeenCalled();
+    expect(useTaskStore.getState().refreshTaskList).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'taskDetail.stopTask' })).toBeEnabled();
+    log.mockRestore();
+  });
+
+  it('retains the ordinary one-off stop API', async () => {
+    seedTask({ automationMode: null, dispatchPhase: 'running', status: 'running' });
+    render(createElement(TaskDetailPage, { taskId: 'T-5' }));
+    await userEvent.click(screen.getByRole('button', { name: 'taskDetail.stopTask' }));
+
+    await waitFor(() =>
+      expect(api.updateStatus).toHaveBeenCalledWith({ id: 'T-5', status: 'paused' }),
+    );
+    expect(api.cancelOccurrence).not.toHaveBeenCalled();
   });
 });

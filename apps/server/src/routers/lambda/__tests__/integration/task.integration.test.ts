@@ -3175,6 +3175,99 @@ describe('Task Router Integration', () => {
   });
 
   describe('cancelTopic', () => {
+    it.each([
+      ['schedule', false],
+      ['schedule', true],
+      ['heartbeat', false],
+      ['heartbeat', true],
+    ] as const)(
+      'cancels a manual %s run without changing future pause=%s',
+      async (mode, paused) => {
+        const taskModel = new TaskModel(serverDB, userId);
+        const topicModel = new TaskTopicModel(serverDB, userId);
+        const dispatchModel = new TaskDispatchModel(serverDB);
+        const task = await taskModel.create({
+          instruction: 'Manual periodic round',
+          assigneeAgentId: testAgentId,
+          automationMode: mode,
+          heartbeatInterval: 600,
+          schedulePattern: '0 * * * *',
+          workflowCategory: 'in_progress',
+        });
+        await seedConfirmedIssuePlan(serverDB, task.id);
+        const manual = await dispatchModel.request({
+          taskId: task.id,
+          trigger: 'manual',
+          requestedBy: userId,
+          initiator: userId,
+          idempotencyKey: 'manual-periodic',
+        });
+        if (manual.state === 'busy') throw new Error('Manual run was not retained');
+        const operationId = 'manual-periodic-operation';
+        const [dispatch] = await serverDB
+          .update(taskDispatches)
+          .set({
+            phase: 'running',
+            operationId,
+            fence: 1,
+          })
+          .where(eq(taskDispatches.id, manual.dispatch.id))
+          .returning();
+        expect(dispatch.automationOccurrence).toBeNull();
+        await topicModel.startRun(task.id, testTopicId, { dispatch, operationId, seq: 1 });
+        const futureRequest = {
+          taskId: task.id,
+          trigger: mode,
+          requestedBy: userId,
+          initiator: userId,
+          idempotencyKey: 'future-periodic',
+        };
+        const future = await dispatchModel.request(futureRequest);
+        if (future.state === 'busy') throw new Error('Future occurrence was not retained');
+        expect(future.dispatch.phase).toBe('queued');
+        const scheduler = {
+          automationPaused: paused,
+          scheduledAt: '2026-10-15T12:00:00.000Z',
+          tickToken: 'future-tick',
+          tickMessageId: 'future-message',
+        };
+        const before = (await taskModel.findById(task.id))!;
+        await serverDB
+          .update(tasks)
+          .set({ context: { ...(before.context as TaskContext), scheduler } })
+          .where(eq(tasks.id, task.id));
+        const service = new TaskService(serverDB, userId);
+        mockInterruptTask.mockImplementationOnce(async () => {
+          expect((await topicModel.findByTopicId(testTopicId))?.status).toBe('running');
+          expect((await dispatchModel.findById(dispatch.id))?.phase).toBe('cancel_requested');
+          return { success: true, cancelState: 'requested' };
+        });
+        await expect(service.cancelTopic(testTopicId, task.id)).rejects.toThrow('STOP_UNCONFIRMED');
+        expect((await topicModel.findByTopicId(testTopicId))?.status).toBe('running');
+        expect((await dispatchModel.findById(dispatch.id))?.phase).toBe('cancel_requested');
+        expect((await taskModel.findById(task.id))?.context).not.toHaveProperty('execution.parked');
+        mockInterruptTask.mockImplementationOnce(async () => {
+          expect((await topicModel.findByTopicId(testTopicId))?.status).toBe('running');
+          expect((await dispatchModel.findById(dispatch.id))?.phase).toBe('cancel_requested');
+          return { success: true, cancelState: 'confirmed' };
+        });
+        await service.cancelTopic(testTopicId, task.id);
+        expect((await topicModel.findByTopicId(testTopicId))?.status).toBe('canceled');
+        expect((await dispatchModel.findById(dispatch.id))?.phase).toBe('canceled');
+        const after = (await taskModel.findById(task.id))!;
+        expect((after.context as TaskContext)?.scheduler).toEqual(scheduler);
+        expect(after.context).not.toHaveProperty('execution.parked');
+        const next = await dispatchModel.request(futureRequest);
+        if (next.state === 'busy') throw new Error('Future occurrence was lost');
+        expect(next.dispatch.id).toBe(future.dispatch.id);
+        expect(next.dispatch.phase).toBe(paused ? 'queued' : 'requested');
+        if (!paused)
+          expect(
+            await dispatchModel.claimForProvisioning(next.dispatch.id, 'test', 60_000),
+          ).not.toBeNull();
+      },
+    );
+
     it('should cancel a running topic and pause task', async () => {
       const task = await caller.create({
         assigneeAgentId: testAgentId,

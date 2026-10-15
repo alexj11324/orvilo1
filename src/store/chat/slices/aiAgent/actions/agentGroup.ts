@@ -17,8 +17,6 @@ const log = debug('store:chat:ai-agent:agentGroup');
 const n = setNamespace('aiAgentGroup');
 
 type Setter = StoreSetter<ChatStore>;
-export const agentGroupSlice = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new ChatGroupChatActionImpl(set, get, _api);
 
 export class ChatGroupChatActionImpl {
   readonly #get: () => ChatStore;

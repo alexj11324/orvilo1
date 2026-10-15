@@ -80,14 +80,6 @@ export const useAcceptanceBySubject = (
     },
   );
 
-/** Rounds, evidence files and bytes a delete would purge. Pass null to skip. */
-export const useAcceptancePurgePreview = (acceptanceId: string | null) =>
-  useClientDataSWR(
-    acceptanceId ? verifyKeys.acceptancePurgePreview(acceptanceId) : null,
-    () => verifyService.getAcceptancePurgePreview([acceptanceId!]),
-    VERIFY_REPORT_SWR_CONFIG,
-  );
-
 /**
  * Cursor-paginated, infinite-scrolling report summaries. `q` drives a
  * server-side title search (spanning the whole history, not just loaded pages);
@@ -170,19 +162,9 @@ export const useVerifyInstruction = (documentId: string | null | undefined) =>
     documentService.getDocumentById(documentId!),
   );
 
-/** A rubric and its run-policy config (e.g. maxRepairRounds). Pass null to skip. */
-export const useRubric = (rubricId: string | null | undefined) =>
-  useClientDataSWR(rubricId ? verifyKeys.rubric(rubricId) : null, () =>
-    verifyService.getRubric(rubricId!),
-  );
-
 /** The workspace's reusable rubric templates (delivery-standard groups). */
 export const useRubrics = (enabled = true) =>
   useClientDataSWR(enabled ? verifyKeys.rubrics() : null, () => verifyService.listRubrics());
-
-/** The workspace's reusable atomic criteria. */
-export const useCriteria = () =>
-  useClientDataSWR(verifyKeys.criteria(), () => verifyService.listCriteria());
 
 /** The criteria a rubric groups, in rubric order. Pass null to skip. */
 export const useRubricCriteria = (rubricId: string | null | undefined) =>

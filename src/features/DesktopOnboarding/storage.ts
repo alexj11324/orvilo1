@@ -1,24 +1,9 @@
-import { type DesktopOnboardingScreen } from './types';
 import { isDesktopOnboardingScreen } from './types';
 
 export const DESKTOP_ONBOARDING_COMPLETED_KEY = 'orvilo:desktop:onboarding:completed:v1';
 export const DESKTOP_ONBOARDING_EVER_COMPLETED_KEY = 'orvilo:desktop:onboarding:everCompleted:v1';
 // v3 resets persisted positions created while Login preceded Welcome.
 export const DESKTOP_ONBOARDING_SCREEN_KEY = 'orvilo:desktop:onboarding:screen:v3';
-
-/**
- * Check if user has completed onboarding in this session
- * Uses sessionStorage so it clears when the browser session ends
- */
-export const getDesktopOnboardingCompleted = () => {
-  if (typeof window === 'undefined') return false;
-
-  try {
-    return window.sessionStorage.getItem(DESKTOP_ONBOARDING_COMPLETED_KEY) === '1';
-  } catch {
-    return false;
-  }
-};
 
 /**
  * Mark onboarding as completed for this session
@@ -78,33 +63,5 @@ export const getDesktopOnboardingScreen = () => {
     return screen;
   } catch {
     return null;
-  }
-};
-
-/**
- * Persist the current onboarding screen
- */
-export const setDesktopOnboardingScreen = (screen: DesktopOnboardingScreen) => {
-  if (typeof window === 'undefined') return false;
-
-  try {
-    window.localStorage.setItem(DESKTOP_ONBOARDING_SCREEN_KEY, screen);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-/**
- * Clear the persisted onboarding screen (called when onboarding completes)
- */
-export const clearDesktopOnboardingScreen = () => {
-  if (typeof window === 'undefined') return false;
-
-  try {
-    window.localStorage.removeItem(DESKTOP_ONBOARDING_SCREEN_KEY);
-    return true;
-  } catch {
-    return false;
   }
 };

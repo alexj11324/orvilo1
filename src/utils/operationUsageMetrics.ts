@@ -97,14 +97,6 @@ export const addUsageToOperationMetrics = (
   usage?: OperationUsageLike | null,
 ): OperationUsageMetrics => mergeOperationUsageMetrics(metrics, usageToOperationMetrics(usage));
 
-export const hasOperationUsageMetrics = (
-  metrics?: Partial<OperationUsageMetrics> | null,
-): metrics is OperationUsageMetrics =>
-  normalizeNumber(metrics?.totalCost) > 0 ||
-  normalizeNumber(metrics?.totalInputTokens) > 0 ||
-  normalizeNumber(metrics?.totalOutputTokens) > 0 ||
-  normalizeNumber(metrics?.totalTokens) > 0;
-
 export const calculateOperationUsageMetrics = (
   messages: OperationUsageMessage[],
   operationIds: Set<string>,

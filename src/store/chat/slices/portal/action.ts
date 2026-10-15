@@ -196,8 +196,6 @@ const resolveLegacyActiveAfterClose = ({
 };
 
 type Setter = StoreSetter<ChatStore>;
-export const chatPortalSlice = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new ChatPortalActionImpl(set, get, _api);
 
 export class ChatPortalActionImpl {
   readonly #get: () => ChatStore;

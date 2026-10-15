@@ -45,23 +45,11 @@ export const HOME_WIDGET_GROUPS = [
 
 export type HomeWidgetGroupKey = (typeof HOME_WIDGET_GROUPS)[number]['key'];
 
-export const HOME_CUSTOMIZE_DEFAULTS = {
-  hiddenHomeWidgets: [] as string[],
-  homeRecentsCount: 8,
-  homeTaskCount: 8,
-};
-
-export const HOME_COUNT_MIN = 3;
-export const HOME_COUNT_MAX = 15;
-
 export const HOME_PRESET_KEYS = ['minimal', 'balanced', 'full'] as const;
 
 export type HomePresetKey = (typeof HOME_PRESET_KEYS)[number];
 
 interface HomePreset {
-  // Applied along with the preset, but left out of `resolveHomePreset`'s
-  // comparison: how much a list shows is a separate axis from which sections
-  // exist, and re-tuning it must not drop the page out of its preset.
   count: number;
   hiddenWidgets: readonly HomeWidgetKey[];
 }
@@ -95,34 +83,6 @@ export const effectiveHomeWidgetKeys = (usageActive: boolean): readonly HomeWidg
  */
 export const isHomeWidgetHidden = (key: HomeWidgetKey, hiddenWidgets: string[]): boolean =>
   hiddenWidgets.includes(key) || (key === 'scheduledTasks' && hiddenWidgets.includes('tasks'));
-
-const hiddenKeySet = (hiddenWidgets: string[], usageActive: boolean): Set<string> =>
-  new Set(
-    effectiveHomeWidgetKeys(usageActive).filter((key) => isHomeWidgetHidden(key, hiddenWidgets)),
-  );
-
-export const resolveHomePreset = (
-  hiddenWidgets: string[],
-  usageActive = false,
-): HomePresetKey | undefined => {
-  const hidden = hiddenKeySet(hiddenWidgets, usageActive);
-  const available = new Set<string>(effectiveHomeWidgetKeys(usageActive));
-
-  return HOME_PRESET_KEYS.find((key) => {
-    const preset = HOME_PRESETS[key];
-    const presetHidden = preset.hiddenWidgets.filter((widget) => available.has(widget));
-
-    return (
-      presetHidden.length === hidden.size && presetHidden.every((widget) => hidden.has(widget))
-    );
-  });
-};
-
-// Nothing is left to stack under the composer, so the page stops being a
-// dashboard: the greeting and the composer become one centered block. Derived
-// from the switches rather than stored, so it can never disagree with them.
-export const isHomeMinimalLayout = (hiddenWidgets: string[], usageActive = false): boolean =>
-  effectiveHomeWidgetKeys(usageActive).every((key) => isHomeWidgetHidden(key, hiddenWidgets));
 
 // An error banner covers every widget whose content it reports on, not just the
 // one it is named after: the topic feed powers unread AND running, and the briefs

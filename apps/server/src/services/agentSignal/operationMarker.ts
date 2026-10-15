@@ -66,11 +66,3 @@ export const parseAgentSignalMarker = (marker: unknown): AgentSignalOperationMar
     ...(str(marker.triggerMessageId) ? { triggerMessageId: str(marker.triggerMessageId) } : {}),
   };
 };
-
-/** Build the `appContext.agentSignal` value to stamp at dispatch time. */
-export const buildAgentSignalMarker = (
-  marker: AgentSignalOperationMarker,
-): AgentSignalOperationMarker => marker;
-
-export const isAgentSignalKind = (value: unknown): value is AgentSignalOperationKind =>
-  typeof value === 'string' && VALID_KINDS.has(value as AgentSignalOperationKind);

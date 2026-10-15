@@ -55,8 +55,6 @@ interface DragState {
 const CurrentDragContext = createContext<DragState | null>(null);
 const SetCurrentDragContext = createContext<((_state: DragState | null) => void) | null>(null);
 
-export const useCurrentDrag = () => use(CurrentDragContext);
-
 export const useSetCurrentDrag = () => {
   const setCurrentDrag = use(SetCurrentDragContext);
 

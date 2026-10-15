@@ -6,8 +6,6 @@ import { type ChatStore } from '@/store/chat/store';
 import { type StoreSetter } from '@/store/types';
 
 type Setter = StoreSetter<ChatStore>;
-export const searchSlice = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new SearchActionImpl(set, get, _api);
 
 export class SearchActionImpl {
   readonly #get: () => ChatStore;

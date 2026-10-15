@@ -1,9 +1,9 @@
 'use client';
 
-import { MaterialFileTypeIcon } from '@lobehub/ui';
 import { cn } from 'cn';
 import { memo } from 'react';
 
+import { MaterialFileTypeIcon } from '@/components/FileIcon';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 import type { FileContentDetail } from '../../../types';

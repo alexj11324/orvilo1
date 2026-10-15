@@ -1,7 +1,14 @@
-import { FileTypeIcon, MaterialFileTypeIcon } from '@lobehub/ui';
-import React, { memo } from 'react';
+import { memo } from 'react';
 
 import { mimeTypeMap } from './config';
+import FileTypeIcon from './FileTypeIcon';
+import MaterialFileTypeIcon from './MaterialFileTypeIcon';
+
+export { default as FileTypeIcon, type FileTypeIconProps } from './FileTypeIcon';
+export {
+  default as MaterialFileTypeIcon,
+  type MaterialFileTypeIconProps,
+} from './MaterialFileTypeIcon';
 
 interface FileListProps {
   fileName: string;

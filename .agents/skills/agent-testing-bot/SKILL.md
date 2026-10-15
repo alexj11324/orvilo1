@@ -1,87 +1,23 @@
 ---
 name: agent-testing-bot
-description: 'Use for real bot-channel acceptance in Discord, Slack, Telegram, WeChat/Weixin, Lark/Feishu, QQ or iMessage on macOS. Extends acceptance with native chat apps.'
+description: 'Historical bot-channel acceptance entry point. Use only to investigate retired Messenger integrations; current Slack integration has separate owners.'
+disable-model-invocation: true
 ---
 
-# Agent Testing — Bot Channels (Orvilo project skill)
+# Retired Messenger Acceptance
 
-This skill **extends** the repo's acceptance adapter (`.agents/acceptance/`) to
-the bot-channel surfaces. It does NOT replace the core process: the same three
-phases apply —
+The generic Messenger/bot-channel stack and its Electron BlueBubbles bridge were
+removed. The platform scripts and guides in this directory are historical
+reference, not supported acceptance recipes. Do not recreate deleted adapters,
+IPC methods, providers or routes to make these scripts run.
 
-```text
-PLAN (Steps 0–2) → EXECUTE (Steps 3–6) → FINISH (Step 7)
-```
+The current Slack integration is a separate implementation:
 
-— and the same report pipeline (`result.json` → `report-init.sh`). Read
-`.agents/acceptance/PROCESS.md` for target grounding, the living logs, the plan
-gate, the report format, and teardown. This file only adds the bot-channel
-surface.
+- `apps/server/src/services/slackIntegration/`: OAuth, webhooks and channel runtime.
+- `apps/server/src/routers/lambda/slackIntegration.ts`: client-facing procedures.
+- `apps/server/src/hatchet/tasks.ts`: queued Slack integration event processing.
 
-> The generic `acceptance` skill this used to extend (installed alongside at
-> `../acceptance/`, shipped as `AcceptanceSkill`) was retired with the standalone
-> acceptance platform, and its publish step went with it. Evidence now goes
-> through the retained channel described in `PROCESS.md` Step 5.
-
-For Orvilo environment/auth/probe specifics (dev server, seeded account, ports),
-the adapter is `.agents/acceptance/PROJECT.md`.
-
-## When this surface applies
-
-| Change scope                                   | Surface                           | Why                                              |
-| ---------------------------------------------- | --------------------------------- | ------------------------------------------------ |
-| **Bot channels** (Discord / WeChat / Lark / …) | Native app via osascript / bridge | Only way to exercise the real channel end-to-end |
-
-Route here only when the behavior under test is a bot channel. For CLI / Web /
-Electron changes, use the surfaces in `.agents/acceptance/PROCESS.md`.
-
-## Platforms
-
-Each platform folder has an `index.md` (activation, navigation, send-message,
-verification snippets) and a `test-<platform>-bot.sh` driver.
-
-| Platform      | Guide                                    | Quick switcher        |
-| ------------- | ---------------------------------------- | --------------------- |
-| Discord       | [discord/index.md](./discord/index.md)   | `Cmd+K`               |
-| Slack         | [slack/index.md](./slack/index.md)       | `Cmd+K`               |
-| Telegram      | [telegram/index.md](./telegram/index.md) | `Cmd+F`               |
-| WeChat / 微信 | [wechat/index.md](./wechat/index.md)     | `Cmd+F`               |
-| Lark / 飞书   | [lark/index.md](./lark/index.md)         | `Cmd+K`               |
-| QQ            | [qq/index.md](./qq/index.md)             | `Cmd+F`               |
-| iMessage      | [imessage/index.md](./imessage/index.md) | bridge (no osascript) |
-
-## Shared driver contract
-
-Every osascript platform script shares one interface:
-
-```bash
-./$PLATFORM/test-$PLATFORM-bot.sh $CHANNEL_OR_CONTACT $MESSAGE [$WAIT_SECONDS] [$SCREENSHOT_PATH]
-```
-
-The script activates the app, navigates to the channel/contact, sends the
-message, waits, and screenshots the result window (via the generic skill's
-`../../acceptance/scripts/capture-app-window.sh`). iMessage is the exception: it
-uses a BlueBubbles bridge, not osascript — see [imessage/index.md](./imessage/index.md).
-
-## osascript prerequisites
-
-The osascript platforms drive real macOS apps (activate, keystroke, click, read
-accessibility, screenshot). Read the generic skill's general macOS-automation
-reference before a first bot run:
-[../../acceptance/references/osascript.md](../../acceptance/references/osascript.md).
-The target native app must already be running and logged in.
-
-## Screen-recording gate (macOS-only)
-
-Bot evidence is captured with OS-level `screencapture` (through
-`capture-app-window.sh`), NOT CDP — so it comes out **entirely black** when macOS
-Screen Recording (TCC) permission is missing OR the display is asleep / locked /
-on a screensaver. Gate BEFORE any bot capture:
-
-```bash
-./.agents/acceptance/scripts/check-screen-recording.sh # exit 0 = OS capture will work
-```
-
-Keep the display awake for the whole capture session (`caffeinate -dimsu &`, kill
-when done). Because this surface depends on OS capture and native macOS apps,
-**bot channels are macOS-only — they do not run headless / in cloud.**
+Trace those owners and their adjacent tests for current Slack work. Use
+`.agents/acceptance/PROCESS.md` for evidence capture. Consult
+`docs/development/slimming-orv-105-messenger.md` only as a historical retirement
+record; its retained-surface list describes that change's revision.

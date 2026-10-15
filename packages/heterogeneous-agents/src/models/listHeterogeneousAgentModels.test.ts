@@ -4,16 +4,9 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const {
-  listDroidAcpModelsMock,
-  listStandardAcpModelsMock,
-  listTraeAcpModelsMock,
-  resolveAcpSpawnTargetMock,
-} = vi.hoisted(() => ({
+const { listDroidAcpModelsMock, listTraeAcpModelsMock } = vi.hoisted(() => ({
   listDroidAcpModelsMock: vi.fn(),
-  listStandardAcpModelsMock: vi.fn(),
   listTraeAcpModelsMock: vi.fn(),
-  resolveAcpSpawnTargetMock: vi.fn(),
 }));
 
 vi.mock('node:os', async () => {
@@ -32,15 +25,6 @@ vi.mock('../spawn/traeAcpSession', () => ({
 
 vi.mock('../spawn/droidAcpSession', () => ({
   listDroidAcpModels: listDroidAcpModelsMock,
-}));
-
-// ACP-first catalog discovery is exercised through `resolveAcpSpawnTarget` +
-// `listStandardAcpModels`; these tests target the legacy `--list-models`-style
-// parsers, so the ACP probe is forced to miss and fall through deterministically
-// (an unmocked probe would hang on the bare `execFile` mock).
-vi.mock('../spawn/standardAcpAgents', () => ({
-  listStandardAcpModels: listStandardAcpModelsMock,
-  resolveAcpSpawnTarget: resolveAcpSpawnTargetMock,
 }));
 
 const execFileMock = vi.mocked(childProcess.execFile);
@@ -65,27 +49,14 @@ describe('heterogeneous agent model discovery', () => {
   beforeEach(() => {
     execFileMock.mockReset();
     listDroidAcpModelsMock.mockReset();
-    listStandardAcpModelsMock.mockReset();
     listTraeAcpModelsMock.mockReset();
-    resolveAcpSpawnTargetMock.mockReset();
-    resolveAcpSpawnTargetMock.mockRejectedValue(new Error('no ACP runtime in test'));
   });
 
   afterEach(() => {
     vi.resetModules();
   });
 
-  it('lists the models Claude Code reports over ACP, without its own default entry', async () => {
-    resolveAcpSpawnTargetMock.mockResolvedValue({
-      commandArgs: [],
-      commandPath: 'bridge',
-      env: {},
-    });
-    listStandardAcpModelsMock.mockResolvedValue([
-      { id: 'default', label: 'Default (recommended)', modelId: 'default' },
-      { id: 'opus', label: 'Opus 5.5', modelId: 'opus' },
-      { id: 'claude-opus-4-8', label: 'Opus 4.8', modelId: 'claude-opus-4-8' },
-    ]);
+  it('returns the Claude Code static catalog without spawning ACP or the CLI', async () => {
     const { listHeterogeneousAgentModels } = await importModule();
 
     const result = await listHeterogeneousAgentModels({
@@ -93,78 +64,70 @@ describe('heterogeneous agent model discovery', () => {
       type: 'claude-code',
     });
 
-    expect(result).toMatchObject({
+    expect(result.status).toBe('success');
+    expect(result.models).toEqual(
+      expect.arrayContaining([
+        { id: 'haiku', label: 'Haiku 5.5', modelId: 'haiku', providerId: 'anthropic' },
+        { id: 'opus', label: 'Opus 5.5', modelId: 'opus', providerId: 'anthropic' },
+      ]),
+    );
+    expect(execFileMock).not.toHaveBeenCalled();
+  });
+
+  it('lists Codex models from `debug models --bundled` and skips hidden slugs', async () => {
+    resolveExecFile(
+      JSON.stringify({
+        models: [
+          { display_name: 'GPT-5.4', slug: 'gpt-5.4' },
+          { display_name: 'GPT-5.5 Mini', slug: 'gpt-5.5-mini', visibility: 'hide' },
+          { display_name: 'GPT-6 Astra', slug: 'gpt-6-astra' },
+        ],
+      }),
+    );
+    const { listHeterogeneousAgentModels, parseCodexModelCatalog } = await importModule();
+
+    expect(
+      parseCodexModelCatalog(JSON.stringify({ models: [{ slug: 'gpt-5.4', visibility: 'hide' }] })),
+    ).toEqual([]);
+
+    await expect(
+      listHeterogeneousAgentModels({ command: '/custom/codex', type: 'codex' }),
+    ).resolves.toMatchObject({
       models: [
-        { id: 'opus', label: 'Opus 5.5' },
-        { id: 'claude-opus-4-8', label: 'Opus 4.8' },
+        { id: 'gpt-5.4', label: 'GPT-5.4', providerId: 'openai' },
+        { id: 'gpt-6-astra', label: 'GPT-6 Astra', providerId: 'openai' },
       ],
       status: 'success',
     });
-  });
-
-  it('treats a CLI that lists only its own default as a working, empty catalog', async () => {
-    resolveAcpSpawnTargetMock.mockResolvedValue({
-      commandArgs: [],
-      commandPath: 'bridge',
-      env: {},
-    });
-    listStandardAcpModelsMock.mockResolvedValue([
-      { id: 'default', label: 'Default', modelId: 'default' },
-    ]);
-    const { listHeterogeneousAgentModels } = await importModule();
-
-    await expect(
-      listHeterogeneousAgentModels({ command: '/custom/codex', type: 'codex' }),
-    ).resolves.toMatchObject({ models: [], status: 'success' });
-  });
-
-  it('never lets a catalog probe fetch a missing bridge through a package runner', async () => {
-    const { listHeterogeneousAgentModels } = await importModule();
-
-    await listHeterogeneousAgentModels({ command: '/custom/claude', type: 'claude-code' });
-
-    expect(resolveAcpSpawnTargetMock).toHaveBeenCalledWith(
-      'claude-code',
-      '/custom/claude',
+    expect(execFileMock).toHaveBeenCalledWith(
+      '/custom/codex',
+      ['debug', 'models', '--bundled'],
       expect.anything(),
-      { allowPackageRunner: false },
+      expect.any(Function),
     );
   });
 
-  it('keeps the reason an ACP probe failed', async () => {
+  it('falls back to the Codex static catalog when discovery is empty or fails', async () => {
+    resolveExecFile('{');
     const { listHeterogeneousAgentModels } = await importModule();
-    const missingBridge = new Error('Claude Code requires the bridge');
-    missingBridge.name = 'AcpBridgeNotFoundError';
 
-    resolveAcpSpawnTargetMock.mockRejectedValueOnce(missingBridge);
-    await expect(
-      listHeterogeneousAgentModels({ command: '/custom/claude', type: 'claude-code' }),
-    ).resolves.toMatchObject({ error: { code: 'cli_not_found' }, status: 'error' });
-
-    resolveAcpSpawnTargetMock.mockResolvedValueOnce({
-      commandArgs: [],
-      commandPath: 'bridge',
-      env: {},
-    });
-    listStandardAcpModelsMock.mockRejectedValueOnce(
-      new Error('ACP request timed out: session/new'),
-    );
     await expect(
       listHeterogeneousAgentModels({ command: '/custom/codex', type: 'codex' }),
-    ).resolves.toMatchObject({ error: { code: 'timeout' }, status: 'error' });
+    ).resolves.toMatchObject({
+      models: expect.arrayContaining([
+        { id: 'gpt-6-astra', label: 'GPT-6 Astra', modelId: 'gpt-6-astra', providerId: 'openai' },
+      ]),
+      status: 'success',
+    });
+
+    rejectExecFile(Object.assign(new Error('spawn ENOENT'), { code: 'ENOENT' }));
+    const missing = await listHeterogeneousAgentModels({
+      command: '/missing/codex',
+      type: 'codex',
+    });
+    expect(missing.status).toBe('success');
+    expect(missing.models.map((model) => model.id)).toContain('gpt-6-astra');
   });
-
-  it.each(['claude-code', 'codex'] as const)(
-    'reports an error for %s when ACP discovery fails, without running a made-up CLI flag',
-    async (type) => {
-      const { listHeterogeneousAgentModels } = await importModule();
-
-      const result = await listHeterogeneousAgentModels({ command: `/custom/${type}`, type });
-
-      expect(result.status).toBe('error');
-      expect(execFileMock).not.toHaveBeenCalled();
-    },
-  );
 
   it('parses opaque model ids, splitting only at the first slash and preserving order', async () => {
     const { parseOpenCodeModelCatalog } = await importModule();
@@ -174,7 +137,7 @@ describe('heterogeneous agent model discovery', () => {
         [
           'openai/gpt-5.6',
           '',
-          'openrouter/google/gemini-2.5-pro',
+          'openrouter/google/gemini-2.5-pro extra-columns',
           'cloudflare/@cf/meta/llama-3.1-8b-instruct',
           'openai/gpt-5.6',
           'PATH=/usr/local/bin:/usr/bin',
@@ -246,7 +209,7 @@ describe('heterogeneous agent model discovery', () => {
     );
   });
 
-  it('fails discovery when CodeBuddy exits successfully without reporting a model catalog', async () => {
+  it('returns an empty catalog when CodeBuddy exits successfully without reporting models', async () => {
     resolveExecFile(
       [
         'Usage: codebuddy [options]',
@@ -262,8 +225,8 @@ describe('heterogeneous agent model discovery', () => {
         type: 'codebuddy',
       }),
     ).resolves.toMatchObject({
-      error: { code: 'command_failed' },
-      status: 'error',
+      models: [],
+      status: 'success',
     });
     expect(execFileMock).toHaveBeenCalledTimes(1);
   });
@@ -310,8 +273,8 @@ describe('heterogeneous agent model discovery', () => {
     await expect(
       listHeterogeneousAgentModels({ command: '/custom/codebuddy', type: 'codebuddy' }),
     ).resolves.toMatchObject({
-      error: { code: 'command_failed' },
-      status: 'error',
+      models: [],
+      status: 'success',
     });
   });
 
@@ -511,7 +474,7 @@ describe('heterogeneous agent model discovery', () => {
     });
     expect(execFileMock).toHaveBeenCalledWith(
       '/custom/opencode',
-      ['models'],
+      ['models', '--verbose'],
       expect.objectContaining({
         cwd: '/repo',
         env: { OPENCODE_CONFIG_DIR: '/config', PATH: '/custom/bin' },
@@ -559,7 +522,7 @@ describe('heterogeneous agent model discovery', () => {
         { env: NodeJS.ProcessEnv },
       ];
       expect(command).toBe('/login/bin/opencode');
-      expect(args).toEqual(['models']);
+      expect(args).toEqual(['models', '--verbose']);
       expect(options.env.PATH?.split(path.delimiter)).toEqual(
         expect.arrayContaining(['/inherited/bin', '/login/bin', '/usr/bin']),
       );
@@ -569,27 +532,46 @@ describe('heterogeneous agent model discovery', () => {
     }
   });
 
-  it('returns a stable missing-CLI error', async () => {
+  it('retries `opencode models` when verbose output has no model ids', async () => {
+    resolveExecFile('Usage: opencode models [--verbose]');
+    resolveExecFile('openai/gpt-5.6\n');
+    const { listHeterogeneousAgentModels } = await importModule();
+
+    await expect(
+      listHeterogeneousAgentModels({ command: '/custom/opencode', type: 'opencode' }),
+    ).resolves.toMatchObject({
+      models: [{ id: 'openai/gpt-5.6', modelId: 'gpt-5.6', providerId: 'openai' }],
+      status: 'success',
+    });
+    expect(execFileMock.mock.calls.map((call) => call[1])).toEqual([
+      ['models', '--verbose'],
+      ['models'],
+    ]);
+  });
+
+  it('returns an empty catalog when OpenCode is missing', async () => {
+    rejectExecFile(Object.assign(new Error('spawn ENOENT'), { code: 'ENOENT' }));
     rejectExecFile(Object.assign(new Error('spawn ENOENT'), { code: 'ENOENT' }));
     const { listHeterogeneousAgentModels } = await importModule();
 
     await expect(
       listHeterogeneousAgentModels({ command: '/missing/opencode', type: 'opencode' }),
     ).resolves.toMatchObject({
-      error: { code: 'cli_not_found' },
-      status: 'error',
+      models: [],
+      status: 'success',
     });
   });
 
-  it('returns a stable timeout error', async () => {
+  it('returns an empty catalog when OpenCode model listing times out', async () => {
+    rejectExecFile(Object.assign(new Error('timed out'), { killed: true, signal: 'SIGTERM' }));
     rejectExecFile(Object.assign(new Error('timed out'), { killed: true, signal: 'SIGTERM' }));
     const { listHeterogeneousAgentModels } = await importModule();
 
     await expect(
       listHeterogeneousAgentModels({ command: '/slow/opencode', type: 'opencode' }),
     ).resolves.toMatchObject({
-      error: { code: 'timeout' },
-      status: 'error',
+      models: [],
+      status: 'success',
     });
   });
 
@@ -735,6 +717,15 @@ describe('heterogeneous agent model discovery', () => {
       }),
     );
     expect(execFileMock).not.toHaveBeenCalled();
+  });
+
+  it('returns an empty catalog when TRAE ACP discovery fails', async () => {
+    listTraeAcpModelsMock.mockRejectedValue(new Error('timeout'));
+    const { listHeterogeneousAgentModels } = await importModule();
+
+    await expect(
+      listHeterogeneousAgentModels({ command: '/custom/traecli', type: 'trae' }),
+    ).resolves.toMatchObject({ models: [], status: 'success' });
   });
 
   it('discovers Factory Droid models through ACP and forwards only safe provider arguments', async () => {

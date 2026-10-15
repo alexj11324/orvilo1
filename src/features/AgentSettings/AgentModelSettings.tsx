@@ -404,6 +404,10 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
             <div className={settingsStyles.hint}>
               {t('settingAgent.modelSettings.catalogError')}
             </div>
+          ) : !catalog.isLoading && (catalog.data?.models.length ?? 0) === 0 ? (
+            <div className={settingsStyles.hint}>
+              {t('settingAgent.modelSettings.catalogEmpty')}
+            </div>
           ) : null}
         </SettingsRow>
       ) : null}

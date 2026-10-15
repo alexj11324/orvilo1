@@ -26,6 +26,7 @@ import {
 import { useAgentStore } from '@/store/agent';
 
 import { BUILTIN_AGENT_KEY } from './agentOptions';
+import { resolveCreateAgentVisibility } from './createAgentVisibility';
 import { RuntimeFields, useAgentRuntimeForm } from './RuntimeFields';
 
 export interface CreateAgentPanelProps {
@@ -52,8 +53,8 @@ const CreateAgentPanel = ({
   const { t } = useTranslation(['chat', 'common']);
   const workspaceId = useActiveWorkspaceId();
   const fieldId = useId();
-  const [selectedVisibility, setSelectedVisibility] = useState<'private' | 'public'>(
-    lockVisibility ? 'private' : visibility,
+  const [selectedVisibility, setSelectedVisibility] = useState<'private' | 'public'>(() =>
+    resolveCreateAgentVisibility({ lockVisibility, requested: visibility, workspaceId }),
   );
   const form = useAgentRuntimeForm({ builtinOnly, initialType, visibility: selectedVisibility });
   const createAgent = useAgentStore((s) => s.createAgent);

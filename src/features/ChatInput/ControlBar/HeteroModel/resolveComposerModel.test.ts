@@ -49,7 +49,7 @@ describe('resolveComposerModelView', () => {
     expect(view({ composerSelection: { model: 'opus', provider: 'claude-code' } })).toMatchObject({
       current: 'opus',
       isDefault: false,
-      title: 'Opus',
+      title: 'Opus 5.5',
     });
   });
 
@@ -57,7 +57,7 @@ describe('resolveComposerModelView', () => {
     expect(view({ topicPin: { model: 'sonnet', provider: 'claude-code' } })).toMatchObject({
       current: 'sonnet',
       isDefault: false,
-      title: 'Sonnet',
+      title: 'Sonnet 5.5',
     });
   });
 
@@ -67,7 +67,7 @@ describe('resolveComposerModelView', () => {
         composerSelection: { model: 'opus', provider: 'claude-code' },
         topicPin: { model: 'haiku', provider: 'claude-code' },
       }),
-    ).toMatchObject({ current: 'haiku', title: 'Haiku' });
+    ).toMatchObject({ current: 'haiku', title: 'Haiku 5.5' });
   });
 
   it('ignores a pick or pin minted for another provider', () => {
@@ -86,7 +86,7 @@ describe('resolveComposerModelView', () => {
       view({
         provider: { model: 'opus', type: 'claude-code' },
       }),
-    ).toMatchObject({ current: 'opus', isDefault: false, title: 'Opus' });
+    ).toMatchObject({ current: 'opus', isDefault: false, title: 'Opus 5.5' });
   });
 
   it('falls back to the raw selector value while the harness list is unavailable', () => {
@@ -102,10 +102,7 @@ describe('resolveComposerModelView', () => {
   it('puts the harness default back at the top of the list, keeping the order', () => {
     expect(withDefaultModelOption(claudeCodeOptions, 'Default')).toEqual([
       { title: 'Default', value: 'default' },
-      { title: 'Fable', value: 'fable' },
-      { title: 'Opus', value: 'opus' },
-      { title: 'Sonnet', value: 'sonnet' },
-      { title: 'Haiku', value: 'haiku' },
+      ...claudeCodeOptions,
     ]);
   });
 

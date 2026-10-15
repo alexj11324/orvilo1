@@ -52,7 +52,7 @@ describe('selector availability', () => {
     expect(getHeteroSelectorCapability('opencode')?.effort).toBeUndefined();
     expect(getHeteroSelectorCapability('qoder')?.effort).toBeDefined();
     expect(getHeteroSelectorCapability('codex')?.model?.source).toBe('catalog');
-    expect(getHeteroSelectorCapability('claude-code')?.model?.source).toBe('catalog');
+    expect(getHeteroSelectorCapability('claude-code')?.model?.source).toBe('static');
     expect(getHeteroSelectorCapability('codebuddy')?.model?.source).toBe('catalog');
     expect(getHeteroSelectorCapability('qoder')?.model?.source).toBe('catalog');
     expect(getHeteroSelectorCapability('trae')?.model?.source).toBe('catalog');

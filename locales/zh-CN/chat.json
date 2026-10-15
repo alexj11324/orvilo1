@@ -272,6 +272,7 @@
   "createAgent.installHint": "在这台电脑上安装一个编程智能体，然后再检查一次。",
   "createAgent.installed": "已安装在所选设备上",
   "createAgent.model.choose": "选择模型",
+  "createAgent.model.discoveryFailed": "没有列出模型。仍可使用该运行时的默认模型。",
   "createAgent.model.empty": "没有匹配的模型",
   "createAgent.model.error": "模型加载失败。",
   "createAgent.model.loading": "正在加载模型…",

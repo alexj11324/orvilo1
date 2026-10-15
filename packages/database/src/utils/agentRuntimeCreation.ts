@@ -51,16 +51,20 @@ export const assertAgentRuntimeCreation = async (
     ) {
       throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AGENT_HOST_REQUIRED' });
     }
+    // A local target is the caller's own computer. It does not have to be a
+    // device published into the workspace.
     const [host] = await db
       .select({ deviceId: devices.deviceId })
       .from(devices)
       .where(
-        and(
-          eq(devices.deviceId, agencyConfig.boundDeviceId),
-          publicWorkspaceAgent
-            ? buildStrictWorkspaceWhere({ ...actor, callerAgentVisibility: 'public' }, devices)
-            : buildWorkspaceWhere(actor, devices),
-        ),
+        agencyConfig.executionTarget === 'local'
+          ? and(eq(devices.deviceId, agencyConfig.boundDeviceId), eq(devices.userId, actor.userId))
+          : and(
+              eq(devices.deviceId, agencyConfig.boundDeviceId),
+              publicWorkspaceAgent
+                ? buildStrictWorkspaceWhere({ ...actor, callerAgentVisibility: 'public' }, devices)
+                : buildWorkspaceWhere(actor, devices),
+            ),
       )
       .limit(1);
     if (!host) {

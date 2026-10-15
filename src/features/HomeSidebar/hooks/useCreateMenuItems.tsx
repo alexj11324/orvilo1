@@ -5,9 +5,11 @@ import { BotIcon, FolderCogIcon, ListPlusIcon, MessageSquarePlus } from 'lucide-
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { toast } from '@/components/toast';
 import { openConnectAgentModal } from '@/features/ConnectAgent';
 import { openNewConversation } from '@/features/Conversation/selectAgent';
+import { resolveCreateAgentVisibility } from '@/features/CreateAgent/createAgentVisibility';
 import type { SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
@@ -40,8 +42,8 @@ interface CreateAgentOptions {
    */
   origin?: 'chat' | 'settings';
   /**
-   * Forwarded to the server-side `visibility` column. Used by the sidebar's
-   * "Create Private …" entries; defaults to `'private'` so personal execution is valid. Has no effect in personal mode.
+   * Forwarded to the server-side `visibility` column. A workspace create is
+   * public unless this is set; personal space defaults to private.
    */
   visibility?: 'private' | 'public';
 }
@@ -52,6 +54,7 @@ interface CreateAgentOptions {
  */
 export const useCreateMenuItems = () => {
   const { t } = useTranslation(['chat', 'common']);
+  const workspaceId = useActiveWorkspaceId();
   const navigate = useWorkspaceAwareNavigate();
   const { allowed: canCreate } = usePermission('create_content');
 
@@ -65,7 +68,10 @@ export const useCreateMenuItems = () => {
       openConnectAgentModal({
         groupId: options?.groupId,
         initialType: options?.initialType,
-        visibility: options?.visibility ?? 'private',
+        visibility: resolveCreateAgentVisibility({
+          requested: options?.visibility,
+          workspaceId,
+        }),
         onCreated: async (agentId, config) => {
           setIsMutatingAgent(true);
           try {
@@ -86,7 +92,7 @@ export const useCreateMenuItems = () => {
         },
       });
     },
-    [canCreate, navigate, refreshAgentList, removeAgent, t],
+    [canCreate, navigate, refreshAgentList, removeAgent, t, workspaceId],
   );
 
   /**

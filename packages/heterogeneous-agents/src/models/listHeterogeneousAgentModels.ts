@@ -5,26 +5,20 @@ import { promisify } from 'node:util';
 import type {
   HeterogeneousAgentModel,
   HeterogeneousAgentModelCatalog,
-  HeterogeneousAgentModelCatalogErrorCode,
   ListHeterogeneousAgentModelsParams,
 } from '@orvilo/types';
-import { HETEROGENEOUS_AGENT_DEFAULT_SELECTION } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 
-import { getHeterogeneousTypeLabel } from '../labels';
-import { ACP_BRIDGE_NOT_FOUND_ERROR_NAME, ACP_RUNTIME_AGENT_TYPES } from '../spawn/acpRuntime';
 import { resolveCliSpawnPlan } from '../spawn/cliSpawn';
 import { listDroidAcpModels } from '../spawn/droidAcpSession';
 import { resolveHeteroSpawnCommand } from '../spawn/resolveCliCommand';
-import { listStandardAcpModels, resolveAcpSpawnTarget } from '../spawn/standardAcpAgents';
 import { listTraeAcpModels } from '../spawn/traeAcpSession';
+import { staticModelCatalog } from './staticCatalogs';
 
 const execFilePromise = promisify(execFile);
-/** How `AcpStdioClient.request` words an expired request. */
-const ACP_REQUEST_TIMEOUT_PREFIX = 'ACP request timed out';
-const ACP_ONLY_CATALOG_TYPES = new Set<string>(['claude-code', 'codex']);
 const MODEL_CATALOG_MAX_BUFFER = 256 * 1024;
 const MODEL_CATALOG_TIMEOUT_MS = 15_000;
+const CODEX_DEBUG_MODELS_ARGS = ['debug', 'models', '--bundled'] as const;
 const CODEBUDDY_MODEL_OPTION = '--model <model>';
 const CODEBUDDY_SUPPORTED_MODELS_LABEL = 'Currently supported:';
 const CURSOR_MODEL_ANNOTATIONS = [' (current)', ' (default)'] as const;
@@ -159,7 +153,7 @@ export const parseOpenCodeModelCatalog = (stdout: string): HeterogeneousAgentMod
   const models: HeterogeneousAgentModel[] = [];
 
   for (const rawLine of stdout.split(/\r?\n/)) {
-    const id = rawLine.trim();
+    const id = rawLine.trim().split(/\s+/, 1)[0] ?? '';
     const separatorIndex = id.indexOf('/');
     if (!OPENCODE_MODEL_ID_PATTERN.test(id) || separatorIndex <= 0 || seen.has(id)) continue;
 
@@ -168,6 +162,41 @@ export const parseOpenCodeModelCatalog = (stdout: string): HeterogeneousAgentMod
       id,
       modelId: id.slice(separatorIndex + 1),
       providerId: id.slice(0, separatorIndex),
+    });
+  }
+
+  return models;
+};
+
+/** Parse `codex debug models --bundled` JSON. Hidden slugs stay out of the picker. */
+export const parseCodexModelCatalog = (stdout: string): HeterogeneousAgentModel[] => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stdout);
+  } catch {
+    return [];
+  }
+
+  const rows = Array.isArray(parsed)
+    ? parsed
+    : isRecord(parsed) && Array.isArray(parsed.models)
+      ? parsed.models
+      : [];
+  const seen = new Set<string>();
+  const models: HeterogeneousAgentModel[] = [];
+
+  for (const row of rows) {
+    if (!isRecord(row)) continue;
+    const id = typeof row.slug === 'string' ? row.slug.trim() : '';
+    if (!id || row.visibility === 'hide' || seen.has(id)) continue;
+
+    const label = typeof row.display_name === 'string' ? row.display_name.trim() : '';
+    seen.add(id);
+    models.push({
+      id,
+      ...(label ? { label } : {}),
+      modelId: id,
+      providerId: 'openai',
     });
   }
 
@@ -227,33 +256,44 @@ export const parseQoderModelCatalog = (stdout: string): HeterogeneousAgentModel[
 
 const getErrorRecord = (error: unknown) =>
   error as {
-    code?: string;
-    killed?: boolean;
-    message?: string;
-    signal?: string;
     stderr?: Buffer | string;
+    stdout?: Buffer | string;
   };
 
-const classifyCatalogError = (error: unknown): HeterogeneousAgentModelCatalogErrorCode => {
-  const { code, killed, signal } = getErrorRecord(error);
-  if (code === 'ENOENT') return 'cli_not_found';
-  if (code === 'ETIMEDOUT' || killed || signal === 'SIGTERM') return 'timeout';
-  if (error instanceof Error) {
-    if (error.name === ACP_BRIDGE_NOT_FOUND_ERROR_NAME) return 'cli_not_found';
-    if (error.message.startsWith(ACP_REQUEST_TIMEOUT_PREFIX)) return 'timeout';
+const catalogSuccess = (
+  models: HeterogeneousAgentModel[],
+  updatedAt: number,
+): HeterogeneousAgentModelCatalog => ({ models, status: 'success', updatedAt });
+
+const runCatalogCommand = async ({
+  args,
+  command,
+  cwd,
+  env,
+}: {
+  args: string[];
+  command: string;
+  cwd?: string;
+  env: NodeJS.ProcessEnv;
+}): Promise<{ stderr: string; stdout: string }> => {
+  const spawnPlan = await resolveCliSpawnPlan(command, args);
+  try {
+    const { stderr, stdout } = await execFilePromise(spawnPlan.command, spawnPlan.args, {
+      cwd,
+      encoding: 'utf8',
+      env,
+      maxBuffer: MODEL_CATALOG_MAX_BUFFER,
+      timeout: MODEL_CATALOG_TIMEOUT_MS,
+      windowsHide: true,
+    });
+    return { stderr: String(stderr), stdout: String(stdout) };
+  } catch (error) {
+    const record = getErrorRecord(error);
+    return {
+      stderr: String(record.stderr ?? ''),
+      stdout: String(record.stdout ?? ''),
+    };
   }
-  return 'command_failed';
-};
-
-const getCatalogErrorMessage = (
-  code: HeterogeneousAgentModelCatalogErrorCode,
-  type: ListHeterogeneousAgentModelsParams['type'],
-): string => {
-  const name = getHeterogeneousTypeLabel(type) ?? type;
-  if (code === 'cli_not_found') return `${name} CLI was not found`;
-  if (code === 'timeout') return `${name} model discovery timed out`;
-
-  return `${name} model discovery failed`;
 };
 
 /**
@@ -263,95 +303,89 @@ const getCatalogErrorMessage = (
  * the same inherited-env stripping/proxy rules as a real session while `orvilo
  * connect` can use its daemon environment. Resolver-discovered PATH is merged
  * underneath explicit caller values.
+ *
+ * Discovery uses the vendor CLI (or a baked-in list for Claude Code). A missing
+ * binary, timeout, or empty parse still returns `status: 'success'` with an
+ * empty list so the picker keeps the runtime default.
  */
 export const listHeterogeneousAgentModels = async (
   params: ListHeterogeneousAgentModelsParams,
 ): Promise<HeterogeneousAgentModelCatalog> => {
   const updatedAt = Date.now();
-  const resolved = await resolveHeteroSpawnCommand(params.type, params.command);
-  const callerEnv = params.env ?? process.env;
-  const mergedPath = [
-    ...new Set(
-      [callerEnv.PATH, resolved.pathEnv].filter(Boolean).join(path.delimiter).split(path.delimiter),
-    ),
-  ]
-    .filter(Boolean)
-    .join(path.delimiter);
-  const env = {
-    ...callerEnv,
-    ...(mergedPath ? { PATH: mergedPath } : {}),
-  };
-
-  let acpError: unknown;
+  if (params.type === 'claude-code') {
+    return catalogSuccess(staticModelCatalog('claude-code'), updatedAt);
+  }
 
   try {
-    // ACP-first discovery for the migrated runtimes: a throwaway
-    // `session/new` exposes the agent's model config option. When the runtime
-    // is missing or exposes no catalog, fall back to the vendor's legacy
-    // model-listing command below.
-    if (ACP_RUNTIME_AGENT_TYPES.has(params.type)) {
-      try {
-        const target = await resolveAcpSpawnTarget(
-          params.type,
-          resolved.command,
-          env as NodeJS.ProcessEnv,
-          { allowPackageRunner: false },
-        );
-        const models = await listStandardAcpModels(params.type, {
-          args: params.args,
-          commandArgs: target.commandArgs,
-          commandPath: target.commandPath,
-          cwd: params.cwd ?? process.cwd(),
-          env: target.env,
-          timeoutMs: MODEL_CATALOG_TIMEOUT_MS,
-        });
-        // Claude Code lists a `default` entry of its own; the selector already
-        // offers "Default" as the choice that leaves the CLI's setting alone.
-        const selectable = models.filter(
-          (model) => model.id !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
-        );
-        // An ACP-only CLI that offers nothing but its own default is still a
-        // working catalog: "Default" needs no model override.
-        if (selectable.length > 0 || ACP_ONLY_CATALOG_TYPES.has(params.type)) {
-          return { models: selectable, status: 'success', updatedAt };
-        }
-      } catch (error) {
-        // Fall through to the legacy catalog probe below.
-        acpError = error;
-      }
+    const resolved = await resolveHeteroSpawnCommand(params.type, params.command);
+    const callerEnv = params.env ?? process.env;
+    const mergedPath = [
+      ...new Set(
+        [callerEnv.PATH, resolved.pathEnv]
+          .filter(Boolean)
+          .join(path.delimiter)
+          .split(path.delimiter),
+      ),
+    ]
+      .filter(Boolean)
+      .join(path.delimiter);
+    const env = {
+      ...callerEnv,
+      ...(mergedPath ? { PATH: mergedPath } : {}),
+    } as NodeJS.ProcessEnv;
+
+    const run = (args: string[]) =>
+      runCatalogCommand({
+        args,
+        command: resolved.command,
+        cwd: params.cwd,
+        env,
+      });
+
+    if (params.type === 'codex') {
+      const { stdout } = await run([...CODEX_DEBUG_MODELS_ARGS]);
+      const models = parseCodexModelCatalog(stdout);
+      return catalogSuccess(models.length > 0 ? models : staticModelCatalog('codex'), updatedAt);
     }
 
-    // These CLIs have no model-listing command of their own; an invented flag
-    // would only fail slower.
-    if (ACP_ONLY_CATALOG_TYPES.has(params.type)) {
-      const code = classifyCatalogError(acpError);
-      return {
-        error: { code, message: getCatalogErrorMessage(code, params.type) },
-        status: 'error',
-        updatedAt,
-      };
+    if (params.type === 'opencode') {
+      const verbose = parseOpenCodeModelCatalog((await run(['models', '--verbose'])).stdout);
+      if (verbose.length > 0) return catalogSuccess(verbose, updatedAt);
+      return catalogSuccess(parseOpenCodeModelCatalog((await run(['models'])).stdout), updatedAt);
     }
 
     if (params.type === 'droid') {
-      const models = await listDroidAcpModels({
-        args: params.args,
-        commandPath: resolved.command,
-        cwd: params.cwd ?? process.cwd(),
-        env: env as NodeJS.ProcessEnv,
-        timeoutMs: MODEL_CATALOG_TIMEOUT_MS,
-      });
-      return { models, status: 'success', updatedAt };
+      try {
+        return catalogSuccess(
+          await listDroidAcpModels({
+            args: params.args,
+            commandPath: resolved.command,
+            cwd: params.cwd ?? process.cwd(),
+            env,
+            timeoutMs: MODEL_CATALOG_TIMEOUT_MS,
+          }),
+          updatedAt,
+        );
+      } catch {
+        return catalogSuccess([], updatedAt);
+      }
     }
 
     if (params.type === 'trae') {
-      const models = await listTraeAcpModels({
-        args: params.args,
-        commandPath: resolved.command,
-        cwd: params.cwd ?? process.cwd(),
-        env: env as NodeJS.ProcessEnv,
-        timeoutMs: MODEL_CATALOG_TIMEOUT_MS,
-      });
-      return { models, status: 'success', updatedAt };
+      try {
+        return catalogSuccess(
+          await listTraeAcpModels({
+            args: params.args,
+            commandPath: resolved.command,
+            cwd: params.cwd ?? process.cwd(),
+            env,
+            timeoutMs: MODEL_CATALOG_TIMEOUT_MS,
+          }),
+          updatedAt,
+        );
+      } catch {
+        return catalogSuccess([], updatedAt);
+      }
     }
 
     const args =
@@ -359,59 +393,31 @@ export const listHeterogeneousAgentModels = async (
         ? ['--help']
         : params.type === 'devin'
           ? ['models', 'list', '--format', 'json']
-          : params.type === 'grok-build' || params.type === 'opencode'
+          : params.type === 'grok-build'
             ? ['models']
             : ['--list-models'];
-    const spawnPlan = await resolveCliSpawnPlan(resolved.command, args);
-    const { stderr, stdout } = await execFilePromise(spawnPlan.command, spawnPlan.args, {
-      cwd: params.cwd,
-      encoding: 'utf8',
-      env: env as NodeJS.ProcessEnv,
-      maxBuffer: MODEL_CATALOG_MAX_BUFFER,
-      timeout: MODEL_CATALOG_TIMEOUT_MS,
-      windowsHide: true,
-    });
+    const { stderr, stdout } = await run(args);
 
     if (params.type === 'codebuddy') {
-      const models =
-        parseCodeBuddyModelCatalogResult(String(stdout)) ??
-        parseCodeBuddyModelCatalogResult(String(stderr));
-      if (!models) {
-        return {
-          error: {
-            code: 'command_failed',
-            message: getCatalogErrorMessage('command_failed', params.type),
-          },
-          status: 'error',
-          updatedAt,
-        };
-      }
-
-      return { models, status: 'success', updatedAt };
+      return catalogSuccess(
+        parseCodeBuddyModelCatalogResult(stdout) ?? parseCodeBuddyModelCatalogResult(stderr) ?? [],
+        updatedAt,
+      );
     }
 
-    return {
-      models:
-        params.type === 'cursor'
-          ? parseCursorModelCatalog(String(stdout))
-          : params.type === 'devin'
-            ? parseDevinModelCatalog(String(stdout))
-            : params.type === 'grok-build'
-              ? parseGrokBuildModelCatalog(String(stdout))
-              : params.type === 'pi'
-                ? parsePiModelCatalog(String(stdout))
-                : params.type === 'qoder'
-                  ? parseQoderModelCatalog(String(stdout))
-                  : parseOpenCodeModelCatalog(String(stdout)),
-      status: 'success',
+    return catalogSuccess(
+      params.type === 'cursor'
+        ? parseCursorModelCatalog(stdout)
+        : params.type === 'devin'
+          ? parseDevinModelCatalog(stdout)
+          : params.type === 'grok-build'
+            ? parseGrokBuildModelCatalog(stdout)
+            : params.type === 'pi'
+              ? parsePiModelCatalog(stdout)
+              : parseQoderModelCatalog(stdout),
       updatedAt,
-    };
-  } catch (error) {
-    const code = classifyCatalogError(error);
-    return {
-      error: { code, message: getCatalogErrorMessage(code, params.type) },
-      status: 'error',
-      updatedAt,
-    };
+    );
+  } catch {
+    return catalogSuccess(params.type === 'codex' ? staticModelCatalog('codex') : [], updatedAt);
   }
 };

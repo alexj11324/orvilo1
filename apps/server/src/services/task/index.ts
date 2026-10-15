@@ -514,10 +514,11 @@ export class TaskService {
 
   /**
    * Delete a topic: interrupt if still running, then remove the task-topic
-   * link and delete the underlying topic.
+   * link and delete the underlying topic. Visibility follows the parent Issue,
+   * including a private Project ceiling.
    */
   async deleteTopic(topicId: string): Promise<void> {
-    const target = await this.taskTopicModel.findByTopicId(topicId);
+    const target = await this.taskTopicModel.findIssueTopicById(topicId);
     if (!target) throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found.' });
 
     if (target.status === 'running' && target.operationId) {

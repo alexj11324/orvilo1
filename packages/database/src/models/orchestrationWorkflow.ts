@@ -509,7 +509,7 @@ export class OrchestrationWorkflowModel {
       return new Map<string, { totalRunCost: number; totalRunDuration: number }>();
 
     const { rows } = await this.db.execute<{
-      orchestrationWorkflow_id: string;
+      orchestration_workflow_id: string;
       total_run_cost: number;
       total_run_duration: number;
     }>(sql`
@@ -542,7 +542,7 @@ export class OrchestrationWorkflowModel {
 
     return new Map(
       rows.map((row) => [
-        row.orchestrationWorkflow_id,
+        row.orchestration_workflow_id,
         {
           totalRunCost: Number(row.total_run_cost),
           totalRunDuration: Number(row.total_run_duration),

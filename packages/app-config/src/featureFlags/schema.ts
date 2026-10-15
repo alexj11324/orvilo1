@@ -43,9 +43,10 @@ export const FeatureFlagsSchema = z.object({
 
   /**
    * CAID rollout gate: controls NEW orchestrated dispatches (orchestration workflow fan-out and
-   * planner/orchestrator wakes). Off by default everywhere — an admin enables it
-   * per deployment (boolean), per user (id list), or per workspace via
-   * `caid_dispatch_workspaces`. Settlement of existing runs, corrective runs,
+   * planner/orchestrator wakes). On by default — a deployment must set an
+   * explicit `false` (or a user id list) to stop admitting new orchestrated
+   * work; `caid_dispatch_workspaces` then re-admits the listed workspaces.
+   * Settlement of existing runs, corrective runs,
    * and manual/schedule/heartbeat wakes are unaffected.
    */
   caid_dispatch: FeatureFlagValue.optional(),

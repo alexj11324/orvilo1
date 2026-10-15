@@ -10,6 +10,8 @@ import {
   orchestrationWorkflowNodeDecisions,
   orchestrationWorkflowNodes,
   orchestrationWorkflows,
+  taskTopics,
+  topics,
   users,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -268,6 +270,40 @@ describe('OrchestrationWorkflowModel', () => {
         taskTotal: 2,
       });
       expect(orchestrationWorkflows[0].orchestrationWorkflow.id).toBe(orchestrationWorkflow.id);
+    });
+
+    it('rolls task run cost and duration up into the listed orchestration workflow', async () => {
+      const task = await new TaskModel(serverDB, userId).create({ instruction: 'measured work' });
+      const orchestrationWorkflow = await orchestrationWorkflowModel.create({
+        subjectType: 'standalone',
+        title: 'Measured',
+      });
+      const node = await graphModel.createNode(orchestrationWorkflow.id, {
+        kind: 'task',
+        title: 'W1',
+      });
+      await serverDB
+        .update(orchestrationWorkflowNodes)
+        .set({ taskId: task.id })
+        .where(eq(orchestrationWorkflowNodes.id, node!.id));
+      await serverDB.insert(topics).values({
+        completedAt: new Date('2026-08-06T10:03:00.000Z'),
+        id: 'orchestration-workflow-measured-run',
+        totalCost: 0.04,
+        userId,
+      });
+      await serverDB.insert(taskTopics).values({
+        createdAt: new Date('2026-08-06T10:00:00.000Z'),
+        seq: 1,
+        taskId: task.id,
+        topicId: 'orchestration-workflow-measured-run',
+        userId,
+      });
+
+      const [item] = (await orchestrationWorkflowModel.list()).orchestrationWorkflows;
+
+      expect(item.totalRunCost).toBeCloseTo(0.04);
+      expect(item.totalRunDuration).toBe(180_000);
     });
 
     it('counts only the decision gates still waiting on a human', async () => {

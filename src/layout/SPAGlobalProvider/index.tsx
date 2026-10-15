@@ -1,8 +1,5 @@
 'use client';
 
-// Retained @lobehub/ui components (Image viewer toolbar, chat list) still toast
-// through the base-ui host, so it stays mounted until those components retire.
-import { ToastHost as BaseToastHost } from '@lobehub/ui/base-ui';
 import { domMax, LazyMotion } from 'motion/react';
 import { Component, type CSSProperties, lazy, memo, type PropsWithChildren, Suspense } from 'react';
 
@@ -114,7 +111,6 @@ const SPAGlobalProvider = memo<PropsWithChildren>(({ children }) => {
                     </CacheHydrationGate>
                   </OrviloAnalyticsProviderWrapper>
                 </TooltipProvider>
-                <BaseToastHost />
                 <ModalHost />
                 <ToastHost />
                 <ContextMenuHost />

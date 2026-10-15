@@ -300,20 +300,20 @@ const CommandMenu = memo(() => {
     }
   }, [open]);
 
-  // Find App root node (.ant-app)
+  // Find the App root node (AppTheme's data-orvilo-app-root)
   useEffect(() => {
     if (!mounted) return;
 
-    const appElement = document.querySelector('.ant-app') as HTMLElement;
+    const appElement = document.querySelector('[data-orvilo-app-root]') as HTMLElement;
     if (appElement) {
       setAppRoot(appElement);
       return;
     }
 
-    // Fallback: use MutationObserver only if .ant-app not found yet
+    // Fallback: use MutationObserver only if the app root is not found yet
     // Observe only direct children of body for better performance
     const observer = new MutationObserver((_, obs) => {
-      const el = document.querySelector('.ant-app') as HTMLElement;
+      const el = document.querySelector('[data-orvilo-app-root]') as HTMLElement;
       if (el) {
         setAppRoot(el);
         obs.disconnect(); // Stop observing once found
@@ -325,7 +325,7 @@ const CommandMenu = memo(() => {
       subtree: false, // Only watch direct children, not entire DOM tree
     });
 
-    // Fallback timeout: if .ant-app not found after 2s, use body
+    // Fallback timeout: if the app root is not found after 2s, use body
     const timeoutId = setTimeout(() => {
       observer.disconnect();
       setAppRoot((prev) => prev || document.body);

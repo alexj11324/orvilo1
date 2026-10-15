@@ -1,5 +1,9 @@
 'use client';
 
+// KaTeX output from the math plugin needs its stylesheet and fonts; the lobehub
+// ThemeProvider used to fetch them from a CDN.
+import 'katex/dist/katex.min.css';
+
 import { cjk } from '@streamdown/cjk';
 import { createMathPlugin } from '@streamdown/math';
 import { cn } from 'cn';
@@ -37,6 +41,7 @@ export type { MarkdownCodeBlockComponentProps } from './CodeBlock';
 export { MarkdownCodeBlockContext } from './CodeBlock';
 export { default as MarkdownCodeBlock } from './CodeBlock';
 export type { CitationItem } from './elements';
+export { markdownElements } from './elements';
 export { Mermaid, type MermaidProps } from './Mermaid';
 export { highlighterThemes, mermaidThemes } from './themes';
 
@@ -233,5 +238,41 @@ export const Markdown = memo<MarkdownProps>(
 );
 
 Markdown.displayName = 'Markdown';
+
+export interface MarkdownTypographyProps extends HTMLAttributes<HTMLDivElement> {
+  fontSize?: number;
+  headerMultiple?: number;
+  lineHeight?: number;
+  marginMultiple?: number;
+}
+
+/**
+ * The Markdown root's rhythm variables for content another renderer produces
+ * (react-markdown, hand-written changelog headings). Children styled with
+ * `markdownElements` read them; nothing is applied by descendant selector.
+ */
+export const MarkdownTypography = ({
+  className,
+  fontSize = 16,
+  headerMultiple = 1,
+  lineHeight = 1.8,
+  marginMultiple = 2,
+  style,
+  ...rest
+}: MarkdownTypographyProps) => (
+  <div
+    className={cn(ROOT_CLASS, className)}
+    style={
+      {
+        '--md-font-size': `${fontSize}px`,
+        '--md-header-multiple': headerMultiple,
+        '--md-line-height': lineHeight,
+        '--md-margin-multiple': marginMultiple,
+        ...style,
+      } as CSSProperties
+    }
+    {...rest}
+  />
+);
 
 export default Markdown;

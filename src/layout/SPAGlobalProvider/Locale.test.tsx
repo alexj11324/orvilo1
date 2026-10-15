@@ -2,19 +2,16 @@
  * @vitest-environment happy-dom
  */
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
-import { ConfigProvider } from 'antd';
 import dayjs from 'dayjs';
-import { type PropsWithChildren, use, useEffect } from 'react';
+import { type PropsWithChildren, useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getAntdLocale, loadDayjsLocaleModule, initialize, instance } = vi.hoisted(() => ({
-  getAntdLocale: vi.fn(),
+const { loadDayjsLocaleModule, initialize, instance } = vi.hoisted(() => ({
   loadDayjsLocaleModule: vi.fn(),
   initialize: vi.fn(),
   instance: { isInitialized: true, language: 'zh-CN', off: vi.fn(), on: vi.fn() },
 }));
 
-vi.mock('@/utils/locale', () => ({ getAntdLocale }));
 vi.mock('@/utils/dayjsLocale', () => ({
   loadDayjsLocaleModule,
   normalizeDayjsLocale: (lang: string) => lang,
@@ -51,7 +48,7 @@ const MountCounter = () => {
 describe('Locale', () => {
   beforeEach(() => {
     mounts = 0;
-    getAntdLocale.mockReset().mockResolvedValue({ locale: 'en' });
+    document.documentElement.dir = 'ltr';
     loadDayjsLocaleModule.mockReset().mockResolvedValue({ default: { name: 'en' } });
     initialize.mockReset().mockResolvedValue(undefined);
     instance.isInitialized = true;
@@ -65,40 +62,21 @@ describe('Locale', () => {
     vi.restoreAllMocks();
   });
 
-  it('keeps the subtree mounted when the antd locale resolves', async () => {
-    let resolveLocale: (value: unknown) => void = () => {};
-    getAntdLocale.mockReturnValue(
-      new Promise((resolve) => {
-        resolveLocale = resolve;
-      }),
-    );
-
+  it('mounts the subtree once while the language settles', async () => {
     render(
       <Locale defaultLang="zh-CN">
         <MountCounter />
       </Locale>,
     );
-    expect(mounts).toBe(1);
-
-    resolveLocale({ locale: 'zh-cn' });
-    await waitFor(() => expect(getAntdLocale).toHaveBeenCalled());
+    await waitFor(() => expect(loadDayjsLocaleModule).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 0));
 
-    // antd's ConfigProvider only wraps children in `LocaleProvider` when `locale` is
-    // truthy — a falsy-to-resolved transition would insert a node and remount everything.
     expect(mounts).toBe(1);
   });
 
-  // Observe the real public Antd context. Resource loading and i18n events are
-  // controlled boundaries; all three actual Locale component bodies run here.
-  const LocaleState = () => {
-    const { locale, direction } = use(ConfigProvider.ConfigContext);
-    return (
-      <output data-testid="actual-locale-state">
-        {JSON.stringify({ locale: locale?.locale, direction })}
-      </output>
-    );
-  };
+  // Resource loading and i18n events are controlled boundaries; all three
+  // actual Locale component bodies run here.
+  const LocaleState = () => <output data-testid="actual-locale-state" />;
   const deferred = <T,>() => {
     let resolve: (value: T) => void = () => {};
     const promise = new Promise<T>((done) => {
@@ -111,43 +89,34 @@ describe('Locale', () => {
     expect(entry).toBeDefined();
     return entry![1] as (language: string) => Promise<void>;
   };
-  const observe = () => JSON.parse(screen.getByTestId('actual-locale-state').textContent!);
+  const observe = () => {
+    screen.getByTestId('actual-locale-state');
+    return { direction: document.documentElement.dir };
+  };
 
   describe.each([
     ['SPA', Locale],
     ['Share', ShareLocale],
     ['Workbench', WorkbenchLocale],
   ] as const)('%s asynchronous locale ownership', (_name, Owner) => {
-    it('ignores an older Antd locale that resolves after the latest language', async () => {
+    it('sets the document direction from the latest language', async () => {
       render(
         <Owner defaultLang="en-US">
           <LocaleState />
         </Owner>,
       );
-      await waitFor(() => expect(observe().locale).toBe('en'));
-      const old = deferred<{ locale: string }>(),
-        current = deferred<{ locale: string }>();
-      getAntdLocale.mockImplementation((lang) => (lang === 'fr' ? old.promise : current.promise));
+      await waitFor(() => expect(observe().direction).toBe('ltr'));
       const change = listener();
-      let oldRequest!: Promise<void>, currentRequest!: Promise<void>;
       await act(async () => {
         instance.language = 'fr';
-        oldRequest = change('fr');
+        await change('fr');
       });
+      expect(observe()).toEqual({ direction: 'ltr' });
       await act(async () => {
         instance.language = 'ar';
-        currentRequest = change('ar');
+        await change('ar');
       });
-      await act(async () => {
-        current.resolve({ locale: 'ar' });
-        await currentRequest;
-      });
-      expect(observe()).toEqual({ locale: 'ar', direction: 'rtl' });
-      await act(async () => {
-        old.resolve({ locale: 'fr' });
-        await oldRequest;
-      });
-      expect(observe()).toEqual({ locale: 'ar', direction: 'rtl' });
+      expect(observe()).toEqual({ direction: 'rtl' });
     });
 
     it('does not let an older dayjs module overwrite the latest global locale', async () => {
@@ -156,10 +125,9 @@ describe('Locale', () => {
           <LocaleState />
         </Owner>,
       );
-      await waitFor(() => expect(observe().locale).toBe('en'));
+      await waitFor(() => expect(observe().direction).toBe('ltr'));
       const old = deferred<{ default: { name: string } }>();
       const current = deferred<{ default: { name: string } }>();
-      getAntdLocale.mockImplementation(async (lang) => ({ locale: lang }));
       loadDayjsLocaleModule.mockReturnValueOnce(old.promise).mockReturnValueOnce(current.promise);
       const change = listener();
       let oldRequest!: Promise<void>, currentRequest!: Promise<void>;
@@ -181,7 +149,7 @@ describe('Locale', () => {
         await oldRequest;
       });
       expect(dayjs.locale()).toBe('ar');
-      expect(observe()).toEqual({ locale: 'ar', direction: 'rtl' });
+      expect(observe()).toEqual({ direction: 'rtl' });
     });
 
     it('does not mutate the global dayjs locale after unmount', async () => {
@@ -190,10 +158,8 @@ describe('Locale', () => {
           <LocaleState />
         </Owner>,
       );
-      await waitFor(() => expect(observe().locale).toBe('en'));
-      const locale = deferred<{ locale: string }>(),
-        dates = deferred<{ default: { name: string } }>();
-      getAntdLocale.mockReturnValue(locale.promise);
+      await waitFor(() => expect(observe().direction).toBe('ltr'));
+      const dates = deferred<{ default: { name: string } }>();
       loadDayjsLocaleModule.mockReturnValue(dates.promise);
       const change = listener();
       let pending!: Promise<void>;
@@ -204,7 +170,6 @@ describe('Locale', () => {
       view.unmount();
       expect(instance.off).toHaveBeenCalledWith('languageChanged', change);
       await act(async () => {
-        locale.resolve({ locale: 'fr' });
         dates.resolve({ default: { name: 'fr' } });
         await pending;
       });
@@ -222,8 +187,7 @@ describe('Locale', () => {
         <LocaleState />
       </Locale>,
     );
-    await waitFor(() => expect(observe().locale).toBe('en'));
-    getAntdLocale.mockResolvedValue({ locale: 'ar' });
+    await waitFor(() => expect(observe().direction).toBe('ltr'));
     await act(async () => {
       instance.language = 'ar';
       await listener()('ar');
@@ -234,7 +198,7 @@ describe('Locale', () => {
       await initial.promise;
     });
     expect(dayjs.locale()).toBe('ar');
-    expect(observe()).toEqual({ locale: 'ar', direction: 'rtl' });
+    expect(observe()).toEqual({ direction: 'rtl' });
   });
 
   it('does not apply a late SPA initialization callback after unmount', async () => {
@@ -246,7 +210,7 @@ describe('Locale', () => {
         <LocaleState />
       </Locale>,
     );
-    await waitFor(() => expect(observe().locale).toBe('en'));
+    await waitFor(() => expect(observe().direction).toBe('ltr'));
     const apply = vi.spyOn(dayjs, 'locale');
     view.unmount();
     await act(async () => {
@@ -262,11 +226,10 @@ describe('Locale', () => {
         <LocaleState />
       </Locale>,
     );
-    await waitFor(() => expect(observe().locale).toBe('en'));
+    await waitFor(() => expect(observe().direction).toBe('ltr'));
     const fallback = deferred<{ default: { name: string } }>();
     const error = new Error('controlled-old-locale-module-failure');
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
-    getAntdLocale.mockImplementation(async (lang) => ({ locale: lang }));
     loadDayjsLocaleModule
       .mockClear()
       .mockRejectedValueOnce(error)
@@ -290,6 +253,6 @@ describe('Locale', () => {
       await oldRequest;
     });
     expect(dayjs.locale()).toBe('ar');
-    expect(observe()).toEqual({ locale: 'ar', direction: 'rtl' });
+    expect(observe()).toEqual({ direction: 'rtl' });
   });
 });

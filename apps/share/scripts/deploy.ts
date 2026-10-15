@@ -58,14 +58,7 @@ async function main() {
 
   if (!existsSync(assetsDir)) throw new Error(`Build output not found at ${assetsDir}`);
 
-  console.log('\n=== Step 2: Emit static CSS ===');
-  execFileSync('node', ['scripts/emit-static-css.mjs', assetsDir], {
-    cwd: shareRoot,
-    env: buildEnv,
-    stdio: 'inherit',
-  });
-
-  console.log('\n=== Step 3: Upload assets to S3 ===');
+  console.log('\n=== Step 2: Upload assets to S3 ===');
   await uploadAssets(assetsDir, {
     accessKeyId: requireEnv('ASSET_S3_ACCESS_KEY_ID', 'MOBILE_S3_ACCESS_KEY_ID'),
     bucket: requireEnv('ASSET_S3_BUCKET', 'MOBILE_S3_BUCKET'),
@@ -76,7 +69,7 @@ async function main() {
     secretAccessKey: requireEnv('ASSET_S3_SECRET_ACCESS_KEY', 'MOBILE_S3_SECRET_ACCESS_KEY'),
   });
 
-  console.log('\n=== Step 4: Deploy worker ===');
+  console.log('\n=== Step 3: Deploy worker ===');
   execFileSync(
     'node_modules/.bin/cf',
     ['deploy', '--prebuilt', ...workerDeployAnnotationArgs(process.env, localOperator(shareRoot))],

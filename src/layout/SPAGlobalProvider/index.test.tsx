@@ -31,15 +31,6 @@ vi.mock('@/components/ContextMenu', async (importOriginal) => {
   };
 });
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
-  const React = await import('react');
-
-  return {
-    ...(await importOriginal<object>()),
-    ToastHost: () => React.createElement('div', { 'data-testid': 'toast-host' }),
-  };
-});
-
 vi.mock('@/components/Modal', async (importOriginal) => {
   const React = await import('react');
 
@@ -372,7 +363,6 @@ describe('SPAGlobalProvider', () => {
       </SPAGlobalProvider>,
     );
 
-    expect(screen.getByTestId('toast-host')).toBeInTheDocument();
     expect(screen.getByTestId('reui-modal-host')).toBeInTheDocument();
     expect(screen.getByTestId('reui-toast-host')).toBeInTheDocument();
     expect(screen.getByTestId('context-menu-host')).toBeInTheDocument();

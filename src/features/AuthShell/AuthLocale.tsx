@@ -1,8 +1,8 @@
 'use client';
 
-import { ConfigProvider } from 'antd';
 import { memo, type PropsWithChildren, useEffect, useState } from 'react';
-import { isRtlLang } from 'rtl-detect';
+
+import { useDocumentDirection } from '@/hooks/useDocumentDirection';
 
 import { createAuthI18n } from './createAuthI18n';
 
@@ -29,22 +29,9 @@ const AuthLocale = memo<AuthLocaleProps>(({ children, defaultLang }) => {
     };
   }, [i18n]);
 
-  const documentDir = isRtlLang(lang) ? 'rtl' : 'ltr';
+  useDocumentDirection(lang);
 
-  return (
-    <ConfigProvider
-      direction={documentDir}
-      theme={{
-        components: {
-          Button: {
-            contentFontSizeSM: 12,
-          },
-        },
-      }}
-    >
-      {children}
-    </ConfigProvider>
-  );
+  return children;
 });
 
 AuthLocale.displayName = 'AuthLocale';

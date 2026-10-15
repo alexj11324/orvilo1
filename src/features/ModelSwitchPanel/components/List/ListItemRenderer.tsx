@@ -1,5 +1,4 @@
 import { Menu as MenuPrimitive } from '@base-ui/react/menu';
-import { Block } from '@lobehub/ui';
 import { cn } from 'cn';
 import { LucideArrowRight, LucideBolt } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
@@ -69,13 +68,9 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
     switch (item.type) {
       case 'no-provider': {
         return (
-          <Block
-            clickable
-            horizontal
-            className={cn(styles.menuItem, styles.tertiaryText)}
-            gap={8}
+          <div
+            className={cn('flex gap-2', styles.menuItem, styles.tertiaryText)}
             key="no-provider"
-            variant={'borderless'}
             onClick={() => {
               onClose();
               navigate('/settings/provider/all');
@@ -83,7 +78,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
           >
             {t('ModelSwitchPanel.emptyProvider')}
             <LucideArrowRight size={16} />
-          </Block>
+          </div>
         );
       }
 

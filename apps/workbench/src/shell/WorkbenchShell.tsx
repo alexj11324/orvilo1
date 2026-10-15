@@ -1,7 +1,5 @@
 'use client';
 
-// Retained @lobehub/ui components still toast through the base-ui host.
-import { ToastHost as BaseToastHost } from '@lobehub/ui/base-ui';
 import type { ResourceLanguage } from 'i18next';
 import { memo, type PropsWithChildren } from 'react';
 
@@ -26,7 +24,6 @@ const WorkbenchShell = memo<WorkbenchShellProps>(({ children, resources, locale:
     <WorkbenchLocale defaultLang={locale} resources={resources}>
       <WorkbenchTheme>
         <TooltipProvider>{children}</TooltipProvider>
-        <BaseToastHost />
         <ModalHost />
         <ToastHost />
       </WorkbenchTheme>

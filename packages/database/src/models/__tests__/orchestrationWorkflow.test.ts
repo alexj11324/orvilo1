@@ -653,6 +653,33 @@ describe('planning leases', () => {
     },
   );
 
+  it('keeps the reply boundary and confirmation across a stale config write-back', async () => {
+    const definition = await orchestrationWorkflowModel.create({
+      title: 'Confirmation race',
+      config: { pausedBy: 'user' },
+    });
+    const stale = await orchestrationWorkflowModel.findById(definition.id);
+    const plan = { topicId: 'topic', postedMessageId: 'msg', postedAt: '2026-10-13T12:00:00.000Z' };
+    await orchestrationWorkflowModel.setConversationPlan(definition.id, plan);
+    await orchestrationWorkflowModel.confirmPlan(definition.id, '2026-10-13T13:00:00.000Z');
+    await orchestrationWorkflowModel.confirmPlan(definition.id, '2030-01-01T00:00:00.000Z');
+
+    // A policy editor writes back its pre-post copy of the whole config.
+    await orchestrationWorkflowModel.update(definition.id, {
+      config: { ...stale!.config, acceptance: { criteriaIds: ['c'] } },
+    });
+    // A stale copy that carries a forged or outdated confirmation cannot override it either.
+    await orchestrationWorkflowModel.update(definition.id, {
+      config: { planConfirmedAt: 'forged', conversationPlan: { ...plan, topicId: 'other' } },
+    });
+    await orchestrationWorkflowModel.update(definition.id, { config: null });
+
+    expect((await orchestrationWorkflowModel.findById(definition.id))?.config).toMatchObject({
+      conversationPlan: plan,
+      planConfirmedAt: '2026-10-13T13:00:00.000Z',
+    });
+  });
+
   it('allows one owner, fences expired owners, and preserves unrelated config on release', async () => {
     const orchestrationWorkflow = await orchestrationWorkflowModel.create({
       title: 'Planning lease',

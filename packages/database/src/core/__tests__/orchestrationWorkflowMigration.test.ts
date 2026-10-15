@@ -25,7 +25,7 @@ describe('orchestration workflow in-place migration', () => {
         CREATE TABLE ai_models (id text PRIMARY KEY, type varchar(20));
         CREATE TABLE tasks (id text PRIMARY KEY, name text, error text);
         CREATE TABLE task_topics (id text PRIMARY KEY, trigger text);
-        CREATE TABLE message_plugins (id text PRIMARY KEY, identifier text, api_name text);
+        CREATE TABLE message_plugins (id text PRIMARY KEY, identifier text, api_name text, state jsonb, intervention jsonb);
         INSERT INTO goals VALUES ('goal_original', 'Keep this objective', '{"goalId":"goal_original","notes":"goal is an objective","artifactPath":"goal.md","literal":"orvilo-goal","purpose":"goal.criteria.draft","tools":["orvilo-goal"],"api":"startOrchestrationWorkflow"}', null, now());
         INSERT INTO goal_nodes VALUES ('node_original', 'goal_original', 'Keep this Issue');
         INSERT INTO goal_traces VALUES ('trace_original', 'goal_original', '{"s3Key":"goal-traces/goal_original.json.zst"}');
@@ -132,6 +132,79 @@ describe('orchestration workflow in-place migration', () => {
       await expect(
         db.exec("INSERT INTO orchestration_workflow_nodes VALUES ('bad', 'missing', 'Bad')"),
       ).rejects.toThrow();
+    } finally {
+      await db.close();
+    }
+  });
+
+  it('rewrites message_plugins state only for Orvilo goal tools and never touches foreign tool results', async () => {
+    const db = new PGlite();
+    try {
+      await db.exec(`
+        CREATE TABLE goals (id text PRIMARY KEY, title text, config jsonb, started_at timestamptz, created_at timestamptz DEFAULT now());
+        CREATE TABLE message_plugins (id text PRIMARY KEY, identifier text, api_name text, state jsonb, intervention jsonb);
+        INSERT INTO message_plugins VALUES
+          ('own', 'orvilo-goal', 'createGoal', '{"goalId":"goal_1","goal":{"title":"x"}}', '{"goalId":"goal_1"}'),
+          ('foreign', 'some-mcp-server', 'search', '{"structuredContent":{"goal":"user text","goalId":"g1"}}', '{"goal":"keep"}'),
+          ('foreign-named-task', 'orvilo-task', 'other', '{"goal":"keep"}', null);
+      `);
+      await db.exec(migration);
+      await db.exec(migration);
+      const { rows } = await db.query(
+        'SELECT id, identifier, state, intervention FROM message_plugins ORDER BY id',
+      );
+      expect(rows).toEqual([
+        {
+          id: 'foreign',
+          identifier: 'some-mcp-server',
+          state: { structuredContent: { goal: 'user text', goalId: 'g1' } },
+          intervention: { goal: 'keep' },
+        },
+        {
+          id: 'foreign-named-task',
+          identifier: 'orvilo-task',
+          state: { goal: 'keep' },
+          intervention: null,
+        },
+        {
+          id: 'own',
+          identifier: 'orvilo-orchestration-workflow',
+          state: {
+            orchestrationWorkflowId: 'goal_1',
+            orchestrationWorkflow: { title: 'x' },
+          },
+          intervention: { orchestrationWorkflowId: 'goal_1' },
+        },
+      ]);
+    } finally {
+      await db.close();
+    }
+  });
+
+  it('rewrites legacy dispatch trigger prefixes and waiting reasons so in-flight work resumes', async () => {
+    const db = new PGlite();
+    try {
+      await db.exec(`
+        CREATE TABLE goals (id text PRIMARY KEY, title text, config jsonb, started_at timestamptz, created_at timestamptz DEFAULT now());
+        CREATE TABLE task_dispatches (id text PRIMARY KEY, requested_by text NOT NULL, waiting_reason text);
+        INSERT INTO task_dispatches VALUES
+          ('queued', 'goal:user_1', NULL),
+          ('paused', 'goal:user_2', 'goal_paused'),
+          ('other', 'manual:user_3', 'no_eligible_agent'),
+          ('planning', 'orchestrator:planning:x', NULL);
+      `);
+      await db.exec(migration);
+      await db.exec(migration);
+      expect((await db.query('SELECT * FROM task_dispatches ORDER BY id')).rows).toEqual([
+        { id: 'other', requested_by: 'manual:user_3', waiting_reason: 'no_eligible_agent' },
+        {
+          id: 'paused',
+          requested_by: 'orchestrationWorkflow:user_2',
+          waiting_reason: 'orchestration_workflow_paused',
+        },
+        { id: 'planning', requested_by: 'orchestrator:planning:x', waiting_reason: null },
+        { id: 'queued', requested_by: 'orchestrationWorkflow:user_1', waiting_reason: null },
+      ]);
     } finally {
       await db.close();
     }

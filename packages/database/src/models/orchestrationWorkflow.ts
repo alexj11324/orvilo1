@@ -200,16 +200,20 @@ export class OrchestrationWorkflowModel {
       .set({
         ...value,
         // Policy editors may carry a pre-claim or pre-release snapshot. Runtime
-        // ownership always comes from the current row, never that snapshot, and
-        // policy edits cannot replace the concurrently written incident ledger.
+        // ownership and plan confirmation always come from the current row,
+        // never that snapshot, and policy edits cannot replace the concurrently
+        // written incident ledger. Confirmation is written only through
+        // setConversationPlan / confirmPlan.
         ...(value.config !== undefined
           ? {
-              config: sql`(COALESCE(${JSON.stringify(value.config ?? {})}::jsonb, '{}'::jsonb) - 'planningCheckpoint' - 'planningProtocol' - 'supervisorState' - 'managerState')
+              config: sql`(COALESCE(${JSON.stringify(value.config ?? {})}::jsonb, '{}'::jsonb) - 'planningCheckpoint' - 'planningProtocol' - 'supervisorState' - 'managerState' - 'conversationPlan' - 'planConfirmedAt')
                 || jsonb_strip_nulls(jsonb_build_object(
                   'planningCheckpoint', ${orchestrationWorkflows.config}->'planningCheckpoint',
                   'planningProtocol', ${orchestrationWorkflows.config}->'planningProtocol',
                   'supervisorState', ${orchestrationWorkflows.config}->'supervisorState',
-                  'managerState', ${orchestrationWorkflows.config}->'managerState'
+                  'managerState', ${orchestrationWorkflows.config}->'managerState',
+                  'conversationPlan', ${orchestrationWorkflows.config}->'conversationPlan',
+                  'planConfirmedAt', ${orchestrationWorkflows.config}->'planConfirmedAt'
                 ))`,
             }
           : {}),
@@ -218,6 +222,37 @@ export class OrchestrationWorkflowModel {
       .where(and(eq(orchestrationWorkflows.id, id), this.ownership()))
       .returning();
     return row as OrchestrationWorkflowItem | undefined;
+  };
+
+  /** Dedicated writer for the reply boundary of a posted split; `update()` never touches it. */
+  setConversationPlan = async (
+    id: string,
+    plan: { topicId: string; postedMessageId: string; postedAt: string },
+  ) => {
+    await this.db
+      .update(orchestrationWorkflows)
+      .set({
+        config: sql`jsonb_set(COALESCE(${orchestrationWorkflows.config}, '{}'::jsonb), '{conversationPlan}', ${JSON.stringify(plan)}::jsonb)`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(orchestrationWorkflows.id, id), this.ownership()));
+  };
+
+  /** Dedicated, idempotent writer for plan confirmation; the first confirmation wins. */
+  confirmPlan = async (id: string, confirmedAt: string = new Date().toISOString()) => {
+    await this.db
+      .update(orchestrationWorkflows)
+      .set({
+        config: sql`jsonb_set(COALESCE(${orchestrationWorkflows.config}, '{}'::jsonb), '{planConfirmedAt}', to_jsonb(${confirmedAt}::text))`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(orchestrationWorkflows.id, id),
+          this.ownership(),
+          sql`${orchestrationWorkflows.config}->>'planConfirmedAt' IS NULL`,
+        ),
+      );
   };
 
   /** Call inside a transaction when a coordinator needs to serialize a write. */

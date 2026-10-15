@@ -98,7 +98,7 @@ BEGIN
         ('orchestration_workflow_traces', 'ticks_by_branch'),
         ('agents', 'plugins'), ('agents', 'agency_config'), ('agents', 'chat_config'),
         ('agent_operations', 'app_context'), ('agent_operations', 'metadata'), ('agent_operations', 'model_runtime_config'),
-        ('messages', 'tools'), ('messages', 'metadata'), ('message_plugins', 'state'), ('message_plugins', 'intervention'),
+        ('messages', 'tools'), ('messages', 'metadata'),
         ('tasks', 'config'), ('task_topics', 'contract'), ('task_topics', 'handoff'),
         ('verify_runs', 'metadata'), ('verify_runs', 'plan'), ('acceptances', 'config'),
         ('user_settings', 'system_agent'), ('user_settings', 'default_agent'), ('user_settings', 'tool'),
@@ -147,7 +147,25 @@ BEGIN
     UPDATE orchestration_workflow_events SET event_type = 'orchestration_workflow_status' WHERE event_type = 'goal_status';
     UPDATE orchestration_workflow_events SET actor_id = 'orchestration-workflow-coordinator' WHERE actor_id = 'goal-coordinator';
   END IF;
+  IF to_regclass('public.task_dispatches') IS NOT NULL THEN
+    -- Queued/waiting dispatches minted before the rename must stay resumable:
+    -- the resume sweep decodes the trigger prefix of requested_by, and the
+    -- waiting sweep skips orchestration-owned reasons by prefix.
+    UPDATE task_dispatches SET requested_by = 'orchestrationWorkflow:' || substr(requested_by, length('goal:') + 1)
+      WHERE requested_by LIKE 'goal:%';
+    UPDATE task_dispatches SET waiting_reason = 'orchestration_workflow_' || substr(waiting_reason, length('goal_') + 1)
+      WHERE waiting_reason LIKE 'goal\_%' ESCAPE '\';
+  END IF;
   IF to_regclass('public.message_plugins') IS NOT NULL THEN
+    -- message_plugins.state holds arbitrary third-party tool results (MCP
+    -- structuredContent). Rewrite JSON keys only on rows produced by Orvilo's
+    -- own goal tools, and never on foreign payloads.
+    UPDATE message_plugins
+    SET state = pg_temp.rename_orchestration_workflow_json(state),
+        intervention = pg_temp.rename_orchestration_workflow_json(intervention)
+    WHERE (identifier IN ('orvilo-goal', 'orvilo-goal-supervisor')
+        OR (identifier = 'orvilo-task' AND api_name = 'createGoal'))
+      AND (state::text ~ '[gG][oO][aA][lL]' OR intervention::text ~ '[gG][oO][aA][lL]');
     UPDATE message_plugins SET identifier = replace(identifier, 'orvilo-goal', 'orvilo-orchestration-workflow'),
       api_name = replace(replace(api_name, 'Goal', 'OrchestrationWorkflow'), 'createOrchestrationWorkflow', 'startOrchestrationWorkflow')
       WHERE identifier IN ('orvilo-goal', 'orvilo-goal-supervisor')

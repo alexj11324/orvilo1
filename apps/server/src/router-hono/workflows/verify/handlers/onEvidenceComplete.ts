@@ -5,7 +5,9 @@ import { runVerifyAfterEvidenceSubmission } from '@/server/services/verify/lifec
 
 interface OnEvidenceCompletePayload {
   deliverable: string;
-  orchestrationWorkflow: string;
+  /** Pre-rename callback bodies still queued at upgrade time carry the requirement here. */
+  goal?: string;
+  orchestrationWorkflow?: string;
   parentOperationId: string;
   userId: string;
   workspaceId?: string;
@@ -23,7 +25,7 @@ export async function onEvidenceComplete(c: Context) {
     body.userId,
     {
       deliverable: body.deliverable,
-      orchestrationWorkflow: body.orchestrationWorkflow ?? '',
+      orchestrationWorkflow: body.orchestrationWorkflow ?? body.goal ?? '',
       operationId: body.parentOperationId,
     },
     body.workspaceId,

@@ -309,15 +309,12 @@ export class OrchestrationWorkflowConversationPlanService {
       await model.update(id, {
         title,
         requirement,
-        config: {
-          ...item.config,
-          ...(acceptance ? { acceptance } : {}),
-          conversationPlan: {
-            topicId: context.topicId,
-            postedMessageId: posted.id,
-            postedAt: new Date(posted.createdAt).toISOString(),
-          },
-        },
+        config: { ...item.config, ...(acceptance ? { acceptance } : {}) },
+      });
+      await model.setConversationPlan(id, {
+        topicId: context.topicId,
+        postedMessageId: posted.id,
+        postedAt: new Date(posted.createdAt).toISOString(),
       });
       return { postedMessageId: posted.id };
     });
@@ -358,10 +355,7 @@ export class OrchestrationWorkflowConversationPlanService {
           code: 'PRECONDITION_FAILED',
           message: 'ORCHESTRATION_WORKFLOW_AWAITING_USER_REPLY',
         });
-      if (!item.config?.planConfirmedAt)
-        await model.update(id, {
-          config: { ...item.config, planConfirmedAt: new Date().toISOString() },
-        });
+      if (!item.config?.planConfirmedAt) await model.confirmPlan(id);
       if (item.status === 'planning') await model.updateStatus(id, 'running');
       return { orchestrationWorkflowId: id, parentTaskId: item.subjectId };
     });

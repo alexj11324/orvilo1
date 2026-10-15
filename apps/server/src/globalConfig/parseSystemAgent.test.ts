@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { parseSystemAgent } from './parseSystemAgent';
 
@@ -11,6 +11,31 @@ describe('parseSystemAgent', () => {
     };
 
     expect(parseSystemAgent(envValue)).toEqual(expected);
+  });
+
+  it('should accept the legacy goal key as a deprecated orchestrationWorkflow alias', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      expect(parseSystemAgent('goal=anthropic/claude-1,thread=openai/gpt-4')).toEqual({
+        orchestrationWorkflow: { provider: 'anthropic', model: 'claude-1' },
+        thread: { provider: 'openai', model: 'gpt-4' },
+      });
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('"goal" is deprecated'));
+      // The renamed key wins over the legacy spelling regardless of order.
+      expect(
+        parseSystemAgent('orchestrationWorkflow=openai/new,goal=anthropic/old')
+          .orchestrationWorkflow,
+      ).toEqual({ provider: 'openai', model: 'new' });
+      // The legacy key also beats the `default` fallback.
+      expect(
+        parseSystemAgent('default=openai/mini,goal=anthropic/claude-1').orchestrationWorkflow,
+      ).toEqual({
+        provider: 'anthropic',
+        model: 'claude-1',
+      });
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('should handle empty environment variable string', () => {

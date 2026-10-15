@@ -17,6 +17,26 @@ import { ActionTagPlugin } from './ActionTagPlugin';
 import { LocalFileTagPlugin } from './LocalFileTagPlugin';
 import { ReferTopicPlugin } from './ReferTopicPlugin';
 
+/** Only these persisted command identifiers have declared editor locale keys.
+ * Dynamic skill/tool identifiers keep their own supplied business label. */
+function nativeActionLabel(node: ActionTagNode, t: TFunction<'editor'>): string {
+  if (node.actionCategory !== 'command') return node.actionLabel;
+  switch (node.actionType) {
+    case 'compact': {
+      return t('slash.compact');
+    }
+    case 'newTopic': {
+      return t('slash.newTopic');
+    }
+    case 'goal': {
+      return t('slash.goal');
+    }
+    default: {
+      return node.actionLabel;
+    }
+  }
+}
+
 /** Existing node classes, shared native decorator registries and serializers;
  * only service identities come from the actual local native kernel closure. */
 export function nativeChatEmbedPlugins(t: TFunction<'editor'>): NativeIPlugin[] {
@@ -26,13 +46,7 @@ export function nativeChatEmbedPlugins(t: TFunction<'editor'>): NativeIPlugin[] 
       ActionTagPlugin,
       {
         decorator: (node: ActionTagNode, editor: LexicalEditor) => (
-          <ActionTag
-            editor={editor}
-            node={node}
-            label={
-              node.actionCategory === 'command' ? t(`slash.${node.actionType}`) : node.actionLabel
-            }
-          />
+          <ActionTag editor={editor} label={nativeActionLabel(node, t)} node={node} />
         ),
       },
     ],

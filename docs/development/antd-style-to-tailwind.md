@@ -296,3 +296,45 @@ references in Tailwind where semantic mappings are pending. The first candidate
 is tracked in [ChatInput rollout batch 1](antd-style-rollout-batch-1.md), including
 its exact base counts, temporary theme references and merge blockers. The phase-0
 acceptance above remains historical; it is not global rollout acceptance.
+
+## Native editor continuation, 2026-10-15
+
+The server document owner now uses the local `@orvilo/editor-runtime/headless`
+implementation. The two patch-review callers use local Pierre Diffs. Browser
+replacement remains explicitly opt-in through `NativeCompletePageEditor` and
+`NativeChatRuntimeContext`; this does not establish completion of #577.
+
+The complete page assembly connects document ownership, collaboration, metadata
+autosave, create/delete/publish/export actions, domain-specific headers, Copilot,
+rich history comparison and restoration, likes, and comments. Its widgets retain
+code, math, links, mentions, images, files, lists, tables, and the slash menu.
+The mathematics renderer is a required real implementation, not a placeholder.
+Native comments share the existing thread business owner, while using native
+editing and read-only rich rendering. Legacy entry points remain available until
+the replacement has product acceptance.
+
+Chat input uses an owned composer protocol and the existing send transaction.
+Failed preflight restores the correct draft, attachments, and context selections
+without replacing newer input. Mounted tests cover pending draft deletion during
+unmount or topic changes, foreign revisions, StrictMode ownership, read-only send,
+and immediate Markdown mirroring after draft restoration. Native toolbar actions
+validate saved selection points against the current document before restoring
+them, so publishing and clearing a comment cannot resurrect deleted node keys.
+The legacy and native editor implementations load separately through the shared
+entry point; the loading surface retains the requested row geometry.
+
+Local validation includes the 65 editor-runtime tests, 32 combined business-owner
+tests, seven mounted draft tests, 13 slash tests, four toolbar selection tests,
+and 78 existing chat, dictation, and comment business tests. These are separate
+check results with potentially overlapping related tests, not a unique total.
+Normal lint and host/device boundary checks remain required, as does full CI on
+the delivered commit. Tests do not replace real Electron verification.
+
+The six approved dependencies have been installed. Promoting KaTeX 0.18.10 from
+an SDK transitive dependency to a direct owner remains a separate pending approval;
+the prepared adapter and rollout gate have not been enabled. Focused Electron
+checks for Image, FloatingPanel, and FloatingSheet are also not substitutes for
+the original 440-scenario token acceptance scope. #690 still requires complete
+historical site/context CSS equivalence evidence; #691–#693, #696, and #697 retain
+their applicable Electron acceptance obligations. #694 must follow actual
+\#690–#693 completion, and the already closed #695 is not reopened by this work.

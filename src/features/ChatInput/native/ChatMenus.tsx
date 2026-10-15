@@ -90,7 +90,7 @@ export function NativeChatMenus({
   const [match, setMatch] = useState<Match>();
   const [index, setIndex] = useState(0);
   const [position, setPosition] = useState({ left: 0, top: 0 });
-  const active = useRef<Match>();
+  const active = useRef<Match | undefined>(undefined);
   const sequence = useRef(0);
   const live = useRef({ items, index });
   live.current = { items, index };
@@ -214,7 +214,7 @@ export function NativeChatMenus({
             replaceableString: next.token,
           });
         const all = categories.flatMap((category) =>
-          category.items.map((item) => ({ ...item, group: category.label })),
+          category.items.map((item) => ({ ...item, key: String(item.key), group: category.label })),
         );
         const ranked = next.query
           ? new Fuse(all, {
@@ -232,7 +232,11 @@ export function NativeChatMenus({
           : all;
         const files = next.query ? await searchLocalFiles(next.query) : [];
         return [
-          ...files.map((file) => ({ ...file, group: t('mention.category.files') })),
+          ...files.map((file) => ({
+            ...file,
+            key: String(file.key),
+            group: t('mention.category.files'),
+          })),
           ...ranked,
         ];
       };

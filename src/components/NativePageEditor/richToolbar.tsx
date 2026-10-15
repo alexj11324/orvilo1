@@ -81,7 +81,7 @@ export function NativeRichToolbar({ editor }: { editor: NativeIEditorKernel }) {
   };
   return (
     <div
-      aria-label={t('toolbar.label')}
+      aria-label={t('actions.typobar.title')}
       className="flex flex-wrap gap-1 rounded-t-(--radius-input) bg-fill-quaternary p-2"
       role="toolbar"
     >
@@ -200,7 +200,7 @@ export function NativeRichToolbar({ editor }: { editor: NativeIEditorKernel }) {
           if (editor.isEditable()) editor.dispatchCommand(UNDO_COMMAND, undefined);
         }}
       >
-        {t('toolbar.undo')}
+        {t('typobar.undo')}
       </Button>
       <Button
         disabled={!editable}
@@ -212,7 +212,7 @@ export function NativeRichToolbar({ editor }: { editor: NativeIEditorKernel }) {
           if (editor.isEditable()) editor.dispatchCommand(REDO_COMMAND, undefined);
         }}
       >
-        {t('toolbar.redo')}
+        {t('typobar.redo')}
       </Button>
     </div>
   );

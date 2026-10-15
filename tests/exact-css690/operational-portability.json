@@ -1,0 +1,16 @@
+{
+  "NodeExecuted": false,
+  "compilerByteUnchanged": true,
+  "compilerSHA256": "c6b551bb6143dae1a249b1134a0567cda92501e2f834f4ca9071e6ba7f512ab5",
+  "finiteAncestorGuardSourceGitHead": "4eabb1d2e7b519c35304ef3557cf47fe631b31cc",
+  "finiteAncestorGuardSourceSHA256": "f459c753eb488c859f4d14f910fcbd411d5b59608640a505b0952a86d682a618",
+  "guardASTIdenticalOutside": [
+    "ROOT/CGROUP/CGROUP_MOUNT location assignments",
+    "current_cgroup discovery copied verbatim from current native-focused-electron guard",
+    "resources copied verbatim from current native-focused-electron guard"
+  ],
+  "otherGuardASTExactlyIdentical": true,
+  "portableGuardSHA256": "2a05aa2d80c7f4d75cafdfa16a203fd0ea0994b1858fedd63a0f7dad9696c022",
+  "thresholdsOrClosureChanged": false,
+  "upstreamGuardSHA256": "b3e3a639354af0faeca1e2f08fb7f634ec95f93546ea4da26aca17235e1ce8ac"
+}

@@ -1,0 +1,30 @@
+{
+  "display_title": "UI tokens 1/8: replace arbitrary Tailwind sizes that have an exact scale equivalent",
+  "display_url": "https://github.com/alexj11324/orvilo1/issues/690",
+  "issue": {
+    "url": "https://github.com/alexj11324/orvilo1/issues/690",
+    "title": "UI tokens 1/8: replace arbitrary Tailwind sizes that have an exact scale equivalent",
+    "issue_number": 690,
+    "body": "## Context\n\nComponents carry about 1,400 Tailwind arbitrary values (`src` 1,269, `packages` 134, `apps` 2). Most have an exact equivalent on the scale, so they can be rewritten with no visual change. This is the first of a series that ends with a lint rule and an empty suppression list.\n\n**Prerequisite:** the role lookup in `.agents/skills/react/SKILL.md#role-lookup`, `--text-dense` in `src/app/globals.css`, and `src/styles/roleClassForms.test.ts`. These are on branch `docs/role-class-lookup` (commit `7c9b0dc72`, rebased on `canary` `9e86b68c9`), not on `canary` yet. Start after that branch merges.\n\n## Rewrites (exact equivalents only)\n\nRoot font size is fixed at 16px (nothing sets `html { font-size }`), so `N px` equals `N/4` on the spacing scale.\n\n| From | To | Notes |\n| --- | --- | --- |\n| `{h,w,size,min-*,max-*,p*,m*,gap*,top,bottom,left,right,inset*,basis,space-*,translate-*,leading}-[Npx]` | `…-{N/4}` | `h-[32px]` → `h-8`, `w-[280px]` → `w-70`, `gap-[6px]` → `gap-1.5`, `gap-[1px]` → `gap-px`. Negative values move the sign: `bottom-[-5px]` → `-bottom-1.25`. |\n| `{h,w,size,min-*,max-*}-[100%]` | `…-full` | 102 sites |\n| `z-[N]` | `z-N` (`z-[-1]` → `-z-1`) | |\n| `ring-[3px]` | `ring-3` | |\n| `text-[13px]` | `text-(length:--text-dense)` | 155 sites |\n| `rounded-[4px]` / `[6px]` / `[12px]` | `rounded-(--radius-chip)` / `(--radius-input)` / `(--radius-overlay)` | `rounded-[8px]`: pick `--radius-button` or `--radius-card` by what the element is |\n| `util-[var(--x)]` | `util-(--x)` | same output, v4 shorthand |\n\nLeave alone: `calc()`, `min()/max()/clamp()`, viewport and `em`/`rem` units, `inherit`, unitless `leading-[1.4]`, grid templates, shadows, and percentages other than 100%.\n\nOff-rhythm values (`gap-[3px]`, `[5px]`, `[7px]`, `[11px]`; about 31 sites) also have exact forms (`gap-0.75`, `gap-1.25`, …). Convert them, and list them in the PR so a reviewer can see which sites sit off the 2/4px rhythm. Do not round them.\n\nFont sizes other than 13px are **not** in this issue; they change line height and are tracked separately.\n\n## Cautions\n\n- Rewrite test files too: some assert class strings.\n- Variants and `!` must survive: `md:hover:h-[32px]` → `md:hover:h-8`.\n- Do not introduce new utility names. `cn` (554 direct imports, no custom config) misclassifies them; see the lookup notes.\n\n## Expected\n\n- No remaining `-[Npx]` on the utilities above, and no `-[100%]`, in `src`, `packages`, `apps`.\n- Proof of equivalence: compile `src/app/globals.css` with `@tailwindcss/postcss` (pattern in `packages/ui/scripts/build-css.mjs`) over the new class names and show each resolves to the original pixel value. No Electron run is needed if that table is attached.\n- `bun run check` green.\n\n\n\n## Prerequisite PR\n\nTracked in #699 (`docs/role-class-lookup`, commit `7c9b0dc727d7c26247e4b0b1abf5b65cc1d84164`). Independent light review completed; CI and normal merge remain pending. Start this issue after #699 merges.\n",
+    "state": "open",
+    "user": {
+      "login": "alexj11324",
+      "name": "alexj11324",
+      "email": null,
+      "avatar_url": "https://avatars.githubusercontent.com/u/183887963?v=4",
+      "id": 183887963
+    },
+    "assignees": null,
+    "labels": null,
+    "milestone": null,
+    "state_reason": null,
+    "comments": 0,
+    "created_at": "2026-10-10T11:08:58Z",
+    "updated_at": "2026-10-10T11:16:11Z",
+    "closed_at": null,
+    "display_url": "https://github.com/alexj11324/orvilo1/issues/690",
+    "display_title": "UI tokens 1/8: replace arbitrary Tailwind sizes that have an exact scale equivalent"
+  },
+  "title": "UI tokens 1/8: replace arbitrary Tailwind sizes that have an exact scale equivalent",
+  "url": "https://github.com/alexj11324/orvilo1/issues/690"
+}

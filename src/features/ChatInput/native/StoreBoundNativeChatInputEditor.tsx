@@ -42,7 +42,8 @@ export function StoreBoundNativeChatInputEditor(props: StoreBoundNativeChatInput
     expand: s.expand,
     feature: s.feature,
     saved: s._savedEditorState,
-    popup: s.slashMenuRef.current,
+    popup:
+      s.slashMenuRef !== null && typeof s.slashMenuRef === 'object' ? s.slashMenuRef.current : null,
   }));
   const { allowed } = usePermission('create_content');
   const { canUseResource } = useChatInputResourceAccess();

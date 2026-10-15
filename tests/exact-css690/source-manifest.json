@@ -1,0 +1,72 @@
+{
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 5181,
+      "sha256": "bdc242ff2cfd3994beb32428b7d687f73ab3bd3901c2d3709c1aca4aa00a8b81"
+    },
+    {
+      "file": "compiler.mjs.source",
+      "bytes": 51711,
+      "sha256": "c6b551bb6143dae1a249b1134a0567cda92501e2f834f4ca9071e6ba7f512ab5"
+    },
+    {
+      "file": "execute.py",
+      "bytes": 4616,
+      "sha256": "7f2d14a5a0f6afeb8f3431d457a3745e1855d86d718df657abe676a504387dc3"
+    },
+    {
+      "file": "fetch_history.py",
+      "bytes": 1613,
+      "sha256": "cddb4e9a8cd95acbcc96b02b894a00a18d02c102f6f3c02b396452884f16f574"
+    },
+    {
+      "file": "guard.py",
+      "bytes": 14348,
+      "sha256": "2a05aa2d80c7f4d75cafdfa16a203fd0ea0994b1858fedd63a0f7dad9696c022"
+    },
+    {
+      "file": "guard_resource_test.py",
+      "bytes": 2872,
+      "sha256": "5cec8df2bd7d09aa9497d48ae169f3a7792fd8eb10a2dfcbcc313911b205160e"
+    },
+    {
+      "file": "historical-55-refs.json",
+      "bytes": 2533,
+      "sha256": "7d416642aaf84408015c7ec95283c8b9bc7842e15618c0be4b7e7488e5f48402"
+    },
+    {
+      "file": "issue-690-source.json",
+      "bytes": 4181,
+      "sha256": "3d6905d1c989d189f25b0788ebe65136b7345a33337441d00933340ae92a7826"
+    },
+    {
+      "file": "operational-portability.json",
+      "bytes": 858,
+      "sha256": "8c346f353b819deb4539a4c45d3bad861c9b8e0787049852a71f14de5dd7ffe9"
+    },
+    {
+      "file": "original-917-obligations.json",
+      "bytes": 1402632,
+      "sha256": "17862923c9b3dcd00f82228ae109af41e9d8c4f1d830ca1a0fa706941c091941"
+    },
+    {
+      "file": "prepare.py",
+      "bytes": 3810,
+      "sha256": "8e016ead4f54b92b36cd64efa08c9486eaa4dba172d0f77e2b49817876a4456d"
+    },
+    {
+      "file": "source_pin_test.py",
+      "bytes": 1960,
+      "sha256": "2ff0d526006ee6429746d1317b5e85e3f0650b629beb06eae2cbb8c797aa942a"
+    },
+    {
+      "file": "upstream-guard.py",
+      "bytes": 12228,
+      "sha256": "b3e3a639354af0faeca1e2f08fb7f634ec95f93546ea4da26aca17235e1ce8ac"
+    }
+  ],
+  "oldWorkspacesCachesGitBundlesSecretsIncluded": false,
+  "schema": "self-contained-whole690-source-inputs-v1",
+  "sourceOnly": true
+}

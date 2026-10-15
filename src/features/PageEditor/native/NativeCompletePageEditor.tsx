@@ -22,6 +22,7 @@ import {
 import type { NativeEditorWidgets } from '@/components/NativePageEditor/session';
 import { NativePageSlashMenu } from '@/components/NativePageEditor/slashMenu';
 import { useNativeWorkspaceMentions } from '@/components/NativePageEditor/useWorkspaceMentions';
+import { NativeChatRuntimeContext } from '@/features/ChatInput/native/NativeChatRuntimeContext';
 import { pageAgentRuntime } from '@/store/tool/slices/builtin/executors/pageAgentRuntime';
 
 import { NativePageCreate, NativePageHeader, NativePageTitle } from './chrome/primaryChrome';
@@ -101,19 +102,21 @@ export function NativeCompletePageEditor({
     widgets,
   );
   return (
-    <NativePageEditorAssembler
-      {...publicProps}
-      chrome={chrome}
-      contentLayout={(content, state) => (
-        <NativeCompletePageLayout state={state}>{content}</NativeCompletePageLayout>
-      )}
-      document={{
-        ...documentOptions,
-        label: label ?? t('pageEditor.editorPlaceholder'),
-        widgets,
-        runtime: pageAgentRuntime,
-      }}
-    />
+    <NativeChatRuntimeContext value={mathRenderer}>
+      <NativePageEditorAssembler
+        {...publicProps}
+        chrome={chrome}
+        contentLayout={(content, state) => (
+          <NativeCompletePageLayout state={state}>{content}</NativeCompletePageLayout>
+        )}
+        document={{
+          ...documentOptions,
+          label: label ?? t('pageEditor.editorPlaceholder'),
+          widgets,
+          runtime: pageAgentRuntime,
+        }}
+      />
+    </NativeChatRuntimeContext>
   );
 }
 function CompleteBodyTools({

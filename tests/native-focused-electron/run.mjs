@@ -27,6 +27,7 @@ const checks = [],
   errors = [],
   network = [],
   warnings = [];
+const pendingLocalResources = new Map();
 const write = (name, value) =>
   fs.writeFileSync(path.join(output, name), JSON.stringify(value, null, 2) + '\n', { flag: 'wx' });
 const check = (id, value, detail = {}) => {
@@ -104,14 +105,21 @@ try {
   });
   page = await electron.firstWindow();
   page.setDefaultTimeout(20000);
+  page.on('request', (request) => {
+    const resource = new URL(request.url());
+    if (resource.hostname === '127.0.0.1')
+      pendingLocalResources.set(request, { path: resource.pathname, type: request.resourceType() });
+  });
+  page.on('requestfinished', (request) => pendingLocalResources.delete(request));
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => {
     if (m.type() === 'error') errors.push(m.text());
     if (m.type() === 'warning') warnings.push(m.text());
   });
-  page.on('requestfailed', (request) =>
-    network.push({ url: request.url(), failure: request.failure() }),
-  );
+  page.on('requestfailed', (request) => {
+    pendingLocalResources.delete(request);
+    network.push({ url: request.url(), failure: request.failure() });
+  });
   page.on('response', (response) => {
     if (response.status() >= 400) network.push({ url: response.url(), status: response.status() });
   });
@@ -152,7 +160,9 @@ try {
       payload,
     }),
   );
-  await page.waitForFunction(() => window.sdk942?.resolvedTheme);
+  // The clean runner must compile the real installed module graph on first load.
+  // Keep action waits at 20s and the outer resource guard's 480s deadline intact.
+  await page.waitForFunction(() => window.sdk942?.resolvedTheme, undefined, { timeout: 120000 });
   await page.evaluate(() => document.fonts.ready);
   for (const width of [1240, 390])
     for (const theme of ['light', 'dark']) {
@@ -416,6 +426,7 @@ try {
     screenshots,
     errors,
     network,
+    pendingLocalResources: [...pendingLocalResources.values()],
     warnings,
     contexts: 4,
     sceneCount: 3,

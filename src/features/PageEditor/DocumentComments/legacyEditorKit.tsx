@@ -20,7 +20,9 @@ import {
 import LegacyCommentContent from './LegacyCommentContent';
 
 const legacyKit: DocumentCommentEditorKit = {
-  PublishedContent: LegacyCommentContent,
+  PublishedContent: ({ content, editorData }) => (
+    <LegacyCommentContent content={content} editorData={editorData ?? null} />
+  ),
   Input: ChatInput,
   ActionBar: ChatInputActionBar,
   useEditor() {

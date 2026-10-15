@@ -45,7 +45,7 @@ const RunReplyEditor = memo<RunReplyEditorProps>(({ onSubmit, onCancel, placehol
           <Button
             disabled={submitting}
             size="sm"
-            style={{ color: 'var(--ant-color-text-description)' }}
+            style={{ color: 'var(--foreground-description)' }}
             variant="ghost"
             onClick={onCancel}
           >

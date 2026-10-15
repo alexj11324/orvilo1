@@ -48,13 +48,13 @@ export interface PullRequestStateVisual {
 
 export const PR_STATE_VISUAL: Record<PullRequestState, PullRequestStateVisual> = {
   closed: {
-    color: 'var(--ant-color-error)',
+    color: 'var(--destructive)',
     icon: GitPullRequestClosed,
     labelKey: 'metaCard.pr.closed',
   },
   merged: { color: MERGED_PURPLE, icon: GitMerge, labelKey: 'metaCard.pr.merged' },
   open: {
-    color: 'var(--ant-color-success)',
+    color: 'var(--success)',
     icon: GitPullRequestArrow,
     labelKey: 'metaCard.pr.open',
   },
@@ -71,24 +71,24 @@ export const getCiVisual = (status?: DeviceGitPullRequestCiStatus): CiVisual => 
   switch (status) {
     case 'success': {
       return {
-        color: 'var(--ant-color-success)',
+        color: 'var(--success)',
         icon: CircleCheck,
         labelKey: 'metaCard.ci.success',
       };
     }
     case 'failure': {
-      return { color: 'var(--ant-color-error)', icon: CircleX, labelKey: 'metaCard.ci.failure' };
+      return { color: 'var(--destructive)', icon: CircleX, labelKey: 'metaCard.ci.failure' };
     }
     case 'pending': {
       return {
-        color: 'var(--ant-color-warning)',
+        color: 'var(--warning)',
         icon: LoaderCircle,
         labelKey: 'metaCard.ci.pending',
       };
     }
     default: {
       return {
-        color: 'var(--ant-color-text-tertiary)',
+        color: 'var(--foreground-tertiary)',
         icon: CircleSlash,
         labelKey: 'metaCard.ci.none',
       };

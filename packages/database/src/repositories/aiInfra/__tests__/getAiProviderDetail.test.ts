@@ -1,6 +1,7 @@
 import type { AiProviderDetailItem } from '@orvilo/types';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createTestSecretCipher } from '../../../../tests/secretCipher';
 import { getTestDB } from '../../../core/getTestDB';
 import type { OrviloDatabase } from '../../../type';
 import { AiInfraRepos } from '../index';
@@ -20,7 +21,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  repo = new AiInfraRepos(serverDB, userId, mockProviderConfigs);
+  repo = new AiInfraRepos(serverDB, createTestSecretCipher, userId, mockProviderConfigs);
 });
 
 describe('AiInfraRepos', () => {

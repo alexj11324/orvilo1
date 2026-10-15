@@ -328,8 +328,8 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
         primary
           ? undefined
           : {
-              borderColor: 'var(--ant-color-border-secondary)',
-              background: 'var(--ant-color-bg-container)',
+              borderColor: 'var(--divider)',
+              background: 'var(--card)',
             }
       }
     >
@@ -455,7 +455,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
           {activity.summary && !(primary && activity.content) && (
             <div
               className="text-sm"
-              style={{ color: 'var(--ant-color-text-description)', whiteSpace: 'pre-wrap' }}
+              style={{ color: 'var(--foreground-description)', whiteSpace: 'pre-wrap' }}
             >
               {activity.summary}
             </div>

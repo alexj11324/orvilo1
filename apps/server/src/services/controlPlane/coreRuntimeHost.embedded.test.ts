@@ -41,6 +41,7 @@ import { CredentialModel } from '@/database/models/credential';
 import { TaskExecutionControlModel } from '@/database/models/taskExecutionControl';
 import { credentials, providerBindings, taskDispatches, workspaces } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { cleanupTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 
 import { resolveOrviloProviderBinding } from '../providerBinding/execution';
@@ -281,12 +282,14 @@ const writeArtifact = async (directory: string, content = '// pinned runner\n') 
 };
 
 const seedBinding = async (run: CanonicalRunBinding) => {
-  const cred = await new CredentialModel(db, run.userId).create({
-    key: `key_${randomBytes(4).toString('hex')}`,
-    name: 'Fixture credential',
-    payload: { values: { PROVIDER_KEY: 'env-secret-7' } },
-    type: 'kv-env',
-  });
+  const cred = await new CredentialModel(db, KeyVaultsGateKeeper.initWithEnvKey, run.userId).create(
+    {
+      key: `key_${randomBytes(4).toString('hex')}`,
+      name: 'Fixture credential',
+      payload: { values: { PROVIDER_KEY: 'env-secret-7' } },
+      type: 'kv-env',
+    },
+  );
   const [row] = await db
     .insert(providerBindings)
     .values({

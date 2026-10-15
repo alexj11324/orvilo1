@@ -23,9 +23,6 @@ import AgentAvatar from './AgentAvatar';
 import nativeStyles from './AgentViewAll.module.css';
 import ItemActions from './ItemActions';
 
-/** Fixed action-column width (the "…" menu) so rows stay aligned. */
-export const ACTION_COL_WIDTH = 32;
-
 /** Author avatar slot — reserved even when the author is unknown. */
 const AUTHOR_COL_WIDTH = 20;
 

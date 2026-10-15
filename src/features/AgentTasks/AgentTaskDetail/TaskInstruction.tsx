@@ -11,7 +11,7 @@ import { EditingIndicator, type EditLockClient, useEditLock } from '@/features/E
 import { EditorCanvas } from '@/features/EditorCanvas';
 import { seedAttachments } from '@/features/EditorCanvas/attachmentRegistry';
 import { usePermission } from '@/hooks/usePermission';
-import { lambdaClient } from '@/libs/trpc/client';
+import { taskService } from '@/services/task';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
@@ -22,10 +22,10 @@ import { useTaskInstructionAutosave } from './useTaskInstructionAutosave';
 
 // Stable lock RPC binding for the task resource.
 const taskLockClient: EditLockClient = {
-  acquire: (id) => lambdaClient.task.acquireTaskLock.mutate({ id }),
-  peek: (id) => lambdaClient.task.getTaskLock.query({ id }),
+  acquire: (id) => taskService.acquireTaskLock({ id }),
+  peek: (id) => taskService.getTaskLock({ id }),
   release: async (id) => {
-    await lambdaClient.task.releaseTaskLock.mutate({ id });
+    await taskService.releaseTaskLock({ id });
   },
 };
 

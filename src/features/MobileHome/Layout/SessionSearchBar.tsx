@@ -66,7 +66,7 @@ const SessionSearchBar = memo<{ mobile?: boolean }>(({ mobile }) => {
       <SearchIcon
         className="pointer-events-none absolute left-3"
         size={16}
-        style={{ color: 'var(--ant-color-text-tertiary)' }}
+        style={{ color: 'var(--foreground-tertiary)' }}
       />
       <Input
         className="w-full px-9"
@@ -89,7 +89,7 @@ const SessionSearchBar = memo<{ mobile?: boolean }>(({ mobile }) => {
             variant="ghost"
             onClick={() => updateSearchKeywords('')}
           >
-            <X size={14} style={{ color: 'var(--ant-color-text-tertiary)' }} />
+            <X size={14} style={{ color: 'var(--foreground-tertiary)' }} />
           </Button>
         )}
       </div>

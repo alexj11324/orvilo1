@@ -11,7 +11,7 @@ const OllamaDesktopSetupGuide = memo(() => {
   return (
     <Center gap={16} paddingBlock={32} style={{ maxWidth: 300, width: '100%' }}>
       <FormAction
-        avatar={<Ollama color={'var(--ant-color-primary)'} size={64} />}
+        avatar={<Ollama color={'var(--primary)'} size={64} />}
         title={t('OllamaSetupGuide.install.title')}
         description={
           <span>

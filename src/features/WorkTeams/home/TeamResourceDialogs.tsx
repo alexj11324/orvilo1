@@ -1,14 +1,15 @@
 'use client';
 
 import { t as translate } from 'i18next';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import { createModal, useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { lambdaClient } from '@/libs/trpc/client';
+import { workTeamService } from '@/services/workTeam';
+import { useFetchTeamDocumentCandidates } from '@/store/workTeam/hooks';
 
 import { isPublicDocument } from './teamResourcePicker';
 import type { TeamResource } from './useTeamResources';
@@ -44,14 +45,14 @@ function LinkForm({
       setPending(true);
       setError(undefined);
       if (link) {
-        await lambdaClient.teamResource.updateLink.mutate({
+        await workTeamService.updateLink({
           resourceId: link.id,
           teamId,
           title: title.trim(),
           url: parsed.href,
         });
       } else {
-        await lambdaClient.teamResource.createLink.mutate({
+        await workTeamService.createLink({
           sectionId,
           teamId,
           title: title.trim() || undefined,
@@ -124,13 +125,13 @@ function SectionForm({
         setError(undefined);
         try {
           if (sectionId) {
-            await lambdaClient.teamResource.renameSection.mutate({
+            await workTeamService.renameSection({
               name: name.trim(),
               sectionId,
               teamId,
             });
           } else {
-            await lambdaClient.teamResource.createSection.mutate({ name: name.trim(), teamId });
+            await workTeamService.createSection({ name: name.trim(), teamId });
           }
           await onChanged();
           close();
@@ -172,39 +173,23 @@ function ExistingDocumentPicker({
   teamId,
 }: DialogOptions & { attachedIds: Set<string> }) {
   const { t } = useTranslation('common');
-  const [page, setPage] = useState(0);
-  const [items, setItems] = useState<
-    Awaited<ReturnType<typeof lambdaClient.document.queryDocuments.query>>['items']
-  >([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<unknown>();
-  const load = useCallback(async (nextPage: number) => {
-    setLoading(true);
-    setError(undefined);
-    try {
-      const result = await lambdaClient.document.queryDocuments.query({
-        current: nextPage,
-        excludeTeamDocuments: true,
-        pageSize: 100,
-      });
-      setItems((previous) => (nextPage === 0 ? result.items : [...previous, ...result.items]));
-      setTotal(result.total);
-      setPage(nextPage);
-    } catch (failure) {
-      setError(failure);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  useEffect(() => {
-    void load(0);
-  }, [load]);
+  const request = useFetchTeamDocumentCandidates(teamId);
+  const { items, total, loadMore } = request;
+  const loading = request.isLoading || request.isValidating;
   const eligible = items.filter(isPublicDocument);
   return (
     <div className="flex flex-col gap-3.5 p-5">
       <ErrorLine error={error} />
+      {request.error && (
+        <AsyncError
+          error={request.error}
+          retrying={request.isValidating}
+          variant="inline"
+          onRetry={() => void request.mutate().catch(() => undefined)}
+        />
+      )}
       <div className="overflow-auto max-h-82.5">
         {eligible.map((document) => (
           <button
@@ -216,7 +201,7 @@ function ExistingDocumentPicker({
               setPendingId(document.id);
               setError(undefined);
               try {
-                await lambdaClient.teamResource.attachDocument.mutate({
+                await workTeamService.attachDocument({
                   documentId: document.id,
                   sectionId,
                   teamId,
@@ -238,7 +223,11 @@ function ExistingDocumentPicker({
             </span>
           </button>
         ))}
-        {!loading && items.length === 0 && !error && t('teams.resources.noDocuments')}
+        {!loading &&
+          items.length === 0 &&
+          !error &&
+          !request.error &&
+          t('teams.resources.noDocuments')}
         {!loading &&
           items.length > 0 &&
           eligible.length === 0 &&
@@ -246,7 +235,7 @@ function ExistingDocumentPicker({
       </div>
       {loading && <span>{t('teams.loading')}</span>}
       {items.length < total && (
-        <Button disabled={loading} size="compact" onClick={() => void load(page + 1)}>
+        <Button disabled={loading} size="compact" onClick={() => void loadMore()}>
           {t('teams.resources.loadMore')}
         </Button>
       )}

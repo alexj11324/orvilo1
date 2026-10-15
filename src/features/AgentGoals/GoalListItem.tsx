@@ -58,7 +58,7 @@ export const GoalListItem = memo<GoalItemProps>(({ goal: item }) => {
         totalRunCost={item.totalRunCost}
         totalRunDuration={item.totalRunDuration}
       />
-      <ArrowRightIcon color={'var(--ant-color-text-quaternary)'} size={16} />
+      <ArrowRightIcon color={'var(--foreground-quaternary)'} size={16} />
     </div>
   );
 });

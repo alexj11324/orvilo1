@@ -20,7 +20,7 @@ type Rect = AcceptanceReviewAnnotation['rect'];
 
 const styles = {
   badge:
-    'absolute -top-2.25 -start-2.25 inline-flex items-center justify-center size-4.5 rounded-full text-xs font-semibold leading-none text-(--ant-color-text-light-solid) bg-destructive',
+    'absolute -top-2.25 -start-2.25 inline-flex items-center justify-center size-4.5 rounded-full text-xs font-semibold leading-none text-(--overlay-mask-foreground) bg-destructive',
   badgeDelete:
     'cursor-pointer absolute -top-3.5 -end-3.5 inline-flex items-center justify-center size-7 border-none rounded-full text-(--destructive-on-fill) bg-destructive hover:brightness-[1.15] [@media(pointer:coarse)]:-top-5.5 [@media(pointer:coarse)]:-end-5.5 [@media(pointer:coarse)]:size-11',
   canvas: 'cursor-crosshair select-none',

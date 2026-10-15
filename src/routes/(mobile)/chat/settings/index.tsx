@@ -41,7 +41,7 @@ export default memo(() => {
       <Tabs
         value={tab ?? ''}
         style={{
-          borderBottom: `1px solid ${'var(--ant-color-border-secondary)'}`,
+          borderBottom: `1px solid ${'var(--divider)'}`,
         }}
         onValueChange={(value) => setTab(value as ChatSettingsTabs)}
       >

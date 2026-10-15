@@ -26,7 +26,7 @@ import type { ExecuteTasksParams, TaskItem } from '../../types';
 
 const styles = {
   assignee: 'flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground',
-  container: 'rounded-(--ant-border-radius) py-3',
+  container: 'rounded-(--radius-card) py-3',
   deleteButton:
     'cursor-pointer text-foreground-tertiary transition-[color] duration-200 ease-[ease] hover:text-destructive',
   timeoutInput: 'w-25',

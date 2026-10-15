@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import ErrorDetails from '@/features/MCP/MCPInstallProgress/InstallError/ErrorDetails';
-import { lambdaClient } from '@/libs/trpc/client';
+import { connectorService } from '@/services/connector';
 import { useToolStore } from '@/store/tool';
 import { mcpStoreSelectors, pluginSelectors } from '@/store/tool/selectors';
 import { type MCPErrorInfoMetadata } from '@/types/plugins';
@@ -167,8 +167,7 @@ const MCPManifestForm = ({
   const [redirectUri, setRedirectUri] = useState('');
   useEffect(() => {
     if (!enableOAuth || authType !== 'oauth2' || redirectUri) return;
-    lambdaClient.connector.getRedirectUri
-      .query()
+    connectorService.getRedirectUri()
       .then((r) => setRedirectUri(r.redirectUri))
       .catch(() => {
         if (typeof window !== 'undefined') {

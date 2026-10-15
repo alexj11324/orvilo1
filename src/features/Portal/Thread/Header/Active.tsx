@@ -26,7 +26,7 @@ const Active = memo(() => {
       <AssigneeAvatar agentId={currentThread.agentId} size={24} />
       <div
         className={cn('truncate min-w-0', oneLineEllipsis)}
-        style={{ color: 'var(--ant-color-text-secondary)', fontSize: 14 }}
+        style={{ color: 'var(--muted-foreground)', fontSize: 14 }}
       >
         {currentThread.title === LOADING_FLAT ? (
           <div className="flex flex-col flex-1 h-7.5 justify-center">
@@ -41,7 +41,7 @@ const Active = memo(() => {
           size="sm"
           variant="secondary"
           style={{
-            color: 'var(--ant-color-text-description)',
+            color: 'var(--foreground-description)',
             flexShrink: 0,
             fontSize: 11,
           }}

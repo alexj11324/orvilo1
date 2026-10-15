@@ -35,7 +35,7 @@ const SkeletonNavItem = ({ width }: { width: string }) => (
       className={'flex flex-col items-center justify-center'}
       style={{ flex: 'none', height: 28, width: 28 }}
     >
-      <SkeletonBar height={18} radius={'var(--ant-border-radius-sm)'} width={18} />
+      <SkeletonBar height={18} radius={'var(--radius-input)'} width={18} />
     </div>
     <div className={'flex flex-col flex-1'}>
       <SkeletonBar height={14} width={width} />

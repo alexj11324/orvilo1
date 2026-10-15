@@ -8,15 +8,6 @@ import type {
   LinearSyncRecoveryRow,
 } from '@orvilo/types';
 
-export const LINEAR_SYNC_STATES: LinearIssueLinkSyncState[] = [
-  'synced',
-  'pending',
-  'conflict',
-  'outcome_unknown',
-  'removed',
-  'unlinked',
-];
-
 export type LinearIssueLinkView = {
   conflict?: LinearSyncConflict | null;
   id: string;
@@ -84,21 +75,6 @@ export const getLinearBindingRollout = (
 
 export type LinearInstallationTone = 'danger' | 'success' | 'warning';
 
-export const getInstallationTone = (status: LinearInstallationStatus): LinearInstallationTone => {
-  switch (status) {
-    case 'active': {
-      return 'success';
-    }
-    case 'paused': {
-      return 'warning';
-    }
-    case 'error':
-    case 'revoked': {
-      return 'danger';
-    }
-  }
-};
-
 export const isCatalogOrganization = (
   organizations: Array<{ id: string }>,
   organizationId: string,
@@ -159,9 +135,6 @@ export const summarizeIssueLinks = (links: LinearIssueLinkView[]): LinearImportS
 
 export const getIssueLinkUrl = (link: LinearIssueLinkView) =>
   link.remoteSnapshot?.url ?? link.lastConfirmedSnapshot.url ?? undefined;
-
-export const getIssueLinkTitle = (link: LinearIssueLinkView) =>
-  link.remoteSnapshot?.title ?? link.lastConfirmedSnapshot.title ?? link.linearIdentifier;
 
 export type LinearWizardStepId =
   'automation' | 'binding' | 'import' | 'installation' | 'mapping' | 'scope' | 'sync';

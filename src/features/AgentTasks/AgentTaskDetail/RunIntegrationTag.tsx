@@ -38,16 +38,16 @@ const STATE_META: Record<
 > = {
   // Corrective attempts are exhausted or the merge path failed — a person has
   // to look, so this is the one state that gets the error color.
-  blocked: { color: 'var(--ant-color-error)', icon: CircleX },
+  blocked: { color: 'var(--destructive)', icon: CircleX },
   // Conflicted, with a corrective run dispatched or in flight — recoverable,
   // so warning rather than error.
-  conflict: { color: 'var(--ant-color-warning)', icon: TriangleAlert },
-  integrated: { color: 'var(--ant-color-success)', icon: CircleCheck },
-  merging: { color: 'var(--ant-color-info)', icon: Loader2, spin: true },
-  pending: { color: 'var(--ant-color-text-tertiary)', icon: CircleDashed },
-  publish_failed: { color: 'var(--ant-color-error)', icon: CircleX },
-  skipped: { color: 'var(--ant-color-text-tertiary)', icon: CircleMinus },
-  verification_pending: { color: 'var(--ant-color-warning)', icon: TriangleAlert },
+  conflict: { color: 'var(--warning)', icon: TriangleAlert },
+  integrated: { color: 'var(--success)', icon: CircleCheck },
+  merging: { color: 'var(--info)', icon: Loader2, spin: true },
+  pending: { color: 'var(--foreground-tertiary)', icon: CircleDashed },
+  publish_failed: { color: 'var(--destructive)', icon: CircleX },
+  skipped: { color: 'var(--foreground-tertiary)', icon: CircleMinus },
+  verification_pending: { color: 'var(--warning)', icon: TriangleAlert },
 };
 
 interface RunIntegrationTagProps {
@@ -116,7 +116,7 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
         <a
           href={integration.prUrl}
           rel={'noopener noreferrer'}
-          style={{ color: 'var(--ant-color-info)', fontSize: 12 }}
+          style={{ color: 'var(--info)', fontSize: 12 }}
           target={'_blank'}
           onClick={(event) => event.stopPropagation()}
         >

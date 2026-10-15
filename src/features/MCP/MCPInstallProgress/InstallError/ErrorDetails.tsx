@@ -22,7 +22,7 @@ const ErrorDetails = memo<{
         <div
           className="flex flex-col gap-2"
           style={{
-            backgroundColor: 'var(--ant-color-fill-quaternary)',
+            backgroundColor: 'var(--fill-quaternary)',
             borderRadius: 8,
             fontFamily: 'monospace',
             fontSize: '11px',

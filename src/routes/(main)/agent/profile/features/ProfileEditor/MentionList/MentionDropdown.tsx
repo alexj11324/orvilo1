@@ -50,10 +50,10 @@ const MentionDropdown = memo<MenuRenderProps>(
       <div
         className="flex flex-col"
         style={{
-          background: 'var(--ant-color-bg-elevated)',
-          border: `1px solid ${'var(--ant-color-border-secondary)'}`,
+          background: 'var(--popover)',
+          border: `1px solid ${'var(--divider)'}`,
           borderRadius: 12,
-          boxShadow: 'var(--ant-box-shadow-secondary)',
+          boxShadow: 'var(--shadow-popover)',
           left: position.x,
           maxHeight: 260,
           maxWidth: 400,
@@ -69,7 +69,7 @@ const MentionDropdown = memo<MenuRenderProps>(
             return (
               <div
                 key={`divider-${(option as any)?.key ?? 'divider'}`}
-                style={{ borderTop: `1px solid ${'var(--ant-color-border-secondary)'}` }}
+                style={{ borderTop: `1px solid ${'var(--divider)'}` }}
               />
             );
           }
@@ -83,7 +83,7 @@ const MentionDropdown = memo<MenuRenderProps>(
               key={String(item.key)}
               ref={isActive ? activeItemRef : null}
               style={{
-                background: isActive ? 'var(--ant-color-fill-secondary)' : undefined,
+                background: isActive ? 'var(--selected)' : undefined,
                 cursor: 'pointer',
               }}
               onMouseEnter={() => setActiveKey?.(String(item.key))}
@@ -99,7 +99,7 @@ const MentionDropdown = memo<MenuRenderProps>(
               )}
               <div
                 style={{
-                  color: 'var(--ant-color-text)',
+                  color: 'var(--foreground)',
                   fontSize: 14,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',

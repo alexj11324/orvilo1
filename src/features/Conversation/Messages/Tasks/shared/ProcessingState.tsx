@@ -19,7 +19,7 @@ const styles = {
   progress: 'relative mx-2 my-3 h-0.75 overflow-hidden rounded-full bg-selected',
   progressBar: 'absolute h-full rounded-full [inset-block-start:0] [inset-inline-start:0] [background:linear-gradient(90deg,var(--primary),var(--primary-hover))] transition-[width] duration-500 ease-out',
   progressCompact: 'relative h-0.75 overflow-hidden rounded-full bg-selected',
-  progressShimmer: 'absolute size-full [inset-block-start:0] [inset-inline-start:0] [background:linear-gradient(90deg,transparent,var(--ant-color-primary-bg-hover),transparent)] animate-[text-shiny-sweep-transform_2s_ease_infinite] motion-reduce:hidden',
+  progressShimmer: 'absolute size-full [inset-block-start:0] [inset-inline-start:0] [background:linear-gradient(90deg,transparent,var(--primary-wash-hover),transparent)] animate-[text-shiny-sweep-transform_2s_ease_infinite] motion-reduce:hidden',
   separator: 'size-0.75 rounded-full bg-foreground-quaternary',
 };
 

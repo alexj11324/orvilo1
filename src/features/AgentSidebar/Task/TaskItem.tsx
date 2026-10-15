@@ -29,10 +29,7 @@ const TaskItem = memo<TaskItemProps>(({ task, active }) => {
       title={displayTitle}
       slots={{
         titlePrefix: hasName ? (
-          <div
-            className="text-xs"
-            style={{ color: 'var(--ant-color-text-tertiary)', flex: 'none' }}
-          >
+          <div className="text-xs" style={{ color: 'var(--foreground-tertiary)', flex: 'none' }}>
             {task.identifier}
           </div>
         ) : undefined,

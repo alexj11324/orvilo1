@@ -408,7 +408,7 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
       styles={{
         body: { padding: 0 },
         panel: {
-          background: 'var(--ant-color-bg-container)',
+          background: 'var(--card)',
           // Leave room for whatever the panel reserves when it yields the
           // bottom edge to a toast; the library's own cap assumes a 16px
           // offset and this panel sits at 8.

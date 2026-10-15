@@ -53,10 +53,10 @@ describe('acceptanceAuthorColor', () => {
 
   it('leaves the verdict colours to verdicts', () => {
     for (const semantic of [
-      'var(--ant-volcano)',
-      'var(--ant-green)',
-      'var(--ant-color-error)',
-      'var(--ant-color-success)',
+      'var(--palette-volcano-6)',
+      'var(--palette-green-6)',
+      'var(--destructive)',
+      'var(--success)',
     ]) {
       expect(ACCEPTANCE_AUTHOR_COLORS).not.toContain(semantic);
     }

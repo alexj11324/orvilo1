@@ -1,5 +1,8 @@
 # iMessage Desktop bridge regression test
 
+> Historical Messenger acceptance recipe. Its adapter/IPC surface was retired.
+> Do not run this as current product verification. See [the current entry point](../SKILL.md).
+
 The iMessage channel is different from the other bot platforms: there is **no
 native app to drive with osascript**. Instead the Desktop app runs a local
 **BlueBubbles bridge** — a small HTTP server in the Electron main process that

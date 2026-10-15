@@ -12,7 +12,7 @@ import type { CheckProposal } from './proposal';
 
 const styles = {
   /* Dashed and untinted: provisional suggestions stay distinct from verdicts. */
-  card: 'rounded-(--ant-border-radius-lg) border border-dashed border-border px-2.5 py-2',
+  card: 'rounded-(--radius-overlay) border border-dashed border-border px-2.5 py-2',
   head: 'cursor-pointer select-none',
   /* The collapsed line carries the claim without needing to open the card. */
   preview: 'min-w-0 flex-1 truncate text-xs',

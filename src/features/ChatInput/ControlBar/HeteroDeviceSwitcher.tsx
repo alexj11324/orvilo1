@@ -64,7 +64,7 @@ const styles = {
   buttonLabel: 'overflow-hidden max-w-30 text-ellipsis whitespace-nowrap',
   buttonOpen: 'text-foreground bg-muted bg-none hover:text-foreground hover:bg-muted hover:bg-none',
   buttonWarning:
-    'text-(--ant-color-warning-text) hover:text-(--ant-color-warning-text) hover:bg-warning-wash hover:bg-none',
+    'text-(--warning-text) hover:text-(--warning-text) hover:bg-warning-wash hover:bg-none',
   buttonReadonly: 'cursor-default hover:text-muted-foreground hover:bg-transparent hover:bg-none',
   check: 'flex-none ms-auto text-primary',
   desc: 'flex gap-1.5 items-center text-xs text-foreground-description',

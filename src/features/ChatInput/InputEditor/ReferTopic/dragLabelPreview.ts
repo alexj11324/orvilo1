@@ -33,10 +33,10 @@ export const setDragLabelPreview = (
   const preview = document.createElement('div');
   Object.assign(preview.style, {
     alignItems: 'center',
-    background: resolveCssVar('var(--ant-color-bg-elevated)', host),
-    border: `1px solid ${resolveCssVar('var(--ant-color-info-border)', host)}`,
+    background: resolveCssVar('var(--popover)', host),
+    border: `1px solid ${resolveCssVar('var(--info-border)', host)}`,
     borderRadius: '10px',
-    color: resolveCssVar('var(--ant-color-info)', host),
+    color: resolveCssVar('var(--info)', host),
     display: 'inline-flex',
     fontSize: '13px',
     gap: '8px',

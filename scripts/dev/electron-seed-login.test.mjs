@@ -28,3 +28,21 @@ test('seed login rejects production and nonlocal URLs before connecting', async 
     else process.env.NODE_ENV = previous;
   }
 });
+
+test('seed login refuses an Electron that is not using the local device gateway', async () => {
+  const previous = process.env.NODE_ENV;
+  try {
+    delete process.env.NODE_ENV;
+    await assert.rejects(
+      seedElectronLogin({
+        cdpPort: '1',
+        serverUrl: 'http://localhost:3010/',
+        verifyTarget: () => true,
+      }),
+      /local device gateway/,
+    );
+  } finally {
+    if (previous === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previous;
+  }
+});

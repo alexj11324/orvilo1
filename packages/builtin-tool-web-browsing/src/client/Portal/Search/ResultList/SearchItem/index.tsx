@@ -14,7 +14,7 @@ import Video from './Video';
 const styles = {
   container: 'flex flex-1 p-2 rounded-(--radius-card) [color:initial] hover:bg-accent',
   desc: 'line-clamp-2 text-ellipsis text-foreground-tertiary',
-  title: 'text-base leading-[inherit] text-(--ant-color-link)',
+  title: 'text-base leading-[inherit] text-(--link)',
   url: 'line-clamp-1 text-ellipsis text-foreground-description',
 };
 

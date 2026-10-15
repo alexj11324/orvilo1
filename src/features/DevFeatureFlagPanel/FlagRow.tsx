@@ -15,7 +15,7 @@ const styles = {
   meta: 'font-mono text-xs leading-5 text-foreground-description',
   name: 'font-mono text-sm leading-5.5 font-medium text-foreground',
   row: 'flex gap-3 items-center justify-between py-1.5 px-3 border-be border-divider border-s-2 border-s-transparent transition-[background-color] duration-(--orvilo-motion-mid) ease-[ease] motion-reduce:transition-none hover:bg-accent',
-  rowOverridden: 'border-s-warning bg-warning-wash hover:bg-(--ant-color-warning-bg-hover)',
+  rowOverridden: 'border-s-warning bg-warning-wash hover:bg-(--warning-wash-hover)',
 };
 
 const segmentOptions = [

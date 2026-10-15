@@ -132,9 +132,3 @@ export const useCategory = () => {
     [t],
   );
 };
-
-export const useCategoryItem = (key?: McpCategory) => {
-  const items = useCategory();
-  if (!key) return;
-  return items.find((item) => item.key === key);
-};

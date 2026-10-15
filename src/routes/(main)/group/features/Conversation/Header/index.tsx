@@ -17,10 +17,7 @@ const Header = memo(() => {
   return (
     <NavHeader
       right={
-        <div
-          className="flex items-center gap-2"
-          style={{ backgroundColor: 'var(--ant-color-bg-container)' }}
-        >
+        <div className="flex items-center gap-2" style={{ backgroundColor: 'var(--card)' }}>
           {/* Progress chip for a heavy group transfer/copy still filling in its
               conversations; renders nothing once the backfill finishes. */}
           {groupId && <AgentMigrationBadge groupId={groupId} />}

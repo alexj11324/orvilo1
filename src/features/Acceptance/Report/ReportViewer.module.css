@@ -50,7 +50,7 @@
 }
 .originLink.originLink:hover,
 .originLink.originLink:hover svg {
-  color: var(--ant-color-link);
+  color: var(--link);
 }
 .evidenceFile.evidenceFile {
   cursor: pointer;
@@ -67,8 +67,8 @@
   background: var(--fill-quaternary);
 }
 .evidenceFile.evidenceFile:hover {
-  border-color: var(--ant-color-link);
-  color: var(--ant-color-link);
+  border-color: var(--link);
+  color: var(--link);
 }
 /* Image className is its public outer frame. Inner image attributes and slots
    stay under Image, including preview/lazy/error behavior and author content. */

@@ -2,10 +2,9 @@ import { normalizeAsyncError } from '@/libs/swr/normalizeError';
 import { isWorkspaceSlugTakenError } from '@/utils/workspaceSlugError';
 
 /** The onboarding action that failed, so the error can name what the user was doing. */
-export type OnboardingAction = 'workspace' | 'agent' | 'selection' | 'finish' | 'skip';
+export type OnboardingAction = 'workspace' | 'agent' | 'selection' | 'finish';
 
-type CopyAction = Exclude<OnboardingAction, 'skip'>;
-type CopyKey = CopyAction | 'workspaceSlugTaken';
+type CopyKey = OnboardingAction | 'workspaceSlugTaken';
 
 export interface OnboardingErrorCopy {
   descriptionKey: `setup.error.${CopyKey}.description`;
@@ -30,10 +29,8 @@ export const resolveOnboardingErrorCopy = (
       titleKey: 'setup.error.workspaceSlugTaken.title',
     };
   }
-  // Skipping finishes onboarding, so a failed skip reads as a failed finish.
-  const copyAction: CopyAction = action === 'skip' ? 'finish' : action;
   return {
-    descriptionKey: `setup.error.${copyAction}.description`,
-    titleKey: `setup.error.${copyAction}.title`,
+    descriptionKey: `setup.error.${action}.description`,
+    titleKey: `setup.error.${action}.title`,
   };
 };

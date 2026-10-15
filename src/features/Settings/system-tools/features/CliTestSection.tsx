@@ -83,14 +83,14 @@ const CliTestSection = memo(() => {
           style={{
             flexDirection: 'column',
             gap: 4,
-            background: 'var(--ant-color-fill-quaternary)',
+            background: 'var(--fill-quaternary)',
             borderRadius: 8,
             fontFamily: 'monospace',
             fontSize: 12,
             padding: 12,
           }}
         >
-          <span style={{ color: 'var(--ant-color-primary)', fontWeight: 600 }}>
+          <span style={{ color: 'var(--primary)', fontWeight: 600 }}>
             $ orvilo {r.args}(exit: {r.exitCode})
           </span>
           {r.stdout && (
@@ -101,7 +101,7 @@ const CliTestSection = memo(() => {
           {r.stderr && (
             <pre
               style={{
-                color: 'var(--ant-color-error)',
+                color: 'var(--destructive)',
                 margin: 0,
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-all',

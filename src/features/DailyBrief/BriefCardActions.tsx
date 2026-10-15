@@ -45,7 +45,7 @@ type CommentMode = { type: 'feedback' } | { key: string; type: 'comment' };
 
 const SuccessTag = memo<{ label: string }>(({ label }) => (
   <div className="flex items-center gap-1">
-    <Check color={'var(--ant-color-text-quaternary)'} size={14} />
+    <Check color={'var(--foreground-quaternary)'} size={14} />
     <div className={cn(styles.resolvedTag)}>{label}</div>
   </div>
 ));
@@ -95,7 +95,7 @@ const BriefCardActions = memo<BriefCardActionsProps>(
       <Button
         className={cn('brief-view-run-btn')}
         size="sm"
-        style={{ color: 'var(--ant-color-text-secondary)' }}
+        style={{ color: 'var(--muted-foreground)' }}
         variant="ghost"
         onClick={handleViewRun}
       >
@@ -277,7 +277,7 @@ const BriefCardActions = memo<BriefCardActionsProps>(
                         className={cn('rounded-full', 'brief-comment-btn')}
                         size="compact"
                         style={{
-                          color: 'var(--ant-color-text-secondary)',
+                          color: 'var(--muted-foreground)',
                         }}
                         onClick={() => setCommentMode({ type: 'feedback' })}
                       >

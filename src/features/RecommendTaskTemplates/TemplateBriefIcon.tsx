@@ -23,7 +23,7 @@ export const TemplateBriefIcon = memo<TemplateBriefIconProps>(
       <div
         className="flex items-center justify-center"
         style={{
-          background: 'var(--ant-color-fill-secondary)',
+          background: 'var(--selected)',
           flexShrink: 0,
           height: tileSize,
           width: tileSize,
@@ -40,8 +40,8 @@ export const TemplateBriefIcon = memo<TemplateBriefIconProps>(
         ) : (
           <span className="anticon" role="img">
             <spec.Comp
-              color={'var(--ant-color-text-secondary)'}
-              fill={'var(--ant-color-text-secondary)'}
+              color={'var(--muted-foreground)'}
+              fill={'var(--muted-foreground)'}
               height={glyphSize}
               size={glyphSize}
               width={glyphSize}

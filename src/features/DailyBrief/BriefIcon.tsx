@@ -11,17 +11,17 @@ const BRIEF_TYPE_ICON: Record<BriefType, typeof CircleDot> = {
 };
 
 const BRIEF_TYPE_COLOR: Record<BriefType, string | undefined> = {
-  decision: 'var(--ant-color-info)',
-  error: 'var(--ant-color-error)',
-  insight: 'var(--ant-color-info)',
-  result: 'var(--ant-color-success)',
+  decision: 'var(--info)',
+  error: 'var(--destructive)',
+  insight: 'var(--info)',
+  result: 'var(--success)',
 } as const;
 
 const BRIEF_TYPE_COLOR_BG: Record<BriefType, string | undefined> = {
-  decision: 'var(--ant-color-info-bg-hover)',
-  error: 'var(--ant-color-error-bg-hover)',
-  insight: 'var(--ant-color-info-bg-hover)',
-  result: 'var(--ant-color-success-bg-hover)',
+  decision: 'var(--info-hover-wash)',
+  error: 'var(--destructive-wash-hover)',
+  insight: 'var(--info-hover-wash)',
+  result: 'var(--success-wash-hover)',
 } as const;
 
 interface BriefIconProps {
@@ -32,15 +32,13 @@ interface BriefIconProps {
 
 const BriefIcon = memo<BriefIconProps>(({ size = 28, type, muted = false }) => {
   const icon = BRIEF_TYPE_ICON[type] || Lightbulb;
-  const color = muted
-    ? 'var(--ant-color-text-quaternary)'
-    : BRIEF_TYPE_COLOR[type] || 'var(--ant-color-primary)';
-  const background = muted ? 'var(--ant-color-fill-quaternary)' : BRIEF_TYPE_COLOR_BG[type];
+  const color = muted ? 'var(--foreground-quaternary)' : BRIEF_TYPE_COLOR[type] || 'var(--primary)';
+  const background = muted ? 'var(--fill-quaternary)' : BRIEF_TYPE_COLOR_BG[type];
 
   return (
     <div
       className="flex flex-col items-center justify-center"
-      style={{ borderRadius: 'var(--ant-border-radius)', height: size, width: size, background }}
+      style={{ borderRadius: 'var(--radius-card)', height: size, width: size, background }}
     >
       {createElement(icon, { color, size: size * 0.6 })}
     </div>

@@ -81,7 +81,7 @@ jobs:
 
       - name: Install deps
         if: steps.release.outputs.should_tag == 'true' || steps.patch.outputs.should_tag == 'true'
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Resolve patch version (patch bump)
         id: patch-version

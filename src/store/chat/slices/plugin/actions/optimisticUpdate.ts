@@ -35,8 +35,6 @@ export interface UpdateToolMessageParams {
  */
 
 type Setter = StoreSetter<ChatStore>;
-export const pluginOptimisticUpdate = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new PluginOptimisticUpdateActionImpl(set, get, _api);
 
 export class PluginOptimisticUpdateActionImpl {
   readonly #get: () => ChatStore;

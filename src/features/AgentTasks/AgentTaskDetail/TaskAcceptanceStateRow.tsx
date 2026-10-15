@@ -41,28 +41,28 @@ import { useOpenAcceptanceInPanel } from './useOpenAcceptanceInPanel';
  * with the subject payload) tells them apart.
  */
 const STATE_META = {
-  accepted: { color: 'var(--ant-color-success)', icon: CheckCheck, labelKey: 'accepted' },
+  accepted: { color: 'var(--success)', icon: CheckCheck, labelKey: 'accepted' },
   awaitingVerification: {
-    color: 'var(--ant-color-text-tertiary)',
+    color: 'var(--foreground-tertiary)',
     icon: CircleDashed,
     labelKey: 'awaitingVerification',
   },
   awaitingDecision: {
-    color: 'var(--ant-color-error)',
+    color: 'var(--destructive)',
     icon: AlertTriangle,
     labelKey: 'awaitingDecision',
   },
-  awaitingReview: { color: 'var(--ant-color-warning)', icon: Stamp, labelKey: 'awaitingReview' },
-  closed: { color: 'var(--ant-color-text-tertiary)', icon: CircleSlash, labelKey: 'closed' },
-  errored: { color: 'var(--ant-color-error)', icon: CircleX, labelKey: 'errored' },
-  rejected: { color: 'var(--ant-color-error)', icon: RotateCcw, labelKey: 'rejected' },
+  awaitingReview: { color: 'var(--warning)', icon: Stamp, labelKey: 'awaitingReview' },
+  closed: { color: 'var(--foreground-tertiary)', icon: CircleSlash, labelKey: 'closed' },
+  errored: { color: 'var(--destructive)', icon: CircleX, labelKey: 'errored' },
+  rejected: { color: 'var(--destructive)', icon: RotateCcw, labelKey: 'rejected' },
   repairing: {
-    color: 'var(--ant-color-warning)',
+    color: 'var(--warning)',
     icon: RefreshCw,
     labelKey: 'repairing',
     spin: true,
   },
-  verifying: { color: 'var(--ant-color-info)', icon: Loader2, labelKey: 'verifying', spin: true },
+  verifying: { color: 'var(--info)', icon: Loader2, labelKey: 'verifying', spin: true },
 } as const;
 
 type StateKey = keyof typeof STATE_META;

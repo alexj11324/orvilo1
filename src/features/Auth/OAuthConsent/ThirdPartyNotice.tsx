@@ -28,10 +28,8 @@ const ThirdPartyNotice = memo<ThirdPartyNoticeProps>(({ developerName, policyUri
       {policyUri && (
         <a href={policyUri} rel={'noreferrer'} target={'_blank'}>
           <div className="flex items-center gap-1">
-            <div style={{ color: 'var(--ant-color-link)' }}>
-              {t('consent.thirdParty.privacyPolicy')}
-            </div>
-            <ExternalLinkIcon style={{ color: 'var(--ant-color-link)', fontSize: 14 }} />
+            <div style={{ color: 'var(--link)' }}>{t('consent.thirdParty.privacyPolicy')}</div>
+            <ExternalLinkIcon style={{ color: 'var(--link)', fontSize: 14 }} />
           </div>
         </a>
       )}

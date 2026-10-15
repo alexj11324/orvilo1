@@ -119,6 +119,9 @@ The Slack App uses HTTP events (Socket Mode off) with OAuth redirect
 `app_mentions:read`, `chat:write`, `channels:read`, `channels:history`, `groups:read`, `groups:history`,
 `im:read`, `im:history`, `users:read`, and `files:read`; user OAuth requests
 `users:read` to verify the linked identity.
+If Slack uses a separate HTTPS ingress, set `SLACK_REDIRECT_URI` to its exact
+callback URL on both the app and worker and register that URL with Slack. Keep
+`APP_URL` at the application's origin: it also defines the Electron OIDC issuer.
 Token rotation is off for this app; rotating grants fail closed instead of
 persisting tokens that this implementation cannot refresh.
 

@@ -27,7 +27,8 @@ export const getOAuthConfig = () => {
   return {
     clientId: env.SLACK_CLIENT_ID,
     clientSecret: env.SLACK_CLIENT_SECRET,
-    redirectUri: new URL('/oauth/slack/callback', appEnv.APP_URL).toString(),
+    redirectUri:
+      env.SLACK_REDIRECT_URI ?? new URL('/oauth/slack/callback', appEnv.APP_URL).toString(),
   };
 };
 export const slackApi = async (

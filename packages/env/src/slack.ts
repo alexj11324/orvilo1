@@ -7,11 +7,13 @@ export const getSlackConfig = () =>
     server: {
       SLACK_CLIENT_ID: z.string().optional(),
       SLACK_CLIENT_SECRET: z.string().optional(),
+      SLACK_REDIRECT_URI: z.string().url().optional(),
       SLACK_SIGNING_SECRET: z.string().optional(),
     },
     runtimeEnv: {
       SLACK_CLIENT_ID: process.env.SLACK_CLIENT_ID,
       SLACK_CLIENT_SECRET: process.env.SLACK_CLIENT_SECRET,
+      SLACK_REDIRECT_URI: process.env.SLACK_REDIRECT_URI,
       SLACK_SIGNING_SECRET: process.env.SLACK_SIGNING_SECRET,
     },
   });

@@ -185,7 +185,7 @@ describe('AiAgentService.execAgent - three-state plugin config (pinned/auto/disa
     expect(builtinSpecIds()).toEqual(expect.arrayContaining(['orvilo-task', 'orvilo-agent']));
   });
 
-  it('restricts an orchestration turn to the exclusive plugin set', async () => {
+  it('does not remount retired Goal tools for an orchestration turn', async () => {
     mockGetAgentConfig.mockResolvedValue(baseAgentConfig(['orvilo-task']));
 
     await service.execAgent({
@@ -194,7 +194,7 @@ describe('AiAgentService.execAgent - three-state plugin config (pinned/auto/disa
       prompt: 'Submit evidence',
     } as any);
 
-    expect(builtinSpecIds()).toEqual(['orvilo-goal']);
+    expect(builtinSpecIds()).toEqual([]);
   });
 
   it('mounts nothing for non-builtin identifiers regardless of mode', async () => {

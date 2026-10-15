@@ -22,6 +22,7 @@ import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
 import { CredentialModel } from '@/database/models/credential';
 import { linearBindingWriteEnabled, LinearSyncModel } from '@/database/models/linearSync';
+import { ProjectModel } from '@/database/models/project';
 import {
   TaskHandoffRequiredError,
   TaskModel,

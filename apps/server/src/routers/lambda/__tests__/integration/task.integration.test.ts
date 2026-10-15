@@ -12,7 +12,7 @@ import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { projects, taskDispatches, tasks, taskTopics } from '@/database/schemas';
-import { verifyCheckResults, verifyRuns } from '@/database/schemas/verify';
+import { acceptances, verifyCheckResults, verifyRuns } from '@/database/schemas/verify';
 import { TaskService } from '@/server/services/task';
 import { IssueChecklistService } from '@/server/services/task/checklist';
 import { TaskDispatchService } from '@/server/services/taskDispatch';
@@ -2782,159 +2782,85 @@ describe('Task Router Integration', () => {
     });
   });
 
-  describe('review config', () => {
-    it('should set and retrieve review rubrics', async () => {
+  describe('retired review and verify config', () => {
+    it('rejects legacy review writes while retaining saved rubric reads', async () => {
       const task = await caller.create({ instruction: 'Test' });
-
-      await caller.updateReview({
-        id: task.data.id,
-        review: {
-          autoRetry: true,
-          enabled: true,
-          maxIterations: 3,
-          rubrics: [
-            {
-              config: { criteria: '内容准确性' },
-              id: 'r1',
-              name: '准确性',
-              threshold: 0.8,
-              type: 'llm-rubric',
-              weight: 1,
-            },
-            {
-              config: { value: '```' },
-              id: 'r2',
-              name: '包含代码',
-              type: 'contains',
-              weight: 1,
-            },
-          ],
-        },
-      });
-
-      const review = await caller.getReview({ id: task.data.id });
-      expect(review.data!.enabled).toBe(true);
-      expect(review.data!.rubrics).toHaveLength(2);
-      expect(review.data!.rubrics[0].type).toBe('llm-rubric');
-    });
-  });
-
-  describe('verify config', () => {
-    it('moves verify config supplied at task creation into Acceptance', async () => {
-      const task = await caller.create({
-        config: {
-          model: 'test-model',
-          verify: { enabled: true, maxIterations: 2, requirement: 'Ship the artifact' },
-        },
-        instruction: 'Test',
-      });
-
-      const storedTask = await new TaskModel(serverDB, userId).findById(task.data.id);
-      const acceptance = await new AcceptanceModel(serverDB, userId).findBySubject(
-        'task',
-        task.data.id,
-      );
-
-      expect(storedTask?.config).toEqual({ model: 'test-model' });
-      expect(acceptance).toMatchObject({
-        config: { enabled: true, maxIterations: 2 },
-        requirement: 'Ship the artifact',
-      });
-    });
-
-    it('should set and retrieve verify config (round-trip)', async () => {
-      const task = await caller.create({ instruction: 'Test' });
-
-      await caller.updateVerifyConfig({
-        id: task.data.id,
-        verify: {
-          enabled: true,
-          maxIterations: 3,
-          verifyCriteriaIds: ['c1', 'c2'],
-          verifyRubricId: 'rub_1',
-        },
-      });
-
-      const verify = await caller.getVerifyConfig({ id: task.data.id });
-      expect(verify.data).toEqual({
+      const review = {
+        autoRetry: true,
         enabled: true,
         maxIterations: 3,
-        verifyCriteriaIds: ['c1', 'c2'],
-        verifyRubricId: 'rub_1',
-      });
+        rubrics: [
+          {
+            config: { criteria: 'Accuracy' },
+            id: 'r1',
+            name: 'Accuracy',
+            type: 'llm-rubric',
+            weight: 1,
+          },
+        ],
+      };
+      await serverDB.update(tasks).set({ config: { review } }).where(eq(tasks.id, task.data.id));
 
-      // task.detail must surface the saved verify config (not leave it undefined).
-      const detail = await caller.detail({ id: task.data.id });
-      expect(detail.data!.verify).toEqual({
+      await expect(
+        caller.updateReview({ id: task.data.id, review: { ...review, enabled: false } }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+      expect((await caller.getReview({ id: task.data.id })).data).toEqual(review);
+    });
+
+    it('rejects verify configuration supplied at task creation', async () => {
+      await expect(
+        caller.create({
+          config: { verify: { enabled: true, maxIterations: 2, requirement: 'Ship the artifact' } },
+          instruction: 'Test',
+        }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    });
+
+    it('rejects verify patches while retaining historical policy and detail reads', async () => {
+      const task = await caller.create({ instruction: 'Test' });
+      const config = {
         enabled: true,
         maxIterations: 3,
-        verifyCriteriaIds: ['c1', 'c2'],
+        verifyCriteriaIds: ['c1'],
         verifyRubricId: 'rub_1',
+      };
+      await serverDB.insert(acceptances).values({
+        userId,
+        subjectType: 'task',
+        subjectId: task.data.id,
+        config,
+        requirement: 'Historical delivery',
       });
 
-      const storedTask = await new TaskModel(serverDB, userId).findById(task.data.id);
-      const acceptance = await new AcceptanceModel(serverDB, userId).findBySubject(
-        'task',
-        task.data.id,
-      );
-      expect(storedTask?.config).not.toHaveProperty('verify');
-      expect(acceptance).toMatchObject({
-        config: {
-          enabled: true,
-          maxIterations: 3,
-          verifyCriteriaIds: ['c1', 'c2'],
-          verifyRubricId: 'rub_1',
-        },
+      await expect(
+        caller.updateVerifyConfig({ id: task.data.id, verify: { verifyRubricId: null } }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+      expect((await caller.getVerifyConfig({ id: task.data.id })).data).toEqual({
+        ...config,
+        requirement: 'Historical delivery',
       });
+      expect((await caller.detail({ id: task.data.id })).data!.verify).toEqual({
+        ...config,
+        requirement: 'Historical delivery',
+      });
+      expect(
+        (await new AcceptanceModel(serverDB, userId).findBySubject('task', task.data.id))?.config,
+      ).toEqual(config);
     });
 
-    it('should clear a saved field when passed null', async () => {
+    it('does not materialize an Acceptance policy from legacy task configuration', async () => {
       const task = await caller.create({ instruction: 'Test' });
+      await serverDB
+        .update(tasks)
+        .set({
+          config: { review: { autoRetry: true, enabled: true, maxIterations: 4, rubrics: [] } },
+        })
+        .where(eq(tasks.id, task.data.id));
 
-      await caller.updateVerifyConfig({
-        id: task.data.id,
-        verify: { enabled: true, verifyRubricId: 'rub_1' },
-      });
-
-      // Clear the rubric.
-      await caller.updateVerifyConfig({
-        id: task.data.id,
-        verify: { verifyRubricId: null },
-      });
-
-      const verify = await caller.getVerifyConfig({ id: task.data.id });
-      expect(verify.data).toEqual({ enabled: true });
-    });
-
-    it('getVerifyConfig falls back to the legacy review key', async () => {
-      const task = await caller.create({ instruction: 'Test' });
-
-      await caller.updateReview({
-        id: task.data.id,
-        review: { autoRetry: true, enabled: true, maxIterations: 4, rubrics: [] },
-      });
-
-      const verify = await caller.getVerifyConfig({ id: task.data.id });
-      expect(verify.data).toEqual({ enabled: true, maxIterations: 4 });
-    });
-
-    it('preserves legacy verify fields when applying a partial Acceptance patch', async () => {
-      const task = await caller.create({ instruction: 'Test' });
-      await new TaskModel(serverDB, userId).updateVerifyConfig(task.data.id, {
-        enabled: true,
-        maxIterations: 4,
-      });
-
-      await caller.updateVerifyConfig({
-        id: task.data.id,
-        verify: { maxIterations: 2 },
-      });
-
-      const verify = await caller.getVerifyConfig({ id: task.data.id });
-      expect(verify.data).toEqual({
-        enabled: true,
-        maxIterations: 2,
-      });
+      expect((await caller.getVerifyConfig({ id: task.data.id })).data).toBeNull();
+      expect(
+        await new AcceptanceModel(serverDB, userId).findBySubject('task', task.data.id),
+      ).toBeUndefined();
     });
   });
 

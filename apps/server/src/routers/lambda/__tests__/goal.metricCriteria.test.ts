@@ -25,11 +25,13 @@ const mockCreate = vi.fn();
 const mockSetMetricCriteria = vi.fn();
 const mockRecordObservation = vi.fn();
 const mockFindById = vi.fn();
+const mockGraph = vi.fn();
 
 vi.mock('@/server/services/goal', () => ({
   GoalService: vi.fn(function () {
     return {
       create: mockCreate,
+      graph: mockGraph,
       recordObservation: mockRecordObservation,
       setMetricCriteria: mockSetMetricCriteria,
     };
@@ -49,107 +51,44 @@ vi.mock('@/server/services/goal/scheduler', () => ({
 
 const { goalRouter } = await import('../goal');
 
-describe('goalRouter numeric acceptance', () => {
+describe('goalRouter retired numeric acceptance', () => {
   const ctx: any = { serverDB: {}, userId: 'user-1', workspaceId: null };
   const caller = goalRouter.createCaller(ctx);
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockCreate.mockResolvedValue({ goal: { id: 'goal_1' } });
-    mockFindById.mockResolvedValue({ id: 'goal_1', userId: 'user-1' });
-    mockSetMetricCriteria.mockResolvedValue({ goal: { id: 'goal_1' } });
-    mockRecordObservation.mockResolvedValue({ point: {}, series: {}, shouldAdvance: true });
   });
 
-  it('accepts planning limits without a separately configured manager identity', async () => {
-    await caller.create({
-      agentId: 'task-worker',
-      createdByAgentId: 'creating-agent',
-      config: { manager: { maxTurns: 5 } },
-      title: 'Creator-managed goal',
-    });
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        createdByAgentId: 'creating-agent',
-        config: { manager: { maxTurns: 5 } },
-      }),
-    );
-  });
-
-  it('carries measured clauses through the create contract', async () => {
-    // Zod strips unknown keys, so a clause absent from the schema would reach
-    // the service as `undefined` and leave the gate unreachable in production
-    // while the service-level tests still passed.
-    await caller.create({
-      config: { acceptance: { metrics: [{ key: 'followers', target: 1_000_000 }] } },
-      title: 'Grow the account',
-    });
-
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        config: { acceptance: { metrics: [{ key: 'followers', target: 1_000_000 }] } },
-      }),
-    );
-  });
-
-  it('declares clauses after creation, defaulting to replace mode', async () => {
-    await caller.setMetricCriteria({
-      id: 'goal_1',
-      metrics: [{ key: 'churn', op: 'lte', target: 5 }],
-    });
-
-    expect(mockSetMetricCriteria).toHaveBeenCalledWith(
-      'goal_1',
-      [{ key: 'churn', op: 'lte', target: 5 }],
-      undefined,
-    );
-  });
-
-  it('passes merge mode through, so single-clause declares upsert server-side', async () => {
-    await caller.setMetricCriteria({
-      id: 'goal_1',
-      metrics: [{ key: 'churn', op: 'lte', target: 5 }],
-      mode: 'merge',
-    });
-
-    expect(mockSetMetricCriteria).toHaveBeenCalledWith(
-      'goal_1',
-      [{ key: 'churn', op: 'lte', target: 5 }],
-      'merge',
-    );
-  });
-
-  it('rejects a comparison the evaluator does not implement', async () => {
-    await expect(
-      caller.setMetricCriteria({
-        id: 'goal_1',
-        metrics: [{ key: 'churn', op: 'approx' as never, target: 5 }],
-      }),
-    ).rejects.toThrow();
+  it.each([
+    [
+      'create',
+      () => caller.create({ title: 'Retired goal', config: { manager: { maxTurns: 5 } } }),
+    ],
+    [
+      'setMetricCriteria',
+      () =>
+        caller.setMetricCriteria({
+          id: 'goal_1',
+          metrics: [{ key: 'churn', op: 'lte', target: 5 }],
+          mode: 'merge',
+        }),
+    ],
+    [
+      'recordObservation',
+      () => caller.recordObservation({ id: 'goal_1', key: 'followers', value: 1200 }),
+    ],
+  ] as const)('rejects %s without writing or scheduling execution', async (_name, invoke) => {
+    await expect(invoke()).rejects.toMatchObject({ code: 'METHOD_NOT_SUPPORTED' });
+    expect(mockCreate).not.toHaveBeenCalled();
     expect(mockSetMetricCriteria).not.toHaveBeenCalled();
+    expect(mockRecordObservation).not.toHaveBeenCalled();
+    expect(mockScheduleGoalAdvance).not.toHaveBeenCalled();
   });
 
-  describe('recordObservation', () => {
-    it('wakes the coordinator when the measurement cleared the gate', async () => {
-      await caller.recordObservation({ id: 'goal_1', key: 'followers', value: 1200 });
-
-      expect(mockRecordObservation).toHaveBeenCalledWith('goal_1', {
-        key: 'followers',
-        value: 1200,
-      });
-      expect(mockScheduleGoalAdvance).toHaveBeenCalledWith(
-        expect.objectContaining({ goalId: 'goal_1', trigger: 'observe' }),
-      );
-    });
-
-    it('does not queue an advance a parked goal would tick straight back out of', async () => {
-      mockRecordObservation.mockResolvedValue({ point: {}, series: {}, shouldAdvance: false });
-
-      const result = await caller.recordObservation({ id: 'goal_1', key: 'followers', value: 400 });
-
-      expect(mockScheduleGoalAdvance).not.toHaveBeenCalled();
-      // `shouldAdvance` is coordination bookkeeping, not part of the response.
-      expect(result.data).not.toHaveProperty('shouldAdvance');
-    });
+  it('retains historical graph reads', async () => {
+    const graph = { goal: { id: 'goal_1' }, nodes: [], edges: [] };
+    mockGraph.mockResolvedValue(graph);
+    await expect(caller.graph({ id: 'goal_1' })).resolves.toEqual({ data: graph, success: true });
+    expect(mockScheduleGoalAdvance).not.toHaveBeenCalled();
   });
 });

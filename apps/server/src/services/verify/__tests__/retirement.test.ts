@@ -36,6 +36,7 @@ const completion = {
   operationId: 'operation',
   deliverable: 'historical output',
   goal: 'legacy goal',
+  reviewerAgentId: 'historical-reviewer',
 };
 
 beforeEach(() => vi.clearAllMocks());

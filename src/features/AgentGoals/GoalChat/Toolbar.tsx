@@ -94,7 +94,7 @@ const Toolbar = memo<ToolbarProps>(({ onCollapse }) => {
                     <NavItem
                       active={topic.id === activeTopicId}
                       key={topic.id}
-                      title={topic.title || t('untitled', { ns: 'topic' })}
+                      title={topic.title || t('defaultTitle', { ns: 'topic' })}
                       onClick={() => {
                         void switchTopic(topic.id);
                         setTopicPopoverOpen(false);

@@ -279,6 +279,7 @@ const AcceptanceCheckInventory = ({
         filter={filter}
         groupFeedback={groupFeedback}
         reviewPending={false}
+        onGroupFeedback={async () => false}
         onOpenTrace={onOpenTrace}
         onReview={async () => false}
         onRound={setRoundFilter}

@@ -506,7 +506,7 @@ describe('Goal archive Project ceiling', () => {
     expect((await owner.findById(goal.id))?.title).toBe('Restricted historical goal');
     await serverDB
       .insert(projectMembers)
-      .values({ projectId: project.id, workspaceId, userId: otherUserId, role: 'member' });
+      .values({ projectId: project.id, workspaceId, userId: otherUserId, role: 'contributor' });
     expect((await memberGraph.getGraph(goal.id))?.nodes[0].title).toBe('Confidential requirement');
     expect((await member.list()).total).toBe(1);
   });

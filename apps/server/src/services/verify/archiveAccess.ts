@@ -58,7 +58,13 @@ export const canReadArchiveTopic = async (
 };
 
 /** Ledger visibility cannot widen its Issue/Project/Topic/Document visibility ceiling. */
-export const canReadAcceptanceArchive = async (ctx: ArchiveReader, acceptance: AcceptanceItem) => {
+export const canReadAcceptanceArchive = async (
+  ctx: ArchiveReader,
+  // Goal is a historical read-only subject, never a new Acceptance writer input.
+  acceptance: Omit<AcceptanceItem, 'subjectType'> & {
+    subjectType: AcceptanceItem['subjectType'] | 'goal';
+  },
+) => {
   let readable = Boolean(ctx.userId) && ctx.userId === acceptance.userId;
   if (!readable) readable = acceptance.visibility === 'public';
   if (!readable && ctx.userId && acceptance.workspaceId) {

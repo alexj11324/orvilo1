@@ -8,8 +8,7 @@ import { AiAgentService } from '../index';
 // `capabilityContext`/`extraSystemContext`; DB agent_skills and
 // agent-document skills are lazily activated by the `skills` runtime on the
 // execution host instead of being eagerly inlined here. `exclusivePluginIds`
-// is the caller-driven isolation channel (e.g. a direct /goal prompt from the
-// skill-management layer).
+// is the caller-driven isolation channel; retired tools remain unavailable.
 const { mockDispatchHeteroAgent, mockGetAgentConfig, mockMessageCreate, mockPluginQuery } =
   vi.hoisted(() => ({
     mockDispatchHeteroAgent: vi.fn(),
@@ -175,7 +174,7 @@ describe('AiAgentService.execAgent - run tool surface', () => {
     expect(dispatchInput().extraSystemContext).toBeDefined();
   });
 
-  it('restricts the surface to exclusivePluginIds (the /goal isolation channel)', async () => {
+  it('does not remount retired Goal tools through exclusivePluginIds', async () => {
     mockGetAgentConfig.mockResolvedValue(
       baseAgentConfig({ plugins: ['orvilo-agent', 'orvilo-task'] }),
     );
@@ -187,7 +186,7 @@ describe('AiAgentService.execAgent - run tool surface', () => {
       selectedToolIds: ['selected-tool'],
     } as any);
 
-    expect(builtinSpecIds()).toEqual(['orvilo-goal']);
+    expect(builtinSpecIds()).toEqual([]);
   });
 
   it('merges turn-scoped selectedToolIds into the surface', async () => {

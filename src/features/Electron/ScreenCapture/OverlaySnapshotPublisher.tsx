@@ -1,25 +1,21 @@
 'use client';
 
-import { ThemeContext } from '@emotion/react';
-import type { LobeCustomToken, ThemeProviderProps } from '@lobehub/ui';
 import type {
   ScreenCaptureAgentOption,
   ScreenCaptureOverlayTheme,
 } from '@orvilo/electron-client-ipc';
 import isEqual from 'fast-deep-equal';
-import { memo, use, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/slices/agentList/selectors';
+import { useResolvedDocumentTheme } from '@/styles/resolvedThemeRoles';
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
 import { resolveOverlayAgentOptions, resolveOverlayDefaultAgentId } from './overlaySnapshot';
-
-type ResolvedOverlayTheme = Parameters<NonNullable<ThemeProviderProps['customToken']>>[0]['token'] &
-  LobeCustomToken & { isDarkMode: boolean };
 
 const PANEL_SHADOW_DARK = '0 4px 4px color-mix(in srgb, #000 40%, transparent)';
 const PANEL_SHADOW_LIGHT = '0 4px 4px color-mix(in srgb, #000 4%, transparent)';
@@ -34,7 +30,7 @@ const OverlaySnapshotPublisher = memo(() => {
   useFetchAgentList();
 
   const allAgents = useHomeStore(homeAgentListSelectors.allAgents, isEqual);
-  const theme = use(ThemeContext) as ResolvedOverlayTheme;
+  const theme = useResolvedDocumentTheme();
   const activeAgentId = useAgentStore((s) => s.activeAgentId);
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const inboxMeta = useAgentStore((s) =>

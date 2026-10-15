@@ -35,8 +35,9 @@ function createEditor() {
     getDocument(format: string): unknown {
       return format === 'markdown' ? text : format === 'json' ? editorJSON(text) : undefined;
     },
-    setDocument(format: string, content: string) {
+    setDocument(format: string, content: unknown) {
       if (format !== 'markdown') throw new Error('This fixture writes Markdown only');
+      if (typeof content !== 'string') throw new Error('This fixture requires Markdown text');
       text = content;
     },
   } satisfies DocumentEditorPort;

@@ -1,10 +1,10 @@
 'use client';
 
-import { ThemeContext } from '@emotion/react';
-import { memo, use, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors } from '@/store/user/selectors';
+import { useResolvedDocumentTheme } from '@/styles/resolvedThemeRoles';
 
 import { buildXtermTheme } from './theme';
 import { xtermManager } from './xtermManager';
@@ -16,9 +16,7 @@ import { xtermManager } from './xtermManager';
  */
 const TerminalView = memo<{ sessionId: string }>(({ sessionId }) => {
   const hostRef = useRef<HTMLDivElement>(null);
-  const theme = use(ThemeContext) as Parameters<typeof buildXtermTheme>[0] & {
-    fontFamilyCode: string;
-  };
+  const theme = useResolvedDocumentTheme();
   const terminalFontFamily = useUserStore(preferenceSelectors.terminalFontFamily);
 
   useEffect(() => {

@@ -10,14 +10,16 @@ import { useTranslation } from 'react-i18next';
 
 import { genFontFamily, genFontFamilyCode } from '@/const/font';
 import { useIsDark } from '@/hooks/useIsDark';
+import { NativeThemeProvider } from '@/layout/GlobalProvider/NativeThemeProvider';
 import Image from '@/libs/next/Image';
 import Link from '@/libs/next/Link';
-import { ThemeRoles } from '@/styles/themeRoles';
 
 const ShareTheme = memo<PropsWithChildren>(({ children }) => {
   const isDark = useIsDark();
   const { i18n } = useTranslation();
   const appearance = isDark ? 'dark' : 'light';
+  const fontFamily = genFontFamily({ locale: i18n.language });
+  const fontFamilyCode = genFontFamilyCode({ locale: i18n.language });
 
   return (
     <ConfigProvider config={{ aAs: Link, imgAs: Image, imgUnoptimized: true }} motion={m}>
@@ -30,16 +32,20 @@ const ShareTheme = memo<PropsWithChildren>(({ children }) => {
         theme={{
           cssVar: { key: 'orvilo-vars' },
           token: {
-            fontFamily: genFontFamily({ locale: i18n.language }),
-            fontFamilyCode: genFontFamilyCode({ locale: i18n.language }),
+            fontFamily,
+            fontFamilyCode,
           },
         }}
       >
-        <ThemeRoles>
+        <NativeThemeProvider
+          appearance={appearance}
+          fontFamily={fontFamily}
+          fontFamilyCode={fontFamilyCode}
+        >
           <div className="h-full">
             <LazyMotion features={domMax}>{children}</LazyMotion>
           </div>
-        </ThemeRoles>
+        </NativeThemeProvider>
       </ThemeProvider>
     </ConfigProvider>
   );

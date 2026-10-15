@@ -172,16 +172,21 @@ test('rejects local canonical-role redefinition in CSS, arbitrary properties and
   assert.match(result, /local native font role override: 'Inter Variable'/);
 });
 
-// Exercise the actual unchanged owner declarations, with only their file-read
-// boundary supplied in memory. No parser logic is copied into this test.
-function checkActualNativeProducer(
-  providerImport,
-  { mono = 'theme.fontFamilyCode', badGenerator = false } = {},
-) {
+// Execute the actual guard declarations against real current owner sources.
+// Only the file-read boundary is substituted; no AST verification is duplicated.
+const producerFiles = [
+  'src/styles/resolvedThemeRoles.ts',
+  'src/styles/themeRoles.ts',
+  'src/layout/GlobalProvider/AppTheme.tsx',
+  'src/layout/GlobalProvider/NativeAppTheme.tsx',
+  'src/layout/GlobalProvider/NativeThemeProvider.tsx',
+  'src/styles/nativeTheme.ts',
+  'src/features/AuthShell/AuthThemeLite.tsx',
+];
+function checkActualNativeProducer(changes = []) {
   const source = readFileSync(guard, 'utf8');
   const owner = ts.createSourceFile(guard, source, ts.ScriptTarget.Latest, true);
-  const names = ['importedNames', 'verifyNativeFontProducer'];
-  const declarations = names.map((name) => {
+  const declarations = ['importedNames', 'verifyNativeFontProducer'].map((name) => {
     const node = owner.statements.find(
       (statement) =>
         (ts.isFunctionDeclaration(statement) && statement.name?.text === name) ||
@@ -193,64 +198,308 @@ function checkActualNativeProducer(
     assert(node, `Actual guard function ${name} must exist`);
     return node.getText(owner);
   });
-  const roleSource = `const createThemeRoleStyles = (theme) => { return \`--font-sans: \${theme.fontFamily}; --font-mono: \${${mono}};\`; };`;
-  const appSource = `
-    ${providerImport}
-    import { useMemo } from 'react';
-    import { genFontFamily, genFontFamilyCode } from '${badGenerator ? './unowned-font' : '@/const/font'}';
-    function AppTheme({ customFontFamily, language, userFontFamily, userFontFamilyCode }) {
-      const fontFamily = useMemo(() => genFontFamily({
-        customFontFamily, locale: resolveUILocale(language).normalizedLocale, userFontFamily,
-      }), [customFontFamily, language, userFontFamily]);
-      const fontFamilyCode = useMemo(() => genFontFamilyCode({
-        locale: resolveUILocale(language).normalizedLocale, userFontFamily: userFontFamilyCode,
-      }), [language, userFontFamilyCode]);
-      return <RootTheme theme={{ token: { fontFamily, fontFamilyCode } }}><span /></RootTheme>;
-    }
-  `;
   const root = path.resolve(import.meta.dirname, '../..');
-  return runInNewContext(declarations.join('\n') + '\nverifyNativeFontProducer()', {
-    ts,
-    path,
-    root,
-    readFileSync: (file) => {
-      if (file === path.join(root, 'src/styles/themeRoles.ts')) return roleSource;
-      if (file === path.join(root, 'src/layout/GlobalProvider/AppTheme.tsx')) return appSource;
-      throw new Error(`Unexpected producer read ${file}`);
-    },
+  const files = new Map(
+    producerFiles.map((file) => [file, readFileSync(path.join(root, file), 'utf8')]),
+  );
+  for (const [file, change] of changes) {
+    const original = files.get(file);
+    assert.equal(typeof original, 'string');
+    const next = change(original);
+    assert.notEqual(next, original, `Mutation must actually change ${file}`);
+    files.set(file, next);
+  }
+  return JSON.parse(
+    runInNewContext(
+      declarations.join('\n') +
+        `
+    const sites = new Map();
+    const valid = verifyNativeFontProducer(sites);
+    JSON.stringify({ valid, sites: [...sites].map(([file, positions]) => [file, positions.size]) });
+  `,
+      {
+        ts,
+        path,
+        root,
+        readFileSync: (file) => {
+          const relative = path.relative(root, file).replaceAll('\\', '/');
+          assert(files.has(relative), `Unexpected producer read ${relative}`);
+          return files.get(relative);
+        },
+      },
+    ),
+  );
+}
+
+const app = 'src/layout/GlobalProvider/AppTheme.tsx';
+const auth = 'src/features/AuthShell/AuthThemeLite.tsx';
+const frame = 'src/layout/GlobalProvider/NativeAppTheme.tsx';
+const provider = 'src/layout/GlobalProvider/NativeThemeProvider.tsx';
+const resolver = 'src/styles/nativeTheme.ts';
+const publisher = 'src/styles/resolvedThemeRoles.ts';
+const legacy = 'src/styles/themeRoles.ts';
+const replace = (before, after) => (source) => source.replace(before, after);
+
+test('verifies the complete actual generator, native publisher and real compatibility chain', () => {
+  assert.deepEqual(checkActualNativeProducer(), {
+    valid: true,
+    sites: [
+      [app, 2],
+      [auth, 2],
+    ],
+  });
+});
+
+test('keeps official named aliases and deep-default SDK provider identities', () => {
+  const aliasedSDK = (source) =>
+    source
+      .replaceAll(/\bThemeProvider\b/g, 'RootTheme')
+      .replace('{ ConfigProvider, RootTheme }', '{ ConfigProvider, ThemeProvider as RootTheme }');
+  assert.equal(checkActualNativeProducer([[app, aliasedSDK]]).valid, true);
+  assert.equal(
+    checkActualNativeProducer([
+      [
+        app,
+        replace(
+          "import { ConfigProvider, ThemeProvider } from '@lobehub/ui';",
+          "import { ConfigProvider } from '@lobehub/ui';\nimport ThemeProvider from '@lobehub/ui/es/ThemeProvider/ThemeProvider';",
+        ),
+      ],
+    ]).valid,
+    true,
+  );
+  const aliasedNative = (source) =>
+    source
+      .replaceAll(/\bNativeAppTheme\b/g, 'DocumentTheme')
+      .replace(
+        "import { DocumentTheme } from './DocumentTheme'",
+        "import { NativeAppTheme as DocumentTheme } from './NativeAppTheme'",
+      );
+  assert.equal(checkActualNativeProducer([[app, aliasedNative]]).valid, true);
+  const aliasedGenerator = (source) =>
+    source
+      .replace(
+        'import { genFontFamily, genFontFamilyCode }',
+        'import { genFontFamily as getUiFont, genFontFamilyCode }',
+      )
+      .replace('genFontFamily({', 'getUiFont({');
+  assert.equal(checkActualNativeProducer([[app, aliasedGenerator]]).valid, true);
+});
+
+const brokenChains = [
+  ['unowned UI generator', app, replace('genFontFamily({', 'localFontFamily({')],
+  ['unowned code generator import', app, replace("from '@/const/font'", "from './unowned-font'")],
+  [
+    'missing canonical memo dependency',
+    app,
+    replace('[customFontFamily, language, userFontFamily]', '[customFontFamily, userFontFamily]'),
+  ],
+  ['literal SDK token', app, replace(/(token:\s*\{\s*)fontFamily,/, "$1fontFamily: 'SimSun',")],
+  ['literal native prop', app, replace('fontFamily={fontFamily}', 'fontFamily="SimSun"')],
+  ['spread native prop override', app, replace('<NativeAppTheme', '<NativeAppTheme {...override}')],
+  [
+    'duplicate native font prop',
+    app,
+    replace('fontFamily={fontFamily}', 'fontFamily={fontFamily} fontFamily="SimSun"'),
+  ],
+  [
+    'swapped native code prop',
+    app,
+    replace('fontFamilyCode={fontFamilyCode}', 'fontFamilyCode={fontFamily}'),
+  ],
+  [
+    'unowned native frame import',
+    app,
+    replace("from './NativeAppTheme'", "from './unowned-theme'"),
+  ],
+  [
+    'unowned SDK provider import',
+    app,
+    replace(
+      "import { ConfigProvider, ThemeProvider } from '@lobehub/ui'",
+      "import { ConfigProvider, ThemeProvider } from './local-ui'",
+    ),
+  ],
+  [
+    'spread override in real native frame',
+    frame,
+    replace(
+      '<NativeThemeProvider {...options}>',
+      '<NativeThemeProvider {...options} fontFamily="SimSun">',
+    ),
+  ],
+  [
+    'disconnected native frame return',
+    frame,
+    (source) =>
+      source
+        .replace('<NativeThemeProvider {...options}>', '<div>')
+        .replace('</NativeThemeProvider>', '</div>'),
+  ],
+  [
+    'unowned native provider import',
+    frame,
+    replace("from './NativeThemeProvider'", "from './unowned-provider'"),
+  ],
+  [
+    'unowned resolver import',
+    provider,
+    replace("from '@/styles/nativeTheme'", "from './unowned-resolver'"),
+  ],
+  [
+    'literal light resolver font',
+    provider,
+    replace(/(appearance: 'light',[\s\S]*?)fontFamily,/, "$1fontFamily: 'SimSun',"),
+  ],
+  [
+    'missing provider memo dependency',
+    provider,
+    replace(
+      '[primaryColor, neutralColor, fontFamily, fontFamilyCode, animationMode]',
+      '[primaryColor, neutralColor, fontFamily, animationMode]',
+    ),
+  ],
+  [
+    'wrong current-theme context',
+    provider,
+    replace("appearance === 'dark' ? dark : light", "appearance === 'dark' ? light : dark"),
+  ],
+  [
+    'wrong SSR dark sheet',
+    provider,
+    replace(
+      'createThemeRoleStyles(light) + createThemeRoleStyles(dark)',
+      'createThemeRoleStyles(light) + createThemeRoleStyles(light)',
+    ),
+  ],
+  [
+    'unowned publisher import',
+    provider,
+    replace("from '@/styles/resolvedThemeRoles'", "from './unowned-roles'"),
+  ],
+  [
+    'spread resolver return override',
+    resolver,
+    replace('    isDarkMode: dark,', '    ...options,\n    isDarkMode: dark,'),
+  ],
+  [
+    'literal resolver return font',
+    resolver,
+    replace(/(isDarkMode: dark,\s*)fontFamily,/, "$1fontFamily: 'SimSun',"),
+  ],
+  [
+    'swapped resolver code return',
+    resolver,
+    replace(/(isDarkMode: dark,\s*fontFamily,\s*)fontFamilyCode,/, '$1fontFamilyCode: fontFamily,'),
+  ],
+  [
+    'changed canonical CSS mono field',
+    publisher,
+    replace('--font-mono: ${theme.fontFamilyCode}', '--font-mono: ${theme.fontFamily}'),
+  ],
+  [
+    'unexported canonical publisher',
+    publisher,
+    replace('export const createThemeRoleStyles', 'const createThemeRoleStyles'),
+  ],
+  [
+    'disconnected legacy style publication',
+    publisher,
+    replace('createThemeRoleStyles(theme)', 'unownedStyles(theme)'),
+  ],
+  [
+    'fake compatibility re-export',
+    legacy,
+    replace("export * from './resolvedThemeRoles'", "export * from './unowned-roles'"),
+  ],
+  [
+    'fake compatibility delegate',
+    legacy,
+    replace(
+      "import { ResolvedThemeRoles } from './resolvedThemeRoles'",
+      "import { ResolvedThemeRoles } from './unowned-roles'",
+    ),
+  ],
+  ['changed legacy context', legacy, replace('use(ThemeContext)', 'use(UnownedThemeContext)')],
+  ['changed legacy forwarded theme', legacy, replace('{ theme }', '{ theme: {} }')],
+];
+for (const [name, file, change] of brokenChains) {
+  test(`rejects broken producer chain: ${name}`, () => {
+    assert.deepEqual(checkActualNativeProducer([[file, change]]), { valid: false, sites: [] });
   });
 }
 
-test('native publisher recognizes the official public named ThemeProvider and alias', () => {
-  assert.equal(
-    checkActualNativeProducer("import { ThemeProvider as RootTheme } from '@lobehub/ui';"),
-    true,
-  );
-  assert.equal(
-    checkActualNativeProducer(
-      "import { ThemeProvider as RootTheme, ConfigProvider } from '@lobehub/ui';",
-    ),
-    true,
-  );
+test('never grants a JSX font prop exemption outside the verified returned owner', () => {
+  const result = checkFixture(`
+    import { NativeAppTheme } from '@/layout/GlobalProvider/NativeAppTheme';
+    const fontFamily = 'SimSun';
+    const local = <NativeAppTheme fontFamily={fontFamily} fontFamilyCode="Inter" />;
+  `);
+  assert.match(result, /local font-family override: \{fontFamily\}/);
 });
 
-test('native publisher keeps its original deep-default provider identity', () => {
-  assert.equal(
-    checkActualNativeProducer(
-      "import RootTheme from '@lobehub/ui/es/ThemeProvider/ThemeProvider';",
-    ),
-    true,
-  );
+test('auth accepts actual canonical generator and native-provider aliases', () => {
+  const alias = (source) =>
+    source
+      .replace(
+        'import { genFontFamily, genFontFamilyCode }',
+        'import { genFontFamily as getUiFont, genFontFamilyCode }',
+      )
+      .replace('genFontFamily({', 'getUiFont({')
+      .replace(
+        'import { NativeThemeProvider }',
+        'import { NativeThemeProvider as AuthNativeTheme }',
+      )
+      .replace('<NativeThemeProvider', '<AuthNativeTheme')
+      .replace('</NativeThemeProvider>', '</AuthNativeTheme>');
+  assert.equal(checkActualNativeProducer([[auth, alias]]).valid, true);
 });
 
-test('native publisher rejects unrelated providers and altered generator or code-font mapping', () => {
-  for (const imported of [
-    "import { ThemeProvider as RootTheme } from './local-provider';",
-    "import { ConfigProvider as RootTheme } from '@lobehub/ui';",
-    "import RootTheme from '@lobehub/ui';",
-  ])
-    assert.equal(checkActualNativeProducer(imported), false);
-  const actual = "import { ThemeProvider as RootTheme } from '@lobehub/ui';";
-  assert.equal(checkActualNativeProducer(actual, { badGenerator: true }), false);
-  assert.equal(checkActualNativeProducer(actual, { mono: 'theme.fontFamily' }), false);
-});
+for (const [name, change] of [
+  ['unowned generator', replace("from '@/const/font'", "from './local-font'")],
+  ['unowned language source', replace("from 'react-i18next'", "from './local-i18n'")],
+  ['fixed language overriding real locale', replace('locale: i18n.language', "locale: 'en-US'")],
+  ['literal native font', replace('fontFamily={fontFamily}', 'fontFamily="SimSun"')],
+  [
+    'swapped native code font',
+    replace('fontFamilyCode={fontFamilyCode}', 'fontFamilyCode={fontFamily}'),
+  ],
+  [
+    'spread native font override',
+    replace('<NativeThemeProvider', '<NativeThemeProvider {...override}'),
+  ],
+  [
+    'duplicate native font',
+    replace('fontFamily={fontFamily}', 'fontFamily={fontFamily} fontFamily="SimSun"'),
+  ],
+  ['literal SDK token', replace(/(token:\s*\{\s*)fontFamily,/, "$1fontFamily: 'SimSun',")],
+  [
+    'unowned native import',
+    replace("from '@/layout/GlobalProvider/NativeThemeProvider'", "from './local-theme'"),
+  ],
+  ['unowned SDK import', replace("from '@lobehub/ui'", "from './local-ui'")],
+  [
+    'disconnected returned tree',
+    (source) =>
+      source.replace('<NativeThemeProvider', '<div').replace('</NativeThemeProvider>', '</div>'),
+  ],
+]) {
+  test(`auth rejects broken canonical chain: ${name}`, () => {
+    assert.deepEqual(checkActualNativeProducer([[auth, change]]), { valid: false, sites: [] });
+  });
+}
+
+for (const [name, wrap] of [
+  ['false short-circuit', (sheet) => `{false && ${sheet}}`],
+  ['dynamic conditional', (sheet) => `{appearance === 'light' ? ${sheet} : null}`],
+  ['uninvoked callback', (sheet) => `{() => ${sheet}}`],
+]) {
+  test(`rejects native CSS that is only a descendant AST match: ${name}`, () => {
+    const hideSheet = (source) =>
+      source.replace(/<style data-orvilo-native-theme="">[\s\S]*?<\/style>/, wrap);
+    assert.deepEqual(checkActualNativeProducer([[provider, hideSheet]]), {
+      valid: false,
+      sites: [],
+    });
+  });
+}

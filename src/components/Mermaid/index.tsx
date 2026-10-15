@@ -1,6 +1,5 @@
 'use client';
 
-import { ThemeContext } from '@emotion/react';
 import { cn } from 'cn';
 import {
   ChevronDown,
@@ -13,13 +12,14 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import type { ComponentProps, CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from 'react';
-import { use, useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Highlighter from '@/components/Highlighter';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useIsDark } from '@/hooks/useIsDark';
+import { useResolvedDocumentTheme } from '@/styles/resolvedThemeRoles';
 
 import { type DiagramLink, getDiagramLinks } from './links';
 import { diagramDocument, renderDiagram } from './render';
@@ -74,7 +74,7 @@ export function Mermaid({
 }: MermaidProps) {
   const { t } = useTranslation('common');
   const isDark = useIsDark();
-  const theme = use(ThemeContext) as { fontFamily: string };
+  const theme = useResolvedDocumentTheme();
   const id = useId().replaceAll(/[^\w-]/g, '');
   const host = useRef<HTMLDivElement>(null);
   const source = children.trim();

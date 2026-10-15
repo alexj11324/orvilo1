@@ -22,13 +22,10 @@ const { cacheGateReleased, canAccessDevDock, devDockRenderError, initializeBuilt
   }),
 );
 
-vi.mock('@lobehub/ui', async (importOriginal) => {
+vi.mock('@/libs/contextMenu/ContextMenuHost', async () => {
   const React = await import('react');
-
   return {
-    ...(await importOriginal<object>()),
-    ContextMenuHost: () => React.createElement('div', { 'data-testid': 'context-menu-host' }),
-    setContextMenuInterceptor: vi.fn(),
+    ContextMenuHost: () => React.createElement('div', { 'data-testid': 'local-context-menu-host' }),
   };
 });
 
@@ -38,7 +35,7 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
   return {
     ...(await importOriginal<object>()),
     ModalHost: () => React.createElement('div', { 'data-testid': 'base-modal-host' }),
-    ToastHost: () => React.createElement('div', { 'data-testid': 'toast-host' }),
+    ToastHost: () => React.createElement('div', { 'data-testid': 'legacy-editor-toast-host' }),
   };
 });
 
@@ -374,11 +371,11 @@ describe('SPAGlobalProvider', () => {
       </SPAGlobalProvider>,
     );
 
-    expect(screen.getByTestId('base-modal-host')).toBeInTheDocument();
-    expect(screen.getByTestId('toast-host')).toBeInTheDocument();
+    expect(screen.queryByTestId('base-modal-host')).not.toBeInTheDocument();
+    expect(screen.getByTestId('legacy-editor-toast-host')).toBeInTheDocument();
     expect(screen.getByTestId('reui-modal-host')).toBeInTheDocument();
     expect(screen.getByTestId('reui-toast-host')).toBeInTheDocument();
-    expect(screen.getByTestId('context-menu-host')).toBeInTheDocument();
+    expect(screen.getByTestId('local-context-menu-host')).toBeInTheDocument();
   });
 
   it('does not mount the chat-store favicon subscriber before post-render initialization', () => {

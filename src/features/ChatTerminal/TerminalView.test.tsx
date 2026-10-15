@@ -1,6 +1,8 @@
-import { ThemeProvider } from '@emotion/react';
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+
+import { resolveNativeTheme } from '@/styles/nativeTheme';
+import { ResolvedThemeRoles } from '@/styles/resolvedThemeRoles';
 
 import TerminalView from './TerminalView';
 
@@ -16,9 +18,16 @@ const { manager, preference } = vi.hoisted(() => ({
 }));
 
 const terminalUnderTheme = (sessionId: string, fontFamilyCode = 'Application Mono') => (
-  <ThemeProvider theme={{ fontFamilyCode }}>
+  <ResolvedThemeRoles
+    emitStyle={false}
+    theme={resolveNativeTheme({
+      appearance: 'dark',
+      fontFamily: 'Application Sans',
+      fontFamilyCode,
+    })}
+  >
     <TerminalView sessionId={sessionId} />
-  </ThemeProvider>
+  </ResolvedThemeRoles>
 );
 
 vi.mock('@/store/user', () => ({

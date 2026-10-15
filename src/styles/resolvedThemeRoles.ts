@@ -251,6 +251,8 @@ interface ResolvedThemeRoleValues {
   motionEnabled: boolean;
 }
 
+const ResolvedDocumentThemeContext = createContext<ResolvedDocumentTheme | undefined>(undefined);
+
 const ResolvedFillTertiaryContext = createContext<ResolvedThemeRoleValues | undefined>(undefined);
 // Current App/Auth/Share/Workbench provider audit supplies no responsive overrides.
 // This is the installed public xs alias default (screenSM 576 - 1), also used
@@ -290,12 +292,16 @@ export function ResolvedThemeRoles({
     ],
   );
   return createElement(
-    ResolvedFillTertiaryContext.Provider,
-    { value: values },
-    emitStyle
-      ? createElement('style', { 'data-orvilo-theme-roles': '' }, createThemeRoleStyles(theme))
-      : null,
-    children,
+    ResolvedDocumentThemeContext.Provider,
+    { value: theme },
+    createElement(
+      ResolvedFillTertiaryContext.Provider,
+      { value: values },
+      emitStyle
+        ? createElement('style', { 'data-orvilo-theme-roles': '' }, createThemeRoleStyles(theme))
+        : null,
+      children,
+    ),
   );
 }
 
@@ -328,4 +334,14 @@ export function useResolvedMotionValues(): { enabled: boolean; durationMid: stri
     throw new Error('ThemeRoles must wrap resolved motion consumers');
   }
   return { enabled: values.motionEnabled, durationMid: values.motionDurationMid };
+}
+
+/** Resolved drawing/rendering values owned by the same document authority as CSS.
+ * Legacy and native hosts both publish here; native readers never import Emotion. */
+export function useResolvedDocumentTheme(): ResolvedDocumentTheme {
+  const theme = use(ResolvedDocumentThemeContext);
+  if (theme === undefined) {
+    throw new Error('ThemeRoles must wrap resolved document theme consumers');
+  }
+  return theme;
 }

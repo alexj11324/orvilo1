@@ -365,3 +365,21 @@ real nested CommonJS icon data loaded as ESM; the finite optimizer now includes
 62 verified nested leaves without restoring full UI barrels. The complete original
 440-case acceptance and whole 917-site CSS proof remain separate required gates.
 Neither completion nor merge is claimed by this integration.
+
+### Native production theme integration and compiler v2 follow-up
+
+App, Auth, Share and Workbench now publish the owned native semantic theme while
+retaining the SDK context still required by remaining consumers. Five theme
+readers use the owned contract; actual SDK SSR comparisons cover 79 fields across
+156 palette combinations and four motion cases. Unused legacy shell modal,
+context-menu and toast hosts are removed; the live legacy editor toast host stays.
+The font guard validates actual canonical producer chains, with 60 passing
+regressions and a passing repository scan, without path exemptions. Related
+resource/SSR tests pass (16); prior theme/shell related tests pass (28).
+
+The full 917-site CSS compiler v2 retains original obligations and resource
+limits and adds independently reviewed unique-site, complete-parent-lineage and
+scoped-variable proofs. Eight Python source/guard checks pass; its 18 Node
+fixtures and whole compiler still require actual CI execution. The focused
+Electron configuration imports its .mts helper explicitly, correcting the last
+CI startup failure. No Electron acceptance or migration completion is claimed.

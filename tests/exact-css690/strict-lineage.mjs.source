@@ -1,0 +1,184 @@
+/** Versioned actual Git/AST lineage proof. No fuzzy literal/token/value matching.
+ * Every successful route retains the complete real parent-child path, exact
+ * whole-blob origin and unique existing AST slot, all token order/context and
+ * canonical exact rewrite constraints at EVERY changed-source edge. */
+import assert from 'node:assert/strict';
+import { uniqueHistoricalSlot, physicalSourceSiteId, hasUnprovedSourceSites, sameStrictContext } from './strict-site-identity.mjs';
+
+export async function proveStrictGitLineage({ git, sha, ts, extractAt, canonical, obligations,
+  current, initialHead, baseline, pairs, sourceHashes, saveHistorical }) {
+  const graphRows = git(['rev-list', '--parents', '--reverse', '--topo-order', `${baseline}..${initialHead}`])
+    .toString().trim().split('\n').filter(Boolean).map((line) => {
+      const [ref, ...parents] = line.split(' '); return { ref, parents };
+    });
+  const baseParents = git(['rev-list', '--parents', '-n', '1', baseline]).toString().trim().split(' ').slice(1);
+  const graph = [{ ref: baseline, parents: baseParents }, ...graphRows];
+  const refs = new Set(graph.map((row) => row.ref));
+  const boundary = new Set(graph.flatMap((row) => row.parents).filter((ref) => !refs.has(ref)));
+  const owners = [...new Set([...obligations.values()].map((row) => row.file))].sort();
+  const trees = new Map(), contents = new Map(), slots = new Map(), transitions = new Map(), routeProofNodes = new Map();
+  function states(ref) {
+    if (trees.has(ref)) return trees.get(ref);
+    const data = git(['ls-tree', '-r', '-z', ref, '--', ...owners]);
+    const value = new Map();
+    for (const line of data.toString().split('\0').filter(Boolean)) {
+      const tab = line.indexOf('\t'); const [mode, type, blob] = line.slice(0, tab).split(' ');
+      if (type === 'blob') value.set(line.slice(tab + 1), { mode, blob });
+    }
+    trees.set(ref, value); return value;
+  }
+  function source(ref, file) {
+    const state = states(ref).get(file); if (!state) return null;
+    if (!contents.has(state.blob)) {
+      const bytes = git(['cat-file', 'blob', state.blob]);
+      contents.set(state.blob, { bytes, text: bytes.toString(), sha256: sha(bytes) });
+    }
+    return { ...state, ...contents.get(state.blob) };
+  }
+  function readSlots(ref, file) {
+    const record = source(ref, file); if (!record) return [];
+    const key = file + ':' + record.blob;
+    if (!slots.has(key)) slots.set(key, extractAt(file, record.text, { phase: 'strict-lineage', ref, blob: record.blob }));
+    return slots.get(key);
+  }
+  // All graph nodes and actual first/all-parent lists are bound explicitly.
+  const graphBinding = graph.map((row) => ({ ...row, commitSHA256: sha(git(['cat-file', 'commit', row.ref])) }));
+  const directCandidatesBeforeDAG = [...pairs.values()];
+  const directPhysicalSiteIds = new Set();
+  for (const obligation of obligations.values()) {
+    obligation.directSourceCandidates = [...obligation.provedBy];
+    for (const proof of obligation.provedBy) if (proof.sourceSiteId) directPhysicalSiteIds.add(proof.sourceSiteId);
+    // Direct endpoint candidates are never full-DAG certificates. Preserve
+    // them independently, then rebuild accepted pairs from actual all-parent
+    // routes so the direct shortcut cannot bypass merge/identity checks.
+    obligation.provedBy = [];
+  }
+  pairs.clear();
+  const rows = []; let addedBindings = 0, newlySolvedPhysicalSitesBeyondDirect = 0;
+  for (const obligation of obligations.values()) {
+    const originResults = [];
+    for (const origin of obligation.origins.filter((row, index, all) => all.findIndex((other) => other.ref === row.ref && other.blob === row.blob && other.fullLiteral === row.fullLiteral) === index)) {
+      const record = source(origin.ref, obligation.file);
+      assert(record && record.blob === origin.blob && record.sha256 === origin.sha256, 'Original Git whole-blob identity changed');
+      const addressSlots = readSlots(origin.ref, obligation.file).filter((slot) => slot.slot === obligation.astSlot);
+      obligation.sourceSites ||= [];
+      for (const slot of addressSlots.filter((slot) => slot.classes[obligation.tokenIndex] === obligation.beforeClass)) {
+        const id = physicalSourceSiteId(obligation.file, origin.ref, record.blob, slot, obligation.tokenIndex);
+        if (!obligation.sourceSites.some((site) => site.id === id)) obligation.sourceSites.push({ id,
+          ref: origin.ref, blob: record.blob, astSlot: slot.slot, start: slot.start ?? null,
+          end: slot.end ?? null, line: slot.line, column: slot.column, fullLiteral: slot.value,
+          tokenIndex: obligation.tokenIndex });
+      }
+      const first = addressSlots.filter((slot) => slot.value === origin.fullLiteral && slot.classes[obligation.tokenIndex] === obligation.beforeClass);
+      if (addressSlots.length !== 1 || first.length !== 1) {
+        originResults.push({ origin, status: 'HOLD', reason: 'ORIGINAL_AST_LITERAL_IDENTITY_NOT_UNIQUE', matches: addressSlots.length });
+        continue;
+      }
+      const sourceSiteId = physicalSourceSiteId(obligation.file, origin.ref, record.blob, first[0], obligation.tokenIndex);
+      if (obligation.provedBy.some((proof) => proof.sourceSiteId === sourceSiteId)) {
+        originResults.push({ origin, status: 'THIS_PHYSICAL_SITE_ALREADY_STRICTLY_PROVED', sourceSiteId }); continue;
+      }
+      const rule = first[0].classifications[obligation.tokenIndex];
+      assert(rule?.candidates?.length, 'Original obligation must keep its exact original classifier');
+      const reachable = new Map();
+      // Shared whole-blob+mode at a genuine graph boundary is exact object
+      // identity, not a claim that a side branch descends from this origin.
+      for (const seed of [origin.ref, baseline, ...boundary]) {
+        const state = states(seed).get(obligation.file);
+        if (state?.blob === record.blob && state.mode === record.mode) {
+          const anchor = { kind: 'EXACT_ORIGINAL_WHOLE_BLOB_MODE_AND_CONTEXT_ANCHOR', ref: seed,
+            originalRef: origin.ref, wholeBlob: record.blob, gitMode: record.mode,
+            slot: first[0].slot, strictContext: first[0].strictContext ?? null, sourceSiteId };
+          const routeProofId = sha(JSON.stringify(anchor));
+          routeProofNodes.set(routeProofId, { id: routeProofId, ...anchor });
+          reachable.set(seed, { slot: first[0], path: [seed], events: [], routeProofId, seed: anchor });
+        }
+      }
+      const blocked = [];
+      for (const node of graph) {
+        // Before its unique topological visit, only an explicitly recorded
+        // original whole-blob/mode proof anchor can already exist here.
+        if (reachable.has(node.ref)) continue;
+        const candidates = [], incomingHolds = [];
+        for (const parent of node.parents) {
+          const previous = reachable.get(parent);
+          if (!previous) { incomingHolds.push({ parent, child: node.ref, reason: 'UNPROVED_INCOMING_PARENT_ROUTE' }); continue; }
+          const before = states(parent).get(obligation.file), after = states(node.ref).get(obligation.file);
+          if (!before || !after || before.mode !== after.mode) {
+            incomingHolds.push({ parent, child: node.ref, reason: 'MISSING_OR_CHANGED_OWNER_MODE' }); continue;
+          }
+          let next;
+          if (before.blob === after.blob) next = previous.slot;
+          else {
+            const hits = readSlots(node.ref, obligation.file).filter((slot) => slot.slot === previous.slot.slot);
+            if (hits.length !== 1) { incomingHolds.push({ parent, child: node.ref, reason: 'AST_SLOT_MISSING_OR_AMBIGUOUS', matches: hits.length }); continue; }
+            next = hits[0];
+            // Retains same literal length, token order and every non-target
+            // companion; legitimate semantic role changes stay separate HOLD.
+            if (!sameStrictContext(previous.slot, next)) { incomingHolds.push({ parent, child: node.ref, reason: 'CHANGED_STRUCTURAL_OR_SEMANTIC_CONTEXT' }); continue; }
+            const everyTokenPreservedOrExact = previous.slot.classes.length === next.classes.length && previous.slot.classes.every((token, index) => token === next.classes[index] || previous.slot.classifications[index]?.candidates?.includes(next.classes[index]));
+            if (!everyTokenPreservedOrExact) { incomingHolds.push({ parent, child: node.ref, reason: 'NONCANONICAL_WHOLE_LITERAL_OR_COMPANION_CHANGE' }); continue; }
+          }
+          const eventKey = sha(JSON.stringify([parent, node.ref, obligation.file, previous.slot.slot, previous.slot.value, next.value]));
+          if (before.blob !== after.blob && !transitions.has(eventKey)) {
+            const old = source(parent, obligation.file), newer = source(node.ref, obligation.file);
+            await saveHistorical(old.bytes, parent, obligation.file, old.blob, old.mode);
+            await saveHistorical(newer.bytes, node.ref, obligation.file, newer.blob, newer.mode);
+            transitions.set(eventKey, { id: eventKey, parent, child: node.ref, file: obligation.file,
+              before: { blob: old.blob, sha256: old.sha256, gitMode: old.mode, slot: previous.slot.slot, fullLiteral: previous.slot.value, classes: previous.slot.classes },
+              after: { blob: newer.blob, sha256: newer.sha256, gitMode: newer.mode, slot: next.slot, fullLiteral: next.value, classes: next.classes },
+              uniqueExistingASTAddress: true, everyFullLiteralTokenCanonical: true });
+          }
+          candidates.push({ slot: next, seed: previous.seed, parent, parentRouteProofId: previous.routeProofId,
+            transitionId: before.blob === after.blob ? null : eventKey,
+            path: [...previous.path, node.ref], events: before.blob === after.blob ? previous.events : [...previous.events, eventKey] });
+        }
+        if (incomingHolds.length || candidates.length !== node.parents.length || !candidates.length) {
+          blocked.push(...incomingHolds);
+          // A genuine anchor is a declared proof boundary. All other nodes
+          // require every actual incoming parent, including failed routes.
+          reachable.delete(node.ref);
+          continue;
+        }
+        const endpointKeys = candidates.map((value) => JSON.stringify([value.slot.slot,
+          value.slot.strictContext ?? null, value.slot.value, value.slot.start, value.slot.end]));
+        if (!endpointKeys.every((key) => key === endpointKeys[0])) {
+          blocked.push({ child: node.ref, reason: 'MULTIPLE_DISTINCT_PARENT_AST_ENDPOINTS', incomingRoutes: candidates.map((value) => ({ parent: value.parent, parentRouteProofId: value.parentRouteProofId })) });
+          continue;
+        }
+        const proof = { kind: 'ALL_ACTUAL_PARENT_ROUTES_PROVED', ref: node.ref, file: obligation.file,
+          slot: candidates[0].slot.slot, strictContext: candidates[0].slot.strictContext ?? null,
+          endpointLiteral: candidates[0].slot.value,
+          incomingRoutes: candidates.map((value) => ({ parent: value.parent,
+            parentRouteProofId: value.parentRouteProofId, transitionId: value.transitionId })) };
+        const routeProofId = sha(JSON.stringify(proof));
+        routeProofNodes.set(routeProofId, { id: routeProofId, ...proof });
+        // One representative path is retained for compatibility only. The
+        // certificate contains EVERY incoming route, never endpoint Map loss.
+        reachable.set(node.ref, { ...candidates[0], routeProofId });
+      }
+      const endpoint = reachable.get(initialHead);
+      const now = (current.get(obligation.file) || []).filter((slot) => endpoint && slot.slot === endpoint.slot.slot && slot.value === endpoint.slot.value);
+      if (!endpoint || now.length !== 1 || !canonical(first[0], now[0].classes) || !rule.candidates.includes(now[0].classes[obligation.tokenIndex])) {
+        originResults.push({ origin, status: 'HOLD', reasons: blocked, exactEndpoint: endpoint ? { slot: endpoint.slot.slot, fullLiteral: endpoint.slot.value } : null }); continue;
+      }
+      const target = now[0], next = target.classes[obligation.tokenIndex];
+      const key = JSON.stringify([rule.token, next]);
+      const pair = pairs.get(key) || { id: sha(key), beforeClass: rule.token, currentClass: next, classification: rule, sites: [] };
+      const site = { file: obligation.file, astSlot: first[0].slot, tokenIndex: obligation.tokenIndex,
+        before: { ref: origin.ref, blob: record.blob, sha256: record.sha256, line: first[0].line, column: first[0].column, fullLiteral: first[0].value, literalSource: first[0].literalSource },
+        intermediate: null, current: { head: initialHead, sha256: sourceHashes.find((row) => row.file === obligation.file).sha256, line: target.line, column: target.column, fullLiteral: target.value, literalSource: target.literalSource },
+        beforeFullClasses: first[0].classes, currentFullClasses: target.classes,
+        actualGitParentChildPath: endpoint.path, seed: endpoint.seed, transitionIds: endpoint.events, allParentRouteProofId: endpoint.routeProofId, representativePathOnly: true, sourceSiteId, evidenceScope: 'VERSIONED_STRICT_GIT_AST_LINEAGE_REQUIRES_ACTUAL_CSS_COMPILE' };
+      pair.sites.push(site); pairs.set(key, pair);
+      obligation.provedBy.push({ pairId: pair.id, beforeRef: origin.ref, currentHead: initialHead, proofScope: 'strict-git-ast-lineage-v2', sourceSiteId, allParentRouteProofId: endpoint.routeProofId, parentChildPath: endpoint.path, transitionIds: endpoint.events });
+      addedBindings++;
+      if (!directPhysicalSiteIds.has(sourceSiteId)) newlySolvedPhysicalSitesBeyondDirect++;
+      originResults.push({ origin, status: 'UNIQUE_STRICT_SOURCE_COUNTERPART_ONLY', pairId: pair.id, sourceRoute: endpoint.path, transitionIds: endpoint.events, allParentRouteProofId: endpoint.routeProofId, diagnosticBlockedRoutes: blocked, compilerAcceptanceInferred: false });
+    }
+    rows.push({ id: obligation.id, file: obligation.file, origins: originResults, status: !hasUnprovedSourceSites(obligation) ? 'STRICT_COUNTERPART_PENDING_SAME_FULL_COMPILER_GATES' : 'HOLD' });
+  }
+  return { schema: 'actual-strict-git-ast-lineage-v2', rootHead: initialHead, baseline, originalRows: obligations.size,
+    graph: graphBinding, boundaries: [...boundary], completeParentRouteProofNodes: [...routeProofNodes.values()], transitions: [...transitions.values()], rows, addedBindings, strictRouteSiteBindings: addedBindings, newlySolvedPhysicalSitesBeyondDirect, directCandidatesBeforeDAG, directCandidatesAreNotDAGAcceptance: true,
+    allOriginalObligationsRetained: true, semanticChangesAccepted: false, missingOrAmbiguousRemainHold: true, compilerAcceptanceInferred: false };
+}

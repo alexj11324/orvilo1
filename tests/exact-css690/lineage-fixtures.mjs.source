@@ -1,0 +1,148 @@
+/** Genuine temporary Git histories + the actual current TS parser/classifier. */
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { scopedVariableHolds } from './scoped-variable-proof.mjs';
+import { physicalSourceSiteId, selectDirectCounterpart, hasUnprovedSourceSites } from './strict-site-identity.mjs';
+import { proveStrictGitLineage } from './strict-lineage.mjs';
+
+export async function runLineageFixtures({ out, ts, sha, extractAt, canonical, postcss, valueParser, invariantRecords, compiledRecords }) {
+  const folder = path.join(out, 'strict-lineage-fixtures'); await mkdir(folder);
+  const initial = "export function view(){ const role = 'h-[13px] w-8'; return role; }\n";
+  const cases = [
+    { name: 'exact-transition-and-unrelated-later-commit', after: initial.replace('h-[13px]', 'h-3.25'), later: '\nexport const unrelated = true;\n', prove: true },
+    { name: 'rounded13-to12-rejected', after: initial.replace('h-[13px]', 'h-3'), prove: false },
+    { name: 'changed-nontarget-companion-rejected', after: initial.replace('h-[13px] w-8', 'h-3.25 w-9'), prove: false },
+    { name: 'ambiguous-valid-block-scoped-AST-address-rejected', after: "export function view(){ if(true){const role='h-3.25 w-8';} if(false){const role='h-3.25 w-8';} }\n", prove: false },
+    { name: 'missing-owner-rejected', after: null, prove: false },
+    { name: 'historical-duplicate-deletion-direct-shortcut-rejected',
+      before: "export function view(){ if(a){ const role='h-[13px] w-8'; } if(b){ const role='h-[13px] w-8'; } }\n",
+      after: "export function view(){ if(a){ const role='h-3.25 w-8'; } }\n", prove: false, duplicateOrigin: true },
+    { name: 'unique-role-moved-to-different-control-block-rejected',
+      before: "export function view(){ if(a){ const role='h-[13px] w-8'; } }\n",
+      after: "export function view(){ if(b){ const role='h-3.25 w-8'; } }\n", prove: false },
+    { name: 'merge-all-canonical-parent-routes-retained', after: initial.replace('h-[13px]', 'h-3.25'), merge: 'valid', prove: true },
+    { name: 'merge-one-rounded-parent-remains-HOLD', after: initial.replace('h-[13px]', 'h-3.25'), merge: 'rounded', prove: false },
+    { name: 'merge-one-ambiguous-parent-remains-HOLD', after: initial.replace('h-[13px]', 'h-3.25'), merge: 'ambiguous', prove: false },
+    { name: 'merge-one-deleted-parent-remains-HOLD', after: initial.replace('h-[13px]', 'h-3.25'), merge: 'deleted', prove: false },
+  ];
+  const rows = [];
+  for (const fixture of cases) {
+    const root = path.join(folder, fixture.name); await mkdir(root);
+    const git = (args, options = {}) => execFileSync('git', args, { cwd: root, maxBuffer: 32 * 1024 * 1024, ...options });
+    git(['init', '-q', '-b', 'main']);
+    const original = fixture.before || initial;
+    await writeFile(path.join(root, 'owner.ts'), original);
+    git(['add', '.']); git(['-c', 'user.name=CSS fixture', '-c', 'user.email=css-fixture@example.invalid', 'commit', '-qm', 'Original']);
+    const baseline = git(['rev-parse', 'HEAD']).toString().trim();
+    const blob = git(['rev-parse', 'HEAD:owner.ts']).toString().trim();
+    if (fixture.after === null) git(['rm', '-q', 'owner.ts']);
+    else { await writeFile(path.join(root, 'owner.ts'), fixture.after); git(['add', '.']); }
+    git(['-c', 'user.name=CSS fixture', '-c', 'user.email=css-fixture@example.invalid', 'commit', '-qm', 'Transition']);
+    if (fixture.later) {
+      await writeFile(path.join(root, 'owner.ts'), fixture.after + fixture.later);
+      git(['add', '.']); git(['-c', 'user.name=CSS fixture', '-c', 'user.email=css-fixture@example.invalid', 'commit', '-qm', 'Unrelated later change']);
+    }
+    if (fixture.merge) {
+      git(['checkout', '-qb', 'alternate', baseline]);
+      if (fixture.merge === 'deleted') git(['rm', '-q', 'owner.ts']);
+      else {
+        const alternate = fixture.merge === 'rounded' ? initial.replace('h-[13px]', 'h-3')
+          : fixture.merge === 'ambiguous' ? "export function view(){ if(a){const role='h-3.25 w-8';} if(b){const role='h-3.25 w-8';} }\n"
+          : fixture.after;
+        await writeFile(path.join(root, 'owner.ts'), alternate); git(['add', '.']);
+      }
+      git(['-c', 'user.name=CSS fixture', '-c', 'user.email=css-fixture@example.invalid', 'commit', '-qm', 'Alternate parent']);
+      git(['checkout', '-q', 'main']);
+      try { git(['merge', '--no-ff', '--no-commit', 'alternate']); }
+      catch (error) { assert.equal(error.status, 1, 'Only an actual merge conflict is resolved by this fixture'); }
+      git(['rev-parse', '--verify', 'MERGE_HEAD']);
+      await writeFile(path.join(root, 'owner.ts'), fixture.after); git(['add', '.']);
+      git(['-c', 'user.name=CSS fixture', '-c', 'user.email=css-fixture@example.invalid', 'commit', '-qm', 'Actual two-parent merge']);
+      assert.equal(git(['rev-list', '--parents', '-n', '1', 'HEAD']).toString().trim().split(' ').length, 3);
+    }
+    const initialHead = git(['rev-parse', 'HEAD']).toString().trim();
+    const before = extractAt('owner.ts', original, { phase: 'ACTUAL_TEMP_GIT_FIXTURE', ref: baseline });
+    const slot = before.find((row) => row.classes.includes('h-[13px]')); assert(slot);
+    const tokenIndex = slot.classes.indexOf('h-[13px]');
+    const origin = { ref: baseline, blob, sha256: sha(Buffer.from(original)), fullLiteral: slot.value, line: slot.line };
+    const id = JSON.stringify(['owner.ts', slot.slot, tokenIndex, 'h-[13px]']);
+    const obligations = new Map([[id, { id, file: 'owner.ts', astSlot: slot.slot, tokenIndex, beforeClass: 'h-[13px]', origins: [origin], provedBy: [] }]]);
+    const text = fixture.after === null ? null : fixture.after + (fixture.later || '');
+    const current = new Map(text === null ? [] : [['owner.ts', extractAt('owner.ts', text, { phase: 'ACTUAL_TEMP_GIT_FIXTURE', ref: initialHead })]]);
+    const pairs = new Map();
+    const obligation = obligations.get(id);
+    const historicalSites = before.filter((candidate) => candidate.slot === slot.slot && candidate.classes[tokenIndex] === 'h-[13px]');
+    obligation.sourceSites = historicalSites.map((candidate) => ({
+      id: physicalSourceSiteId('owner.ts', baseline, blob, candidate, tokenIndex), ref: baseline, blob,
+      astSlot: candidate.slot, start: candidate.start, end: candidate.end, line: candidate.line,
+      column: candidate.column, fullLiteral: candidate.value, tokenIndex }));
+    // Exercise the EXACT shared direct-counterpart selector used by the full
+    // compiler, before the lineage path can see an existing proof shortcut.
+    for (const oldSlot of historicalSites) {
+      const direct = selectDirectCounterpart({ oldSlots: before, oldSlot, currentSlots: current.get('owner.ts'),
+        intermediateSlots: null, hasIntermediate: false, canonical });
+      if (fixture.duplicateOrigin || fixture.before) assert.equal(direct, null, fixture.name);
+      if (direct) obligation.provedBy.push({ sourceSiteId: physicalSourceSiteId('owner.ts', baseline, blob, oldSlot, tokenIndex),
+        proofScope: 'DIRECT_ENDPOINT_CANDIDATE_NOT_A_ROUTE_CERTIFICATE' });
+    }
+    if (fixture.duplicateOrigin) {
+      assert.equal(obligation.sourceSites.length, 2);
+      assert.equal(new Set(obligation.sourceSites.map((site) => site.id)).size, 2);
+      assert.equal(hasUnprovedSourceSites(obligation), true);
+    }
+    if (fixture.merge) assert(obligation.provedBy.length > 0, 'Actual direct candidate must not bypass the merge regression');
+    const result = await proveStrictGitLineage({ git, sha, ts, extractAt, canonical, obligations, current,
+      initialHead, baseline, pairs, sourceHashes: text === null ? [] : [{ file: 'owner.ts', sha256: sha(Buffer.from(text)) }],
+      saveHistorical: async (data, _ref, _file, originalBlob) => {
+        const destination = path.join(folder, originalBlob + '.source');
+        await writeFile(destination, data);
+      } });
+    assert.equal(result.addedBindings > 0, fixture.prove, fixture.name);
+    assert.equal(obligations.size, 1);
+    assert.equal(hasUnprovedSourceSites(obligation), !fixture.prove, fixture.name + ': complete physical-site acceptance');
+    if (!fixture.prove) { assert.equal(obligation.provedBy.length, 0); assert.equal(pairs.size, 0); }
+    if (fixture.prove) {
+      const site = [...pairs.values()][0].sites[0];
+      assert.equal(site.actualGitParentChildPath.at(-1), initialHead);
+      assert(site.transitionIds.length > 0);
+      assert.equal(site.beforeFullClasses.length, site.currentFullClasses.length);
+      if (fixture.merge) {
+        const proof = result.completeParentRouteProofNodes.find((node) => node.id === site.allParentRouteProofId);
+        assert.equal(proof.incomingRoutes.length, 2);
+        assert.equal(new Set(proof.incomingRoutes.map((route) => route.parent)).size, 2);
+        assert.equal(new Set(proof.incomingRoutes.map((route) => route.parentRouteProofId)).size, 2);
+      }
+    }
+    rows.push({ name: fixture.name, expectedStrictProof: fixture.prove, addedBindings: result.addedBindings,
+      actualBaseline: baseline, actualHead: initialHead, originalRows: result.originalRows, passed: true });
+  }
+  const variableCases = [
+    { name: 'dark-spacing-override-rejected', css: ':root{--spacing:4px}.dark{--spacing:8px}.before{height:13px}.after{height:calc(var(--spacing) * 3.25)}', hold: true },
+    { name: 'media-radius-override-rejected', css: ':root{--radius-input:6px}@media(min-width:1px){:root{--radius-input:8px}}.before{border-radius:6px}.after{border-radius:var(--radius-input)}', hold: true },
+    { name: 'local-dense-font-override-rejected', css: ':root{--text-dense:13px}.compact{--text-dense:14px}.before{font-size:13px}.after{font-size:var(--text-dense)}', hold: true },
+    { name: 'different-unconditional-layer-binding-rejected', css: ':root{--spacing:8px}@layer tokens{:root{--spacing:4px}}.before{height:13px}.after{height:calc(var(--spacing) * 3.25)}', hold: true },
+    { name: 'noninherited-property-initial-value-rejected', css: ':root{--spacing:4px}@property --spacing{syntax:"<length>";inherits:false;initial-value:8px}.before{height:13px}.after{height:calc(var(--spacing) * 3.25)}', hold: true },
+    { name: 'same-symbolic-formula-in-both-classes-is-safe', css: ':root{--role:4px}.dark{--role:8px}.before{height:var(--role)}.after{height:var(--role)}', hold: false },
+    { name: 'unconditional-fixed-spacing-has-no-alternate-binding', css: ':root{--spacing:4px}.before{height:13px}.after{height:calc(var(--spacing) * 3.25)}', hold: false },
+  ];
+  for (const fixture of variableCases) {
+    const cssRoot = postcss.parse(fixture.css), variables = new Map();
+    cssRoot.walkRules((rule) => {
+      if (rule.selector !== ':root') return;
+      for (let parent = rule.parent; parent && parent.type !== 'root'; parent = parent.parent)
+        if (parent.type === 'rule' || parent.type === 'atrule' && parent.name !== 'layer') return;
+      rule.walkDecls((decl) => variables.set(decl.prop, decl.value));
+    });
+    const { records } = compiledRecords(cssRoot, new Set(['before', 'after']));
+    for (const font of [16, 20]) assert.deepEqual(invariantRecords(records.get('before'), font, variables),
+      invariantRecords(records.get('after'), font, variables), 'Fixture must reproduce original root-only apparent equivalence');
+    const holds = scopedVariableHolds({ before: records.get('before'), after: records.get('after'), cssRoot,
+      variables, invariantRecords, valueParser });
+    assert.equal(holds.length > 0, fixture.hold, fixture.name);
+    rows.push({ name: fixture.name, actualPostcssAST: true, alternateBindingHolds: holds, passed: true });
+  }
+  return { schema: 'real-git-and-public-ts-lineage-fixtures-v2', rows, allExpectationsMatched: true,
+    actualProductProofOrAcceptanceInferred: false };
+}

@@ -1,0 +1,61 @@
+/** Physical historical sites never collapse into a shared legacy917 key. */
+export function uniqueHistoricalSlot(slots, astSlot) {
+  const matches = slots.filter((slot) => slot.slot === astSlot);
+  return matches.length === 1 ? matches[0] : null;
+}
+export function physicalSourceSiteId(file, ref, blob, slot, tokenIndex) {
+  return JSON.stringify([file, ref, blob, slot.slot, slot.start ?? null, slot.end ?? null,
+    slot.line, slot.column, slot.literalSource, tokenIndex]);
+}
+export function hasUnprovedSourceSites(obligation) {
+  if (!obligation.provedBy.length) return true;
+  return (obligation.sourceSites || []).some((site) =>
+    !obligation.provedBy.some((proof) => proof.sourceSiteId === site.id));
+}
+
+const contextCaches = new WeakMap();
+export function strictNodeContext(ts, source, node) {
+  let cache = contextCaches.get(source);
+  if (!cache) { cache = new WeakMap(); contextCaches.set(source, cache); }
+  const context = (current) => {
+    if (!current.parent) return [];
+    if (cache.has(current)) return cache.get(current);
+    const parent = current.parent, siblings = [];
+    ts.forEachChild(parent, (child) => { if (child.kind === current.kind) siblings.push(child); });
+    const meaning = {};
+    if (parent.name) meaning.name = parent.name.getText(source);
+    if (ts.isIfStatement(parent) || ts.isWhileStatement(parent) || ts.isDoStatement(parent) || ts.isSwitchStatement(parent)) meaning.expression = parent.expression.getText(source);
+    if (ts.isConditionalExpression(parent)) meaning.condition = parent.condition.getText(source);
+    if (ts.isCaseClause(parent)) meaning.case = parent.expression.getText(source);
+    if (ts.isForStatement(parent)) {
+      meaning.initializer = parent.initializer?.getText(source) ?? null;
+      meaning.condition = parent.condition?.getText(source) ?? null;
+      meaning.incrementor = parent.incrementor?.getText(source) ?? null;
+    }
+    if (ts.isForInStatement(parent) || ts.isForOfStatement(parent)) {
+      meaning.initializer = parent.initializer.getText(source); meaning.expression = parent.expression.getText(source);
+    }
+    if (ts.isJsxElement(parent)) meaning.tag = parent.openingElement.tagName.getText(source);
+    if (ts.isJsxOpeningElement(parent) || ts.isJsxSelfClosingElement(parent)) meaning.tag = parent.tagName.getText(source);
+    if (ts.isCallExpression(parent)) meaning.callee = parent.expression.getText(source);
+    const value = [...context(parent), { parentKind: ts.SyntaxKind[parent.kind], childKind: ts.SyntaxKind[current.kind], ordinal: siblings.indexOf(current), meaning }];
+    cache.set(current, value); return value;
+  };
+  return JSON.stringify(context(node));
+}
+export function sameStrictContext(before, after) {
+  if (before.strictContext !== undefined || after.strictContext !== undefined)
+    return typeof before.strictContext === 'string' && before.strictContext === after.strictContext;
+  return before.kind === after.kind && before.slot === after.slot;
+}
+export function selectDirectCounterpart({ oldSlots, oldSlot, currentSlots, intermediateSlots, hasIntermediate, canonical }) {
+  if (uniqueHistoricalSlot(oldSlots, oldSlot.slot) !== oldSlot) return null;
+  const now = uniqueHistoricalSlot(currentSlots || [], oldSlot.slot);
+  if (!now || !sameStrictContext(oldSlot, now) || !canonical(oldSlot, now.classes)) return null;
+  let intermediate = null;
+  if (hasIntermediate) {
+    intermediate = uniqueHistoricalSlot(intermediateSlots || [], oldSlot.slot);
+    if (!intermediate || !sameStrictContext(oldSlot, intermediate) || !canonical(oldSlot, intermediate.classes) || intermediate.classes.join(' ') !== now.classes.join(' ')) return null;
+  }
+  return { now, intermediate };
+}

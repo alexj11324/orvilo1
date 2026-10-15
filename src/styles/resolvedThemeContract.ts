@@ -1,4 +1,4 @@
-/** Values consumed by Orvilo semantic roles; independent of any UI SDK. */
+/** Values consumed by Orvilo semantic roles and native rendering clients; independent of any UI SDK. */
 export interface ResolvedDocumentTheme {
   blue: string;
   boxShadow: string;
@@ -15,6 +15,8 @@ export interface ResolvedDocumentTheme {
   colorError: string;
   colorErrorBg: string;
   colorErrorBorder: string;
+  colorErrorBorderHover: string;
+  colorErrorHover: string;
   colorErrorText: string;
   colorFill: string;
   colorFillQuaternary: string;
@@ -24,10 +26,13 @@ export interface ResolvedDocumentTheme {
   colorInfoBg: string;
   colorInfoBgHover: string;
   colorInfoBorder: string;
+  colorInfoBorderHover: string;
+  colorInfoHover: string;
   colorInfoText: string;
   colorLink: string;
   colorLinkActive: string;
   colorPrimary: string;
+  colorPrimaryActive: string;
   colorPrimaryBg: string;
   colorPrimaryBgHover: string;
   colorPrimaryBorder: string;
@@ -38,6 +43,8 @@ export interface ResolvedDocumentTheme {
   colorSuccess: string;
   colorSuccessBg: string;
   colorSuccessBorder: string;
+  colorSuccessBorderHover: string;
+  colorSuccessHover: string;
   colorSuccessText: string;
   colorText: string;
   colorTextDescription: string;

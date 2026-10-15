@@ -2,7 +2,7 @@
 
 import '@/styles/fonts.css';
 
-import { ConfigProvider, type NeutralColors, type PrimaryColors, ThemeProvider } from '@lobehub/ui';
+import { ConfigProvider, ThemeProvider } from '@lobehub/ui';
 import * as m from 'motion/react-m';
 import { type ReactNode } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
@@ -20,19 +20,19 @@ import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors, userGeneralSettingsSelectors } from '@/store/user/selectors';
-import { BaseGlobalStyle, GlobalStyle } from '@/styles';
-import { ThemeRoles } from '@/styles/themeRoles';
+import type { UserNeutralColor, UserPrimaryColor } from '@/styles/nativeThemeSwatches';
 import { setCookie } from '@/utils/client/cookie';
 
 import AntdStyleLayer from './AntdStyleLayer';
 import styles from './AppTheme.module.css';
+import { NativeAppTheme } from './NativeAppTheme';
 
 export interface AppThemeProps {
   children?: ReactNode;
   customFontFamily?: string;
   customFontURL?: string;
-  defaultNeutralColor?: NeutralColors;
-  defaultPrimaryColor?: PrimaryColors;
+  defaultNeutralColor?: UserNeutralColor;
+  defaultPrimaryColor?: UserPrimaryColor;
   enableCustomFonts?: boolean;
   globalCDN?: boolean;
 }
@@ -145,9 +145,16 @@ const AppTheme = memo<AppThemeProps>(
               },
             }}
           >
-            <BaseGlobalStyle />
-            <GlobalStyle />
-            <ThemeRoles>{children}</ThemeRoles>
+            <NativeAppTheme
+              animationMode={animationMode}
+              appearance={currentAppearence}
+              fontFamily={fontFamily}
+              fontFamilyCode={fontFamilyCode}
+              neutralColor={neutralColor ?? defaultNeutralColor}
+              primaryColor={primaryColor ?? defaultPrimaryColor}
+            >
+              {children}
+            </NativeAppTheme>
           </ThemeProvider>
         </ConfigProvider>
       </AntdStyleLayer>

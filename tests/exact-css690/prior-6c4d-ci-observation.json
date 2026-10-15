@@ -1,0 +1,82 @@
+{
+  "actualCompiled": {
+    "pairs": 94,
+    "exact16Pairs": 94,
+    "physicalGeometry20Differences": [],
+    "typography20Diagnostics": [],
+    "artifact": {
+      "file": "whole-current-plus-before.css",
+      "sha256": "2ec729fcc6f949f65712812e625f943722cb844bb0efa7294102d4f71a76fba4",
+      "bytes": 635076
+    }
+  },
+  "actualCurrentCounts": {
+    "arbitraryTokens": 1054,
+    "stillPreciselyConvertible": 0,
+    "offRhythmConvertible": 0,
+    "outOf690Scope": 1054,
+    "dynamicOrUnsupported": 0
+  },
+  "actualGuard": {
+    "failures": [],
+    "exitCode": 2,
+    "elapsedSeconds": 115.77770562500007,
+    "memoryEventsDelta": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0
+    },
+    "knownOwnedClosure": true
+  },
+  "actualHead": "6c4d041476c223a71e40d94d8dfb1233fc1f9cec",
+  "actualHistory": {
+    "obligations": 917,
+    "provedSourceClassPairs": 94,
+    "provedSiteBindings": 355,
+    "noHistoricalPassReused": true,
+    "counterpartHolds": 726
+  },
+  "actualParseHolds": [
+    {
+      "file": "packages/web-crawler/src/utils/html/terms.html.js",
+      "phase": "current",
+      "ref": "6c4d041476c223a71e40d94d8dfb1233fc1f9cec",
+      "kind": "TS_PARSE_DIAGNOSTICS",
+      "diagnostics": ["';' expected.", "';' expected."]
+    },
+    {
+      "file": "src/libs/document-loaders/loaders/markdown/__tests__/demo.mdx.ts",
+      "phase": "current",
+      "ref": "6c4d041476c223a71e40d94d8dfb1233fc1f9cec",
+      "kind": "TS_PARSE_DIAGNOSTICS",
+      "diagnostics": ["Expression expected."]
+    },
+    {
+      "file": "packages/web-crawler/src/utils/html/terms.html.js",
+      "phase": "historical-before",
+      "ref": "70012596a5e5778f344a115062f7753ad407b12d",
+      "blob": "9aceb2004dea2f53b65811edfca2e700b872830f",
+      "kind": "TS_PARSE_DIAGNOSTICS",
+      "diagnostics": ["';' expected.", "';' expected."]
+    },
+    {
+      "file": "src/libs/document-loaders/loaders/markdown/__tests__/demo.mdx.ts",
+      "phase": "historical-before",
+      "ref": "70012596a5e5778f344a115062f7753ad407b12d",
+      "blob": "9b75fad3e4aeefa567f1e73b913e49ddcb085da9",
+      "kind": "TS_PARSE_DIAGNOSTICS",
+      "diagnostics": ["Expression expected."]
+    }
+  ],
+  "actualStatus": "HOLD",
+  "actualSummarySHA256": "e6369e94729d6a85c6149c2fe7987421c497fa5a808d035918dfa3dccc24419e",
+  "all917OriginalContextsRetained": true,
+  "artifact": 11980884453,
+  "artifactZipSHA256": "035f47ea64d9fe0900616c2dacc8d272e39f7d45580bf19700d24d29b45d3125",
+  "job": 116479856647,
+  "oldFactsNeverPromotedToV2OrCurrentProof": true,
+  "run": 38751811434
+}

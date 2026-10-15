@@ -8,7 +8,7 @@ import type { Plugin } from 'vite';
 import { defineConfig, mergeConfig } from 'vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
-import { nativeAntdNestedCjs } from './finite-antd-cjs';
+import { nativeAntdNestedCjs } from './finite-antd-cjs.mts';
 import desktopConfig from './product/apps/desktop/vite.renderer.config';
 import { orviloUiImports } from './product/plugins/vite/orviloUiImports';
 

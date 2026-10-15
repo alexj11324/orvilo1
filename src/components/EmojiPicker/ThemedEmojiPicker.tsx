@@ -1,15 +1,14 @@
 'use client';
 
 import Picker from '@emoji-mart/react';
-import { ThemeContext } from '@emotion/react';
-import { type ComponentProps, use, useEffect, useRef } from 'react';
+import { type ComponentProps, useEffect, useRef } from 'react';
 
-import type { ResolvedDocumentTheme } from '@/styles/themeRoles';
+import { useResolvedDocumentTheme } from '@/styles/resolvedThemeRoles';
 
 import { bindEmojiPickerTheme, emojiRgbChannels } from './shadowTheme';
 
 export default function ThemedEmojiPicker(props: ComponentProps<typeof Picker>) {
-  const theme = use(ThemeContext) as ResolvedDocumentTheme;
+  const theme = useResolvedDocumentTheme();
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!container.current) return;

@@ -8,13 +8,15 @@ import path from 'node:path';
 import { ThemeContext } from '@emotion/react';
 import { MaskShadow, ThemeProvider } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
-import { createElement, use } from 'react';
+import { createElement, Fragment, use } from 'react';
 import type { EntryContext } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderNativeDocument } from '@/libs/ssr/renderNativeDocument';
 import { type NativeThemeOptions, resolveNativeTheme } from '@/styles/nativeTheme';
 import { neutralColors, primaryColors } from '@/styles/nativeThemeSwatches';
+import { useResolvedDocumentTheme } from '@/styles/resolvedThemeRoles';
+import { ThemeRoles } from '@/styles/themeRoles';
 
 import handleAuthRequest from '../../../apps/auth/app/entry.server';
 import handleShareRequest from '../../../apps/share/app/entry.server';
@@ -230,8 +232,14 @@ function ResolvedSDKThemeReceipt({
   return createElement('main', { 'data-resolved-sdk-theme': '' }, 'actual resolved SDK theme');
 }
 
+function OwnedThemeReceipt({ receive }: { receive: (theme: Record<string, unknown>) => void }) {
+  receive(Object.fromEntries(Object.entries(useResolvedDocumentTheme())));
+  return createElement('span', { 'data-owned-resolved-theme': '' }, 'owned resolved theme');
+}
+
 async function renderSDKThemeReceipt(options: NativeThemeOptions) {
   let resolved: Record<string, unknown> | undefined;
+  let owned: Record<string, unknown> | undefined;
   const html = await renderNativeDocument(
     createElement(
       'html',
@@ -265,6 +273,15 @@ async function renderSDKThemeReceipt(options: NativeThemeOptions) {
               resolved = value;
             },
           }),
+          createElement(
+            ThemeRoles,
+            null,
+            createElement(OwnedThemeReceipt, {
+              receive: (value) => {
+                owned = value;
+              },
+            }),
+          ),
         ),
       ),
     ),
@@ -276,6 +293,8 @@ async function renderSDKThemeReceipt(options: NativeThemeOptions) {
   expect(html).toContain('actual resolved SDK theme');
   expect(html).toContain('</body></html>');
   expect(resolved).toBeDefined();
+  expect(owned).toEqual(resolved);
+  expect(html).toContain('data-owned-resolved-theme');
   return resolved;
 }
 
@@ -284,7 +303,7 @@ describe('actual installed SDK resolved-theme parity before default semantic cut
   // The default palette names are not persisted UserPrimary/NeutralColor values.
   // Enumerate the actual persisted options without introducing invalid gray/primary values.
   for (const appearance of ['light', 'dark'] as const) {
-    it(`${appearance}: compares every one of 72 fields for the full legal primary/neutral matrix`, async () => {
+    it(`${appearance}: compares every one of 79 fields for the full legal primary/neutral matrix`, async () => {
       let cases = 0;
       for (const primaryColor of [
         undefined,
@@ -319,7 +338,7 @@ describe('actual installed SDK resolved-theme parity before default semantic cut
           const native = resolveNativeTheme(options);
           const actual = await renderSDKThemeReceipt(options);
           const keys = Object.keys(native);
-          expect(keys).toHaveLength(72);
+          expect(keys).toHaveLength(79);
           expect(native, JSON.stringify(options)).toEqual(
             Object.fromEntries(keys.map((key) => [key, actual?.[key]])),
           );
@@ -355,15 +374,34 @@ describe('native complete document SSR output', () => {
           createElement(
             'body',
             null,
-            createElement(
-              NativeThemeProvider,
-              { appearance: 'light', primaryColor, fontFamily, fontFamilyCode: 'Geist Mono' },
-              createElement(
-                'main',
-                { className: 'bg-background text-foreground' },
-                'Native content',
+            createElement(NativeThemeProvider, {
+              appearance: 'light',
+              primaryColor,
+              fontFamily,
+              fontFamilyCode: 'Geist Mono',
+              children: createElement(
+                Fragment,
+                null,
+                createElement(
+                  'main',
+                  { className: 'bg-background text-foreground' },
+                  'Native content',
+                ),
+                createElement(OwnedThemeReceipt, {
+                  receive: (theme) => {
+                    expect(theme.fontFamily).toBe(fontFamily);
+                    expect(theme.colorPrimary).toBe(
+                      resolveNativeTheme({
+                        appearance: 'light',
+                        primaryColor,
+                        fontFamily,
+                        fontFamilyCode: 'Geist Mono',
+                      }).colorPrimary,
+                    );
+                  },
+                }),
               ),
-            ),
+            }),
           ),
         ),
         (error) => {
@@ -387,6 +425,7 @@ describe('native complete document SSR output', () => {
       expect(html).toContain('--background: #f8f8f8');
       expect(html).toContain('--background: #000000');
       expect(html).toContain('data-orvilo-native-theme');
+      expect(html).toContain('data-owned-resolved-theme');
       expect(html).not.toContain('data-emotion=');
       expect(html).toContain('</body></html>');
     }

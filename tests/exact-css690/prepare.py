@@ -51,7 +51,9 @@ def main():
     shutil.copyfile(HERE/'source-manifest.json',out/'source-manifest.json')
     # Immutable source archive becomes the actual executable only in the
     # external prepared packet; normal repository formatting cannot rewrite it.
-    shutil.copyfile(out/'compiler.mjs.source',out/'run.mjs')
+    shutil.copyfile(out/'compiler-v2.mjs.source',out/'run.mjs')
+    for module in ['document-grammar.mjs','embedded-context.mjs','strict-lineage.mjs','lineage-fixtures.mjs','strict-site-identity.mjs','scoped-variable-proof.mjs']:
+        shutil.copyfile(out/(module+'.source'),out/module)
     # Explicit history refs are supplied; no machine-local evidence locators or
     # old PASS reports are required. The unchanged compiler expects a directory.
     (out/'evidence-locators').mkdir()

@@ -2,13 +2,28 @@
   "files": [
     {
       "file": "README.md",
-      "bytes": 5181,
-      "sha256": "bdc242ff2cfd3994beb32428b7d687f73ab3bd3901c2d3709c1aca4aa00a8b81"
+      "bytes": 10661,
+      "sha256": "92732ba2892f2d525fe7d4fdf2031a19cbebe6f433410804c91bf3d184c1407e"
+    },
+    {
+      "file": "compiler-v2.mjs.source",
+      "bytes": 58192,
+      "sha256": "e7593aaa0cd1875fcafd8b88b3904ff5417d45391c973806e5c0f971aab40f6f"
     },
     {
       "file": "compiler.mjs.source",
       "bytes": 51711,
       "sha256": "c6b551bb6143dae1a249b1134a0567cda92501e2f834f4ca9071e6ba7f512ab5"
+    },
+    {
+      "file": "document-grammar.mjs.source",
+      "bytes": 18583,
+      "sha256": "ac90bc40c0dc8354c30b21d6f805bd7c0009e9fb7eea2594090936563029925b"
+    },
+    {
+      "file": "embedded-context.mjs.source",
+      "bytes": 1979,
+      "sha256": "1a76f9dc13eeeecd4c3372a34977f5bca5c2d5f0ba5afcef9ae8b77752aff379"
     },
     {
       "file": "execute.py",
@@ -41,6 +56,11 @@
       "sha256": "3d6905d1c989d189f25b0788ebe65136b7345a33337441d00933340ae92a7826"
     },
     {
+      "file": "lineage-fixtures.mjs.source",
+      "bytes": 11881,
+      "sha256": "726fbbaf8f156f64d02f856bcd6ee92bbe13a990fe086c0d22e1d98542929b92"
+    },
+    {
       "file": "operational-portability.json",
       "bytes": 858,
       "sha256": "8c346f353b819deb4539a4c45d3bad861c9b8e0787049852a71f14de5dd7ffe9"
@@ -52,13 +72,33 @@
     },
     {
       "file": "prepare.py",
-      "bytes": 3810,
-      "sha256": "8e016ead4f54b92b36cd64efa08c9486eaa4dba172d0f77e2b49817876a4456d"
+      "bytes": 4038,
+      "sha256": "a94a95b185c9ee477819ba90b5c47857cb29235657b3fbf7abc919fca2e9c5ac"
+    },
+    {
+      "file": "prior-6c4d-ci-observation.json",
+      "bytes": 2606,
+      "sha256": "60691125ca79c845a0c65bee16a140a38d47777093f32ff5adfd651d3a8b435a"
+    },
+    {
+      "file": "scoped-variable-proof.mjs.source",
+      "bytes": 2572,
+      "sha256": "0c66523216e63f8cb11ad6b3a765b8d19e4bf6ef5dcc8cf1a1a982868cb12f78"
     },
     {
       "file": "source_pin_test.py",
-      "bytes": 1960,
-      "sha256": "2ff0d526006ee6429746d1317b5e85e3f0650b629beb06eae2cbb8c797aa942a"
+      "bytes": 2420,
+      "sha256": "42997c345275b285f02ed96b5f8788d41088d85e4b104d9335ec5cf7b5358cb2"
+    },
+    {
+      "file": "strict-lineage.mjs.source",
+      "bytes": 14681,
+      "sha256": "1cae27a9ef14ccea455a1e140fb5b64ce7c47ca6cb8264b09f151a69916fb595"
+    },
+    {
+      "file": "strict-site-identity.mjs.source",
+      "bytes": 3693,
+      "sha256": "22cc5aa3612834ee14d8f0bf79b11906274ef27f5417c8e97ef1929ff7f94cb6"
     },
     {
       "file": "upstream-guard.py",
@@ -66,7 +106,9 @@
       "sha256": "b3e3a639354af0faeca1e2f08fb7f634ec95f93546ea4da26aca17235e1ce8ac"
     }
   ],
+  "newParserAndLineageScopeRequiresIndependentReview": true,
   "oldWorkspacesCachesGitBundlesSecretsIncluded": false,
-  "schema": "self-contained-whole690-source-inputs-v1",
+  "originalCompilerAndGuardSnapshotsPreserved": true,
+  "schema": "self-contained-whole690-source-inputs-v2-review-fixed",
   "sourceOnly": true
 }

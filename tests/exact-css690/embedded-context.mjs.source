@@ -1,0 +1,35 @@
+/** Grammar contexts only; no source/owner filtering or acceptance decisions. */
+const javascriptTypes = new Set([
+  '', 'module', 'application/ecmascript', 'application/javascript',
+  'application/x-ecmascript', 'application/x-javascript', 'text/ecmascript',
+  'text/javascript', 'text/javascript1.0', 'text/javascript1.1',
+  'text/javascript1.2', 'text/javascript1.3', 'text/javascript1.4',
+  'text/javascript1.5', 'text/jscript', 'text/livescript',
+  'text/x-ecmascript', 'text/x-javascript',
+]);
+
+export function htmlScriptContext(type, code) {
+  const declaredType = String(type || '').trim().toLowerCase();
+  const mime = declaredType.split(';', 1)[0].trim();
+  const json = mime === 'application/json' || /^application\/[a-z0-9!#$&^_.+-]+\+json$/.test(mime) ||
+    declaredType === 'importmap' || declaredType === 'speculationrules';
+  if (json) {
+    let jsonError = null;
+    try { JSON.parse(code); } catch (error) { jsonError = String(error.message || error); }
+    return { declaredType, mime, kind: 'JSON_DATA_SCRIPT', source: '(' + code + ')',
+      prefixCharacters: 1, jsonError, unsupportedType: false };
+  }
+  return { declaredType, mime, kind: javascriptTypes.has(declaredType) || javascriptTypes.has(mime)
+    ? 'JAVASCRIPT_SCRIPT' : 'UNSUPPORTED_TYPED_SCRIPT', source: code, prefixCharacters: 0,
+    jsonError: null, unsupportedType: !(javascriptTypes.has(declaredType) || javascriptTypes.has(mime)) };
+}
+
+export function mdxExpressionContext(type, code) {
+  // Comments/empty expressions have no executable expression. Preserve the
+  // existing raw SourceFile audit, which does not invent an empty (...) error.
+  const onlyComments = /^(?:\s|\/\*[\s\S]*?\*\/)*$/.test(code);
+  const expression = type !== 'mdxjsEsm' && !onlyComments;
+  return { kind: type === 'mdxjsEsm' ? 'MDX_ESM_PROGRAM' : onlyComments
+    ? 'MDX_COMMENT_OR_EMPTY_EXPRESSION' : 'MDX_EXPRESSION',
+  source: expression ? '(' + code + ')' : code, prefixCharacters: expression ? 1 : 0 };
+}

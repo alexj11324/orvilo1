@@ -1,0 +1,38 @@
+/** Root-value substitution alone cannot prove a class under local/theme/media
+ * token overrides. Equal symbolic formulas are invariant; all other relevant
+ * alternate variable bindings remain an explicit HOLD. */
+export function scopedVariableHolds({ before, after, cssRoot, variables, invariantRecords, valueParser }) {
+  if (JSON.stringify(invariantRecords(before, 16, new Map())) === JSON.stringify(invariantRecords(after, 16, new Map()))) return [];
+  const dependencies = new Set();
+  const scan = (value) => valueParser(value).walk((node) => {
+    if (node.type !== 'function' || node.value !== 'var') return;
+    const name = valueParser.stringify(node.nodes).split(',')[0].trim();
+    if (!name.startsWith('--') || dependencies.has(name)) return;
+    dependencies.add(name);
+    if (variables.has(name)) scan(variables.get(name));
+  });
+  for (let index = 0; index < Math.max(before.length, after.length); index++) {
+    const left = before[index], right = after[index];
+    if (left && right && JSON.stringify(invariantRecords([left], 16, new Map())) === JSON.stringify(invariantRecords([right], 16, new Map()))) continue;
+    if (left) scan(left.value);
+    if (right) scan(right.value);
+  }
+  const holds = [];
+  cssRoot.walkDecls((declaration) => {
+    if (!dependencies.has(declaration.prop)) return;
+    const parents = [];
+    for (let parent = declaration.parent; parent && parent.type !== 'root'; parent = parent.parent) parents.push(parent);
+    const conditional = parents.some((parent) => parent.type === 'atrule' && parent.name !== 'layer');
+    const selectors = parents.filter((parent) => parent.type === 'rule').map((parent) => parent.selector);
+    const scoped = !selectors.length || !selectors.every((selector) => selector.split(',').every((part) => /^\s*:(?:root|host)\s*$/.test(part)));
+    const alternateRootValue = variables.has(declaration.prop) && declaration.value !== variables.get(declaration.prop);
+    if (conditional || scoped || alternateRootValue) holds.push({ kind: 'UNPROVED_ALTERNATE_TOKEN_EQUIVALENCE',
+      property: declaration.prop, value: declaration.value, conditional, scoped, alternateRootValue, selectors,
+      ancestry: parents.map((parent) => parent.type === 'rule' ? parent.selector : `@${parent.name} ${parent.params}`) });
+  });
+  cssRoot.walkAtRules('property', (registration) => {
+    if (dependencies.has(registration.params.trim())) holds.push({ kind: 'UNPROVED_PROPERTY_REGISTRATION_CONTEXT',
+      property: registration.params.trim(), registration: registration.toString() });
+  });
+  return holds;
+}

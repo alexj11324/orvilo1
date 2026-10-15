@@ -1,6 +1,5 @@
 'use client';
 
-import { ThemeContext } from '@emotion/react';
 import type { FileDiffOptions } from '@pierre/diffs';
 import { PatchDiff as PierrePatchDiff } from '@pierre/diffs/react';
 import { cn } from 'cn';
@@ -10,14 +9,13 @@ import {
   type CSSProperties,
   memo,
   type ReactNode,
-  use,
   useMemo,
   useState,
 } from 'react';
 
 import MaterialFileTypeIcon from '@/components/MaterialFileTypeIcon';
 import { Button } from '@/components/ui/button';
-import type { ResolvedDocumentTheme } from '@/styles/themeRoles';
+import { useResolvedDocumentTheme } from '@/styles/resolvedThemeRoles';
 
 import { countPatchChanges, patchDiffOptions, patchDisplayName } from './model';
 import { nativeDiffCSS, registerNativeDiffTheme } from './theme';
@@ -58,7 +56,7 @@ export const PatchDiff = memo(function PatchDiff({
   style,
   ...props
 }: PatchDiffProps) {
-  const theme = use(ThemeContext) as ResolvedDocumentTheme;
+  const theme = useResolvedDocumentTheme();
   const [expanded, setExpanded] = useState(defaultExpand);
   const displayName = useMemo(
     () => patchDisplayName(patch, fileName, language),

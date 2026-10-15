@@ -22,6 +22,10 @@ class ExactSourceTests(unittest.TestCase):
         self.assertEqual(digest(HERE/'compiler.mjs.source'),'c6b551bb6143dae1a249b1134a0567cda92501e2f834f4ca9071e6ba7f512ab5')
         self.assertEqual(digest(HERE/'upstream-guard.py'),'b3e3a639354af0faeca1e2f08fb7f634ec95f93546ea4da26aca17235e1ce8ac')
         self.assertEqual(strip_operational((HERE/'guard.py').read_text()),strip_operational((HERE/'upstream-guard.py').read_text()))
+    def test_v2_reuses_frozen_document_grammar_and_preserves_original_compiler(self):
+        self.assertNotEqual(digest(HERE/'compiler-v2.mjs.source'),digest(HERE/'compiler.mjs.source'))
+        self.assertEqual(digest(HERE/'document-grammar.mjs.source'),'ac90bc40c0dc8354c30b21d6f805bd7c0009e9fb7eea2594090936563029925b')
+        self.assertEqual(digest(HERE/'embedded-context.mjs.source'),'1a76f9dc13eeeecd4c3372a34977f5bca5c2d5f0ba5afcef9ae8b77752aff379')
     def test_all_frozen_inputs_preserved(self):
         for row in json.loads((HERE/'source-manifest.json').read_text())['files']:
             self.assertEqual(digest(HERE/row['file']),row['sha256'],row['file'])

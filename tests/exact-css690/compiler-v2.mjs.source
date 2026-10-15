@@ -1,0 +1,653 @@
+#!/usr/bin/env node
+// Source-only authored runner. Root executes with its serial memory/time/process guard.
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { readFile, writeFile, mkdir, readdir, stat, realpath } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { gzipSync } from 'node:zlib';
+import { htmlScriptContext } from './embedded-context.mjs';
+import { createDocumentGrammarAudit } from './document-grammar.mjs';
+import { proveStrictGitLineage } from './strict-lineage.mjs';
+import { runLineageFixtures } from './lineage-fixtures.mjs';
+import { scopedVariableHolds } from './scoped-variable-proof.mjs';
+import { uniqueHistoricalSlot, physicalSourceSiteId, hasUnprovedSourceSites, strictNodeContext, selectDirectCounterpart } from './strict-site-identity.mjs';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const args = process.argv.slice(2);
+const option = (name, fallback) => { const i = args.indexOf(name); return i < 0 ? fallback : args[i + 1]; };
+const root = path.resolve(option('--root', process.env.ORVILO_ROOT || '/workspace/orvilo1'));
+const out = path.resolve(option('--out', path.join(here, 'result')));
+assert.ok(!out.startsWith(root + path.sep) && out !== root, 'Evidence output must stay outside Root');
+await mkdir(out, { recursive: true });
+let actualPhase = 'initializing';
+const phase = (row) => { actualPhase = row.phase; console.error(JSON.stringify(row)); };
+let errorReceiptWriting = false;
+async function captureActualFailure(error) {
+  if (errorReceiptWriting) { console.error(String(error.stack || error)); process.exitCode = 2; return; }
+  errorReceiptWriting = true; process.exitCode = 2;
+  const artifacts = [];
+  for (const name of ['source-bindings.json', 'current-owned-ast-inventory.json', 'counterpart-obligations.json', 'counterpart-holds.json', 'proved-source-pairs.json', 'historical-whole-source-manifest.json', 'derived-compiler-input.css', 'whole-current-plus-before.css', 'actual-compiled-pairs.json']) {
+    try { const data = await readFile(path.join(out, name)); artifacts.push({ file: name, presence: true, bytes: data.length, sha256: createHash('sha256').update(data).digest('hex') }); }
+    catch (readError) { if (readError.code !== 'ENOENT') artifacts.push({ file: name, presence: 'READ_ERROR', error: String(readError) }); else artifacts.push({ file: name, presence: false }); }
+  }
+  const receipt = { status: 'HOLD', issue: 690, failedActualPhase: actualPhase,
+    error: { name: error.name || 'Error', message: String(error.message || error), stack: String(error.stack || error) },
+    actualPartialArtifacts: artifacts, noCompilerOrScopePassInferred: true,
+    sourceOnlySuccessorOf: '92d2f9880aee9a22b7c26910067457130020922cdc6193b9eb4719c9aa19006c' };
+  try { await writeFile(path.join(out, 'actual-failure.json'), JSON.stringify(receipt, null, 2) + '\n'); await writeFile(path.join(out, 'summary.json'), JSON.stringify(receipt, null, 2) + '\n'); }
+  catch (writeError) { console.error('Failed to persist actual HOLD receipt:', String(writeError)); }
+  console.error(JSON.stringify({ status: 'HOLD', phase: actualPhase, actualFailure: path.join(out, 'actual-failure.json'), error: receipt.error.message }));
+}
+process.on('uncaughtException', (error) => { void captureActualFailure(error); });
+process.on('unhandledRejection', (error) => { void captureActualFailure(error instanceof Error ? error : new Error(String(error))); });
+const auditOnly = args.includes('--audit-only');
+const baseline = option('--baseline', '70012596a5e5778f344a115062f7753ad407b12d');
+const requireRoot = createRequire(path.join(root, 'package.json'));
+const ts = requireRoot('typescript');
+const postcss = requireRoot('postcss');
+const selectorParser = requireRoot('postcss-selector-parser');
+const valueParser = requireRoot('postcss-value-parser');
+const tw = requireRoot('@tailwindcss/postcss');
+const sha = (data) => createHash('sha256').update(data).digest('hex');
+const git = (argv, options = {}) => execFileSync('git', argv, { cwd: root, maxBuffer: 512 * 1024 * 1024, ...options });
+const gitText = (argv) => git(argv, { encoding: 'utf8' }).trim();
+const initialHead = gitText(['rev-parse', 'HEAD']);
+const initialTree = gitText(['rev-parse', 'HEAD^{tree}']);
+assert.equal(gitText(['status', '--porcelain', '--untracked-files=normal']), '', 'Commit the source candidate before this bound proof');
+assert.equal(gitText(['rev-parse', '--verify', `${baseline}^{commit}`]), baseline, 'Baseline must be an exact locally available commit');
+const scriptHash = sha(await readFile(fileURLToPath(import.meta.url)));
+const parserIdentity = [];
+async function extraParser(name, prefix) {
+  const entries = (await readdir(path.join(root, 'node_modules/.pnpm'))).filter((entry) => entry.startsWith(prefix));
+  assert.equal(entries.length, 1, `Installed ${name} parser resolution is ambiguous or missing`);
+  const directory = path.join(root, 'node_modules/.pnpm', entries[0], 'node_modules', ...name.split('/'));
+  const packageFile = path.join(directory, 'package.json'); const data = await readFile(packageFile); const metadata = JSON.parse(data);
+  assert.equal(metadata.name, name); const entry = createRequire(packageFile).resolve(directory);
+  parserIdentity.push({ name, version: metadata.version, package: packageFile, packageSHA256: sha(data), entry, entrySHA256: sha(await readFile(entry)) });
+  return import(pathToFileURL(entry));
+}
+const htmlParser = await extraParser('parse5', 'parse5@');
+const mdxParser = await extraParser('@mdx-js/mdx', '@mdx-js+mdx@');
+const sourceHashes = [];
+const historySnapshots = new Map();
+await mkdir(path.join(out, 'historical-whole-source'), { recursive: true });
+async function saveHistorical(data, ref, file, blob, gitMode) {
+  const hash = sha(data); let row = historySnapshots.get(hash);
+  if (!row) { const compressed = gzipSync(data); const name = `historical-whole-source/${hash}.source.gz`; await writeFile(path.join(out, name), compressed); row = { file: name, originalSHA256: hash, originalBytes: data.length, gzipSHA256: sha(compressed), gzipBytes: compressed.length, origins: [] }; historySnapshots.set(hash, row); }
+  row.origins.push({ ref, path: file, blob, gitMode }); return row.file;
+}
+const parseHolds = [];
+let extractionPhase = { phase: 'current', ref: initialHead };
+const omittedParserKinds = [];
+const current = new Map();
+const inventory = [];
+
+// Version2 reads real committed grammar contexts; original snapshots stay intact.
+const embeddedGrammarContexts = [];
+const documentSourceCache = new Map();
+function readDocumentSource(ref, file) {
+  const key = ref + ':' + file;
+  if (documentSourceCache.has(key)) return documentSourceCache.get(key);
+  const entry = git(['ls-tree', '-z', ref, '--', file]).toString().split('\0').filter(Boolean);
+  if (entry.length !== 1) { documentSourceCache.set(key, null); return null; }
+  const tab = entry[0].indexOf('\t'); const [gitMode, kind, blob] = entry[0].slice(0, tab).split(' ');
+  if (kind !== 'blob') return null;
+  const bytes = git(['cat-file', 'blob', blob]);
+  const record = { text: bytes.toString(), gitMode, blob, sha256: sha(bytes), bytes: bytes.length };
+  documentSourceCache.set(key, record); return record;
+}
+const documentGrammarAudit = createDocumentGrammarAudit({ ts, mdxParser, sha,
+  readGitSource: readDocumentSource,
+  evidence: { consumerEntrypoints: ['src/libs/document-loaders/loaders/markdown/__tests__/index.test.ts'] } });
+
+// Exact rational arithmetic; no floating point or rounded CSS values are used for equality.
+const gcd = (a, b) => { a = a < 0n ? -a : a; b = b < 0n ? -b : b; while (b) [a, b] = [b, a % b]; return a || 1n; };
+const rational = (n, d = 1n) => { if (d < 0n) [n, d] = [-n, -d]; const g = gcd(n, d); return { n: n / g, d: d / g }; };
+const number = (text) => {
+  const match = /^([+-]?)(?:(\d+)(?:\.(\d+))?|\.(\d+))$/.exec(text);
+  if (!match) throw new Error(`Not an exact finite decimal: ${text}`);
+  const digits = match[3] || match[4] || ''; const d = 10n ** BigInt(digits.length);
+  return rational((match[1] === '-' ? -1n : 1n) * BigInt((match[2] || '0') + digits), d);
+};
+const multiply = (a, b) => rational(a.n * b.n, a.d * b.d);
+const decimal = (r) => {
+  const negative = r.n < 0n; let n = negative ? -r.n : r.n;
+  const whole = n / r.d; n %= r.d;
+  let tail = ''; const seen = new Set();
+  while (n) { assert.ok(!seen.has(n.toString()), 'Non-terminating decimal cannot become a numeric scale class'); seen.add(n.toString()); n *= 10n; tail += (n / r.d).toString(); n %= r.d; }
+  return `${negative ? '-' : ''}${whole}${tail ? '.' + tail : ''}`;
+};
+const fraction = (r) => `${r.n}/${r.d}`;
+const splitClasses = (text) => {
+  const result = []; let start = 0, brackets = 0, parentheses = 0, escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (escaped) { escaped = false; continue; } if (ch === '\\') { escaped = true; continue; }
+    if (ch === '[') brackets++; else if (ch === ']') brackets--; else if (ch === '(') parentheses++; else if (ch === ')') parentheses--;
+    if (/\s/.test(ch) && brackets === 0 && parentheses === 0) { if (i > start) result.push(text.slice(start, i)); start = i + 1; }
+  }
+  if (start < text.length) result.push(text.slice(start));
+  return result.filter(Boolean);
+};
+const classParts = (token) => {
+  let last = -1, bracket = 0, parentheses = 0, escape = false;
+  for (let i = 0; i < token.length; i++) {
+    const ch = token[i]; if (escape) { escape = false; continue; } if (ch === '\\') { escape = true; continue; }
+    if (ch === '[') bracket++; else if (ch === ']') bracket--; else if (ch === '(') parentheses++; else if (ch === ')') parentheses--;
+    if (ch === ':' && !bracket && !parentheses) last = i;
+  }
+  const variant = token.slice(0, last + 1); let base = token.slice(last + 1);
+  const startImportant = base.startsWith('!'); const endImportant = base.endsWith('!');
+  if (startImportant) base = base.slice(1); if (endImportant) base = base.slice(0, -1);
+  const negative = base.startsWith('-'); if (negative) base = base.slice(1);
+  return { variant, base, negative, startImportant, endImportant };
+};
+const scaleUtilities = new Set('h w size min-w max-w min-h max-h p px py pt pb pl pr ps pe pbs pbe m mx my mt mb ml mr ms me mbs mbe gap gap-x gap-y top bottom left right start end inset inset-x inset-y inset-s inset-e inset-bs inset-be basis space-x space-y translate-x translate-y translate-z translate leading'.split(' '));
+const fullUtilities = new Set('h w size min-w max-w min-h max-h'.split(' '));
+function classify(token) {
+  const parts = classParts(token); const { base } = parts;
+  let modifier = '';
+  const format = (utility, value, neg = parts.negative) => `${parts.variant}${parts.startImportant ? '!' : ''}${neg ? '-' : ''}${utility}-${value}${modifier}${parts.endImportant ? '!' : ''}`;
+  const prefix = /^([a-z][\w-]*)-\[/.exec(base);
+  let arbitrary = null;
+  if (prefix) {
+    let depth = 1, escaped = false, end = -1;
+    for (let i = prefix[0].length; i < base.length; i++) {
+      if (escaped) { escaped = false; continue; } if (base[i] === '\\') { escaped = true; continue; }
+      if (base[i] === '[') depth++; if (base[i] === ']' && --depth === 0) { end = i; break; }
+    }
+    if (end >= 0 && (!base.slice(end + 1) || base[end + 1] === '/')) arbitrary = [base, prefix[1], base.slice(prefix[0].length, end), base.slice(end + 1)];
+  }
+  if (!arbitrary) {
+    if (/^[a-z][\w-]*-\[/.test(base)) return { kind: 'DYNAMIC_OR_MALFORMED', token, reason: 'Incomplete arbitrary utility in a literal/template fragment; no finite static counterpart' };
+    return null;
+  }
+  const [, utility, value] = arbitrary; modifier = arbitrary[3] || '';
+  const plainValue = value.replace(/^(?:length|number|percentage):/, '');
+  const pixel = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+))px$/.exec(plainValue);
+  if (pixel && scaleUtilities.has(utility)) {
+    let px = number(pixel[1]); if (parts.negative) px = rational(-px.n, px.d);
+    const positive = rational(px.n < 0n ? -px.n : px.n, px.d);
+    const q = multiply(positive, rational(1n, 4n));
+    const scale = positive.n === positive.d ? 'px' : decimal(q);
+    return { kind: 'PX_SCALE', utility, token, candidates: [format(utility, scale, px.n < 0n)], exactPixel: fraction(px), exactScale: fraction(q), unit: 'px', offRhythm: positive.n % (2n * positive.d) !== 0n, typography: utility === 'leading' };
+  }
+  if (plainValue === '100%' && fullUtilities.has(utility)) return { kind: 'FULL', token, candidates: [format(utility, 'full')], exactFraction: '1/1', unit: '%' };
+  if (utility === 'z' && /^-?\d+$/.test(plainValue)) { const signed = number(plainValue); const n = parts.negative ? rational(-signed.n, signed.d) : signed; return { kind: 'Z_INTEGER', token, candidates: [format('z', decimal(rational(n.n < 0n ? -n.n : n.n, n.d)), n.n < 0n)], exactInteger: fraction(n), unit: 'number' }; }
+  if (utility === 'ring' && pixel) { const px = number(pixel[1]); if (parts.negative || px.n < 0n) return { kind: 'HOLD_NO_VALID_NEGATIVE_RING', token }; return { kind: 'RING_PIXEL', token, candidates: [format('ring', decimal(px), false)], exactPixel: fraction(px), unit: 'px' }; }
+  if (utility === 'text' && plainValue === '13px') return { kind: 'DENSE_FONT', token, candidates: [format('text', '(length:--text-dense)')], exactPixel: '13/1', unit: 'px', typography: true };
+  if (utility === 'rounded' && pixel) {
+    const roles = { '4px': ['chip'], '6px': ['input'], '8px': ['button', 'card'], '12px': ['overlay'] }[decimal(number(pixel[1])) + 'px'];
+    if (roles) return { kind: 'SHAPE_ROLE', token, candidates: roles.map((role) => format('rounded', `(--radius-${role})`)), exactPixel: fraction(number(pixel[1])), unit: 'px', roleChoiceNeeds692: true };
+  }
+  if (scaleUtilities.has(utility) && /^[-+0-9.eE]+px$/.test(plainValue) && !pixel) return { kind: 'HOLD_UNPARSED_EXACT_CSS_NUMBER', token, reason: 'CSS numeric grammar is not parsed by this finite exact-rational implementation; extend parser without rounding before completion' };
+  const variable = /^(?:(length|color|number|percentage|angle):)?var\((--[^()]+(?:\([^()]*\)[^()]*)?)\)$/.exec(value);
+  if (variable) return { kind: 'VAR_SHORTHAND', token, candidates: [format(utility, `(${variable[1] ? variable[1] + ':' : ''}${variable[2]})`)], variableExpression: value, unit: 'symbolic' };
+  return { kind: 'OUTSIDE_EXACT_690_REWRITES', token, reason: 'Issue explicitly leaves calc/min/max/clamp/viewport/em/rem/inherit/unitless line-height/grid/shadows/other percentages/non13 fonts or unassigned shape purposes for their owner' };
+}
+
+function named(node) {
+  if (ts.isVariableDeclaration(node)) return `Variable:${node.name.getText()}`;
+  if (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node) || ts.isMethodDeclaration(node)) return `${ts.SyntaxKind[node.kind]}:${node.name?.getText() || '<anonymous>'}`;
+  if (ts.isPropertyAssignment(node) || ts.isPropertyDeclaration(node)) return `Property:${node.name.getText()}`;
+  if (ts.isJsxAttribute(node)) return `Attribute:${node.name.getText()}`;
+  return null;
+}
+function tsSlots(file, text) {
+  const scriptKind = /\.[cm]?jsx?$/.test(file) ? (/jsx$/.test(file) ? ts.ScriptKind.JSX : ts.ScriptKind.JS) : (/tsx$/.test(file) ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, scriptKind);
+  const slots = [];
+  if (source.parseDiagnostics.length) parseHolds.push({ file, ...extractionPhase, kind: 'TS_PARSE_DIAGNOSTICS', diagnostics: source.parseDiagnostics.map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n')) });
+  function visit(node, address, anchors) {
+    const label = named(node); const nextAnchors = label ? [...anchors, label] : anchors;
+    const nextAddress = label ? [] : address;
+    if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) || node.kind === ts.SyntaxKind.TemplateHead || node.kind === ts.SyntaxKind.TemplateMiddle || node.kind === ts.SyntaxKind.TemplateTail) {
+      const classes = splitClasses(node.text); const classes690 = classes.map(classify);
+      if (!file.endsWith('.json.ts') || classes690.some(Boolean) || classes.some((token) => /^[a-z][\w-]*-/.test(classParts(token).base))) {
+        const location = source.getLineAndCharacterOfPosition(node.getStart(source));
+        slots.push({ slot: JSON.stringify([...nextAnchors, ...nextAddress, ts.SyntaxKind[node.kind]]), kind: ts.SyntaxKind[node.kind], line: location.line + 1, column: location.character + 1,
+          strictContext: strictNodeContext(ts, source, node), start: node.getStart(source), end: node.end, literalSource: node.getText(source), value: node.text, classes, classifications: classes690 });
+      }
+    }
+    const children = []; ts.forEachChild(node, (child) => { children.push(child); }); const count = new Map();
+    for (const child of children) { const k = ts.SyntaxKind[child.kind]; const ordinal = count.get(k) || 0; count.set(k, ordinal + 1); visit(child, [...nextAddress, `${k}#${ordinal}`], nextAnchors); }
+  }
+  visit(source, [], []);
+  return slots;
+}
+function cssSlots(file, text) {
+  const slots = []; let ast;
+  try { ast = postcss.parse(text, { from: file }); } catch (error) { parseHolds.push({ file, ...extractionPhase, kind: 'CSS_PARSE_ERROR', error: String(error) }); return slots; }
+  const counts = new Map();
+  ast.walkAtRules('apply', (node) => {
+    const ancestry = []; for (let p = node.parent; p && p.type !== 'root'; p = p.parent) ancestry.unshift(p.type === 'rule' ? `rule:${p.selector}` : `at:${p.name}:${p.params}`);
+    const key = JSON.stringify(ancestry); const ordinal = counts.get(key) || 0; counts.set(key, ordinal + 1);
+    const classes = splitClasses(node.params); const classifications = classes.map(classify);
+    slots.push({ slot: JSON.stringify([...ancestry, `apply#${ordinal}`]), kind: 'CSS_APPLY', line: node.source.start.line, column: node.source.start.column, literalSource: node.toString(), value: node.params, classes, classifications });
+  });
+  return slots;
+}
+function htmlSlots(file, text) {
+  const slots = []; const parse = htmlParser.parse || htmlParser.default?.parse;
+  const document = parse(text, { sourceCodeLocationInfo: true });
+  function visit(node, address) {
+    for (const attr of node.attrs || []) if (attr.name === 'class' || attr.name === 'classname') {
+      const location = node.sourceCodeLocation?.attrs?.[attr.name];
+      const classes = splitClasses(attr.value);
+      slots.push({ slot: JSON.stringify([...address, `attribute:${attr.name}`]), kind: 'HTML_CLASS_ATTRIBUTE', line: location?.startLine || 0, column: location?.startCol || 0,
+        value: attr.value, literalSource: location ? text.slice(location.startOffset, location.endOffset) : attr.value, classes, classifications: classes.map(classify) });
+    }
+    if (node.tagName === 'script') {
+      const code = (node.childNodes || []).map((child) => child.value || '').join('');
+      const type = (node.attrs || []).find((attr) => attr.name === 'type')?.value || '';
+      const context = htmlScriptContext(type, code);
+      if (context.jsonError || context.unsupportedType) parseHolds.push({ file, ...extractionPhase, kind: 'HOLD_TYPED_SCRIPT_CONTEXT', context });
+      const originalStart = parseHolds.length;
+      const originalSlots = tsSlots(file + '.js', code);
+      const originalSyntheticDiagnostics = parseHolds.splice(originalStart);
+      const rawProgram = ts.createSourceFile(file + '.js', code, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+      const originalProgramPositionDiagnostics = rawProgram.parseDiagnostics.map((diagnostic) => ({
+        code: diagnostic.code, offsetUtf16: diagnostic.start ?? null, lengthUtf16: diagnostic.length ?? null,
+        message: ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n') }));
+      let retained;
+      if (context.kind === 'JSON_DATA_SCRIPT' && !context.jsonError) retained = tsSlots(file + '.js', context.source);
+      else { retained = originalSlots; parseHolds.push(...originalSyntheticDiagnostics); }
+      embeddedGrammarContexts.push({ file, ...extractionPhase, address, ...context,
+        wholeRawBody: code, rawSHA256: sha(code), wholeOwnerSHA256: sha(text), scriptLocation: node.sourceCodeLocation,
+        parserSourceSHA256: sha(context.source), originalSlots, originalSyntheticDiagnostics,
+        originalProgramPositionDiagnostics, retainedSlots: retained });
+      for (const slot of retained) slots.push({ ...slot, slot: JSON.stringify([...address, 'inline-script', slot.slot]) });
+    }
+    const counts = new Map();
+    for (const child of node.childNodes || []) { const tag = child.tagName || child.nodeName; const ordinal = counts.get(tag) || 0; counts.set(tag, ordinal + 1); visit(child, [...address, `${tag}#${ordinal}`]); }
+    if (node.content) visit(node.content, [...address, 'template-content']);
+  }
+  visit(document, []); return slots;
+}
+function mdxSlots(file, text) {
+  const slots = []; let document;
+  try { document = mdxParser.createProcessor({ format: 'mdx' }).parse(text); } catch (error) { parseHolds.push({ file, ...extractionPhase, kind: 'MDX_PARSE_ERROR', error: String(error) }); return slots; }
+  function visit(node, address) {
+    for (const attr of node.attributes || []) if (attr.name === 'className' || attr.name === 'class') {
+      if (typeof attr.value === 'string') { const classes = splitClasses(attr.value); slots.push({ slot: JSON.stringify([...address, `attribute:${attr.name}`]), kind: 'MDX_CLASS_ATTRIBUTE', line: node.position?.start?.line || 0, column: node.position?.start?.column || 0, value: attr.value, literalSource: attr.value, classes, classifications: classes.map(classify) }); }
+      else if (attr.value?.value) for (const slot of tsSlots(file + '.tsx', '(' + attr.value.value + ')')) slots.push({ ...slot, slot: JSON.stringify([...address, `attribute:${attr.name}`, slot.slot]) });
+    }
+    if (['mdxjsEsm', 'mdxFlowExpression', 'mdxTextExpression'].includes(node.type) && typeof node.value === 'string') for (const slot of tsSlots(file + '.tsx', node.value)) slots.push({ ...slot, slot: JSON.stringify([...address, node.type, slot.slot]) });
+    if (node.type === 'html') for (const slot of htmlSlots(file, node.value)) slots.push({ ...slot, slot: JSON.stringify([...address, 'html-fragment', slot.slot]) });
+    if (node.type === 'code' && /^(?:[cm]?[jt]sx?|javascript|typescript|html|css)$/.test(node.lang || '')) {
+      const extension = ['javascript', 'typescript'].includes(node.lang) ? node.lang === 'javascript' ? 'js' : 'ts' : node.lang;
+      const start = parseHolds.length;
+      const retained = extract(file + '.' + extension, node.value);
+      const diagnostics = parseHolds.slice(start);
+      const proof = documentGrammarAudit.fence({ file, text, node, address, phase: extractionPhase,
+        syntheticDiagnostics: diagnostics, retainedSlots: retained });
+      // Only actual public AST/closed text-consumer proof distinguishes
+      // documentary literal code. Every original diagnostic and slot survives.
+      if (proof.provedDocumentaryLiteral) parseHolds.splice(start, diagnostics.length);
+      // Valid original programs keep their original gate behavior; unknown
+      // literal/dedent contexts remain in the separate exhaustive audit. They
+      // cannot discharge an actual synthetic parse error without strict proof.
+      if (diagnostics.length && proof.hold) parseHolds.push(proof.hold);
+      if (diagnostics.length && proof.mappingHold) parseHolds.push(proof.mappingHold);
+      for (const slot of retained) slots.push({ ...slot, slot: JSON.stringify([...address, 'code-fixture', slot.slot]) });
+    }
+    const counts = new Map(); for (const child of node.children || []) { const kind = child.type + ':' + (child.name || ''); const ordinal = counts.get(kind) || 0; counts.set(kind, ordinal + 1); visit(child, [...address, `${kind}#${ordinal}`]); }
+  }
+  visit(document, []); return slots;
+}
+const codeExtension = /\.(?:[cm]?[jt]sx?|css|html?|mdx|svg|json)$/;
+const supported = codeExtension;
+const extract = (file, text) => file.endsWith('.css') ? cssSlots(file, text) : /\.(?:html?|svg)$/.test(file) ? htmlSlots(file, text) : file.endsWith('.mdx') ? mdxSlots(file, text) : file.endsWith('.json') ? tsSlots(file + '.ts', '(' + text + ')') : tsSlots(file, text);
+const sourceKinds = new Map();
+const allFiles = [...new Set(git(['ls-files', '-z', '--cached', '--others', '--exclude-standard', '--', 'src', 'packages', 'apps']).toString().split('\0').filter(Boolean))].sort();
+for (const file of allFiles) {
+  const data = await readFile(path.join(root, file)); const info = await stat(path.join(root, file));
+  sourceHashes.push({ file, sha256: sha(data), bytes: data.length, nativeMode: info.mode & 0o777 });
+  sourceKinds.set(path.extname(file), (sourceKinds.get(path.extname(file)) || 0) + 1);
+  if (!codeExtension.test(file)) {
+    if (/(?:^|[\s'\"`])(?:[a-z]+:)*-?(?:h|w|size|min-w|max-w|min-h|max-h|p[xytrbles]*|m[xytrbles]*|gap(?:-[xy])?|top|bottom|left|right|inset(?:-[xy])?|basis|space-[xy]|translate-[xy]|leading|z|ring|text|rounded)-\[/.test(data.toString('utf8'))) omittedParserKinds.push({ file, reason: 'Unparsed source/data kind contains class-like utility material: must obtain an installed AST counterpart before whole-scope completion' });
+    continue;
+  }
+  if (!supported.test(file)) { omittedParserKinds.push({ file, reason: 'No installed AST parser is applied to this executable source kind; must be audited before whole-scope completion' }); continue; }
+  const slots = extract(file, data.toString()); current.set(file, slots);
+  for (const slot of slots) for (let index = 0; index < slot.classes.length; index++) if (slot.classifications[index]) inventory.push({ file, slot: slot.slot, line: slot.line, column: slot.column, tokenIndex: index, fullLiteral: slot.value, ...slot.classifications[index] });
+}
+phase({ phase: 'current-owned-ast-audit-complete', head: initialHead, files: sourceHashes.length, ASTFiles: current.size, arbitraryTokens: inventory.length });
+await writeFile(path.join(out, 'current-owned-ast-inventory.json'), JSON.stringify(inventory, null, 2) + '\n');
+await writeFile(path.join(out, 'source-bindings.json'), JSON.stringify({ initialHead, initialTree, scriptHash, files: sourceHashes }, null, 2) + '\n');
+
+// History JSON is a locator for immutable Git objects, never a historical PASS receipt.
+const historyRefs = new Set([baseline]);
+const evidenceRoot = option('--historical-evidence', '/workspace/orvilo-evidence');
+for (const entry of await readdir(evidenceRoot, { withFileTypes: true })) {
+  if (!entry.isDirectory() || !/^690-/.test(entry.name)) continue;
+  const locator = path.join(evidenceRoot, entry.name, 'batch.json');
+  try { const row = JSON.parse(await readFile(locator, 'utf8')); if (/^[a-f0-9]{40}$/.test(row.sha || '') && /^refactor\/tailwind-exact-/.test(row.branch || '')) historyRefs.add(row.sha); } catch {}
+}
+try {
+  const index = JSON.parse(await readFile(path.join(evidenceRoot, 'INTEGRATION-MISSING-690-INDEX.json'), 'utf8'));
+  for (const row of index.additional690Rows || []) if (/^[a-f0-9]{40}$/.test(row.sha || '')) historyRefs.add(row.sha);
+} catch {}
+for (let i = 0; i < args.length; i++) if (args[i] === '--history-ref') historyRefs.add(args[i + 1]);
+const historyHolds = [];
+const targets = [];
+for (const ref of historyRefs) {
+  try {
+    const exact = gitText(['rev-parse', '--verify', `${ref}^{commit}`]);
+    if (exact === baseline) targets.push({ before: baseline, after: null, files: null });
+    else { const before = gitText(['rev-parse', `${exact}^1`]); const files = git(['diff', '--name-only', '-z', before, exact, '--', 'src', 'packages', 'apps']).toString().split('\0').filter((file) => supported.test(file)); targets.push({ before, after: exact, files }); }
+  } catch (error) { historyHolds.push({ ref, reason: 'Historical commit/parent is unavailable, cannot restore source counterpart', error: String(error.message).split('\n')[0] }); }
+}
+const blobCache = new Map();
+function tree(ref) {
+  const rows = git(['ls-tree', '-r', '-z', ref, '--', 'src', 'packages', 'apps']).toString().split('\0').filter(Boolean).map((line) => { const tab = line.indexOf('\t'); const [mode, type, blob] = line.slice(0, tab).split(' '); return { mode, type, blob, file: line.slice(tab + 1) }; }).filter((row) => row.type === 'blob' && supported.test(row.file));
+  return new Map(rows.map((row) => [row.file, row]));
+}
+function loadBlobs(blobs) {
+  const missing = [...new Set(blobs)].filter((id) => !blobCache.has(id)); if (!missing.length) return;
+  // git cat-file's binary batch framing, exact byte lengths (not newline/string heuristics).
+  const data = git(['cat-file', '--batch'], { input: missing.join('\n') + '\n' }); let offset = 0;
+  for (const expected of missing) {
+    const end = data.indexOf(10, offset); assert.ok(end >= 0); const [id, type, size] = data.subarray(offset, end).toString().split(' '); assert.equal(id, expected); assert.equal(type, 'blob'); const length = Number(size);
+    const source = data.subarray(end + 1, end + 1 + length); assert.equal(source.length, length); blobCache.set(id, source); offset = end + 1 + length + 1;
+  }
+  assert.equal(offset, data.length);
+}
+const pairs = new Map();
+const obligations = new Map();
+const canonical = (slot, nextClasses) => slot.classes.length === nextClasses.length && slot.classes.every((token, i) => {
+  const rule = slot.classifications[i]; return token === nextClasses[i] || Boolean(rule?.candidates?.includes(nextClasses[i]));
+});
+const uniqueSlot = (slots, key) => { const matches = (slots || []).filter((slot) => slot.slot === key); return matches.length === 1 ? matches[0] : null; };
+for (const target of targets) {
+  const oldTree = tree(target.before); const nextTree = target.after ? tree(target.after) : null;
+  const selected = (target.files || [...oldTree.keys()]).filter((file) => oldTree.has(file));
+  loadBlobs(selected.map((file) => oldTree.get(file).blob));
+  if (nextTree) loadBlobs(selected.filter((file) => nextTree.has(file)).map((file) => nextTree.get(file).blob));
+  for (const file of selected) {
+    const entry = oldTree.get(file); const original = blobCache.get(entry.blob);
+    extractionPhase = { phase: 'historical-before', ref: target.before, blob: entry.blob }; const oldSlots = extract(file, original.toString());
+    const intermediateEntry = nextTree?.get(file);
+    extractionPhase = { phase: 'historical-after', ref: target.after, blob: intermediateEntry?.blob }; const intermediateSlots = intermediateEntry ? extract(file, blobCache.get(intermediateEntry.blob).toString()) : null;
+    if (oldSlots.some((slot) => slot.classifications.some((rule) => rule?.candidates))) await saveHistorical(original, target.before, file, entry.blob, entry.mode);
+    for (const oldSlot of oldSlots) for (let i = 0; i < oldSlot.classes.length; i++) {
+      const rule = oldSlot.classifications[i]; if (!rule?.candidates) continue;
+      const id = JSON.stringify([file, oldSlot.slot, i, rule.token]);
+      const obligation = obligations.get(id) || { id, file, astSlot: oldSlot.slot, tokenIndex: i, beforeClass: rule.token, origins: [], provedBy: [] };
+      obligation.origins.push({ ref: target.before, blob: entry.blob, sha256: sha(original), line: oldSlot.line, fullLiteral: oldSlot.value }); obligations.set(id, obligation);
+      const sourceSiteId = physicalSourceSiteId(file, target.before, entry.blob, oldSlot, i);
+      obligation.sourceSites ||= [];
+      if (!obligation.sourceSites.some((site) => site.id === sourceSiteId)) obligation.sourceSites.push({
+        id: sourceSiteId, ref: target.before, blob: entry.blob, astSlot: oldSlot.slot,
+        start: oldSlot.start ?? null, end: oldSlot.end ?? null, line: oldSlot.line,
+        column: oldSlot.column, fullLiteral: oldSlot.value, tokenIndex: i });
+      const direct = selectDirectCounterpart({ oldSlots, oldSlot, currentSlots: current.get(file),
+        intermediateSlots, hasIntermediate: Boolean(target.after), canonical });
+      if (!direct) continue;
+      const { now, intermediate } = direct;
+      if (intermediate) await saveHistorical(blobCache.get(intermediateEntry.blob), target.after, file, intermediateEntry.blob, intermediateEntry.mode);
+      const next = now.classes[i];
+      if (!rule.candidates.includes(next)) continue;
+      const currentHash = sourceHashes.find((row) => row.file === file).sha256;
+      const key = JSON.stringify([rule.token, next]);
+      const pair = pairs.get(key) || { id: sha(key), beforeClass: rule.token, currentClass: next, classification: rule, sites: [] };
+      const site = { file, astSlot: oldSlot.slot, tokenIndex: i, before: { ref: target.before, blob: entry.blob, sha256: sha(original), line: oldSlot.line, column: oldSlot.column, fullLiteral: oldSlot.value, literalSource: oldSlot.literalSource },
+        intermediate: intermediate ? { ref: target.after, blob: intermediateEntry.blob, sha256: sha(blobCache.get(intermediateEntry.blob)), line: intermediate.line, fullLiteral: intermediate.value } : null,
+        current: { head: initialHead, sha256: currentHash, line: now.line, column: now.column, fullLiteral: now.value, literalSource: now.literalSource }, beforeFullClasses: oldSlot.classes, currentFullClasses: now.classes };
+      pair.sites.push(site); pairs.set(key, pair); obligation.provedBy.push({ pairId: pair.id, beforeRef: target.before, afterRef: target.after, currentHead: initialHead, sourceSiteId });
+    }
+  }
+}
+const lineageFixtureReport = await runLineageFixtures({ out, ts, sha, canonical, postcss, valueParser, invariantRecords, compiledRecords,
+  extractAt: (file, text, phase) => {
+    const previous = extractionPhase; extractionPhase = phase;
+    try { return tsSlots(file, text); } finally { extractionPhase = previous; }
+  } });
+await writeFile(path.join(out, 'strict-lineage-fixtures-v2.json'), JSON.stringify(lineageFixtureReport, null, 2) + '\n');
+phase({ phase: 'strict-git-ast-lineage-v2-start', originalObligations: obligations.size });
+const lineage = await proveStrictGitLineage({ git, sha, ts, canonical, obligations, current,
+  initialHead, baseline, pairs, sourceHashes, saveHistorical,
+  extractAt: (file, text, phase) => {
+    const previous = extractionPhase; extractionPhase = phase;
+    try { return extract(file, text); } finally { extractionPhase = previous; }
+  } });
+await writeFile(path.join(out, 'strict-git-ast-lineage-v2.json'), JSON.stringify(lineage, null, 2) + '\n');
+await writeFile(path.join(out, 'embedded-document-grammar-v2.json'), JSON.stringify({
+  documents: documentGrammarAudit.documents, consumerContexts: documentGrammarAudit.consumerContexts,
+  typedHtmlScriptContexts: embeddedGrammarContexts, fullOriginalDiagnosticsRetained: true,
+  everyOriginalExtractedClassSlotRetained: true, independentAcceptance: false }, null, 2) + '\n');
+phase({ phase: 'historical-git-counterparts-complete', obligations: obligations.size, sourcePairs: pairs.size });
+const counterpartHolds = [...obligations.values()].filter(hasUnprovedSourceSites).map((row) => ({ ...row, status: 'HOLD', reason: 'No unique same AST slot plus exact full-class token order/non-target context and actual historical after/current counterpart; no fuzzy same-value matching or guessed mapping' }));
+await writeFile(path.join(out, 'counterpart-obligations.json'), JSON.stringify([...obligations.values()], null, 2) + '\n');
+await writeFile(path.join(out, 'counterpart-holds.json'), JSON.stringify(counterpartHolds, null, 2) + '\n');
+await writeFile(path.join(out, 'historical-whole-source-manifest.json'), JSON.stringify([...historySnapshots.values()], null, 2) + '\n');
+await writeFile(path.join(out, 'proved-source-pairs.json'), JSON.stringify([...pairs.values()], null, 2) + '\n');
+
+const remaining = inventory.filter((row) => row.candidates?.length);
+const staticHolds = inventory.filter((row) => row.kind.startsWith('HOLD_') || row.kind === 'DYNAMIC_OR_MALFORMED');
+const compiledPairs = [];
+const compilerHolds = [];
+const geometry20Differences = [];
+const typography20Diagnostics = [];
+let compileIdentity = null;
+let artifact = null;
+const configFiles = ['package.json', 'pnpm-workspace.yaml', 'pnpm-lock.yaml', '.gitignore', 'apps/desktop/package.json', 'postcss.config.mjs', 'src/app/globals.css', 'apps/desktop/vite.renderer.config.ts', 'plugins/vite/sharedRendererConfig.ts', 'packages/ui/scripts/build-css.mjs', 'DESIGN.md', '.agents/skills/react/SKILL.md'];
+const configBindings = [];
+for (const file of configFiles) {
+  try { const data = await readFile(path.join(root, file)); configBindings.push({ file, presence: true, bytes: data.length, sha256: sha(data) }); }
+  catch (error) {
+    if (file !== 'pnpm-lock.yaml' || error.code !== 'ENOENT') throw error;
+    configBindings.push({ file, presence: false, sha256: null, bytes: 0,
+      absence: 'Actual ENOENT at this candidate; Root lock is not present. Bound absence, not an exemption or a fabricated lock.',
+      trackedGitEntry: gitText(['ls-files', '--', file]) });
+  }
+}
+await writeFile(path.join(out, 'actual-config-presence-bindings.json'), JSON.stringify(configBindings, null, 2) + '\n');
+const inputGlobals = await readFile(path.join(root, 'src/app/globals.css'), 'utf8');
+await writeFile(path.join(out, 'current-globals-whole.css'), inputGlobals);
+
+// Canonical CSS-value AST, including exact rational evaluation of constants.
+// Unknown variables/functions remain symbolic; unsupported algebra causes HOLD, never guessed equality.
+function cssCanonical(value, rootFont, variables) {
+  const resolve = (name, visited = new Set()) => {
+    if (!variables.has(name) || visited.has(name)) return null;
+    visited.add(name); return canonicalNodes(valueParser(variables.get(name)).nodes, visited);
+  };
+  const constant = (text) => {
+    const match = /^([+-]?(?:\d+(?:\.\d+)?|\.\d+))(px|rem|%|deg|s|ms)?$/.exec(text);
+    if (!match) return null;
+    const q = number(match[1]); const unit = match[2] || 'number';
+    return { type: 'rational', q: unit === 'rem' ? multiply(q, number(String(rootFont))) : q, unit: unit === 'rem' ? 'px' : unit };
+  };
+  const str = (value) => value.type === 'rational' ? `rational(${fraction(value.q)}:${value.unit})` : value.text;
+  const binary = (operator, left, right) => {
+    if (left.type === 'rational' && right.type === 'rational') {
+      if ((operator === '+' || operator === '-') && left.unit === right.unit) return { type: 'rational', unit: left.unit, q: rational(left.q.n * right.q.d + (operator === '-' ? -1n : 1n) * right.q.n * left.q.d, left.q.d * right.q.d) };
+      if (operator === '*' && (left.unit === 'number' || right.unit === 'number')) return { type: 'rational', unit: left.unit === 'number' ? right.unit : left.unit, q: multiply(left.q, right.q) };
+      if (operator === '/' && right.unit === 'number' && right.q.n !== 0n) return { type: 'rational', unit: left.unit, q: rational(left.q.n * right.q.d, left.q.d * right.q.n) };
+    }
+    return { type: 'symbol', text: `(${operator} ${str(left)} ${str(right)})` };
+  };
+  function calc(nodes, visited) {
+    const tokens = nodes.filter((node) => node.type !== 'space' && node.type !== 'comment').map((node) => node.type === 'word' && ['+', '-', '*', '/'].includes(node.value) || node.type === 'div' && node.value === '/' ? { operator: node.value } : atom(node, visited));
+    let position = 0;
+    const primary = () => {
+      const token = tokens[position++]; if (!token || token.operator) throw new Error('Unsupported CSS calc token sequence'); return token;
+    };
+    const product = () => { let value = primary(); while (['*', '/'].includes(tokens[position]?.operator)) { const operator = tokens[position++].operator; value = binary(operator, value, primary()); } return value; };
+    let value = product();
+    while (['+', '-'].includes(tokens[position]?.operator)) { const operator = tokens[position++].operator; value = binary(operator, value, product()); }
+    if (position !== tokens.length) throw new Error('Unparsed CSS calc algebra');
+    return value;
+  }
+  function atom(node, visited) {
+    if (node.type === 'word') return constant(node.value) || { type: 'symbol', text: `word(${node.value})` };
+    if (node.type === 'function') {
+      if (node.value === 'var') {
+        const nonspace = node.nodes.filter((part) => part.type !== 'space' && part.type !== 'comment');
+        if (nonspace.length === 1 && nonspace[0].type === 'word') { const resolved = resolve(nonspace[0].value, new Set(visited)); if (resolved) return resolved.length === 1 ? resolved[0] : { type: 'symbol', text: 'sequence(' + resolved.map(str).join(' ') + ')' }; }
+      }
+      if (node.value === 'calc') { try { return calc(node.nodes, visited); } catch { return { type: 'symbol', text: `calc-unsupported(${canonicalNodes(node.nodes, visited).map(str).join(' ')})` }; } }
+      return { type: 'symbol', text: `function(${node.value} ${canonicalNodes(node.nodes, visited).map(str).join(' ')})` };
+    }
+    if (node.type === 'string') return { type: 'symbol', text: `string(${JSON.stringify(node.value)})` };
+    return { type: 'symbol', text: `${node.type}(${node.value})` };
+  }
+  function canonicalNodes(nodes, visited = new Set()) { return nodes.filter((node) => node.type !== 'space' && node.type !== 'comment').map((node) => atom(node, visited)); }
+  return canonicalNodes(valueParser(value).nodes).map(str).join(' ');
+}
+function normalizedSelector(selector, className) { return selectorParser((selectors) => selectors.walkClasses((node) => { if (node.value === className) node.value = '__690_class__'; })).processSync(selector); }
+function compiledRecords(cssRoot, wanted) {
+  const records = new Map([...wanted].map((name) => [name, []])); let order = 0;
+  const selectorNames = new WeakMap(); const selectorForms = new Map();
+  const classesOf = (node) => {
+    if (selectorNames.has(node)) return selectorNames.get(node);
+    const result = [];
+    if (!node.parent || !(node.parent.type === 'atrule' && /keyframes$/i.test(node.parent.name))) selectorParser((selector) => selector.walkClasses((part) => { if (wanted.has(part.value)) result.push(part.value); })).processSync(node.selector);
+    selectorNames.set(node, result); return result;
+  };
+  const selectorForm = (selector, name) => { const key = JSON.stringify([selector, name]); if (!selectorForms.has(key)) selectorForms.set(key, normalizedSelector(selector, name)); return selectorForms.get(key); };
+  const layers = []; cssRoot.walkAtRules('layer', (node) => { if (!node.nodes) layers.push({ params: node.params, sourceOrder: order++ }); });
+  cssRoot.walkDecls((decl) => {
+    const ancestry = []; const names = new Set();
+    for (let node = decl.parent; node && node.type !== 'root'; node = node.parent) {
+      if (node.type === 'rule') {
+        for (const name of classesOf(node)) names.add(name);
+        ancestry.unshift({ type: 'rule', selector: node.selector });
+      } else if (node.type === 'atrule') ancestry.unshift({ type: 'atrule', name: node.name, params: node.params });
+    }
+    for (const name of names) records.get(name).push({ globalDeclarationOrder: order, classDeclarationOrder: records.get(name).length,
+      ancestry, normalizedAncestry: ancestry.map((part) => part.type === 'rule' ? { ...part, selector: selectorForm(part.selector, name) } : part),
+      property: decl.prop, value: decl.value, important: Boolean(decl.important), raw: decl.toString() });
+    order++;
+  });
+  return { records, layers, declarations: order };
+}
+function invariantRecords(records, font, variables) {
+  return records.map(({ classDeclarationOrder, normalizedAncestry, property, value, important }) => ({ classDeclarationOrder, ancestry: normalizedAncestry, property, value: cssCanonical(value, font, variables), important }));
+}
+function packageIdentity(name) {
+  const resolved = requireRoot.resolve(name); let directory = path.dirname(resolved);
+  while (directory !== path.dirname(directory)) {
+    try { const text = requireRoot('node:fs').readFileSync(path.join(directory, 'package.json'), 'utf8'); const value = JSON.parse(text); if (value.name === name) return { name, version: value.version, entry: resolved, package: path.join(directory, 'package.json'), packageSHA256: sha(text), entrySHA256: sha(requireRoot('node:fs').readFileSync(resolved)) }; } catch {}
+    directory = path.dirname(directory);
+  }
+  throw new Error(`Cannot establish installed package identity: ${name}`);
+}
+if (!auditOnly && pairs.size) {
+  const pairRows = [...pairs.values()];
+  const sourceClasses = [...new Set(pairRows.flatMap((pair) => pair.sites.flatMap((site) => site.beforeFullClasses)))].sort();
+  const derivedFile = path.join(out, 'derived-historical-before-classes.txt');
+  await writeFile(derivedFile, sourceClasses.join('\n') + '\n');
+  // Original globals and Desktop/default root PostCSS pipeline are intact; only a derived additive source is appended.
+  const input = inputGlobals + '\n@source ' + JSON.stringify(derivedFile) + ';\n';
+  const configText = await readFile(path.join(root, 'postcss.config.mjs'), 'utf8');
+  assert.equal((configText.match(/'@tailwindcss\/postcss'/g) || []).length, 1, 'Root CSS pipeline changed: inspect owning config before executing');
+  const actualPostcssConfig = (await import(pathToFileURL(path.join(root, 'postcss.config.mjs')))).default;
+  assert.deepEqual(Object.keys(actualPostcssConfig.plugins || {}), ['@tailwindcss/postcss'], 'Additional Desktop/root PostCSS plugins require actual pipeline extension, no silent omission');
+  phase({ phase: 'actual-desktop-postcss-compile-start', classPairs: pairs.size, historicalSourceTokens: sourceClasses.length });
+  const result = await postcss([tw(actualPostcssConfig.plugins['@tailwindcss/postcss'])]).process(input, { from: path.join(root, 'src/app/globals.css'), to: path.join(out, 'whole-current-plus-before.css'), map: false });
+  await writeFile(path.join(out, 'derived-compiler-input.css'), input);
+  await writeFile(path.join(out, 'whole-current-plus-before.css'), result.css);
+  const wanted = new Set(pairRows.flatMap((pair) => [pair.beforeClass, pair.currentClass, ...pair.sites.flatMap((site) => [...site.beforeFullClasses, ...site.currentFullClasses])]));
+  const { records, layers, declarations } = compiledRecords(result.root, wanted);
+  const variables = new Map(); const variableBindings = [];
+  result.root.walkDecls((decl) => {
+    if (!/^(?:--spacing|--text-dense|--radius-(?:chip|input|button|card|overlay)|--leading-[\w_-]+)$/.test(decl.prop)) return;
+    const parents = []; for (let n = decl.parent; n && n.type !== 'root'; n = n.parent) parents.push(n);
+    const selectors = parents.filter((n) => n.type === 'rule').map((n) => n.selector);
+    const conditional = parents.some((n) => n.type === 'atrule' && !['layer'].includes(n.name));
+    variableBindings.push({ property: decl.prop, value: decl.value, selectors, conditional, ancestry: parents.map((n) => n.type === 'rule' ? n.selector : `@${n.name} ${n.params}`) });
+    if (!conditional && selectors.every((s) => s.split(',').every((part) => /^\s*:(?:root|host)\s*$/.test(part)))) variables.set(decl.prop, decl.value);
+  });
+  const dependencyFiles = [];
+  for (const item of result.messages) {
+    if (item.type === 'dependency' && item.file) {
+      try { const data = await readFile(item.file); dependencyFiles.push({ file: item.file, realpath: await realpath(item.file), sha256: sha(data), bytes: data.length }); } catch (error) { compilerHolds.push({ kind: 'UNBOUND_COMPILER_DEPENDENCY', file: item.file, error: String(error) }); }
+    }
+  }
+  const nativeCompilerModules = [];
+  for (const file of Object.keys(requireRoot.cache || {})) {
+    if (!/node_modules\/\.pnpm\/(?:@tailwindcss\+|tailwindcss@|lightningcss|postcss)/.test(file)) continue;
+    const data = await readFile(file); nativeCompilerModules.push({ file, realpath: await realpath(file), sha256: sha(data), bytes: data.length });
+  }
+  const externalSourceDirectoryBindings = [];
+  const bindDir = async (directory) => {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const file = path.join(directory, entry.name);
+      if (entry.isDirectory()) await bindDir(file);
+      else if (entry.isFile()) { const data = await readFile(file); externalSourceDirectoryBindings.push({ file, sha256: sha(data), bytes: data.length }); }
+    }
+  };
+  const boundExternalDirectories = new Set();
+  for (const item of result.messages) if (item.type === 'dir-dependency' && item.dir && item.dir.includes('/node_modules/') && !boundExternalDirectories.has(item.dir)) { boundExternalDirectories.add(item.dir); await bindDir(item.dir); }
+  compileIdentity = { gitTrackedSourceTree: initialTree, nativeCompilerModules, externalSourceDirectoryBindings, packages: ['typescript', 'postcss', '@tailwindcss/postcss', 'tailwindcss', 'postcss-selector-parser', 'postcss-value-parser'].map(packageIdentity),
+    additionalASTParsers: parserIdentity, rootConfig: configBindings, inputSHA256: sha(input), globalsSHA256: sha(inputGlobals), derivedSourceSHA256: sha(await readFile(derivedFile)),
+    originalSourcesPreserved: true, additiveHistoricalSourceOnly: true, dependencyFiles, messages: result.messages, layerStatements: layers, declarationCount: declarations, variableBindings };
+  for (const pair of pairRows) {
+    const before = records.get(pair.beforeClass) || []; const after = records.get(pair.currentClass) || [];
+    if (!before.length || !after.length) { compilerHolds.push({ pairId: pair.id, kind: 'MISSING_ACTUAL_COMPILED_CLASS', beforeClass: pair.beforeClass, currentClass: pair.currentClass, beforeDeclarations: before.length, afterDeclarations: after.length }); continue; }
+    const before16 = invariantRecords(before, 16, variables); const after16 = invariantRecords(after, 16, variables);
+    const equal16 = JSON.stringify(before16) === JSON.stringify(after16);
+    const before20 = invariantRecords(before, 20, variables); const after20 = invariantRecords(after, 20, variables);
+    const equal20 = JSON.stringify(before20) === JSON.stringify(after20);
+    const row = { ...pair, status: equal16 ? 'EXACT_16PX' : 'HOLD', beforeRules: before, currentRules: after, actualNormalized16: { before: before16, current: after16 }, actualNormalized20: { before: before20, current: after20 }, equal16, equal20, cascadeHolds: [] };
+    const alternateVariableHolds = scopedVariableHolds({ before, after, cssRoot: result.root,
+      variables, invariantRecords, valueParser });
+    if (alternateVariableHolds.length) {
+      row.status = 'HOLD'; row.cascadeHolds.push(...alternateVariableHolds);
+      compilerHolds.push({ pairId: pair.id, kind: 'SCOPED_OR_CONDITIONAL_TOKEN_BINDING_NOT_PROVED', bindings: alternateVariableHolds });
+    }
+    if (!equal16) compilerHolds.push({ pairId: pair.id, kind: 'ACTUAL_DECLARATION_OR_SELECTOR_STATE_LAYER_ORDER_MISMATCH_AT_16', beforeClass: pair.beforeClass, currentClass: pair.currentClass });
+    if (!equal20) (pair.classification.typography ? typography20Diagnostics : geometry20Differences).push({ pairId: pair.id, beforeClass: pair.beforeClass, currentClass: pair.currentClass, classification: pair.classification.kind, reason: pair.classification.typography ? 'Issue #690 fixes root16; current DESIGN typography scales independently with rem. This is explicitly not a PASS at20 or a rounded pixel comparison.' : 'Physical geometry differs at20 and requires correction, no tolerance.' });
+    // Preserve and inspect relative order versus all actual same-literal companions.
+    // A changed order between potentially overlapping declarations is HOLD, even if a singleton looked equal.
+    const family = (property) => /^(?:padding|margin|border|background|font|inset)/.exec(property)?.[0] || property;
+    const conflicts = (a, b) => a.property === b.property || family(a.property) === family(b.property);
+    for (const site of pair.sites) for (let i = 0; i < site.beforeFullClasses.length; i++) {
+      if (i === site.tokenIndex) continue;
+      const oldCompanion = site.beforeFullClasses[i]; const currentCompanion = site.currentFullClasses[i];
+      const beforeCompanion = records.get(oldCompanion) || []; const afterCompanion = records.get(currentCompanion) || [];
+      for (const oldDecl of before) for (const otherOld of beforeCompanion) {
+        if (!conflicts(oldDecl, otherOld)) continue;
+        const newDecl = after[oldDecl.classDeclarationOrder]; const otherNew = afterCompanion[otherOld.classDeclarationOrder];
+        if (!newDecl || !otherNew) continue;
+        if (JSON.stringify(oldDecl.normalizedAncestry) !== JSON.stringify(otherOld.normalizedAncestry) || JSON.stringify(newDecl.normalizedAncestry) !== JSON.stringify(otherNew.normalizedAncestry)) continue;
+        const oldOrder = Math.sign(oldDecl.globalDeclarationOrder - otherOld.globalDeclarationOrder); const newOrder = Math.sign(newDecl.globalDeclarationOrder - otherNew.globalDeclarationOrder);
+        if (oldOrder !== newOrder && !(oldDecl.property === otherOld.property && cssCanonical(oldDecl.value, 16, variables) === cssCanonical(otherOld.value, 16, variables))) row.cascadeHolds.push({ file: site.file, astSlot: site.astSlot, tokenIndex: site.tokenIndex, companionIndex: i, oldCompanion, currentCompanion, property: oldDecl.property, companionProperty: otherOld.property, oldOrder, newOrder });
+      }
+    }
+    if (row.cascadeHolds.length) { row.status = 'HOLD'; compilerHolds.push({ pairId: pair.id, kind: 'POTENTIAL_SAME_LITERAL_CASCADE_ORDER_CHANGE', sites: row.cascadeHolds }); }
+    compiledPairs.push(row);
+  }
+  artifact = { file: 'whole-current-plus-before.css', sha256: sha(result.css), bytes: Buffer.byteLength(result.css) };
+}
+await writeFile(path.join(out, 'actual-compiled-pairs.json'), JSON.stringify({ rootFontScope: 16, font20DiagnosticDomain: true, geometryExpectedInvariant20: true, compiler: compileIdentity, pairs: compiledPairs, wholeCSS: artifact }, null, 2) + '\n');
+
+// Rebind every source and config after compiler execution; concurrent changes invalidate the result.
+const finalHead = gitText(['rev-parse', 'HEAD']); const drift = [];
+if (finalHead !== initialHead) drift.push({ kind: 'HEAD_CHANGED', initialHead, finalHead });
+for (const row of [...sourceHashes, ...configBindings]) {
+  if (row.presence === false) {
+    try { await readFile(path.join(root, row.file)); drift.push({ kind: 'ABSENT_CONFIG_CREATED', file: row.file }); }
+    catch (error) { if (error.code !== 'ENOENT') drift.push({ kind: 'ABSENT_CONFIG_READ_STATE_CHANGED', file: row.file, error: String(error) }); }
+    if (gitText(['ls-files', '--', row.file]) !== row.trackedGitEntry) drift.push({ kind: 'ABSENT_CONFIG_GIT_TRACKING_CHANGED', file: row.file });
+  } else if (sha(await readFile(path.join(root, row.file))) !== row.sha256) drift.push({ kind: 'SOURCE_OR_CONFIG_CHANGED', file: row.file });
+}
+if (gitText(['status', '--porcelain', '--untracked-files=normal'])) drift.push({ kind: 'WORKTREE_CHANGED' });
+const summary = { status: auditOnly ? 'AUDIT_ONLY_HOLD' : remaining.length || staticHolds.length || parseHolds.length || omittedParserKinds.length || counterpartHolds.length || historyHolds.length || compilerHolds.length || geometry20Differences.length || drift.length || !compiledPairs.length ? 'HOLD' : 'CURRENT_SCOPE_EXACT_COMPILE_PASS',
+  compilerScopeVersion: 2, originalCompilerSHA256: 'c6b551bb6143dae1a249b1134a0567cda92501e2f834f4ca9071e6ba7f512ab5',
+  lineage: { strictRouteSiteBindings: lineage.strictRouteSiteBindings, newlySolvedPhysicalSitesBeyondDirect: lineage.newlySolvedPhysicalSitesBeyondDirect, directCandidatesAreNotDAGAcceptance: true, originalRows: lineage.originalRows, semanticChangesAccepted: false },
+  issue: 690, issueSource: { file: path.join(here, 'issue-690-source.json'), sha256: sha(await readFile(path.join(here, 'issue-690-source.json'))) },
+  initialHead, initialTree, finalHead, scriptHash, baseline, scope: { roots: ['src', 'packages', 'apps'], ownedFiles: sourceHashes.length, ASTFiles: current.size, exceptions: [], testsIncluded: true, parserIdentity, sourceKinds: Object.fromEntries(sourceKinds), sourceKindsNotParsed: omittedParserKinds },
+  currentCounts: { arbitraryTokens: inventory.length, stillPreciselyConvertible: remaining.length, offRhythmConvertible: remaining.filter((row) => row.offRhythm).length, outOf690Scope: inventory.filter((row) => row.kind === 'OUTSIDE_EXACT_690_REWRITES').length, dynamicOrUnsupported: staticHolds.length },
+  history: { verifiedTargets: targets, obligations: obligations.size, provedSourceClassPairs: pairs.size, provedSiteBindings: [...pairs.values()].reduce((n, pair) => n + pair.sites.length, 0), noHistoricalPassReused: true, counterpartHolds: counterpartHolds.length },
+  compiled: { pairs: compiledPairs.length, exact16Pairs: compiledPairs.filter((row) => row.equal16 && !row.cascadeHolds.length).length, physicalGeometry20Differences: geometry20Differences, typography20Diagnostics, artifact },
+  blockers: { remaining, staticHolds, parseHolds, omittedParserKinds, historyHolds, compilerHolds, drift },
+  acceptanceBoundary: 'No approximate/fuzzy matching, no numeric tolerance, no expected CSS string used as compiler output. Actual singleton/variant/nested/layer/declaration/cascade evidence only. The previously accepted #780 E305112 safe-area/category/percentage formula probe is not rerun here; its calc and non100 percentages are explicitly outside original #690 rewrite scope. This runner never closes an issue or claims Electron/691/692/693/694 completion.' };
+await writeFile(path.join(out, 'summary.json'), JSON.stringify(summary, null, 2) + '\n');
+console.log(JSON.stringify({ status: summary.status, head: initialHead, currentConvertible: remaining.length, historicalObligations: obligations.size, sourcePairs: pairs.size, compiledPairs: compiledPairs.length, counterpartHolds: counterpartHolds.length, compilerHolds: compilerHolds.length, report: path.join(out, 'summary.json') }));
+process.exitCode = summary.status === 'CURRENT_SCOPE_EXACT_COMPILE_PASS' ? 0 : 2;

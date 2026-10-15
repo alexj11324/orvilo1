@@ -1,7 +1,6 @@
 'use client';
 
-import { ContextMenuHost } from '@lobehub/ui';
-import { ModalHost as BaseModalHost, ToastHost } from '@lobehub/ui/base-ui';
+import { ToastHost as LegacyEditorToastHost } from '@lobehub/ui/base-ui';
 import { domMax, LazyMotion } from 'motion/react';
 import { Component, type CSSProperties, lazy, memo, type PropsWithChildren, Suspense } from 'react';
 
@@ -115,11 +114,12 @@ const SPAGlobalProvider = memo<PropsWithChildren>(({ children }) => {
                     </CacheHydrationGate>
                   </OrviloAnalyticsProviderWrapper>
                 </TooltipProvider>
-                <BaseModalHost />
-                <ToastHost />
+                {/* The still-default legacy editor's ReactLinkPlugin,
+                    Markdown auto-format and image viewer emit SDK toasts.
+                    Retain only this compatibility queue until their cutover. */}
+                <LegacyEditorToastHost />
                 <ReUIModalHost />
                 <ReUIToastHost />
-                <ContextMenuHost />
                 <NativeContextMenuHost />
                 <Suspense>
                   <TaskDock />

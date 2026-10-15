@@ -257,7 +257,7 @@ describe('Task Router Integration', () => {
     const paused = (await taskModel.findById(task.id))!;
     expect(response.task.context).toMatchObject({ scheduler: { automationPaused: true } });
     expect(response.task).toEqual(paused);
-    expect((paused.context as TaskContext)?.execution?.parked).toBeUndefined();
+    expect(paused.context).not.toHaveProperty('execution.parked');
     expect(paused).toMatchObject({
       executionGeneration: before.executionGeneration,
       domainRevision: before.domainRevision,
@@ -299,7 +299,7 @@ describe('Task Router Integration', () => {
       const task = await model.create({ instruction: 'Idle', automationMode });
       await new TaskService(serverDB, userId).updateStatus({ id: task.id, status: 'paused' });
       const context = (await model.findById(task.id))?.context as TaskContext;
-      expect(context?.execution?.parked).toBeDefined();
+      expect(context).toHaveProperty('execution.parked');
       expect((await model.derivedStatusByIds([task.id]))[task.id]).toBe('paused');
     },
   );

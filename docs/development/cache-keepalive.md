@@ -10,7 +10,8 @@ when Anthropic cut the default TTL 1h → 5m in March 2026.
 Orvilo keeps the cache warm **per engine, per its own TTL economics**: after a
 turn settles, the child process stays alive and a scheduler sends an _inert_
 `session/prompt` turn on the SAME ACP session just under the TTL. The next
-real prompt retires the keeper and spawns fresh — the new process's
+real prompt either adopts the live child (the gateway warm pool, below) or
+retires the keeper and spawns fresh — the new process's
 `session/load` replays the same conversation prefix against the still-warm
 provider cache (provider caches key on request content, not process identity).
 
@@ -22,6 +23,7 @@ provider cache (provider caches key on request content, not process identity).
 | Scheduler (injectable clock) | `packages/heterogeneous-agents/src/spawn/cacheKeepalive.ts`                                                                                                              |
 | Lifecycle hook               | `AcpAgentSession.run()` — arms after `settlePrompt` + `idle` status; `run()` resolves at turn end as before and the keeper owns the child until disarm                   |
 | Keeper retirement            | `HeterogeneousAgentCtr.sendPromptWithStandardAcp` / `sendPromptWithDevinAcp` close the armed keeper before spawning the next turn's process                              |
+| Keeper adoption              | `AcpAgentSession.runWarm` (used by `createPersistentAcpAgent`) waits out an in-flight ping, disarms with `activity` and keeps the child for the next real turn           |
 | Telemetry                    | `HeterogeneousAgentRuntimeStatus.cacheKeepalive` (`pings`, `disarmReason`, `lastUsage`) on the `closed` status; `idleDeadlineAt` on `idle`; `exit.json` in the CLI trace |
 
 ## Engine policy table
@@ -64,7 +66,7 @@ interrupt / error (`closed`/`error`). On disarm the child is closed and the
 
 ## Boundaries
 
-- **Between-turns only.** ACP sessions are spawned per turn, so the live
+- **Between-turns only.** Renderer-driven ACP sessions are spawned per turn, so the live
   process only exists after a settled turn. Mid-turn idles (permission asks,
   elicitation, long tool runs, rate-limit backoff) CANNOT be pinged — one ACP
   session does not accept concurrent `session/prompt`s and tool-running
@@ -101,3 +103,15 @@ cache counters (claude-code surfaces `cache_read_input_tokens` /
 `cache_creation_input_tokens`), a warm turn should show high cache-read and
 \~zero cache-creation on the resumed prefix. For `devin`, that telemetry is
 the confirmation path for the assumed TTL.
+
+## Gateway warm pool
+
+Behind `ORVILO_HETERO_WARM_POOL=1` (types from `ORVILO_HETERO_WARM_POOL_TYPES`,
+default `claude-code`), the desktop runs gateway `agent_run_request`s in-process
+(`runHeteroTurn`) on a `PersistentAcpAgent` pooled per workspace/topic/agent
+(`apps/desktop/src/main/modules/heterogeneousAgent/gatewayAcpPool.ts`). Only
+the first turn spawns and runs `initialize` + `session/new|resume|load`; later
+turns send `session/prompt` on the same child. Between turns the child is held
+by the engine's keeper when it arms (its residency window applies), otherwise by
+`warmIdleMs` (10 min). Fingerprint changes (cwd, command, args, env, builtin
+tools, permission), resume-id mismatch, cancel or a dead child recreate it.

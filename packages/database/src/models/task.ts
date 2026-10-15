@@ -2546,7 +2546,7 @@ export class TaskModel {
           if (statuses.some((status) => ['backlog', 'running', 'scheduled'].includes(status)))
             activePeriodicStatuses.push('paused');
           const periodicStatus = or(
-            and(sql`${automationPaused} IS NULL`, statusesPredicate),
+            and(sql`coalesce(${automationPaused}, '') = ''`, statusesPredicate),
             and(
               sql`${automationPaused} = 'false'`,
               predicateForLegacyStatuses(activePeriodicStatuses) ?? sql`false`,

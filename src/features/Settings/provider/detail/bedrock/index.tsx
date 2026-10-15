@@ -1,12 +1,13 @@
 'use client';
 
-import { Select, Tabs, type TabsItem } from '@lobehub/ui/base-ui';
 import { BedrockProviderCard } from 'model-bank/modelProviders';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { FormPassword } from '@/components/FormInput';
+import Select from '@/components/Select';
 import { SkeletonInput } from '@/components/Skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePermission } from '@/hooks/usePermission';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { type GlobalLLMProviderKey } from '@/types/user/settings';
@@ -81,7 +82,7 @@ const useBedrockCard = (): ProviderItem => {
     setAuthMode(inferBedrockAuthMode(keyVaults));
   }, [isLoading, keyVaults]);
 
-  const authModeOptions = useMemo<TabsItem[]>(
+  const authModeOptions = useMemo<{ disabled: boolean; key: BedrockAuthMode; label: string }[]>(
     () => [
       {
         disabled: !canManageProvider,
@@ -178,15 +179,20 @@ const useBedrockCard = (): ProviderItem => {
         children: isLoading ? (
           <SkeletonInput />
         ) : (
-          <Tabs
-            activeKey={authMode}
-            items={authModeOptions}
-            styles={{
-              list: { display: 'flex', width: '100%' },
-              tab: { flex: 1 },
-            }}
-            onChange={handleAuthModeChange}
-          />
+          <Tabs value={authMode} onValueChange={(mode) => handleAuthModeChange(String(mode))}>
+            <TabsList className="flex w-full">
+              {authModeOptions.map((option) => (
+                <TabsTrigger
+                  className="flex-1"
+                  disabled={option.disabled}
+                  key={option.key}
+                  value={option.key}
+                >
+                  {option.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         ),
         desc: t(`${providerKey}.authMode.desc`),
         label: t(`${providerKey}.authMode.title`),
@@ -198,6 +204,7 @@ const useBedrockCard = (): ProviderItem => {
         ) : (
           <Select
             allowClear
+            className="w-full"
             placeholder={AWS_REGIONS[0]}
             options={AWS_REGIONS.map((i) => ({
               label: i,

@@ -1359,10 +1359,9 @@ export class TaskIntegrationService {
   }
 
   /**
-   * Verify on the remote that `record.branch` landed on `record.baseBranch`:
-   * a merged PR for the branch wins (covers squash merges that leave no
-   * ancestry), otherwise an ancestry compare decides. API failures report
-   * `merged: false` + `error` — the caller treats them as "not landed yet".
+   * Observe the delivery's remote PR identity. A merged PR proves completion;
+   * a matching unmerged PR with fresh head/base reads can proceed to Reviewer.
+   * Unverifiable remote state reports `merged: false` + `error`.
    */
   private async verifyRemoteMerge(
     record: TaskTopicIntegration,
@@ -1442,6 +1441,16 @@ export class TaskIntegrationService {
         };
       }
       return { ...identity, merged: true, sha: pr.sha };
+    }
+
+    if (
+      pr &&
+      pr.headSha === expectedHeadSha &&
+      pr.baseBranch === record.baseBranch &&
+      currentHeadSha === expectedHeadSha &&
+      currentBaseSha
+    ) {
+      return { ...identity, merged: false };
     }
 
     const state = await isBranchMergedInto({

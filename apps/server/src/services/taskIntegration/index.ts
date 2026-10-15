@@ -1292,7 +1292,8 @@ export class TaskIntegrationService {
       ...historyPatch,
       state: 'verification_pending',
     });
-    return 'hold';
+    // The run can enter Reviewer now; the PR waits for final human acceptance.
+    return 'settled';
   }
 
   /** Check the remote merge state after an integrator run returned. */

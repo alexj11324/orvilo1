@@ -1051,7 +1051,7 @@ describe('TaskIntegrationService', () => {
       expect(mockRunner.runTask).not.toHaveBeenCalled();
     });
 
-    it('hands a repository-bound ACP device delivery to deterministic review without a merge agent', async () => {
+    it('releases a repository-bound ACP completion for Reviewer before PR merge', async () => {
       const record = remoteRecord({
         deviceId: 'dev-1',
         repoPath: '/repos/widgets',
@@ -1062,7 +1062,7 @@ describe('TaskIntegrationService', () => {
         task: baseTask(),
         taskTopicId: 'topic_1',
       });
-      expect(outcome).toBe('hold');
+      expect(outcome).toBe('settled');
       expect(mockRunner.runTask).not.toHaveBeenCalled();
       expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
         'task_1',
@@ -1074,15 +1074,16 @@ describe('TaskIntegrationService', () => {
         }),
       );
       expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+      expect(mockTaskServiceUpdateStatus).not.toHaveBeenCalled();
     });
 
-    it('queues an unmerged sandbox delivery for deterministic review', async () => {
+    it('releases an unmerged sandbox completion for Reviewer with its frozen remote identity', async () => {
       mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(remoteRecord()));
       const outcome = await service.integrateOnComplete({
         task: baseTask(),
         taskTopicId: 'topic_1',
       });
-      expect(outcome).toBe('hold');
+      expect(outcome).toBe('settled');
       expect(mockRunner.runTask).not.toHaveBeenCalled();
       expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
         'task_1',
@@ -1100,7 +1101,7 @@ describe('TaskIntegrationService', () => {
         asTopic(remoteRecord({ state: 'merging' })),
       );
       expect(await service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' })).toBe(
-        'hold',
+        'settled',
       );
       expect(mockRunner.runTask).not.toHaveBeenCalled();
       expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(

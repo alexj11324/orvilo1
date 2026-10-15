@@ -257,6 +257,7 @@
   "OllamaSetupGuide.install.linux.manual": "或者，你也可以参考 <1>Linux 手动安装指南</1> 自行安装",
   "OllamaSetupGuide.install.title": "在本地安装并开启 Ollama 应用",
   "OllamaSetupGuide.install.windowsTab": "Windows (预览版)",
+  "PatchDiff.lineAction": "添加行引用",
   "Thinking.thinking": "深度思考中…",
   "Thinking.thought": "已深度思考（用时 {{duration}} 秒）",
   "Thinking.thoughtWithDuration": "已深度思考",

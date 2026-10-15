@@ -302,6 +302,7 @@ export default {
     'Alternatively, you can refer to the <1>Linux Manual Installation Guide</1> for a manual installation.',
   'OllamaSetupGuide.install.title': 'Install and Start the Ollama Application Locally',
   'OllamaSetupGuide.install.windowsTab': 'Windows (Preview)',
+  'PatchDiff.lineAction': 'Add line reference',
   'Thinking.thinking': 'Deep Thinking...',
   'Thinking.thought': 'Deeply Thought (in {{duration}} seconds)',
   'Thinking.thoughtWithDuration': 'Deeply Thought',

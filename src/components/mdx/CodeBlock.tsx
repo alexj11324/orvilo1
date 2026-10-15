@@ -1,48 +1,41 @@
 'use client';
 
-import { Mermaid } from '@lobehub/ui';
-import { Pre, PreSingleLine } from '@lobehub/ui/mdx';
 import { type FC, type PropsWithChildren } from 'react';
 
-const countLines = (str: string): number => {
-  const regex = /\n/g;
-  const matches = str.match(regex);
-  return matches ? matches.length : 1;
-};
+import { Mermaid } from '@/components/Markdown/Mermaid';
+import {
+  CodeBlock as CodeBlockRoot,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+  CodeBlockLanguage,
+  markdownCodeProps,
+} from '@/components/ui/code-block';
 
-const useCode = (raw: any) => {
-  if (!raw) return;
-
-  const { children, className } = raw.props;
-
-  if (!children) return;
-
-  const content = (Array.isArray(children) ? (children[0] as string) : children).trim();
-
-  const lang = className?.replace('language-', '') || 'txt';
-
-  const isSingleLine = countLines(content) <= 1 && content.length <= 32;
-
-  return {
-    content,
-    isSingleLine,
-    lang,
-  };
-};
+const SINGLE_LINE_MAX_LENGTH = 32;
 
 const CodeBlock: FC<PropsWithChildren> = ({ children }) => {
-  const code = useCode(children);
+  const { code: raw, language = 'txt' } = markdownCodeProps({ children });
+  const code = raw.trim();
 
   if (!code) return;
 
-  if (code.isSingleLine) return <PreSingleLine language={code.lang}>{code.content}</PreSingleLine>;
-  if (code.lang === 'mermaid') {
-    return <Mermaid variant={'borderless'}>{code.content}</Mermaid>;
-  }
+  if (!code.includes('\n') && code.length <= SINGLE_LINE_MAX_LENGTH)
+    return (
+      <CodeBlockRoot className="my-3" code={code} language={language}>
+        <CodeBlockCopyButton />
+      </CodeBlockRoot>
+    );
+  if (language === 'mermaid') return <Mermaid variant={'borderless'}>{code}</Mermaid>;
+
   return (
-    <Pre fullFeatured allowChangeLanguage={false} language={code.lang}>
-      {code.content}
-    </Pre>
+    <CodeBlockRoot showLineNumbers className="my-3 min-w-0" code={code} language={language}>
+      <CodeBlockHeader>
+        <CodeBlockLanguage />
+        <div className="ml-auto flex items-center gap-1">
+          <CodeBlockCopyButton />
+        </div>
+      </CodeBlockHeader>
+    </CodeBlockRoot>
   );
 };
 

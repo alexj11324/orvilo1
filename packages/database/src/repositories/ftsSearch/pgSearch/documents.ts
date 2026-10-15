@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, isNull, ne, notInArray, or, sql } from 'drizzle
 import { DOCUMENT_FOLDER_TYPE, documents, knowledgeBaseFiles } from '../../../schemas';
 import { sanitizeBm25Query } from '../../../utils/bm25';
 import { buildDocumentReadableWhere } from '../../../utils/documentAccess';
+import { buildOptionalFileTopicCeiling } from '../../../utils/fileTopicCeiling';
 import { buildWorkspaceWhere } from '../../../utils/workspace';
 import type {
   FtsSearchBackendResponse,
@@ -135,6 +136,11 @@ export async function searchPages(
     .where(
       and(
         context.liftedScopeWhere(hits.workspaceId),
+        buildOptionalFileTopicCeiling(
+          db,
+          { userId: context.userId, workspaceId: context.scope.workspaceId },
+          hits.fileId,
+        ),
         excludeKbIds && excludeKbIds.length > 0
           ? or(isNull(hits.knowledgeBaseId), notInArray(hits.knowledgeBaseId, excludeKbIds))
           : undefined,
@@ -193,6 +199,7 @@ export async function searchKnowledgeBaseDocuments(
   const matchClause = sql`(${documents.title} @@@ ${bm25Query} OR ${documents.slug} @@@ ${bm25Query} OR ${documents.content} @@@ ${bm25Query})`;
   const folderClause = ne(documents.fileType, DOCUMENT_FOLDER_TYPE);
   const userClause = buildDocumentReadableWhere(db, context.scope);
+  const fileCeiling = buildOptionalFileTopicCeiling(db, context.scope, documents.fileId);
 
   const inlineRowsPromise = db
     .select({
@@ -209,6 +216,7 @@ export async function searchKnowledgeBaseDocuments(
     .where(
       and(
         userClause,
+        fileCeiling,
         folderClause,
         inArray(documents.knowledgeBaseId, knowledgeBaseIds),
         matchClause,
@@ -237,7 +245,7 @@ export async function searchKnowledgeBaseDocuments(
         inArray(knowledgeBaseFiles.knowledgeBaseId, knowledgeBaseIds),
       ),
     )
-    .where(and(userClause, folderClause, matchClause))
+    .where(and(userClause, fileCeiling, folderClause, matchClause))
     .orderBy(sql`paradedb.score(${documents.id}) DESC`)
     .limit(limit);
 

@@ -68,6 +68,21 @@ export const buildFileTopicCeiling = (
 };
 
 /**
+ * A row that optionally points at a file. Rows with no file keep their own
+ * ACL. Rows whose file is attached to an unreadable topic stay hidden.
+ */
+export const buildOptionalFileTopicCeiling = (
+  db: OrviloDatabase,
+  ctx: Reader,
+  fileId: SQLWrapper,
+): SQL | undefined => {
+  const ceiling = buildFileTopicCeiling(db, ctx, fileId);
+  if (!ceiling) return undefined;
+
+  return or(sql`${fileId} is null`, ceiling);
+};
+
+/**
  * File Works follow their origin topic. Other work types keep their own
  * resource ACL. A missing origin topic is not treated as a private Project.
  */

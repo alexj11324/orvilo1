@@ -28,7 +28,10 @@ import {
 } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
 import { buildDocumentReadableWhere } from '../../../utils/documentAccess';
-import { buildFileTopicCeiling } from '../../../utils/fileTopicCeiling';
+import {
+  buildFileTopicCeiling,
+  buildOptionalFileTopicCeiling,
+} from '../../../utils/fileTopicCeiling';
 import { normalizeInboxAgentMeta, normalizeInboxAgentTitle } from '../../../utils/inboxAgent';
 import { searchableMessage } from '../../../utils/searchableMessage';
 import { notShareVisitorMessage, notShareVisitorTopic } from '../../../utils/shareVisitor';
@@ -61,6 +64,13 @@ const truncate = (
   if (content.length <= maxLength) return content;
   return `${content.slice(0, maxLength)}...`;
 };
+
+/** Document hydration stays outside the search scan and follows the file's Project ceiling. */
+const readableDocument = (db: OrviloDatabase, scope: FtsSearchBackendScope): SQL =>
+  and(
+    buildDocumentReadableWhere(db, scope),
+    buildOptionalFileTopicCeiling(db, scope, documents.fileId),
+  )!;
 
 /** Select one extra character so truncation preserves exact ellipsis behavior without loading full content. */
 const documentContentPreview = (maxLength: number) =>
@@ -506,7 +516,7 @@ export const hydrateFiles = async (
           })
           .from(documents)
           .where(
-            and(inArray(documents.fileId, selectedFileIds), buildDocumentReadableWhere(db, scope)),
+            and(inArray(documents.fileId, selectedFileIds), readableDocument(db, scope)),
           );
   const contentByFile = new Map<string, string | null>();
   for (const row of documentRows.toSorted((left, right) => left.id.localeCompare(right.id))) {
@@ -557,7 +567,7 @@ export const hydrateFolders = async (
           documents.id,
           hits.map(({ id }) => id),
         ),
-        buildDocumentReadableWhere(db, scope),
+        readableDocument(db, scope),
         eq(documents.fileType, DOCUMENT_FOLDER_TYPE),
       ),
     );
@@ -615,7 +625,7 @@ export const hydratePages = async (
           documents.id,
           hits.map(({ id }) => id),
         ),
-        buildDocumentReadableWhere(db, scope),
+        readableDocument(db, scope),
         eq(documents.fileType, 'custom/document'),
       ),
     );
@@ -670,7 +680,7 @@ export const hydrateKnowledgeBaseDocuments = async (
           documents.id,
           hits.map(({ id }) => id),
         ),
-        buildDocumentReadableWhere(db, scope),
+        readableDocument(db, scope),
         ne(documents.fileType, DOCUMENT_FOLDER_TYPE),
       ),
     );
@@ -703,7 +713,7 @@ export const hydrateKnowledgeBaseDocuments = async (
           })
           .from(documents)
           .where(
-            and(inArray(documents.id, selectedDocumentIds), buildDocumentReadableWhere(db, scope)),
+            and(inArray(documents.id, selectedDocumentIds), readableDocument(db, scope)),
           );
   const contentById = new Map(contentRows.map(({ content, id }) => [id, content] as const));
 

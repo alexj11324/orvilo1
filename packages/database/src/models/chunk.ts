@@ -5,6 +5,7 @@ import { chunk } from 'es-toolkit/compat';
 import type { NewChunkItem, NewUnstructuredChunkItem } from '../schemas';
 import { chunks, embeddings, fileChunks, files, unstructuredChunks } from '../schemas';
 import type { OrviloDatabase } from '../type';
+import { buildOptionalFileTopicCeiling } from '../utils/fileTopicCeiling';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 export class ChunkModel {
@@ -24,6 +25,14 @@ export class ChunkModel {
 
   private fileChunksOwnership = () =>
     buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, fileChunks);
+
+  /** Chunk text follows the file it was parsed from, including a private Project. */
+  private linkedFileCeiling = () =>
+    buildOptionalFileTopicCeiling(
+      this.db,
+      { userId: this.userId, workspaceId: this.workspaceId },
+      fileChunks.fileId,
+    );
 
   bulkCreate = async (params: NewChunkItem[], fileId: string) => {
     return this.db.transaction(async (trx) => {
@@ -106,7 +115,14 @@ export class ChunkModel {
       })
       .from(chunks)
       .innerJoin(fileChunks, eq(chunks.id, fileChunks.chunkId))
-      .where(and(eq(fileChunks.fileId, id), this.ownership(), this.fileChunksOwnership()))
+      .where(
+        and(
+          eq(fileChunks.fileId, id),
+          this.ownership(),
+          this.fileChunksOwnership(),
+          this.linkedFileCeiling(),
+        ),
+      )
       .limit(20)
       .offset(page * 20)
       .orderBy(asc(chunks.index));
@@ -123,7 +139,14 @@ export class ChunkModel {
       .select()
       .from(chunks)
       .innerJoin(fileChunks, eq(chunks.id, fileChunks.chunkId))
-      .where(and(eq(fileChunks.fileId, id), this.ownership(), this.fileChunksOwnership()));
+      .where(
+        and(
+          eq(fileChunks.fileId, id),
+          this.ownership(),
+          this.fileChunksOwnership(),
+          this.linkedFileCeiling(),
+        ),
+      );
 
     return data
       .map((item) => item.chunks)
@@ -140,7 +163,7 @@ export class ChunkModel {
         id: fileChunks.fileId,
       })
       .from(fileChunks)
-      .where(and(inArray(fileChunks.fileId, ids), this.fileChunksOwnership()))
+      .where(and(inArray(fileChunks.fileId, ids), this.fileChunksOwnership(), this.linkedFileCeiling()))
       .groupBy(fileChunks.fileId);
   };
 
@@ -151,7 +174,7 @@ export class ChunkModel {
         id: fileChunks.fileId,
       })
       .from(fileChunks)
-      .where(and(eq(fileChunks.fileId, ids), this.fileChunksOwnership()))
+      .where(and(eq(fileChunks.fileId, ids), this.fileChunksOwnership(), this.linkedFileCeiling()))
       .groupBy(fileChunks.fileId);
 
     return data[0]?.count ?? 0;
@@ -185,6 +208,7 @@ export class ChunkModel {
       .where(
         and(
           this.ownership(),
+          this.linkedFileCeiling(),
           fileIds ? this.fileChunksOwnership() : undefined,
           fileIds ? inArray(fileChunks.fileId, fileIds) : undefined,
         ),
@@ -229,7 +253,14 @@ export class ChunkModel {
       .leftJoin(embeddings, eq(chunks.id, embeddings.chunkId))
       .leftJoin(fileChunks, eq(chunks.id, fileChunks.chunkId))
       .leftJoin(files, eq(files.id, fileChunks.fileId))
-      .where(and(inArray(fileChunks.fileId, fileIds), this.ownership(), this.fileChunksOwnership()))
+      .where(
+        and(
+          inArray(fileChunks.fileId, fileIds),
+          this.ownership(),
+          this.fileChunksOwnership(),
+          this.linkedFileCeiling(),
+        ),
+      )
       .orderBy((t) => desc(t.similarity))
       // Relaxed to 15 for now
       .limit(topK);

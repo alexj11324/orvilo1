@@ -96,7 +96,7 @@ P1 表示会破坏部署、身份边界或服务投递的配置冲突；P2 表�
 - 修改的 JS/TS 脚本已通过 ESLint；Bash setup 语法检查与 `git diff --check` 通过。环境未提供 Bun，未运行 `bun run check` 包装器，使用已安装的本地 ESLint/Vitest/Node 执行上述定向检查。
 - 全仓类型检查仍由已有 CI job 执行，遵守仓库 “不在本地跑全仓 typecheck” 的规则。本轮没有宣称它已经通过。
 - 没有启动生产服务、修改实际密钥、运行数据库迁移或进行真实 Clerk / 外部 Hatchet/Electron 全链路验收。Compose/YAML 测试与打包加载不能替代这些部署验证。
-- 独立审查：初轮及一次修复复核完成，原四组发现均确认解决，未发现新增发布阻断问题。复核指出的邮箱验证标志文案残留已修正；该最后文案修正未再启动额外独立复核。独立审查者自己的子进程测试受沙箱 EPERM 限制，上述通过结果来自主执行者获准的本地运行。
+- 独立审查：初轮及一次修复复核完成，原四组发现均确认解决，未发现新增发布阻断问题。复核指出的邮箱验证标志文案残留已修正。后续清理又去掉启动诊断里把 SMTP/Resend 当成注册邮箱校验、并要求设置 `AUTH_EMAIL_VERIFICATION` 的提示；该标志只转发给账户门户，实际校验在 Clerk。Grafana 中文示例中的 Casdoor 配置注释，以及已不再挂载的 `docker-compose/production/grafana/init_data.json`，也已删除。
 
 ## 未覆盖事项与使用限制
 

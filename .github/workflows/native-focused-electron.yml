@@ -61,7 +61,7 @@ jobs:
           EXPECTED_REVISION: ${{ inputs.revision || github.sha }}
         run: |
           ELECTRON="$(realpath apps/desktop/node_modules/electron/dist/electron)"
-          PLAYWRIGHT="$(node -p 'require.resolve("playwright")')"
+          PLAYWRIGHT="$(node -p 'require("node:path").join(require("node:path").dirname(require("node:module").createRequire(require.resolve("@playwright/test")).resolve("playwright/package.json")), "index.mjs")')"
           NODE="$(command -v node)"
           # A finite process scope is required; run Electron as the original non-root runner.
           # Scope/ancestor/host headroom is measured by the unchanged admission thresholds.

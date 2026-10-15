@@ -33,3 +33,10 @@ sibling matrix shards report `cancelled` rather than `failure`. A `cancelled`
 shard is not the failure — open the logs of the shard job that actually went
 red. `Required Quality Gate` is the branch-protection check; on
 duplicate-skipped PR runs it mirrors the owning push run's verdict.
+
+## Repository evolution audit
+
+[Initial tracked snapshot to current implementation](repository-audit/README.md)
+records the exact comparison commits, complete file inventory, environment references,
+ranked inconsistencies and verification limits. Historical rollout notes do not
+override the current implementation or the code owners in `AGENTS.md`.

@@ -5,7 +5,7 @@ Guidelines for using AI coding agents in this opensource Orvilo repository.
 ## Tech Stack
 
 - Next.js 16 + React 19 + TypeScript
-- SPA inside Next.js with `react-router-dom`
+- SPA inside Next.js with `react-router`
 - Local ReUI/shadcn components and adapters, retained `@lobehub/ui` features, antd-style; see the **react** skill for component and styling choices
 - react-i18next for i18n; zustand for state management
 - SWR for data fetching; TRPC for type-safe backend

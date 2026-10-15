@@ -9,7 +9,7 @@ inputs:
   package-manager-cache:
     description: Pass-through to actions/setup-node package-manager-cache
     required: false
-    default: 'false'
+    default: 'true'
   bun-version:
     description: Bun version
     required: false
@@ -32,4 +32,9 @@ runs:
       uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
+        cache: ${{ inputs.package-manager-cache == 'true' && 'pnpm' || '' }}
+        cache-dependency-path: |
+          pnpm-lock.yaml
+          apps/cli/pnpm-lock.yaml
+          apps/desktop/pnpm-lock.yaml
         package-manager-cache: ${{ inputs.package-manager-cache }}

@@ -43,8 +43,7 @@ ENV NEXT_PUBLIC_BASE_PATH="${NEXT_PUBLIC_BASE_PATH}" \
 ENV APP_URL="http://app.com" \
     DATABASE_DRIVER="node" \
     DATABASE_URL="postgres://postgres:password@localhost:5432/postgres" \
-    KEY_VAULTS_SECRET="use-for-build" \
-    AUTH_SECRET="use-for-build"
+    KEY_VAULTS_SECRET="use-for-build"
 
 # Sentry
 ENV NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
@@ -207,26 +206,12 @@ ENV KEY_VAULTS_SECRET="" \
     DATABASE_DRIVER="node" \
     DATABASE_URL=""
 
-# Better Auth
-ENV AUTH_SECRET="" \
-    AUTH_SSO_PROVIDERS="" \
-    AUTH_ALLOWED_EMAILS="" \
-    AUTH_ADDITIONAL_TRUSTED_ORIGINS="" \
-    AUTH_TRUSTED_ORIGINS="" \
+# Clerk accounts portal: inject deployment credentials at runtime, never build time.
+ENV AUTH_ACCOUNTS_URL="" \
+    AUTH_COOKIE_DOMAIN="" \
     AUTH_DISABLE_EMAIL_PASSWORD="" \
     AUTH_EMAIL_VERIFICATION="" \
-    AUTH_ENABLE_MAGIC_LINK="" \
-    # Google
-    AUTH_GOOGLE_ID="" \
-    AUTH_GOOGLE_SECRET="" \
-    # GitHub
-    AUTH_GITHUB_ID="" \
-    AUTH_GITHUB_SECRET="" \
-    # Microsoft
-    AUTH_MICROSOFT_ID="" \
-    AUTH_MICROSOFT_SECRET="" \
-    AUTH_MICROSOFT_AUTHORITY_URL="" \
-    AUTH_MICROSOFT_TENANT_ID=""
+    AUTH_ENABLE_MAGIC_LINK=""
 
 # Redis
 ENV REDIS_URL="" \

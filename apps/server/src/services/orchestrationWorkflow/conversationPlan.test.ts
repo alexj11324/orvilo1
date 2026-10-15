@@ -246,6 +246,26 @@ describe('board split and conversation reply admission', () => {
     ]);
     expect(issues.find((issue) => issue.id === added.id)!.parentTaskId).toBe(result.parentTaskId);
   });
+  it('reactivates a sub-Issue that rejoins the pending split after being moved out', async () => {
+    const result = await plans().prepare(input, context);
+    const [, beta] = result.taskIds;
+    const nodeFor = async () =>
+      (
+        await db
+          .select()
+          .from(orchestrationWorkflowNodes)
+          .where(eq(orchestrationWorkflowNodes.taskId, beta))
+      )[0];
+    const proposedStatus = (await nodeFor()).status;
+
+    await new TaskModel(db, userId).update(beta, { parentTaskId: null });
+    await plans().post(result.orchestrationWorkflowId, context);
+    expect((await nodeFor()).status).toBe('retired');
+
+    await new TaskModel(db, userId).update(beta, { parentTaskId: result.parentTaskId });
+    await plans().post(result.orchestrationWorkflowId, context);
+    expect((await nodeFor()).status).toBe(proposedStatus);
+  });
   it('does not accept a caller-supplied confirmation stamp', async () => {
     const graph = await new OrchestrationWorkflowService(db, userId).create({
       title: 'Untrusted',

@@ -208,12 +208,21 @@ export class OrchestrationWorkflowConversationPlanService {
       }
       for (const node of graph?.nodes.filter((node) => node.kind === 'task') ?? []) {
         const issue = issues.find((item) => item.id === node.taskId);
-        if (issue)
+        if (issue) {
           await graphModel.updateNodeText(id, node.id, {
             title: issue.name ?? node.title,
             description: issue.instruction,
           });
-        else
+          // An Issue moved out and back keeps its retired node; the frontier
+          // skips retired nodes, so restore the bound (active) state.
+          if (node.status === 'retired')
+            await graphModel.updateNodeStatus(
+              id,
+              node.id,
+              'active',
+              'Sub-Issue restored to the pending split',
+            );
+        } else
           await graphModel.updateNodeStatus(
             id,
             node.id,

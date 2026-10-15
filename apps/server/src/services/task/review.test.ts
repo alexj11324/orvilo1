@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { TaskApiName, TaskManifest } from '@orvilo/builtin-tool-task';
 import type { TaskItem } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -211,6 +212,54 @@ describe('ordinary Issue review', () => {
       cycleId: 'cycle',
       actorAgentId: 'reviewer',
       operationId: 'review-op',
+    });
+  });
+  it('gives the reviewer one submission UUID per item despite an original Checklist label', async () => {
+    const checkItemId = '6f6720e9-876b-4d58-8b13-08ce5e48afc7';
+    const criterion = {
+      title: 'Persist the delivered answer',
+      description: 'Reload and compare the stored answer.',
+      required: true,
+      definition: { expected: 'The delivered answer survives reload.' },
+    };
+    mocks.prepareReview.mockResolvedValue({
+      run: {
+        id: 'round',
+        plan: [{ ...criterion, id: checkItemId, verifierConfig: { checklistItemId: 'C-1' } }],
+      },
+      proof: params.proof,
+    });
+    await startIssueReview(db, 'user', 'task');
+    const prompt = mocks.exec.mock.calls[0][0].prompt as string;
+    const checklist = JSON.parse(
+      prompt.split('Confirmed Checklist (the sole acceptance criteria):\n')[1].split('\n\n')[0],
+    );
+    expect(checklist).toEqual([{ checkItemId, ...criterion }]);
+    expect(prompt).not.toContain('C-1');
+    expect(prompt).toContain('Copy each checkItemId UUID exactly');
+    expect(prompt).toContain('content or an accessible uploaded fileId');
+    expect(prompt).toContain('description alone is not evidence');
+    const tool = TaskManifest.api.find((api) => api.name === TaskApiName.submitTaskReview);
+    expect(tool?.parameters).toMatchObject({
+      properties: {
+        items: {
+          items: {
+            properties: {
+              checkItemId: { description: expect.stringContaining('checkItemId UUID') },
+              evidence: {
+                description: expect.stringContaining('content or an accessible uploaded fileId'),
+                items: {
+                  properties: {
+                    content: { description: expect.stringContaining('inline') },
+                    fileId: { description: expect.stringContaining('uploaded') },
+                    description: { description: expect.stringContaining('alone is not evidence') },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
   });
   it('includes the real saved-Agent delivery cwd when no workspace was provisioned', async () => {

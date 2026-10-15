@@ -334,10 +334,16 @@ export const TaskManifest: BuiltinToolManifest = {
               type: 'object',
               additionalProperties: false,
               properties: {
-                checkItemId: { type: 'string' },
+                checkItemId: {
+                  description:
+                    'Copy the exact checkItemId UUID from the confirmed Checklist in the review request, not an original Checklist label or index.',
+                  type: 'string',
+                },
                 verdict: { enum: ['pass', 'fail', 'uncertain'], type: 'string' },
                 comment: { type: 'string' },
                 evidence: {
+                  description:
+                    'Real observations for this item and delivery: each entry needs a supported type and nonempty content or an accessible uploaded fileId; description alone is not evidence.',
                   type: 'array',
                   minItems: 1,
                   items: {
@@ -357,9 +363,20 @@ export const TaskManifest: BuiltinToolManifest = {
                         ],
                         type: 'string',
                       },
-                      content: { type: 'string' },
-                      fileId: { type: 'string' },
-                      description: { type: 'string' },
+                      content: {
+                        description:
+                          'Nonempty inline observations or tool output supporting the verdict.',
+                        type: 'string',
+                      },
+                      fileId: {
+                        description:
+                          'The accessible file ID of an already uploaded evidence artifact.',
+                        type: 'string',
+                      },
+                      description: {
+                        description: 'Optional caption; description alone is not evidence.',
+                        type: 'string',
+                      },
                     },
                     required: ['type'],
                   },

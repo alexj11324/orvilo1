@@ -93,11 +93,20 @@ export async function startIssueReview(
     const prompt = [
       `Review Issue ${task.identifier}: ${task.name ?? ''}`,
       `Issue background and scope:\n${task.instruction}`,
-      `Confirmed Checklist (the sole acceptance criteria):\n${JSON.stringify(run.plan)}`,
+      `Confirmed Checklist (the sole acceptance criteria):\n${JSON.stringify(
+        run.plan?.map((item) => ({
+          checkItemId: item.id,
+          title: item.title,
+          description: item.description,
+          required: item.required,
+          definition: item.definition,
+          resourceSnapshot: item.resourceSnapshot,
+        })),
+      )}`,
       `Checklist round: ${run.id}\nDelivery proof: ${JSON.stringify(proof)}`,
       `Delivered final reply:\n${typeof finalReply === 'string' ? finalReply : '(No final reply recorded)'}`,
       ...(cwd ? [`Working directory: ${cwd}`] : []),
-      `Check every Checklist item against this delivery version. Record exactly one overall verdict using submitTaskReview with identifier ${task.identifier}, runId, the exact delivery proof, and items containing each checkItemId, verdict pass/fail/uncertain, comment and real evidence. Required uncertain or failing items cannot pass. A failing overall verdict requires a repair comment. Passing review waits for human acceptance and does not complete or merge the Issue.`,
+      `Check every Checklist item against this delivery version. Record exactly one overall verdict using submitTaskReview with identifier ${task.identifier}, runId, the exact delivery proof, and items containing each checkItemId, verdict pass/fail/uncertain, comment and real evidence. Copy each checkItemId UUID exactly from the confirmed Checklist above; never substitute an original Checklist label or index. Each item needs a nonempty comment and at least one evidence object with a supported type and nonempty content or an accessible uploaded fileId; description alone is not evidence. Use content for inline observations or tool output and fileId for an already uploaded artifact. Judge each item independently from observed evidence. Required uncertain or failing items cannot pass. A failing overall verdict requires a repair comment. Passing review waits for human acceptance and does not complete or merge the Issue.`,
     ].join('\n\n');
     const { AiAgentService } = await import('../aiAgent');
     const result = await new AiAgentService(db, userId, { workspaceId }).execAgent({

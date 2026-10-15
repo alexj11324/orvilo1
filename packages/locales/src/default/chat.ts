@@ -1842,8 +1842,9 @@ export default {
   'taskDetail.comment.replyToRunUnnumbered': 'Reply to an earlier run',
   'taskDetail.commentDraftSaveFailed': 'Could not save comment draft',
   'taskDetail.commentSendFailed': 'Could not post the comment. Your draft is kept.',
-  'taskDetail.commentPlaceholder':
-    'Leave a comment, or @ a teammate — comments also guide the next run...',
+  'taskDetail.instructionSendFailed':
+    'Could not send the instruction. Your draft is kept. Wait for the current run or check your Issue and Agent permissions.',
+  'taskDetail.commentPlaceholder': 'Leave a comment, or @ the Agent to send an instruction...',
   'taskDetail.fieldValue': '{{field}}: {{value}}',
   'taskDetail.sendComment': 'Send comment',
   'taskDetail.runCollapse': 'Collapse run',

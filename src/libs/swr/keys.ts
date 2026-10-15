@@ -370,6 +370,10 @@ export const taskKeys = {
     ],
   ),
   detail: def('task:detail', (taskId: string) => ['task:detail', taskId]),
+  instructionTarget: def('task:instructionTarget', (taskId: string) => [
+    'task:instructionTarget',
+    taskId,
+  ]),
   groupList: def(
     'task:groupList',
     (

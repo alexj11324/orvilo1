@@ -83,6 +83,7 @@ export class TaskLifecycleSliceActionImpl {
     id: string,
     params?: {
       continueTopicId?: string;
+      instructionAgentId?: string;
       intent?: 'continue' | 'repair' | 'authorized_replan';
       prompt?: string;
       replanApprovalId?: string;

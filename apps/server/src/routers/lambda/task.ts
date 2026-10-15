@@ -95,6 +95,7 @@ import { TransferErrorCode } from '@/types/transferError';
 
 import { assertWorkspaceRowManageable } from './_helpers/assertWorkspaceRowManageable';
 import { assertIssueExecutionInput } from './_helpers/issueExecutionInput';
+import { resolveIssueInstructionTarget } from './_helpers/issueInstruction';
 import { assertCanUseWorkspaceAgent } from './_helpers/workspaceAgentGuard';
 import { projectWorkspaceConversationMetadata } from './_helpers/workspaceConversationMetadata';
 import {
@@ -869,6 +870,33 @@ export const taskRouter = router({
         }),
         success: true,
       };
+    }),
+  getInstructionTarget: taskProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.id);
+      try {
+        const target = await resolveIssueInstructionTarget(ctx, task);
+        const [agent] = await ctx.agentModel.getAgentAvatarsByIds([target.agentId]);
+        return {
+          data: agent
+            ? {
+                agentId: target.agentId,
+                topicId: target.topicId,
+                name: agent.title ?? agent.name ?? agent.id,
+                avatar: agent.avatar,
+              }
+            : null,
+          success: true,
+        };
+      } catch (error) {
+        if (
+          error instanceof TRPCError &&
+          ['FORBIDDEN', 'NOT_FOUND', 'CONFLICT'].includes(error.code)
+        )
+          return { data: null, success: true };
+        throw error;
+      }
     }),
   getIssuePlan: taskProcedure
     .input(z.object({ id: z.string().min(1) }))
@@ -2001,6 +2029,7 @@ export const taskRouter = router({
       idInput.merge(
         z.object({
           continueTopicId: z.string().optional(),
+          instructionAgentId: z.string().min(1).optional(),
           delegationGrantId: z.string().optional(),
           idempotencyKey: z.string().min(1).max(255).optional(),
           // SB08: which contract this run adopts. `continue` continues an
@@ -2036,15 +2065,28 @@ export const taskRouter = router({
           delegation = { agentId: grant.agentId, grantId: grant.id };
         }
 
+        const instruction =
+          input.continueTopicId || input.instructionAgentId
+            ? await resolveIssueInstructionTarget(ctx, task, {
+                agentId: input.instructionAgentId,
+                topicId: input.continueTopicId,
+              })
+            : undefined;
+        if (instruction && delegation)
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Issue input cannot replace the Run executor',
+          });
         const runner = new TaskRunnerService(
           ctx.serverDB,
-          ctx.userId,
+          instruction?.executionUserId ?? ctx.userId,
           ctx.workspaceId ?? undefined,
         );
         return await runner.runTask({
-          continueTopicId: input.continueTopicId,
+          continueTopicId: instruction?.topicId ?? input.continueTopicId,
           delegation,
           extraPrompt: input.prompt,
+          requestedBy: ctx.userId,
           idempotencyKey: input.idempotencyKey,
           intent: input.intent,
           replanApprovalId: input.replanApprovalId,

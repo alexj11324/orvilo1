@@ -15,6 +15,8 @@ import { lambdaClient } from '@/libs/trpc/client';
 class TaskService {
   draftIssuePlan = async (id: string) => lambdaClient.task.draftIssuePlan.mutate({ id });
 
+  getInstructionTarget = async (id: string) => lambdaClient.task.getInstructionTarget.query({ id });
+
   getIssuePlan = async (id: string) => lambdaClient.task.getIssuePlan.query({ id });
 
   confirmIssuePlan = async (id: string, revision: number) =>
@@ -318,6 +320,7 @@ class TaskService {
     id: string,
     params?: {
       continueTopicId?: string;
+      instructionAgentId?: string;
       idempotencyKey?: string;
       intent?: 'continue' | 'repair' | 'authorized_replan';
       prompt?: string;

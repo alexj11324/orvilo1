@@ -19,9 +19,14 @@ vi.mock('@/store/task', () => ({
       addComment: vi.fn(),
       cancelTopic: vi.fn(),
       openTopicDrawer: vi.fn(),
+      runTask: instruction.runTask,
       taskDetailMap: {},
     }),
 }));
+
+vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ allowed: true }) }));
+
+vi.mock('@/components/toast', () => ({ toast: { error: vi.fn() } }));
 
 vi.mock('@/hooks/useActivityTime', () => ({
   useActivityTime: () => ({ text: '4m ago', title: '4m ago' }),
@@ -29,12 +34,23 @@ vi.mock('@/hooks/useActivityTime', () => ({
 
 // None of these render for this activity; they are stubbed only to keep the
 // reply editor's upload stack and the verify feature out of the module graph.
-vi.mock('./RunReplyEditor', () => ({ default: () => null }));
+vi.mock('./RunReplyEditor', () => ({
+  default: ({ onSubmit }: { onSubmit: (text: string) => Promise<void> }) => (
+    <button onClick={() => void onSubmit('Check the latest result')}>Send instruction</button>
+  ),
+}));
 vi.mock('./RunVerifyDetail', () => ({ default: () => <span>Acceptance checklist</span> }));
 vi.mock('./RunVerifyTag', () => ({ default: () => <span>Accepted</span> }));
 
 vi.mock('@/features/AgentProfileCard/AgentProfilePopup', () => ({
   default: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
+
+const instruction = vi.hoisted(() => ({ runTask: vi.fn() }));
+vi.mock('./useIssueInstructionTarget', () => ({
+  useIssueInstructionTarget: () => ({
+    target: { agentId: 'saved-agent', topicId: 'run-1', name: 'Saved Agent' },
+  }),
 }));
 
 const activity = {
@@ -52,6 +68,30 @@ describe('TopicCard', () => {
   afterEach(() => {
     cleanup();
     useHomeStore.setState({ ungroupedAgents: [] });
+  });
+
+  it('sends an explicit reply through the authorized Issue execution entry', async () => {
+    instruction.runTask.mockResolvedValue({ success: true });
+    render(
+      <TopicCard
+        activity={{
+          ...activity,
+          author: { id: 'saved-agent', name: 'Saved Agent', type: 'agent' },
+        }}
+      />,
+      { wrapper: MemoryRouter },
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'taskDetail.runFollowUp' }));
+    await userEvent.click(screen.getByText('Send instruction'));
+    expect(instruction.runTask).toHaveBeenCalledWith(
+      'T-1',
+      {
+        continueTopicId: 'run-1',
+        instructionAgentId: 'saved-agent',
+        prompt: 'Check the latest result',
+      },
+      { throwOnError: true },
+    );
   });
 
   it('shows the delivery without a second acceptance status or checklist', () => {

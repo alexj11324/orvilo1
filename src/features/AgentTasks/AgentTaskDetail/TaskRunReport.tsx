@@ -16,6 +16,7 @@ import { isRunEndedBadly } from './runEnding';
 import RunFailureReason from './RunFailureReason';
 import RunReplyEditor from './RunReplyEditor';
 import { useTaskDetailTaskId } from './TaskDetailScope';
+import { useIssueInstructionTarget } from './useIssueInstructionTarget';
 
 /**
  * What the agent reported for this task, presented as a report.
@@ -41,12 +42,18 @@ interface TaskRunReportProps {
 const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
   const { t } = useTranslation('chat');
   const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
-  const addComment = useTaskStore((s) => s.addComment);
+  const runTask = useTaskStore((s) => s.runTask);
   const activeTaskId = useTaskDetailTaskId();
   const [commenting, setCommenting] = useState(false);
 
   // A descendant run belongs to `sourceTaskId`, not the open parent.
   const runTaskId = activity.sourceTaskId ?? activeTaskId;
+  const { target: instructionTarget } = useIssueInstructionTarget(runTaskId);
+  const canInstruct =
+    !!activity.id &&
+    instructionTarget?.topicId === activity.id &&
+    instructionTarget?.agentId ===
+      (activity.author?.type === 'agent' ? activity.author.id : activity.agentId);
 
   const openConversation = useCallback(() => {
     if (!activity.id) return;
@@ -89,8 +96,17 @@ const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
         <RunReplyEditor
           onCancel={() => setCommenting(false)}
           onSubmit={async (text) => {
-            if (!runTaskId) return;
-            await addComment(runTaskId, text, { topicId: activity.id });
+            if (!runTaskId || !canInstruct || !instructionTarget)
+              throw new Error('The Issue Agent changed');
+            await runTask(
+              runTaskId,
+              {
+                continueTopicId: activity.id,
+                instructionAgentId: instructionTarget.agentId,
+                prompt: text,
+              },
+              { throwOnError: true },
+            );
             setCommenting(false);
           }}
         />
@@ -102,7 +118,7 @@ const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
             title={t('taskDetail.openRunChat')}
             onClick={openConversation}
           />
-          {!!runTaskId && (
+          {!!runTaskId && canInstruct && (
             <ActionIcon
               icon={MessageCircle}
               size={'small'}

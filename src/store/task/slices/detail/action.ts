@@ -869,6 +869,13 @@ export class TaskDetailSliceActionImpl {
     }
   };
 
+  useFetchIssueInstructionTarget = (taskId?: string) =>
+    useClientDataSWR(
+      taskId ? taskKeys.instructionTarget(taskId) : null,
+      () => taskService.getInstructionTarget(taskId!),
+      { refreshInterval: taskId ? 15_000 : 0 },
+    );
+
   useFetchTaskDetail = (taskId?: string) => {
     // Drive polling from a reactive boolean. SWR's function-form refreshInterval
     // is a trap here: it's only re-evaluated after a timer fires, so if the first

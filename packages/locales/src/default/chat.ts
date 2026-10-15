@@ -2142,7 +2142,7 @@ export default {
   'taskDetail.status.failed': 'Failed',
   'taskDetail.status.paused': 'Pending review',
   'taskDetail.status.running': 'In progress',
-  'taskDetail.status.scheduled': 'Scheduled',
+  'taskDetail.status.scheduled': 'Automation on',
   'taskDetail.statusCascade.applyFailed': 'Could not update the issue status. Try again.',
   'taskDetail.statusCascade.cancel': 'Cancel',
   'taskDetail.statusCascade.description_other':
@@ -2940,7 +2940,7 @@ export default {
   'taskList.kanban.paused': 'Paused',
   'taskList.kanban.needsInput': 'Pending review',
   'taskList.kanban.running': 'In progress',
-  'taskList.kanban.scheduled': 'Scheduled',
+  'taskList.kanban.scheduled': 'Automation on',
   'taskList.kanban.showColumn': 'Show column',
   'taskList.kanban.todo': 'Todo',
   'taskList.kanban.triage': 'Triage',

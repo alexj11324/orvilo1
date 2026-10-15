@@ -206,7 +206,7 @@ export default {
   'settings.tab_runs': 'Runs',
   'settings.tab_settings': 'Settings',
 
-  'status.active': 'Active',
+  'status.active': 'Automation on',
   'status.inactive': 'Inactive',
   'status.paused': 'Paused',
 

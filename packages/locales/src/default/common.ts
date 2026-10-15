@@ -1075,7 +1075,7 @@ export default {
   'savedViews.values.status.paused': 'Pending review',
   'savedViews.values.status.reviewing': 'In Review',
   'savedViews.values.status.running': 'In progress',
-  'savedViews.values.status.scheduled': 'Scheduled',
+  'savedViews.values.status.scheduled': 'Automation on',
   'savedViews.values.triageStatus.accepted': 'Accepted',
   'savedViews.values.triageStatus.declined': 'Declined',
   'savedViews.values.triageStatus.duplicate': 'Duplicate',

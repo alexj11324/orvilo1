@@ -199,7 +199,7 @@
   "settings.load_failed": "加载自动化失败",
   "settings.tab_runs": "运行记录",
   "settings.tab_settings": "设置",
-  "status.active": "已激活",
+  "status.active": "自动化已启用",
   "status.inactive": "未激活",
   "status.paused": "已暂停",
   "template_categories.code_review": "代码审查",

@@ -199,7 +199,7 @@
   "settings.load_failed": "Failed to load automation",
   "settings.tab_runs": "Runs",
   "settings.tab_settings": "Settings",
-  "status.active": "Active",
+  "status.active": "Automation on",
   "status.inactive": "Inactive",
   "status.paused": "Paused",
   "template_categories.code_review": "Code review",

@@ -917,7 +917,7 @@
   "savedViews.values.status.paused": "待审阅",
   "savedViews.values.status.reviewing": "审核中",
   "savedViews.values.status.running": "进行中",
-  "savedViews.values.status.scheduled": "已计划",
+  "savedViews.values.status.scheduled": "自动化已启用",
   "savedViews.values.triageStatus.accepted": "已接受",
   "savedViews.values.triageStatus.declined": "已拒绝",
   "savedViews.values.triageStatus.duplicate": "重复",

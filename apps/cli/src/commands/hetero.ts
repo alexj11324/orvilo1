@@ -29,6 +29,12 @@ import type {
   UploadHeterogeneousImage,
 } from '@orvilo/heterogeneous-agents/spawn';
 import {
+  CoalescingBatchIngester,
+  createOperationHeartbeat,
+  createOperationTokenRenewal,
+  TrpcIngestSink,
+} from '@orvilo/heterogeneous-agents/run';
+import {
   classifyHeteroProcessFailure,
   createFileStoreImageUploader,
   isHeteroStatusGuideErrorData,
@@ -44,13 +50,9 @@ import {
   persistChildResultInboxRecord,
   resolvePersistentToolCallId,
 } from '../utils/childResultInbox';
-import { CoalescingBatchIngester } from '../utils/CoalescingBatchIngester';
 import { HeteroTraceRecorder } from '../utils/HeteroTraceRecorder';
 import { log } from '../utils/logger';
-import { createOperationHeartbeat } from '../utils/OperationHeartbeat';
-import { createOperationTokenRenewal } from '../utils/OperationTokenRenewal';
 import { createLocalTraceStore } from '../utils/traceStore';
-import { TrpcIngestSink } from '../utils/TrpcIngestSink';
 
 // `orvilo` is the builtin agent bound to the Prime harness — the fixed
 // type→adapter map resolves it to 'prime' (see
@@ -560,6 +562,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
           operationId,
           renew: async (id) =>
             (await getTrpcClient()).aiAgent.refreshHeteroOperationToken.mutate({ operationId: id }),
+          warn: (message) => log.warn(message),
         })
       : undefined;
 

@@ -35,26 +35,24 @@ const { finishCalls } = vi.hoisted(() => ({
     sessionId?: string;
   }>,
 }));
-vi.mock('../utils/TrpcIngestSink', () => ({
-  TrpcIngestSink: vi.fn().mockImplementation(function () {
-    return {
-      finish: async (params: (typeof finishCalls)[number]) => {
-        finishCalls.push(params);
-      },
-      ingest: async () => undefined,
-    };
-  }),
-}));
 const { pushedEvents } = vi.hoisted(() => ({
   pushedEvents: [] as Array<{ data: any; type: string }>,
 }));
-vi.mock('../utils/CoalescingBatchIngester', () => ({
+vi.mock('@orvilo/heterogeneous-agents/run', () => ({
   CoalescingBatchIngester: vi.fn().mockImplementation(function () {
     return {
       drain: async () => undefined,
       push: (event: { data: any; type: string }) => {
         pushedEvents.push({ data: event.data, type: event.type });
       },
+    };
+  }),
+  TrpcIngestSink: vi.fn().mockImplementation(function () {
+    return {
+      finish: async (params: (typeof finishCalls)[number]) => {
+        finishCalls.push(params);
+      },
+      ingest: async () => undefined,
     };
   }),
 }));

@@ -38,7 +38,8 @@ vi.mock('../api/client', () => ({
 }));
 
 const { mockRenewalStop } = vi.hoisted(() => ({ mockRenewalStop: vi.fn() }));
-vi.mock('../utils/OperationTokenRenewal', () => ({
+vi.mock('@orvilo/heterogeneous-agents/run', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@orvilo/heterogeneous-agents/run')>()),
   createOperationTokenRenewal: () => ({ active: true, stop: mockRenewalStop }),
 }));
 

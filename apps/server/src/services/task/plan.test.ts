@@ -161,6 +161,60 @@ describe('Issue plan confirmation', () => {
     },
   );
 
+  it('drops only prior-draft parent blocks to omitted canceled children on unconfirmed replan', async () => {
+    const model = new TaskModel(db, user, ws);
+    const first = { ...proposal(), tasks: proposal().tasks.slice(0, 2) };
+    vi.mocked(runAcpJudgment).mockResolvedValue({
+      data: first,
+      run: { operationId: 'planning-operation', status: 'done' },
+    });
+    const draft = await service().draftIssuePlan(id);
+    const [retained, omitted] = draft.subtasks;
+    const manual = await model.create({ instruction: 'Manual external prerequisite' });
+    await model.addDependency(id, manual.id, 'blocks');
+    await new TaskService(db, user, ws).updateStatus({ id: omitted.id, status: 'canceled' });
+    const canceled = (await model.findById(omitted.id))!;
+    expect(canceled.workflowCategory).toBe('canceled');
+    expect((await model.getDependencies(id)).map((edge) => edge.dependsOnId)).toContain(omitted.id);
+    vi.mocked(runAcpJudgment).mockResolvedValue({
+      data: { ...first, tasks: [first.tasks[0]] },
+      run: { operationId: 'replanning-operation', status: 'done' },
+    });
+
+    const redrafted = await service().draftIssuePlan(id);
+
+    expect(redrafted.plan?.confirmedAt).toBeUndefined();
+    expect(redrafted.plan?.revision).toBe(draft.plan!.revision + 1);
+    expect(redrafted.plan?.checklists.map((check) => check.taskId).sort()).toEqual(
+      [id, retained.id].sort(),
+    );
+    expect(
+      redrafted.dependencies
+        .filter((edge) => edge.taskId === id && edge.type === 'blocks')
+        .map((edge) => edge.dependsOnId)
+        .sort(),
+    ).toEqual([retained.id, manual.id].sort());
+    expect(await model.findById(omitted.id)).toMatchObject({
+      workflowCategory: 'canceled',
+      executionGeneration: canceled.executionGeneration,
+      instruction: canceled.instruction,
+    });
+    expect(TaskService.prototype.runReadySubtasks).not.toHaveBeenCalled();
+    await service().confirmIssuePlan({ id, revision: redrafted.plan!.revision });
+    expect(await model.areAllDependenciesCompleted(id)).toBe(false);
+    expect((await model.getDependencies(id)).map((edge) => edge.dependsOnId)).toContain(manual.id);
+    expect(await model.findById(omitted.id)).toMatchObject({ workflowCategory: 'canceled' });
+    await reviewedArtifact(retained.id);
+    await new IssueChecklistService(db, user, ws).confirmChecklist({
+      taskId: manual.id,
+      expectedRevision: 0,
+      deliveryKind: 'artifact',
+      items: check.items,
+    });
+    await reviewedArtifact(manual.id);
+    expect(await model.areAllDependenciesCompleted(id)).toBe(true);
+  });
+
   it('emits a planning schema the judgment validator can compile and enforce', async () => {
     await service().draftIssuePlan(id);
     const input = vi.mocked(runAcpJudgment).mock.calls[0][2].input;

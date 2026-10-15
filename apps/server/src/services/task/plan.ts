@@ -522,14 +522,20 @@ export class TaskPlanService {
               { workflowCategory: 'canceled' },
               { agentId, userId: this.userId },
             );
-        for (const edge of latest.dependencies)
-          if (
-            edge.type === 'blocks' &&
-            edge.taskId === current.id &&
-            oldPlan.checklists.some((check) => check.taskId === edge.dependsOnId)
-          )
-            await model.removeDependency(current.id, edge.dependsOnId);
       }
+      for (const edge of latest.dependencies)
+        if (
+          edge.type === 'blocks' &&
+          edge.taskId === current.id &&
+          oldPlan?.checklists.some((check) => check.taskId === edge.dependsOnId) &&
+          (oldPlan.confirmedAt ||
+            latest.subtasks.some(
+              (child) =>
+                child.id === edge.dependsOnId &&
+                ['done', 'canceled'].includes(child.workflowCategory),
+            ))
+        )
+          await model.removeDependency(current.id, edge.dependsOnId);
       await model.update(current.id, {
         workflowCategory: 'triage',
         triageStatus: 'untriaged',

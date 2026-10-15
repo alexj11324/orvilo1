@@ -196,6 +196,7 @@ jobs:
           node scripts/architecture/check-database-boundaries.mjs
           node scripts/architecture/check-runtime-boundaries.mjs
           node --test scripts/architecture/check-runtime-boundaries.test.mjs
+          node --test scripts/architecture/check-shared-resolutions.test.mjs
           node scripts/ci/checkFrontendDataBoundaries.mjs
 
       - name: Build independent type boundaries

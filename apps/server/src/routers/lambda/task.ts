@@ -1,6 +1,12 @@
 import { TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import { AgentRuntimeErrorType } from '@orvilo/model-runtime';
-import type { TaskItem, TaskListItem, TaskParticipant, TaskVerifyConfig } from '@orvilo/types';
+import type {
+  TaskItem,
+  TaskListItem,
+  TaskParticipant,
+  TaskVerifyConfig,
+  TaskWorkflowCategory,
+} from '@orvilo/types';
 import { TASK_ATTENTION_REASONS } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { and, eq, isNull } from 'drizzle-orm';

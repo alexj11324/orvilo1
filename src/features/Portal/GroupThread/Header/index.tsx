@@ -47,7 +47,7 @@ const Header = memo(() => {
         </div>
       }
       style={{
-        background: 'var(--ant-color-bg-container)',
+        background: 'var(--card)',
         paddingBlock: 6,
         paddingInline: 8,
       }}

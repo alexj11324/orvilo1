@@ -52,15 +52,15 @@ export interface StatusVisual {
  * warning color, animation just signals liveness.
  */
 const VISUALS = {
-  archived: { color: 'var(--ant-color-text-description)', icon: Archive },
-  backlog: { color: 'var(--ant-color-text-quaternary)', icon: CircleDot },
-  canceled: { color: 'var(--ant-orange)', icon: CirclePause },
-  completed: { color: 'var(--ant-color-success)', icon: CircleCheck },
-  failed: { color: 'var(--ant-color-error)', icon: CircleX },
-  idle: { color: 'var(--ant-color-text-tertiary)', icon: Circle },
-  running: { color: 'var(--ant-color-warning)', icon: CircleDot },
-  scheduled: { color: 'var(--ant-color-warning)', icon: Clock },
-  waitingForHuman: { color: 'var(--ant-color-info)', icon: HandIcon },
+  archived: { color: 'var(--foreground-description)', icon: Archive },
+  backlog: { color: 'var(--foreground-quaternary)', icon: CircleDot },
+  canceled: { color: 'var(--palette-orange-6)', icon: CirclePause },
+  completed: { color: 'var(--success)', icon: CircleCheck },
+  failed: { color: 'var(--destructive)', icon: CircleX },
+  idle: { color: 'var(--foreground-tertiary)', icon: Circle },
+  running: { color: 'var(--warning)', icon: CircleDot },
+  scheduled: { color: 'var(--warning)', icon: Clock },
+  waitingForHuman: { color: 'var(--info)', icon: HandIcon },
 } satisfies Record<string, ExecutionStatusVisual>;
 
 export const TASK_STATUS_VISUALS: Record<TaskStatus, ExecutionStatusVisual> = {
@@ -71,7 +71,7 @@ export const TASK_STATUS_VISUALS: Record<TaskStatus, ExecutionStatusVisual> = {
   // Task `paused` is surfaced as "Pending review" — Cordy's in-review
   // category, so it takes the review glyph (violet clock), not the
   // waiting-for-human hand a topic uses.
-  paused: { color: 'var(--ant-purple)', icon: Clock },
+  paused: { color: 'var(--palette-purple-6)', icon: Clock },
   running: VISUALS.running,
   scheduled: VISUALS.scheduled,
 };
@@ -94,14 +94,14 @@ export const resolveTaskStatus = (status: null | string | undefined): TaskStatus
  * never draws two marks — do not reach for a lucide circle instead.
  */
 export const WORKFLOW_CATEGORY_VISUALS: Record<TaskWorkflowCategory, StatusVisual> = {
-  backlog: { color: 'var(--ant-color-text-quaternary)', icon: WORKFLOW_CATEGORY_ICONS.backlog },
-  canceled: { color: 'var(--ant-color-text-description)', icon: WORKFLOW_CATEGORY_ICONS.canceled },
+  backlog: { color: 'var(--foreground-quaternary)', icon: WORKFLOW_CATEGORY_ICONS.backlog },
+  canceled: { color: 'var(--foreground-description)', icon: WORKFLOW_CATEGORY_ICONS.canceled },
   // Linear's brand indigo — the same paint the milestone diamond uses.
   done: { color: '#5e6ad2', icon: WORKFLOW_CATEGORY_ICONS.done },
-  in_progress: { color: 'var(--ant-color-warning)', icon: WORKFLOW_CATEGORY_ICONS.in_progress },
-  in_review: { color: 'var(--ant-color-success)', icon: WORKFLOW_CATEGORY_ICONS.in_review },
-  todo: { color: 'var(--ant-color-text-tertiary)', icon: WORKFLOW_CATEGORY_ICONS.todo },
-  triage: { color: 'var(--ant-orange)', icon: WORKFLOW_CATEGORY_ICONS.triage },
+  in_progress: { color: 'var(--warning)', icon: WORKFLOW_CATEGORY_ICONS.in_progress },
+  in_review: { color: 'var(--success)', icon: WORKFLOW_CATEGORY_ICONS.in_review },
+  todo: { color: 'var(--foreground-tertiary)', icon: WORKFLOW_CATEGORY_ICONS.todo },
+  triage: { color: 'var(--palette-orange-6)', icon: WORKFLOW_CATEGORY_ICONS.triage },
 };
 
 /**
@@ -128,8 +128,8 @@ export const PROJECT_STATUS_VISUALS: Record<ProjectStatus, ExecutionStatusVisual
   backlog: VISUALS.backlog,
   canceled: VISUALS.canceled,
   completed: VISUALS.completed,
-  paused: { color: 'var(--ant-color-text-secondary)', icon: PauseCircle },
-  planned: { color: 'var(--ant-purple)', icon: CircleDot },
+  paused: { color: 'var(--muted-foreground)', icon: PauseCircle },
+  planned: { color: 'var(--palette-purple-6)', icon: CircleDot },
   reviewing: VISUALS.waitingForHuman,
 };
 
@@ -144,7 +144,7 @@ export const TOPIC_STATUS_VISUALS: Record<ChatTopicStatus, ExecutionStatusVisual
   archived: VISUALS.archived,
   // Topic lists are mostly history: mute completed to keep long lists quiet,
   // unlike task boards where a green check marks an achievement.
-  completed: { ...VISUALS.completed, color: 'var(--ant-color-text-description)' },
+  completed: { ...VISUALS.completed, color: 'var(--foreground-description)' },
   // A failed topic is an alert the user should act on, not a terminal outcome
   // like a failed task run — the warning triangle reads that way, the circled X
   // reads as "closed/rejected".
@@ -152,7 +152,7 @@ export const TOPIC_STATUS_VISUALS: Record<ChatTopicStatus, ExecutionStatusVisual
   running: VISUALS.running,
   scheduled: VISUALS.scheduled,
   // `unread` rows render a custom ripple dot; this is the fallback glyph.
-  unread: { color: 'var(--ant-color-info)', icon: CircleDot },
+  unread: { color: 'var(--info)', icon: CircleDot },
   waitingForHuman: VISUALS.waitingForHuman,
 };
 
@@ -163,7 +163,7 @@ export const TOPIC_STATUS_VISUALS: Record<ChatTopicStatus, ExecutionStatusVisual
  * the waiting-for-human glyph since "needs your attention" is its semantic.
  */
 export const TOPIC_GROUP_VISUALS = {
-  favorite: { color: 'var(--ant-color-text-tertiary)', icon: StarIcon },
+  favorite: { color: 'var(--foreground-tertiary)', icon: StarIcon },
   pending: VISUALS.waitingForHuman,
 } satisfies Record<string, ExecutionStatusVisual>;
 
@@ -179,8 +179,8 @@ export const EXECUTION_STATUS_VISUALS = VISUALS;
 export const EXECUTION_STATE_VISUALS: Record<TaskExecutionState, StatusVisual> = {
   canceled: VISUALS.canceled,
   failed: VISUALS.failed,
-  outcome_unknown: { color: 'var(--ant-color-text-secondary)', icon: CircleHelpIcon },
-  provisioning: { color: 'var(--ant-color-warning)', icon: Clock },
+  outcome_unknown: { color: 'var(--muted-foreground)', icon: CircleHelpIcon },
+  provisioning: { color: 'var(--warning)', icon: Clock },
   queued: VISUALS.scheduled,
   running: VISUALS.running,
   succeeded: VISUALS.completed,

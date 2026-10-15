@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { ClearTodosParams } from '../../types';
 
 const styles = {
-  container: 'rounded-(--ant-border-radius) bg-accent p-3',
+  container: 'rounded-(--radius-card) bg-accent p-3',
   dangerText: 'text-(length:--text-dense) text-destructive',
   header: 'text-warning',
   label: 'text-(length:--text-dense) text-muted-foreground',

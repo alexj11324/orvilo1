@@ -74,7 +74,7 @@ export const useMentionCategories = (): MentionCategory[] => {
             <span style={{ flex: 'none' }}>{displayName}</span>
             <span
               style={{
-                color: 'var(--ant-color-text-description)',
+                color: 'var(--foreground-description)',
                 fontSize: 12,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',

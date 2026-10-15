@@ -63,8 +63,7 @@ export const useAgentDisplayMeta = (
           ? 'orvilo'
           : null,
     avatar: meta?.avatar || sidebarAvatar || (isInbox ? DEFAULT_INBOX_AVATAR : DEFAULT_AVATAR),
-    backgroundColor:
-      meta?.backgroundColor || sidebarAgent?.backgroundColor || 'var(--ant-color-bg-container)',
+    backgroundColor: meta?.backgroundColor || sidebarAgent?.backgroundColor || 'var(--card)',
     title:
       agentDisplayName(meta) ||
       agentDisplayName(sidebarAgent) ||

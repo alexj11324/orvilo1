@@ -41,7 +41,7 @@ const MCPInstallProgress = memo<{ identifier: string }>(({ identifier }) => {
           <div className="flex flex-col py-1">
             <Progress className="h-1.5" value={installProgress.progress} />
             {stepText && (
-              <div style={{ fontSize: 11, marginTop: 4, color: 'var(--ant-color-text-secondary)' }}>
+              <div style={{ fontSize: 11, marginTop: 4, color: 'var(--muted-foreground)' }}>
                 ({installProgress.progress}%) {stepText}
               </div>
             )}

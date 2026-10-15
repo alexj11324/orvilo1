@@ -244,7 +244,7 @@ const AutomationCreatePage = memo(() => {
                     ? agentDisplayName(assigneeMeta)
                     : t('instructions.agent_placeholder')}
                 </div>
-                <ChevronRight color={'var(--ant-color-text-tertiary)'} size={14} />
+                <ChevronRight color={'var(--foreground-tertiary)'} size={14} />
               </div>
             </AssigneeAgentSelector>
           </div>

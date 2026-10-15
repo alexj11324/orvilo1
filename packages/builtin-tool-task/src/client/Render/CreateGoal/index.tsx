@@ -40,7 +40,7 @@ const PHASE_META = {
   accepted: { color: 'var(--success)', icon: CheckCheck, settled: true },
   awaitingDecision: { color: 'var(--destructive)', icon: AlertTriangle, settled: true },
   awaitingReview: { color: 'var(--warning)', icon: Stamp, settled: true },
-  closed: { color: 'var(--ant-color-text-tertiary)', icon: CircleSlash, settled: true },
+  closed: { color: 'var(--foreground-tertiary)', icon: CircleSlash, settled: true },
   errored: { color: 'var(--destructive)', icon: CircleX, settled: true },
   rejected: { color: 'var(--destructive)', icon: RotateCcw, settled: false },
   repairing: { color: 'var(--warning)', icon: RefreshCw, settled: false },

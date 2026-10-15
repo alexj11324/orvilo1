@@ -168,7 +168,7 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>((props) => {
 
       {enabled && nextRun && (
         <div className={cn(styles.preview, 'flex items-center gap-2.5')}>
-          <Clock color={'var(--ant-color-text-description)'} size={16} />
+          <Clock color={'var(--foreground-description)'} size={16} />
           <div className="text-muted-foreground">{t('taskSchedule.nextRun', { ns: 'chat' })}</div>
           <div className="font-medium" style={{ flex: 1, textAlign: 'right' }}>
             {formatAbsoluteDateTime(nextRun.toDate())}

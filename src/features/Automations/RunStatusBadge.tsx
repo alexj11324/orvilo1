@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { normalizeRunStatus } from './shared';
 
 const RUN_STYLE: Record<string, { background: string; color: string }> = {
-  completed: { background: 'var(--ant-color-success-bg)', color: 'var(--success)' },
-  failed: { background: 'var(--ant-color-error-bg)', color: 'var(--destructive)' },
-  running: { background: 'var(--ant-color-info-bg)', color: 'var(--info)' },
+  completed: { background: 'var(--success-wash)', color: 'var(--success)' },
+  failed: { background: 'var(--destructive-wash)', color: 'var(--destructive)' },
+  running: { background: 'var(--info-wash)', color: 'var(--info)' },
   skipped: { background: 'var(--accent)', color: 'var(--muted-foreground)' },
 };
 

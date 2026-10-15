@@ -198,7 +198,7 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
               cy={7}
               fill="none"
               r={5.5}
-              stroke={'var(--ant-color-fill-secondary)'}
+              stroke={'var(--selected)'}
               strokeWidth={2.5}
             />
             <circle
@@ -206,7 +206,7 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
               cy={7}
               fill="none"
               r={5.5}
-              stroke={'var(--ant-color-success)'}
+              stroke={'var(--success)'}
               strokeDasharray={`${(data.percent / 100) * 2 * Math.PI * 5.5} ${2 * Math.PI * 5.5}`}
               strokeLinecap="round"
               strokeWidth={2.5}

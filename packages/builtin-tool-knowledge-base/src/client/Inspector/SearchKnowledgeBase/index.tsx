@@ -54,7 +54,7 @@ export const SearchKnowledgeBaseInspector = memo<
           ) : (
             <span
               className="text-xs"
-              style={{ marginInlineStart: 4, color: 'var(--ant-color-text-description)' }}
+              style={{ marginInlineStart: 4, color: 'var(--foreground-description)' }}
             >
               ({t('builtins.orvilo-knowledge-base.inspector.noResults')})
             </span>

@@ -25,7 +25,7 @@ const styles = {
   dotSelected: 'border-primary bg-primary',
   group: 'relative',
   groupHeader: 'sticky inset-bs-0 z-1 bg-card pbs-2.5 pbe-1.5 ps-6 text-xs leading-5 font-medium',
-  item: 'cursor-pointer rounded-(--radius-button) py-1 px-2 transition-[background-color] duration-(--orvilo-motion-mid) ease-(--ant-motion-ease-in-out) motion-reduce:transition-none hover:bg-fill-quaternary',
+  item: 'cursor-pointer rounded-(--radius-button) py-1 px-2 transition-[background-color] duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-in-out) motion-reduce:transition-none hover:bg-fill-quaternary',
   itemCurrent: 'cursor-default',
   itemSelected: 'bg-selected hover:bg-selected',
   source: 'ms-auto truncate ps-2 text-xs leading-5 text-foreground-tertiary',

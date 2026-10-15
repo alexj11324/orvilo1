@@ -53,8 +53,8 @@ const ChatHeaderTitle = memo(() => {
             icon={ChevronDown}
             size={{ blockSize: 14, borderRadius: '50%', size: 12 }}
             style={{
-              background: 'var(--ant-color-fill-secondary)',
-              color: 'var(--ant-color-text-description)',
+              background: 'var(--selected)',
+              color: 'var(--foreground-description)',
             }}
           />
         </div>

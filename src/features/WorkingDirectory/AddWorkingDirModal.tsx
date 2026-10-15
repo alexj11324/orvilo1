@@ -97,9 +97,7 @@ const AddWorkingDirContent = ({
             setError(undefined);
           }}
         />
-        {error ? (
-          <div style={{ color: 'var(--ant-color-error)', fontSize: 12 }}>{error}</div>
-        ) : null}
+        {error ? <div style={{ color: 'var(--destructive)', fontSize: 12 }}>{error}</div> : null}
       </div>
       <div className="flex flex-wrap justify-end gap-2">
         {deviceId && (

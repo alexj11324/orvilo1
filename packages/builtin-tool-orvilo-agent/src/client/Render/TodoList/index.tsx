@@ -92,7 +92,7 @@ const TodoListUI = memo<TodoListUIProps>(({ items }) => {
       style={{
         background: 'var(--card)',
         border: `1px solid var(--sidebar-border)`,
-        borderRadius: 'var(--ant-border-radius)',
+        borderRadius: 'var(--radius-card)',
         width: '100%',
       }}
     >

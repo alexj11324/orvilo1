@@ -59,7 +59,7 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
           {chars > 0 && (
             <span
               className="font-mono rounded bg-muted px-1 text-xs"
-              style={{ color: 'var(--ant-color-text-description)' }}
+              style={{ color: 'var(--foreground-description)' }}
             >
               {' '}
               <AnimatedNumber value={chars} />
@@ -88,7 +88,7 @@ export const InitPageInspector = memo<BuiltinInspectorProps<InitDocumentArgs, In
         {chars > 0 && (
           <span
             className="font-mono rounded bg-muted px-1 text-xs"
-            style={{ color: 'var(--ant-color-text-description)' }}
+            style={{ color: 'var(--foreground-description)' }}
           >
             {' '}
             <AnimatedNumber value={chars} />

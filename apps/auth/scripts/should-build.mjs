@@ -20,7 +20,7 @@ const META_TRIGGER_SEGMENTS = [
   'pnpm-lock.yaml',
   'tsconfig.json',
 ];
-const BUNDLED_LOCALE = /locales\/[^/]+\/(?:auth|authError|common|error|marketAuth|oauth)\.json$/;
+const BUNDLED_LOCALE = /locales\/[^/]+\/(?:auth|authError|common|error|oauth)\.json$/;
 
 const META_TRIGGERS = [
   (file) => META_TRIGGER_SEGMENTS.some((segment) => file.includes(segment)),

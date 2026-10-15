@@ -18,32 +18,21 @@ import {
   type WorkingModel,
 } from '@orvilo/types';
 
-import type { ConnectorToolPermission } from '@/database/schemas';
 import { applyToolNameMaxLength } from '@/helpers/applyToolNameMaxLength';
 import { isToolAvailableInCurrentEnv } from '@/helpers/toolAvailability';
-import { patchManifestWithPermissions } from '@/libs/mcp/patchManifestPermissions';
 import { getAgentStoreState } from '@/store/agent';
 import { agentChatConfigSelectors, agentSelectors } from '@/store/agent/selectors';
 import { getToolStoreState } from '@/store/tool';
-import {
-  composioStoreSelectors,
-  orviloSkillStoreSelectors,
-  pluginSelectors,
-} from '@/store/tool/selectors';
-import { connectorSelectors } from '@/store/tool/slices/connector';
 import { useUserStore } from '@/store/user';
 import { settingsSelectors } from '@/store/user/selectors';
 
 import { getSearchConfig } from '../getSearchConfig';
 import { isCanUseFC } from '../isCanUseFC';
-import { buildClientConnectorManifests } from './buildClientConnectorManifests';
 
 /**
  * Tools engine configuration options
  */
 export interface ToolsEngineConfig {
-  /** Additional manifests to include beyond the standard ones */
-  additionalManifests?: ToolManifest[];
   /** Default tool IDs that will always be added to the end of the tools list */
   defaultToolIds?: string[];
   /**
@@ -106,13 +95,7 @@ const dropInvalidManifests = (manifests: (ToolManifest | undefined)[], source: s
  * Initialize ToolsEngine with current manifest schemas and configurable options
  */
 export const createToolsEngine = (config: ToolsEngineConfig = {}): ToolsEngine => {
-  const {
-    enableChecker,
-    additionalManifests = [],
-    defaultToolIds,
-    disabledPluginIds = [],
-    manifestContext,
-  } = config;
+  const { enableChecker, defaultToolIds, disabledPluginIds = [], manifestContext } = config;
 
   // Push the deployment's `TOOL_NAME_MAX_LENGTH` in before any tool name is
   // generated — the client mirror of `createServerToolsEngine`. Without it a
@@ -120,39 +103,6 @@ export const createToolsEngine = (config: ToolsEngineConfig = {}): ToolsEngine =
   applyToolNameMaxLength();
 
   const toolStoreState = getToolStoreState();
-
-  // Get custom connector manifests (user-added MCP servers). Connectors take
-  // priority over plugins: any plugin sharing a connector identifier is dropped
-  // so the connector (server-side execution with its stored token) wins.
-  const connectorManifests = buildClientConnectorManifests(
-    connectorSelectors.customConnectors(toolStoreState),
-  );
-  const connectorIdentifiers = new Set(connectorManifests.map((m) => m.identifier));
-
-  // Per-connector tool permissions, keyed by connector identifier. Used to patch
-  // community-MCP plugin manifests below so the user's needs_approval / disabled
-  // settings surface as humanIntervention (custom connectors are handled by their
-  // own manifests above; disabled is also hard-blocked at the mcp router).
-  const connectorPermsByIdentifier = new Map(
-    connectorSelectors
-      .connectorList(toolStoreState)
-      .map((c) => [c.identifier, new Map(c.tools.map((t) => [t.toolName, t.permission]))] as const),
-  );
-
-  // Get all available plugin manifests (excluding ones now covered by a connector),
-  // patched with their connector tool permissions when a connector row exists.
-  const pluginManifests = pluginSelectors
-    .installedPluginManifestList(toolStoreState)
-    .filter((m) => !connectorIdentifiers.has(m.identifier))
-    .map((m) => {
-      const perms = connectorPermsByIdentifier.get(m.identifier);
-      return perms && perms.size > 0
-        ? (patchManifestWithPermissions(
-            m as any,
-            perms as Map<string, ConnectorToolPermission>,
-          ) as ToolManifest)
-        : m;
-    });
 
   // Get all builtin tool manifests. When a manifest context is supplied (agent
   // runtime path), context-aware tools resolve their manifest for it — trimming
@@ -166,28 +116,7 @@ export const createToolsEngine = (config: ToolsEngineConfig = {}): ToolsEngine =
     )
     .filter((m): m is BuiltinToolManifest => !!m) as ToolManifest[];
 
-  // Get Composio tool manifests
-  const composioTools = composioStoreSelectors.composioAsOrviloTools(toolStoreState);
-  const composioManifests = composioTools
-    .map((tool) => tool.manifest as ToolManifest)
-    .filter(Boolean);
-
-  // Get Orvilo Skill tool manifests
-  const orviloSkillTools = orviloSkillStoreSelectors.orviloSkillAsOrviloTools(toolStoreState);
-  const orviloSkillManifests = orviloSkillTools
-    .map((tool) => tool.manifest as ToolManifest)
-    .filter(Boolean);
-
-  // Combine all manifests, dropping entries that would crash ToolsEngine.
-  // Each source is filtered separately so the warning pinpoints the origin.
-  const combinedManifests = [
-    ...dropInvalidManifests(pluginManifests, 'installedPlugins'),
-    ...dropInvalidManifests(builtinManifests, 'builtinTools'),
-    ...dropInvalidManifests(composioManifests, 'composio'),
-    ...dropInvalidManifests(orviloSkillManifests, 'orviloSkills'),
-    ...dropInvalidManifests(connectorManifests, 'connectors'),
-    ...dropInvalidManifests(additionalManifests, 'additionalManifests'),
-  ];
+  const combinedManifests = dropInvalidManifests(builtinManifests, 'builtinTools');
 
   // Disabled identifiers are dropped from the pool outright (not left for the
   // enableChecker rules) — a plugin, skill, connector, or user-toggleable
@@ -264,18 +193,7 @@ export const createAgentToolsEngine = (
     enableChecker: createEnableChecker({
       allowExplicitActivation: !isChatMode,
       platformFilter: ({ pluginId }) => {
-        const toolStoreState = getToolStoreState();
-        const installedPlugin = pluginSelectors.getInstalledPluginById(pluginId)(toolStoreState);
-
-        if (
-          !isToolAvailableInCurrentEnv(pluginId, {
-            installedPlugins: installedPlugin ? [installedPlugin] : toolStoreState.installedPlugins,
-          })
-        ) {
-          return false;
-        }
-
-        return undefined; // fall through to rules
+        return isToolAvailableInCurrentEnv(pluginId) ? undefined : false;
       },
       rules: isChatMode ? chatModeRules : agentModeRules,
     }),

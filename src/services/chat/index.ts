@@ -1,6 +1,5 @@
 import { AgentBuilderIdentifier } from '@orvilo/builtin-tool-agent-builder';
 import {
-  getConnectorCatalog,
   REQUEST_AGENT_ID_HEADER,
   REQUEST_TOPIC_ID_HEADER,
   REQUEST_TRIGGER_HEADER,
@@ -37,11 +36,7 @@ import { aiModelSelectors, aiProviderSelectors, getAiInfraStoreState } from '@/s
 import { getChatStoreState } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/slices/topic/selectors';
 import { getToolStoreState } from '@/store/tool';
-import {
-  builtinToolSelectors,
-  composioStoreSelectors,
-  orviloSkillStoreSelectors,
-} from '@/store/tool/selectors';
+import { builtinToolSelectors } from '@/store/tool/selectors';
 import { getUserStoreState, useUserStore } from '@/store/user';
 import {
   settingsSelectors,
@@ -212,36 +207,16 @@ class ChatService {
       const activeAgentConfig =
         agentSelectors.getAgentConfigById(activeAgentId)(getAgentStoreState());
 
-      // Build official tools list (builtin tools + Composio tools)
+      // Build the internal builtin tools list
       const toolState = getToolStoreState();
       const enabledPlugins = activeAgentConfig?.plugins || [];
 
       const officialTools: OfficialToolItem[] = [];
 
-      const isComposioEnabled = Boolean(
-        typeof window !== 'undefined' &&
-        window.global_serverConfigStore?.getState()?.serverConfig?.enableComposio,
-      );
-      const isOrviloSkillEnabled = Boolean(
-        typeof window !== 'undefined' &&
-        window.global_serverConfigStore?.getState()?.serverConfig?.enableOrviloSkill,
-      );
-      const connectorCatalog = getConnectorCatalog({
-        composio: isComposioEnabled,
-        orvilo: isOrviloSkillEnabled,
-      });
-      const connectorIdentifiers = new Set(
-        connectorCatalog.map((item) =>
-          item.type === 'orvilo' ? item.provider.id : item.serverType.identifier,
-        ),
-      );
-
       // Get builtin tools (excluding connectors rendered through their canonical owner)
       const builtinTools = builtinToolSelectors.metaList(toolState);
 
       for (const tool of builtinTools) {
-        if (connectorIdentifiers.has(tool.identifier)) continue;
-
         officialTools.push({
           description: tool.meta?.description,
           enabled: enabledPlugins.includes(tool.identifier),
@@ -249,37 +224,6 @@ class ChatService {
           installed: true,
           name: tool.meta?.title || tool.identifier,
           type: 'builtin',
-        });
-      }
-
-      const allComposioServers = composioStoreSelectors.getServers(toolState);
-      const allOrviloSkillServers = orviloSkillStoreSelectors.getServers(toolState);
-      for (const connector of connectorCatalog) {
-        if (connector.type === 'composio') {
-          const { serverType } = connector;
-          const server = allComposioServers.find(
-            (item) => item.identifier === serverType.identifier,
-          );
-          officialTools.push({
-            description: `Orvilo Mcp Server: ${serverType.label}`,
-            enabled: enabledPlugins.includes(serverType.identifier),
-            identifier: serverType.identifier,
-            installed: !!server,
-            name: serverType.label,
-            type: 'composio',
-          });
-          continue;
-        }
-
-        const { provider } = connector;
-        const server = allOrviloSkillServers.find((item) => item.identifier === provider.id);
-        officialTools.push({
-          description: `Orvilo Skill Provider: ${provider.label}`,
-          enabled: enabledPlugins.includes(provider.id),
-          identifier: provider.id,
-          installed: !!server,
-          name: provider.label,
-          type: 'orvilo-skill',
         });
       }
 

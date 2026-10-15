@@ -5,16 +5,11 @@
  * Extends AgentBuilder functionality with group-specific operations.
  */
 import { AgentManagerRuntime } from '@orvilo/agent-manager-runtime';
-import type {
-  GetAvailableModelsParams,
-  InstallPluginParams,
-  SearchMarketToolsParams,
-} from '@orvilo/builtin-tool-agent-builder';
+import type { GetAvailableModelsParams } from '@orvilo/builtin-tool-agent-builder';
 import type { BuiltinToolContext, BuiltinToolResult, ToolAfterCallContext } from '@orvilo/types';
 import { BaseExecutor } from '@orvilo/types';
 
 import { agentService } from '@/services/agent';
-import { discoverService } from '@/services/discover';
 import { getChatGroupStoreState } from '@/store/agentGroup';
 import { useGroupProfileStore } from '@/store/groupProfile';
 
@@ -44,7 +39,6 @@ const agentManagerRuntime = new AgentManagerRuntime({
     queryAgents: agentService.queryAgents,
     removeAgent: agentService.removeAgent,
   },
-  discoverService,
 });
 const groupAgentBuilderRuntime = new GroupAgentBuilderExecutionRuntime();
 
@@ -176,10 +170,6 @@ class GroupAgentBuilderExecutor extends BaseExecutor<typeof GroupAgentBuilderApi
     return agentManagerRuntime.getAvailableModels(params);
   };
 
-  searchMarketTools = async (params: SearchMarketToolsParams): Promise<BuiltinToolResult> => {
-    return agentManagerRuntime.searchMarketTools(params);
-  };
-
   updateConfig = async (
     params: UpdateAgentConfigWithIdParams,
     ctx: BuiltinToolContext,
@@ -198,23 +188,6 @@ class GroupAgentBuilderExecutor extends BaseExecutor<typeof GroupAgentBuilderApi
     }
 
     return agentManagerRuntime.updateAgentConfig(agentId, restParams);
-  };
-
-  installPlugin = async (
-    params: InstallPluginParams,
-    ctx: BuiltinToolContext,
-  ): Promise<BuiltinToolResult> => {
-    const agentId = ctx.agentId;
-
-    if (!agentId) {
-      return {
-        content: 'No supervisor agent found',
-        error: { message: 'No supervisor agent found', type: 'NoAgentContext' },
-        success: false,
-      };
-    }
-
-    return agentManagerRuntime.installPlugin(agentId, params);
   };
 
   // ==================== Hooks ====================

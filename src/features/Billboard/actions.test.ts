@@ -10,29 +10,22 @@ import {
   runBillboardAction,
 } from './actions';
 
-const { openChangelogModal, openFeedbackModal, resetOnboarding, openExternalLink, electronState } =
-  vi.hoisted(() => ({
-    electronState: {
-      dataSyncConfig: { storageMode: 'cloud' } as {
-        active?: boolean;
-        remoteServerUrl?: string;
-        storageMode: 'cloud' | 'selfHost';
-      },
+const { openChangelogModal, resetOnboarding, openExternalLink, electronState } = vi.hoisted(() => ({
+  electronState: {
+    dataSyncConfig: { storageMode: 'cloud' } as {
+      active?: boolean;
+      remoteServerUrl?: string;
+      storageMode: 'cloud' | 'selfHost';
     },
-    openChangelogModal: vi.fn(),
-    openExternalLink: vi.fn(),
-    openFeedbackModal: vi.fn(),
-    resetOnboarding: vi.fn(),
-  }));
+  },
+  openChangelogModal: vi.fn(),
+  openExternalLink: vi.fn(),
+  resetOnboarding: vi.fn(),
+}));
 
 vi.mock('@/components/ChangelogModal', () => ({
   default: openChangelogModal,
   openChangelogModal,
-}));
-
-vi.mock('@/components/FeedbackModal', () => ({
-  default: openFeedbackModal,
-  openFeedbackModal,
 }));
 
 vi.mock('@/store/user', () => ({
@@ -111,7 +104,7 @@ describe('resolveBillboardAction', () => {
 
     expect(resolveBillboardAction('resetOnboarding')).toBeNull();
     expect(resolveBillboardAction('openChangelog')).toBe('openChangelog');
-    expect(resolveBillboardAction('openFeedback')).toBe('openFeedback');
+    expect(resolveBillboardAction('openFeedback')).toBeNull();
   });
 
   it('should return null for unknown values so the CTA falls back to linkUrl', () => {
@@ -179,14 +172,6 @@ describe('runBillboardAction', () => {
     runBillboardAction('openChangelog');
 
     expect(openChangelogModal).toHaveBeenCalledTimes(1);
-    expect(openFeedbackModal).not.toHaveBeenCalled();
-  });
-
-  it('should open the feedback modal for openFeedback', () => {
-    runBillboardAction('openFeedback');
-
-    expect(openFeedbackModal).toHaveBeenCalledTimes(1);
-    expect(openChangelogModal).not.toHaveBeenCalled();
   });
 
   it('should reset onboarding progress for resetOnboarding', async () => {

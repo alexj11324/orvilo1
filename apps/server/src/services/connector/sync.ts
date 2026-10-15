@@ -1,22 +1,17 @@
 import type { ConnectorModel, DecryptedConnector } from '@/database/models/connector';
-import type { ConnectorToolModel } from '@/database/models/connectorTool';
 import type { ConnectorCredentials } from '@/database/schemas';
-import { ConnectorMcpConnectionType, ConnectorStatus } from '@/database/schemas';
+import { ConnectorMcpConnectionType } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import type { AuthConfig } from '@/libs/mcp';
-import { inferCrudType } from '@/libs/mcp/utils';
-import { mcpService } from '@/server/services/mcp';
+import type { mcpService } from '@/server/services/mcp';
 
 import { buildGitHubMcpParams, isGitHubMcpConnector } from './githubMcp';
 import { ensureFreshConnectorToken } from './tokens';
 
 export interface ConnectorToolSyncContext {
   connectorModel: ConnectorModel;
-  connectorToolModel: ConnectorToolModel;
   serverDB: OrviloDatabase;
 }
-
-export type ConnectorToolSyncInput = Parameters<ConnectorToolModel['upsertMany']>[1][number];
 
 /** Build the MCP client connection params (with auth) from a connector row. */
 export const buildConnectorMcpParams = (
@@ -106,69 +101,4 @@ export const resolveConnectorMcpParams = async (
 
   const fresh = await ensureFreshConnectorToken(connector, ctx.connectorModel);
   return buildConnectorMcpParams(fresh);
-};
-
-/** Fetch and normalize a connector's remote tool surface without mutating storage. */
-export const fetchConnectorToolSyncInputs = async (
-  connector: DecryptedConnector,
-  ctx: Pick<ConnectorToolSyncContext, 'connectorModel' | 'serverDB'>,
-): Promise<ConnectorToolSyncInput[]> => {
-  if (!connector.mcpServerUrl && connector.mcpConnectionType !== ConnectorMcpConnectionType.stdio) {
-    throw new Error('Connector has no MCP server URL configured');
-  }
-
-  const mcpParams = await resolveConnectorMcpParams(connector, ctx);
-  const rawTools = await mcpService.listRawTools(mcpParams);
-
-  return rawTools.map((tool) => ({
-    crudType: inferCrudType(tool.name),
-    description: tool.description,
-    inputSchema: tool.inputSchema as Record<string, unknown>,
-    toolName: tool.name,
-  }));
-};
-
-/** Persist an already-fetched tool surface using the supplied database context. */
-export const persistConnectorToolSyncInputs = async (
-  connectorId: string,
-  connector: DecryptedConnector,
-  syncInputs: ConnectorToolSyncInput[],
-  ctx: Pick<ConnectorToolSyncContext, 'connectorModel' | 'connectorToolModel'>,
-): Promise<void> => {
-  await ctx.connectorToolModel.upsertMany(connectorId, syncInputs);
-  if (isGitHubMcpConnector(connector)) {
-    await ctx.connectorToolModel.deleteToolsNotIn(
-      connectorId,
-      syncInputs.map((tool) => tool.toolName),
-    );
-  }
-  await ctx.connectorModel.updateStatus(connectorId, ConnectorStatus.connected);
-};
-
-/**
- * Connect to a connector's MCP server, fetch its tool list, and sync it into
- * `user_connector_tools`. Refreshes the OAuth token first when needed, and
- * updates the connector status (`connected` on success, `error` on failure).
- *
- * Shared by the `syncTools` tRPC mutation and the OAuth callback so a connector
- * has its tools immediately after authorization — no client round-trip needed.
- */
-export const syncConnectorToolsById = async (
-  connectorId: string,
-  ctx: ConnectorToolSyncContext,
-): Promise<{ toolCount: number }> => {
-  const connector = await ctx.connectorModel.findById(connectorId);
-  if (!connector) throw new Error('Connector not found');
-
-  let syncInputs: ConnectorToolSyncInput[];
-  try {
-    syncInputs = await fetchConnectorToolSyncInputs(connector, ctx);
-  } catch (err) {
-    await ctx.connectorModel.updateStatus(connectorId, ConnectorStatus.error);
-    throw err;
-  }
-
-  await persistConnectorToolSyncInputs(connectorId, connector, syncInputs, ctx);
-
-  return { toolCount: syncInputs.length };
 };

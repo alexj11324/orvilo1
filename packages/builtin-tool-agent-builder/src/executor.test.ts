@@ -25,7 +25,6 @@ vi.mock('@orvilo/agent-manager-runtime', () => ({
 }));
 
 vi.mock('@/services/agent', () => ({ agentService: {} }));
-vi.mock('@/services/discover', () => ({ discoverService: {} }));
 vi.mock('@/store/agent', () => ({
   getAgentStoreState: () => ({
     appendStreamingSystemRole: mockAppendStreamingSystemRole,
@@ -80,15 +79,14 @@ describe('AgentBuilderExecutor.onAfterCall', () => {
     vi.clearAllMocks();
   });
 
-  it.each([
-    AgentBuilderApiName.updateAgentConfig,
-    AgentBuilderApiName.updatePrompt,
-    AgentBuilderApiName.installPlugin,
-  ])('refreshes the invocation-scoped target after %s', async (apiName) => {
-    await agentBuilderExecutor.onAfterCall(createContext(apiName, { agentId: 'target-agent' }));
+  it.each([AgentBuilderApiName.updateAgentConfig, AgentBuilderApiName.updatePrompt])(
+    'refreshes the invocation-scoped target after %s',
+    async (apiName) => {
+      await agentBuilderExecutor.onAfterCall(createContext(apiName, { agentId: 'target-agent' }));
 
-    expect(mockRefreshAgentConfig).toHaveBeenCalledExactlyOnceWith('target-agent');
-  });
+      expect(mockRefreshAgentConfig).toHaveBeenCalledExactlyOnceWith('target-agent');
+    },
+  );
 
   it('does not replay a gateway prompt update through the persistent streaming actions', async () => {
     await agentBuilderExecutor.onAfterCall(
@@ -123,5 +121,25 @@ describe('AgentBuilderExecutor.onAfterCall', () => {
     );
 
     expect(mockRefreshAgentConfig).not.toHaveBeenCalled();
+  });
+});
+
+describe('AgentBuilderExecutor retired API calls', () => {
+  it.each(['installPlugin', 'searchMarketTools'])(
+    'rejects %s during historical replay',
+    async (apiName) => {
+      const result = await agentBuilderExecutor.invoke(apiName, {}, { messageId: 'old-message' });
+      expect(result).toMatchObject({ error: { type: 'ApiNotFound' }, success: false });
+    },
+  );
+
+  it('enables builtin tools through the existing config toggle', async () => {
+    await agentBuilderExecutor.updateConfig(
+      { togglePlugin: { enabled: true, pluginId: 'orvilo-web-browsing' } },
+      { agentId: 'target-agent', messageId: 'message-1' },
+    );
+    expect(mockUpdateAgentConfig).toHaveBeenCalledWith('target-agent', {
+      togglePlugin: { enabled: true, pluginId: 'orvilo-web-browsing' },
+    });
   });
 });

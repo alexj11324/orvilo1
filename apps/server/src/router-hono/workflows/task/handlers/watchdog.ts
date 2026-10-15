@@ -4,7 +4,6 @@ import { getServerDB } from '@/database/server';
 import { sweepQueuedDeviceOperations } from '@/server/services/aiAgent/deviceQueue';
 import { AutomationResultDeliveryService } from '@/server/services/automationResultDelivery';
 import { sweepDevicePrimeRunReconcile } from '@/server/services/devicePrimeReconcile';
-import { sweepMcpEventSubscriptions } from '@/server/services/mcpEvents/maintenance';
 import { sweepMcpEventInbox } from '@/server/services/mcpEvents/runtime';
 import { sweepTaskBacklogIntake } from '@/server/services/taskBacklogIntake';
 import { sweepTaskCancellations } from '@/server/services/taskCancellation';
@@ -84,15 +83,7 @@ export async function watchdog(c: Context) {
     // invocation and the core admission boundary with ordinary task dispatch.
     // A missing event migration must not stop cancellation/watchdog recovery.
     let eventInbox: unknown;
-    let eventSubscriptions: unknown;
     let eventMaintenanceHealthy = true;
-    try {
-      eventSubscriptions = await sweepMcpEventSubscriptions(db);
-    } catch {
-      eventSubscriptions = { status: 'unavailable' };
-      eventMaintenanceHealthy = false;
-      console.error('[task/watchdog] MCP event subscription maintenance unavailable');
-    }
     try {
       eventInbox = await sweepMcpEventInbox(db);
     } catch {
@@ -143,7 +134,6 @@ export async function watchdog(c: Context) {
       heartbeatRecovery,
       resultOutputs,
       resultOutputsHealthy,
-      eventSubscriptions,
       activeDispatches,
       canceledDispatches,
       driftFencedDispatches,

@@ -96,17 +96,6 @@ export const workspaceCredsRouter = router({
       }
     }),
 
-  createOAuth: workspaceCredsManageProcedure
-    .input(z.object({ ...createBaseInput, oauthConnectionId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const data = await ctx.credsService.createOAuth({ ...input, workspaceScope: true });
-        return { data, success: true };
-      } catch (error) {
-        wrapInternal('createOAuth', error);
-      }
-    }),
-
   delete: workspaceCredsManageProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -146,14 +135,6 @@ export const workspaceCredsRouter = router({
       return await ctx.credsService.listWorkspace();
     } catch (error) {
       wrapInternal('list', error);
-    }
-  }),
-
-  listOAuthConnections: workspaceCredsManageProcedure.query(async ({ ctx }) => {
-    try {
-      return await ctx.credsService.listOAuthConnections();
-    } catch (error) {
-      wrapInternal('listOAuthConnections', error);
     }
   }),
 

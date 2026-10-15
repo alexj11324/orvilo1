@@ -99,10 +99,6 @@ export const authRoutes: RouteObject[] = [
         path: 'auth-error',
       },
       {
-        element: lazyElement(() => import('@/routes/auth/market-auth-callback')),
-        path: 'market-auth-callback',
-      },
-      {
         element: lazyElement(() => import('@/routes/auth/oauth/consent/[uid]')),
         path: 'oauth/consent/:uid',
       },

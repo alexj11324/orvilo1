@@ -11,30 +11,14 @@ import debug from 'debug';
 import { and, eq, inArray, like, sql } from 'drizzle-orm';
 
 import { ChatGroupModel } from '@/database/models/chatGroup';
-import { ConnectorModel } from '@/database/models/connector';
-import { ConnectorToolModel } from '@/database/models/connectorTool';
-import { EventOutboxModel, newEventId } from '@/database/models/eventOutbox';
+import { EventOutboxModel } from '@/database/models/eventOutbox';
 import { MessageModel } from '@/database/models/message';
-import { PluginModel } from '@/database/models/plugin';
-import {
-  agentOperations,
-  agents,
-  ConnectorToolPermission,
-  messagePlugins,
-  messages,
-} from '@/database/schemas';
+import { agentOperations, agents, messagePlugins, messages } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import type {
   ExecGroupMemberParams,
   ExecGroupMemberResult,
 } from '@/server/services/agentExecution/types';
-import {
-  getGitHubMcpGrantIdentity,
-  isGitHubMcpConnector,
-} from '@/server/services/connector/githubMcp';
-import { resolveConnectorMcpParams } from '@/server/services/connector/sync';
-import { mcpService } from '@/server/services/mcp';
-import { ToolExecutionService } from '@/server/services/toolExecution';
 import { BuiltinToolsExecutor } from '@/server/services/toolExecution/builtin';
 import type {
   ToolExecutionContext,
@@ -47,14 +31,6 @@ import {
   childResultEventId,
   isOwnedToolCallId,
 } from '../agentExecution/childResultDelivery';
-import {
-  authorizeToolApprovalReceipt,
-  buildToolApprovalEvent,
-  TOOL_APPROVAL_TTL_MS,
-  toolApprovalEventId,
-  type ToolApprovalScope,
-  toolApprovalScopeHash,
-} from '../agentExecution/toolApprovalReceipt';
 import { buildGroupAgentContext, resolveGroupRunContext } from './helpers/groupContext';
 import {
   buildServerAgentMemberRunner,
@@ -63,14 +39,6 @@ import {
   type OrchestrationRunnerState,
   registerWorkFromIntent,
 } from './orchestrationRunners';
-import {
-  apiSchemaDigest,
-  connectorAuthRevision,
-  type ExternalToolPins,
-  pluginInstallPin,
-  sha256Hex,
-  stableStringify,
-} from './pipeline/externalToolPins';
 
 const log = debug('orvilo-server:ai-agent:acp-builtin-tool');
 
@@ -179,30 +147,8 @@ export const loadAcpToolOperation = async (
 };
 
 /**
- * External (connector / installed-plugin MCP) mount persisted at dispatch on
- * `metadata.externalTools` — api names + source only, never transport params
- * or credentials. The exec callback re-resolves the connection at call time.
- */
-interface ExternalToolMountMetadata {
-  apis: string[];
-  /**
-   * Mount-time identity pins (SA02/F04): the exact connection/install + grant
-   * revision + per-api schema digests the dispatch authorized. Exec
-   * re-authorizes the SAME row — never a different connection that happens to
-   * share the identifier.
-   */
-  pins?: ExternalToolPins;
-  source: 'connector' | 'mcp-plugin';
-}
-
-const readExternalMounts = (
-  operation: OperationRow,
-): Record<string, ExternalToolMountMetadata> | undefined =>
-  operation.metadata?.externalTools as Record<string, ExternalToolMountMetadata> | undefined;
-
-/**
  * Check `identifier:apiName` against the run's dispatch-time allowlist — the
- * union of `metadata.builtinTools` and `metadata.externalTools` api names. The
+ * persisted `metadata.builtinTools` api names. The
  * allowlist — not the caller's claim — decides what is invocable, so a stolen
  * or replayed operation token cannot reach a runtime the tool-surface resolver
  * never mounted.
@@ -213,13 +159,12 @@ const resolveToolAllowlist = (
   apiName: string,
 ): Record<string, string[]> => {
   const builtinAllowlist = operation.metadata?.builtinTools as Record<string, string[]> | undefined;
-  const externalMount = readExternalMounts(operation)?.[identifier];
-  if (!builtinAllowlist && !externalMount) {
+  if (!builtinAllowlist) {
     throw new AcpBuiltinToolForbiddenError(
       'This operation was dispatched without a builtin tool surface',
     );
   }
-  const apiNames = builtinAllowlist?.[identifier] ?? externalMount?.apis;
+  const apiNames = builtinAllowlist[identifier];
   if (!apiNames?.includes(apiName)) {
     throw new AcpBuiltinToolForbiddenError(
       `Tool ${identifier}:${apiName} is not part of this run's tool surface`,
@@ -401,24 +346,6 @@ export const execAcpBuiltinTool = async (
     workspaceId: operation.workspaceId ?? workspaceId,
   };
 
-  // External connector / installed-plugin tools share the per-run MCP surface
-  // and this callback, but their connection is resolved fresh on every call —
-  // revoked credentials, disabled connectors or desynced tool names are caught
-  // here, not at dispatch time.
-  const externalMount = readExternalMounts(operation)?.[identifier];
-  if (externalMount) {
-    return execAcpExternalTool({
-      context,
-      db,
-      identifier,
-      mount: externalMount,
-      operation,
-      payload: chatToolPayload,
-      userId,
-      workspaceId: operation.workspaceId ?? workspaceId,
-    });
-  }
-
   const result: ToolExecutionResult = await new BuiltinToolsExecutor(db, userId).execute(
     chatToolPayload,
     context,
@@ -461,383 +388,6 @@ export const execAcpBuiltinTool = async (
     state: result.state,
     success: result.success,
   };
-};
-
-/**
- * Execute one external (connector / installed-plugin MCP) tool call for an ACP
- * run. The dispatch-time mount only stored api names + source; this re-reads
- * the live row on every call:
- *   - connector: agent-aware `resolveByIdentifiers` + `isEnabled` + synced,
- *     non-disabled tool name + fresh OAuth token → `buildConnectorMcpParams`
- *   - mcp-plugin: installed manifest api list + `customParams.mcp` transport
- * Either way the actual call goes through `ToolExecutionService.executeTool`
- * (`type: 'mcp'`), so permission gating, device tunnelling and truncation all
- * behave identically to the classic path.
- */
-const execAcpExternalTool = async (input: {
-  context: ToolExecutionContext;
-  db: OrviloDatabase;
-  identifier: string;
-  mount: ExternalToolMountMetadata;
-  operation: OperationRow;
-  payload: ChatToolPayload;
-  userId: string;
-  workspaceId?: string;
-}): Promise<AcpBuiltinToolExecResult> => {
-  const { context, db, identifier, mount, operation, payload, userId, workspaceId } = input;
-  const pins = mount.pins;
-
-  // The approval contract mounted with this run: the receipt binds the
-  // pinned connection/install, grant revision, per-api schema and args hash.
-  let authRevision: string | undefined;
-  let schemaDigest: string | undefined;
-
-  let manifest: OrviloToolManifest;
-  if (mount.source === 'connector') {
-    const connectorModel = new ConnectorModel(db, userId, workspaceId);
-    // Pinned mounts re-load the exact authorized row; a same-identifier row is
-    // never substituted (C03). Only legacy mounts recorded before pins existed
-    // fall back to identifier resolution.
-    const connector = pins?.connectorId
-      ? await connectorModel.findById(pins.connectorId)
-      : (
-          await connectorModel.resolveByIdentifiers([identifier], operation.agentId ?? undefined)
-        )[0];
-    if (!connector) {
-      throw new AcpBuiltinToolNotFoundError(`Connector '${identifier}' not found`);
-    }
-    if (connector.identifier !== identifier) {
-      // The pinned row no longer claims this identifier (re-link / row reuse)
-      // — refuse rather than let the mount drift onto a different connection.
-      throw new AcpBuiltinToolForbiddenError(
-        `Pinned connector for '${identifier}' no longer carries that identifier`,
-      );
-    }
-    if (!connector.isEnabled) {
-      throw new AcpBuiltinToolForbiddenError(`Connector '${identifier}' is disabled`);
-    }
-    const githubGrant = isGitHubMcpConnector(connector)
-      ? await getGitHubMcpGrantIdentity({ connector, db })
-      : null;
-    if (isGitHubMcpConnector(connector) && !githubGrant) {
-      throw new AcpBuiltinToolForbiddenError(
-        `GitHub authorization for connector '${identifier}' is unavailable`,
-      );
-    }
-    if (
-      githubGrant &&
-      ((pins?.grantRevision && pins.grantRevision !== githubGrant.grantRevision) ||
-        (pins?.githubUserId && pins.githubUserId !== githubGrant.githubUserId))
-    ) {
-      throw new AcpBuiltinToolForbiddenError(
-        `Connector '${identifier}' GitHub identity or grant changed since dispatch; remount required`,
-      );
-    }
-    authRevision = connectorAuthRevision(connector, githubGrant);
-    if (pins?.authRevision && authRevision !== pins.authRevision) {
-      throw new AcpBuiltinToolForbiddenError(
-        `Connector '${identifier}' was re-authorized since dispatch; remount required`,
-      );
-    }
-
-    const connectorToolModel = new ConnectorToolModel(db, userId, workspaceId);
-    const tools = await connectorToolModel.queryByConnector(connector.id);
-    const tool = tools.find((item) => item.toolName === payload.apiName);
-    if (!tool) {
-      throw new AcpBuiltinToolNotFoundError(
-        `Tool '${payload.apiName}' is not synced on connector '${identifier}'`,
-      );
-    }
-    if (tool.permission === ConnectorToolPermission.disabled) {
-      throw new AcpBuiltinToolForbiddenError(
-        `Tool '${payload.apiName}' is disabled on connector '${identifier}'`,
-      );
-    }
-    schemaDigest = apiSchemaDigest(tool.inputSchema ?? {});
-    const pinnedDigest = pins?.schemaDigests?.[payload.apiName];
-    if (pinnedDigest && pinnedDigest !== schemaDigest) {
-      throw new AcpBuiltinToolForbiddenError(
-        `Tool '${payload.apiName}' schema changed since dispatch; remount required`,
-      );
-    }
-    if (tool.permission === ConnectorToolPermission.needs_approval) {
-      const refused = await gateAcpExternalToolApproval({
-        apiName: payload.apiName,
-        argsJson: payload.arguments,
-        authRevision,
-        connectorId: connector.id,
-        db,
-        grantRevision: githubGrant?.grantRevision,
-        identifier,
-        kind: 'connector_tool',
-        operation,
-        schemaDigest,
-        toolCallId: payload.id,
-        userId,
-        workspaceId,
-      });
-      if (refused) return refused;
-    }
-
-    manifest = {
-      api: tools.map((item) => ({
-        description: item.description ?? undefined,
-        name: item.toolName,
-        parameters: (item.inputSchema ?? {}) as Record<string, unknown>,
-      })),
-      identifier,
-      meta: {},
-      mcpParams: await resolveConnectorMcpParams(
-        connector,
-        { connectorModel, serverDB: db },
-        githubGrant
-          ? {
-              githubUserId: githubGrant.githubUserId,
-              grantRevision: githubGrant.grantRevision,
-            }
-          : undefined,
-      ),
-      type: 'mcp',
-    } as unknown as OrviloToolManifest;
-  } else {
-    const plugin = await new PluginModel(db, userId, workspaceId).findById(identifier);
-    const mcpParams =
-      plugin?.customParams?.mcp ??
-      (plugin?.manifest as { mcpParams?: unknown } | null | undefined)?.mcpParams;
-    if (!plugin?.manifest?.api?.length || !mcpParams) {
-      throw new AcpBuiltinToolNotFoundError(
-        `Plugin '${identifier}' is not installed or has no callable MCP transport`,
-      );
-    }
-    const installPin = pluginInstallPin(plugin);
-    if (pins?.pluginInstallId && installPin !== pins.pluginInstallId) {
-      // A different install generation now owns the identifier — the mount
-      // authorized a specific install, refuse the substitution.
-      throw new AcpBuiltinToolForbiddenError(
-        `Plugin '${identifier}' was reinstalled since dispatch; remount required`,
-      );
-    }
-    const pluginApi = plugin.manifest.api.find((api) => api.name === payload.apiName);
-    schemaDigest = apiSchemaDigest(pluginApi?.parameters ?? {});
-    const pinnedDigest = pins?.schemaDigests?.[payload.apiName];
-    if (pinnedDigest && pinnedDigest !== schemaDigest) {
-      throw new AcpBuiltinToolForbiddenError(
-        `Tool '${payload.apiName}' schema changed since dispatch; remount required`,
-      );
-    }
-    // Manifest-declared intervention policies ride the same receipt contract
-    // as connector `needs_approval` rows — the host surfaces a permission
-    // card, the server consumes a one-time receipt.
-    const apiPolicy = pluginApi?.humanIntervention;
-    const manifestPolicy = (plugin.manifest as { humanIntervention?: unknown }).humanIntervention;
-    const requiresApproval =
-      apiPolicy === 'required' ||
-      apiPolicy === 'always' ||
-      (apiPolicy === undefined && (manifestPolicy === 'required' || manifestPolicy === 'always'));
-    if (requiresApproval) {
-      const refused = await gateAcpExternalToolApproval({
-        apiName: payload.apiName,
-        argsJson: payload.arguments,
-        db,
-        identifier,
-        kind: 'plugin_tool',
-        operation,
-        pluginInstallId: installPin,
-        schemaDigest,
-        toolCallId: payload.id,
-        userId,
-        workspaceId,
-      });
-      if (refused) return refused;
-    }
-
-    manifest = { ...(plugin.manifest as OrviloToolManifest), mcpParams } as OrviloToolManifest;
-  }
-
-  const result = await new ToolExecutionService({
-    builtinToolsExecutor: new BuiltinToolsExecutor(db, userId),
-    mcpService,
-  }).executeTool(
-    { ...payload, type: 'mcp' },
-    {
-      ...context,
-      toolManifestMap: { ...context.toolManifestMap, [identifier]: manifest },
-    },
-  );
-
-  return {
-    content: result.content,
-    error: result.error
-      ? { code: result.error.code, message: result.error.message ?? String(result.error) }
-      : undefined,
-    state: result.state,
-    success: result.success,
-  };
-};
-
-/**
- * Unified tool-authorization step for approval-gated external calls (F04).
- *
- * The gate runs BEFORE `ToolExecutionService.executeTool` — a refused call
- * produces zero network side effects (`mcpService.callTool` never runs). A
- * missing receipt creates a pending one bound to
- * principal/workspace/operation/generation/toolCallId/connection/argsHash and
- * returns a `pending` result the host turns into an intervention card; the
- * human decision lands via `submitHeteroIntervention` (user-auth channel —
- * the op-token path can only ever create or observe a receipt, never decide
- * it). Headless runs and runs with no interaction surface refuse explicitly.
- */
-const gateAcpExternalToolApproval = async (params: {
-  apiName: string;
-  argsJson: string;
-  authRevision?: string;
-  connectorId?: string;
-  db: OrviloDatabase;
-  identifier: string;
-  grantRevision?: string;
-  kind: 'connector_tool' | 'plugin_tool';
-  operation: OperationRow;
-  pluginInstallId?: string;
-  schemaDigest?: string;
-  toolCallId: string;
-  userId: string;
-  workspaceId?: string;
-}): Promise<AcpBuiltinToolExecResult | undefined> => {
-  const { db, operation, toolCallId } = params;
-  const appContext = (operation.appContext ?? {}) as Record<string, unknown>;
-  const now = Date.now();
-
-  // Headless / no-interaction runs are not auto-approve — the call cannot
-  // reach a human, so it refuses outright without creating a receipt.
-  if (appContext.interventionApprovalMode === 'headless') {
-    return {
-      error: {
-        code: 'acp_tool_approval_unavailable',
-        message: `Tool '${params.identifier}.${params.apiName}' requires human approval and this run has no interaction surface`,
-      },
-      success: false,
-    };
-  }
-
-  const expiresAt = now + TOOL_APPROVAL_TTL_MS;
-  const argsHash = sha256Hex(stableStringify(safeParseJson(params.argsJson)));
-  // The canonical approval scope this call must match at consume time — the
-  // receipt persists its digest (`scopeHash`) so an approval minted for tool
-  // A can never be spent by a same-toolCallId/same-args call to tool B.
-  const scope: ToolApprovalScope = {
-    agentId: operation.agentId ?? undefined,
-    apiName: params.apiName,
-    argsHash,
-    authRevision: params.authRevision,
-    connectorId: params.connectorId,
-    executionGeneration: (appContext.executionGeneration as number | undefined) ?? undefined,
-    identifier: params.identifier,
-    grantRevision: params.grantRevision,
-    kind: params.kind,
-    operationId: operation.id,
-    pluginInstallId: params.pluginInstallId,
-    schemaDigest: params.schemaDigest,
-    toolCallId,
-    userId: operation.userId,
-    workspaceId: params.workspaceId ?? operation.workspaceId ?? '',
-  };
-  const scopeHash = toolApprovalScopeHash(scope);
-  const event = buildToolApprovalEvent({
-    ...scope,
-    expiresAt,
-    now,
-    windowId: newEventId(),
-  });
-  // Insert is dedupe-stable on eventId — retries/concurrent polls converge on
-  // the same receipt rather than stacking approvals.
-  await new EventOutboxModel(db).upsertDeliveryReceipt({ event });
-
-  const authorization = await authorizeToolApprovalReceipt(db, {
-    argsHash,
-    // The stable invocation id is the toolCallId itself — the host mints it
-    // once per logical call and reuses it across crash/renew retries, which
-    // is also what makes the consume CAS idempotent for that invocation.
-    invocationId: toolCallId,
-    now,
-    operationId: operation.id,
-    scopeHash,
-    toolCallId,
-  });
-  const status = authorization.status;
-  if (status === 'approved') return undefined;
-
-  if (status === 'expired') {
-    // An expired receipt with no terminal decision re-pends under a fresh
-    // window; a stale APPROVAL inside the dead window is cleared by the renew
-    // CAS so it can never ride the new window. Each renew rotates `windowId`
-    // (+ bumps `windowVersion`) and re-binds the scope to THIS call, so a
-    // card answered for a previous window is rejected as `stale_window`.
-    const renewWindowId = newEventId();
-    const renewed = await new EventOutboxModel(db).renewToolApprovalReceipt({
-      argsHash,
-      eventId: toolApprovalEventId(operation.id, toolCallId),
-      expiresAt,
-      now,
-      scopeHash,
-      windowId: renewWindowId,
-    });
-    if (renewed) {
-      return {
-        error: {
-          code: 'acp_tool_approval_pending',
-          message: `Tool '${params.identifier}.${params.apiName}' requires human approval`,
-        },
-        state: { toolApproval: { expiresAt, renewed: true, windowId: renewWindowId } },
-        success: false,
-      };
-    }
-  }
-
-  const reason =
-    status === 'denied'
-      ? 'acp_tool_approval_denied'
-      : status === 'consumed'
-        ? 'acp_tool_approval_consumed'
-        : status === 'args_mismatch'
-          ? 'acp_tool_approval_args_mismatch'
-          : status === 'scope_mismatch'
-            ? 'acp_tool_approval_scope_mismatch'
-            : status === 'expired'
-              ? 'acp_tool_approval_expired'
-              : 'acp_tool_approval_pending';
-  return {
-    error: {
-      code: reason,
-      message:
-        status === 'denied'
-          ? `The user denied '${params.identifier}.${params.apiName}'`
-          : status === 'consumed'
-            ? `Approval for '${params.identifier}.${params.apiName}' was already consumed`
-            : status === 'args_mismatch'
-              ? `Approval for '${params.identifier}.${params.apiName}' covered different arguments`
-              : status === 'scope_mismatch'
-                ? `Approval for '${params.identifier}.${params.apiName}' covered a different tool scope`
-                : status === 'expired'
-                  ? `Approval for '${params.identifier}.${params.apiName}' expired`
-                  : `Tool '${params.identifier}.${params.apiName}' requires human approval`,
-    },
-    state: {
-      toolApproval: {
-        expiresAt: authorization.expiresAt ?? expiresAt,
-        windowId: authorization.windowId,
-        windowVersion: authorization.windowVersion,
-      },
-    },
-    success: false,
-  };
-};
-
-const safeParseJson = (raw: string): unknown => {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return raw;
-  }
 };
 
 export interface AcpBuiltinToolChildResult {

@@ -101,46 +101,7 @@ export interface AuthExpiredMessage {
   type: 'auth_expired';
 }
 
-/**
- * Stdio MCP connection params forwarded to the device for a tunneled MCP tool
- * call. The cloud server can't spawn the user's local MCP binary, so the
- * command/args/env travel to the device, which spawns and calls it locally.
- */
-export interface GatewayMcpStdioParams {
-  args: string[];
-  command: string;
-  env?: Record<string, string>;
-  name: string;
-  type: 'stdio';
-}
-
-/**
- * HTTP MCP connection params forwarded to the device for a tunneled MCP tool
- * call. Used for endpoints only the device's network can reach (localhost /
- * LAN MCP servers) — the cloud server's fetch would fail. Credentials are
- * decrypted server-side and forwarded verbatim; the device stores nothing.
- */
-export interface GatewayMcpHttpParams {
-  auth?: { accessToken?: string; token?: string; type: 'none' | 'bearer' | 'oauth2' };
-  headers?: Record<string, string>;
-  name: string;
-  type: 'http';
-  url: string;
-}
-
-/** MCP connection params for a tunneled call — discriminated on `type`. */
-export type GatewayMcpParams = GatewayMcpStdioParams | GatewayMcpHttpParams;
-
-/**
- * How the device should execute a tunneled tool call. Explicit so routing never
- * depends on structural sniffing (e.g. "does `params` exist?") — the gateway
- * relays every call over one `tool-call` channel, so the discriminator must be
- * a dedicated field, not the shape of the payload.
- *
- * `'tool'` is the generic builtin/local-system call; `'mcp'` is a tunneled
- * stdio MCP call. Open to future kinds (e.g. `'skill'`).
- */
-export type GatewayToolCallType = 'tool' | 'mcp';
+export type GatewayToolCallType = 'tool';
 
 export interface ToolCallRequestMessage {
   /** Operation that triggered the call, propagated by the gateway for tracing. */
@@ -152,13 +113,7 @@ export interface ToolCallRequestMessage {
     apiName: string;
     arguments: string;
     identifier: string;
-    /** MCP connection params (stdio or http) — present only when `type === 'mcp'`. */
-    params?: GatewayMcpParams;
-    /**
-     * Routing discriminator. `'mcp'` → the device's local MCP client (spawns
-     * the stdio server); `'tool'` (or omitted, for back-compat with older
-     * servers) → the builtin local-system tool switch.
-     */
+    /** Builtin device tool dispatch; omitted by older builtin callers. */
     type?: GatewayToolCallType;
   };
   type: 'tool_call_request';

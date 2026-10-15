@@ -61,24 +61,6 @@ import { runExpertiseHistoryTopicWorkflow } from '@/server/workflows/expertiseHi
 import { processLinearImportWorkflow } from '@/server/workflows/linearImport/process';
 import { executeLinearSyncWorkflow } from '@/server/workflows/linearSync/execute';
 import { processLinearSyncWorkflow } from '@/server/workflows/linearSync/process';
-import { OnboardingTaskRecommendationWorkflow } from '@/server/workflows/onboardingTaskRecommendation';
-import {
-  failOnboardingTaskRecommendations,
-  processOnboardingTaskRecommendations,
-} from '@/server/workflows/onboardingTaskRecommendation/process';
-import { OnboardingUnderstandingWorkflow } from '@/server/workflows/onboardingUnderstanding';
-import {
-  failRunningUnderstandingWriting,
-  processCollectedUnderstanding,
-} from '@/server/workflows/onboardingUnderstanding/processCollected';
-import {
-  failRunningDetailedUnderstandingPersona,
-  processDetailedUnderstandingPersona,
-} from '@/server/workflows/onboardingUnderstanding/processDetailedPersona';
-import {
-  failRunningUnderstandingProviders,
-  processUnderstandingProviders,
-} from '@/server/workflows/onboardingUnderstanding/processProviders';
 
 interface StoredWorkflowInput {
   body: unknown;
@@ -108,18 +90,6 @@ const runWorkflowFailureCompensation = async (path: HatchetWorkflowPath, body: u
   switch (path) {
     case '/api/workflows/memory-user-memory/pipelines/chat-topic/process-topic': {
       return failMemoryExtractionTopic(body);
-    }
-    case '/api/workflows/onboarding/task-recommendations/process': {
-      return failOnboardingTaskRecommendations(body);
-    }
-    case '/api/workflows/onboarding/understanding/process-collected': {
-      return failRunningUnderstandingWriting(body);
-    }
-    case '/api/workflows/onboarding/understanding/process-detailed-persona': {
-      return failRunningDetailedUnderstandingPersona(body);
-    }
-    case '/api/workflows/onboarding/understanding/process-providers': {
-      return failRunningUnderstandingProviders(body);
     }
     default: {
       return undefined;
@@ -456,35 +426,6 @@ const runners: Record<HatchetWorkflowPath, WorkflowRunner> = {
     invoke(processUsersHandler, input, stepStore),
   '/api/workflows/memory-user-memory/pipelines/persona/update-writing': (input, stepStore) =>
     invoke(personaUpdateHandler, input, stepStore),
-  '/api/workflows/onboarding/task-recommendations/process': (input, stepStore) =>
-    invoke(processOnboardingTaskRecommendations, input, stepStore),
-  '/api/workflows/onboarding/understanding/process-collected': (input, stepStore) =>
-    processCollectedUnderstanding(
-      createWorkflowContext(input.body, input.headers, input.workflowRunId, {
-        stepStore,
-      }) as Parameters<typeof processCollectedUnderstanding>[0],
-      {
-        triggerDetailedPersona: (payload, options) =>
-          OnboardingUnderstandingWorkflow.triggerDetailedPersona(payload, options),
-      },
-    ),
-  '/api/workflows/onboarding/understanding/process-detailed-persona': (input, stepStore) =>
-    invoke(processDetailedUnderstandingPersona, input, stepStore),
-  '/api/workflows/onboarding/understanding/process-providers': (input, stepStore) =>
-    processUnderstandingProviders(
-      createWorkflowContext(input.body, input.headers, input.workflowRunId, {
-        stepStore,
-      }) as Parameters<typeof processUnderstandingProviders>[0],
-      {
-        processCollectedWorkflow: {} as Parameters<
-          typeof processUnderstandingProviders
-        >[1]['processCollectedWorkflow'],
-        triggerCollected: (payload, options) =>
-          OnboardingUnderstandingWorkflow.triggerWriting(payload, options),
-        triggerTaskRecommendations: (payload, options) =>
-          OnboardingTaskRecommendationWorkflow.trigger(payload, options),
-      },
-    ),
   '/api/workflows/linear-sync/process': (input, stepStore) =>
     invoke(processLinearSyncWorkflow, input, stepStore),
   '/api/workflows/linear-import/process': (input, stepStore) =>

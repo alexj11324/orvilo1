@@ -3,7 +3,6 @@ import type { BrowserSidebarBroadcastEvents } from './browserSidebar';
 import type { GatewayConnectionBroadcastEvents } from './gatewayConnection';
 import type { HeterogeneousAgentBroadcastEvents } from './heterogeneousAgent';
 import type { NavigationBroadcastEvents } from './navigation';
-import type { ProtocolBroadcastEvents } from './protocol';
 import type { RemoteServerBroadcastEvents } from './remoteServer';
 import type { ScreenCaptureBroadcastEvents } from './screenCapture';
 import type { SystemBroadcastEvents } from './system';
@@ -29,8 +28,7 @@ export interface MainBroadcastEvents
     SystemBroadcastEvents,
     TerminalBroadcastEvents,
     TopicPopupBroadcastEvents,
-    ZoomBroadcastEvents,
-    ProtocolBroadcastEvents {}
+    ZoomBroadcastEvents {}
 
 export type MainBroadcastEventKey = keyof MainBroadcastEvents;
 

@@ -274,15 +274,12 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
     footer: knowledgeFooter,
     items: knowledgeItems,
   } = useKnowledgeControls({ openAttachKnowledgeModal: handleOpenKnowledge });
-  const closeDropdown = useCallback(() => close(), [close]);
   const {
     autoCount: skillAutoCount,
     isPolicyMenuOpen: isSkillPolicyMenuOpen,
-    marketFooter: skillMarketFooter,
-    marketHeader: skillMarketHeader,
     marketItems: skillItems,
     pinnedCount: skillPinnedCount,
-  } = useToolsControls({ closeDropdown });
+  } = useToolsControls();
 
   const isModelBuiltinSearchInternal = useAiInfraStore(
     aiModelSelectors.isModelBuiltinSearchInternal(model, provider),
@@ -471,8 +468,6 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                   <ChevronRight fill={'transparent'} height={16} size={16} width={16} />
                 </span>
               ),
-              footer: skillMarketFooter,
-              header: skillMarketHeader,
               icon: (
                 <span className="anticon" role="img">
                   <SkillsIcon fill={'transparent'} height={16} size={16} width={16} />
@@ -743,8 +738,6 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
     tEditor,
     tSetting,
     skillItems,
-    skillMarketFooter,
-    skillMarketHeader,
     upload,
     close,
   ]);

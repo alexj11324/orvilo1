@@ -94,17 +94,6 @@ export const credsRouter = router({
       }
     }),
 
-  createOAuth: credsProcedure
-    .input(z.object({ ...createBaseInput, oauthConnectionId: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const data = await ctx.credsService.createOAuth({ ...input, workspaceScope: false });
-        return { data, success: true };
-      } catch (error) {
-        wrapInternal('createOAuth', error);
-      }
-    }),
-
   delete: credsProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
     try {
       return await ctx.credsService.delete(input.id, false);
@@ -147,16 +136,6 @@ export const credsRouter = router({
       }
     }),
 
-  getSkillCredStatus: credsProcedure
-    .input(z.object({ skillIdentifier: z.string() }))
-    .query(async ({ ctx, input }) => {
-      try {
-        return await ctx.credsService.getSkillCredStatus(input.skillIdentifier);
-      } catch (error) {
-        wrapInternal('getSkillCredStatus', error);
-      }
-    }),
-
   // `userId` stays in the input for shape compatibility with the Market
   // contract, but credentials are always resolved for the authenticated
   // caller — a caller must never inject into a session they don't own.
@@ -181,35 +160,11 @@ export const credsRouter = router({
       }
     }),
 
-  injectForSkill: credsProcedure
-    .input(
-      z.object({
-        sandbox: z.boolean().optional().default(true),
-        skillIdentifier: z.string(),
-        topicId: z.string().optional(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        return await ctx.credsService.injectForSkill(input);
-      } catch (error) {
-        wrapInternal('injectForSkill', error);
-      }
-    }),
-
   list: credsProcedure.query(async ({ ctx }) => {
     try {
       return await ctx.credsService.listPersonal();
     } catch (error) {
       wrapInternal('list', error);
-    }
-  }),
-
-  listOAuthConnections: credsProcedure.query(async ({ ctx }) => {
-    try {
-      return await ctx.credsService.listOAuthConnections();
-    } catch (error) {
-      wrapInternal('listOAuthConnections', error);
     }
   }),
 

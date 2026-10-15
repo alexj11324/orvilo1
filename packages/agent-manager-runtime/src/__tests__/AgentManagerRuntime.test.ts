@@ -1,26 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getAgentStoreState } from '@/store/agent';
-import { composioStoreSelectors, orviloSkillStoreSelectors } from '@/store/tool/selectors';
-import { ComposioServerStatus } from '@/store/tool/slices/composioStore/types';
-import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
 
 import { AgentManagerRuntime } from '../AgentManagerRuntime';
-import type { IAgentService, IDiscoverService } from '../types';
-
-/**
- * The `@/store/agent` mock below recreates a fresh object (with fresh
- * `vi.fn()`s) on every `getAgentStoreState()` call, so a write made through
- * one call's `optimisticUpdateAgentConfig` isn't visible on another call's
- * returned object. This finds whichever of this test's calls actually wrote.
- */
-const getLastOptimisticConfigUpdateCall = () => {
-  for (const result of [...vi.mocked(getAgentStoreState).mock.results].reverse()) {
-    const calls = (result.value.optimisticUpdateAgentConfig as ReturnType<typeof vi.fn>).mock.calls;
-    if (calls.length > 0) return calls.at(-1);
-  }
-  return undefined;
-};
+import type { IAgentService } from '../types';
 
 const getOptimisticConfigUpdateCalls = () =>
   vi.mocked(getAgentStoreState).mock.results.flatMap((result) => {
@@ -45,11 +28,6 @@ const mockAgentService: IAgentService = {
   getAgentConfigById: vi.fn(),
   queryAgents: vi.fn(),
   removeAgent: vi.fn(),
-};
-
-const mockDiscoverService: IDiscoverService = {
-  getAssistantList: vi.fn(),
-  getMcpList: vi.fn(),
 };
 
 // Mock stores
@@ -108,39 +86,6 @@ vi.mock('@/store/aiInfra', () => ({
   })),
 }));
 
-vi.mock('@/store/tool', () => ({
-  getToolStoreState: vi.fn(() => ({
-    installMCPPlugin: vi.fn().mockResolvedValue(true),
-    refreshPlugins: vi.fn(),
-  })),
-}));
-
-vi.mock('@/store/tool/selectors', () => ({
-  builtinToolSelectors: {
-    metaList: vi.fn(() => [{ identifier: 'orvilo-web-browsing', meta: { title: 'Web Browsing' } }]),
-  },
-  composioStoreSelectors: {
-    getServers: vi.fn(() => []),
-  },
-  orviloSkillStoreSelectors: {
-    getServers: vi.fn(() => []),
-  },
-  pluginSelectors: {
-    getInstalledPluginById: vi.fn(() => () => null),
-    isPluginInstalled: vi.fn(() => () => false),
-  },
-}));
-
-vi.mock('@/store/user', () => ({
-  getUserStoreState: vi.fn(() => ({})),
-}));
-
-vi.mock('@/store/user/selectors', () => ({
-  userProfileSelectors: {
-    userId: vi.fn(() => 'test-user-id'),
-  },
-}));
-
 describe('AgentManagerRuntime', () => {
   let runtime: AgentManagerRuntime;
 
@@ -149,12 +94,9 @@ describe('AgentManagerRuntime', () => {
     vi.mocked(mockAgentService.getRuntimeForCreation).mockResolvedValue({
       agencyConfig: { activeProvider: 'codex' },
     } as never);
-    vi.mocked(composioStoreSelectors.getServers).mockReturnValue([]);
-    vi.mocked(orviloSkillStoreSelectors.getServers).mockReturnValue([]);
     Reflect.deleteProperty(window, 'global_serverConfigStore');
     runtime = new AgentManagerRuntime({
       agentService: mockAgentService,
-      discoverService: mockDiscoverService,
     });
   });
 
@@ -355,7 +297,6 @@ describe('AgentManagerRuntime', () => {
 
       const result = await runtime.searchAgents({
         keyword: 'test',
-        source: 'user',
       });
 
       expect(result.success).toBe(true);
@@ -364,11 +305,10 @@ describe('AgentManagerRuntime', () => {
       expect(result.content).toContain('id="agent-2"');
       expect(result.state).toMatchObject({
         agents: expect.arrayContaining([
-          expect.objectContaining({ id: 'agent-1', isMarket: false }),
-          expect.objectContaining({ id: 'agent-2', isMarket: false }),
+          expect.objectContaining({ id: 'agent-1' }),
+          expect.objectContaining({ id: 'agent-2' }),
         ]),
         hasMore: false,
-        source: 'user',
         totalCount: 2,
       });
     });
@@ -386,7 +326,7 @@ describe('AgentManagerRuntime', () => {
       ] as any);
       vi.mocked(mockAgentService.countAgents).mockResolvedValue(1);
 
-      const result = await runtime.searchAgents({ source: 'user' });
+      const result = await runtime.searchAgents({});
 
       expect(result.success).toBe(true);
       expect(result.content).toContain('heteroType="claude-code"');
@@ -398,63 +338,22 @@ describe('AgentManagerRuntime', () => {
       });
     });
 
-    it('should search marketplace agents', async () => {
-      vi.mocked(mockDiscoverService.getAssistantList).mockResolvedValue({
-        items: [
-          {
-            identifier: 'market-agent-1',
-            title: 'Market Agent',
-            description: 'From market',
-          } as any,
-        ],
-        totalCount: 1,
-      } as any);
-
-      const result = await runtime.searchAgents({
-        keyword: 'market',
-        source: 'market',
-      });
-
-      expect(result.success).toBe(true);
-      expect(mockAgentService.countAgents).not.toHaveBeenCalled();
-      expect(result.state).toMatchObject({
-        agents: expect.arrayContaining([
-          expect.objectContaining({ id: 'market-agent-1', isMarket: true }),
-        ]),
-        source: 'market',
-        totalCount: 1,
-      });
-    });
-
-    it('should search all sources by default', async () => {
+    it('searches the workspace without any Marketplace service', async () => {
       vi.mocked(mockAgentService.queryAgents).mockResolvedValue([
-        {
-          id: 'user-agent',
-          title: 'User Agent',
-          avatar: null,
-          backgroundColor: null,
-          description: null,
-        },
-      ] as any);
+        { id: 'user-agent', title: 'User Agent' },
+      ]);
       vi.mocked(mockAgentService.countAgents).mockResolvedValue(1);
-      vi.mocked(mockDiscoverService.getAssistantList).mockResolvedValue({
-        items: [{ identifier: 'market-agent', title: 'Market Agent' } as any],
-        totalCount: 1,
-      } as any);
-
       const result = await runtime.searchAgents({ keyword: 'test' });
-
       expect(result.success).toBe(true);
-      expect(result.state?.source).toBe('all');
-      expect(result.state?.agents).toHaveLength(2);
-      expect(result.state?.totalCount).toBe(2);
+      expect(result.state?.agents).toEqual([{ id: 'user-agent', title: 'User Agent' }]);
+      expect(result.state?.totalCount).toBe(1);
     });
 
     it('should return no agents found message', async () => {
       vi.mocked(mockAgentService.queryAgents).mockResolvedValue([]);
       vi.mocked(mockAgentService.countAgents).mockResolvedValue(0);
 
-      const result = await runtime.searchAgents({ keyword: 'nonexistent', source: 'user' });
+      const result = await runtime.searchAgents({ keyword: 'nonexistent' });
 
       expect(result.success).toBe(true);
       expect(result.content).toContain('No agents matched');
@@ -471,7 +370,7 @@ describe('AgentManagerRuntime', () => {
       vi.mocked(mockAgentService.queryAgents).mockResolvedValue(page as any);
       vi.mocked(mockAgentService.countAgents).mockResolvedValue(137);
 
-      const result = await runtime.searchAgents({ limit: 20, source: 'user' });
+      const result = await runtime.searchAgents({ limit: 20 });
 
       expect(result.success).toBe(true);
       expect(result.content).toContain('Found 137 agents in your workspace, showing 1-20:');
@@ -490,7 +389,7 @@ describe('AgentManagerRuntime', () => {
       vi.mocked(mockAgentService.queryAgents).mockResolvedValue(page as any);
       vi.mocked(mockAgentService.countAgents).mockResolvedValue(50);
 
-      const result = await runtime.searchAgents({ limit: 20, offset: 20, source: 'user' });
+      const result = await runtime.searchAgents({ limit: 20, offset: 20 });
 
       expect(mockAgentService.queryAgents).toHaveBeenCalledWith({
         keyword: undefined,
@@ -514,7 +413,7 @@ describe('AgentManagerRuntime', () => {
       ] as any);
       vi.mocked(mockAgentService.countAgents).mockResolvedValue(1);
 
-      const result = await runtime.searchAgents({ limit: 50, source: 'user' });
+      const result = await runtime.searchAgents({ limit: 50 });
 
       expect(mockAgentService.queryAgents).toHaveBeenCalledWith({
         keyword: undefined,
@@ -530,32 +429,17 @@ describe('AgentManagerRuntime', () => {
       vi.mocked(mockAgentService.queryAgents).mockResolvedValue([]);
       vi.mocked(mockAgentService.countAgents).mockResolvedValue(37);
 
-      const result = await runtime.searchAgents({ offset: 200, source: 'user' });
+      const result = await runtime.searchAgents({ offset: 200 });
 
       expect(result.success).toBe(true);
       expect(result.content).toContain('No agents at offset 200; only 37 match');
-    });
-
-    it('should fall back to item count when marketplace omits totalCount', async () => {
-      vi.mocked(mockDiscoverService.getAssistantList).mockResolvedValue({
-        items: [
-          { identifier: 'market-agent-1', title: 'Market Agent' } as any,
-          { identifier: 'market-agent-2', title: 'Another Agent' } as any,
-        ],
-        totalCount: undefined,
-      } as any);
-
-      const result = await runtime.searchAgents({ source: 'market' });
-
-      expect(result.success).toBe(true);
-      expect(result.state?.totalCount).toBe(2);
     });
 
     it('should handle search failure', async () => {
       vi.mocked(mockAgentService.queryAgents).mockRejectedValue(new Error('DB unavailable'));
       vi.mocked(mockAgentService.countAgents).mockResolvedValue(0);
 
-      const result = await runtime.searchAgents({ source: 'user' });
+      const result = await runtime.searchAgents({});
 
       expect(result.success).toBe(false);
       expect(result.content).toContain('Failed to search agents');
@@ -657,7 +541,6 @@ describe('AgentManagerRuntime', () => {
     it('should preserve invocation order for concurrent updates to the same agent', async () => {
       const secondRuntime = new AgentManagerRuntime({
         agentService: mockAgentService,
-        discoverService: mockDiscoverService,
       });
       const firstUpdate = runtime.updatePrompt('agent-id', {
         prompt: 'First prompt is intentionally longer',
@@ -675,36 +558,6 @@ describe('AgentManagerRuntime', () => {
         ['agent-id', { editorData: null, systemRole: 'First prompt is intentionally longer' }],
         ['agent-id', { editorData: null, systemRole: 'Second prompt' }],
       ]);
-    });
-  });
-
-  describe('searchMarketTools', () => {
-    it('should search market tools', async () => {
-      vi.mocked(mockDiscoverService.getMcpList).mockResolvedValue({
-        items: [
-          {
-            identifier: 'tool-1',
-            name: 'Tool One',
-            description: 'First tool',
-            author: 'Author',
-          } as any,
-          { identifier: 'tool-2', name: 'Tool Two', description: 'Second tool' } as any,
-        ],
-        totalCount: 2,
-      } as any);
-
-      const result = await runtime.searchMarketTools({ query: 'test' });
-
-      expect(result.success).toBe(true);
-      expect(result.content).toContain('Found 2 tool(s)');
-      expect(result.state).toMatchObject({
-        query: 'test',
-        tools: expect.arrayContaining([
-          expect.objectContaining({ identifier: 'tool-1' }),
-          expect.objectContaining({ identifier: 'tool-2' }),
-        ]),
-        totalCount: 2,
-      });
     });
   });
 
@@ -822,110 +675,6 @@ describe('AgentManagerRuntime', () => {
 
       expect(result.success).toBe(false);
       expect(result.content).toContain('Failed to duplicate agent');
-    });
-  });
-
-  describe('installPlugin', () => {
-    /** @example An unqualified GitHub install selects the canonical Orvilo owner. */
-    it('routes colliding official connector identifiers to Orvilo', async () => {
-      // ROOT CAUSE:
-      //
-      // Official connector installation used to check the Composio catalog first.
-      // Because GitHub existed in both catalogs, the agent builder opened Composio
-      // even though the generic connector catalog assigns GitHub to Orvilo.
-      //
-      // We fixed this by resolving the shared catalog owner before dispatching
-      // to either authorization runtime.
-      window.global_serverConfigStore = {
-        getState: () => ({
-          serverConfig: { enableComposio: true, enableOrviloSkill: true },
-        }),
-      } as unknown as NonNullable<typeof window.global_serverConfigStore>;
-      vi.mocked(composioStoreSelectors.getServers).mockReturnValue([
-        {
-          appSlug: 'GITHUB',
-          authConfigId: 'auth-config-id',
-          connectedAccountId: 'connected-account-id',
-          createdAt: 1,
-          identifier: 'github',
-          label: 'GitHub',
-          status: ComposioServerStatus.ACTIVE,
-        },
-      ]);
-      vi.mocked(orviloSkillStoreSelectors.getServers).mockReturnValue([
-        {
-          identifier: 'github',
-          isConnected: true,
-          name: 'GitHub',
-          status: OrviloSkillStatus.CONNECTED,
-        },
-      ]);
-
-      const result = await runtime.installPlugin('agent-id', {
-        identifier: 'github',
-        source: 'official',
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.content).toContain('Successfully enabled OrviloSkill provider');
-      expect(result.state).toMatchObject({ isOrviloSkill: true, pluginId: 'github' });
-    });
-
-    it('should install builtin tool', async () => {
-      const result = await runtime.installPlugin('agent-id', {
-        identifier: 'orvilo-web-browsing',
-        source: 'official',
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.content).toContain('Successfully enabled builtin tool');
-      expect(result.state).toMatchObject({
-        installed: true,
-        pluginId: 'orvilo-web-browsing',
-        success: true,
-      });
-    });
-
-    it('should return error for unknown official tool', async () => {
-      const result = await runtime.installPlugin('agent-id', {
-        identifier: 'unknown-tool',
-        source: 'official',
-      });
-
-      expect(result.success).toBe(false);
-      expect(result.content).toContain('not found');
-    });
-
-    it('flips an existing disabled object entry back to pinned, without duplicating it', async () => {
-      const originalPlugins = mockAgentConfig.plugins;
-      mockAgentConfig.plugins = [
-        { identifier: 'orvilo-web-browsing', mode: 'disabled' } as any,
-      ] as any;
-
-      try {
-        const result = await runtime.installPlugin('agent-id', {
-          identifier: 'orvilo-web-browsing',
-          source: 'official',
-        });
-
-        expect(result.success).toBe(true);
-        expect(getLastOptimisticConfigUpdateCall()).toEqual([
-          'agent-id',
-          { plugins: [{ identifier: 'orvilo-web-browsing', mode: 'pinned' }] },
-        ]);
-      } finally {
-        mockAgentConfig.plugins = originalPlugins;
-      }
-    });
-
-    it('should install market plugin', async () => {
-      const result = await runtime.installPlugin('agent-id', {
-        identifier: 'market-plugin',
-        source: 'market',
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.content).toContain('Successfully installed and enabled MCP plugin');
     });
   });
 });

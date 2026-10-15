@@ -78,7 +78,8 @@ vi.mock('@/components/DragUploadZone/DragUploadProvider', async () => {
   };
 });
 
-vi.mock('@/const/version', () => ({
+vi.mock('@/const/version', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   isDesktop: false,
 }));
 
@@ -109,15 +110,6 @@ vi.mock('@/features/Electron/AuthRequiredModal', () => ({
 vi.mock('@/layout/AuthProvider/SessionAuth/WebSessionAuthRecovery', () => ({
   default: () => <div data-testid="web-session-auth-recovery" />,
 }));
-
-vi.mock('@/layout/AuthProvider/MarketAuth', async () => {
-  const React = await import('react');
-
-  return {
-    MarketAuthProvider: ({ children }: { children?: ReactNode }) =>
-      React.createElement('div', { 'data-testid': 'market-auth-provider' }, children),
-  };
-});
 
 vi.mock('@/layout/GlobalProvider/AppTheme', async () => {
   const React = await import('react');
@@ -253,17 +245,6 @@ describe('SPAGlobalProvider', () => {
     expect(screen.queryByTestId('auth-required-modal')).toBeNull();
   });
 
-  it('provides Market auth from the SPA global provider', () => {
-    render(
-      <SPAGlobalProvider>
-        <div data-testid="spa-route-content" />
-      </SPAGlobalProvider>,
-    );
-
-    const routeContent = screen.getByTestId('spa-route-content');
-
-    expect(routeContent.closest('[data-testid="market-auth-provider"]')).not.toBeNull();
-  });
   it('mounts DevDock in dev builds even without server-resolved access', async () => {
     render(
       <DevDockLayout>

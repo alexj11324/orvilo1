@@ -107,7 +107,7 @@ describe('settings useCategory', () => {
 
     // The skill marketplace and the OAuth-app console were both retired, so the
     // tools group is exactly the two tabs that are still live.
-    expect(keysOf(SettingsGroupKey.Tools)).toEqual([SettingsTabs.Connector]);
+    expect(keysOf(SettingsGroupKey.Tools)).toBeUndefined();
   });
 
   it('keeps Provider visible when provider settings are enabled', () => {
@@ -144,7 +144,7 @@ describe('settings useCategory', () => {
     const toolsGroup = result.current.find((group) => group.key === SettingsGroupKey.Tools);
     const developerGroup = result.current.find((group) => group.key === SettingsGroupKey.Developer);
 
-    expect(toolsGroup?.items.map((item) => item.key)).not.toContain(SettingsTabs.OAuthApps);
+    expect(toolsGroup?.items.map((item) => item.key) ?? []).not.toContain(SettingsTabs.OAuthApps);
     expect(developerGroup?.items.map((item) => item.key)).not.toContain(SettingsTabs.OAuthApps);
   });
 
@@ -246,7 +246,6 @@ describe('settings useCategory', () => {
         SettingsTabs.Profile,
         SettingsTabs.Appearance,
         SettingsTabs.Notification,
-        SettingsTabs.Connector,
         SettingsTabs.Advanced,
       ]) {
         expect(hrefOf(tab), `${tab} points into the workspace tree`).toBeUndefined();

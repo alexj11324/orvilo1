@@ -1,19 +1,13 @@
 import { getBuiltinRenderDisplayControl } from '@orvilo/builtin-tools/displayControls';
-import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
 import { type RenderDisplayControl, type ToolManifest } from '@orvilo/types';
 
-import {
-  isInstalledPluginAvailableInCurrentEnv,
-  isToolAvailableInCurrentEnv,
-} from '@/helpers/toolAvailability';
+import { isToolAvailableInCurrentEnv } from '@/helpers/toolAvailability';
 import { type MetaData } from '@/types/meta';
 import { type OrviloToolMeta } from '@/types/tool/tool';
 
 import { type ToolStoreState } from '../initialState';
 import { builtinToolSelectors } from '../slices/builtin/selectors';
-import { ComposioServerStatus } from '../slices/composioStore';
 import { orviloSkillStoreSelectors } from '../slices/orviloSkillStore';
-import { OrviloSkillStatus } from '../slices/orviloSkillStore/types';
 import { pluginSelectors } from '../slices/plugin/selectors';
 
 const metaList = (s: ToolStoreState): OrviloToolMeta[] => {
@@ -119,22 +113,10 @@ export interface AvailableToolForDiscovery {
   name: string;
 }
 
-/**
- * Get all tools available for tool discovery (activateTools).
- * Built from raw state to avoid inheriting unrelated filtering logic.
- *
- * Sources:
- * 1. Builtin tools (from s.builtinTools) — exclude non-discoverable, skills, platform-unavailable
- * 2. User-installed plugins (from s.installedPlugins) — exclude Composio/Orvilo Skill/agent skill overlap
- * 3. Composio MCP servers (connected) — description from COMPOSIO_APP_TYPES
- * 4. Orvilo Skill servers (connected) — description from ORVILO_SKILL_PROVIDERS
- */
+/** Internal builtin tools available for explicit activation. */
 const availableToolsForDiscovery = (s: ToolStoreState): AvailableToolForDiscovery[] => {
   // Build exclusion sets for deduplication
   const builtinSkillIds = new Set((s.builtinSkills || []).map((skill) => skill.identifier));
-  const agentSkillIds = new Set((s.agentSkills || []).map((skill) => skill.identifier));
-  const composioIds = new Set((s.composioServers || []).map((server) => server.identifier));
-  const orviloSkillIds = new Set((s.orviloSkillServers || []).map((server) => server.identifier));
 
   // 1. Builtin tools — directly from s.builtinTools
   const builtinItems = s.builtinTools
@@ -147,58 +129,7 @@ const availableToolsForDiscovery = (s: ToolStoreState): AvailableToolForDiscover
       name: tool.title || tool.identifier,
     }));
 
-  // 2. User-installed plugins — directly from s.installedPlugins
-  //    Exclude Composio, Orvilo Skill, and agent skill entries (they are handled in dedicated sources)
-  const pluginItems = s.installedPlugins
-    .filter((p) => !composioIds.has(p.identifier))
-    .filter((p) => !orviloSkillIds.has(p.identifier))
-    .filter((p) => !agentSkillIds.has(p.identifier))
-    .filter((p) => !p.customParams?.composio) // extra safety for Composio plugins
-    .filter((plugin) => isInstalledPluginAvailableInCurrentEnv(plugin))
-    .map((plugin) => {
-      const meta = plugin.manifest?.meta;
-      return {
-        description: meta?.description || '',
-        identifier: plugin.identifier,
-        name: meta?.title || plugin.identifier,
-      };
-    });
-
-  // 3. Composio MCP servers (connected only)
-  const composioItems = (s.composioServers || [])
-    .filter((server) => server.status === ComposioServerStatus.ACTIVE && server.tools?.length)
-    // A connector identifier can have legacy Composio and current Orvilo
-    // connections at the same time. Tool discovery is identifier-based, so the
-    // canonical Orvilo connection must own the single visible entry.
-    .filter(
-      (server) =>
-        !s.orviloSkillServers?.some(
-          (item) =>
-            item.identifier === server.identifier && item.status === OrviloSkillStatus.CONNECTED,
-        ),
-    )
-    .map((server) => {
-      const config = getComposioAppByIdentifier(server.identifier);
-      return {
-        description: config?.description || '',
-        identifier: server.identifier,
-        name: config?.label || server.label,
-      };
-    });
-
-  // 4. Orvilo Skill servers (connected only)
-  const orviloSkillItems = (s.orviloSkillServers || [])
-    .filter((server) => server.status === OrviloSkillStatus.CONNECTED)
-    .map((server) => {
-      const config = getOrviloSkillProviderById(server.identifier);
-      return {
-        description: config?.description || '',
-        identifier: server.identifier,
-        name: config?.label || server.name,
-      };
-    });
-
-  return [...builtinItems, ...pluginItems, ...composioItems, ...orviloSkillItems];
+  return builtinItems;
 };
 
 export const toolSelectors = {

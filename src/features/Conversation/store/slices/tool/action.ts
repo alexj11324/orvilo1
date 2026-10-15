@@ -204,10 +204,7 @@ export class ToolActionImpl {
     toolMessageId: string,
     response: Record<string, unknown>,
     options?: {
-      agentInterventionAction?: Extract<
-        AgentInterventionSourceAction,
-        { type: 'submit_answers' | 'submit_custom' }
-      >;
+      agentInterventionAction?: Extract<AgentInterventionSourceAction, { type: 'submit_answers' }>;
       createUserMessage?: boolean;
       prepareLegacyFallback?: () => Promise<{
         createUserMessage?: boolean;

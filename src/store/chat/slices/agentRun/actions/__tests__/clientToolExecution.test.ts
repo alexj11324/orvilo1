@@ -363,62 +363,6 @@ describe('internal_executeClientTool', () => {
     });
   });
 
-  describe('MCP fallback', () => {
-    it('routes to mcpService when no builtin executor registered', async () => {
-      hasExecutorMock.mockReturnValue(false);
-      invokeMcpToolCallMock.mockResolvedValue({
-        content: 'mcp-ok',
-        state: { cursor: 1 },
-        success: true,
-      });
-      const { action, sendToolResult } = setup();
-
-      await action.internal_executeClientTool(
-        makeData({ apiName: 'echo', identifier: 'mcp-demo' }),
-        { operationId: 'op-1' },
-      );
-
-      expect(invokeMcpToolCallMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          apiName: 'echo',
-          arguments: '{"path":"/tmp/a.txt"}',
-          identifier: 'mcp-demo',
-        }),
-        expect.objectContaining({ topicId: 'topic-1' }),
-      );
-      expect(sendToolResult).toHaveBeenCalledWith(
-        expect.objectContaining({
-          content: 'mcp-ok',
-          state: { cursor: 1 },
-          success: true,
-          toolCallId: 'call_1',
-        }),
-      );
-    });
-
-    it('sends failure tool_result when MCP returns an error result', async () => {
-      hasExecutorMock.mockReturnValue(false);
-      invokeMcpToolCallMock.mockResolvedValue({
-        content: null,
-        error: { message: 'mcp boom', type: 'mcp_error' },
-        success: false,
-      });
-      const { action, sendToolResult } = setup();
-
-      await action.internal_executeClientTool(makeData({ identifier: 'mcp-demo' }), {
-        operationId: 'op-1',
-      });
-
-      expect(sendToolResult).toHaveBeenCalledWith(
-        expect.objectContaining({
-          content: null,
-          error: expect.objectContaining({ message: 'mcp boom', type: 'mcp_error' }),
-          success: false,
-        }),
-      );
-    });
-  });
-
   describe('execution timeout (Bug 2)', () => {
     beforeEach(() => {
       vi.useFakeTimers();

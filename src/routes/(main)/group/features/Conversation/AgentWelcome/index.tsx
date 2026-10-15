@@ -6,7 +6,6 @@ import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useConversationStore } from '@/features/Conversation';
-import ToolAuthAlert from '@/features/Conversation/AgentWelcome/ToolAuthAlert';
 import { contextSelectors } from '@/features/Conversation/store';
 import SupervisorAvatar from '@/routes/(main)/group/features/GroupAvatar';
 import { useAgentStore } from '@/store/agent';
@@ -52,7 +51,6 @@ const InboxWelcome = memo(() => {
               : agentSystemRoleMsg}
           </Markdown>
         </div>
-        <ToolAuthAlert />
       </div>
     </>
   );

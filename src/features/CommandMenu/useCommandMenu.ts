@@ -92,7 +92,6 @@ export const useCommandMenu = () => {
         wantsFts
           ? lambdaClient.search.query.query({
               agentId,
-              includeMarketplace: false,
               limitPerType,
               locale,
               query: searchQuery,

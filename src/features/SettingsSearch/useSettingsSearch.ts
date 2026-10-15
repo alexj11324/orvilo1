@@ -1,4 +1,4 @@
-import { isDesktop, ORVILO_SKILL_PROVIDERS } from '@orvilo/const';
+import { isDesktop } from '@orvilo/const';
 import type { LucideIcon } from 'lucide-react';
 import { DEFAULT_MODEL_PROVIDER_LIST } from 'model-bank/modelProviders';
 import { useEffect, useMemo, useState } from 'react';
@@ -81,7 +81,6 @@ export const useSettingsSearch = (
   const { hideDocs } = useServerConfigStore(featureFlagsSelectors);
   const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
   const enableGatewayMode = useServerConfigStore(serverConfigSelectors.enableGatewayMode);
-  const enableComposio = useServerConfigStore(serverConfigSelectors.enableComposio);
   const disableEmailPassword = useServerConfigStore(serverConfigSelectors.disableEmailPassword);
   const isLogin = useUserStore(authSelectors.isLogin);
   const hasEmail = useUserStore((s) => !!userProfileSelectors.userProfile(s)?.email);
@@ -96,7 +95,6 @@ export const useSettingsSearch = (
     const ctx: SettingsSearchContext = {
       disableEmailPassword: !!disableEmailPassword,
       enableBusinessFeatures: !!enableBusinessFeatures,
-      enableComposio: !!enableComposio,
       enableGatewayMode: !!enableGatewayMode,
       hasEmail,
       hideDocs: !!hideDocs,
@@ -179,26 +177,6 @@ export const useSettingsSearch = (
       });
     }
 
-    // Builtin OAuth connectors (Notion, GitHub, …): searching a connector name
-    // should land on the connector page. The page has no per-connector deep
-    // link, so these navigate to the tab itself. Availability ultimately
-    // depends on the Market API, but this static catalog is what the page
-    // renders from.
-    const connectorTab = visibleTabs.get(SettingsTabs.Connector);
-    if (connectorTab)
-      for (const connector of ORVILO_SKILL_PROVIDERS) {
-        entries.push({
-          breadcrumb: `${connectorTab.groupTitle} › ${connectorTab.label}`,
-          haystack: [connector.label.toLowerCase(), connector.id.toLowerCase()],
-          icon: connectorTab.icon,
-          key: `connector-${connector.id}`,
-          label: connector.label,
-          pinyinBase: [],
-          tab: SettingsTabs.Connector,
-          url: connectorTab.url,
-        });
-      }
-
     // Model providers rank last: builtin names/ids (e.g. "OpenAI") link straight
     // to the provider detail page. Custom providers need an async store fetch and
     // are intentionally not indexed.
@@ -223,7 +201,6 @@ export const useSettingsSearch = (
     t,
     disableEmailPassword,
     enableBusinessFeatures,
-    enableComposio,
     enableGatewayMode,
     hasEmail,
     hideDocs,

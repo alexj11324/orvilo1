@@ -1,6 +1,5 @@
 import type { BuiltinInspector } from '@orvilo/types';
 
-import { AgentMarketplaceInspectors } from '../../agentMarketplace/client/Inspector';
 import { WebOnboardingApiName } from '../../types';
 import { FinishOnboardingInspector } from './FinishOnboarding';
 import { ReadDocumentInspector } from './ReadDocument';
@@ -14,7 +13,6 @@ export const WebOnboardingInspectors: Record<string, BuiltinInspector> = {
   [WebOnboardingApiName.saveUserQuestion]: SaveUserQuestionInspector as BuiltinInspector,
   [WebOnboardingApiName.updateDocument]: UpdateDocumentInspector as BuiltinInspector,
   [WebOnboardingApiName.writeDocument]: WriteDocumentInspector as BuiltinInspector,
-  ...AgentMarketplaceInspectors,
 };
 
 export { default as FinishOnboardingInspector } from './FinishOnboarding';

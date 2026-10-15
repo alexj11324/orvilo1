@@ -5,11 +5,6 @@ import {
 } from '@orvilo/markdown-patch';
 import type { BuiltinServerRuntimeOutput, SaveUserQuestionInput } from '@orvilo/types';
 
-import {
-  AgentMarketplaceExecutionRuntime,
-  type TelemetryHooks,
-} from '../agentMarketplace/ExecutionRuntime';
-import type { ShowAgentMarketplaceArgs, SubmitAgentPickArgs } from '../agentMarketplace/types';
 import { createDocumentReadResult, createWebOnboardingToolResult } from './utils';
 
 export interface WebOnboardingRuntimeService {
@@ -37,32 +32,8 @@ export interface WebOnboardingRuntimeService {
   }>;
 }
 
-export interface WebOnboardingRuntimeOptions {
-  marketplace?: AgentMarketplaceExecutionRuntime;
-  marketplaceHooks?: TelemetryHooks;
-}
-
 export class WebOnboardingExecutionRuntime {
-  private marketplace: AgentMarketplaceExecutionRuntime;
-
-  constructor(
-    private service: WebOnboardingRuntimeService,
-    options: WebOnboardingRuntimeOptions = {},
-  ) {
-    this.marketplace =
-      options.marketplace ?? new AgentMarketplaceExecutionRuntime(options.marketplaceHooks);
-  }
-
-  async showAgentMarketplace(
-    args: ShowAgentMarketplaceArgs | unknown,
-    scope?: { topicId?: string | null },
-  ): Promise<BuiltinServerRuntimeOutput> {
-    return this.marketplace.showAgentMarketplace(args, scope);
-  }
-
-  async submitAgentPick(args: SubmitAgentPickArgs): Promise<BuiltinServerRuntimeOutput> {
-    return this.marketplace.submitAgentPick(args);
-  }
+  constructor(private service: WebOnboardingRuntimeService) {}
 
   async saveUserQuestion(params: SaveUserQuestionInput): Promise<BuiltinServerRuntimeOutput> {
     const result = await this.service.saveUserQuestion(params);

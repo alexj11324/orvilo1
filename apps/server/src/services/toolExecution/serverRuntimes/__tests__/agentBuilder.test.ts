@@ -1,18 +1,9 @@
+import { AgentBuilderManifest } from '@orvilo/builtin-tool-agent-builder';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { DiscoverService } from '@/server/services/discover';
 
 import { agentBuilderRuntime } from '../agentBuilder';
 
-const {
-  mockCreatePlugin,
-  mockFindById,
-  mockGetAgentConfigById,
-  mockUpdateAgent,
-  mockUpdateConfig,
-} = vi.hoisted(() => ({
-  mockCreatePlugin: vi.fn(),
-  mockFindById: vi.fn(),
+const { mockGetAgentConfigById, mockUpdateAgent, mockUpdateConfig } = vi.hoisted(() => ({
   mockGetAgentConfigById: vi.fn(),
   mockUpdateAgent: vi.fn(),
   mockUpdateConfig: vi.fn(),
@@ -28,36 +19,12 @@ vi.mock('@/database/models/agent', () => ({
   }),
 }));
 
-vi.mock('@/database/models/plugin', () => ({
-  PluginModel: vi.fn(function () {
-    return {
-      create: mockCreatePlugin,
-      findById: mockFindById,
-    };
-  }),
-}));
-
-vi.mock('@/server/services/discover', () => ({
-  DiscoverService: vi.fn(function () {
-    return {};
-  }),
-}));
-
 const createRuntime = () =>
   agentBuilderRuntime.factory({
     editingAgentId: 'agent-1',
     serverDB: {} as never,
     toolManifestMap: {},
     userId: 'user-1',
-  });
-
-const createWorkspaceRuntime = () =>
-  agentBuilderRuntime.factory({
-    editingAgentId: 'agent-1',
-    serverDB: {} as never,
-    toolManifestMap: {},
-    userId: 'user-1',
-    workspaceId: 'workspace-1',
   });
 
 describe('agentBuilderRuntime', () => {
@@ -221,84 +188,13 @@ describe('agentBuilderRuntime', () => {
     });
   });
 
-  describe('installPlugin', () => {
-    it('flips an existing disabled builtin-tool entry back to pinned, without duplicating it', async () => {
-      mockGetAgentConfigById.mockResolvedValue({
-        id: 'agent-1',
-        plugins: [{ identifier: 'orvilo-web-browsing', mode: 'disabled' }],
-      });
+  it('does not advertise or execute retired Marketplace tools', () => {
+    const runtime = createRuntime();
+    const apiNames = AgentBuilderManifest.api.map((api) => api.name);
 
-      const runtime = createRuntime();
-      const result = await runtime.installPlugin(
-        { identifier: 'orvilo-web-browsing', source: 'official' },
-        { editingAgentId: 'agent-1', toolManifestMap: {} },
-      );
-
-      expect(result.success).toBe(true);
-      expect(result.state).toMatchObject({ agentId: 'agent-1' });
-      expect(mockUpdateConfig).toHaveBeenCalledWith('agent-1', {
-        plugins: [{ identifier: 'orvilo-web-browsing', mode: 'pinned' }],
-      });
-    });
-
-    it('is a no-op write when the builtin-tool identifier is already pinned', async () => {
-      mockGetAgentConfigById.mockResolvedValue({
-        id: 'agent-1',
-        plugins: ['orvilo-web-browsing'],
-      });
-
-      const runtime = createRuntime();
-      const result = await runtime.installPlugin(
-        { identifier: 'orvilo-web-browsing', source: 'official' },
-        { editingAgentId: 'agent-1', toolManifestMap: {} },
-      );
-
-      expect(result.success).toBe(true);
-      expect(result.state).toMatchObject({ agentId: 'agent-1' });
-      expect(mockUpdateConfig).not.toHaveBeenCalled();
-    });
-
-    it('flips an existing disabled market-plugin entry back to pinned, without duplicating it', async () => {
-      mockGetAgentConfigById.mockResolvedValue({
-        id: 'agent-1',
-        plugins: [{ identifier: 'market-plugin', mode: 'disabled' }],
-      });
-      mockFindById.mockResolvedValue({ identifier: 'market-plugin', manifest: { api: [] } });
-
-      const runtime = createRuntime();
-      const result = await runtime.installPlugin(
-        { identifier: 'market-plugin', source: 'market' },
-        { editingAgentId: 'agent-1', toolManifestMap: {} },
-      );
-
-      expect(result.success).toBe(true);
-      expect(result.state).toMatchObject({ agentId: 'agent-1' });
-      expect(mockUpdateConfig).toHaveBeenCalledWith('agent-1', {
-        plugins: [{ identifier: 'market-plugin', mode: 'pinned' }],
-      });
-    });
-  });
-
-  // Regression guard for `searchMarketTools` returning `unauthorized`: built
-  // without an identity, DiscoverService signs no trusted-client token, so every
-  // server-executed market search failed — which the model reports as a plain
-  // tool failure and silently works around, leaving the built agent with no
-  // market tool.
-  describe('market identity', () => {
-    it('passes the run identity to DiscoverService', () => {
-      createRuntime();
-
-      expect(DiscoverService).toHaveBeenCalledWith({
-        userInfo: { userId: 'user-1', workspaceId: undefined },
-      });
-    });
-
-    it('scopes the market identity to the run workspace', () => {
-      createWorkspaceRuntime();
-
-      expect(DiscoverService).toHaveBeenCalledWith({
-        userInfo: { userId: 'user-1', workspaceId: 'workspace-1' },
-      });
-    });
+    for (const name of ['searchMarketTools', 'installPlugin']) {
+      expect(apiNames).not.toContain(name);
+      expect(runtime[name]).toBeUndefined();
+    }
   });
 });

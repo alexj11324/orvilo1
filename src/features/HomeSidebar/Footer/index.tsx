@@ -2,22 +2,13 @@
 
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { BRANDING_URL, SOCIAL_URL } from '@orvilo/business-const';
-import {
-  Book,
-  CircleHelp,
-  Download,
-  Feather,
-  FileClockIcon,
-  Settings2,
-  SettingsIcon,
-} from 'lucide-react';
+import { Book, CircleHelp, Download, FileClockIcon, Settings2, SettingsIcon } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
 import ActionIcon from '@/components/ActionIcon';
 import { openChangelogModal } from '@/components/ChangelogModal';
-import { openFeedbackModal } from '@/components/FeedbackModal';
 import { GITHUB } from '@/const/url';
 import Billboard from '@/features/Billboard';
 import { useBillboardMenuItems } from '@/features/Billboard/MenuItems';
@@ -103,10 +94,6 @@ const Footer = memo(() => {
     openChangelogModal();
   }, []);
 
-  const handleOpenFeedbackModal = useCallback(() => {
-    openFeedbackModal();
-  }, []);
-
   const { helpMenuItems, trackedMenuKeys } = useMemo<{
     helpMenuItems: SidebarMenuItems;
     trackedMenuKeys: string[];
@@ -142,12 +129,6 @@ const Footer = memo(() => {
             },
           ]
         : []),
-      {
-        icon: <Feather size={14} />,
-        key: 'feedback',
-        label: t('userPanel.feedback'),
-        onClick: handleOpenFeedbackModal,
-      },
       // A deployment without a community server has no Discord entry to offer;
       // it is dropped instead of rendering a menu row that goes nowhere. The
       // divider below stays — it separates the help links above (docs,
@@ -219,7 +200,6 @@ const Footer = memo(() => {
     footer.hideGitHub,
     footer.showChangelog,
     handleOpenChangelogModal,
-    handleOpenFeedbackModal,
     isDevMode,
     t,
     settingLabelKey,

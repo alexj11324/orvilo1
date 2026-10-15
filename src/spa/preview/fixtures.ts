@@ -31,8 +31,6 @@ export const serverConfig = {
   enableBusinessFeatures: false,
   enableGatewayMode: false,
   enableUploadFileToServer: false,
-  enableComposio: false,
-  enableOrviloSkill: false,
 };
 export const featureFlags = {
   ...DEFAULT_FEATURE_FLAGS,

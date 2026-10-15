@@ -1,40 +1,11 @@
-import {
-  getComposioAppByIdentifier,
-  getOrviloSkillProviderById,
-  OFFICIAL_URL,
-} from '@orvilo/const';
 import type { BuiltinServerRuntimeOutput } from '@orvilo/types';
 
-import type {
-  ConnectComposioServiceParams,
-  InitiateOAuthConnectParams,
-  InjectCredsToSandboxParams,
-  SaveCredsParams,
-} from '../types';
-import { ORVILO_OAUTH_PROVIDER_LIST } from '../types';
+import type { InjectCredsToSandboxParams, SaveCredsParams } from '../types';
 
 /**
  * Service interface for Credentials operations
- * Abstracted to allow different implementations (e.g., MarketService-based)
  */
 export interface ICredsService {
-  /**
-   * Get OAuth authorization URL
-   */
-  getOAuthAuthorizeUrl: (
-    provider: string,
-    redirectUri: string,
-  ) => Promise<{
-    authorizeUrl: string;
-  }>;
-
-  /**
-   * Check if OAuth connection exists
-   */
-  getOAuthConnectionStatus: (provider: string) => Promise<{
-    connected: boolean;
-  }>;
-
   /**
    * Inject credentials into sandbox
    */
@@ -78,10 +49,7 @@ export interface ICredsService {
  * This runtime executes creds tools via the injected ICredsService.
  * The service handles context (userId, topicId) internally.
  *
- * Key differences from frontend executor:
- * - No browser APIs (window.open for OAuth)
- * - Direct service calls instead of tRPC client
- * - For OAuth: returns authorization URL instead of opening popup
+ * Uses direct service calls instead of the frontend tRPC client.
  */
 export class CredsExecutionRuntime {
   private credsService: ICredsService;
@@ -90,110 +58,6 @@ export class CredsExecutionRuntime {
   constructor(credsService: ICredsService, context: { topicId?: string; userId?: string } = {}) {
     this.credsService = credsService;
     this.context = context;
-  }
-
-  /**
-   * Connect a Composio integration service
-   * In server-side context, Composio OAuth requires browser interaction,
-   * so we return a message guiding the user to connect via the UI.
-   */
-  async connectComposioService(
-    args: ConnectComposioServiceParams,
-  ): Promise<BuiltinServerRuntimeOutput> {
-    const { service } = args;
-
-    const serverType = getComposioAppByIdentifier(service);
-    if (!serverType) {
-      return {
-        content: `Unknown Composio service: "${service}". Check the available Composio services list in the credentials context.`,
-        error: {
-          message: `Unknown Composio service: ${service}`,
-          type: 'UnknownService',
-        },
-        success: false,
-      };
-    }
-
-    // Server-side cannot open OAuth popups or access browser stores.
-    // Guide the user to connect via the frontend UI.
-    return {
-      content: `To connect ${serverType.label}, please use the Orvilo app UI to initiate the Composio OAuth flow. Server-side execution cannot open OAuth popups. Go to Settings or the onboarding page to connect ${serverType.label}.`,
-      state: {
-        connected: false,
-        identifier: service,
-        requiresUserAction: true,
-        serviceName: serverType.label,
-      },
-      success: true,
-    };
-  }
-
-  /**
-   * Initiate OAuth connection flow
-   * In server-side context, returns authorization URL for the user to click
-   * (cannot open popup like frontend executor)
-   */
-  async initiateOAuthConnect(
-    args: InitiateOAuthConnectParams,
-  ): Promise<BuiltinServerRuntimeOutput> {
-    try {
-      const { provider } = args;
-
-      // Get provider config for display name
-      const providerConfig = getOrviloSkillProviderById(provider);
-      if (!providerConfig) {
-        return {
-          content: `Unknown OAuth provider: ${provider}. Available providers: ${ORVILO_OAUTH_PROVIDER_LIST}`,
-          error: {
-            message: `Unknown OAuth provider: ${provider}`,
-            type: 'UnknownProvider',
-          },
-          success: false,
-        };
-      }
-
-      // Check if already connected
-      const statusResponse = await this.credsService.getOAuthConnectionStatus(provider);
-      if (statusResponse.connected) {
-        return {
-          content: `You are already connected to ${providerConfig.label}. The credential is available for use.`,
-          state: {
-            alreadyConnected: true,
-            providerName: providerConfig.label,
-          },
-          success: true,
-        };
-      }
-
-      // Get the authorization URL
-      // Note: In background execution, we cannot use window.location.origin
-      // Normalize APP_URL by removing trailing slash to avoid double-slash in redirectUri
-      const appUrl = (process.env.APP_URL || OFFICIAL_URL).replace(/\/+$/, '');
-      const redirectUri = `${appUrl}/oauth/callback/success?provider=${provider}`;
-      const response = await this.credsService.getOAuthAuthorizeUrl(provider, redirectUri);
-
-      // In server-side context, return the URL for user to click
-      // This is different from frontend which opens a popup
-      return {
-        content: `To connect to ${providerConfig.label}, please click the following authorization link:\n\n${response.authorizeUrl}\n\nAfter authorization, the credential will be automatically saved and available for use.`,
-        state: {
-          authorizeUrl: response.authorizeUrl,
-          connected: false,
-          providerName: providerConfig.label,
-          requiresUserAction: true,
-        },
-        success: true,
-      };
-    } catch (error) {
-      return {
-        content: `Failed to initiate OAuth connection: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error: {
-          message: error instanceof Error ? error.message : 'Failed to initiate OAuth connection',
-          type: 'InitiateOAuthFailed',
-        },
-        success: false,
-      };
-    }
   }
 
   /**

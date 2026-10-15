@@ -13,8 +13,6 @@ import GitCtr from './GitCtr';
 import HeterogeneousAgentCtr from './HeterogeneousAgentCtr';
 import LocalDatabaseCtr from './LocalDatabaseCtr';
 import LocalFileCtr from './LocalFileCtr';
-import McpCtr from './McpCtr';
-import McpInstallCtr from './McpInstallCtr';
 import MenuController from './MenuCtr';
 import NetworkProxyCtr from './NetworkProxyCtr';
 import NotificationCtr from './NotificationCtr';
@@ -45,8 +43,6 @@ export const controllerIpcConstructors = [
   GitCtr,
   LocalDatabaseCtr,
   LocalFileCtr,
-  McpCtr,
-  McpInstallCtr,
   MenuController,
   NetworkProxyCtr,
   NotificationCtr,

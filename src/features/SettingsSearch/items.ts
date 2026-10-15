@@ -3,7 +3,6 @@ import { SettingsTabs } from '@/store/global/initialState';
 export interface SettingsSearchContext {
   disableEmailPassword: boolean;
   enableBusinessFeatures: boolean;
-  enableComposio: boolean;
   enableGatewayMode: boolean;
   /** Whether the signed-in user has an email on their profile */
   hasEmail: boolean;
@@ -59,7 +58,6 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<SettingsTabs, string[]>> = {
     'background',
   ],
   [SettingsTabs.Billing]: ['billing', 'payment', 'invoice', 'card', 'transaction'],
-  [SettingsTabs.Connector]: ['connectors', 'integrations', 'mcp', 'oauth'],
   [SettingsTabs.Credits]: ['credits', 'balance', 'top up', 'recharge', 'buy credits'],
   [SettingsTabs.Creds]: ['credentials', 'secrets', 'oauth'],
   [SettingsTabs.Devices]: ['devices', 'sessions', 'logged in devices'],
@@ -142,7 +140,6 @@ export const TAB_SEARCH_KEYWORDS_KEYS: Partial<Record<SettingsTabs, string>> = {
   [SettingsTabs.APIKey]: 'settingsSearch.tabKeywords.apikey',
   [SettingsTabs.Appearance]: 'settingsSearch.tabKeywords.appearance',
   [SettingsTabs.Billing]: 'settingsSearch.tabKeywords.billing',
-  [SettingsTabs.Connector]: 'settingsSearch.tabKeywords.connector',
   [SettingsTabs.Credits]: 'settingsSearch.tabKeywords.credits',
   [SettingsTabs.Creds]: 'settingsSearch.tabKeywords.creds',
   [SettingsTabs.Devices]: 'settingsSearch.tabKeywords.devices',
@@ -228,17 +225,6 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     ns: 'auth',
     tab: SettingsTabs.Profile,
     visible: (ctx) => ctx.isLogin && !ctx.isDesktop,
-  },
-  {
-    anchor: 'profile-authorizations',
-    keywords: ['authorizations', 'manage authorizations', 'composio', 'revoke access'],
-    labelKey: 'profile.authorizations.title',
-    ns: 'auth',
-    tab: SettingsTabs.Profile,
-    // The row additionally requires at least one connected Composio server —
-    // async user data intentionally not mirrored; a miss degrades to a plain
-    // tab switch.
-    visible: (ctx) => ctx.enableComposio,
   },
   // Appearance
   {

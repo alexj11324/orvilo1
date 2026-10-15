@@ -1,7 +1,5 @@
 import { AgentBuilderApiName } from '../../types';
 import GetAvailableModels from './GetAvailableModels';
-import InstallPlugin from './InstallPlugin';
-import SearchMarketTools from './SearchMarketTools';
 import UpdateConfig from './UpdateConfig';
 import UpdatePrompt from './UpdatePrompt';
 
@@ -17,10 +15,8 @@ import UpdatePrompt from './UpdatePrompt';
 export const AgentBuilderRenders = {
   // Read operations
   [AgentBuilderApiName.getAvailableModels]: GetAvailableModels,
-  [AgentBuilderApiName.searchMarketTools]: SearchMarketTools,
 
   // Write operations
-  [AgentBuilderApiName.installPlugin]: InstallPlugin,
   [AgentBuilderApiName.updateAgentConfig]: UpdateConfig,
   [AgentBuilderApiName.updatePrompt]: UpdatePrompt,
 };

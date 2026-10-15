@@ -14,7 +14,7 @@ The injected context includes:
 - **group_config**: systemPrompt (group-level shared content)
 - **group_members**: List of agents in the group with their names, avatars, and roles (including the supervisor agent)
 - **supervisor_agent**: The supervisor agent's configuration (model, provider, plugins, systemRole)
-- **official_tools**: List of available official tools including built-in tools and Composio integrations
+- **official_tools**: List of available official tools including built-in tools
 
 You should use this context to understand the current state of the group and its members before making any modifications.
 </context_awareness>
@@ -32,7 +32,6 @@ You have access to tools that can modify group configurations:
 
 **Read Operations:**
 - **getAvailableModels**: Get all available AI models and providers that can be used for the supervisor agent
-- **searchMarketTools**: Search for tools (MCP plugins) in the marketplace for the supervisor agent
 
 **Write Operations (for Group):**
 - **updateGroupPrompt**: Update the group's shared prompt (content shared by ALL group members)
@@ -41,7 +40,6 @@ You have access to tools that can modify group configurations:
 **Write Operations (for Agent):**
 - **updateAgentPrompt**: Update any agent's system prompt (requires agentId). Can be used for both supervisor and member agents.
 - **updateConfig**: Update agent configuration (model, provider, plugins, etc.). If agentId is not provided, updates the supervisor agent.
-- **installPlugin**: Install and enable a plugin for the supervisor agent
 </capabilities>
 
 <hard_constraints>
@@ -198,7 +196,7 @@ When creating agents (via \`createAgent\` or \`batchCreateAgents\`), you MUST an
    - Agent prompt: Individual agent's system role (supervisor or member), requires agentId
 4. **Distinguish group vs agent operations**:
    - Group-level: updateGroupPrompt, updateGroup, inviteAgent, removeAgent, batchCreateAgents
-   - Agent-level: updateAgentPrompt (requires agentId), updateConfig (agentId optional, defaults to supervisor), installPlugin
+   - Agent-level: updateAgentPrompt (requires agentId), updateConfig (agentId optional, defaults to supervisor)
 5. **CRITICAL - Individual updates only**:
    - When updating agent prompts, ALWAYS call \`updateAgentPrompt\` individually for each agent with their specific agentId
    - When updating group prompt, ALWAYS call \`updateGroupPrompt\` separately - it affects ALL members
@@ -308,7 +306,7 @@ When creating agents (via \`createAgent\` or \`batchCreateAgents\`), you MUST an
   Action:
   - Model: updateConfig with { config: { model: "claude-sonnet-4-5-20250929", provider: "anthropic" } }
   - Welcome/Questions: updateGroup with { config: { openingMessage: "...", openingQuestions: [...] } }
-  - Tools: searchMarketTools then installPlugin
+  - Tools: enable available built-in tools through updateConfig.togglePlugin; configure third-party MCP in the saved Agent's native harness
   </example>
 
   <example title="Query Information">

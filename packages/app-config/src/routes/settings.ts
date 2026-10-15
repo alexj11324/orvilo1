@@ -192,7 +192,7 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   [SettingsTabs.Skill]: { status: 'retired' },
   // Messenger/IM adapters were retired as a product surface; stored links are dead ends.
   [SettingsTabs.Messenger]: { status: 'retired' },
-  [SettingsTabs.Connector]: { scope: 'user', status: 'enabled' },
+  [SettingsTabs.Connector]: { scope: 'user', status: 'retired' },
   // The user-built OAuth application console was retired. First-party clients
   // (`orvilo-cli`, desktop, mobile, market) come from the provider's static
   // `defaultClients`, and login / GitHub / Linear / device auth never went

@@ -1,102 +1,58 @@
 // @vitest-environment node
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UserModel } from '@/database/models/user';
+import { resolveMarketUserContext } from '@/libs/trpc/lambda/middleware';
 import { DiscoverService } from '@/server/services/discover';
 import { createFtsSearchRepo } from '@/server/services/ftsSearch';
-import { assertMarketConfigured } from '@/server/services/market/availability';
 
 import { searchRouter } from '../search';
 
-vi.mock('@/database/core/db-adaptor', () => ({
-  getServerDB: vi.fn().mockResolvedValue({}),
+vi.mock('@/libs/trpc/lambda', async () => {
+  const { initTRPC } = await import('@trpc/server');
+  return { router: initTRPC.create().router };
+});
+vi.mock('@/business/server/trpc-middlewares/workspaceAuth', async () => {
+  const { initTRPC } = await import('@trpc/server');
+  return { wsCompatProcedure: initTRPC.create().procedure };
+});
+vi.mock('@/libs/trpc/lambda/middleware', () => ({
+  resolveMarketUserContext: vi.fn(() => {
+    throw new Error('Retired marketplace identity must not be reached');
+  }),
+  serverDatabase: ({ next }: { next: (opts: { ctx: { serverDB: object } }) => unknown }) =>
+    next({ ctx: { serverDB: {} } }),
 }));
-
+vi.mock('@/server/services/discover', () => ({ DiscoverService: vi.fn() }));
 vi.mock('@/server/services/ftsSearch', () => ({ createFtsSearchRepo: vi.fn() }));
-
-vi.mock('@/database/models/user', () => ({
-  UserModel: Object.assign(vi.fn(), { findById: vi.fn() }),
-}));
-
-vi.mock('@/server/services/discover', () => ({
-  DiscoverService: vi.fn(),
+vi.mock('../_helpers/knowledgeBaseAccess', () => ({
+  getRestrictedKnowledgeBaseIds: vi.fn().mockResolvedValue(['restricted-kb']),
 }));
 
 describe('searchRouter', () => {
-  const getAssistantList = vi.fn();
-  const getMcpList = vi.fn();
-  const getPluginList = vi.fn();
-  const getUserSettings = vi.fn();
   const search = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    getAssistantList.mockReset();
-    getMcpList.mockResolvedValue({ items: [] });
-    getPluginList.mockResolvedValue({ items: [] });
-    getUserSettings.mockResolvedValue({ market: { accessToken: 'market-token' } });
     search.mockResolvedValue([]);
-    vi.mocked(UserModel.findById).mockResolvedValue({
-      email: 'user@example.com',
-      fullName: 'Test User',
-    } as any);
-    vi.mocked(UserModel).mockImplementation(function () {
-      return { getUserSettings } as any;
-    });
     vi.mocked(createFtsSearchRepo).mockResolvedValue({ search } as any);
-    vi.mocked(DiscoverService).mockImplementation(function () {
-      return { getAssistantList, getMcpList, getPluginList } as unknown as DiscoverService;
+    vi.mocked(DiscoverService).mockImplementation(() => {
+      throw new Error('Retired marketplace must not be reached');
     });
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllEnvs();
-  });
-
-  it('returns an empty community agent result when the market search succeeds with no matches', async () => {
-    getAssistantList.mockResolvedValue({
-      currentPage: 1,
-      items: [],
-      pageSize: 5,
-      totalCount: 0,
-      totalPages: 0,
-    });
+  it('returns scoped FTS results without resolving marketplace identity or services', async () => {
+    const results = [{ id: 'local-agent', title: 'Local Agent', type: 'agent' }];
+    search.mockResolvedValue(results);
     const caller = searchRouter.createCaller({ userId: 'test-user' } as any);
 
-    const result = await caller.query({ query: 'missing', type: 'communityAgent' });
-
-    expect(result).toEqual([]);
-    expect(DiscoverService).toHaveBeenCalledWith({
-      accessToken: 'market-token',
-      userInfo: {
-        email: 'user@example.com',
-        name: 'Test User',
-        userId: 'test-user',
-      },
-    });
-    expect(getAssistantList).toHaveBeenCalledWith(
-      {
-        includeAgentGroup: true,
-        locale: undefined,
-        pageSize: 5,
-        q: 'missing',
-      },
-      { throwOnError: true },
+    await expect(caller.query({ query: 'assistant', limitPerType: 3, offset: 2 })).resolves.toEqual(
+      results,
     );
-    expect(createFtsSearchRepo).not.toHaveBeenCalled();
-  });
-
-  it('does not load market identity for a local-only search', async () => {
-    const caller = searchRouter.createCaller({ userId: 'test-user' } as any);
-
-    const result = await caller.query({ query: 'local message', type: 'message' });
-
-    expect(result).toEqual([]);
     expect(search).toHaveBeenCalledWith({
-      excludeKnowledgeBaseIds: [],
-      query: 'local message',
-      type: 'message',
+      excludeKnowledgeBaseIds: ['restricted-kb'],
+      limitPerType: 3,
+      offset: 2,
+      query: 'assistant',
     });
     expect(createFtsSearchRepo).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -105,107 +61,50 @@ describe('searchRouter', () => {
         workspaceId: undefined,
       }),
     );
-    expect(UserModel.findById).not.toHaveBeenCalled();
-    expect(getUserSettings).not.toHaveBeenCalled();
+    expect(resolveMarketUserContext).not.toHaveBeenCalled();
+    expect(DiscoverService).not.toHaveBeenCalled();
   });
 
-  it.each([undefined, 'message'] as const)(
-    'searches local data without a configured marketplace (type: %s)',
-    async (type) => {
-      vi.stubEnv('MARKET_BASE_URL', undefined);
-      vi.mocked(DiscoverService).mockImplementation(function () {
-        assertMarketConfigured();
-        return {} as DiscoverService;
-      });
-      const localResult = { id: 'local-message', type: 'message' };
-      search.mockResolvedValue([localResult]);
-      const caller = searchRouter.createCaller({ userId: 'test-user' } as any);
+  it.each([undefined, 'workspace-1'])(
+    'preserves typed scopes for workspace %s and skips unrelated KB exclusions',
+    async (workspaceId) => {
+      const caller = searchRouter.createCaller({ userId: 'test-user', workspaceId } as any);
 
       await expect(
-        caller.query({ includeMarketplace: false, query: 'local message', type }),
-      ).resolves.toEqual([localResult]);
-      expect(DiscoverService).not.toHaveBeenCalled();
-      expect(UserModel.findById).not.toHaveBeenCalled();
-      expect(getUserSettings).not.toHaveBeenCalled();
+        caller.query({ agentId: 'agent-1', query: 'message', type: 'message' }),
+      ).resolves.toEqual([]);
+      expect(search).toHaveBeenCalledWith({
+        agentId: 'agent-1',
+        excludeKnowledgeBaseIds: [],
+        query: 'message',
+        type: 'message',
+      });
+      expect(createFtsSearchRepo).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'test-user', workspaceId }),
+      );
     },
   );
 
-  it('reports an unconfigured marketplace when marketplace search is requested', async () => {
-    vi.stubEnv('MARKET_BASE_URL', undefined);
-    vi.mocked(DiscoverService).mockImplementation(function () {
-      assertMarketConfigured();
-      return {} as DiscoverService;
-    });
+  it.each(['communityAgent', 'mcp', 'plugin'] as const)(
+    'rejects retired public search type %s',
+    async (type) => {
+      const caller = searchRouter.createCaller({ userId: 'test-user' } as any);
+
+      // Simulate a stale external caller rather than bypassing validation.
+      // @ts-expect-error Retired marketplace types are absent from the public API.
+      await expect(caller.query({ query: 'assistant', type })).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+      });
+      expect(createFtsSearchRepo).not.toHaveBeenCalled();
+      expect(DiscoverService).not.toHaveBeenCalled();
+    },
+  );
+
+  it('returns no results for blank input without initializing a search backend', async () => {
     const caller = searchRouter.createCaller({ userId: 'test-user' } as any);
 
-    await expect(
-      caller.query({ query: 'assistant', type: 'communityAgent' }),
-    ).rejects.toMatchObject({
-      code: 'SERVICE_UNAVAILABLE',
-      message: 'Market is not configured for this deployment',
-    });
-  });
-
-  it('keeps untyped searches including the marketplace by default', async () => {
-    const localResult = { id: 'local-agent', title: 'Local Agent', type: 'agent' };
-    search.mockResolvedValue([localResult]);
-    getAssistantList.mockResolvedValue({ items: [] });
-    const caller = searchRouter.createCaller({ userId: 'test-user' } as any);
-
-    const result = await caller.query({ query: 'assistant' });
-
-    expect(result).toEqual([localResult]);
-    expect(getAssistantList).toHaveBeenCalled();
-    expect(getMcpList).toHaveBeenCalled();
-    expect(getPluginList).toHaveBeenCalled();
-  });
-
-  it('preserves untyped search results when the community agent search rejects', async () => {
-    const localResult = { id: 'local-agent', title: 'Local Agent', type: 'agent' };
-    search.mockResolvedValue([localResult]);
-    getAssistantList.mockRejectedValue(new Error('Market unavailable'));
-    const caller = searchRouter.createCaller({ userId: 'test-user' } as any);
-
-    const result = await caller.query({ query: 'assistant' });
-
-    expect(result).toEqual([localResult]);
-    expect(getAssistantList).toHaveBeenCalledWith(
-      {
-        includeAgentGroup: true,
-        locale: undefined,
-        pageSize: 5,
-        q: 'assistant',
-      },
-      { throwOnError: false },
-    );
-  });
-
-  it('keeps the opted-out aggregate search DB-only: no marketplace calls, no market identity', async () => {
-    const localResult = { id: 'local-agent', title: 'Local Agent', type: 'agent' };
-    search.mockResolvedValue([localResult]);
-    const caller = searchRouter.createCaller({ userId: 'test-user' } as any);
-
-    const result = await caller.query({ includeMarketplace: false, query: 'assistant' });
-
-    expect(result).toEqual([localResult]);
-    expect(getAssistantList).not.toHaveBeenCalled();
-    expect(getMcpList).not.toHaveBeenCalled();
-    expect(getPluginList).not.toHaveBeenCalled();
-    expect(UserModel.findById).not.toHaveBeenCalled();
-    expect(getUserSettings).not.toHaveBeenCalled();
-  });
-
-  it('returns a typed error when the community agent market search fails', async () => {
-    const marketError = new Error('Market unavailable');
-    getAssistantList.mockRejectedValue(marketError);
-    vi.spyOn(console, 'error').mockImplementation(function () {});
-    const caller = searchRouter.createCaller({ userId: 'test-user' } as any);
-
-    await expect(
-      caller.query({ query: 'assistant', type: 'communityAgent' }),
-    ).rejects.toMatchObject({
-      code: 'INTERNAL_SERVER_ERROR',
-      message: 'Marketplace agent search is currently unavailable',
-    });
+    await expect(caller.query({ query: '  ' })).resolves.toEqual([]);
+    expect(createFtsSearchRepo).not.toHaveBeenCalled();
+    expect(DiscoverService).not.toHaveBeenCalled();
   });
 });

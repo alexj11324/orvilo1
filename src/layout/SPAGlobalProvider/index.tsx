@@ -14,7 +14,6 @@ import { isDesktop } from '@/const/version';
 import AuthRequiredModal from '@/features/Electron/AuthRequiredModal';
 import { useDevDockMounted } from '@/hooks/useDevDockMounted';
 import AuthProvider from '@/layout/AuthProvider';
-import { MarketAuthProvider } from '@/layout/AuthProvider/MarketAuth';
 import WebSessionAuthRecovery from '@/layout/AuthProvider/SessionAuth/WebSessionAuthRecovery';
 import AppTheme from '@/layout/GlobalProvider/AppTheme';
 import CacheHydrationGate from '@/layout/GlobalProvider/CacheHydrationGate';
@@ -88,46 +87,44 @@ const SPAGlobalProvider = memo<PropsWithChildren>(({ children }) => {
 
   const content = (
     <AuthProvider>
-      <MarketAuthProvider isDesktop={isDesktop}>
-        <StoreInitialization />
-        {/* One session-auth adapter per client on the same `sessionAuthEvents`
+      <StoreInitialization />
+      {/* One session-auth adapter per client on the same `sessionAuthEvents`
             signal: desktop re-auths in place via the OIDC modal, web redirects
             to /signin. Mounted at the provider level so every route —
             /onboarding, mobile, popup — has a subscriber, not just the main
             app layout. */}
-        {isDesktop ? <AuthRequiredModal /> : <WebSessionAuthRecovery />}
-        {isDesktop && <ServerVersionOutdatedAlert />}
-        <FaviconProvider>
-          {postRenderReady && (
-            <Suspense>
-              <DynamicFavicon />
-            </Suspense>
-          )}
-          <GroupWizardProvider>
-            <DragUploadProvider>
-              <LazyMotion features={domMax}>
-                <TooltipProvider>
-                  <OrviloAnalyticsProviderWrapper>
-                    <CacheHydrationGate>
-                      <BuiltinAgentInitialization />
-                      <DevDockLayout>{children}</DevDockLayout>
-                    </CacheHydrationGate>
-                  </OrviloAnalyticsProviderWrapper>
-                </TooltipProvider>
-                <BaseModalHost />
-                <ToastHost />
-                <ReUIModalHost />
-                <ReUIToastHost />
-                <ContextMenuHost />
-                <Suspense>
-                  <TaskDock />
-                  <ImperativeMountHost />
-                </Suspense>
-              </LazyMotion>
-            </DragUploadProvider>
-          </GroupWizardProvider>
-        </FaviconProvider>
-      </MarketAuthProvider>
+      {isDesktop ? <AuthRequiredModal /> : <WebSessionAuthRecovery />}
+      {isDesktop && <ServerVersionOutdatedAlert />}
+      <FaviconProvider>
+        {postRenderReady && (
+          <Suspense>
+            <DynamicFavicon />
+          </Suspense>
+        )}
+        <GroupWizardProvider>
+          <DragUploadProvider>
+            <LazyMotion features={domMax}>
+              <TooltipProvider>
+                <OrviloAnalyticsProviderWrapper>
+                  <CacheHydrationGate>
+                    <BuiltinAgentInitialization />
+                    <DevDockLayout>{children}</DevDockLayout>
+                  </CacheHydrationGate>
+                </OrviloAnalyticsProviderWrapper>
+              </TooltipProvider>
+              <BaseModalHost />
+              <ToastHost />
+              <ReUIModalHost />
+              <ReUIToastHost />
+              <ContextMenuHost />
+              <Suspense>
+                <TaskDock />
+                <ImperativeMountHost />
+              </Suspense>
+            </LazyMotion>
+          </DragUploadProvider>
+        </GroupWizardProvider>
+      </FaviconProvider>
     </AuthProvider>
   );
 

@@ -5,19 +5,12 @@ import { NotebookIdentifier } from '@orvilo/builtin-tool-notebook';
 import { PageAgentIdentifier } from '@orvilo/builtin-tool-page-agent';
 import { builtinTools } from '@orvilo/builtin-tools';
 import { type OrviloDatabase } from '@orvilo/database';
-import {
-  type ChatToolPayload,
-  isWorkSkillProvider,
-  type WorkRegistrationIntent,
-} from '@orvilo/types';
+import { type ChatToolPayload, type WorkRegistrationIntent } from '@orvilo/types';
 import { detectTruncatedJSON, safeParseJSON } from '@orvilo/utils';
 import debug from 'debug';
 
 import { TopicModel } from '@/database/models/topic';
-import { UserModel } from '@/database/models/user';
 import { isShareBlockedBuiltinDispatch } from '@/server/services/aiAgent/shareGate';
-import { ComposioService } from '@/server/services/composio';
-import { MarketService } from '@/server/services/market';
 
 import { getServerRuntime, hasServerRuntime } from './serverRuntimes';
 import { type IToolExecutor, type ToolExecutionContext, type ToolExecutionResult } from './types';
@@ -59,30 +52,10 @@ const collectRuntimeApiNames = (runtime: Record<string, any>): string[] => {
 export class BuiltinToolsExecutor implements IToolExecutor {
   private db: OrviloDatabase;
   private userId: string;
-  private _marketService?: MarketService;
 
   constructor(db: OrviloDatabase, userId: string) {
     this.db = db;
     this.userId = userId;
-  }
-
-  private async getMarketService(): Promise<MarketService> {
-    if (this._marketService) return this._marketService;
-
-    let accessToken: string | undefined;
-    try {
-      const userModel = new UserModel(this.db, this.userId);
-      const settings = await userModel.getUserSettings();
-      accessToken = (settings?.market as any)?.accessToken;
-    } catch {
-      // non-fatal — MarketService will fall back to trustedClientToken
-    }
-
-    this._marketService = new MarketService({
-      accessToken,
-      userInfo: { userId: this.userId },
-    });
-    return this._marketService;
   }
 
   async execute(
@@ -176,59 +149,6 @@ export class BuiltinToolsExecutor implements IToolExecutor {
       source,
       args,
     );
-
-    // Route Orvilo Skills to MarketService
-    if (source === 'orviloSkill') {
-      const marketService = await this.getMarketService();
-      const result = await marketService.executeOrviloSkill({
-        args,
-        context: {
-          topicId: context.topicId,
-        },
-        provider: identifier,
-        timeoutMs: context.executionTimeoutMs,
-        toolName: apiName,
-      });
-
-      if (result.success && isWorkSkillProvider(identifier)) {
-        // Defer Work registration to the agent runtime so the version is written
-        // ONCE with its cumulative cost (known only after execution). Carry the
-        // UNTRUNCATED payload here: the runtime only sees the truncated
-        // `content`, but skill identity (issue/PR url, number, …) lives
-        // exclusively in the raw result.
-        return {
-          ...result,
-          workRegistration: {
-            args,
-            data: safeParseJSON(result.content) ?? result.content,
-            provider: identifier,
-            toolName: apiName,
-            type: 'skill',
-          },
-        };
-      }
-
-      return result;
-    }
-
-    // Route Composio tools to ComposioService. Build it request-scoped: agentId
-    // and workspaceId live on the per-call context (not known at construction),
-    // so a workspace run resolves workspace connectors and a
-    // service-account agent runs off its own Composio account
-    // (Agent > Workspace/Personal).
-    if (source === 'composio') {
-      const composioService = new ComposioService({
-        db: this.db,
-        userId: this.userId,
-        workspaceId: context.workspaceId,
-      });
-      return composioService.executeComposioTool({
-        agentId: context.agentId,
-        args,
-        identifier,
-        toolSlug: apiName,
-      });
-    }
 
     // Use server runtime registry (handles both pre-instantiated and per-request runtimes)
     if (!hasServerRuntime(identifier)) {

@@ -10,7 +10,6 @@ import Advanced from '../advanced';
 import Agents from '../agents';
 import APIKey from '../apikey';
 import Appearance from '../appearance';
-import Connector from '../connector';
 import Creds from '../creds';
 import Devices from '../devices';
 import Hotkey from '../hotkey';
@@ -45,7 +44,6 @@ export const componentMap = {
   [SettingsTabs.Usage]: Usage,
   [SettingsTabs.APIKey]: APIKey,
   [SettingsTabs.Creds]: Creds,
-  [SettingsTabs.Connector]: Connector,
 
   [SettingsTabs.Plans]: Plans,
   [SettingsTabs.Credits]: Credits,

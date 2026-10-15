@@ -2,46 +2,12 @@ import type { BuiltinToolManifest } from '@orvilo/types';
 import type { JSONSchema7 } from 'json-schema';
 
 import { systemPrompt } from './systemRole';
-import { CredsApiName, ORVILO_OAUTH_PROVIDER_IDS, ORVILO_OAUTH_PROVIDER_LIST } from './types';
+import { CredsApiName } from './types';
 
 export const CredsIdentifier = 'orvilo-creds';
 
 export const CredsManifest: BuiltinToolManifest = {
   api: [
-    {
-      description:
-        'Connect a Composio integration service via OAuth. Use this to authorize access to third-party services managed by the Composio platform (e.g., Gmail, Google Calendar, Slack). Check the available Composio services in the credentials context before calling this.',
-      name: CredsApiName.connectComposioService,
-      parameters: {
-        additionalProperties: false,
-        properties: {
-          service: {
-            description:
-              'The Composio service identifier to connect (e.g., "gmail", "google-calendar"). See the available Composio services list in the credentials context.',
-            type: 'string',
-          },
-        },
-        required: ['service'],
-        type: 'object',
-      } satisfies JSONSchema7,
-    },
-    {
-      description:
-        'Initiate OAuth connection flow for a Orvilo Skill provider (e.g., GitHub, Linear, Microsoft Outlook, Notion, Twitter/X). Returns an authorization URL that the user must click to authorize. After authorization, the credential will be automatically saved.',
-      name: CredsApiName.initiateOAuthConnect,
-      parameters: {
-        additionalProperties: false,
-        properties: {
-          provider: {
-            description: `The OAuth provider ID. Available providers: ${ORVILO_OAUTH_PROVIDER_LIST}`,
-            enum: [...ORVILO_OAUTH_PROVIDER_IDS],
-            type: 'string',
-          },
-        },
-        required: ['provider'],
-        type: 'object',
-      } satisfies JSONSchema7,
-    },
     {
       description:
         'Inject credentials into the cloud sandbox environment as environment variables. Only useful when the sandbox is reachable this run — check "Cloud sandbox reachable for credential injection" in the session context before calling this. A routed device does not by itself rule this out: in auto mode the cloud sandbox stays reachable alongside a routed device, so the session-context value is the source of truth, not device-routing status alone.',

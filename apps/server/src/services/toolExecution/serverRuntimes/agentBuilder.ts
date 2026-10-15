@@ -1,21 +1,16 @@
 import {
   AgentBuilderIdentifier,
   type GetAvailableModelsParams,
-  type InstallPluginParams,
   normalizeUpdateConfigParams,
-  type SearchMarketToolsParams,
   type UpdateAgentConfigParams,
   type UpdatePromptParams,
 } from '@orvilo/builtin-tool-agent-builder';
-import { builtinTools } from '@orvilo/builtin-tools';
 import { BRANDING_PROVIDER } from '@orvilo/business-const';
 import { loadModels } from '@orvilo/business-model-bank/model-config';
 import { modelsResultsPrompt } from '@orvilo/prompts';
 import { getPluginMode, upsertPluginMode } from '@orvilo/types';
 
 import { AgentModel } from '@/database/models/agent';
-import { PluginModel } from '@/database/models/plugin';
-import { DiscoverService } from '@/server/services/discover';
 
 import { type ToolExecutionContext, type ToolExecutionResult } from '../types';
 import { type ServerRuntimeRegistration } from './types';
@@ -35,19 +30,6 @@ export const agentBuilderRuntime: ServerRuntimeRegistration = {
     const userId = context.userId;
 
     const agentModel = new AgentModel(context.serverDB, userId, context.workspaceId);
-    const pluginModel = new PluginModel(context.serverDB, userId, context.workspaceId);
-    /**
-     * Market list endpoints require an authenticated caller, and `DiscoverService`
-     * only signs a trusted-client token when it is given an identity — built
-     * without one it sends no credentials at all and every market read fails as
-     * `unauthorized`, which `searchMarketTools` surfaces as a plain tool failure
-     * the model silently works around. `workspaceId` additionally attributes the
-     * read to the workspace rather than the personal account.
-     */
-    const discoverService = new DiscoverService({
-      userInfo: { userId, workspaceId: context.workspaceId },
-    });
-
     return {
       getAvailableModels: async (
         params: GetAvailableModelsParams,
@@ -127,41 +109,6 @@ export const agentBuilderRuntime: ServerRuntimeRegistration = {
           };
         } catch (error) {
           return handleError(error, 'Failed to get available models');
-        }
-      },
-
-      searchMarketTools: async (params: SearchMarketToolsParams): Promise<ToolExecutionResult> => {
-        try {
-          const response = await discoverService.getMcpList({
-            category: params.category,
-            pageSize: params.pageSize || 10,
-            q: params.query,
-          });
-
-          const tools = response.items.map((item) => ({
-            author: item.author,
-            description: item.description,
-            identifier: item.identifier,
-            name: item.name,
-            tags: item.tags,
-          }));
-
-          let summary = `Found ${response.totalCount} tool(s) in the marketplace.`;
-          if (params.query) {
-            summary = `Found ${response.totalCount} tool(s) matching "${params.query}".`;
-          }
-
-          const toolLines = tools
-            .map((t) => `- ${t.name} (${t.identifier})${t.description ? ': ' + t.description : ''}`)
-            .join('\n');
-
-          return {
-            content: `${summary}\n\n${toolLines}`,
-            state: { query: params.query, tools, totalCount: response.totalCount },
-            success: true,
-          };
-        } catch (error) {
-          return handleError(error, 'Failed to search market tools');
         }
       },
 
@@ -277,101 +224,6 @@ export const agentBuilderRuntime: ServerRuntimeRegistration = {
           };
         } catch (error) {
           return handleError(error, 'Failed to update prompt');
-        }
-      },
-
-      installPlugin: async (
-        params: InstallPluginParams,
-        ctx: ToolExecutionContext,
-      ): Promise<ToolExecutionResult> => {
-        const agentId = ctx.editingAgentId ?? ctx.agentId;
-
-        if (!agentId) {
-          return {
-            content: 'No active agent found',
-            error: { message: 'No active agent found', type: 'NoAgentContext' },
-            success: false,
-          };
-        }
-
-        const { identifier, source } = params;
-
-        if (source === 'official') {
-          if (builtinTools.some((t) => t.identifier === identifier)) {
-            // Builtin tools (orvilo-web-browsing, etc.) need no OAuth
-            try {
-              const agent = await agentModel.getAgentConfigById(agentId);
-              if (!agent) return { content: `Agent "${agentId}" not found.`, success: false };
-
-              if (getPluginMode(agent.plugins ?? undefined, identifier) !== 'pinned') {
-                await agentModel.updateConfig(agentId, {
-                  plugins: upsertPluginMode(
-                    agent.plugins ?? undefined,
-                    identifier,
-                    'pinned',
-                  ) as unknown as string[],
-                });
-              }
-              return {
-                content: `Successfully enabled "${identifier}" for agent "${agentId}"`,
-                state: { agentId, installed: true, pluginId: identifier, success: true },
-                success: true,
-              };
-            } catch (error) {
-              return handleError(error, 'Failed to enable builtin tool');
-            }
-          }
-
-          // OAuth-based tools (Composio, OrviloSkill) cannot be installed in background context
-          return {
-            content: `Installing official integrations that require OAuth (Composio, OrviloSkill) is not supported in background execution. Please install "${identifier}" from the Agent Builder UI instead.`,
-            error: { message: 'OAuth not available in background context', type: 'NotSupported' },
-            success: false,
-          };
-        }
-
-        // source === 'market' — MCP marketplace plugin
-        try {
-          const agent = await agentModel.getAgentConfigById(agentId);
-          if (!agent) {
-            return { content: `Agent "${agentId}" not found.`, success: false };
-          }
-
-          const existing = await pluginModel.findById(identifier);
-          if (!existing) {
-            let manifest: any;
-            try {
-              manifest = await discoverService.getMcpManifest({ identifier });
-            } catch {
-              // proceed without manifest if fetch fails; tool will be unusable until manifest loads
-            }
-            await pluginModel.create({ identifier, manifest: manifest as any, type: 'plugin' });
-          } else if (!existing.manifest) {
-            try {
-              const manifest = await discoverService.getMcpManifest({ identifier });
-              await pluginModel.update(identifier, { manifest: manifest as any });
-            } catch {
-              // best-effort backfill
-            }
-          }
-
-          if (getPluginMode(agent.plugins ?? undefined, identifier) !== 'pinned') {
-            await agentModel.updateConfig(agentId, {
-              plugins: upsertPluginMode(
-                agent.plugins ?? undefined,
-                identifier,
-                'pinned',
-              ) as unknown as string[],
-            });
-          }
-
-          return {
-            content: `Successfully enabled plugin "${identifier}" for agent "${agentId}"`,
-            state: { agentId, installed: true, pluginId: identifier, success: true },
-            success: true,
-          };
-        } catch (error) {
-          return handleError(error, 'Failed to install plugin');
         }
       },
     };

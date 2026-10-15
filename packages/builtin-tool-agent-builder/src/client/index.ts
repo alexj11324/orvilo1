@@ -2,8 +2,6 @@
 export { AgentBuilderInspectors } from './Inspector';
 export {
   GetAvailableModelsInspector,
-  InstallPluginInspector,
-  SearchMarketToolsInspector,
   UpdateConfigInspector,
   UpdatePromptInspector,
 } from './Inspector';

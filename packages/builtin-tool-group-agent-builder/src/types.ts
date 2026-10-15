@@ -22,15 +22,12 @@ export const GroupAgentBuilderApiName = {
   getAvailableModels: 'getAvailableModels',
 
   // Write operations (inherited from AgentBuilder)
-  installPlugin: 'installPlugin',
 
   inviteAgent: 'inviteAgent',
 
   removeAgent: 'removeAgent',
 
   searchAgent: 'searchAgent',
-
-  searchMarketTools: 'searchMarketTools',
 
   updateAgentConfig: 'updateConfig',
   // Group operations

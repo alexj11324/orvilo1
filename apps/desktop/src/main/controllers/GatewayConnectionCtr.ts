@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import type { DeviceControlDeps } from '@orvilo/device-control';
-import type { AgentRunRequestMessage, GatewayMcpParams } from '@orvilo/device-gateway-client';
+import type { AgentRunRequestMessage } from '@orvilo/device-gateway-client';
 import type { GatewayConnectionStatus, GatewayLocalState } from '@orvilo/electron-client-ipc';
 import type { AutomationReadinessRequest } from '@orvilo/heterogeneous-agents/automationReadiness';
 import type { HeterogeneousAgentCancellationSignal } from '@orvilo/heterogeneous-agents/protocol';
@@ -14,7 +14,6 @@ import {
   resolveRemotePlatformRuntime,
 } from '@orvilo/heterogeneous-agents/scanHost';
 import { type ILocalSystemService, LocalSystemExecutionRuntime } from '@orvilo/tool-runtime';
-import { serializeMcpIpcPayload } from '@orvilo/utils/mcpIpcPayload';
 import { sleep } from '@orvilo/utils/sleep';
 import { app as electronApp } from 'electron';
 
@@ -33,7 +32,6 @@ import { setDesktopUserAgentHeader } from '@/utils/user-agent';
 import HeterogeneousAgentCtr from './HeterogeneousAgentCtr';
 import { ControllerModule, createProtocolHandler, IpcMethod } from './index';
 import LocalFileCtr from './LocalFileCtr';
-import McpCtr from './McpCtr';
 import RemoteServerConfigCtr from './RemoteServerConfigCtr';
 import ShellCommandCtr from './ShellCommandCtr';
 
@@ -188,10 +186,6 @@ export default class GatewayConnectionCtr extends ControllerModule {
     return this.app.getController(HeterogeneousAgentCtr);
   }
 
-  private get mcpCtr() {
-    return this.app.getController(McpCtr);
-  }
-
   // ─── Lifecycle ───
 
   afterFirstFrame() {
@@ -207,9 +201,6 @@ export default class GatewayConnectionCtr extends ControllerModule {
     srv.setToolCallHandler((identifier, apiName, args) =>
       this.executeToolCall(identifier, apiName, args),
     );
-
-    // Wire up MCP call handler (tunneled stdio MCP calls from the cloud server)
-    srv.setMcpCallHandler((mcpCall) => this.executeMcpCall(mcpCall));
 
     // Wire up message API handler
 
@@ -458,15 +449,6 @@ export default class GatewayConnectionCtr extends ControllerModule {
           logger.error(`Failed to approve project preview root ${root}:`, error);
         }
       },
-      // Device-scoped MCP queries: manifest probes and installability checks
-      // only mean anything on this host — reuse McpCtr's IPC implementations,
-      // wrapped in the same `{json}` envelope the dispatcher ships to the server.
-      checkMcpInstallable: (params) =>
-        this.mcpCtr.validMcpServerInstallable(serializeMcpIpcPayload(params)),
-      getStdioMcpServerManifest: (params) =>
-        this.mcpCtr.getStdioMcpServerManifest(serializeMcpIpcPayload(params)),
-      getStreamableMcpServerManifest: (params) =>
-        this.mcpCtr.getStreamableMcpServerManifest(serializeMcpIpcPayload(params)),
       getLocalFilePreview: (params) => this.localFileCtr.getLocalFilePreview(params),
       readExternalAssetForPublish: (params) =>
         this.localFileCtr.readExternalAssetForPublish(params),
@@ -669,41 +651,6 @@ export default class GatewayConnectionCtr extends ControllerModule {
       state: result,
       success: result.exitCode === 0,
     };
-  }
-
-  /**
-   * Execute an MCP tool call tunneled from the cloud server, for MCP servers
-   * only this machine can reach: stdio (the server can't spawn the user's
-   * local binary) and localhost / LAN HTTP endpoints (the server's fetch
-   * can't reach them). The connection params ride along; we run the call
-   * through the local MCP client.
-   */
-  private async executeMcpCall(mcpCall: {
-    apiName: string;
-    arguments: string;
-    identifier: string;
-    params: GatewayMcpParams;
-  }): Promise<BuiltinServerRuntimeOutput> {
-    const { apiName, arguments: args, params } = mcpCall;
-
-    if (params.type === 'http') {
-      return this.mcpCtr.runHttpMcpTool(
-        { auth: params.auth, headers: params.headers, name: params.name, url: params.url },
-        apiName,
-        args,
-      );
-    }
-
-    return this.mcpCtr.runStdioMcpTool({
-      args,
-      env: params.env,
-      params: {
-        args: params.args,
-        command: params.command,
-        name: params.name,
-      },
-      toolName: apiName,
-    });
   }
 
   // ─── Platform Capability Probing ───

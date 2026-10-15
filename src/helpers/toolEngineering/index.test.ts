@@ -5,6 +5,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAgentToolsEngine, createToolsEngine, getEnabledTools } from './index';
 
+const toolFixture = vi.hoisted(() => ({
+  extra: [] as Array<{ identifier: string; manifest: ToolManifest; type: 'builtin' }>,
+}));
+
 const desktopEnv = vi.hoisted(() => ({ enabled: false }));
 vi.mock('@orvilo/const', async (importOriginal) => ({
   ...(await importOriginal<typeof ConstModule>()),
@@ -21,6 +25,7 @@ vi.mock('@/store/tool', () => ({
   getToolStoreState: () => ({
     connectors: [],
     builtinTools: [
+      ...toolFixture.extra,
       { identifier: AuvManifest.identifier, manifest: AuvManifest, type: 'builtin' as const },
       {
         identifier: 'search',
@@ -185,6 +190,7 @@ describe('toolEngineering', () => {
   afterEach(() => {
     mockGetInstalledPluginById = () => () => undefined;
     mockInstalledPluginManifestList = () => [];
+    toolFixture.extra = [];
     mockUseApplicationBuiltinSearchTool = true;
     mockCurrentAgentPlugins = [];
     mockCurrentAgentDisabledPlugins = [];
@@ -211,7 +217,9 @@ describe('toolEngineering', () => {
     } as unknown as ToolManifest;
 
     const generateLongToolName = () => {
-      mockInstalledPluginManifestList = () => [longNamedPlugin];
+      toolFixture.extra = [
+        { identifier: longNamedPlugin.identifier, manifest: longNamedPlugin, type: 'builtin' },
+      ];
       const toolsEngine = createToolsEngine();
 
       return toolsEngine.generateTools({
@@ -241,6 +249,16 @@ describe('toolEngineering', () => {
   });
 
   describe('createToolsEngine', () => {
+    it('does not activate a historical installed third-party manifest', () => {
+      mockInstalledPluginManifestList = () => [
+        {
+          identifier: 'old-third-party',
+          api: [{ name: 'run', parameters: { type: 'object', properties: {} } }],
+          meta: { title: 'Old MCP' },
+        } as ToolManifest,
+      ];
+      expect(getEnabledTools(['old-third-party'], 'gpt-4', 'openai')).toEqual([]);
+    });
     it('should generate tools array for enabled plugins', () => {
       const toolsEngine = createToolsEngine();
       const result = toolsEngine.generateTools({
@@ -438,7 +456,7 @@ describe('toolEngineering', () => {
       expect(result.tools).toHaveLength(1);
     });
 
-    it('should bypass all enableChecker filters with isExplicitActivation', () => {
+    it('keeps persisted third-party plugins unavailable under explicit activation', () => {
       mockUseApplicationBuiltinSearchTool = false;
       mockInstalledPluginManifestList = () => [
         {
@@ -470,7 +488,7 @@ describe('toolEngineering', () => {
       });
 
       // Both should be enabled despite their normal filters
-      expect(result.enabledToolIds).toContain('stdio-mcp-plugin');
+      expect(result.enabledToolIds).not.toContain('stdio-mcp-plugin');
       expect(result.enabledToolIds).toContain('orvilo-web-browsing');
     });
 
@@ -547,7 +565,7 @@ describe('toolEngineering', () => {
       expect(result.enabledToolIds).not.toContain('stdio-mcp-plugin');
     });
 
-    it('should NOT filter http MCP tools in non-desktop environment', () => {
+    it('does not mount persisted HTTP MCP tools on web', () => {
       mockInstalledPluginManifestList = () => [httpMcpManifest];
       mockGetInstalledPluginById = (id: string) => () =>
         id === 'http-mcp-plugin'
@@ -562,7 +580,7 @@ describe('toolEngineering', () => {
         provider: 'openai',
       });
 
-      expect(result.enabledToolIds).toContain('http-mcp-plugin');
+      expect(result.enabledToolIds).not.toContain('http-mcp-plugin');
     });
   });
 

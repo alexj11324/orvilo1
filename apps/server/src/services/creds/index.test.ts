@@ -5,57 +5,37 @@ import type { CredentialItem } from '@/database/schemas';
 
 import { OwnCredsService } from './index';
 
-const {
-  modelMethods,
-  mockCallTool,
-  mockCheckHash,
-  mockGetFileAccessUrl,
-  mockListConnections,
-  mockUploadBase64,
-} = vi.hoisted(() => ({
-  mockCallTool: vi.fn(async (_tool: string, _params: any) => ({ success: true })),
-  mockCheckHash: vi.fn(),
-  mockGetFileAccessUrl: vi.fn(async () => 'https://files.example/signed'),
-  mockListConnections: vi.fn(async () => ({
-    connections: [
-      {
-        createdAt: '2026-09-28T00:00:00Z',
-        id: 7,
-        providerEmail: 'octocat@github.test',
-        providerId: 'github',
-        providerName: 'GitHub',
-        providerUsername: 'octocat',
-        scopes: ['repo'],
-        updatedAt: '2026-09-28T00:00:00Z',
-      },
-    ],
-  })),
-  mockUploadBase64: vi.fn(async () => ({ fileId: 'file_1', key: 'k', url: 's3://x' })),
-  modelMethods: {
-    create: vi.fn(),
-    deletePersonal: vi.fn(),
-    deletePersonalByKey: vi.fn(),
-    deleteWorkspaceOwned: vi.fn(),
-    decryptPayload: vi.fn(),
-    encryptPayload: vi.fn(async (payload: unknown) => `enc:${JSON.stringify(payload)}`),
-    findPersonalById: vi.fn(),
-    findPersonalByKey: vi.fn(),
-    findPersonalByKeys: vi.fn(),
-    findWorkspaceOwnedById: vi.fn(),
-    findWorkspaceOwnedByKey: vi.fn(),
-    findWorkspaceReadableById: vi.fn(),
-    findWorkspaceReadableByKey: vi.fn(),
-    findWorkspaceReadableByKeys: vi.fn(),
-    listPersonal: vi.fn(async () => []),
-    listWorkspace: vi.fn(async () => []),
-    publish: vi.fn(),
-    share: vi.fn(),
-    touchLastUsed: vi.fn(async () => {}),
-    unshare: vi.fn(),
-    updatePersonal: vi.fn(),
-    updateWorkspaceOwned: vi.fn(),
-  },
-}));
+const { modelMethods, mockCallTool, mockCheckHash, mockGetFileAccessUrl, mockUploadBase64 } =
+  vi.hoisted(() => ({
+    mockCallTool: vi.fn(async (_tool: string, _params: any) => ({ success: true })),
+    mockCheckHash: vi.fn(),
+    mockGetFileAccessUrl: vi.fn(async () => 'https://files.example/signed'),
+    mockUploadBase64: vi.fn(async () => ({ fileId: 'file_1', key: 'k', url: 's3://x' })),
+    modelMethods: {
+      create: vi.fn(),
+      deletePersonal: vi.fn(),
+      deletePersonalByKey: vi.fn(),
+      deleteWorkspaceOwned: vi.fn(),
+      decryptPayload: vi.fn(),
+      encryptPayload: vi.fn(async (payload: unknown) => `enc:${JSON.stringify(payload)}`),
+      findPersonalById: vi.fn(),
+      findPersonalByKey: vi.fn(),
+      findPersonalByKeys: vi.fn(),
+      findWorkspaceOwnedById: vi.fn(),
+      findWorkspaceOwnedByKey: vi.fn(),
+      findWorkspaceReadableById: vi.fn(),
+      findWorkspaceReadableByKey: vi.fn(),
+      findWorkspaceReadableByKeys: vi.fn(),
+      listPersonal: vi.fn(async () => []),
+      listWorkspace: vi.fn(async () => []),
+      publish: vi.fn(),
+      share: vi.fn(),
+      touchLastUsed: vi.fn(async () => {}),
+      unshare: vi.fn(),
+      updatePersonal: vi.fn(),
+      updateWorkspaceOwned: vi.fn(),
+    },
+  }));
 
 // The `@/database` alias doesn't resolve under this repo's vitest (same for
 // every apps/server test touching packages/*), so the model module — and its
@@ -104,10 +84,7 @@ vi.mock('@/server/services/sandbox', () => ({
 }));
 
 const fakeMarketService = {
-  market: {
-    connect: { listConnections: mockListConnections },
-    creds: { getSkillCredStatus: vi.fn(async () => []) },
-  },
+  market: {},
 } as any;
 
 const baseRow = (overrides: Partial<CredentialItem> = {}): CredentialItem =>
@@ -296,29 +273,6 @@ describe('OwnCredsService writes', () => {
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 
-  it('attaches oauth connection display metadata at create time', async () => {
-    modelMethods.create.mockImplementation(async (values) => ({ ...baseRow(), ...values }));
-
-    await personalService().createOAuth({
-      key: 'gh',
-      name: 'GitHub',
-      oauthConnectionId: 7,
-      workspaceScope: false,
-    });
-
-    expect(modelMethods.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        metadata: {
-          oauthEmail: 'octocat@github.test',
-          oauthProvider: 'GitHub',
-          oauthUsername: 'octocat',
-        },
-        payload: { oauthConnectionId: 7 },
-        type: 'oauth',
-      }),
-    );
-  });
-
   it('updates scope-correctly: personal rows via updatePersonal, org rows via updateWorkspaceOwned', async () => {
     modelMethods.updatePersonal.mockResolvedValue([baseRow()]);
     modelMethods.updateWorkspaceOwned.mockResolvedValue([
@@ -464,20 +418,5 @@ describe('OwnCredsService inject', () => {
       fileName: 'cert.pem',
       key: 'cert',
     });
-  });
-});
-
-describe('OwnCredsService skill declarations', () => {
-  it('recomputes satisfied/boundCred against own rows', async () => {
-    fakeMarketService.market.creds.getSkillCredStatus.mockResolvedValueOnce([
-      { key: 'api_key', name: 'API Key', type: 'kv-env' },
-      { key: 'missing_key', name: 'Missing', type: 'kv-env' },
-    ] as never);
-    modelMethods.listPersonal.mockResolvedValue([baseRow({ key: 'api_key' })] as any);
-
-    const statuses = await personalService().getSkillCredStatus('skill-x');
-    expect(statuses[0].satisfied).toBe(true);
-    expect(statuses[0].boundCred?.key).toBe('api_key');
-    expect(statuses[1].satisfied).toBe(false);
   });
 });

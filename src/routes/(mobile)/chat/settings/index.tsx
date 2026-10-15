@@ -64,7 +64,7 @@ export default memo(() => {
         id={id}
         loading={isLoading}
         meta={meta}
-        tab={tab ?? ChatSettingsTabs.Connector}
+        tab={tab ?? ChatSettingsTabs.Rules}
         onConfigChange={updateAgentConfig}
         onMetaChange={updateMetadata}
       />

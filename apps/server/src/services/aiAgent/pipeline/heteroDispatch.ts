@@ -91,7 +91,7 @@ import {
 import { pruneRegeneratedBranch } from '../pruneRegeneratedBranch';
 import { resolveDeviceWorkingDirectoryConfig } from '../resolveDeviceWorkingDirectory';
 import type { ExecRunContext } from '../types';
-import type { ExternalToolSurfaceEntry, ToolSurfaceOutcome } from './runToolSurface';
+import type { ToolSurfaceOutcome } from './runToolSurface';
 
 const log = debug('orvilo-server:ai-agent-service');
 
@@ -636,14 +636,6 @@ export interface HeteroDispatchInput {
   /** Source attribution persisted onto the operation row's appContext. */
   clientIp?: string;
   /**
-   * External (connector / installed-plugin MCP) tools mounted on the same
-   * per-run MCP surface — persisted on the operation as
-   * `metadata.externalTools` (identifier → api names + source only) so the
-   * `execBuiltinTool` callback re-resolves credentials at call time and keeps
-   * them out of operation metadata entirely.
-   */
-  externalToolMounts?: Record<string, ExternalToolSurfaceEntry>;
-  /**
    * Extra caller-supplied context appended after the persona/provider system
    * context (e.g. eval `envPrompt`). Replaces the legacy `evalContext` channel
    * that the retired server-side loop consumed during operation prep.
@@ -711,7 +703,6 @@ export const dispatchHeteroAgent = async (
   const {
     beforeOperationStart,
     builtinToolSpecs,
-    externalToolMounts,
     toolSurfaceOutcomes,
     clientIp,
     extraSystemContext,
@@ -841,20 +832,6 @@ export const dispatchHeteroAgent = async (
               toolSurfaceOutcomes.map((o) => [
                 o.identifier,
                 { kind: o.kind, reason: o.reason, status: o.status },
-              ]),
-            ),
-          }
-        : {}),
-      // External mounts share the builtin-tool callback wire but re-resolve
-      // their connection (fresh OAuth token / customParams.mcp) on each call.
-      // Persist api names + source + the identity pins the exec callback
-      // re-authorizes against — never transport params or secrets.
-      ...(externalToolMounts && Object.keys(externalToolMounts).length
-        ? {
-            externalTools: Object.fromEntries(
-              Object.entries(externalToolMounts).map(([identifier, entry]) => [
-                identifier,
-                { apis: entry.apis.map((api) => api.name), pins: entry.pins, source: entry.source },
               ]),
             ),
           }

@@ -1,14 +1,12 @@
 import { cn } from 'cn';
-import { Pin, Search, Settings, X, Zap } from 'lucide-react';
+import { Pin, Search, X, Zap } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 import type { ActionMenuItem } from '../../menuItems';
-import { usePopoverClose } from '../components/ActionPopover';
 import { ScrollSignalProvider } from './ScrollSignalContext';
 import SkillActivateMode from './SkillActivateMode';
 import ToolsList from './ToolsList';
@@ -56,10 +54,7 @@ interface PopoverContentProps {
 const PopoverContent = memo<PopoverContentProps>(
   ({ autoCount, detailPopoverDisabled, items, pinnedCount }) => {
     const { t } = useTranslation('setting');
-    const navigate = useWorkspaceAwareNavigate();
     const [searchKeyword, setSearchKeyword] = useState('');
-
-    const closePopover = usePopoverClose();
 
     const filteredItems = useMemo(
       () => (searchKeyword ? filterItems(items, searchKeyword) : items),
@@ -114,29 +109,6 @@ const PopoverContent = memo<PopoverContentProps>(
             </span>
             {autoCount}
           </span>
-          <div className="flex flex-row items-center gap-0.5 ms-auto">
-            <Button
-              aria-label={t('tools.plugins.management')}
-              className={styles.iconButton}
-              size="icon"
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                closePopover();
-                navigate('/settings/connector');
-              }}
-            >
-              <span className="anticon" role="img">
-                <Settings
-                  className="size-4"
-                  fill={'transparent'}
-                  height={16}
-                  size={16}
-                  width={16}
-                />
-              </span>
-            </Button>
-          </div>
         </div>
       </div>
     );

@@ -32,48 +32,9 @@ export interface IAgentService {
   removeAgent: (agentId: string) => Promise<unknown>;
 }
 
-/**
- * Interface for discover/marketplace service operations
- */
-export interface IDiscoverService {
-  getAssistantList: (params: { category?: string; pageSize?: number; q?: string }) => Promise<{
-    items: Array<{
-      avatar?: string;
-      backgroundColor?: string;
-      description?: string;
-      identifier: string;
-      title?: string;
-    }>;
-    totalCount: number;
-  }>;
-  getMcpList: (params: { category?: string; pageSize?: number; q?: string }) => Promise<{
-    items: Array<{
-      author?: string;
-      cloudEndPoint?: string;
-      description?: string;
-      haveCloudEndpoint?: boolean;
-      icon?: string;
-      identifier: string;
-      name: string;
-      tags?: string[];
-    }>;
-    totalCount: number;
-  }>;
-}
-
-/**
- * Required services for AgentManagerRuntime
- * Services must be injected for runtime-agnostic usage
- */
+/** Services required for workspace Agent operations. */
 export interface AgentManagerRuntimeServices {
-  /**
-   * Agent service for CRUD operations
-   */
   agentService: IAgentService;
-  /**
-   * Discover service for marketplace operations
-   */
-  discoverService: IDiscoverService;
 }
 
 // ==================== Agent CRUD Types ====================
@@ -133,15 +94,11 @@ export interface DeleteAgentState {
 
 // ==================== Search Types ====================
 
-export type SearchAgentSource = 'user' | 'market' | 'all';
-
 export interface SearchAgentParams {
-  category?: string;
   keyword?: string;
   limit?: number;
   /** Number of workspace agents to skip, for paginating beyond the per-call limit */
   offset?: number;
-  source?: SearchAgentSource;
 }
 
 export interface AgentSearchItem {
@@ -155,7 +112,6 @@ export interface AgentSearchItem {
    */
   heteroType?: HeterogeneousProviderConfig['type'];
   id: string;
-  isMarket?: boolean;
   title?: string;
 }
 
@@ -166,7 +122,6 @@ export interface SearchAgentState {
   keyword?: string;
   /** The offset used for this page of workspace agents */
   offset?: number;
-  source: SearchAgentSource;
   /** Real total of matching agents across the searched sources (not just the returned page) */
   totalCount: number;
 }
@@ -209,50 +164,5 @@ export interface UpdatePromptParams {
 export interface UpdatePromptState {
   newPrompt: string;
   previousPrompt?: string;
-  success: boolean;
-}
-
-// ==================== Plugin/Tools Types ====================
-
-export interface SearchMarketToolsParams {
-  category?: string;
-  pageSize?: number;
-  query?: string;
-}
-
-export interface MarketToolItem {
-  author?: string;
-  cloudEndPoint?: string;
-  description?: string;
-  haveCloudEndpoint?: boolean;
-  icon?: string;
-  identifier: string;
-  installed?: boolean;
-  name: string;
-  tags?: string[];
-}
-
-export interface SearchMarketToolsState {
-  query?: string;
-  tools: MarketToolItem[];
-  totalCount: number;
-}
-
-export interface InstallPluginParams {
-  identifier: string;
-  source: 'market' | 'official';
-}
-
-export interface InstallPluginState {
-  awaitingApproval?: boolean;
-  error?: string;
-  installed: boolean;
-  isComposio?: boolean;
-  isOrviloSkill?: boolean;
-  pluginId: string;
-  pluginName?: string;
-  redirectUrl?: string;
-  serverName?: string;
-  serverStatus?: 'connected' | 'pending_auth' | 'error' | 'not_connected';
   success: boolean;
 }

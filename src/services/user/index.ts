@@ -1,12 +1,5 @@
 import type { OnboardingUserInfo } from '@orvilo/context-engine';
 import { type MarkdownPatchHunk } from '@orvilo/markdown-patch';
-import type {
-  ConfirmOnboardingUnderstandingInput,
-  OnboardingUnderstandingPollingResult,
-  RetryOnboardingUnderstandingProviderInput,
-  ReviseOnboardingUnderstandingInput,
-  StartOnboardingUnderstandingInput,
-} from '@orvilo/types';
 import { type PartialDeep } from 'type-fest';
 
 import { lambdaClient } from '@/libs/trpc/client';
@@ -21,16 +14,6 @@ import {
 import { type UserSettings } from '@/types/user/settings';
 
 export class UserService {
-  confirmOnboardingUnderstanding = async (input: ConfirmOnboardingUnderstandingInput) => {
-    return lambdaClient.user.confirmOnboardingUnderstanding.mutate(input);
-  };
-
-  getOnboardingUnderstanding = async (
-    topicId: string,
-  ): Promise<OnboardingUnderstandingPollingResult> => {
-    return lambdaClient.user.getOnboardingUnderstanding.query({ topicId });
-  };
-
   getUserActivitySummary = async (): Promise<{
     lastUserMessageAt: Date | null;
     userCreatedAt: Date | null;
@@ -75,24 +58,6 @@ export class UserService {
 
   patchOnboardingDocument = async (type: 'soul' | 'persona', hunks: MarkdownPatchHunk[]) => {
     return lambdaClient.user.patchOnboardingDocument.mutate({ hunks, type });
-  };
-
-  retryOnboardingUnderstandingSource = async (
-    input: RetryOnboardingUnderstandingProviderInput,
-  ): Promise<OnboardingUnderstandingPollingResult> => {
-    return lambdaClient.user.retryOnboardingUnderstandingSource.mutate(input);
-  };
-
-  reviseOnboardingUnderstanding = async (
-    input: ReviseOnboardingUnderstandingInput,
-  ): Promise<OnboardingUnderstandingPollingResult> => {
-    return lambdaClient.user.reviseOnboardingUnderstanding.mutate(input);
-  };
-
-  startOnboardingUnderstanding = async (
-    input: StartOnboardingUnderstandingInput,
-  ): Promise<OnboardingUnderstandingPollingResult> => {
-    return lambdaClient.user.startOnboardingUnderstanding.mutate(input);
   };
 
   updateOnboarding = async (onboarding: UserOnboarding) => {

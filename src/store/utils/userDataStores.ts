@@ -3,7 +3,6 @@ import { unstable_batchedUpdates } from 'react-dom';
 import { useAgentStore } from '@/store/agent';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { useChatStore } from '@/store/chat';
-import { useDiscoverStore } from '@/store/discover';
 import { useDocumentStore } from '@/store/document';
 import { useFileStore } from '@/store/file';
 import { useHomeStore } from '@/store/home';
@@ -26,7 +25,6 @@ const resetableStores: ResetableStoreApi[] = [
   useAgentGroupStore,
   useAgentStore,
   useChatStore,
-  useDiscoverStore,
   useDocumentStore,
   useFileStore,
   useHomeStore,

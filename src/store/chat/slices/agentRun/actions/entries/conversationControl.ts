@@ -950,10 +950,7 @@ export class ConversationControlActionImpl {
     response: Record<string, unknown>,
     context?: ConversationContext,
     options?: {
-      agentInterventionAction?: Extract<
-        AgentInterventionSourceAction,
-        { type: 'submit_answers' | 'submit_custom' }
-      >;
+      agentInterventionAction?: Extract<AgentInterventionSourceAction, { type: 'submit_answers' }>;
       createUserMessage?: boolean;
       prepareLegacyFallback?: () => Promise<{
         createUserMessage?: boolean;

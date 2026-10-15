@@ -111,8 +111,8 @@ vi.mock('@/libs/trpc/lambda/middleware', () => ({
 const input = {
   taskId: 'task',
   connectorId: 'source',
-  eventName: 'changed',
-  arguments: {},
+  eventName: 'github.pull_request',
+  arguments: { repository: 'owner/repository' },
   filters: [],
 };
 const caller = (overrides = {}) =>
@@ -134,7 +134,13 @@ beforeEach(() => {
     triggerRevision: 3,
   });
   mocks.task.mockResolvedValue({ id: 'task', createdByUserId: 'user' });
-  mocks.connector.mockResolvedValue({ id: 'source', userId: 'user' });
+  mocks.connector.mockResolvedValue({
+    id: 'source',
+    userId: 'user',
+    isEnabled: true,
+    status: 'connected',
+    metadata: { githubMcp: { type: 'github_user_connection', grantOwnerUserId: 'user' } },
+  });
   mocks.list.mockResolvedValue([]);
   mocks.discover.mockResolvedValue({
     supported: true,
@@ -236,7 +242,7 @@ describe('MCP Events router authorization decisions (auth transport mocked)', ()
         workspaceId: 'workspace',
         userId: 'user',
         taskId: 'task',
-        subscriptionId: 'binding',
+        subscriptionId: expect.any(String),
         enabled: false,
       }),
       undefined,
@@ -249,7 +255,11 @@ describe('MCP Events router authorization decisions (auth transport mocked)', ()
     mocks.binding.mockResolvedValue({ state: 'revoked' });
     await caller().create(input);
     expect(mocks.save).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'existing', subscriptionId: 'binding', enabled: false }),
+      expect.objectContaining({
+        id: 'existing',
+        subscriptionId: expect.any(String),
+        enabled: false,
+      }),
       3,
     );
   });
@@ -287,9 +297,9 @@ describe('MCP Events router authorization decisions (auth transport mocked)', ()
   it('cleans up subscription on trigger CAS conflict', async () => {
     mocks.save.mockResolvedValue(undefined);
     await expect(caller().create(input)).rejects.toMatchObject({ code: 'CONFLICT' });
-    expect(mocks.stop).toHaveBeenCalledWith(
+    expect(mocks.revoke).toHaveBeenCalledWith(
       { tenantId: 'workspace', connectorId: 'source' },
-      'binding',
+      expect.any(String),
     );
   });
   it('converts a saved event definition to a paused automation without running it', async () => {
@@ -393,8 +403,12 @@ describe('MCP Events router authorization decisions (auth transport mocked)', ()
     expect(mocks.stop).not.toHaveBeenCalled();
     expect(mocks.updateTask).not.toHaveBeenCalled();
   });
-  it('redacts remote failure messages', async () => {
-    mocks.discover.mockRejectedValue(new Error('Bearer secret-token'));
+  it('rejects third-party MCP discovery and registration without remote IO', async () => {
+    mocks.connector.mockResolvedValue({ id: 'source', userId: 'user' });
+    await expect(caller().create(input)).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     await expect(caller().discover(input)).rejects.toThrow('Event discovery is unavailable');
+    expect(mocks.discover).not.toHaveBeenCalled();
+    expect(mocks.create).not.toHaveBeenCalled();
+    expect(mocks.pendingBinding).not.toHaveBeenCalled();
   });
 });

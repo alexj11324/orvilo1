@@ -50,7 +50,7 @@ const workflowPatterns: WorkflowPattern[] = [
   {
     requiresCallAgent: true,
     steps: [
-      'Search for existing agents (workspace or marketplace)',
+      'Search for existing agents (workspace)',
       'Select the best match for the task',
       'Call agent with specific instruction',
     ],
@@ -87,12 +87,12 @@ const workflowPatterns: WorkflowPattern[] = [
   {
     steps: [
       'Create or select an agent',
-      'Use installPlugin to add necessary tools/integrations',
-      'Call the agent with instructions that leverage the installed plugins',
+      'Use updateAgent to enable available builtin tools',
+      'Call the agent with instructions that leverage the enabled builtin tools',
     ],
     stepsWithoutCallAgent: [
       'Create or select an agent',
-      'Use installPlugin to add necessary tools/integrations',
+      'Use updateAgent to enable available builtin tools',
     ],
     title: 'Equip with Plugins',
   },
@@ -196,13 +196,12 @@ export const buildSystemPrompt = (
 - **duplicateAgent**: Create a copy of an existing agent
 
 **Discovery:**
-- **searchAgent**: Find agents in user's workspace or marketplace
+- **searchAgent**: Find agents in user's workspace
 
 **Prompt:**
 - **updatePrompt**: Update an agent's system prompt directly (preferred over updateAgent when only changing the prompt)
 
-**Plugin Management:**
-- **installPlugin**: Install a plugin/tool for an agent (builtin, Composio, OrviloSkill, or MCP marketplace)${
+${
   includeCallAgent
     ? `
 
@@ -223,9 +222,9 @@ When this tool is enabled, you will receive contextual information about:
     ? " You can call them directly via callAgent without first running searchAgent when one of them clearly matches the user's request."
     : ''
 }
-- **Available Plugins**: List of plugins (builtin tools, Composio integrations, OrviloSkill providers) you can enable for agents
+- **Available Plugins**: List of builtin tools you can enable for agents
 
-This information is automatically injected into the conversation context. Use the exact IDs from the context when specifying model/provider/plugins/agentId parameters. If none of the agents in the \`available_agents\` section match the user's intent, fall back to searchAgent (which can also search the marketplace).
+This information is automatically injected into the conversation context. Use the exact IDs from the context when specifying model/provider/plugins/agentId parameters. If none of the agents in the \`available_agents\` section match the user's intent, fall back to searchAgent.
 </context_injection>
 
 <self_management>
@@ -237,7 +236,6 @@ You can manage yourself using the same Agent Management tools. Your own agent ID
 - **getAgentDetail**: Check your current configuration
 - **updatePrompt**: Update your system prompt (preferred for prompt-only changes)
 - **updateAgent**: Change your model, provider, or other config/meta fields
-- **installPlugin**: Add new plugins/tools to yourself
 - **duplicateAgent**: Create a copy of yourself
 
 **Tool selection for prompt changes**: When only the system prompt needs updating, always use \`updatePrompt\` instead of \`updateAgent\`. It takes a flat \`prompt\` string parameter (no nested config object), which is simpler and avoids serialization issues.
@@ -316,8 +314,7 @@ You can specify plugins during agent creation using the \`plugins\` parameter:
 
 **Plugin types available:**
 - **Builtin tools**: Core system tools (e.g., web search, image generation)
-- **Composio integrations**: Third-party service integrations requiring OAuth
-- **OrviloSkill providers**: Advanced skill providers
+Third-party MCP configuration is owned by the saved Agent's native harness.
 
 Refer to the injected context for available plugin IDs and descriptions.
 
@@ -364,43 +361,10 @@ duplicateAgent(agentId, newTitle?)
 The duplicated agent inherits all configuration from the original. After duplication, use updateAgent to customize the copy.
 </duplicate_guide>
 
-<install_plugin_guide>
-## Installing Plugins
-
-Use installPlugin to add tools/plugins to an agent:
-
-**Plugin Sources:**
-- **official**: Builtin tools (e.g., web search, code sandbox), Composio integrations (e.g., Gmail, Google Calendar), and OrviloSkill providers
-- **market**: MCP marketplace plugins
-
-\`\`\`
-installPlugin(agentId, identifier, source)
-\`\`\`
-
-**Notes:**
-- Some official plugins (Composio, OrviloSkill) may require OAuth authorization
-- Use the available plugins from the injected context to find valid plugin identifiers
-- After installation, the plugin is automatically enabled for the specified agent
-</install_plugin_guide>
-
 <search_guide>
 ## Finding the Right Agent
 
-Use searchAgent to discover agents:
-
-**User Agents** (source: 'user'):
-- Your personally created agents
-- Previously used marketplace agents
-
-**Marketplace Agents** (source: 'market'):
-- Community-created agents
-- Professional templates
-- Specialized tools
-
-**Search Tips:**
-- Use specific keywords related to the task
-- Filter by category when browsing marketplace
-- Check agent descriptions for capability details
+Use searchAgent to find existing workspace agents by keyword. Use limit and offset to page through results. Check descriptions and runtime details for the capability needed.
 </search_guide>${includeCallAgent ? executionGuideSection : subAgentContextSection}
 
 <workflow_patterns>
@@ -438,7 +402,7 @@ I've created your coding assistant agent.
 <orviloAgents identifier="session-abc123" title="Coding Assistant" description="Expert in TypeScript and React" avatar="💻" backgroundColor="#3B82F6" />
 \`\`\`
 
-Do NOT render a card when calling \`getAgentDetail\`, \`updateAgent\`, \`updatePrompt\`, \`deleteAgent\`, or \`installPlugin\`.
+Do NOT render a card when calling \`getAgentDetail\`, \`updateAgent\`, \`updatePrompt\`, \`deleteAgent\`.
 </agent_card_rendering>
 
 <best_practices>

@@ -2,24 +2,11 @@ import { OrviloActivatorIdentifier } from '@orvilo/builtin-tool-activator';
 import { AgentBuilderIdentifier } from '@orvilo/builtin-tool-agent-builder';
 import { AgentManagementIdentifier } from '@orvilo/builtin-tool-agent-management';
 import { formatUploadedFilesPrompt } from '@orvilo/builtin-tool-cloud-sandbox';
-import {
-  type ComposioServiceSummary,
-  CredsIdentifier,
-  type CredSummary,
-  excludeDisabledComposioServices,
-  generateComposioServicesList,
-  generateCredsList,
-  resolveAvailableComposioServices,
-} from '@orvilo/builtin-tool-creds';
+import { CredsIdentifier, type CredSummary, generateCredsList } from '@orvilo/builtin-tool-creds';
 import { GroupAgentBuilderIdentifier } from '@orvilo/builtin-tool-group-agent-builder';
 import { OrviloAgentIdentifier } from '@orvilo/builtin-tool-orvilo-agent';
 import { WebOnboardingIdentifier } from '@orvilo/builtin-tool-web-onboarding';
-import {
-  AGENT_PLAN_FILE_TYPE,
-  COMPOSIO_APP_TYPES,
-  getConnectorCatalog,
-  isDesktop,
-} from '@orvilo/const';
+import { AGENT_PLAN_FILE_TYPE, isDesktop } from '@orvilo/const';
 import type {
   AgentBuilderContext,
   AgentContextDocument,
@@ -68,13 +55,7 @@ import { chatSelectors, topicSelectors } from '@/store/chat/selectors';
 import { getElectronStoreState } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { getToolStoreState } from '@/store/tool';
-import {
-  builtinToolSelectors,
-  composioStoreSelectors,
-  orviloSkillStoreSelectors,
-  toolSelectors,
-} from '@/store/tool/selectors';
-import { ComposioServerStatus } from '@/store/tool/slices/composioStore';
+import { builtinToolSelectors, toolSelectors } from '@/store/tool/selectors';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
@@ -256,34 +237,14 @@ export const contextEngineering = async ({
           };
         }
 
-        // Build official tools list (builtin tools + Composio tools)
+        // Build the internal builtin tools list
         const toolState = getToolStoreState();
         const officialTools: GroupOfficialToolItem[] = [];
-
-        const isComposioEnabled = Boolean(
-          typeof window !== 'undefined' &&
-          window.global_serverConfigStore?.getState()?.serverConfig?.enableComposio,
-        );
-        const isOrviloSkillEnabled = Boolean(
-          typeof window !== 'undefined' &&
-          window.global_serverConfigStore?.getState()?.serverConfig?.enableOrviloSkill,
-        );
-        const connectorCatalog = getConnectorCatalog({
-          composio: isComposioEnabled,
-          orvilo: isOrviloSkillEnabled,
-        });
-        const connectorIdentifiers = new Set(
-          connectorCatalog.map((item) =>
-            item.type === 'orvilo' ? item.provider.id : item.serverType.identifier,
-          ),
-        );
 
         // Get builtin tools (excluding connectors rendered through their canonical owner)
         const builtinTools = builtinToolSelectors.metaList(toolState);
 
         for (const tool of builtinTools) {
-          if (connectorIdentifiers.has(tool.identifier)) continue;
-
           officialTools.push({
             description: tool.meta?.description,
             enabled: enabledPlugins.includes(tool.identifier),
@@ -291,37 +252,6 @@ export const contextEngineering = async ({
             installed: true,
             name: tool.meta?.title || tool.identifier,
             type: 'builtin',
-          });
-        }
-
-        const allComposioServers = composioStoreSelectors.getServers(toolState);
-        const allOrviloSkillServers = orviloSkillStoreSelectors.getServers(toolState);
-        for (const connector of connectorCatalog) {
-          if (connector.type === 'composio') {
-            const { serverType } = connector;
-            const server = allComposioServers.find(
-              (item) => item.identifier === serverType.identifier,
-            );
-            officialTools.push({
-              description: `Orvilo Mcp Server: ${serverType.label}`,
-              enabled: enabledPlugins.includes(serverType.identifier),
-              identifier: serverType.identifier,
-              installed: !!server,
-              name: serverType.label,
-              type: 'composio',
-            });
-            continue;
-          }
-
-          const { provider } = connector;
-          const server = allOrviloSkillServers.find((item) => item.identifier === provider.id);
-          officialTools.push({
-            description: `Orvilo Skill Provider: ${provider.label}`,
-            enabled: enabledPlugins.includes(provider.id),
-            identifier: provider.id,
-            installed: !!server,
-            name: provider.label,
-            type: 'orvilo-skill',
           });
         }
 
@@ -410,7 +340,7 @@ export const contextEngineering = async ({
 
   if (isCredsEnabled) {
     try {
-      const credsResult = await lambdaClient.market.creds.list.query();
+      const credsResult = await lambdaClient.creds.list.query();
       const userCreds = (credsResult as any)?.data ?? [];
       credsList = userCreds.map((cred: any): CredSummary => ({
         description: cred.description,
@@ -422,47 +352,6 @@ export const contextEngineering = async ({
     } catch (error) {
       // Silently fail - creds context is optional
       log('Failed to resolve creds context:', error);
-    }
-  }
-
-  // Build Composio services list for creds context
-  // Shows which Composio services are connected (authorized) and which are available to connect
-  let composioServicesList = '';
-
-  const isComposioEnabled =
-    typeof window !== 'undefined' &&
-    window.global_serverConfigStore?.getState()?.serverConfig?.enableComposio;
-
-  if (isCredsEnabled && isComposioEnabled) {
-    try {
-      const toolState = getToolStoreState();
-      const allComposioServers = composioStoreSelectors.getServers(toolState);
-      const disabledIdSet = new Set(disabledPluginIds ?? []);
-
-      // Disabled services are dropped from both lists — not surfaced as
-      // "connected, use directly" (this agent shouldn't use it) nor as
-      // "available to connect" (the user's account-level OAuth connection,
-      // if any, is untouched; this agent just isn't meant to see it).
-      const connected: ComposioServiceSummary[] = excludeDisabledComposioServices(
-        allComposioServers.filter((s) => s.status === ComposioServerStatus.ACTIVE),
-        disabledIdSet,
-      ).map((s) => ({ identifier: s.identifier, name: s.label }));
-
-      const connectedIds = new Set(connected.map((s) => s.identifier));
-      const available = resolveAvailableComposioServices(
-        COMPOSIO_APP_TYPES,
-        connectedIds,
-        disabledIdSet,
-      );
-
-      composioServicesList = generateComposioServicesList(connected, available);
-      log(
-        'Composio services context resolved: connected=%d, available=%d',
-        connected.length,
-        available.length,
-      );
-    } catch (error) {
-      log('Failed to resolve Composio services context:', error);
     }
   }
 
@@ -558,23 +447,6 @@ export const contextEngineering = async ({
     // Builtin tools (use allMetaList to include hidden tools like web-browsing, cloud-sandbox, etc.)
     // Exclude only truly internal tools (agent-management itself, agent-builder, page-agent)
     const allBuiltinTools = builtinToolSelectors.allMetaList(toolState);
-    const isComposioEnabled = Boolean(
-      typeof window !== 'undefined' &&
-      window.global_serverConfigStore?.getState()?.serverConfig?.enableComposio,
-    );
-    const isOrviloSkillEnabled = Boolean(
-      typeof window !== 'undefined' &&
-      window.global_serverConfigStore?.getState()?.serverConfig?.enableOrviloSkill,
-    );
-    const connectorCatalog = getConnectorCatalog({
-      composio: isComposioEnabled,
-      orvilo: isOrviloSkillEnabled,
-    });
-    const connectorIdentifiers = new Set(
-      connectorCatalog.map((item) =>
-        item.type === 'orvilo' ? item.provider.id : item.serverType.identifier,
-      ),
-    );
     const INTERNAL_TOOLS = new Set([
       'orvilo-agent-management', // Don't show agent-management in its own context
       'orvilo-agent-builder', // Used for editing current agent, not for creating new agents
@@ -583,7 +455,6 @@ export const contextEngineering = async ({
     ]);
 
     for (const tool of allBuiltinTools) {
-      if (connectorIdentifiers.has(tool.identifier)) continue;
       // Skip internal tools
       if (INTERNAL_TOOLS.has(tool.identifier)) continue;
 
@@ -592,27 +463,6 @@ export const contextEngineering = async ({
         identifier: tool.identifier,
         name: tool.meta?.title || tool.identifier,
         type: 'builtin' as const,
-      });
-    }
-
-    for (const connector of connectorCatalog) {
-      if (connector.type === 'composio') {
-        const { serverType } = connector;
-        availablePlugins.push({
-          description: serverType.description,
-          identifier: serverType.identifier,
-          name: serverType.label,
-          type: 'composio' as const,
-        });
-        continue;
-      }
-
-      const { provider } = connector;
-      availablePlugins.push({
-        description: provider.description,
-        identifier: provider.id,
-        name: provider.label,
-        type: 'orvilo-skill' as const,
       });
     }
 
@@ -767,8 +617,6 @@ export const contextEngineering = async ({
       ...HOST_VARIABLE_GENERATORS,
       // NOTICE: required by builtin-tool-creds/src/systemRole.ts
       CREDS_LIST: () => (credsList ? generateCredsList(credsList) : ''),
-      // NOTICE: required by builtin-tool-creds/src/systemRole.ts (Composio integrations)
-      COMPOSIO_SERVICES_LIST: () => composioServicesList,
       // NOTICE: required by builtin-tool-creds/src/systemRole.ts (session_context)
       session_date: () =>
         new Intl.DateTimeFormat('en-US', {

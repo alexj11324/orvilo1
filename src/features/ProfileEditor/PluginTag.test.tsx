@@ -77,10 +77,6 @@ vi.mock('@/store/serverConfig', () => ({
   serverConfigSelectors: { enableComposio: () => false, enableOrviloSkill: () => false },
   useServerConfigStore: (sel: (s: unknown) => unknown) => sel({}),
 }));
-vi.mock('@/store/discover', () => ({
-  useDiscoverStore: (sel: (s: unknown) => unknown) =>
-    sel({ usePluginDetail: () => ({ data: undefined, isLoading: false }) }),
-}));
 
 describe('PluginTag author attribution', () => {
   beforeEach(() => {

@@ -14,8 +14,6 @@ export const AgentBuilderApiName = {
   // Note: getAgentConfig, getAgentMeta, getPrompt, getAvailableTools, searchOfficialTools are removed
   // because the current agent context is now automatically injected
   getAvailableModels: 'getAvailableModels',
-  installPlugin: 'installPlugin',
-  searchMarketTools: 'searchMarketTools',
   // Write operations
   // Note: setModel, setOpeningMessage, setOpeningQuestions, updateChatConfig, updateAgentMeta, togglePlugin are removed
   // and consolidated into updateAgentConfig
@@ -119,106 +117,5 @@ export interface UpdatePromptState {
   agentId?: string;
   newPrompt: string;
   previousPrompt?: string;
-  success: boolean;
-}
-
-// ============== SearchMarketTools Types ==============
-
-export interface SearchMarketToolsParams {
-  /**
-   * Optional: filter by category (e.g., "developer", "productivity", "web-search")
-   */
-  category?: string;
-  /**
-   * Optional: number of results to return (default: 10, max: 20)
-   */
-  pageSize?: number;
-  /**
-   * Optional: search keywords to find specific tools
-   */
-  query?: string;
-}
-
-export interface MarketToolItem {
-  author?: string;
-  cloudEndPoint?: string;
-  description?: string;
-  haveCloudEndpoint?: boolean;
-  icon?: string;
-  identifier: string;
-  installed?: boolean;
-  name: string;
-  tags?: string[];
-}
-
-export interface SearchMarketToolsState {
-  query?: string;
-  tools: MarketToolItem[];
-  totalCount: number;
-}
-
-// Note: SearchOfficialTools types are removed because official tools are now
-// automatically injected into the conversation context via AgentBuilderContextInjector
-
-// ============== InstallPlugin Types ==============
-
-export interface InstallPluginParams {
-  /**
-   * Plugin identifier to install
-   */
-  identifier: string;
-  /**
-   * Plugin source type: 'market' for MCP marketplace, 'official' for builtin/composio/orviloSkill tools
-   */
-  source: 'market' | 'official';
-}
-
-export interface InstallPluginState {
-  /** Stable target captured by the mutation invocation. */
-  agentId?: string;
-  /**
-   * Whether the plugin requires human approval to continue installation
-   * (e.g., Composio tools need OAuth connection)
-   */
-  awaitingApproval?: boolean;
-  /**
-   * Error message if installation failed
-   */
-  error?: string;
-  /**
-   * Whether the plugin is installed
-   */
-  installed: boolean;
-  /**
-   * Whether the plugin is a Composio tool that needs OAuth connection
-   */
-  isComposio?: boolean;
-  /**
-   * Whether the plugin is a OrviloSkill provider that needs OAuth connection
-   */
-  isOrviloSkill?: boolean;
-  /**
-   * Plugin identifier
-   */
-  pluginId: string;
-  /**
-   * Plugin display name
-   */
-  pluginName?: string;
-  /**
-   * Composio OAuth URL if authorization is needed
-   */
-  redirectUrl?: string;
-  /**
-   * Composio server name (for Composio tools)
-   */
-  serverName?: string;
-  /**
-   * Server status (for Composio tools and OrviloSkill providers)
-   */
-  serverStatus?: 'connected' | 'pending_auth' | 'error' | 'not_connected';
-  /**
-   * Whether the operation was successful
-   */
   success: boolean;
 }

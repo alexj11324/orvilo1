@@ -7,21 +7,14 @@ import debug from 'debug';
 
 import { resolveEffectiveWorkingDirectory } from '@/helpers/effectiveWorkingDirectory';
 import { resolveClientLocalSandbox } from '@/helpers/localSandbox';
-import { type MCPToolCallResult } from '@/libs/mcp';
-import { mcpService } from '@/services/mcp';
-import { messageService } from '@/services/message';
 import { archiveToolResultViaServer } from '@/services/toolResultArchive';
 import { operationSelectors } from '@/store/chat/slices/operation';
 import { type ChatStore } from '@/store/chat/store';
-import { useToolStore } from '@/store/tool';
-import { composioStoreSelectors, orviloSkillStoreSelectors } from '@/store/tool/selectors';
 import { hasExecutor } from '@/store/tool/slices/builtin/executors';
 import { type StoreSetter } from '@/store/types';
 import { safeParseJSON } from '@/utils/safeParseJSON';
 
 import { dbMessageSelectors } from '../../message/selectors';
-import { type RemoteToolExecutor } from './exector';
-import { composioExecutor, orviloSkillExecutor } from './exector';
 
 const log = debug('orvilo-store:plugin-types');
 
@@ -48,35 +41,11 @@ export class PluginTypesActionImpl {
     payload: ChatToolPayload,
     stepContext?: RuntimeStepContext,
   ): Promise<any> => {
-    // When the tool call comes from a DB-stored message (e.g. after humanIntervention approval),
-    // the `source` field is not persisted and arrives as undefined. Fall back to a live store
-    // lookup so Composio / Orvilo Skill tools still route correctly.
-    let effectiveSource = payload.source;
-    if (!effectiveSource) {
-      const toolStoreState = useToolStore.getState();
-      const composioTools = composioStoreSelectors.composioAsOrviloTools(toolStoreState);
-      if (composioTools.some((t) => t.identifier === payload.identifier)) {
-        effectiveSource = 'composio';
-      } else {
-        const orviloSkillTools = orviloSkillStoreSelectors.orviloSkillAsOrviloTools(toolStoreState);
-        if (orviloSkillTools.some((t) => t.identifier === payload.identifier)) {
-          effectiveSource = 'orviloSkill';
-        }
-      }
-    }
-
-    if (effectiveSource === 'composio') {
-      return await this.#get().invokeComposioTypePlugin(id, {
-        ...payload,
-        source: effectiveSource,
-      });
-    }
-
-    if (effectiveSource === 'orviloSkill') {
-      return await this.#get().invokeOrviloSkillTypePlugin(id, {
-        ...payload,
-        source: effectiveSource,
-      });
+    if (payload.source === 'composio' || payload.source === 'orviloSkill') {
+      return {
+        content: 'Configure third-party tools in the Agent native harness.',
+        success: false,
+      };
     }
 
     const params = safeParseJSON(payload.arguments);
@@ -286,192 +255,6 @@ export class PluginTypesActionImpl {
       error: { type: 'ToolNotFound', message: 'No executor found' },
       success: false,
     };
-  };
-
-  invokeComposioTypePlugin = async (
-    id: string,
-    payload: ChatToolPayload,
-  ): Promise<string | undefined> => {
-    return this.#get().internal_invokeRemoteToolPlugin(
-      id,
-      payload,
-      composioExecutor,
-      'invokeComposioTypePlugin',
-    );
-  };
-
-  invokeOrviloSkillTypePlugin = async (
-    id: string,
-    payload: ChatToolPayload,
-  ): Promise<string | undefined> => {
-    return this.#get().internal_invokeRemoteToolPlugin(
-      id,
-      payload,
-      orviloSkillExecutor,
-      'invokeOrviloSkillTypePlugin',
-    );
-  };
-
-  invokeMCPTypePlugin = async (
-    id: string,
-    payload: ChatToolPayload,
-  ): Promise<string | undefined> => {
-    let data: MCPToolCallResult | undefined;
-
-    // Get message to extract agentId/topicId
-    const message = dbMessageSelectors.getDbMessageById(id)(this.#get());
-
-    // Get abort controller from operation
-    const operationId = this.#get().messageOperationMap[id];
-    const operation = operationId ? this.#get().operations[operationId] : undefined;
-    const abortController = operation?.abortController;
-
-    log(
-      '[invokeMCPTypePlugin] messageId=%s, tool=%s, operationId=%s, aborted=%s',
-      id,
-      payload.apiName,
-      operationId,
-      abortController?.signal.aborted,
-    );
-
-    try {
-      const result = await mcpService.invokeMcpToolCall(payload, {
-        signal: abortController?.signal,
-        topicId: message?.topicId,
-      });
-
-      if (!!result) data = result;
-    } catch (error) {
-      console.error(error);
-      const err = error as Error;
-
-      // ignore the aborted request error
-      if (err.message.includes('The user aborted a request.')) {
-        log('[invokeMCPTypePlugin] Request aborted: messageId=%s, tool=%s', id, payload.apiName);
-      } else {
-        const result = await messageService.updateMessageError(id, error as any, {
-          agentId: message?.agentId,
-          topicId: message?.topicId,
-        });
-        if (result?.success && result.messages) {
-          this.#get().replaceMessages(result.messages, {
-            context: { agentId: message?.agentId || '', topicId: message?.topicId },
-          });
-        }
-      }
-    }
-
-    // If error occurred, exit
-
-    if (!data) return;
-
-    // Archive oversized content (or truncate if archive context unavailable)
-    const rawContent = data.content || (data.error as any)?.message || '';
-    const truncatedContent = await archiveToolResultViaServer({
-      agentId: message?.agentId,
-      content: rawContent,
-      identifier: payload.identifier,
-      toolCallId: payload.id,
-      topicId: message?.topicId,
-    });
-
-    // operationId already declared above, reuse it
-    const context = operationId ? { operationId } : undefined;
-
-    // Use optimisticUpdateToolMessage to update content and state/error in a single call
-    await this.#get().optimisticUpdateToolMessage(
-      id,
-      {
-        content: truncatedContent,
-        pluginError: data.success ? undefined : data.error,
-        pluginState: data.success ? data.state : undefined,
-      },
-      context,
-    );
-
-    return truncatedContent;
-  };
-
-  internal_invokeRemoteToolPlugin = async (
-    id: string,
-    payload: ChatToolPayload,
-    executor: RemoteToolExecutor,
-    logPrefix: string,
-  ): Promise<string | undefined> => {
-    let data: MCPToolCallResult | undefined;
-
-    // Get message to extract sessionId/topicId
-    const message = dbMessageSelectors.getDbMessageById(id)(this.#get());
-
-    // Get abort controller from operation
-    const operationId = this.#get().messageOperationMap[id];
-    const operation = operationId ? this.#get().operations[operationId] : undefined;
-    const abortController = operation?.abortController;
-
-    log(
-      '[%s] messageId=%s, tool=%s, operationId=%s, aborted=%s',
-      logPrefix,
-      id,
-      payload.apiName,
-      operationId,
-      abortController?.signal.aborted,
-    );
-
-    try {
-      // Pass topicId from message context, not global active state
-      // This ensures tool calls use the correct topic even if user switches topics
-      data = await executor(payload, {
-        sourceToolCallId: payload.id,
-        topicId: message?.topicId,
-      });
-    } catch (error) {
-      console.error(`[${logPrefix}] Error:`, error);
-
-      // ignore the aborted request error
-      const err = error as Error;
-      if (err.message.includes('aborted')) {
-        log('[%s] Request aborted: messageId=%s, tool=%s', logPrefix, id, payload.apiName);
-      } else {
-        const result = await messageService.updateMessageError(id, error as any, {
-          agentId: message?.agentId,
-          topicId: message?.topicId,
-        });
-        if (result?.success && result.messages) {
-          this.#get().replaceMessages(result.messages, {
-            context: {
-              agentId: message?.agentId,
-              topicId: message?.topicId,
-            },
-          });
-        }
-      }
-    }
-
-    // If error occurred, exit
-    if (!data) return;
-
-    const rawContent = data.content || (data.error as any)?.message || '';
-    const remoteContent = await archiveToolResultViaServer({
-      agentId: message?.agentId,
-      content: rawContent,
-      identifier: payload.identifier,
-      toolCallId: payload.id,
-      topicId: message?.topicId,
-    });
-    const context = operationId ? { operationId } : undefined;
-
-    // Use optimisticUpdateToolMessage to update content and state/error in a single call
-    await this.#get().optimisticUpdateToolMessage(
-      id,
-      {
-        content: remoteContent,
-        pluginError: data.success ? undefined : data.error,
-        pluginState: data.success ? data.state : undefined,
-      },
-      context,
-    );
-
-    return remoteContent;
   };
 }
 

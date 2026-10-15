@@ -14,7 +14,6 @@ import {
 } from '@orvilo/types';
 
 import { agentService } from '@/services/agent';
-import { discoverService } from '@/services/discover';
 import { getAgentStoreState, useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
@@ -31,7 +30,6 @@ import {
   type DeleteAgentParams,
   type DuplicateAgentParams,
   type GetAgentDetailParams,
-  type InstallPluginParams,
   type SearchAgentParams,
   type UpdateAgentParams,
   type UpdatePromptParams,
@@ -47,7 +45,6 @@ const runtime = new AgentManagerRuntime({
     queryAgents: agentService.queryAgents,
     removeAgent: agentService.removeAgent,
   },
-  discoverService,
 });
 
 class AgentManagementExecutor extends BaseExecutor<typeof AgentManagementApiName> {
@@ -99,13 +96,6 @@ class AgentManagementExecutor extends BaseExecutor<typeof AgentManagementApiName
 
   updatePrompt = async (params: UpdatePromptParams): Promise<BuiltinToolResult> => {
     return runtime.updatePrompt(params.agentId, { prompt: params.prompt });
-  };
-
-  installPlugin = async (params: InstallPluginParams): Promise<BuiltinToolResult> => {
-    return runtime.installPlugin(params.agentId, {
-      identifier: params.identifier,
-      source: params.source,
-    });
   };
 
   // ==================== Search ====================

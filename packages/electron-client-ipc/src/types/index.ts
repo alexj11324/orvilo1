@@ -8,7 +8,6 @@ export * from './git';
 export * from './heterogeneousAgent';
 export * from './localDatabase';
 export * from './localSystem';
-export * from './mcpInstall';
 export * from './notification';
 export * from './proxy';
 export * from './proxyTRPCRequest';

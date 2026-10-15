@@ -8,7 +8,6 @@ import { getActivePluginIds, TERMINAL_AGENT_OPERATION_STATUSES } from '@orvilo/t
 import { isRecord } from '@orvilo/utils/object';
 import { and, desc, eq, gte, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 
-import { evaluateFeatureFlag } from '@/config/featureFlags';
 import { AgentModel } from '@/database/models/agent';
 import { ConnectorModel } from '@/database/models/connector';
 import { DeviceModel } from '@/database/models/device';
@@ -17,8 +16,6 @@ import { agentOperations, ConnectorStatus, messages } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { findUsableAgentExecutionBinding } from '@/database/utils/agent-access';
 import { snapshotAutomationDefinition } from '@/database/utils/automationOccurrence';
-import { getServerFeatureFlagsFromRuntimeConfig } from '@/server/featureFlags';
-import { resolveExternalToolSurface } from '@/server/services/aiAgent/pipeline/resolveExternalToolSurface';
 import { resolveRunToolSurface } from '@/server/services/aiAgent/pipeline/runToolSurface';
 import { resolveDeviceWorkingDirectory } from '@/server/services/aiAgent/resolveDeviceWorkingDirectory';
 import {
@@ -66,11 +63,7 @@ export async function checkMcpAutomationReadiness(input: {
 }): Promise<AutomationReadiness> {
   const { db, task, trigger, binding } = input;
   const reasons: AutomationReadinessCode[] = [];
-  if (binding?.sourceType !== 'github') {
-    const flags = await getServerFeatureFlagsFromRuntimeConfig(trigger.userId);
-    if (evaluateFeatureFlag(flags.mcp_event_automations, trigger.userId) !== true)
-      reasons.push('ACCEPTANCE_REQUIRED');
-  }
+  if (binding?.sourceType !== 'github') reasons.push('CONFIGURATION_INVALID');
   const scope = { userId: trigger.userId, workspaceId: trigger.workspaceId };
   const config = isRecord(task.config) ? task.config : {};
   const workspace = isRecord(config.workspace) ? config.workspace : {};
@@ -162,17 +155,10 @@ export async function checkMcpAutomationReadiness(input: {
       checkpoint.onAgentRequest !== false
     )
       requiredToolIds.push(BriefIdentifier);
-    const externalTools = await resolveExternalToolSurface({
-      ...scope,
-      db,
-      agentId: agent.id,
-      candidateIds: requiredToolIds,
-    });
     const surface = resolveRunToolSurface({
       agentPlugins: agent.plugins ?? undefined,
       enableAgentMode: agent.chatConfig?.enableAgentMode,
       requiredToolIds,
-      externalTools,
       supportsBuiltinToolMount: canMountBuiltinToolSurface({ type }),
     });
     if (surface.outcomes.some((outcome) => outcome.status !== 'mounted'))

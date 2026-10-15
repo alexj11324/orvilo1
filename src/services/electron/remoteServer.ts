@@ -1,4 +1,4 @@
-import { type DataSyncConfig, type MarketAuthorizationParams } from '@orvilo/electron-client-ipc';
+import { type DataSyncConfig } from '@orvilo/electron-client-ipc';
 
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
@@ -33,13 +33,6 @@ class RemoteServerService {
    */
   requestAuthorization = async (config: DataSyncConfig) => {
     return ensureElectronIpc().auth.requestAuthorization(config);
-  };
-
-  /**
-   * Request Market authorization
-   */
-  requestMarketAuthorization = async (params: MarketAuthorizationParams) => {
-    return ensureElectronIpc().auth.requestMarketAuthorization(params);
   };
 
   /**

@@ -36,7 +36,6 @@ export const FeatureFlagsSchema = z.object({
   welcome_suggest: FeatureFlagValue.optional(),
   changelog: FeatureFlagValue.optional(),
 
-  market: FeatureFlagValue.optional(),
   knowledge_base: FeatureFlagValue.optional(),
 
   rag_eval: FeatureFlagValue.optional(),
@@ -125,10 +124,6 @@ export const DEFAULT_FEATURE_FLAGS: IFeatureFlags = {
   storage_overage: true,
   workspace: isDev,
 
-  // Off in the open-source build: the marketplace, the Composio catalogue and
-  // the changelog entry all lead out of the product. A deployment that runs
-  // those services turns the flag back on (FEATURE_FLAGS or runtime config).
-  market: false,
   speech_to_text: true,
   voice_dictation: false,
   changelog: false,
@@ -175,7 +170,6 @@ export const mapFeatureFlagsEnvToState = (
     enableCloudSandbox: evaluateFeatureFlag(config.cloud_sandbox, userId),
     enableWorkspace: evaluateFeatureFlag(config.workspace, userId),
 
-    showMarket: evaluateFeatureFlag(config.market, userId),
     enableSTT: evaluateFeatureFlag(config.speech_to_text, userId),
     enableVoiceDictation: evaluateFeatureFlag(config.voice_dictation, userId),
 

@@ -1,13 +1,9 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { deriveAgentInterventionActivityKey } from '@/business/server/agent-run/agentInterventionIdentity';
 
 import { buildRuntimeInterventionNotification } from '../agentInterventionNotification';
-
-vi.mock('@/business/server/agent-run/executeCustomIntervention', () => ({
-  getAgentMarketplaceInterventionReview: vi.fn(async () => []),
-}));
 
 const binaryTool = {
   apiName: 'editFile',
@@ -188,7 +184,7 @@ describe('buildRuntimeInterventionNotification', () => {
     });
   });
 
-  it('matches Web marketplace actions without advertising reserved cancel', async () => {
+  it('keeps a historical Marketplace call review-only without producing catalog detail', async () => {
     const marketplace = {
       apiName: 'showAgentMarketplace',
       arguments: '{"requestId":"request-1","categoryHints":["coding"]}',
@@ -213,6 +209,40 @@ describe('buildRuntimeInterventionNotification', () => {
 
     expect(result?.items[0].allowedActions).toEqual(['submit_custom', 'skip_interaction', 'stop']);
     expect(result?.items[0].allowedActions).not.toContain('cancel_interaction');
+    expect(result?.items[0]).not.toHaveProperty('detail');
+    expect(result?.items[0]).not.toHaveProperty('request');
+    expect(result?.systemActionEligibility).toBe('review_only');
+  });
+
+  it('keeps native provider custom interactions review-only', async () => {
+    const result = await buildRuntimeInterventionNotification({
+      operationId: 'operation-1',
+      state: buildState({
+        pendingToolsCalling: [{ ...binaryTool, identifier: 'codex', apiName: 'requestPermission' }],
+      }),
+      userId: 'user-1',
+    });
+    expect(result?.items[0]).toMatchObject({
+      allowedActions: ['submit_custom', 'skip_interaction', 'stop'],
+      interactionKind: 'custom',
+      surface: 'form',
+    });
+    expect(result?.systemActionEligibility).toBe('review_only');
+  });
+
+  it('keeps security-blocked binary requests review-only', async () => {
+    const result = await buildRuntimeInterventionNotification({
+      operationId: 'operation-1',
+      state: buildState({
+        pendingToolsCalling: [{ ...binaryTool, arguments: '{"command":"rm -rf /"}' }],
+      }),
+      userId: 'user-1',
+    });
+    expect(result?.items[0]).toMatchObject({
+      interactionKind: 'tool_approval',
+      risk: { level: 'critical' },
+      surface: 'binary',
+    });
     expect(result?.systemActionEligibility).toBe('review_only');
   });
 

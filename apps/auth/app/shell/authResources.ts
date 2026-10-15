@@ -2,7 +2,6 @@ import defaultAuth from '@/locales/default/auth';
 import defaultAuthError from '@/locales/default/authError';
 import defaultCommon from '@/locales/default/common';
 import defaultError from '@/locales/default/error';
-import defaultMarketAuth from '@/locales/default/marketAuth';
 import defaultOauth from '@/locales/default/oauth';
 
 import { DEFAULT_PRERENDER_LOCALE, resolveDocumentLocale } from '../lib/prerender';
@@ -12,7 +11,7 @@ import type { AuthNamespace, AuthResourceBundle } from './i18nScript';
 // twin, so no dictionary enters the browser bundle — each document carries just
 // its own locale, inlined by `root.tsx`.
 const translated = import.meta.glob<{ default: Record<string, string> }>(
-  '../../../../locales/*/{auth,authError,common,error,marketAuth,oauth}.json',
+  '../../../../locales/*/{auth,authError,common,error,oauth}.json',
   { eager: true },
 );
 
@@ -33,7 +32,6 @@ BUNDLES[DEFAULT_PRERENDER_LOCALE] = {
   authError: defaultAuthError,
   common: defaultCommon,
   error: defaultError,
-  marketAuth: defaultMarketAuth,
   oauth: defaultOauth,
 };
 

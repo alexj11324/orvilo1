@@ -1,12 +1,10 @@
 import isEqual from 'fast-deep-equal';
 import { t as translate } from 'i18next';
 import { EyeIcon } from 'lucide-react';
-import type React from 'react';
 import { lazy, memo, Suspense, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { createModal } from '@/components/Modal';
-import { startSkillDrag } from '@/features/ChatInput/InputEditor/ActionTag/skillDragData';
 import {
   type SkillListItem,
   type SkillRowAction,
@@ -19,14 +17,6 @@ import { agentSkillsSelectors } from '@/store/tool/selectors';
 const AgentSkillDetail = lazy(() => import('@/features/AgentSkillDetail'));
 
 const EMPTY_ITEMS: SkillListItem[] = [];
-
-const handleSkillDragStart = (item: SkillListItem, event: React.DragEvent) => {
-  startSkillDrag(event, {
-    category: 'skill',
-    label: item.name,
-    type: item.id,
-  });
-};
 
 const openSkillDetailModal = (skillId: string) =>
   createModal({
@@ -88,7 +78,7 @@ const UserLevelSkills = memo<UserLevelSkillsProps>(({ hideHeader }) => {
 
   // Read-only inventory. Renaming and deleting platform skills went with the
   // retired Skill-management chain, so the only actions left are opening the
-  // skill and dragging it into the composer.
+  // saved skill details.
   const getRowActions = useCallback(
     (item: SkillListItem): SkillRowAction[] => {
       const skill = agentSkills.find((s) => s.identifier === item.id);
@@ -117,14 +107,7 @@ const UserLevelSkills = memo<UserLevelSkillsProps>(({ hideHeader }) => {
 
   if (items.length === 0) return null;
 
-  const list = (
-    <SkillsList
-      getRowActions={getRowActions}
-      items={items}
-      onOpenSkill={onOpenSkill}
-      onSkillDragStart={handleSkillDragStart}
-    />
-  );
+  const list = <SkillsList getRowActions={getRowActions} items={items} onOpenSkill={onOpenSkill} />;
 
   if (hideHeader) return list;
 

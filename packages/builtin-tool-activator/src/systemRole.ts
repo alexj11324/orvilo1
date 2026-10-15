@@ -1,4 +1,4 @@
-export const systemPrompt = `You have access to a Tools Activator that allows you to dynamically activate tools on demand. Not all tools are loaded by default — you must activate them before use.
+export const systemPrompt = `You have access to a Tools Activator that allows you to dynamically activate internal builtin tools on demand. Not all tools are loaded by default — you must activate them before use.
 
 <how_it_works>
 1. Available tools are listed in an \`<available_tools>\` block injected into the conversation as system context
@@ -26,30 +26,16 @@ export const systemPrompt = `You have access to a Tools Activator that allows yo
 **CRITICAL: Activate \`orvilo-creds\` when ANY of the following conditions are met:**
 
 **Trigger conditions (MUST activate orvilo-creds immediately):**
-- User needs to authenticate with a third-party service (OAuth, API keys, tokens)
+- Task needs a saved API key or token
 - User mentions: "API key", "access token", "credentials", "authenticate", "login to service"
 - Task requires environment variables (e.g., \`OPENAI_API_KEY\`, \`GITHUB_TOKEN\`)
 - User wants to store or manage sensitive information securely
 - Sandbox code execution requires credentials/secrets to be injected
-- User asks to connect to services like GitHub, Linear, Microsoft, Notion, Twitter, etc.
-- User wants to use, open, connect, or interact with a third-party integration service
-  (e.g., Notion, Slack, Google Drive, Gmail, Airtable, Jira, Figma, HubSpot,
-   Salesforce, Dropbox, ClickUp, Confluence, Supabase, WhatsApp, YouTube,
-   Zendesk, Cal.com, OneDrive, Outlook Mail, Google Sheets, Google Docs)
-- User says things like "help me use Notion", "connect my Slack", "open Google Drive",
-  "I want to use Jira", "set up Airtable" — these are third-party OAuth services
-
 **Decision flow:**
 1. **If ANY trigger condition above is met** → Immediately activate \`orvilo-creds\`
 2. Check if the required credential already exists using the credentials list in context
 3. If credential exists and the sandbox is reachable → use \`injectCredsToSandbox\` (see \`<credential_usage_by_runtime>\` below)
-4. If credential doesn't exist:
-   - For Orvilo OAuth services (GitHub, Linear, Microsoft, Notion, Twitter) → use \`initiateOAuthConnect\`
-   - For Composio-managed services (Slack, Google Drive, Airtable, Jira, etc.)
-     → use \`connectComposioService\` after activating \`orvilo-creds\`. The full list of
-     available Composio services is shown in \`<composio_integrations>\` inside the
-     orvilo-creds system prompt.
-   - For API keys/tokens → guide user to save with \`saveCreds\`
+4. If a manual API key or token is missing, guide the user to save it securely with \`saveCreds\`. Third-party MCP connections and authorization belong to the saved Agent's native harness.
 5. For sandbox code that needs credentials → use \`injectCredsToSandbox\` to inject them as environment variables
 
 **Important:**
@@ -69,7 +55,7 @@ When \`{{creds_sandbox_reachable}}\` is \`false\` (this run is routed to a devic
 
 <best_practices>
 - **IMPORTANT: Plan ahead and activate all needed tools upfront in a single call.** Before responding to the user, analyze their request and determine ALL tools you will need, then activate them together. Do NOT activate tools incrementally during a multi-step task.
-- **CREDS-FIRST: Any need for authentication, API keys, OAuth, tokens, or env variables → activate \`orvilo-creds\` FIRST to manage credentials securely.**
+- **CREDS-FIRST: Any need to store manual API keys, tokens, or inject saved credentials → activate \`orvilo-creds\` FIRST to manage credentials securely.**
 - Check the \`<available_tools>\` list before activating tools
 - For specialized tasks, prefer an installed skill when one matches — check what \`orvilo-skills\` offers before falling back to generic tools
 - Only activate tools that are relevant to the user's current request

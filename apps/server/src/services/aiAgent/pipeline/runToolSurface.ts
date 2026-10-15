@@ -13,8 +13,6 @@ import debug from 'debug';
 
 import { hasServerRuntime } from '@/server/services/toolExecution/serverRuntimes';
 
-import type { ExternalToolPins } from './externalToolPins';
-
 const log = debug('orvilo-server:ai-agent:tool-surface');
 
 /**
@@ -45,39 +43,8 @@ export interface RunToolSurface {
    * instructions plus each mounted tool's usage guidance (`manifest.systemRole`).
    */
   capabilityContext?: string;
-  /**
-   * External (connector / installed-plugin MCP) tools that mounted this run,
-   * keyed by identifier. Persisted on the operation so the exec callback can
-   * re-resolve the connection and enforce the per-tool allowlist — carries no
-   * credentials or `mcpParams`.
-   */
-  externalTools?: Record<string, ExternalToolSurfaceEntry>;
   /** Outcome for every requested tool id, in request order. */
   outcomes: ToolSurfaceOutcome[];
-}
-
-/**
- * A resolved external tool surface for one identifier — produced upstream from
- * `user_connectors`/`user_connector_tools` or `user_installed_plugins` by
- * `resolveExternalToolSurface`. `callable` is false when a plugin manifest
- * exists but carries no transport params (`customParams.mcp`); such an entry
- * resolves as `unsupported`/`no-server-executor` rather than mounting a spec
- * the exec path cannot fulfil.
- */
-export interface ExternalToolSurfaceEntry {
-  apis: Array<{
-    description?: string;
-    name: string;
-    parameters?: Record<string, unknown>;
-  }>;
-  callable: boolean;
-  /**
-   * Identity pins persisted on the operation (SA02/F04): the exec callback
-   * re-authorizes the SAME connection/install + grant revision + schema
-   * digest — never a same-identifier substitute.
-   */
-  pins?: ExternalToolPins;
-  source: 'connector' | 'mcp-plugin';
 }
 
 interface ResolveRunToolSurfaceInput {
@@ -89,7 +56,6 @@ interface ResolveRunToolSurfaceInput {
   /** `chatConfig.enableAgentMode === false` restricts the surface to `chatModeAllowedToolIds`. */
   enableAgentMode?: boolean;
   exclusivePluginIds?: string[];
-  externalTools?: Record<string, ExternalToolSurfaceEntry>;
   /**
    * Tool identifiers this run cannot start without — task-tool requirements,
    * exclusive surfaces and evidence tools all land here. Every id must resolve
@@ -120,9 +86,6 @@ interface ResolveRunToolSurfaceInput {
  *   - builtin tools with a `serverRuntimes` registration → `builtinToolSpecs`;
  *     device-proxy runtimes (local-system / browser / remote-device) count —
  *     their factory routes the call back to the bound device via the gateway
- *   - external MCP / connector / installed-plugin tools resolved upstream into
- *     `externalTools` → `builtinToolSpecs` (same per-run MCP wire; the exec
- *     callback re-resolves the connection at call time)
  *   - anything unresolved → an `unsupported`/`unauthorized`/`failed` outcome
  *     with a machine-readable reason — never silently dropped.
  *
@@ -140,7 +103,6 @@ export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToo
     disableTools,
     enableAgentMode,
     exclusivePluginIds,
-    externalTools,
     requiredToolIds,
     selectedToolIds,
     supportsBuiltinToolMount = true,
@@ -196,7 +158,6 @@ export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToo
   const skillBlocks: string[] = [];
   const toolGuidance: string[] = [];
   const specs: AcpBuiltinToolSpec[] = [];
-  const mountedExternal: Record<string, ExternalToolSurfaceEntry> = {};
 
   for (const identifier of requested) {
     try {
@@ -279,35 +240,7 @@ export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToo
         continue;
       }
 
-      // External MCP / connector / installed-plugin tools: resolved upstream
-      // into `externalTools`; their calls ride the same per-run MCP surface and
-      // the server-side exec callback re-resolves the connection (fresh OAuth
-      // token / `customParams.mcp`) at call time.
-      const external = externalTools?.[identifier];
-      if (!external) {
-        push({ identifier, kind: 'tool', reason: 'plugin-not-installed', status: 'unsupported' });
-        continue;
-      }
-      if (!supportsBuiltinToolMount) {
-        push({
-          identifier,
-          kind: 'tool',
-          reason: 'harness-cannot-mount-mcp',
-          status: 'unsupported',
-        });
-        continue;
-      }
-      if (!external.callable) {
-        push({ identifier, kind: 'tool', reason: 'no-server-executor', status: 'unsupported' });
-        continue;
-      }
-      if (!external.apis.length) {
-        push({ identifier, kind: 'tool', reason: 'no-api-surface', status: 'unsupported' });
-        continue;
-      }
-      specs.push({ apis: external.apis, identifier });
-      mountedExternal[identifier] = external;
-      push({ identifier, kind: 'tool', reason: '', status: 'mounted' });
+      push({ identifier, kind: 'tool', reason: 'native-harness-tool', status: 'unsupported' });
     } catch (error) {
       push({
         identifier,
@@ -344,7 +277,6 @@ export const resolveRunToolSurface = (input: ResolveRunToolSurfaceInput): RunToo
   return {
     builtinToolSpecs: specs,
     capabilityContext,
-    ...(Object.keys(mountedExternal).length ? { externalTools: mountedExternal } : {}),
     outcomes,
   };
 };

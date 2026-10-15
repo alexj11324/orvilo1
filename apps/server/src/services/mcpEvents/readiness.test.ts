@@ -95,6 +95,8 @@ const input = () => ({
     tenantId: 'workspace',
     connectorId: 'source',
     state: 'active',
+    sourceType: 'github',
+    github: { githubUserId: '123', grantRevision: 'grant' },
     expiresAt: null,
   } as any,
 });
@@ -266,7 +268,11 @@ beforeEach(() => {
       heterogeneousProvider: { type: 'codex' },
     },
   });
-  mocks.source.mockResolvedValue({ isEnabled: true, status: 'connected' });
+  mocks.source.mockResolvedValue({
+    isEnabled: true,
+    status: 'connected',
+    metadata: { githubMcp: {} },
+  });
   mocks.devices.mockResolvedValue([{ deviceId: 'one', userId: 'user', hostname: 'Device one' }]);
   mocks.online.mockResolvedValue([{ deviceId: 'one' }]);
   mocks.probe.mockResolvedValue({ success: true, content: JSON.stringify(verified()) });
@@ -298,16 +304,14 @@ describe('MCP automation readiness', () => {
     mocks.githubGrant.mockResolvedValue(null);
     expect((await checkMcpAutomationReadiness(native)).canEnable).toBe(false);
   });
-  it('keeps production enabling blocked until real Device acceptance is released', async () => {
-    mocks.flags.mockResolvedValue({});
-    expect(await checkMcpAutomationReadiness(input())).toMatchObject({
+  it('keeps retired arbitrary MCP sources unavailable regardless of release flags', async () => {
+    const legacy = input();
+    legacy.binding.sourceType = 'mcp';
+    mocks.flags.mockResolvedValue({ mcp_event_automations: true });
+    expect(await checkMcpAutomationReadiness(legacy)).toMatchObject({
       canEnable: false,
-      reasons: ['ACCEPTANCE_REQUIRED'],
+      reasons: ['CONFIGURATION_INVALID'],
     });
-    mocks.flags.mockResolvedValue({ mcp_event_automations: ['another-user'] });
-    expect((await checkMcpAutomationReadiness(input())).canEnable).toBe(false);
-    mocks.flags.mockResolvedValue({ mcp_event_automations: ['user'] });
-    expect((await checkMcpAutomationReadiness(input())).canEnable).toBe(true);
   });
   it('validates the saved Agent device through a real host probe', async () => {
     const result = await checkMcpAutomationReadiness(input());

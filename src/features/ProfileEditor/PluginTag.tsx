@@ -13,11 +13,8 @@ import Avatar from '@/components/Avatar';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsDark } from '@/hooks/useIsDark';
-import { useDiscoverStore } from '@/store/discover';
-import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useToolStore } from '@/store/tool';
 import {
   builtinToolSelectors,
@@ -174,17 +171,12 @@ const PluginTag = memo<PluginTagProps>(
 
     // Composio-related state
     const allComposioServers = useToolStore(composioStoreSelectors.getServers, isEqual);
-    const isComposioEnabledInEnv = useServerConfigStore(serverConfigSelectors.enableComposio);
 
     // Orvilo Skill-related state
     const allOrviloSkillServers = useToolStore(orviloSkillStoreSelectors.getServers, isEqual);
-    const isOrviloSkillEnabled = useServerConfigStore(serverConfigSelectors.enableOrviloSkill);
 
     // Custom connector state
     const customConnectors = useToolStore(connectorSelectors.customConnectors, isEqual);
-
-    // Check if plugin is installed
-    const isInstalled = useToolStore(pluginSelectors.isPluginInstalled(identifier));
 
     // Try to find in local lists first (including Composio and OrviloSkill)
     const localMeta = useMemo(() => {
@@ -198,8 +190,11 @@ const PluginTag = memo<PluginTagProps>(
       const agentInstalled = !!agentConn;
 
       const connector = resolveConnectorCatalogItem(identifier, {
-        composio: isComposioEnabledInEnv,
-        orvilo: isOrviloSkillEnabled,
+        composio:
+          agentInstalled || allComposioServers.some((server) => server.identifier === identifier),
+        orvilo:
+          agentInstalled ||
+          allOrviloSkillServers.some((server) => server.identifier === identifier),
       });
       if (connector?.type === 'orvilo') {
         const connectedServer = allOrviloSkillServers.find((s) => s.identifier === identifier);
@@ -284,27 +279,18 @@ const PluginTag = memo<PluginTagProps>(
       agentConnectors,
       builtinList,
       installedPluginList,
-      isComposioEnabledInEnv,
       allComposioServers,
-      isOrviloSkillEnabled,
       allOrviloSkillServers,
       customConnectors,
       useAllMetaList,
     ]);
 
-    // Fetch from remote if not found locally
-    const usePluginDetail = useDiscoverStore((s) => s.usePluginDetail);
-    const { data: remoteData, isLoading } = usePluginDetail({
-      identifier: !localMeta && !isInstalled ? identifier : undefined,
-      withManifest: false,
-    });
-
-    // Determine final metadata
+    // Historical metadata comes from saved local records.
     const meta = localMeta || {
       availableInWeb: true,
-      avatar: remoteData?.avatar,
+      avatar: undefined,
       isInstalled: false,
-      title: remoteData?.title || identifier,
+      title: identifier,
       type: 'plugin' as const,
     };
 
@@ -314,11 +300,6 @@ const PluginTag = memo<PluginTagProps>(
 
     // Render icon based on type
     const renderIcon = () => {
-      // Show loading spinner when loading
-      if (isLoading) {
-        return <Spinner className="size-4 shrink-0 text-muted-foreground" />;
-      }
-
       // Show warning icon when not installed
       if (!meta.isInstalled) {
         return <AlertCircle className={styles.warningIcon} size={16} />;
@@ -359,14 +340,14 @@ const PluginTag = memo<PluginTagProps>(
         text += ` (${t('tools.desktopOnly', { defaultValue: 'Desktop Only' })})`;
       }
       // Don't show "Not Installed" when loading
-      if (!meta.isInstalled && !isLoading) {
+      if (!meta.isInstalled) {
         text += ` (${t('tools.notInstalled', { defaultValue: 'Not Installed' })})`;
       }
       return text;
     };
 
     // Only show error state when not installed and not loading
-    const showErrorState = !meta.isInstalled && !isLoading;
+    const showErrorState = !meta.isInstalled;
 
     return (
       <Badge

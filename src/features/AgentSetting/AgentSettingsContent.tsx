@@ -6,7 +6,6 @@ import { agentSelectors } from '@/store/agent/selectors';
 import { ChatSettingsTabs } from '@/store/global/initialState';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 
-import AgentConnectors from './AgentConnectors';
 import AgentGraphRuntime from './AgentGraphRuntime';
 import AgentRules from './AgentRules';
 import AgentSelfIteration from './AgentSelfIteration';
@@ -27,7 +26,6 @@ const AgentSettingsContent = memo<AgentSettingsContentProps>(({ tab, loadingSkel
       {tab === ChatSettingsTabs.Rules && <AgentRules />}
       {enableAgentSelfIteration && tab === ChatSettingsTabs.SelfIteration && <AgentSelfIteration />}
       {tab === ChatSettingsTabs.Graph && <AgentGraphRuntime />}
-      {tab === ChatSettingsTabs.Connector && <AgentConnectors />}
     </>
   );
 });

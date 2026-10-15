@@ -10,7 +10,7 @@ import { AgentManagementApiName } from './types';
  * `callAgent` must be hidden inside a sub-agent run: the server executor
  * rejects nested dispatch outright (NESTED_AGENT_CALL_NOT_ALLOWED), so
  * advertising the API there only makes the model burn tool calls on a path
- * that can never succeed. Agent CRUD / search / plugin APIs stay available —
+ * that can never succeed. Agent CRUD / search APIs stay available —
  * this returns a trimmed manifest (not `null`). It rewrites BOTH halves of the
  * manifest in step: the `api` list drops `callAgent`, and `systemRole`
  * switches to the variant without the dispatch guidance plus an explicit note

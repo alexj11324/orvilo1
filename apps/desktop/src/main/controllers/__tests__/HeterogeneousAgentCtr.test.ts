@@ -1152,6 +1152,8 @@ describe('HeterogeneousAgentCtr', () => {
       } as any);
       const { sessionId } = await ctr.startSession({
         agentType: 'qoder',
+        // The default command: preflight reuses binary detection instead of probing.
+        command: 'qodercli',
       });
 
       await ctr.sendPrompt({

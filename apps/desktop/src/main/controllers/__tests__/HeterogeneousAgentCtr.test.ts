@@ -1152,7 +1152,6 @@ describe('HeterogeneousAgentCtr', () => {
       } as any);
       const { sessionId } = await ctr.startSession({
         agentType: 'qoder',
-        command: 'qoder',
       });
 
       await ctr.sendPrompt({

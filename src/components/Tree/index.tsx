@@ -3,17 +3,10 @@
 import { Collapsible } from '@base-ui/react/collapsible';
 import { cn } from 'cn';
 import { ChevronRight } from 'lucide-react';
-import {
-  type CSSProperties,
-  type KeyboardEvent,
-  memo,
-  type MouseEvent,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type CSSProperties, type KeyboardEvent, memo, type MouseEvent, useRef } from 'react';
 
-import { flattenVisible, getAllKeys, guidePath, hasChildren, type TreeDataNode } from './utils';
+import { useTreeState } from './useTreeState';
+import { guidePath, hasChildren, resolveTreeKey, type TreeDataNode } from './utils';
 
 export type { TreeDataNode } from './utils';
 
@@ -185,8 +178,6 @@ const TreeNode = ({ ctx, depth, isLast, node, trail }: TreeNodeProps) => {
   );
 };
 
-const EMPTY: string[] = [];
-
 /**
  * Single-select tree with indent guides, animated expand/collapse and
  * WAI-ARIA tree keyboard navigation (arrows, Home/End, Enter/Space).
@@ -196,61 +187,34 @@ const Tree = memo<TreeProps>(
     blockNode = false,
     className,
     classNames = {},
-    defaultExpandAll = false,
-    defaultExpandedKeys = EMPTY,
-    defaultSelectedKeys = EMPTY,
+    defaultExpandAll,
+    defaultExpandedKeys,
+    defaultSelectedKeys,
     disabled = false,
-    expandedKeys: expandedKeysProp,
+    expandedKeys,
     indent = 20,
     onExpand,
     onRightClick,
     onSelect,
-    selectedKeys: selectedKeysProp,
+    selectedKeys,
     showLine = false,
     style,
     styles: slotStyles = {},
     treeData,
   }) => {
-    const [innerExpanded, setInnerExpanded] = useState(() =>
-      defaultExpandAll ? getAllKeys(treeData) : defaultExpandedKeys,
-    );
-    const [innerSelected, setInnerSelected] = useState(defaultSelectedKeys);
-    const [activeKeyState, setActiveKey] = useState<string | null>(null);
+    const { activeKey, expanded, flat, selected, setActiveKey, toggleExpand, toggleSelect } =
+      useTreeState({
+        defaultExpandAll,
+        defaultExpandedKeys,
+        defaultSelectedKeys,
+        disabled,
+        expandedKeys,
+        onExpand,
+        onSelect,
+        selectedKeys,
+        treeData,
+      });
     const rootRef = useRef<HTMLDivElement>(null);
-
-    const expandedKeys = expandedKeysProp ?? innerExpanded;
-    const selectedKeys = selectedKeysProp ?? innerSelected;
-    const expanded = useMemo(() => new Set(expandedKeys), [expandedKeys]);
-    const selected = useMemo(() => new Set(selectedKeys), [selectedKeys]);
-    const flat = useMemo(() => flattenVisible(treeData, expanded), [treeData, expanded]);
-
-    const isVisible = (key: string | null | undefined) =>
-      !!key && flat.some((row) => row.node.key === key);
-    const activeKey = isVisible(activeKeyState)
-      ? activeKeyState
-      : (selectedKeys.find(isVisible) ?? flat[0]?.node.key ?? null);
-
-    const setExpandedKeys = (next: string[], node: TreeDataNode, willExpand: boolean) => {
-      if (expandedKeysProp === undefined) setInnerExpanded(next);
-      onExpand?.(next, { expanded: willExpand, node });
-    };
-
-    const toggleExpand = (node: TreeDataNode) => {
-      const willExpand = !expanded.has(node.key);
-      setExpandedKeys(
-        willExpand ? [...expandedKeys, node.key] : expandedKeys.filter((key) => key !== node.key),
-        node,
-        willExpand,
-      );
-    };
-
-    const toggleSelect = (node: TreeDataNode) => {
-      if (disabled || node.disabled || node.selectable === false) return;
-      const next = [node.key];
-      if (selectedKeysProp === undefined) setInnerSelected(next);
-      setActiveKey(node.key);
-      onSelect?.(next, { node, selected: true });
-    };
 
     const focusRow = (key: string) => {
       setActiveKey(key);
@@ -261,31 +225,12 @@ const Tree = memo<TreeProps>(
 
     const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
       const current = (event.target as HTMLElement).closest<HTMLElement>('[role="treeitem"]');
-      const index = flat.findIndex((row) => row.node.key === current?.dataset.key);
-      const row = flat[index];
-      if (!row) return;
-
-      const actions: Record<string, () => void> = {
-        ' ': () => toggleSelect(row.node),
-        'ArrowDown': () => flat[index + 1] && focusRow(flat[index + 1].node.key),
-        'ArrowLeft': () => {
-          if (row.hasChildren && expanded.has(row.node.key)) toggleExpand(row.node);
-          else if (row.parentKey) focusRow(row.parentKey);
-        },
-        'ArrowRight': () => {
-          if (!row.hasChildren) return;
-          if (expanded.has(row.node.key)) focusRow(flat[index + 1].node.key);
-          else toggleExpand(row.node);
-        },
-        'ArrowUp': () => flat[index - 1] && focusRow(flat[index - 1].node.key),
-        'End': () => focusRow(flat.at(-1)!.node.key),
-        'Enter': () => toggleSelect(row.node),
-        'Home': () => focusRow(flat[0].node.key),
-      };
-      const action = actions[event.key];
+      const action = resolveTreeKey(flat, expanded, current?.dataset.key, event.key);
       if (!action) return;
       event.preventDefault();
-      action();
+      if (action.type === 'focus') focusRow(action.key);
+      else if (action.type === 'toggle') toggleExpand(action.node);
+      else toggleSelect(action.node);
     };
 
     const ctx: TreeContextValue = {

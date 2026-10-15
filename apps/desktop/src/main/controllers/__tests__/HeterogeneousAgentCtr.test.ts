@@ -1151,8 +1151,8 @@ describe('HeterogeneousAgentCtr', () => {
         storeManager: { get: vi.fn() },
       } as any);
       const { sessionId } = await ctr.startSession({
-        agentType: 'claude-code',
-        command: 'claude',
+        agentType: 'qoder',
+        command: 'qoder',
       });
 
       await ctr.sendPrompt({
@@ -1175,6 +1175,24 @@ describe('HeterogeneousAgentCtr', () => {
       ).toEqual([]);
       // The intervention slot is cleaned up once the run settles.
       expect((ctr as any).opIdToIntervention.has(operationId)).toBe(false);
+    });
+
+    it('does not mount the ask-user MCP server for claude-code (native ACP elicitation)', async () => {
+      const ctr = new HeterogeneousAgentCtr({
+        appStoragePath,
+        storeManager: { get: vi.fn() },
+      } as any);
+      const { sessionId } = await ctr.startSession({
+        agentType: 'claude-code',
+        command: 'claude',
+      });
+
+      await ctr.sendPrompt({ operationId: 'op-cc-no-mcp', prompt: 'hello', sessionId });
+
+      const [, options] = standardAcpSessionConstructMock.mock.calls.at(-1)!;
+      expect(options.mcpServers).toBeUndefined();
+      // The bridge still answers `elicitation/create` and permission requests.
+      expect(options.askUserBridge).toBeDefined();
     });
 
     it('does not mount the builtin MCP server for agents without AskUserQuestion tools', async () => {

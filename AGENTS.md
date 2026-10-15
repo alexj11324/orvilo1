@@ -63,7 +63,14 @@ bun run dev:desktop:skip-login
 ```
 
 `dev:desktop:skip-login` needs the seed user and `DATABASE_URL` in `.env`; see the
-Sign in section of the local setup guide.
+Sign in section of the local setup guide. It starts a local device gateway and
+points Next and Electron at it; it does not use the production gateway. If
+Electron is already open on `/onboarding`, sign it in with
+`bun run dev:desktop:login-local` using the live CDP port, as the Sign in
+section of the local setup guide describes. That command does not attach a
+gateway; an Electron that is not already on the local gateway must be started
+with `skip-login`. Do not stop for a person and do not reload the page to
+recover the session.
 
 After `dev:spa` starts, the terminal prints a **Debug Proxy** URL:
 

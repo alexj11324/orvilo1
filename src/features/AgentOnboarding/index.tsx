@@ -122,7 +122,7 @@ const AgentOnboarding = ({ children }: AgentOnboardingProps) => {
     (s) => s.tabs.find((tab) => tab.id === s.activeTabId)?.url ?? null,
   );
   const pathname = activeTabUrl?.split(/[?#]/)[0] ?? location.pathname;
-  const { availability, ready, error, retry, retrying } = useAgentAvailability();
+  const { confirmedUsable, error, ready, retry, retrying } = useAgentAvailability();
   const isLogin = useUserStore(authSelectors.isLogin);
   if (
     !shouldCoverAppForAgentSetup({
@@ -146,6 +146,8 @@ const AgentOnboarding = ({ children }: AgentOnboardingProps) => {
     </>
   );
 
+  // Known-usable accounts pass even when an auxiliary probe failed.
+  if (confirmedUsable) return <>{children}</>;
   if (error !== undefined)
     return cover(<AsyncError error={error} retrying={retrying} onRetry={() => void retry()} />);
   if (!ready)
@@ -154,7 +156,6 @@ const AgentOnboarding = ({ children }: AgentOnboardingProps) => {
         <Spinner />
       </div>,
     );
-  if (availability.usable) return <>{children}</>;
   return cover(<OnboardingBody retry={retry} />);
 };
 

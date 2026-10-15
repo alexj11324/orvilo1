@@ -1,8 +1,8 @@
-import { Markdown } from '@lobehub/ui';
 import type { GoalGraphSnapshot } from '@orvilo/types';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { Badge } from '@/components/reui/badge';
 import {
   Accordion,

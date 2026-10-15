@@ -1,12 +1,12 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { clsx as cx, cn } from 'cn';
 import { ListTree } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 import { portalThreadSelectors, threadSelectors } from '@/store/chat/selectors';

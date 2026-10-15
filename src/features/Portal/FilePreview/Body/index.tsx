@@ -1,10 +1,10 @@
-import { Markdown } from '@lobehub/ui';
 import { BoltIcon, FileIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import Loading from '@/components/Loading/CircleLoading';
+import { Markdown } from '@/components/Markdown';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FileNotFound from '@/features/FileNotFound';
 import FileViewer from '@/features/FileViewer';

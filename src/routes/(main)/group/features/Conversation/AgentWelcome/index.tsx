@@ -1,10 +1,10 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { useConversationStore } from '@/features/Conversation';
 import ToolAuthAlert from '@/features/Conversation/AgentWelcome/ToolAuthAlert';
 import { contextSelectors } from '@/features/Conversation/store';

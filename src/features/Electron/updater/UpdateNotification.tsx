@@ -1,4 +1,3 @@
-import { Markdown } from '@lobehub/ui';
 import type { UpdateInfo } from '@orvilo/electron-client-ipc';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { t } from 'i18next';
@@ -6,6 +5,7 @@ import { X } from 'lucide-react';
 import React, { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { createModal, useModalContext } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button as BaseButton } from '@/components/ui/button';

@@ -1,5 +1,6 @@
-import { Markdown } from '@lobehub/ui';
 import { memo } from 'react';
+
+import { Markdown } from '@/components/Markdown';
 
 interface HighlightedContentProps {
   children?: string | null;

@@ -1,9 +1,9 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { memo, useEffect } from 'react';
 
+import { Markdown } from '@/components/Markdown';
 import { useGroupProfileStore } from '@/store/groupProfile';
 
 import type { UpdateGroupPromptParams } from '../../../types';

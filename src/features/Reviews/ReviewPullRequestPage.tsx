@@ -1,6 +1,5 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -22,6 +21,7 @@ import { useLocation, useParams } from 'react-router';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import { Markdown } from '@/components/Markdown';
 import SimpleEmpty from '@/components/SimpleEmpty';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';

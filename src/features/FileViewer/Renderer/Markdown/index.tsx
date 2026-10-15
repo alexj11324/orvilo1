@@ -1,11 +1,11 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { cn } from 'cn';
 import { CodeIcon, EyeIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';

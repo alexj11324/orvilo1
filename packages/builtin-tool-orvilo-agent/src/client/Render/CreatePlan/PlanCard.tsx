@@ -1,9 +1,9 @@
 'use client';
-import { Markdown } from '@lobehub/ui';
 import { cn } from 'cn';
 import { ListChecksIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import { Markdown } from '@/components/Markdown';
 import { useChatStore } from '@/store/chat';
 
 import type { Plan } from '../../../types';

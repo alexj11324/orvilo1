@@ -1,4 +1,3 @@
-import { Markdown } from '@lobehub/ui';
 import type { WriteLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { cn } from 'cn';
@@ -7,6 +6,7 @@ import path from 'path-browserify-esm';
 import { memo } from 'react';
 
 import { InlineHtmlPreview, isHtmlFile } from '@/components/HtmlPreview';
+import { Markdown } from '@/components/Markdown';
 import { CodeBlock } from '@/components/ui/code-block';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LocalFile, LocalFolder } from '@/features/LocalFile';

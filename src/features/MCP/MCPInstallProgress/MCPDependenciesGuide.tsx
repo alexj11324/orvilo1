@@ -1,10 +1,10 @@
-import { Markdown } from '@lobehub/ui';
 import { AlertTriangle, CheckCircle, ExternalLink, Terminal } from 'lucide-react';
 import * as m from 'motion/react-m';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from 'react-responsive';
 
+import { Markdown } from '@/components/Markdown';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CodeBlock } from '@/components/ui/code-block';

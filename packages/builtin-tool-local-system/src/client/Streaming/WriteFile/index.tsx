@@ -1,11 +1,11 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { WriteLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import path from 'path-browserify-esm';
 import { memo } from 'react';
 
+import { Markdown } from '@/components/Markdown';
 import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 type WriteFileArgs = WriteLocalFileParams & {

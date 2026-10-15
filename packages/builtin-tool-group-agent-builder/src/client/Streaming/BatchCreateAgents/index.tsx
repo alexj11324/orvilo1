@@ -1,11 +1,11 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { cn } from 'cn';
 import { memo } from 'react';
 
 import Avatar from '@/components/Avatar';
+import { Markdown } from '@/components/Markdown';
 import { Separator } from '@/components/ui/separator';
 import ToolTag from '@/features/ToolTag';
 

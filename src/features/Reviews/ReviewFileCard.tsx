@@ -1,9 +1,9 @@
-import { PatchDiff } from '@lobehub/ui';
 import { clsx, cn } from 'cn';
 import { ChevronDownIcon, FileDiffIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import PatchDiff from '@/components/PatchDiff';
 import { Button } from '@/components/ui/button';
 
 import CommentComposer from './CommentComposer';

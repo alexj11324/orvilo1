@@ -1,5 +1,4 @@
 import { ChatInput, ChatInputActionBar, useEditor } from '@lobehub/editor/react';
-import { Markdown } from '@lobehub/ui';
 import type { DocumentCommentItem } from '@orvilo/types';
 import { cn } from 'cn';
 import { ChevronRight, MessageCircle, Pencil, Trash } from 'lucide-react';
@@ -8,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
+import { Markdown } from '@/components/Markdown';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';

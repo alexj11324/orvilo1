@@ -1,4 +1,3 @@
-import { Markdown } from '@lobehub/ui';
 import type { CrawlResult } from '@orvilo/types';
 import type { CrawlSuccessResult } from '@orvilo/web-crawler';
 import { cn } from 'cn';
@@ -6,6 +5,7 @@ import { CircleAlert, Copy, ExternalLink, Info } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { CodeBlock } from '@/components/reui/code-block/code-block';
 import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';

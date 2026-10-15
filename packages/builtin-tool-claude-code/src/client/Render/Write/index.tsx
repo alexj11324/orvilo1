@@ -1,10 +1,10 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import path from 'path-browserify-esm';
 import { memo } from 'react';
 
+import { Markdown } from '@/components/Markdown';
 import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 import { Skeleton } from '@/components/ui/skeleton';
 

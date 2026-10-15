@@ -1,10 +1,11 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { Check, ShieldCheck, X } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Markdown } from '@/components/Markdown';
 
 import type { SetTaskVerifyParams, SetTaskVerifyState } from '../../../types';
 import { TaskResultCard } from '../shared';

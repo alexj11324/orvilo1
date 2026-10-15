@@ -1,4 +1,3 @@
-import { Markdown } from '@lobehub/ui';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import isEqual from 'fast-deep-equal';
 import { t as translate } from 'i18next';
@@ -8,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
 import AsyncError from '@/components/AsyncError';
+import { Markdown } from '@/components/Markdown';
 import { createModal, useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';

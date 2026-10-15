@@ -1,10 +1,10 @@
 'use client';
 
 import { ScrollArea } from '@base-ui/react/scroll-area';
-import { Markdown } from '@lobehub/ui';
 import type { RefObject } from 'react';
 import { memo, useEffect } from 'react';
 
+import { Markdown } from '@/components/Markdown';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 
 interface StreamingMarkdownProps {

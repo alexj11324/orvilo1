@@ -1,5 +1,4 @@
 import { Typography } from '@lobehub/ui';
-import { Image } from '@lobehub/ui/mdx';
 import { Fragment, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type Components } from 'react-markdown';
@@ -8,6 +7,7 @@ import urlJoin from 'url-join';
 
 import { CustomMDX } from '@/components/mdx';
 import CollapsibleSection from '@/components/mdx/CollapsibleSection';
+import Image from '@/components/mdx/Image.vite';
 import remarkCollapsibleSections from '@/components/mdx/remarkCollapsibleSections';
 import { Separator } from '@/components/ui/separator';
 import { OFFICIAL_SITE } from '@/const/url';

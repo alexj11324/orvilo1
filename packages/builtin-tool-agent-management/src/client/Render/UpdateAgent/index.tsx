@@ -1,8 +1,9 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { Markdown } from '@/components/Markdown';
 
 import type { UpdateAgentParams } from '../../../types';
 

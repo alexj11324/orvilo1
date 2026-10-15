@@ -38,6 +38,14 @@ vi.mock('node:os', async () => {
   return { ...actual, platform: vi.fn(() => 'linux') };
 });
 
+// The Orvilo-managed bridge install would otherwise probe the real home dir and
+// spawn a background `bun add` through the mocked `spawn` above.
+vi.mock('./acpBridgeInstall', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./acpBridgeInstall')>()),
+  detectManagedAcpBridgeCommand: vi.fn(async () => ({ available: false })),
+  scheduleManagedAcpBridgeInstall: vi.fn(),
+}));
+
 vi.mock('./resolveCliCommand', async () => {
   const actual = await vi.importActual<typeof resolveCliCommand>('./resolveCliCommand');
   return {
@@ -356,7 +364,10 @@ describe('spawnAgent', () => {
     expect(spawnCalls).toHaveLength(0);
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Bridge resolutions are cached per process; each test re-mocks detection.
+    const { resetAcpSpawnTargetCache } = await import('./standardAcpAgents');
+    resetAcpSpawnTargetCache();
     spawnCalls.length = 0;
     nextFakeProc = null;
     platformMock.mockReturnValue('linux');

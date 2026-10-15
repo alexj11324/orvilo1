@@ -764,7 +764,7 @@ export class TaskTopicModel {
     const completionReservationId = `${reservationPrefix}${randomUUID()}`;
     const leaseExpiresAt = new Date(now.getTime() + 30 * 60 * 1000);
     const claimed = await this.db.transaction(async (tx) => {
-      // The dispatch is already terminal when its topic completion starts.
+      // Execution has ended; root automation dispatches wait for delivery acceptance.
       // Lock and validate that exact owner instead of relying on the retired
       // running projection, which disappears as soon as the dispatch settles.
       if (dispatchClaim) {
@@ -793,7 +793,14 @@ export class TaskTopicModel {
           !dispatch ||
           dispatch.taskId !== taskId ||
           dispatch.operationId !== operationId ||
-          dispatch.phase !== phase ||
+          (dispatch.phase !== phase &&
+            !(
+              status === 'completed' &&
+              dispatch.phase === 'waiting' &&
+              dispatch.waitingReason === 'automation_delivery_pending' &&
+              dispatch.automationOccurrence &&
+              !dispatch.automationOccurrence.parentDispatchId
+            )) ||
           dispatch.fence !== dispatchClaim.fence ||
           dispatch.generation !== dispatchClaim.generation ||
           task.executionGeneration !== dispatchClaim.generation ||

@@ -511,6 +511,7 @@ describe('TaskTopicModel', () => {
     const completedDispatchFixture = async (
       suffix: string,
       phase: 'canceled' | 'failed' | 'succeeded' = 'succeeded',
+      occurrence?: 'root' | 'child',
     ) => {
       const topicId = `tpc_completed_${suffix}`;
       const operationId = `op_completed_${suffix}`;
@@ -519,6 +520,7 @@ describe('TaskTopicModel', () => {
       const topicModel = new TaskTopicModel(serverDB, userId);
       const task = await taskModel.create({
         instruction: 'Recover succeeded dispatch',
+        automationMode: occurrence ? 'schedule' : undefined,
         executionGeneration: 1,
         workflowCategory: 'in_progress',
       });
@@ -527,6 +529,21 @@ describe('TaskTopicModel', () => {
       const current = (await taskModel.findById(task.id))!;
       const dispatch = {
         id: dispatchId,
+        automationOccurrence: occurrence
+          ? {
+              occurrenceId: `${suffix}-occurrence`,
+              ...(occurrence === 'child' ? { parentDispatchId: 'parent-dispatch' } : {}),
+              definition: {
+                assigneeAgentId: current.assigneeAgentId,
+                automationMode: 'schedule' as const,
+                config: current.config,
+                definitionVersionId: `${suffix}-definition`,
+                instruction: current.instruction,
+                policyRevision: current.policyRevision,
+                requirementRevision: current.requirementRevision,
+              },
+            }
+          : undefined,
         planRevision: null,
         taskId: task.id,
         generation: 1,
@@ -585,6 +602,107 @@ describe('TaskTopicModel', () => {
         }),
       ).rejects.toThrow('already being processed');
     });
+
+    it('claims a successful root automation callback while its delivery and next occurrence wait', async () => {
+      const { taskModel, topicModel, task, dispatch, topicId, operationId } =
+        await completedDispatchFixture('automation-root', 'succeeded', 'root');
+      const dispatchModel = new TaskDispatchModel(serverDB);
+      expect(await dispatchModel.findById(dispatch.id)).toMatchObject({
+        phase: 'waiting',
+        waitingReason: 'automation_delivery_pending',
+      });
+      const queued = await dispatchModel.request({
+        taskId: task.id,
+        trigger: 'schedule',
+        requestedBy: userId,
+        idempotencyKey: 'automation-second-occurrence',
+      });
+      if (queued.state === 'busy') throw new Error('Second occurrence was not retained');
+      expect(queued.dispatch.phase).toBe('queued');
+
+      const claim = await topicModel.settleIfRunning(
+        task.id,
+        topicId,
+        operationId,
+        'completed',
+        'done',
+        { dispatchId: dispatch.id, fence: 1, generation: 1 },
+      );
+      expect(claim).toMatch(/^completion:/);
+      expect(await topicModel.findByTopicId(topicId)).toMatchObject({
+        status: 'completed',
+        runState: 'succeeded',
+      });
+      expect(await dispatchModel.findById(dispatch.id)).toMatchObject({
+        phase: 'waiting',
+        waitingReason: 'automation_delivery_pending',
+      });
+      expect(await dispatchModel.findById(queued.dispatch.id)).toMatchObject({ phase: 'queued' });
+      expect(await taskModel.findById(task.id)).toMatchObject({
+        executionGeneration: 1,
+        workflowCategory: 'in_progress',
+        currentTopicId: topicId,
+      });
+    });
+
+    it.each([
+      'generic-wait',
+      'no-occurrence',
+      'child',
+      'failed',
+      'canceled',
+      'fence',
+      'generation',
+      'operation',
+      'assignee',
+    ] as const)(
+      'rejects a completed callback for an automation dispatch in %s',
+      async (invalid) => {
+        const { topicModel, task, dispatch, topicId, operationId } = await completedDispatchFixture(
+          `automation-${invalid}`,
+          invalid === 'failed' || invalid === 'canceled' ? invalid : 'succeeded',
+          invalid === 'child' ? 'child' : 'root',
+        );
+        if (invalid === 'generic-wait' || invalid === 'child') {
+          await serverDB
+            .update(taskDispatches)
+            .set({
+              phase: 'waiting',
+              waitingReason:
+                invalid === 'generic-wait' ? 'no_eligible_agent' : 'automation_delivery_pending',
+            })
+            .where(eq(taskDispatches.id, dispatch.id));
+        }
+        if (invalid === 'no-occurrence') {
+          await serverDB
+            .update(taskDispatches)
+            .set({ automationOccurrence: null })
+            .where(eq(taskDispatches.id, dispatch.id));
+        }
+        if (invalid === 'assignee') {
+          await serverDB.insert(agents).values({ id: 'automation-new-assignee', userId });
+          await serverDB
+            .update(tasks)
+            .set({ assigneeAgentId: 'automation-new-assignee' })
+            .where(eq(tasks.id, task.id));
+        }
+        expect(
+          await topicModel.settleIfRunning(
+            task.id,
+            topicId,
+            invalid === 'operation' ? 'wrong-operation' : operationId,
+            'completed',
+            'done',
+            {
+              dispatchId: dispatch.id,
+              fence: invalid === 'fence' ? 99 : 1,
+              generation: invalid === 'generation' ? 99 : 1,
+            },
+          ),
+        ).toBeNull();
+        expect((await topicModel.findByTopicId(topicId))?.status).toBe('running');
+      },
+    );
 
     it.each(['failed', 'canceled'] as const)(
       'accepts the matching %s dispatch without mistaking it for a user park',

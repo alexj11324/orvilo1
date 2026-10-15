@@ -234,7 +234,7 @@ export function NativeTableController({
         onClick={select}
         onMouseDown={(event) => event.preventDefault()}
       >
-        {t('block.select')}
+        {t('table.select')}
       </Button>
       <Button
         disabled={!editable}

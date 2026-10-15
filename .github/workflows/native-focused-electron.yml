@@ -1,0 +1,80 @@
+name: Focused Electron acceptance
+on:
+  push:
+    branches: ['refactor/native-ui-sdk-removal-batch']
+    paths:
+      - 'tests/native-focused-electron/**'
+      - '.github/workflows/native-focused-electron.yml'
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: Exact 40-character candidate commit; focused scope only
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: native-focused-electron-${{ inputs.revision || github.sha }}
+  cancel-in-progress: false
+jobs:
+  focused-native:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.revision || github.sha }}
+          persist-credentials: false
+      - name: Validate exact checked-out revision before repository setup
+        env:
+          EXPECTED_REVISION: ${{ inputs.revision || github.sha }}
+        run: |
+          [[ "$EXPECTED_REVISION" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_REVISION"
+      - uses: ./.github/actions/setup-env
+      - run: pnpm install --no-frozen-lockfile
+      - name: Install isolated Desktop dependencies with normal lifecycle scripts
+        run: pnpm install --no-frozen-lockfile
+        working-directory: apps/desktop
+      - name: Install Linux display and runtime libraries
+        run: pnpm exec playwright install-deps chromium
+      - name: Check resource guard platform cases
+        run: |
+          python3 tests/native-focused-electron/guard_resource_test.py
+          python3 tests/native-focused-electron/source_pin_test.py
+      - name: Prepare exact candidate and pinned public assets
+        env:
+          EXPECTED_REVISION: ${{ inputs.revision || github.sha }}
+        run: |
+          python3 tests/native-focused-electron/prepare.py --root "$GITHUB_WORKSPACE" --output "$RUNNER_TEMP/native-harness" --revision "$EXPECTED_REVISION"
+      - name: Preserve Chromium setuid sandbox
+        run: |
+          ELECTRON_SANDBOX="$(realpath apps/desktop/node_modules/electron/dist/chrome-sandbox)"
+          sudo chown root:root "$ELECTRON_SANDBOX"
+          sudo chmod 4755 "$ELECTRON_SANDBOX"
+      - name: Run original guarded focused Electron matrix
+        env:
+          ORVILO_PRODUCT_ROOT: ${{ github.workspace }}
+          EXPECTED_REVISION: ${{ inputs.revision || github.sha }}
+        run: |
+          ELECTRON="$(realpath apps/desktop/node_modules/electron/dist/electron)"
+          PLAYWRIGHT="$(node -p 'require.resolve("playwright")')"
+          NODE="$(command -v node)"
+          # A finite process scope is required; run Electron as the original non-root runner.
+          # Scope/ancestor/host headroom is measured by the unchanged admission thresholds.
+          sudo systemd-run --scope --property=MemoryAccounting=yes --property=MemoryMax=6G \
+            runuser -u "$(id -un)" -- env \
+            PATH="$PATH" HOME="$HOME" ORVILO_PRODUCT_ROOT="$ORVILO_PRODUCT_ROOT" \
+            xvfb-run -a python3 "$RUNNER_TEMP/native-harness/guard.py" \
+            --output "$RUNNER_TEMP/native-results" --head "$EXPECTED_REVISION" \
+            --scope sdk942-first --lease "GH_NATIVE_${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}" \
+            --node "$NODE" --electron "$ELECTRON" --playwright "$PLAYWRIGHT" --port 5187
+      - name: Upload actual guarded evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: focused-native-${{ inputs.revision || github.sha }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/native-results/
+            ${{ runner.temp }}/native-harness/binding.json
+          retention-days: 14

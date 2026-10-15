@@ -55,7 +55,7 @@ export function NativeDiffActions({
         onClick={() => act(DiffAction.Reject)}
         onMouseDown={(e) => e.preventDefault()}
       >
-        {t(nodeKey ? 'modifier.reject' : 'modifier.rejectedAll')}
+        {t(nodeKey ? 'modifier.reject' : 'modifier.rejectAll')}
       </Button>
       <Button
         disabled={!editable}
@@ -175,7 +175,7 @@ export function NativeFormattingToolbar({ editor }: { editor: NativeIEditorKerne
         }}
       >
         <input
-          aria-label={t('link.url')}
+          aria-label={t('link.editLinkTitle')}
           className="h-9 rounded-(--radius-input) border border-input bg-background px-3 text-sm text-foreground"
           disabled={!editable}
           type="url"

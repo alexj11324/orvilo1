@@ -447,12 +447,16 @@ export const nativeCodeLanguages = [
   },
 ] as const satisfies readonly NativeCodeLanguageDescription[];
 
+const includesExtension = (extensions: readonly string[], value: string) =>
+  extensions.includes(value);
+
 /** Keep current modeMatch ordering, lowercasing and extension aliases. */
 export function resolveNativeCodeLanguage(value = ''): NativeCodeLanguageDescription {
   const normalized = value.toLocaleLowerCase() || 'plain';
   return (
     nativeCodeLanguages.find(
-      (mode) => mode.value === normalized || ('ext' in mode && mode.ext.includes(normalized)),
+      (mode) =>
+        mode.value === normalized || ('ext' in mode && includesExtension(mode.ext, normalized)),
     ) ?? nativeCodeLanguages[0]
   );
 }

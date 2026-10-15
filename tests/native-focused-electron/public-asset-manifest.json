@@ -1,0 +1,22 @@
+{
+  "assets": [
+    {
+      "url": "https://registry.npmmirror.com/@lobehub/assets-fileicon/1.0.0/files/assets/folder.svg",
+      "package": "@lobehub/assets-fileicon",
+      "version": "1.0.0",
+      "member": "package/assets/folder.svg",
+      "bodyPath": "public-asset-data/folder.svg",
+      "sha256": "2afe649490719f86c472260eaaa1c9203212b258f867428ce617ab778785fbe1",
+      "bytes": 252,
+      "contentType": "image/svg+xml",
+      "method": "GET",
+      "resourceType": "image",
+      "navigationAllowed": false,
+      "registryArchiveSha256": "2e0cab77d95e7114c3b5bb43f1bd90adb027a727eec924efdb9e2c27c04938ea",
+      "registrySRI": "sha512-7U8Aj6WfC/Ve6ysYziFBVCC0veID7ES/B8pEtVAzxkq1zY9MXwSXZtplYgjbNx4l2dCsvB6wEK9TBabgo0knpA=="
+    }
+  ],
+  "privateSdkApiUsed": false,
+  "schema": "finite-genuine-public-asset-transport-manifest-v1",
+  "unplannedExternalRequestsAllowed": false
+}

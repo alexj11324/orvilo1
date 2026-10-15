@@ -2,6 +2,11 @@ import { stylelint } from '@lobehub/lint';
 
 export default {
   ...stylelint,
+  overrides: stylelint.overrides.map((override) =>
+    override.customSyntax === 'postcss-styled-syntax'
+      ? { ...override, files: [...override.files, '*.mts', '*.cts'] }
+      : override,
+  ),
   rules: {
     ...stylelint.rules,
     // Temporarily disabled for gradual migration

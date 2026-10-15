@@ -84,7 +84,7 @@ function href(value: string | undefined): string | undefined {
 }
 export function NativeMentionWidget(props: NativeWidgetProps) {
   const { data, selected, select } = useDecoration(props);
-  const label = isRecord(data) && typeof data.label === 'string' ? data.label : '';
+  const label = data && 'label' in data && typeof data.label === 'string' ? data.label : '';
   return (
     <span
       contentEditable={false}

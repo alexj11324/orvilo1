@@ -120,4 +120,7 @@ export default {
   'typobar.tex': 'TeX Formula',
   'typobar.underline': 'Underline',
   'typobar.undo': 'Undo',
+  'nativeDocument.unavailableWithEdits':
+    'This document is unavailable. Your unsaved edits remain open for copying or recovery.',
+  'table.select': 'Select rows or columns',
 };

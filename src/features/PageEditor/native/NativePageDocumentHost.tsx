@@ -10,11 +10,13 @@ import AsyncError from '@/components/AsyncError';
 import { NativePageEditor, type NativePageEditorProps } from '@/components/NativePageEditor';
 import { ArticleSkeleton } from '@/components/Skeleton';
 import UnsavedChangesGuard from '@/features/EditorCanvas/UnsavedChangesGuard';
+import { writeDraft } from '@/features/PageEditor/pageDraftStorage';
 import { useRegisterFilesHotkeys, useSaveDocumentHotkey } from '@/hooks/useHotkeys';
 import { useDocumentStore } from '@/store/document';
 import { editorSelectors } from '@/store/document/slices/editor';
 
 import { bindNativePageRuntime, type NativePageRuntimePort } from './runtimeBinding';
+import { useNativeDocumentResource } from './useNativeDocumentResource';
 
 export interface NativePageDocumentHostProps extends Omit<
   NativePageEditorProps,
@@ -73,11 +75,9 @@ function NativePageDocumentSession({
   const hydrating = useRef(false);
   const hydratedRef = useRef(hydrated);
   hydratedRef.current = hydrated;
-  const useFetchDocument = useDocumentStore((s) => s.useFetchDocument);
   const isDirty = useDocumentStore(editorSelectors.isDirty(documentId));
   const blocked = useDocumentStore(editorSelectors.saveBlockedByLock(documentId));
   const documentReady = useDocumentStore((s) => !!s.documents[documentId]);
-  const canWrite = hydrated && editable && !disabled && !blocked;
 
   useEffect(() => {
     if (!ready) return;
@@ -94,8 +94,27 @@ function NativePageDocumentSession({
     };
   }, [documentId, ready]);
 
-  const { data, error, mutate } = useFetchDocument(documentId, { autoSave, editor: ready?.editor });
-  const version = data?.updatedAt?.toISOString();
+  const { data, error, mutate, hydrationDocument } = useNativeDocumentResource(
+    documentId,
+    ready?.editor,
+    autoSave,
+  );
+  const missingWithEdits = data === null && documentReady && isDirty;
+  const canWrite = hydrated && editable && !disabled && !blocked && data !== null;
+  useEffect(() => {
+    if (!missingWithEdits || !ready) return;
+    const state = useDocumentStore.getState();
+    if (state.activeDocumentId !== documentId || state.editor !== ready.editor) return;
+    const doc = state.documents[documentId];
+    if (!doc?.isDirty) return;
+    writeDraft({
+      documentId,
+      editorData: hydrated ? ready.editor.getDocument('json') : doc.editorData,
+      ownerId: lockOwnerId,
+      savedAt: new Date().toISOString(),
+    });
+  }, [documentId, hydrated, lockOwnerId, missingWithEdits, ready]);
+  const version = hydrationDocument?.updatedAt?.toISOString();
   useEffect(() => {
     if (!ready || !documentReady) return;
     useDocumentStore.getState().internal_dispatchDocument({
@@ -106,7 +125,8 @@ function NativePageDocumentSession({
   }, [documentId, documentReady, lockOwnerId, ready]);
 
   useEffect(() => {
-    if (!ready || !data || !documentReady || isDirty) return;
+    if (!ready || (!hydrationDocument && !isDirty) || !documentReady || (isDirty && hydrated))
+      return;
     if (hydrated && hydrationVersion.current === version) return;
     let current = true;
     hydrating.current = true;
@@ -126,7 +146,7 @@ function NativePageDocumentSession({
     return () => {
       current = false;
     };
-  }, [data, documentReady, hydrated, isDirty, ready, version]);
+  }, [hydrationDocument, documentReady, hydrated, isDirty, ready, version]);
 
   useEffect(() => {
     if (!ready || !canWrite) return;
@@ -175,7 +195,12 @@ function NativePageDocumentSession({
           }}
         />
       )}
-      {data === null ? (
+      {missingWithEdits && (
+        <p className="text-sm text-muted-foreground" role="status">
+          {t('nativeDocument.unavailableWithEdits', { ns: 'editor' })}
+        </p>
+      )}
+      {data === null && !missingWithEdits ? (
         <NotFound />
       ) : (
         <>
@@ -184,6 +209,7 @@ function NativePageDocumentSession({
             <NativePageEditor
               {...surface}
               content=""
+              debounceWait={0}
               editable={canWrite}
               type="markdown"
               onReady={(editor, commands) => {

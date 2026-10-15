@@ -1,4 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
+import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import { createNativeBrowserEditor } from './session';
@@ -14,14 +15,18 @@ const createKernel = () =>
       linkIframe: () => null,
       linkSchema: () => null,
     }),
-    () => ({ decorator: () => null, handleUpload: async () => ({ url: '/file' }), theme: {} }),
+    () => ({
+      decorator: () => createElement('span'),
+      handleUpload: async () => ({ url: '/file' }),
+      theme: {},
+    }),
     () => ({
       defaultBlockImage: true,
       getImageWidth: async () => 100,
       handleUpload: async () => ({ url: '/image' }),
       handleRehost: async (url: string) => ({ url }),
       needRehost: () => false,
-      render: () => null,
+      render: () => createElement('span'),
     }),
   );
 

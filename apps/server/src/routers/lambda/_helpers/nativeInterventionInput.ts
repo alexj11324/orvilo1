@@ -3,6 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 
 import { agentOperations, messagePlugins, messages, tasks, taskTopics } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { buildTaskReadableWhere } from '@/database/utils/taskTeamReadable';
 
 import { assertCanUseMessageTargets } from './conversationResourceGuard';
 import { assertIssueExecutionInput } from './issueExecutionInput';
@@ -49,6 +50,7 @@ export const assertCanUseOperationAgent = async (params: {
               eq(tasks.workspaceId, row.workspaceId),
               eq(tasks.currentTopicId, row.topicId),
               eq(taskTopics.operationId, operationId),
+              buildTaskReadableWhere(db, { userId, workspaceId: row.workspaceId }),
             ),
           )
           .limit(1)

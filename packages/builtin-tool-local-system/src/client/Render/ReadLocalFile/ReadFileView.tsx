@@ -1,4 +1,4 @@
-import { Image, Markdown, PreviewGroup } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { useToolRenderCapabilities } from '@orvilo/shared-tool-ui';
 import type { ReadFileState } from '@orvilo/tool-runtime';
 import { cn } from 'cn';
@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import FileIcon from '@/components/FileIcon';
 import { InlineHtmlPreview, isHtmlFile } from '@/components/HtmlPreview';
+import Image, { PreviewGroup } from '@/components/Image';
 
 const styles = {
   actions:

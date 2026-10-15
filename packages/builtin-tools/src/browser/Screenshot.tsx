@@ -1,6 +1,7 @@
-import { Image } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import Image from '@/components/Image';
 
 import { resolveScreenshotSrc } from './screenshotSrc';
 import type { BrowserScreenshotState } from './types';

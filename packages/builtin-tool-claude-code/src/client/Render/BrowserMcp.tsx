@@ -1,11 +1,11 @@
 'use client';
 
-import { Image, PreviewGroup } from '@lobehub/ui';
 import type { BuiltinRender, BuiltinRenderProps } from '@orvilo/types';
 import { cn } from 'cn';
 import { Globe } from 'lucide-react';
 import { memo } from 'react';
 
+import Image, { PreviewGroup } from '@/components/Image';
 import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 
 import {

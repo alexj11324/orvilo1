@@ -27,7 +27,7 @@ const lockClient: EditLockClient = {
 
 /** Mount in a document-keyed native session. Shared useEditLock owns acquire,
  * heartbeat, release, network recovery and viewer fallback polling. */
-export function useNativePageCollaboration(documentId: string) {
+export function useNativePageCollaboration(documentId: string, metadataDirty = false) {
   const page = usePageDocumentMetadata(documentId);
   const { allowed: canEdit } = usePermission('edit_own_content');
   const collaborative = Boolean(page?.workspaceId && page.visibility !== 'private');
@@ -44,7 +44,7 @@ export function useNativePageCollaboration(documentId: string) {
   const lock = useEditLock({
     client: lockClient,
     enabled: collaborative,
-    isDirty: canEdit && canEditResource && isDirty,
+    isDirty: canEdit && canEditResource && (isDirty || metadataDirty),
     ownerId,
     pollWhileViewing: false,
     resourceId: documentId,

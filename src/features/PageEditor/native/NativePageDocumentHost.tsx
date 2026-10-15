@@ -23,6 +23,7 @@ export interface NativePageDocumentHostProps extends Omit<
   'content' | 'type' | 'editable' | 'onReady' | 'onChange' | 'onTextChange'
 > {
   autoSave?: boolean;
+  beforeSave?: () => Promise<void>;
   disabled?: boolean;
   documentId: string;
   /** Resolved permission + resource access + lock verdict, never default true. */
@@ -32,6 +33,8 @@ export interface NativePageDocumentHostProps extends Omit<
   /** Host chooses chrome; this module never imports the SDK PageEditorProvider. */
   header?: ReactNode;
   lockOwnerId?: string;
+  /** Metadata shares the existing leave guard; never mount a second blocker. */
+  metadataDirty?: boolean;
   onContentChange?: () => void;
   onInit?: (editor: NativeIEditorKernel) => void;
   /** Invoked only after a requested manual save actually leaves the doc clean. */
@@ -48,6 +51,8 @@ export function NativePageDocumentHost(props: NativePageDocumentHostProps) {
 
 function NativePageDocumentSession({
   documentId,
+  metadataDirty = false,
+  beforeSave,
   editable,
   disabled = false,
   lockOwnerId,
@@ -68,8 +73,8 @@ function NativePageDocumentSession({
     commands: EditorRuntimeCommandBindings;
   }>();
   const [hydrated, setHydrated] = useState(false);
-  const callbacks = useRef({ getTitle, setTitle, onInit, onContentChange, onSave });
-  callbacks.current = { getTitle, setTitle, onInit, onContentChange, onSave };
+  const callbacks = useRef({ getTitle, setTitle, onInit, onContentChange, onSave, beforeSave });
+  callbacks.current = { getTitle, setTitle, onInit, onContentChange, onSave, beforeSave };
   const hydrationVersion = useRef<string | undefined>(undefined);
   const lastPublishedJSON = useRef<string | undefined>(undefined);
   const hydrating = useRef(false);
@@ -165,6 +170,7 @@ function NativePageDocumentSession({
       if (!ready || !hydrated) return false;
       const state = useDocumentStore.getState();
       if (state.editor !== ready.editor || state.activeDocumentId !== documentId) return false;
+      await callbacks.current.beforeSave?.();
       await state.commitEditorMutation(documentId, { saveSource });
       const doc = useDocumentStore.getState().documents[documentId];
       const saved = !!doc && !doc.isDirty && !doc.saveBlockedByLock;
@@ -182,7 +188,7 @@ function NativePageDocumentSession({
     <>
       {header}
       <UnsavedChangesGuard
-        isDirty={isDirty}
+        isDirty={isDirty || metadataDirty}
         message={t('form.unsavedWarning', { ns: 'ui' })}
         onAutoSave={() => save('system')}
       />

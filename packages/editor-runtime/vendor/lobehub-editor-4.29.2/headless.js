@@ -12594,3 +12594,176 @@ export { MathInlineNode as NativeMathInlineNode, MathBlockNode as NativeMathBloc
 
 // Existing listener-owned command identities; never recreate command objects.
 export { INSERT_MENTION_COMMAND, UPDATE_LINK_TEXT_COMMAND, UNLINK_LINK_COMMAND };
+
+// Virtual block behavior from SDK 4.29.2, bound to this local closure's commands.
+//#region src/plugins/virtual-block/plugin/register.ts
+const nativeVirtualBlockLogger = createDebugLogger("plugin", "virtual-block");
+function nativeVirtualRootElement(node) {
+	let currentNode = node;
+	let parent = currentNode.getParent();
+	while (parent !== null && !$isRootOrShadowRoot(parent)) {
+		currentNode = parent;
+		parent = currentNode.getParent();
+	}
+	return currentNode;
+}
+function $isNativeVirtualEmptyNode(node) {
+	if (node.getChildrenSize() === 0) return true;
+	for (const child of node.getChildren()) if ($isTextNode(child)) {
+		if (child.getTextContent().trim().length > 0) return false;
+	} else if ($isElementNode(child)) {
+		if (!$isNativeVirtualEmptyNode(child)) return false;
+	} else return false;
+	return true;
+}
+function $getNativeVirtualListItem(selection) {
+	const focusNode = selection.focus.getNode();
+	const listNode = nativeVirtualRootElement(focusNode);
+	if (!$isListNode(listNode)) return null;
+	let current = focusNode;
+	while (current.getParent() !== listNode) {
+		const parent = current.getParent();
+		if (!parent || $isRootOrShadowRoot(parent)) return null;
+		current = parent;
+	}
+	if (!$isListItemNode(current)) return null;
+	return {
+		listItem: current,
+		listNode
+	};
+}
+function $isNativeVirtualListBoundary(selection, isBackward) {
+	if (!selection.isCollapsed()) return false;
+	const focusNode = selection.focus.getNode();
+	if ($isListNode(focusNode)) return isBackward ? selection.focus.offset === 0 : selection.focus.offset === focusNode.getChildrenSize();
+	const listContext = $getNativeVirtualListItem(selection);
+	if (!listContext) return false;
+	const { listItem } = listContext;
+	return isBackward ? !listItem.getPreviousSibling() : !listItem.getNextSibling();
+}
+function registerNativeVirtualBlockKeys(editor, kernel) {
+	let needRemoveOnFocusNode = null;
+	return mergeRegister(editor.registerUpdateListener((payload) => {
+		const { mutatedNodes } = payload;
+		if (needRemoveOnFocusNode) {
+			if (mutatedNodes?.get(ParagraphNode)?.get(needRemoveOnFocusNode.getKey()) === "destroyed") {
+				console.info("Virtual block node was removed externally", needRemoveOnFocusNode);
+				needRemoveOnFocusNode = null;
+				return;
+			}
+			editor.update(() => {
+				try {
+					const selection = $getSelection();
+					if ($isRangeSelection(selection)) {
+						const focusNode = selection.focus.getNode();
+						if (needRemoveOnFocusNode && !$closest(focusNode, (node) => node === needRemoveOnFocusNode)) {
+							if ($isNativeVirtualEmptyNode(needRemoveOnFocusNode)) {
+								nativeVirtualBlockLogger.info("Removing virtual block node after focus moved away", needRemoveOnFocusNode);
+								needRemoveOnFocusNode?.remove();
+								needRemoveOnFocusNode = null;
+							} else needRemoveOnFocusNode = null;
+							return;
+						}
+					} else if ($isNodeSelection(selection) && needRemoveOnFocusNode) {
+						if ($isNativeVirtualEmptyNode(needRemoveOnFocusNode)) {
+							needRemoveOnFocusNode?.remove();
+							needRemoveOnFocusNode = null;
+						} else needRemoveOnFocusNode = null;
+						return;
+					}
+				} catch (error) {
+					console.error("Error during virtual block cleanup", error);
+				}
+			});
+		}
+	}), kernel.registerHighCommand(KEY_ARROW_UP_COMMAND, (event) => {
+		const selection = $getSelection();
+		if (event.shiftKey) return false;
+		if ($isNodeSelection(selection)) {
+			const nodes = selection.getNodes();
+			if (nodes.length > 0) {
+				const elementNode = nativeVirtualRootElement(nodes[0]);
+				event.preventDefault();
+				const p = $createParagraphNode();
+				needRemoveOnFocusNode = p;
+				elementNode.insertBefore(p);
+				p.selectEnd();
+				return true;
+			}
+		} else if ($isRangeSelection(selection)) {
+			const possibleNode = nativeVirtualRootElement(selection.focus.getNode());
+			if (possibleNode === needRemoveOnFocusNode || $isNativeVirtualEmptyNode(possibleNode)) return false;
+			if ($isListNode(possibleNode) && !$isNativeVirtualListBoundary(selection, true)) return false;
+			if ($getRoot().getFirstChild() === possibleNode || $isDecoratorNode(possibleNode.getPreviousSibling())) {
+				event.preventDefault();
+				const p = $createParagraphNode();
+				possibleNode.insertBefore(p);
+				needRemoveOnFocusNode = p;
+				p.selectStart();
+				return true;
+			}
+		}
+		return false;
+	}, COMMAND_PRIORITY_NORMAL), kernel.registerHighCommand(KEY_ARROW_DOWN_COMMAND, (event) => {
+		const selection = $getSelection();
+		if ($isNodeSelection(selection)) {
+			const nodes = selection.getNodes();
+			if (nodes.length > 0) {
+				const node = nodes[0];
+				const blockNode = nativeVirtualRootElement(node);
+				event.preventDefault();
+				const p = $createParagraphNode();
+				needRemoveOnFocusNode = p;
+				blockNode.insertAfter(p);
+				p.selectStart();
+				return true;
+			}
+		} else if ($isRangeSelection(selection)) {
+			if (!selection.isCollapsed()) return false;
+			const possibleNode = nativeVirtualRootElement(selection.focus.getNode());
+			if (possibleNode === needRemoveOnFocusNode || $isNativeVirtualEmptyNode(possibleNode)) return false;
+			if ($isListNode(possibleNode) && !$isNativeVirtualListBoundary(selection, false)) return false;
+			if ($getRoot().getLastChild() === possibleNode) {
+				event.preventDefault();
+				const p = $createParagraphNode();
+				possibleNode.insertAfter(p);
+				needRemoveOnFocusNode = p;
+				p.selectStart();
+				return true;
+			}
+		}
+		return false;
+	}, COMMAND_PRIORITY_NORMAL), editor.registerCommand(SELECT_BEFORE_CODEMIRROR_COMMAND, (payload) => {
+		editor.update(() => {
+			const node = $getNodeByKey(payload.key);
+			if (!node) return;
+			const p = $createParagraphNode();
+			needRemoveOnFocusNode = p;
+			node.insertBefore(p);
+			p.selectEnd();
+			editor.focus();
+			return true;
+		});
+		return true;
+	}, COMMAND_PRIORITY_NORMAL), editor.registerCommand(SELECT_AFTER_CODEMIRROR_COMMAND, (payload) => {
+		editor.update(() => {
+			const node = $getNodeByKey(payload.key);
+			if (!node) return;
+			const p = $createParagraphNode();
+			needRemoveOnFocusNode = p;
+			node.insertAfter(p);
+			p.selectEnd();
+			editor.focus();
+			return true;
+		});
+		return true;
+	}, COMMAND_PRIORITY_NORMAL));
+}
+//#endregion
+
+class NativeVirtualBlockPlugin extends KernelPlugin {
+  static pluginName = "NativeVirtualBlockPlugin";
+  constructor(kernel, config) { super(); this.kernel = kernel; kernel.registerThemes({ virtualBlock: config?.theme || "" }); }
+  onInit(editor) { this.register(registerNativeVirtualBlockKeys(editor, this.kernel)); }
+}
+export { NativeVirtualBlockPlugin, ILitexmlService, IMarkdownShortCutService };

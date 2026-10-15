@@ -42,106 +42,111 @@ const styles = {
 };
 
 export interface HistoryListItemProps {
+  canRestore?: boolean;
   historyId: string;
   onCompare: (historyId: string) => void;
   onRestore: (historyId: string) => void;
 }
 
-export const HistoryListItem = memo<HistoryListItemProps>(({ historyId, onCompare, onRestore }) => {
-  const { t } = useTranslation(['common', 'file']);
-  const item = useHistoryItemsStore(historyItemSelectors.itemById(historyId));
-  const isRestoring = useHistoryItemsStore(historyItemSelectors.isRestoring(historyId));
-  const authorInfo = useAuthorInfo(item?.userId);
+export const HistoryListItem = memo<HistoryListItemProps>(
+  ({ canRestore = true, historyId, onCompare, onRestore }) => {
+    const { t } = useTranslation(['common', 'file']);
+    const item = useHistoryItemsStore(historyItemSelectors.itemById(historyId));
+    const isRestoring = useHistoryItemsStore(historyItemSelectors.isRestoring(historyId));
+    const authorInfo = useAuthorInfo(item?.userId);
 
-  const handleCompare = useEventCallback(() => {
-    onCompare(historyId);
-  });
+    const handleCompare = useEventCallback(() => {
+      onCompare(historyId);
+    });
 
-  const handleRestore = useEventCallback(() => {
-    onRestore(historyId);
-  });
+    const handleRestore = useEventCallback(() => {
+      onRestore(historyId);
+    });
 
-  const handleStopPropagation = useEventCallback((event: MouseEvent) => {
-    event.stopPropagation();
-  });
+    const handleStopPropagation = useEventCallback((event: MouseEvent) => {
+      event.stopPropagation();
+    });
 
-  if (!item) return null;
+    if (!item) return null;
 
-  const timeLabel = formatHistoryRowTime(item.savedAt);
-  const saveSourceLabel = t(`pageEditor.history.saveSource.${item.saveSource}`, { ns: 'file' });
+    const timeLabel = formatHistoryRowTime(item.savedAt);
+    const saveSourceLabel = t(`pageEditor.history.saveSource.${item.saveSource}`, { ns: 'file' });
 
-  return (
-    <div
-      {...clickableProps(!item.isCurrent)}
-      className={cn(styles.row, item.isCurrent && styles.rowCurrent, CLICKABLE_FOCUS_RING)}
-      onClick={item.isCurrent ? undefined : handleCompare}
-    >
-      <div className={cn('flex flex-col items-start gap-1', styles.rowMain)}>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <span className="inline-flex">
-                  <span className={cn(styles.rowTime, item.isCurrent && styles.rowTimeCurrent)}>
-                    {timeLabel}
+    return (
+      <div
+        {...clickableProps(!item.isCurrent)}
+        className={cn(styles.row, item.isCurrent && styles.rowCurrent, CLICKABLE_FOCUS_RING)}
+        onClick={item.isCurrent ? undefined : handleCompare}
+      >
+        <div className={cn('flex flex-col items-start gap-1', styles.rowMain)}>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span className="inline-flex">
+                    <span className={cn(styles.rowTime, item.isCurrent && styles.rowTimeCurrent)}>
+                      {timeLabel}
+                    </span>
                   </span>
-                </span>
-              }
-            />
-            <TooltipContent>{formatHistoryAbsoluteTime(item.savedAt)}</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <span className={styles.description}>
-          {authorInfo?.fullName ? `${authorInfo.fullName} · ` : ''}
-          {dayjs(item.savedAt).fromNow()}
-        </span>
-      </div>
+                }
+              />
+              <TooltipContent>{formatHistoryAbsoluteTime(item.savedAt)}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <span className={styles.description}>
+            {authorInfo?.fullName ? `${authorInfo.fullName} · ` : ''}
+            {dayjs(item.savedAt).fromNow()}
+          </span>
+        </div>
 
-      <div className={styles.rowRight}>
-        {item.isCurrent && (
-          <Badge
-            className={cn(styles.currentBadge, 'bg-transparent text-info-text')}
-            size="sm"
-            variant="secondary"
-          >
-            {t('pageEditor.history.current', { ns: 'file' })}
-          </Badge>
-        )}
+        <div className={styles.rowRight}>
+          {item.isCurrent && (
+            <Badge
+              className={cn(styles.currentBadge, 'bg-transparent text-info-text')}
+              size="sm"
+              variant="secondary"
+            >
+              {t('pageEditor.history.current', { ns: 'file' })}
+            </Badge>
+          )}
 
-        {!item.isCurrent && (
-          <Badge
-            size="sm"
-            variant="secondary"
-            className={cn(
-              styles.sourceTag,
-              'history-source-tag',
-              'bg-transparent',
-              SOURCE_TAG_CLASS[item.saveSource],
-            )}
-          >
-            {saveSourceLabel}
-          </Badge>
-        )}
-        {!item.isCurrent && (
-          <div className={cn(styles.actions, 'history-actions')} onClick={handleStopPropagation}>
-            <ActionIcon
-              icon={ArrowLeftRightIcon}
-              size={{ blockSize: 32, borderRadius: '50%', size: 16 }}
-              title={t('pageEditor.history.compare', { ns: 'file' })}
-              onClick={handleCompare}
-            />
-            <ActionIcon
-              icon={RotateCcwIcon}
-              loading={isRestoring}
-              size={{ blockSize: 32, borderRadius: '50%', size: 16 }}
-              title={t('pageEditor.history.restore', { ns: 'file' })}
-              onClick={handleRestore}
-            />
-          </div>
-        )}
+          {!item.isCurrent && (
+            <Badge
+              size="sm"
+              variant="secondary"
+              className={cn(
+                styles.sourceTag,
+                'history-source-tag',
+                'bg-transparent',
+                SOURCE_TAG_CLASS[item.saveSource],
+              )}
+            >
+              {saveSourceLabel}
+            </Badge>
+          )}
+          {!item.isCurrent && (
+            <div className={cn(styles.actions, 'history-actions')} onClick={handleStopPropagation}>
+              <ActionIcon
+                icon={ArrowLeftRightIcon}
+                size={{ blockSize: 32, borderRadius: '50%', size: 16 }}
+                title={t('pageEditor.history.compare', { ns: 'file' })}
+                onClick={handleCompare}
+              />
+              {canRestore && (
+                <ActionIcon
+                  icon={RotateCcwIcon}
+                  loading={isRestoring}
+                  size={{ blockSize: 32, borderRadius: '50%', size: 16 }}
+                  title={t('pageEditor.history.restore', { ns: 'file' })}
+                  onClick={handleRestore}
+                />
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 HistoryListItem.displayName = 'HistoryListItem';

@@ -1,0 +1,112 @@
+'use client';
+
+import { cn } from 'cn';
+import type { SerializedEditorState } from 'lexical';
+import { GitCompareArrowsIcon } from 'lucide-react';
+import { memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import CircleLoading from '@/components/Loading/CircleLoading';
+import { NativeHistoryDiff, type NativeHistoryDiffProps } from '@/components/NativeHistoryDiff';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
+import { useClientDataSWR } from '@/libs/swr';
+import type { CompareHistoryItemsOutput } from '@/server/routers/lambda/_schema/documentHistory';
+import { documentService } from '@/services/document';
+import { useDocumentStore } from '@/store/document';
+import { editorSelectors } from '@/store/document/slices/editor';
+
+const styles = {
+  container: 'flex min-h-0 flex-1 flex-col overflow-hidden bg-card',
+  content: 'min-h-0 flex-1 overflow-auto',
+  empty: 'p-6',
+};
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isSerializedEditorState = (value: unknown): value is SerializedEditorState =>
+  isObject(value) && isObject(value.root) && Array.isArray(value.root.children);
+
+const isSerializedRootNode = (value: unknown): value is SerializedEditorState['root'] =>
+  isObject(value) && value.type === 'root' && Array.isArray(value.children);
+
+const normalizeEditorState = (value: unknown): SerializedEditorState | null => {
+  if (isSerializedEditorState(value)) return value;
+  if (isSerializedRootNode(value)) return { root: value };
+
+  return null;
+};
+
+interface NativeDocumentHistoryDiffProps extends Pick<
+  NativeHistoryDiffProps,
+  'widgets' | 'plugins'
+> {
+  documentId: string;
+  historyId: string;
+}
+
+export const NativeDocumentHistoryDiff = memo<NativeDocumentHistoryDiffProps>(
+  ({ documentId, historyId, widgets, plugins }) => {
+    const { t } = useTranslation('file');
+    const lastUpdatedTime = useDocumentStore(
+      (s) => editorSelectors.lastUpdatedTime(documentId)(s) ?? null,
+    );
+
+    const { data, error, isLoading } = useClientDataSWR<CompareHistoryItemsOutput>(
+      ['page-editor-document-history-compare', documentId, historyId, lastUpdatedTime],
+      async () =>
+        documentService.compareDocumentHistoryItems({
+          documentId,
+          fromHistoryId: 'head',
+          toHistoryId: historyId,
+        }),
+    );
+
+    const labels = useMemo<NativeHistoryDiffProps['labels']>(
+      () => ({
+        new: t('pageEditor.history.compareOldLabel'),
+        old: t('pageEditor.history.compareCurrentLabel'),
+      }),
+      [t],
+    );
+    const normalizedValues = useMemo(() => {
+      const oldValue = normalizeEditorState(data?.from.editorData);
+      const newValue = normalizeEditorState(data?.to.editorData);
+
+      return { newValue, oldValue };
+    }, [data?.from.editorData, data?.to.editorData]);
+
+    return (
+      <div className={cn('flex flex-col flex-1 gap-0', styles.container)}>
+        {isLoading && !data ? (
+          <div className={cn('flex flex-col items-center justify-center', styles.empty)}>
+            <CircleLoading />
+          </div>
+        ) : error || !data || !normalizedValues.oldValue || !normalizedValues.newValue ? (
+          <div className={cn('flex flex-col items-center justify-center', styles.empty)}>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <GitCompareArrowsIcon />
+                </EmptyMedia>
+                <EmptyDescription>{t('pageEditor.history.compareError')}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </div>
+        ) : (
+          <div className={styles.content}>
+            <NativeHistoryDiff
+              labels={labels}
+              newValue={normalizedValues.newValue}
+              oldValue={normalizedValues.oldValue}
+              plugins={plugins}
+              widgets={widgets}
+            />
+          </div>
+        )}
+      </div>
+    );
+  },
+);
+
+NativeDocumentHistoryDiff.displayName = 'NativeDocumentHistoryDiff';

@@ -9,6 +9,7 @@
 export type {
   HostAttachmentPickOptions,
   HostDialogPort,
+  HostDocumentPort,
   HostFolderPick,
   HostLocalResourceRef,
   HostMenuPort,

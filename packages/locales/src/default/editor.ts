@@ -1,4 +1,7 @@
 export default {
+  'nativeCopilot.selectionTitle': 'Document selection',
+  'nativeCopilot.openFailed':
+    'Could not open the page conversation. Your selection is kept in the composer context.',
   'nativeImage.remove': 'Remove image',
   'nativeImage.preview': 'Preview image',
   'nativeImage.edit': 'Edit image URL',

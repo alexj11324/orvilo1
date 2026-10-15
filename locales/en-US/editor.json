@@ -55,6 +55,8 @@
   "modifier.acceptAll": "Keep All",
   "modifier.reject": "Revert",
   "modifier.rejectAll": "Revert All",
+  "nativeCopilot.openFailed": "Could not open the page conversation. Your selection is kept in the composer context.",
+  "nativeCopilot.selectionTitle": "Document selection",
   "nativeDocument.unavailableWithEdits": "This document is unavailable. Your unsaved edits remain open for copying or recovery.",
   "nativeImage.edit": "Edit image URL",
   "nativeImage.invalidUrl": "Enter a valid image URL.",

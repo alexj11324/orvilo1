@@ -2,12 +2,15 @@ import type { HostCapability, HostContext, HostKind } from '@orvilo/types';
 import { deviceOperationError, deviceOperationOk } from '@orvilo/types';
 
 import { autoUpdateService } from '@/services/electron/autoUpdate';
+import { desktopExportService } from '@/services/electron/desktopExportService';
 import { desktopNotificationService } from '@/services/electron/desktopNotification';
 import { gatewayConnectionService } from '@/services/electron/gatewayConnection';
 import { electronOpenInAppService } from '@/services/electron/openInApp';
 import { desktopSettingsService } from '@/services/electron/settings';
 import { electronSystemService } from '@/services/electron/system';
 import { desktopTrayService } from '@/services/electron/tray';
+import { getElectronStoreState } from '@/store/electron';
+import { electronSyncSelectors } from '@/store/electron/selectors';
 
 import { pickFilesViaDomInput } from './domFilePick';
 import type { HostLocalResourceRef, HostPort } from './host';
@@ -26,7 +29,9 @@ const DESKTOP_CAPABILITIES: ReadonlySet<HostCapability> = new Set([
   'app.update',
   'dialog.openFile',
   'file.pickAttachment',
+  'file.exportText',
   'link.openExternal',
+  'link.resolvePublic',
   'menu.native',
   'notification.native',
   'shell.openTerminal',
@@ -81,6 +86,13 @@ export const createDesktopHostPort = (
     dialog: {
       pickAttachments: (options) => pickFilesViaDomInput(options),
       selectFolder: (params) => electronSystemService.selectFolder(params),
+    },
+    document: {
+      exportMarkdown: (options) => desktopExportService.exportMarkdown(options),
+      resolveLink: (pathname) =>
+        Promise.resolve(
+          `${electronSyncSelectors.remoteServerUrl(getElectronStoreState())}${pathname}`,
+        ),
     },
     ensureLocalDeviceId,
     has: (capability) => DESKTOP_CAPABILITIES.has(capability),

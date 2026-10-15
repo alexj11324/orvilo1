@@ -136,9 +136,19 @@ export interface HostTrayPort {
   updateNavigationSnapshot: (snapshot: TrayNavigationSnapshot) => Promise<HostResult<void>>;
 }
 
+export interface HostDocumentPort {
+  exportMarkdown: (options: {
+    content: string;
+    fileName: string;
+  }) => Promise<HostResult<{ canceled: boolean; filePath?: string }>>;
+  /** The host selects its public origin; callers supply the product pathname. */
+  resolveLink: (pathname: string) => Promise<HostResult<string>>;
+}
+
 export interface HostPort {
   readonly context: HostContext;
   readonly dialog: HostDialogPort;
+  readonly document: HostDocumentPort;
   /**
    * This shell's machine identity after the device handshake: present only on
    * a Desktop whose own machine is a registered device. It is a "this
@@ -222,6 +232,10 @@ const createUnsupportedHost = (): HostPort => ({
   dialog: {
     pickAttachments: () => unsupported('file.pickAttachment'),
     selectFolder: () => unsupported('dialog.openFile'),
+  },
+  document: {
+    exportMarkdown: () => unsupported('file.exportText'),
+    resolveLink: () => unsupported('link.resolvePublic'),
   },
   ensureLocalDeviceId: () => Promise.resolve(undefined),
   has: () => false,

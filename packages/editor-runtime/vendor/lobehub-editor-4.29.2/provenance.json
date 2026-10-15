@@ -15,11 +15,12 @@
     "installedSource": "@lobehub/editor@4.29.2/es/headless.d.ts",
     "sha256": "5e5a95fba2372a121b9f4fdac95a9c141d49088d1aecf5220a9bdaa75477dc7e",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/headless.d.ts",
-    "transform": "original bytes preserved except trailing newline normalization; appended owned browser/CM identity exports or declarations only; append native upload plugin and actual command declarations; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only",
+    "transform": "original bytes preserved except trailing newline normalization; appended owned browser/CM identity exports or declarations only; append native upload plugin and actual command declarations; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only; native chat companion: exports actual local LiteXML/Markdown service IDs; JS appends namespaced SDK virtual-block key behavior using existing local closure symbols",
     "localSHA256": "4e65ee38c4c4cb4ba59d31f4d956fe044db0ab9bfeb25832b66e8cde9a99fb24",
     "mathCompanionBeforeSHA256": "27763c5ef4b282845554f970a0b73810656240837bf9f22372b5910944553551",
-    "ownedSHA256": "4e65ee38c4c4cb4ba59d31f4d956fe044db0ab9bfeb25832b66e8cde9a99fb24",
-    "linkMentionCompanionBeforeSHA256": "849bc90352766b475f559d70a9c18be591eb84c7d8432e31abe503bca54e2516"
+    "ownedSHA256": "b3abcd43d9189fc6ae3d344a756ec949a828927b4edf4dd755e7220a0dac2549",
+    "linkMentionCompanionBeforeSHA256": "849bc90352766b475f559d70a9c18be591eb84c7d8432e31abe503bca54e2516",
+    "nativeChatBeforeSHA256": "4e65ee38c4c4cb4ba59d31f4d956fe044db0ab9bfeb25832b66e8cde9a99fb24"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/common/node/node-id.d.ts",
@@ -44,11 +45,12 @@
     "installedSource": "@lobehub/editor@4.29.2/es/headless.js",
     "sha256": "119c4f3b9075380ebcd8af05f74963351167f59c04dbb69f305b70123d3b692f",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/headless.js",
-    "transform": "original bytes preserved except trailing newline normalization; appended owned browser/CM identity exports or declarations only; append original installed UploadService/UploadPlugin/getDragSelection closure with same existing kernel/service identities; add live readonly guards for file/image/drop/paste and post-decode insertion; append existing upload command object exports; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only",
+    "transform": "original bytes preserved except trailing newline normalization; appended owned browser/CM identity exports or declarations only; append original installed UploadService/UploadPlugin/getDragSelection closure with same existing kernel/service identities; add live readonly guards for file/image/drop/paste and post-decode insertion; append existing upload command object exports; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only; native chat companion: exports actual local LiteXML/Markdown service IDs; JS appends namespaced SDK virtual-block key behavior using existing local closure symbols",
     "localSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3",
     "mathCompanionBeforeSHA256": "af6f3d93ce9fb6827526766116164bb9b553de5523332aee1ea81c722c4d5392",
-    "ownedSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3",
-    "linkMentionCompanionBeforeSHA256": "8dd905970751aa327b43c0f4dd5976c75c4bb36ca4045b75e451c385b43bb762"
+    "ownedSHA256": "ee074368c1c3060357ea294ba2d42b8b546b98a76921104acfb6d0d8e181fe81",
+    "linkMentionCompanionBeforeSHA256": "8dd905970751aa327b43c0f4dd5976c75c4bb36ca4045b75e451c385b43bb762",
+    "nativeChatBeforeSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/common/service/i-node-identity-service.js",
@@ -133,29 +135,38 @@
     "sha256": "fa66648922642da4363d43b5e182bb10fb063448c583bcdf4d065b3db07560dc",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/headless.js",
     "localSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3",
-    "transform": "append implementation region only; module imports rewired to existing lexical/rich-text dependencies and existing SAME IUploadService/KernelPlugin; original genServiceId declaration deliberately omitted; live lexical.isEditable guard added to upload command callbacks; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only",
+    "transform": "append implementation region only; module imports rewired to existing lexical/rich-text dependencies and existing SAME IUploadService/KernelPlugin; original genServiceId declaration deliberately omitted; live lexical.isEditable guard added to upload command callbacks; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only; native chat companion: exports actual local LiteXML/Markdown service IDs; JS appends namespaced SDK virtual-block key behavior using existing local closure symbols",
     "mathCompanionBeforeSHA256": "af6f3d93ce9fb6827526766116164bb9b553de5523332aee1ea81c722c4d5392",
-    "ownedSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3",
-    "linkMentionCompanionBeforeSHA256": "8dd905970751aa327b43c0f4dd5976c75c4bb36ca4045b75e451c385b43bb762"
+    "ownedSHA256": "ee074368c1c3060357ea294ba2d42b8b546b98a76921104acfb6d0d8e181fe81",
+    "linkMentionCompanionBeforeSHA256": "8dd905970751aa327b43c0f4dd5976c75c4bb36ca4045b75e451c385b43bb762",
+    "nativeChatBeforeSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/upload/utils/index.js",
     "sha256": "70be6e025d5de4a4d7f175359602f479feeceb988e0ef605594985856786df5b",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/headless.js",
     "localSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3",
-    "transform": "append implementation region only; module imports rewired to existing lexical/rich-text dependencies and existing SAME IUploadService/KernelPlugin; original genServiceId declaration deliberately omitted; live lexical.isEditable guard added to upload command callbacks; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only",
+    "transform": "append implementation region only; module imports rewired to existing lexical/rich-text dependencies and existing SAME IUploadService/KernelPlugin; original genServiceId declaration deliberately omitted; live lexical.isEditable guard added to upload command callbacks; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only; native chat companion: exports actual local LiteXML/Markdown service IDs; JS appends namespaced SDK virtual-block key behavior using existing local closure symbols",
     "mathCompanionBeforeSHA256": "af6f3d93ce9fb6827526766116164bb9b553de5523332aee1ea81c722c4d5392",
-    "ownedSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3",
-    "linkMentionCompanionBeforeSHA256": "8dd905970751aa327b43c0f4dd5976c75c4bb36ca4045b75e451c385b43bb762"
+    "ownedSHA256": "ee074368c1c3060357ea294ba2d42b8b546b98a76921104acfb6d0d8e181fe81",
+    "linkMentionCompanionBeforeSHA256": "8dd905970751aa327b43c0f4dd5976c75c4bb36ca4045b75e451c385b43bb762",
+    "nativeChatBeforeSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3"
   },
   {
     "installedSource": "@lobehub/editor@4.29.2/es/plugins/upload/plugin/index.js",
     "sha256": "4abda5282484adf805469aff7080564d80a27e219c5baefbe55873f7fd789788",
     "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/headless.js",
     "localSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3",
-    "transform": "append implementation region only; module imports rewired to existing lexical/rich-text dependencies and existing SAME IUploadService/KernelPlugin; original genServiceId declaration deliberately omitted; live lexical.isEditable guard added to upload command callbacks; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only",
+    "transform": "append implementation region only; module imports rewired to existing lexical/rich-text dependencies and existing SAME IUploadService/KernelPlugin; original genServiceId declaration deliberately omitted; live lexical.isEditable guard added to upload command callbacks; owned math identity export companion: appended actual MathInlineNode/MathBlockNode runtime exports and matching declaration classes; existing browser/code/media upload exports and guards preserved; append existing INSERT_MENTION_COMMAND/UPDATE_LINK_TEXT_COMMAND/UNLINK_LINK_COMMAND identities or exact declarations only; native chat companion: exports actual local LiteXML/Markdown service IDs; JS appends namespaced SDK virtual-block key behavior using existing local closure symbols",
     "mathCompanionBeforeSHA256": "af6f3d93ce9fb6827526766116164bb9b553de5523332aee1ea81c722c4d5392",
-    "ownedSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3",
-    "linkMentionCompanionBeforeSHA256": "8dd905970751aa327b43c0f4dd5976c75c4bb36ca4045b75e451c385b43bb762"
+    "ownedSHA256": "ee074368c1c3060357ea294ba2d42b8b546b98a76921104acfb6d0d8e181fe81",
+    "linkMentionCompanionBeforeSHA256": "8dd905970751aa327b43c0f4dd5976c75c4bb36ca4045b75e451c385b43bb762",
+    "nativeChatBeforeSHA256": "d3de094c68d023c6ca310eb08ce0c9152a637d5995f7942c9737195a57d209c3"
+  },
+  {
+    "installedSource": "@lobehub/editor@4.29.2/es/plugins/virtual-block/plugin/register.js",
+    "sha256": "a5e888bcb9c47327f96d8465ef739baa1eaad637533c11498553be16af572d07",
+    "target": "packages/editor-runtime/vendor/lobehub-editor-4.29.2/headless.js",
+    "transform": "append namespaced functions; remove standalone imports/init/exports; bind existing local lexical/list/utils/debug/commands; preserve bodies"
   }
 ]

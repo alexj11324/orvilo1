@@ -1,93 +1,9 @@
-import { isChatGroupSessionId } from '@orvilo/types';
-import { memo, useCallback, useMemo } from 'react';
-
-import DragUploadZone, { useUploadFiles } from '@/components/DragUploadZone';
-import { actionMap } from '@/features/ChatInput/ActionBar/config';
-import { ActionBarContext } from '@/features/ChatInput/ActionBar/context';
-import {
-  COMPACT_ACTION_BAR_CONTEXT,
-  COMPACT_ACTION_BAR_STYLE,
-  COMPACT_SEND_BUTTON_PROPS,
-} from '@/features/ChatInput/compactPreset';
-import {
-  ChatInput,
-  ChatList,
-  conversationSelectors,
-  useConversationStore,
-} from '@/features/Conversation';
-import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors } from '@/store/agent/selectors';
+'use client';
 
 import { usePageLockedByOther } from '../usePageLockedByOther';
-import AgentSelectorAction from './AgentSelector/AgentSelectorAction';
-import CopilotToolbar from './Toolbar';
-import Welcome from './Welcome';
+import PageCopilotConversationBody from './ConversationBody';
 
-const Search = actionMap['search'];
-
-const EMPTY_LEFT_ACTIONS: [] = [];
-
-const Conversation = memo(() => {
-  const [setActiveAgentId, useFetchAgentConfig] = useAgentStore((s) => [
-    s.setActiveAgentId,
-    s.useFetchAgentConfig,
-  ]);
-  const currentAgentId = useConversationStore(conversationSelectors.agentId);
-
-  useFetchAgentConfig(true, currentAgentId);
-
-  const model = useAgentStore((s) => agentByIdSelectors.getAgentModelById(currentAgentId)(s));
-  const provider = useAgentStore((s) =>
-    agentByIdSelectors.getAgentModelProviderById(currentAgentId)(s),
-  );
-  const { handleUploadFiles } = useUploadFiles({ agentId: currentAgentId, model, provider });
-
-  const handleAgentChange = useCallback(
-    (id: string) => {
-      if (!id || id === currentAgentId || isChatGroupSessionId(id)) return;
-      setActiveAgentId(id);
-    },
-    [currentAgentId, setActiveAgentId],
-  );
-
-  const leftContent = useMemo(
-    () => (
-      <ActionBarContext value={COMPACT_ACTION_BAR_CONTEXT}>
-        <div className="flex items-center gap-0.5">
-          <AgentSelectorAction onAgentChange={handleAgentChange} />
-          <Search />
-        </div>
-      </ActionBarContext>
-    ),
-    [handleAgentChange],
-  );
-
-  // Another member holds the page edit lock → the agent's edits can't be saved,
-  // so block sending until the lock clears. The body LockedAlert explains why.
+export default function Conversation() {
   const lockedByOther = usePageLockedByOther();
-
-  return (
-    <DragUploadZone
-      style={{ flex: 1, height: '100%', minWidth: 300 }}
-      onUploadFiles={handleUploadFiles}
-    >
-      <div className="flex flex-col flex-1" style={{ height: '100%' }}>
-        <CopilotToolbar />
-        <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
-          <ChatList welcome={<Welcome />} />
-        </div>
-        <ChatInput
-          actionBarStyle={COMPACT_ACTION_BAR_STYLE}
-          allowExpand={false}
-          disableSend={lockedByOther}
-          leftActions={EMPTY_LEFT_ACTIONS}
-          leftContent={leftContent}
-          sendButtonProps={COMPACT_SEND_BUTTON_PROPS}
-          showControlBar={false}
-        />
-      </div>
-    </DragUploadZone>
-  );
-});
-
-export default Conversation;
+  return <PageCopilotConversationBody lockedByOther={lockedByOther} />;
+}

@@ -55,6 +55,8 @@
   "modifier.acceptAll": "全部保留",
   "modifier.reject": "撤销",
   "modifier.rejectAll": "全部撤销",
+  "nativeCopilot.openFailed": "无法打开页面对话。选区已保留在输入框上下文中。",
+  "nativeCopilot.selectionTitle": "文档选区",
   "nativeDocument.unavailableWithEdits": "文档暂不可用。未保存的修改仍保留在编辑器中，可复制或恢复。",
   "nativeImage.edit": "编辑图片链接",
   "nativeImage.invalidUrl": "请输入有效的图片链接。",

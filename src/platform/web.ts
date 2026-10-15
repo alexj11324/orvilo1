@@ -7,7 +7,9 @@ import { hostPortUnsupported } from './host';
 
 const WEB_CAPABILITIES: ReadonlySet<HostCapability> = new Set([
   'file.pickAttachment',
+  'file.exportText',
   'link.openExternal',
+  'link.resolvePublic',
 ]);
 
 const webContext = (kind: HostKind): HostContext => ({
@@ -28,6 +30,23 @@ export const createWebHostPort = (
   dialog: {
     pickAttachments: (options) => pickFilesViaDomInput(options),
     selectFolder: () => Promise.resolve(hostUnsupported('dialog.openFile')),
+  },
+  document: {
+    exportMarkdown: async ({ content, fileName }) => {
+      const url = URL.createObjectURL(new Blob([content], { type: 'text/markdown' }));
+      const anchor = document.createElement('a');
+      try {
+        anchor.href = url;
+        anchor.download = fileName;
+        document.body.append(anchor);
+        anchor.click();
+        return { canceled: false };
+      } finally {
+        anchor.remove();
+        URL.revokeObjectURL(url);
+      }
+    },
+    resolveLink: (pathname) => Promise.resolve(`${window.location.origin}${pathname}`),
   },
   ensureLocalDeviceId: () => Promise.resolve(undefined),
   has: (capability) => WEB_CAPABILITIES.has(capability),

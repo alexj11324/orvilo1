@@ -42,6 +42,11 @@ export {
   INSERT_IMAGE_COMMAND,
   UploadPlugin,
 } from '../../vendor/lobehub-editor-4.29.2/headless.js';
+export {
+  ILitexmlService,
+  IMarkdownShortCutService,
+  NativeVirtualBlockPlugin,
+} from '../../vendor/lobehub-editor-4.29.2/headless.js';
 export type {
   IEditorKernel as NativeIEditorKernel,
   IPlugin as NativeIPlugin,
@@ -52,6 +57,11 @@ export {
   LITEXML_DIFFNODE_COMMAND,
 } from '../../vendor/lobehub-editor-4.29.2/plugins/litexml/command/symbols.js';
 export { nativeEditorRuntimeCommands } from './runtimeCommands';
+export {
+  $generateJSONFromSelectedNodes,
+  $generateNodesFromSerializedNodes,
+  $insertGeneratedNodes,
+} from '@lexical/clipboard';
 export {
   INSERT_ORDERED_LIST_COMMAND,
   INSERT_UNORDERED_LIST_COMMAND,

@@ -1,0 +1,6 @@
+{
+  "source": "@lobehub/editor@4.29.2/es/renderer/diff/compute.js",
+  "upstreamSHA256": "f0ed448768483b70b0272d7f270548ae620088216d6d75e43fd3d7af115a4647",
+  "transform": "Only two inline diff background roles map to approved semantic destructive-wash/success-wash; all structural alignment/text diff algorithms unchanged",
+  "localSHA256": "a461fe72570f3e523ea070f3a48b4cbb69c21e51715aa93b865d002af7c21590"
+}

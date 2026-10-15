@@ -25,8 +25,12 @@ export type HostCapability =
   | 'dialog.openFile'
   /** Open an attachment picker (any host; browser uses user-authorized picks). */
   | 'file.pickAttachment'
+  /** Export renderer-supplied text through the host's save surface. */
+  | 'file.exportText'
   /** Open an OS-level external link handler. */
   | 'link.openExternal'
+  /** Resolve a product route against the host's public server origin. */
+  | 'link.resolvePublic'
   /** Native application menus / context menus. */
   | 'menu.native'
   /** Native OS notifications (not web Notification API). */

@@ -31,7 +31,7 @@ function NativeCollaborativeSession({
   ...props
 }: NativeCollaborativePageDocumentHostProps) {
   const { t } = useTranslation('file');
-  const session = useNativePageCollaboration(documentId);
+  const session = useNativePageCollaboration(documentId, props.metadataDirty);
   const [editor, setEditor] = useState<NativeIEditorKernel>();
   useNativePageDraft({
     documentId,

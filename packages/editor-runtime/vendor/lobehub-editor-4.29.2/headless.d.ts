@@ -178,3 +178,8 @@ export declare class NativeMathBlockNode extends DecoratorNode<unknown> {
 export declare const INSERT_MENTION_COMMAND: import("lexical").LexicalCommand<{ label: string; metadata?: Record<string, unknown> }>;
 export declare const UPDATE_LINK_TEXT_COMMAND: import("lexical").LexicalCommand<{ key: string; text: string }>;
 export declare const UNLINK_LINK_COMMAND: import("lexical").LexicalCommand<{ key: string }>;
+
+/** Actual local service IDs; SDK is a declaration-only contract during migration. */
+export declare const ILitexmlService: typeof import("@lobehub/editor").ILitexmlService;
+export declare const IMarkdownShortCutService: typeof import("@lobehub/editor").IMarkdownShortCutService;
+export declare const NativeVirtualBlockPlugin: IEditorPluginConstructor<Record<string, unknown>>;

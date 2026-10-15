@@ -3,7 +3,7 @@
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { RotateCcwIcon } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { memo, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
@@ -13,7 +13,6 @@ import type {
   DocumentHistorySaveSource,
 } from '@/server/routers/lambda/_schema/documentHistory';
 
-import DocumentHistoryDiff from '../DocumentHistoryDiff';
 import { formatHistoryAbsoluteTime } from '../formatHistoryDate';
 import HistorySidebar from './HistorySidebar';
 
@@ -30,16 +29,32 @@ const styles = {
   root: 'flex h-full w-full overflow-hidden bg-card',
 };
 
+export type DocumentHistoryDiffRenderer = (props: {
+  documentId: string;
+  historyId: string;
+}) => ReactNode;
+
 export interface CompareContentProps {
+  canRestore?: boolean;
   documentId: string;
   initialHistoryId: string;
   items: DocumentHistoryListItem[];
   onRestore: (item: DocumentHistoryListItem) => void;
+  /** Explicit rich renderer; native callers never fall back to the SDK. */
+  renderDiff: DocumentHistoryDiffRenderer;
   saveSourceLabels: Record<DocumentHistorySaveSource, string>;
 }
 
 const CompareContent = memo<CompareContentProps>(
-  ({ documentId, initialHistoryId, items, onRestore, saveSourceLabels }) => {
+  ({
+    canRestore: allowRestore = true,
+    documentId,
+    initialHistoryId,
+    items,
+    onRestore,
+    renderDiff,
+    saveSourceLabels,
+  }) => {
     const { t } = useTranslation('file');
 
     const [selectedHistoryId, setSelectedHistoryId] = useState<string>(initialHistoryId);
@@ -53,7 +68,7 @@ const CompareContent = memo<CompareContentProps>(
 
     if (!selectedItem) return null;
 
-    const canRestore = !selectedItem.isCurrent;
+    const canRestore = allowRestore && !selectedItem.isCurrent;
 
     return (
       <div className={styles.root}>
@@ -92,7 +107,7 @@ const CompareContent = memo<CompareContentProps>(
             )}
           </div>
           <div className={styles.diffBody}>
-            <DocumentHistoryDiff documentId={documentId} historyId={selectedItem.id} />
+            {renderDiff({ documentId, historyId: selectedItem.id })}
           </div>
         </div>
         <HistorySidebar

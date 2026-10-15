@@ -2371,6 +2371,76 @@ describe('TaskModel', () => {
       expect(comments[0].content).toBe('First');
       expect(comments[2].content).toBe('Third');
     });
+
+    it('threads replies one level deep and cascades them with the root', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Test' });
+
+      const root = await model.addComment({
+        authorUserId: userId,
+        content: 'Root',
+        taskId: task.id,
+        userId,
+      });
+      const reply = await model.addComment({
+        authorUserId: userId,
+        content: 'Reply',
+        parentCommentId: root.id,
+        taskId: task.id,
+        userId,
+      });
+      // A reply to a reply reattaches to the thread root: the feed nests a
+      // single level, so the model never stores a deeper parent.
+      const nested = await model.addComment({
+        authorUserId: userId,
+        content: 'Nested reply',
+        parentCommentId: reply.id,
+        taskId: task.id,
+        userId,
+      });
+
+      expect(reply.parentCommentId).toBe(root.id);
+      expect(nested.parentCommentId).toBe(root.id);
+      const comments = await model.getComments(task.id);
+      expect(comments).toHaveLength(3);
+      expect(comments.find((c) => c.id === reply.id)?.parentCommentId).toBe(root.id);
+
+      // Deleting the thread root takes its replies with it.
+      await model.deleteComment(root.id);
+      expect(await model.getComments(task.id)).toHaveLength(0);
+    });
+
+    it('rejects a reply aimed at a comment on a different issue', async () => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Threaded' });
+      const other = await model.create({ instruction: 'Other' });
+      const foreign = await model.addComment({
+        authorUserId: userId,
+        content: 'Foreign root',
+        taskId: other.id,
+        userId,
+      });
+
+      await expect(
+        model.addComment({
+          authorUserId: userId,
+          content: 'Cross-issue reply',
+          parentCommentId: foreign.id,
+          taskId: task.id,
+          userId,
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      await expect(
+        model.addComment({
+          authorUserId: userId,
+          content: 'Ghost reply',
+          parentCommentId: 'cmt_missing',
+          taskId: task.id,
+          userId,
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      expect(await model.getComments(task.id)).toHaveLength(0);
+    });
   });
 
   describe('completion time', () => {

@@ -1023,6 +1023,7 @@ export const taskRouter = router({
         content: z.string().min(1),
         editorData: z.unknown().optional(),
         id: z.string(),
+        parentCommentId: z.string().optional(),
         topicId: z.string().optional(),
       }),
     )
@@ -1048,6 +1049,7 @@ export const taskRouter = router({
           briefId: input.briefId,
           content: input.content,
           editorData: input.editorData as never,
+          parentCommentId: input.parentCommentId,
           taskId: task.id,
           topicId: input.topicId,
           userId: ctx.userId,

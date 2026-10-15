@@ -27,6 +27,7 @@ import type {
 } from '@orvilo/types';
 import { isNotNull, isNull, sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   boolean,
   check,
   date,
@@ -651,6 +652,15 @@ export const taskComments = pgTable(
     // Optional references
     briefId: text('brief_id').references(() => briefs.id, { onDelete: 'set null' }),
     topicId: text('topic_id').references(() => topics.id, { onDelete: 'set null' }),
+    /**
+     * Comment this one replies to — Linear-style one-level threads. Always
+     * points at the thread root: `TaskModel.addComment` rewrites a
+     * reply-to-reply onto the root so feeds never have to nest deeper.
+     * Deleting the parent takes its replies with it.
+     */
+    parentCommentId: text('parent_comment_id').references((): AnyPgColumn => taskComments.id, {
+      onDelete: 'cascade',
+    }),
 
     // Mirror of parent task's visibility. Same cascade contract as the other
     // task-child tables (`task_dependencies` / `task_documents` / `task_topics`).
@@ -670,6 +680,7 @@ export const taskComments = pgTable(
     index('task_comments_agent_id_idx').on(t.authorAgentId),
     index('task_comments_brief_id_idx').on(t.briefId),
     index('task_comments_topic_id_idx').on(t.topicId),
+    index('task_comments_parent_comment_id_idx').on(t.parentCommentId),
     index('task_comments_workspace_id_idx').on(t.workspaceId),
     index('task_comments_workspace_visibility_idx').on(t.workspaceId, t.visibility, t.userId),
   ],

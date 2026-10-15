@@ -53,7 +53,8 @@ import { filterActivitiesForFeed, isLinkedCommentActivity } from './activityFeed
 import { resolveAssignmentActivityCopy } from './assignmentActivityCopy';
 import CommentCard from './CommentCard';
 import { commentComposerKey } from './commentComposerKey';
-import CommentInput from './CommentInput';
+import CommentInput, { type CommentReplyTarget } from './CommentInput';
+import { splitCommentThreads } from './commentThreads';
 import IssueSubscribeToggle from './IssueSubscribeToggle';
 import PropertyChangeSentence from './PropertyChangeSentence';
 import TaskBriefCard from './TaskBriefCard';
@@ -489,24 +490,49 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
     if (activeTaskId) await refreshTaskDetail(activeTaskId);
   }, [activeTaskId, refreshTaskDetail]);
 
-  const items = useMemo(
-    () =>
-      // Linear's issue feed is one unified timeline — no filter UI, so this
-      // always runs 'all' and every activity renders. The helper stays as the
-      // tested seam: it still encodes that a deep-linked comment passes
-      // through whatever filter is active.
-      filterActivitiesForFeed(activities, 'all', hash)
+  /**
+   * The comment the composer is replying to. The target is always the thread
+   * root — the feed nests a single level, so reply-to-reply still lands on
+   * the same thread (the model normalizes the same way).
+   */
+  const [replyTarget, setReplyTarget] = useState<CommentReplyTarget | null>(null);
+  const handleReply = useCallback((activity: TaskDetailActivity) => {
+    const commentId = activity.parentCommentId ?? activity.id;
+    if (!commentId) return;
+    setReplyTarget({ authorName: activity.author?.name ?? null, commentId });
+    document.getElementById('task-comment-composer')?.scrollIntoView({ block: 'center' });
+  }, []);
+  const clearReplyTarget = useCallback(() => setReplyTarget(null), []);
+
+  const { items, repliesByParent } = useMemo(() => {
+    // Linear's issue feed is one unified timeline — no filter UI, so this
+    // always runs 'all' and every activity renders. The helper stays as the
+    // tested seam: it still encodes that a deep-linked comment passes
+    // through whatever filter is active.
+    const filtered = filterActivitiesForFeed(activities, 'all', hash);
+    // Replies leave the flat list and nest under their thread root instead —
+    // they keep `activities` order (chronological) inside the thread while
+    // the top level below reverses to newest-first.
+    const { repliesByParent, topLevel } = splitCommentThreads(filtered);
+    return {
+      items: topLevel
         .map((act, i) => ({
           activity: act,
           brief: act.type === 'brief' ? toBriefItem(act) : null,
           key: act.id ?? `activity-${i}`,
         }))
         .reverse(),
-    [activities, hash],
-  );
+      repliesByParent,
+    };
+  }, [activities, hash]);
 
   const commentInput = activeTaskId ? (
-    <CommentInput key={commentComposerKey(activeTaskId, workspaceId)} taskId={activeTaskId} />
+    <CommentInput
+      key={commentComposerKey(activeTaskId, workspaceId)}
+      replyTarget={replyTarget}
+      taskId={activeTaskId}
+      onClearReply={clearReplyTarget}
+    />
   ) : null;
 
   // A goal loop can produce many rounds; only the newest run opens by default so
@@ -567,7 +593,16 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
             return <TopicCard activity={activity} defaultExpanded={false} key={key} />;
           }
           if (activity.type === 'comment') {
-            return <CommentCard activity={activity} key={key} />;
+            return (
+              <CommentCard
+                activity={activity}
+                key={key}
+                replies={activity.id ? repliesByParent.get(activity.id) : undefined}
+                // The result panel mounts no composer — replying there would
+                // be a dead end, so cards in it never offer the affordance.
+                onReply={variant === 'activity' ? handleReply : undefined}
+              />
+            );
           }
           // Lifecycle bookkeeping ("created the task", reassignments). It belongs
           // to the activity timeline; in a result panel it is a row between the

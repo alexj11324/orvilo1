@@ -265,6 +265,29 @@ describe('TaskDetailSliceAction', () => {
       expect(useTaskStore.getState().taskDetailMap['T-1'].activities).toEqual([]);
     });
 
+    it('marks the synthesized row as a reply and forwards parentCommentId', async () => {
+      seed();
+      let release!: () => void;
+      vi.mocked(taskService.addComment).mockReturnValue(
+        new Promise((resolve) => {
+          release = () => resolve({ data: { id: 'cmt_2' } } as any);
+        }),
+      );
+
+      const pending = useTaskStore
+        .getState()
+        .addComment('T-1', 'reply text', { parentCommentId: 'cmt_root' });
+
+      const activities = useTaskStore.getState().taskDetailMap['T-1'].activities ?? [];
+      expect(activities[0]).toMatchObject({ parentCommentId: 'cmt_root', type: 'comment' });
+      expect(taskService.addComment).toHaveBeenCalledWith('T-1', 'reply text', {
+        parentCommentId: 'cmt_root',
+      });
+
+      release();
+      await pending;
+    });
+
     it('leaves an agent-authored comment to the refetch', async () => {
       seed();
       vi.mocked(taskService.addComment).mockResolvedValue({ data: { id: 'cmt_1' } } as any);

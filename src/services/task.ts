@@ -317,6 +317,7 @@ class TaskService {
       authorAgentId?: string;
       briefId?: string;
       editorData?: unknown;
+      parentCommentId?: string;
       topicId?: string;
     },
   ) => lambdaClient.task.addComment.mutate({ content, id, ...opts });

@@ -50,7 +50,15 @@ vi.mock('@/components/toast', () => ({ toast: { error: vi.fn() } }));
 // Heavy feed children are stubbed to markers; the section chrome under test —
 // header, rail lines, time format, composer seat — renders for real.
 vi.mock('./CommentInput', () => ({ default: () => <div data-testid="comment-input" /> }));
-vi.mock('./CommentCard', () => ({ default: () => <div data-testid="comment-card" /> }));
+vi.mock('./CommentCard', () => ({
+  default: ({ activity, replies }: { activity: { id?: string }; replies?: { id?: string }[] }) => (
+    <div data-comment-id={activity.id} data-testid="comment-card">
+      {(replies ?? []).map((reply) => (
+        <div data-testid={`reply-${reply.id}`} key={reply.id} />
+      ))}
+    </div>
+  ),
+}));
 vi.mock('./TopicCard', () => ({ default: () => <div data-testid="topic-card" /> }));
 vi.mock('./TaskBriefCard', () => ({ default: () => <div data-testid="brief-card" /> }));
 vi.mock('./TaskRunReport', () => ({ default: () => <div data-testid="run-report" /> }));
@@ -147,6 +155,29 @@ describe('TaskActivities', () => {
     const rail = container.querySelector('.before\\:bg-divider');
     expect(rail).not.toBeNull();
     expect(rail!.compareDocumentPosition(composer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('nests a comment reply inside its parent card instead of a flat row', () => {
+    setDetail({
+      activities: [
+        { content: 'root', id: 'c1', time: '2026-05-01T00:00:00Z', type: 'comment' },
+        {
+          content: 'reply',
+          id: 'c2',
+          parentCommentId: 'c1',
+          time: '2026-05-02T00:00:00Z',
+          type: 'comment',
+        },
+        { content: 'other', id: 'c3', time: '2026-05-03T00:00:00Z', type: 'comment' },
+      ],
+    });
+    renderFeed();
+
+    // Two top-level cards only — the reply renders nested inside its parent.
+    expect(screen.getAllByTestId('comment-card')).toHaveLength(2);
+    const parent = document.querySelector('[data-comment-id="c1"]')!;
+    expect(within(parent as HTMLElement).getByTestId('reply-c2')).toBeTruthy();
+    expect(document.querySelector('[data-comment-id="c3"]')).not.toBeNull();
   });
 
   it('keeps the empty state ahead of the composer when the feed has nothing', () => {

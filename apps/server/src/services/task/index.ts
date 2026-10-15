@@ -2032,6 +2032,8 @@ export class TaskService {
           editorData: c.editorData ?? undefined,
           files: files.length > 0 ? files : undefined,
           id: c.id,
+          // Thread membership: NULL keeps the card at the feed's top level.
+          parentCommentId: c.parentCommentId ?? null,
           // A follow-up left on one run says which run, so it does not read as
           // an unanswered comment on the Issue. `seq` is null when that run is
           // older than the loaded window of runs.

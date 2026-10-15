@@ -53,6 +53,14 @@ for (const source of ['absent', 'shell', 'dotenv', 'cached', 'generator-failure'
           },
           execFileSync: (command, args) => {
             if (command === 'bash' && args?.includes('env')) {
+              if (args.some((arg) => String(arg).endsWith('local-gateway-setup.sh'))) {
+                return [
+                  'export ENABLE_AGENT_GATEWAY=1',
+                  'export AGENT_GATEWAY_URL=http://localhost:8788',
+                  `export AGENT_GATEWAY_SERVICE_TOKEN="$(cat '${tokenFile}')"`,
+                  '',
+                ].join('\n');
+              }
               return [
                 'export DEVICE_GATEWAY_URL=http://localhost:8787',
                 `export DEVICE_GATEWAY_SERVICE_TOKEN="$(cat '${tokenFile}')"`,
@@ -124,6 +132,16 @@ for (const source of ['absent', 'shell', 'dotenv', 'cached', 'generator-failure'
         assert.equal(server.env.CLERK_SECRET_KEY, `${source}-fixture-secret`);
       assert.equal(server.env.DEVICE_GATEWAY_URL, 'http://localhost:8787');
       assert.equal(server.env.DEVICE_GATEWAY_SERVICE_TOKEN, 'fixture-service-token');
+      assert.equal(server.env.AGENT_GATEWAY_URL, 'http://localhost:8788');
+      assert.equal(server.env.AGENT_GATEWAY_SERVICE_TOKEN, 'fixture-service-token');
+      assert.equal(server.env.ENABLE_AGENT_GATEWAY, '1');
+      const agentGateway = launches.find(
+        ({ args }) =>
+          args.some((arg) => String(arg).endsWith('local-gateway-setup.sh')) &&
+          args.includes('start'),
+      );
+      assert.ok(agentGateway, 'skip-login starts the local agent gateway before Next');
+      assert.equal(agentGateway.env.GATEWAY_PORT, '8788');
       const desktop = launches.find(({ args }) => args.includes('dev:desktop'));
       assert.equal(desktop.env.DEVICE_GATEWAY_URL, 'http://localhost:8787');
       assert.equal(desktop.env.DEBUG, 'services:GatewayConnectionSrv');

@@ -3,6 +3,8 @@ import net from 'node:net';
 
 export const LOCAL_DEVICE_GATEWAY_SETUP =
   '.agents/acceptance/scripts/agent-gateway/local-device-gateway-setup.sh';
+export const LOCAL_AGENT_GATEWAY_SETUP =
+  '.agents/acceptance/scripts/agent-gateway/local-gateway-setup.sh';
 
 export const PRODUCTION_DEVICE_GATEWAY_HOST = 'device-gateway.aspectlylabs.com';
 
@@ -14,6 +16,19 @@ export function parseGatewayEnv(output) {
   const tokenFile = /DEVICE_GATEWAY_SERVICE_TOKEN="\$\(cat '([^']+)'\)"/.exec(output)?.[1];
   if (!tokenFile) {
     throw new Error('Local device gateway env did not print the service token file');
+  }
+  return { tokenFile, url };
+}
+
+/** Settings printed by `local-gateway-setup.sh env`. The token itself is never printed. */
+export function parseAgentGatewayEnv(output) {
+  const urlLine = /^(?:export )?AGENT_GATEWAY_URL=(.+)$/m.exec(output);
+  if (!urlLine) throw new Error('Local agent gateway env did not print AGENT_GATEWAY_URL');
+  const url = urlLine[1].trim();
+  const tokenFile = /AGENT_GATEWAY_SERVICE_TOKEN="\$\(cat '([^']+)'\)"/.exec(output)?.[1];
+  if (!tokenFile) throw new Error('Local agent gateway env did not print the service token file');
+  if (!/^(?:export )?ENABLE_AGENT_GATEWAY=1$/m.test(output)) {
+    throw new Error('Local agent gateway env did not enable ENABLE_AGENT_GATEWAY');
   }
   return { tokenFile, url };
 }
@@ -36,7 +51,10 @@ export function localPortIsOpen(port) {
   });
 }
 
-export async function waitForLocalPort(port, { shouldStop, timeoutMs = 180_000 } = {}) {
+export async function waitForLocalPort(
+  port,
+  { label = 'Local device gateway', shouldStop, timeoutMs = 180_000 } = {},
+) {
   const deadline = Date.now() + timeoutMs;
   while (!shouldStop?.() && Date.now() < deadline) {
     if (await localPortIsOpen(port)) return;
@@ -45,7 +63,7 @@ export async function waitForLocalPort(port, { shouldStop, timeoutMs = 180_000 }
   if (shouldStop?.()) return;
   if (await localPortIsOpen(port)) return;
   throw new Error(
-    `Local device gateway did not listen on localhost:${port}. Install go and git, or check that the gateway repository is reachable. skip-login does not use the production gateway.`,
+    `${label} did not listen on localhost:${port}. Install go and git, or check that the gateway repository is reachable. skip-login does not use the production gateway.`,
   );
 }
 

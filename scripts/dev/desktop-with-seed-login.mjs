@@ -10,7 +10,9 @@ import path from 'node:path';
 import { localServerUrl, seedElectronLogin } from './electron-seed-login.mjs';
 import {
   isLocalDeviceGatewayUrl,
+  LOCAL_AGENT_GATEWAY_SETUP,
   LOCAL_DEVICE_GATEWAY_SETUP,
+  parseAgentGatewayEnv,
   parseGatewayEnv,
   PRODUCTION_DEVICE_GATEWAY_HOST,
   waitForLocalPort,
@@ -60,6 +62,22 @@ if (
 if (await listening(gatewayPort)) {
   throw new Error(
     `Local device gateway port ${gatewayPort} is already in use; stop that process or set GATEWAY_PORT. skip-login does not use the production gateway.`,
+  );
+}
+const agentGatewayPort = process.env.AGENT_GATEWAY_PORT || '8788';
+if (
+  !Number.isInteger(Number(agentGatewayPort)) ||
+  Number(agentGatewayPort) < 1 ||
+  Number(agentGatewayPort) > 65535
+) {
+  throw new Error('Invalid local agent gateway port');
+}
+if (agentGatewayPort === gatewayPort) {
+  throw new Error('The agent gateway and the device gateway need different local ports');
+}
+if (await listening(agentGatewayPort)) {
+  throw new Error(
+    `Local agent gateway port ${agentGatewayPort} is already in use; stop that process or set AGENT_GATEWAY_PORT. skip-login does not use the production agent gateway.`,
   );
 }
 if (!process.env.JWKS_KEY) {
@@ -190,6 +208,42 @@ try {
   stop(1);
 }
 
+let agentGatewayToken = '';
+let agentGatewayUrl = '';
+if (!closing) {
+  const agentGatewayEnvOutput = execFileSync('bash', [LOCAL_AGENT_GATEWAY_SETUP, 'env'], {
+    encoding: 'utf8',
+    env: { ...process.env, GATEWAY_PORT: agentGatewayPort, SERVER_URL: serverUrl.origin },
+  });
+  const parsed = parseAgentGatewayEnv(agentGatewayEnvOutput);
+  agentGatewayUrl = parsed.url;
+  if (!isLocalDeviceGatewayUrl(agentGatewayUrl)) {
+    throw new Error(
+      `Local agent gateway env printed ${agentGatewayUrl}; skip-login does not use the production agent gateway.`,
+    );
+  }
+  agentGatewayToken = (await readFile(parsed.tokenFile, 'utf8')).trim();
+  if (!agentGatewayToken) throw new Error('Local agent gateway service token is empty');
+  start(
+    'local-agent-gateway',
+    {
+      GATEWAY_PORT: agentGatewayPort,
+      JWKS_KEY: process.env.JWKS_KEY,
+      SERVER_URL: serverUrl.origin,
+    },
+    ['bash', LOCAL_AGENT_GATEWAY_SETUP, 'start'],
+  );
+  try {
+    await waitForLocalPort(agentGatewayPort, {
+      label: 'Local agent gateway',
+      shouldStop: () => closing,
+    });
+  } catch (error) {
+    console.error(error.message);
+    stop(1);
+  }
+}
+
 // Seed sessions are only accepted while the server asks the stub about them; it
 // forwards every other Clerk call, so a normal sign-in keeps working.
 if (!closing && !(await listening(clerkStubPort)))
@@ -201,9 +255,12 @@ if (!closing)
   start('dev:next', {
     CLERK_API_URL: `http://127.0.0.1:${clerkStubPort}`,
     // The server requires a key before calling the stub; seed sessions need no real key.
+    AGENT_GATEWAY_SERVICE_TOKEN: agentGatewayToken,
+    AGENT_GATEWAY_URL: agentGatewayUrl,
     CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY || 'local-seed-stub',
     DEVICE_GATEWAY_SERVICE_TOKEN: gatewayToken,
     DEVICE_GATEWAY_URL: gatewayUrl,
+    ENABLE_AGENT_GATEWAY: '1',
     PORT: serverUrl.port,
   });
 const desktopChild = closing

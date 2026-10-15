@@ -174,10 +174,14 @@ builds connect to the hosted gateway (`device-gateway.aspectlylabs.com`), which
 trusts only tokens signed by production. A local dev server signs with its own
 `JWKS_KEY`, so that hosted gateway will not accept a local token.
 
-`bun run dev:desktop:skip-login` starts a gateway that trusts the local key,
+`bun run dev:desktop:skip-login` starts a device gateway that trusts the local key,
 points Next and Electron at `http://localhost:8787`, and fails if that gateway
-does not come up. It does not fall back to the production gateway. The e2e mock
-on port 3407 is a separate test double and is not this process.
+does not come up. It also starts the local Agent Gateway on `http://localhost:8788`
+and sets `ENABLE_AGENT_GATEWAY`, `AGENT_GATEWAY_URL`, and
+`AGENT_GATEWAY_SERVICE_TOKEN` on Next. Sending a message needs that Agent Gateway;
+the device gateway only connects this computer. It does not fall back to the
+production gateways. The e2e mock on port 3407 is a separate test double and is
+not either of these processes.
 
 To start the gateway on its own (for a stack that is not using skip-login), use
 the same script skip-login calls. The gateway is a separate Go service kept in
@@ -209,6 +213,7 @@ It needs `go` and `git`. The service token is generated once into `.records/env/
 | 3406 | Mock LLM (OpenAI-compatible, e2e)                        |
 | 3407 | Mock agent gateway (e2e)                                 |
 | 8787 | Local device gateway (`dev:desktop:skip-login`)          |
+| 8788 | Local Agent Gateway (`dev:desktop:skip-login`)           |
 
 The Docker e2e path uses different ports on purpose — app `:3006`, Postgres
 `:5433` — so both paths can coexist; see `e2e/docs/local-setup.md`.

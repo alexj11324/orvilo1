@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 import {
   isLocalDeviceGatewayUrl,
+  parseAgentGatewayEnv,
   parseGatewayEnv,
   PRODUCTION_DEVICE_GATEWAY_HOST,
 } from './local-device-gateway.mjs';
@@ -23,6 +24,23 @@ test('parseGatewayEnv rejects output that omits the URL or token file', () => {
     /token file/,
   );
   assert.throws(() => parseGatewayEnv('export FOO=bar\n'), /DEVICE_GATEWAY_URL/);
+});
+
+test('parseAgentGatewayEnv reads the URL, the enable flag, and the token file path', () => {
+  const parsed = parseAgentGatewayEnv(`
+export ENABLE_AGENT_GATEWAY=1
+export AGENT_GATEWAY_URL=http://localhost:8788
+export AGENT_GATEWAY_SERVICE_TOKEN="$(cat '/tmp/agent-gateway.token')"
+`);
+  assert.equal(parsed.url, 'http://localhost:8788');
+  assert.equal(parsed.tokenFile, '/tmp/agent-gateway.token');
+  assert.throws(
+    () =>
+      parseAgentGatewayEnv(
+        'export AGENT_GATEWAY_URL=http://localhost:8788\nexport AGENT_GATEWAY_SERVICE_TOKEN="$(cat \'/tmp/agent-gateway.token\')"\n',
+      ),
+    /ENABLE_AGENT_GATEWAY/,
+  );
 });
 
 test('isLocalDeviceGatewayUrl accepts loopback HTTP and rejects the production host', () => {

@@ -164,6 +164,44 @@ vi.mock('@/server/services/taskLifecycle', () => ({
 const db = {} as any;
 
 describe('driveTaskFromVerify', () => {
+  it('completes an explicitly accepted Goal without a reviewer despite automated review and Aegis gates', async () => {
+    runFindByOperation.mockResolvedValue({
+      id: 'run-1',
+      acceptanceId: 'acceptance-1',
+      status: 'passed',
+      userDecision: 'accept',
+    });
+    taskFindById.mockResolvedValue({
+      assigneeAgentId: 'a1',
+      reviewerAgentId: null,
+      id: 'task-1',
+      identifier: 'T-1',
+      runReservationId: 'completion:op-1:lease-1',
+      status: 'running',
+    });
+    opFindById.mockResolvedValue({
+      id: 'op-1',
+      taskId: 'task-1',
+      topicId: 'topic-done',
+      metadata: { aegis: { artifacts: [], enabled: true } },
+    });
+    goalFindByTask.mockResolvedValue({ id: 'goal-1' });
+    vi.mocked(reviewGoalDelivery).mockResolvedValue({
+      status: 'errored',
+      feedback: 'Set a reviewer Agent on the Issue.',
+      predictionIds: [],
+    });
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+    expect(reviewGoalDelivery).not.toHaveBeenCalled();
+    expect(serviceUpdateStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'task-1', status: 'completed' }),
+      undefined,
+      expect.objectContaining({ reservationId: 'completion:op-1:lease-1' }),
+      expect.objectContaining({ onStatusCommitted: expect.any(Function) }),
+    );
+    expect(taskUpdateStatusForExecutionContract).not.toHaveBeenCalled();
+  });
+
   it('automatically sends a Goal delivery back when Acceptance review rejects a Verify pass', async () => {
     runFindByOperation.mockResolvedValue({
       id: 'run-1',
@@ -336,6 +374,7 @@ describe('driveTaskFromVerify', () => {
     }));
     taskFindById.mockResolvedValue({
       assigneeAgentId: 'a1',
+      reviewerAgentId: 'reviewer-1',
       id: 'task-1',
       identifier: 'T-1',
       runReservationId: 'completion:op-1:lease-1',
@@ -773,6 +812,7 @@ describe('driveTaskFromVerify', () => {
     runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
     taskFindById.mockResolvedValue({
       currentTopicId: 'topic-current',
+      reviewerAgentId: 'reviewer-1',
       id: 'task-1',
       runReservationId: 'completion:op-corrective:lease-2',
       status: 'running',

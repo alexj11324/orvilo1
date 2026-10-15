@@ -38,7 +38,7 @@ describe('resolveTaskAcceptance', () => {
 
   it('uses Acceptance as the authoritative completion contract', async () => {
     mocks.acceptanceFindPolicyBySubject.mockResolvedValue({
-      config: { maxIterations: 3, verifierAgentId: 'acceptance-agent' },
+      config: { maxIterations: 3 },
       id: 'acceptance-1',
       requirement: 'Acceptance requirement',
     });
@@ -48,7 +48,7 @@ describe('resolveTaskAcceptance', () => {
 
     expect(resolved).toMatchObject({
       acceptance: { id: 'acceptance-1' },
-      config: { maxIterations: 3, verifierAgentId: 'acceptance-agent' },
+      config: { maxIterations: 3 },
       requirement: 'Acceptance requirement',
     });
   });
@@ -89,12 +89,12 @@ describe('resolveTaskAcceptance', () => {
       .mockResolvedValueOnce({ id: 'child', parentTaskId: 'parent' })
       .mockResolvedValueOnce({ id: 'parent', parentTaskId: null });
     mocks.acceptanceFindPolicyBySubject.mockResolvedValueOnce(null).mockResolvedValueOnce({
-      config: { enabled: true, verifierAgentId: 'parent-verifier' },
+      config: { enabled: true },
       id: 'parent-acceptance',
       requirement: 'Parent contract',
     });
     mocks.acceptanceEnsure.mockResolvedValue({
-      config: { enabled: true, verifierAgentId: 'parent-verifier' },
+      config: { enabled: true },
       id: 'child-acceptance',
       requirement: 'Parent contract',
     });
@@ -102,7 +102,7 @@ describe('resolveTaskAcceptance', () => {
     const resolved = await resolveTaskAcceptance(db, 'user-1', 'child', 'workspace-1');
 
     expect(mocks.acceptanceEnsure).toHaveBeenCalledWith('task', 'child', {
-      config: { enabled: true, verifierAgentId: 'parent-verifier' },
+      config: { enabled: true },
       projectId: undefined,
       requirement: 'Parent contract',
     });

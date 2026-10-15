@@ -14,7 +14,6 @@ const {
   taskTopicFindByOperationId,
   finalizeVerifyRun,
   recordHeterogeneousDeliverableEvidence,
-  startEvidenceSubmission,
   updateStatus,
 } = vi.hoisted(() => ({
   claimEvidenceCollection: vi.fn(),
@@ -26,7 +25,6 @@ const {
   operationFindById: vi.fn(),
   taskTopicFindByOperationId: vi.fn(),
   recordHeterogeneousDeliverableEvidence: vi.fn(),
-  startEvidenceSubmission: vi.fn(),
   updateStatus: vi.fn(),
 }));
 
@@ -82,13 +80,12 @@ vi.mock('../agentVerifier', () => ({
     return vi.fn();
   }),
 }));
-vi.mock('../modelConfig', () => ({
-  resolveVerifyModelConfig: vi.fn().mockResolvedValue({ model: 'm', provider: 'p' }),
+vi.mock('../reviewerAgent', () => ({
+  resolveIssueReviewer: vi.fn().mockResolvedValue('reviewer-1'),
 }));
 vi.mock('../settle', () => ({ finalizeVerifyRun }));
 vi.mock('../evidenceSubmission', () => ({
   recordHeterogeneousDeliverableEvidence,
-  startEvidenceSubmission,
 }));
 vi.mock('../taskAcceptance', () => ({
   resolveTaskAcceptance: vi.fn().mockResolvedValue({ config: { enabled: true } }),
@@ -116,7 +113,6 @@ describe('runVerifyOnCompletion — verification claim', () => {
       operationFindById,
       taskTopicFindByOperationId,
       recordHeterogeneousDeliverableEvidence,
-      startEvidenceSubmission,
       updateStatus,
     ].forEach((m) => m.mockReset());
     findByOperation.mockResolvedValue(confirmedRun);
@@ -124,6 +120,19 @@ describe('runVerifyOnCompletion — verification claim', () => {
     taskTopicFindByOperationId.mockResolvedValue(null);
     claimVerifying.mockResolvedValue(true);
     evidenceListByRun.mockResolvedValue([]);
+  });
+
+  it('does not run a confirmed administrative plan when the durable operation opts out of task verification', async () => {
+    operationFindById.mockResolvedValue({
+      id: 'op-1',
+      taskId: 'task-1',
+      metadata: { skipTaskVerification: true },
+    });
+    await runVerifyOnCompletion(db, 'u1', params);
+    expect(claimEvidenceCollection).not.toHaveBeenCalled();
+    expect(claimVerifying).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+    expect(finalizeVerifyRun).not.toHaveBeenCalled();
   });
 
   it('defers task verification while its workspace integration is unresolved', async () => {
@@ -162,8 +171,8 @@ describe('runVerifyOnCompletion — verification claim', () => {
 
     await runVerifyOnCompletion(db, 'u1', params);
 
-    expect(startEvidenceSubmission).toHaveBeenCalledTimes(1);
-    expect(execute).not.toHaveBeenCalled();
+    expect(recordHeterogeneousDeliverableEvidence).toHaveBeenCalledTimes(1);
+    expect(execute).toHaveBeenCalledOnce();
   });
 
   it('still collects when a criterion is missing a declared evidence type', async () => {
@@ -190,7 +199,7 @@ describe('runVerifyOnCompletion — verification claim', () => {
 
     await runVerifyOnCompletion(db, 'u1', params);
 
-    expect(startEvidenceSubmission).toHaveBeenCalledTimes(1);
+    expect(recordHeterogeneousDeliverableEvidence).toHaveBeenCalledTimes(1);
   });
 
   it('judges directly when the builder already submitted evidence inside the Task run', async () => {
@@ -207,7 +216,6 @@ describe('runVerifyOnCompletion — verification claim', () => {
     await runVerifyOnCompletion(db, 'u1', params);
 
     expect(claimEvidenceCollection).not.toHaveBeenCalled();
-    expect(startEvidenceSubmission).not.toHaveBeenCalled();
     expect(claimVerifying).toHaveBeenCalledTimes(1);
     expect(execute).toHaveBeenCalledTimes(1);
   });
@@ -225,11 +233,11 @@ describe('runVerifyOnCompletion — verification claim', () => {
 
     await runVerifyOnCompletion(db, 'u1', params);
 
-    expect(startEvidenceSubmission).toHaveBeenCalledWith(
+    expect(recordHeterogeneousDeliverableEvidence).toHaveBeenCalledWith(
       expect.objectContaining({ operation: expect.objectContaining({ id: 'op-1' }) }),
     );
-    expect(claimVerifying).not.toHaveBeenCalled();
-    expect(execute).not.toHaveBeenCalled();
+    expect(claimVerifying).toHaveBeenCalledOnce();
+    expect(execute).toHaveBeenCalledOnce();
   });
 
   it('records a heterogeneous builder handoff directly and continues to verification', async () => {
@@ -251,7 +259,6 @@ describe('runVerifyOnCompletion — verification claim', () => {
         operation: expect.objectContaining({ id: 'op-1' }),
       }),
     );
-    expect(startEvidenceSubmission).not.toHaveBeenCalled();
     expect(claimVerifying).toHaveBeenCalledTimes(1);
     expect(execute).toHaveBeenCalledTimes(1);
   });

@@ -22,6 +22,7 @@ import debug from 'debug';
 
 import { TopicTrigger } from '@/const/topic';
 import { AgentModel } from '@/database/models/agent';
+import { AgentOperationModel } from '@/database/models/agentOperation';
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/taskDependency';
@@ -33,6 +34,7 @@ import { isBuiltinHarnessOffered } from '@/server/featureFlags/builtinHarness';
 import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { ActionApprovalService, AgentDelegationService } from '@/server/services/agentDelegation';
 import { AiAgentService } from '@/server/services/aiAgent';
+import { isQueuedDeviceOperation } from '@/server/services/aiAgent/deviceQueue';
 import type { EventDispatchEvidence, PreparedTaskDispatch } from '@/server/services/taskDispatch';
 import {
   TaskDispatchConflictError,
@@ -96,6 +98,8 @@ export interface RunTaskParams {
    * name the contract they mean instead of silently adopting old or new.
    */
   intent?: TaskRunIntent;
+  /** Internal reviewer feedback continuation; fenced again before operation dispatch. */
+  issueReviewRepairCycleId?: string;
   /** Optional per-operation cap. Omitted means the agent runtime remains uncapped. */
   maxSteps?: number;
   /** Parent delivery operation for internal corrective runs. */
@@ -210,6 +214,7 @@ export class TaskRunnerService {
       extraPrompt,
       integrationSeed,
       idempotencyKey,
+      issueReviewRepairCycleId,
       intent,
       maxSteps,
       parentOperationId,
@@ -522,13 +527,29 @@ export class TaskRunnerService {
       }
 
       let existingTopics = await this.taskTopicModel.findByTaskId(task.id);
+      const heartbeatExpired =
+        task.lastHeartbeatAt &&
+        task.heartbeatTimeout &&
+        (Date.now() - new Date(task.lastHeartbeatAt).getTime()) / 1000 > task.heartbeatTimeout;
+      const queuedOperations = heartbeatExpired
+        ? await Promise.all(
+            existingTopics
+              .filter((topic) => topic.operationId)
+              .map((topic) =>
+                new AgentOperationModel(this.db, this.userId, this.workspaceId).findById(
+                  topic.operationId!,
+                ),
+              ),
+          )
+        : [];
+      const waitingForDevice = queuedOperations.some(isQueuedDeviceOperation);
 
       // Recover expired runs before deciding whether another run conflicts.
       // The previous ordering rejected every stale `running` topic first, so
       // the timeout cleanup below was unreachable for the case it existed to
       // repair. Re-read after the conditional update so concurrent callers all
       // make their decision from the persisted state.
-      if (task.lastHeartbeatAt && task.heartbeatTimeout) {
+      if (!waitingForDevice && task.lastHeartbeatAt && task.heartbeatTimeout) {
         const elapsed = (Date.now() - new Date(task.lastHeartbeatAt).getTime()) / 1000;
         if (elapsed > task.heartbeatTimeout) {
           await this.taskTopicModel.timeoutRunning(task.id);
@@ -539,7 +560,7 @@ export class TaskRunnerService {
       // Recover a dead generation before checking for an in-flight topic. The
       // old ordering rejected on the stale running row first, so timeout
       // cleanup below was unreachable precisely when it was needed.
-      if (task.lastHeartbeatAt && task.heartbeatTimeout) {
+      if (!waitingForDevice && task.lastHeartbeatAt && task.heartbeatTimeout) {
         const now = Date.now();
         const elapsed = (now - new Date(task.lastHeartbeatAt).getTime()) / 1000;
         const hasRunningTopic = existingTopics.some((topic) => topic.status === 'running');
@@ -766,6 +787,7 @@ export class TaskRunnerService {
         new Date(),
         undefined,
         replaceReservationId,
+        issueReviewRepairCycleId,
       );
       if (!reserved) {
         throw new TRPCError({
@@ -781,7 +803,12 @@ export class TaskRunnerService {
         this.db,
         this.userId,
         {
-          context: { reservationId },
+          context: {
+            reservationId,
+            ...(issueReviewRepairCycleId
+              ? { expectedIssueReviewCycleId: issueReviewRepairCycleId }
+              : {}),
+          },
           runStarted: true,
           taskId: task.id,
         },
@@ -818,6 +845,7 @@ export class TaskRunnerService {
         extraPrompt,
         {
           contractContent: inheritedContractContent,
+          skipTaskVerification,
           ...(runIntent === 'fresh_occurrence'
             ? {
                 occurrence: preparedDispatch!.dispatch.automationOccurrence ?? undefined,
@@ -1043,6 +1071,20 @@ export class TaskRunnerService {
             const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
             const taskTopicModel = new TaskTopicModel(tx, this.userId, this.workspaceId);
 
+            if (
+              issueReviewRepairCycleId &&
+              !(await taskModel.isIssueReviewRepairCurrent(
+                task.id,
+                { cycleId: issueReviewRepairCycleId },
+                tx,
+              ))
+            ) {
+              throw new TRPCError({
+                code: 'CONFLICT',
+                message: 'Issue review repair cycle changed before launch.',
+              });
+            }
+
             // Revalidate the task reservation in the same transaction that
             // publishes the running topic. A concurrent terminal cascade
             // locks and clears this reservation before changing status, so a
@@ -1135,6 +1177,7 @@ export class TaskRunnerService {
         trigger: TopicTrigger.RunTask,
         userInterventionConfig: { approvalMode: 'headless' },
         appContext: {
+          ...(issueReviewRepairCycleId ? { issueReviewRepairCycleId } : {}),
           dispatchFence: preparedDispatch!.fence,
           dispatchId: preparedDispatch!.dispatch.id,
           executionGeneration: preparedDispatch!.dispatch.generation,

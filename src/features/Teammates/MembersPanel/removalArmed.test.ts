@@ -6,7 +6,6 @@ import { removalArmed } from './removalArmed';
 const preview: RemovalPreview = {
   assignedTaskCount: 0,
   assignedTasks: [],
-  reviewingTaskCount: 0,
   runningDelegationCount: 0,
   sharedDeviceCount: 0,
 };

@@ -259,20 +259,6 @@ describe('useHomeAgentRows', () => {
     );
   });
 
-  it('lists the builtin task agent only when includeTaskAgent is set', () => {
-    mocks.agentState.builtinAgentIdMap['task-agent'] = 'agt_task';
-    mocks.agentState.agentMap['agt_task'] = { title: 'Task Agent' };
-    mocks.homeState.ungroupedAgents = [agent('agt_a', 'Shared')];
-
-    const { result: withoutTaskAgent } = renderHook(() => useHomeAgentRows());
-    expect(ids(withoutTaskAgent.current.workspaceRows)).toEqual(['agt_inbox', 'agt_a']);
-
-    const { result: withTaskAgent } = renderHook(() =>
-      useHomeAgentRows({ includeTaskAgent: true }),
-    );
-    expect(ids(withTaskAgent.current.workspaceRows)).toEqual(['agt_inbox', 'agt_task', 'agt_a']);
-  });
-
   it('excludes chat groups so only agent ids reach the home input', () => {
     mocks.homeState.ungroupedAgents = [
       agent('agt_a', 'Agent'),
@@ -301,7 +287,7 @@ describe('useHomeAgentRows', () => {
       agent('agt_cc', 'Claude Code', { heterogeneousType: 'claude-code' }),
     ];
 
-    const { result } = renderHook(() => useHomeAgentRows({ includeTaskAgent: true }));
+    const { result } = renderHook(() => useHomeAgentRows());
 
     expect(ids(result.current.workspaceRows)).toEqual(['agt_codex']);
     expect(ids(result.current.privateRows)).toEqual(['agt_cc']);

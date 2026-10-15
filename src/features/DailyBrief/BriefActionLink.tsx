@@ -33,7 +33,7 @@ interface BriefActionLinkProps {
  * never registered the target (acceptance is web-only — see
  * `desktopRouter.config.tsx`), so the button reads as dead. Internal
  * destinations therefore route through React Router instead, and acceptance —
- * which has no standalone desktop route at all — opens in the task-agent panel
+ * which has no standalone desktop route at all — opens in the task conversation panel
  * beside its task, the same surface `TaskAcceptance` / `RunVerifyTag` use.
  *
  * The `href` stays on the anchor so middle-click / copy-link still work, and

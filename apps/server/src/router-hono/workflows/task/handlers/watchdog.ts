@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 
 import { getServerDB } from '@/database/server';
+import { sweepQueuedDeviceOperations } from '@/server/services/aiAgent/deviceQueue';
 import { AutomationResultDeliveryService } from '@/server/services/automationResultDelivery';
 import { sweepDevicePrimeRunReconcile } from '@/server/services/devicePrimeReconcile';
 import { sweepMcpEventSubscriptions } from '@/server/services/mcpEvents/maintenance';
@@ -25,6 +26,7 @@ import { runTaskWatchdog } from '@/server/services/taskWatchdog';
 export async function watchdog(c: Context) {
   try {
     const db = await getServerDB();
+    await sweepQueuedDeviceOperations({ db });
     const plannedStartOutcomes = await sweepPlanningTaskDispatchStarts({ db });
     const plannedStarts = plannedStartOutcomes.filter(
       (outcome) => outcome.outcome === 'started',

@@ -32,7 +32,7 @@ interface RemoveMemberContentProps {
 
 /**
  * Removal confirmation with the real `removalPreview`: what the member still
- * holds (assigned tasks, reviews, running delegations, devices) plus an
+ * holds (assigned tasks, running delegations, devices) plus an
  * optional reassignee. The preview is fetched only while this dialog is open,
  * so the numbers are never stale when the user commits.
  */
@@ -63,7 +63,6 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
   const hasImpact =
     preview &&
     (preview.assignedTaskCount > 0 ||
-      preview.reviewingTaskCount > 0 ||
       preview.runningDelegationCount > 0 ||
       preview.sharedDeviceCount > 0);
 
@@ -98,13 +97,6 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
           <div className={styles.previewRow}>
             <div className="text-sm leading-5.5 text-muted-foreground">
               {t('workspaceSetting.members.previewTasks', { count: preview.assignedTaskCount })}
-            </div>
-          </div>
-          <div className={styles.previewRow}>
-            <div className="text-sm leading-5.5 text-muted-foreground">
-              {t('workspaceSetting.members.previewReviews', {
-                count: preview.reviewingTaskCount,
-              })}
             </div>
           </div>
           <div className={styles.previewRow}>

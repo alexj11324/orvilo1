@@ -27,6 +27,7 @@ import AssigneeAgentSelector from '../features/AssigneeAgentSelector';
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
+import { pickReviewerAgent } from '../features/ReviewerAgentSelector';
 import TaskPriorityTag from '../features/TaskPriorityTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
@@ -207,8 +208,14 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
       pickAndInsertAttachments(editor);
     }, [editor]);
 
+    const reviewerSelectionPending = useRef(false);
     const handleSubmit = useCallback(async () => {
-      if (!canCreateTask || useTaskStore.getState().isCreatingTask) return;
+      if (
+        !canCreateTask ||
+        useTaskStore.getState().isCreatingTask ||
+        reviewerSelectionPending.current
+      )
+        return;
       const instruction = instructionRef.current.trim();
       const hasFiles = getAttachmentFileIdsFromEditor(editor).length > 0;
       if (!instruction && !title.trim() && !hasFiles) return;
@@ -218,7 +225,16 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
       // `createTask` keeps its rejecting contract; surface the failure here so a
       // failed create isn't silent and the modal stays open with its content.
       try {
+        let reviewerAgentId: string | undefined;
+        if (workflowCategory === 'in_review') {
+          reviewerSelectionPending.current = true;
+          const picked = await pickReviewerAgent();
+          reviewerSelectionPending.current = false;
+          if (!picked) return;
+          reviewerAgentId = picked;
+        }
         const result = await createTask({
+          ...(reviewerAgentId ? { reviewerAgentId } : {}),
           assigneeAgentId,
           assigneeUserId,
           editorData: editorJson,
@@ -245,6 +261,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
           });
         }
       } catch {
+        reviewerSelectionPending.current = false;
         toast.error(t('createTask.createFailed'));
       }
     }, [

@@ -122,6 +122,11 @@ export default class HeterogeneousAgentCtr extends ControllerModule {
     );
   }
 
+  async hasOrviloHeteroExec(params: { operationId: string }): Promise<boolean> {
+    // A status probe must not initialize the lazy runtime or its services.
+    return (await this.implementationPromise)?.hasOrviloHeteroExec(params) ?? false;
+  }
+
   /**
    * Cancels a gateway CLI wrapper through the lazy implementation boundary.
    *

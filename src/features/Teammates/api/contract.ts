@@ -24,8 +24,6 @@ export interface WorkspaceMemberSummary {
   joinedAt?: Date | string;
   /** Open tasks the member owns (server-computed workload). */
   openAssignedCount?: number;
-  /** Open tasks awaiting the member's review. */
-  openReviewingCount?: number;
   /** Project memberships held inside this workspace. */
   projectCount?: number;
   role: WorkspaceRole;
@@ -111,7 +109,6 @@ export interface RemovalPreview {
     id: string;
     title: string;
   }[];
-  reviewingTaskCount: number;
   runningDelegationCount: number;
   sharedDeviceCount: number;
 }

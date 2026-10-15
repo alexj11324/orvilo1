@@ -57,6 +57,37 @@ describe('AgentRuntimeService.startExecution', () => {
   });
 
   describe('idle / never-dispatched operations', () => {
+    it('acknowledges a durable offline queue without minting another operation', async () => {
+      findByIdMock.mockResolvedValue({
+        ...operationRow('idle'),
+        metadata: {
+          deviceQueue: {
+            state: 'waiting',
+            queuedAt: new Date().toISOString(),
+            offlineSince: new Date().toISOString(),
+            payload: {
+              agentId: 'agent',
+              agentType: 'opencode',
+              assistantMessageId: 'assistant',
+              channel: 'agent_run_request',
+              deviceId: 'device',
+              prompt: 'Original prompt',
+              topicId: 'topic',
+            },
+          },
+        },
+      });
+      const stateManager = buildStateManager(null);
+      const service = buildService(stateManager);
+      expect(await service.startExecution({ operationId: 'op_1' })).toEqual({
+        alreadyStarted: false,
+        operationId: 'op_1',
+        scheduled: true,
+        success: true,
+      });
+      expect(stateManager.saveAgentState).not.toHaveBeenCalled();
+    });
+
     it('rejects an idle operation row instead of returning a successful no-op', async () => {
       // The F09 bug: a legal idle op fell through to
       // `{ success: true, scheduled: false }` — a "start" that started nothing.

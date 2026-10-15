@@ -60,10 +60,14 @@ export interface SettlementContext {
   error?: string | null;
   /** Immutable dispatch contract the verdict belongs to. */
   expectedContract?: SettlementExpectedContract;
+  /** Automatic reviewer feedback cycle that still owns this assignee delivery. */
+  expectedIssueReviewCycleId?: string;
   /** Status the task is expected to still hold (CAS precondition). */
   expectedStatus?: string;
   /** Whether the user canceled the issue itself (not just the run). */
   issueCancel?: boolean;
+  /** Trusted Verify settlement: the Issue member explicitly accepted this delivery. */
+  manualAcceptance?: boolean;
   /** A manual "run now" on an automation task — not an automation-health signal. */
   manualAutomationRun?: boolean;
 

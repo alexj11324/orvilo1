@@ -38,7 +38,7 @@ export const useRunWithContractCheck = () => {
   const { allowed: canEditTask, reason: permissionReason } = usePermission('create_content');
   const canPause = useTaskDetailSelector(taskDetailSelectors.canPauseTask);
   const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
-  const assigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
+  const assigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeAgentId);
   const assigneeUserId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeUserId);
   const fallbackAgentId = useFallbackAgentId();
   const runningActivity = detail?.activities?.find(

@@ -46,6 +46,11 @@ describe('resolveAgentConfig without a host', () => {
 
     expect(resolved.plugins).toEqual([]);
   });
+  it('mounts task tools while preserving the Agent instructions', () => {
+    const resolved = resolveAgentConfig({ agentId: 'agt_1', scope: 'task' }, snapshot());
+    expect(resolved.plugins).toContain('orvilo-task');
+    expect(resolved.agentConfig.systemRole).toBe('You are helpful.');
+  });
 
   it('carries the agent config plugins through for a regular agent', () => {
     const resolved = resolveAgentConfig(

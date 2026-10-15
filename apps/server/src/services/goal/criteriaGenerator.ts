@@ -1,4 +1,3 @@
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { TRACING_SCENARIOS } from '@orvilo/const';
 import { isProgrammaticTestCheck } from '@orvilo/const/verify';
 import type { TracingOptions } from '@orvilo/llm-generation-tracing';
@@ -20,6 +19,8 @@ import debug from 'debug';
 import { z } from 'zod';
 
 import type { OrviloDatabase } from '@/database/type';
+import { AiGenerationService } from '@/server/services/aiGeneration';
+import { AcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 
 import { generateGoalObject } from './generation';
 
@@ -98,8 +99,8 @@ export class GoalCriteriaGeneratorService {
   ) {}
 
   async generate(params: {
-    /** Goal's coordinator agent — the authorized ACP binding, when known. */
-    agentId?: string | null;
+    /** Explicit coordinator for this editable draft, before an Issue exists. */
+    agentId?: string;
     context?: string;
     goal: string;
     maxCriteria?: number;
@@ -110,20 +111,28 @@ export class GoalCriteriaGeneratorService {
   }
 
   async generatePlan(params: {
-    /** Goal's coordinator agent — the authorized ACP binding, when known. */
-    agentId?: string | null;
+    /** Explicit coordinator for this editable draft, before an Issue exists. */
+    agentId?: string;
     context?: string;
     goal: string;
     maxCriteria?: number;
   }): Promise<GoalPlanDraft | undefined> {
     const maxCriteria = params.maxCriteria ?? DEFAULT_MAX_CRITERIA;
-    const raw = await generateGoalObject(
+    if (!params.agentId)
+      throw new AcpJudgmentBindingError(
+        'goal.criteriaDraft',
+        'Select a coordinator Agent to draft the acceptance criteria.',
+      );
+    const raw = await new AiGenerationService(
       this.db,
       this.userId,
       this.workspaceId,
-      params.agentId,
+    ).generateObject(
       {
-        ...chainGoalCriteriaDraft({ ...params, maxCriteria }),
+        messages: chainGoalCriteriaDraft({ ...params, maxCriteria }).messages.map((message) => ({
+          ...message,
+          role: 'user' as const,
+        })),
         schema: GOAL_CRITERIA_DRAFT_JSON_SCHEMA,
         thinking: { type: 'disabled' },
       },
@@ -131,9 +140,7 @@ export class GoalCriteriaGeneratorService {
         judgment: {
           binding: {
             agentId: params.agentId,
-            // Acceptance criteria are the verify agent's domain; it is the
-            // standing builtin binding when the goal has no coordinator yet.
-            slug: BUILTIN_AGENT_SLUGS.verifyAgent,
+            allowEnvFallback: false,
           },
           purpose: 'goal.criteriaDraft',
         },

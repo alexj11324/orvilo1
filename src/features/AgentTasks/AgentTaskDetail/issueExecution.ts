@@ -1,4 +1,5 @@
 import type {
+  IssueReviewState,
   TaskDetailActivity,
   TaskDispatchPhase,
   TaskExecutionState,
@@ -29,6 +30,8 @@ export type IssueExecutionKind =
   | 'needsAgent'
   | 'notStarted'
   | 'outcomeUnknown'
+  | 'reviewPending'
+  | 'reworkRequired'
   | 'provisioning'
   | 'queued'
   | 'running'
@@ -62,6 +65,7 @@ export interface IssueExecutionInput {
   blocked?: boolean;
   dispatchPhase?: TaskDispatchPhase | null;
   dispatchWaitingReason?: string | null;
+  issueReview?: Pick<IssueReviewState, 'consecutiveFailures' | 'repairPending'>;
   /** `status` of the Issue's own latest run row, if it has one. */
   latestRunStatus?: string | null;
   orchestrationAdmission?: 'disabled' | 'enabled' | null;
@@ -240,6 +244,21 @@ export const resolveIssueExecution = (input: IssueExecutionInput): IssueExecutio
 
     case 'succeeded': {
       const settled = workflowCategory === 'done' || workflowCategory === 'canceled';
+      // A delivery's completed dispatch is stale while the reviewer or assignee
+      // owns the next step. The Issue workflow is authoritative in this cycle.
+      if (!input.automationMode && input.issueReview) {
+        const reviewing = workflowCategory === 'in_review';
+        const reworking =
+          workflowCategory === 'in_progress' &&
+          (input.issueReview.repairPending || input.issueReview.consecutiveFailures > 0);
+        if (reviewing || reworking)
+          return {
+            actionBlocked: false,
+            hints: [],
+            kind: reviewing ? 'reviewPending' : 'reworkRequired',
+            showFailureReason: false,
+          };
+      }
       return {
         actionBlocked: false,
         badge: execution,
@@ -282,6 +301,8 @@ export const showsHeaderRunControl = (input: {
 export const EXECUTION_KIND_LABEL_KEYS: Partial<Record<IssueExecutionKind, string>> = {
   awaitingAcceptance: 'taskDetail.execution.view.awaitingAcceptance',
   needsAgent: 'taskDetail.execution.view.needsAgent',
+  reviewPending: 'taskDetail.review.waitingReviewer',
+  reworkRequired: 'taskDetail.execution.view.reworkRequired',
   notStarted: 'taskDetail.execution.view.notStarted',
   scheduled: 'taskDetail.execution.view.scheduled',
   stopped: 'taskDetail.execution.view.stopped',

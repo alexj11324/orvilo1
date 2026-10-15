@@ -1,4 +1,8 @@
-import type { EditTaskParams, ListWorkspaceMembersParams } from '@orvilo/builtin-tool-task';
+import type {
+  EditTaskParams,
+  ListWorkspaceMembersParams,
+  SubmitTaskReviewParams,
+} from '@orvilo/builtin-tool-task';
 import {
   normalizeListTasksParams,
   normalizeListWorkspaceMembersParams,
@@ -34,6 +38,7 @@ import { tasks } from '@/database/schemas';
 import { appEnv } from '@/envs/app';
 import { taskRouter } from '@/server/routers/lambda/task';
 import { TaskService } from '@/server/services/task';
+import { readIssueReview, submitIssueReview } from '@/server/services/task/review';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
@@ -386,6 +391,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       const updateData: {
         assigneeAgentId?: string | null;
         assigneeUserId?: string | null;
+        reviewerAgentId?: string | null;
         description?: string;
         instruction?: string;
         name?: string;
@@ -416,6 +422,12 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
           args.assigneeUserId
             ? `assignee member → ${await resolveMemberLabel(args.assigneeUserId)}`
             : 'assignee member cleared',
+        );
+      }
+      if (args.reviewerAgentId !== undefined) {
+        updateData.reviewerAgentId = args.reviewerAgentId;
+        changes.push(
+          args.reviewerAgentId ? `reviewer agent → ${args.reviewerAgentId}` : 'reviewer cleared',
         );
       }
       if (args.instruction !== undefined) {
@@ -683,12 +695,60 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       return { content: formatTaskEdited(task.identifier, changes), success: true };
     },
 
+    submitTaskReview: async (args: SubmitTaskReviewParams) => {
+      if (!deps.db || !deps.userId || !agentId || !operationId || !taskId)
+        return { content: 'No authenticated reviewer Agent run.', success: false };
+      if (
+        !['pass', 'fail'].includes(args.verdict) ||
+        (args.verdict === 'fail' && !args.comment?.trim())
+      )
+        return {
+          content: 'A failed review requires a comment explaining what is missing.',
+          success: false,
+        };
+      const task = await taskModel().resolve(args.identifier);
+      const review = task && readIssueReview(task);
+      if (!task || task.id !== taskId || !review)
+        return { content: 'This reviewer run cannot judge the requested Issue.', success: false };
+      try {
+        const result = await submitIssueReview(
+          deps.db,
+          deps.userId,
+          {
+            actorAgentId: agentId,
+            comment: args.comment,
+            cycleId: review.cycleId,
+            operationId,
+            taskId: task.id,
+            verdict: args.verdict,
+          },
+          deps.workspaceId,
+        );
+        return {
+          content: `Issue ${task.identifier} review recorded. Status: ${result.task.workflowCategory}.`,
+          state: {
+            commentId: result.commentId,
+            identifier: task.identifier,
+            stopped: result.stopped,
+            success: true,
+            workflowCategory: result.task.workflowCategory,
+          },
+          success: true,
+        };
+      } catch (error) {
+        console.error('[task-runtime] Issue review verdict was not applied', error);
+        return {
+          content: error instanceof Error ? error.message : 'Issue review verdict was not applied.',
+          success: false,
+        };
+      }
+    },
+
     setTaskVerify: async (args: {
       enabled?: boolean | null;
       identifier: string;
       maxIterations?: number | null;
       requirement?: string | null;
-      verifierAgentId?: string | null;
       verifyCriteriaIds?: string[] | null;
       verifyRubricId?: string | null;
     }) => {
@@ -703,7 +763,6 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         enabled?: boolean | null;
         maxIterations?: number | null;
         requirement?: string | null;
-        verifierAgentId?: string | null;
         verifyCriteriaIds?: string[] | null;
         verifyRubricId?: string | null;
       } = {};
@@ -731,14 +790,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
             : `max iterations → ${args.maxIterations}`,
         );
       }
-      if (args.verifierAgentId !== undefined) {
-        verify.verifierAgentId = args.verifierAgentId;
-        changes.push(
-          args.verifierAgentId
-            ? `verifier agent → ${args.verifierAgentId}`
-            : 'verifier agent cleared',
-        );
-      }
+
       if (args.verifyRubricId !== undefined) {
         verify.verifyRubricId = args.verifyRubricId;
         changes.push(
@@ -951,8 +1003,9 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       const detail = await taskService().getTaskDetail(id);
       if (!detail) return { content: `Task not found: ${id}`, success: false };
 
+      const reviewers = await taskCaller().listReviewerAgents();
       return {
-        content: formatTaskDetail(detail),
+        content: `${formatTaskDetail(detail)}\nUsable reviewer Agents: ${JSON.stringify(reviewers.data)}. Set reviewerAgentId with editTask before this delivered Issue enters review. Choose canReviewIssues=true; unsupported runtimes cannot be assigned as reviewer.`,
         state: {
           domainRevision: detail.domainRevision,
           identifier: detail.identifier,

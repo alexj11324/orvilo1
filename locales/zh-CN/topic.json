@@ -69,7 +69,6 @@
   "duplicateSuccess": "话题复制成功",
   "failedStatusTip": "当前执行遇到了错误，点击查看详情",
   "favorite": "收藏",
-
   "filter.groupMode.byProject": "按项目",
   "filter.groupMode.byStatus": "按状态",
   "filter.groupMode.byTime": "按时间阶段",
@@ -184,6 +183,7 @@
   "taskManager.agent": "任务智能体",
   "taskManager.agentSelector.privateGroup": "私人",
   "taskManager.agentSelector.workspaceGroup": "工作区",
+  "taskManager.orchestratorRequired": "请选择一个 Agent，或配置协调 Agent 来管理 Issue。",
   "taskManager.welcome": "问我关于你的 Issue",
   "temp": "临时",
   "title": "话题"

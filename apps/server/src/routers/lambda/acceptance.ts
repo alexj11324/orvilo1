@@ -16,6 +16,7 @@ import {
 } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AcceptanceFlowModel } from '@/database/models/acceptanceFlow';
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import { TaskModel } from '@/database/models/task';
 import { VerifyReviewPredictionModel } from '@/database/models/verifyReviewPrediction';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
@@ -37,10 +38,10 @@ import {
   previewAcceptancePurge,
   purgeAcceptance,
   REVIEW_PREDICT_CONCURRENCY,
-  REVIEW_PREDICT_MODEL_CONFIG,
   shouldSurfaceProposal,
   VerifyReviewPredictorService,
 } from '@/server/services/verify';
+import { resolveIssueReviewer } from '@/server/services/verify/reviewerAgent';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
 import { canManageAcceptance } from './_helpers/acceptanceWriteScope';
@@ -537,25 +538,23 @@ export const acceptanceRouter = router({
       // the result it judged. Keying on the logical id silently misses every
       // plan that uses a distinct snapshot id: generation reports success and
       // no card ever renders.
+      const reviewerAgentId =
+        acceptance.subjectType === 'task'
+          ? ((
+              await new TaskModel(
+                ctx.serverDB,
+                acceptance.userId,
+                acceptance.workspaceId ?? undefined,
+              ).findById(acceptance.subjectId)
+            )?.reviewerAgentId ?? '')
+          : '';
       const predictionByResult = new Map<string, (typeof predictions)[number]>();
-      // Goal reviews may use the owner's configured model. Their persisted ids
-      // identify the actual automatic decision without admitting unrelated rows.
-      const automaticPredictionIds = new Set(
-        runs.flatMap((run) => run.metadata?.goalReview?.predictionIds ?? []),
-      );
       // Newest-first from the model, so the first write per check item wins and
       // later (older) rows are ignored.
       for (const prediction of predictions) {
         // Rows from an earlier pin (another model / prompt version) stay in
         // the table for the comparison set but are not this page's reviewer.
-        if (
-          !isCurrentReviewPrediction(
-            prediction,
-            REVIEW_PREDICT_MODEL_CONFIG,
-            automaticPredictionIds,
-          )
-        )
-          continue;
+        if (!isCurrentReviewPrediction(prediction, reviewerAgentId)) continue;
         if (!predictionByResult.has(prediction.checkResultId)) {
           predictionByResult.set(prediction.checkResultId, prediction);
         }
@@ -823,7 +822,12 @@ export const acceptanceRouter = router({
 
       // Pinned, never the verifier's own model: the predictor reads screenshots,
       // and a text-only verifier model silently judges frames it cannot see.
-      const modelConfig = REVIEW_PREDICT_MODEL_CONFIG;
+      const reviewerAgentId = await resolveIssueReviewer(
+        ctx.serverDB,
+        ctx.userId,
+        acceptance.subjectType === 'task' ? acceptance.subjectId : undefined,
+        acceptance.workspaceId ?? undefined,
+      );
 
       const predictor = new VerifyReviewPredictorService(
         ctx.serverDB,
@@ -841,7 +845,7 @@ export const acceptanceRouter = router({
       // poll — before a single new judgement has landed.
       await predictor.resetPending(
         pending.map((check) => check.result!.id),
-        modelConfig,
+        reviewerAgentId,
       );
 
       // Dispatched AFTER the response, with a ceiling on how many model calls
@@ -865,8 +869,7 @@ export const acceptanceRouter = router({
               instructionDocumentId: check.planItem?.documentId,
               // The Acceptance's pinned verifier is the authorized judgment
               // binding (builtin verify agent + env are the fallbacks).
-              judgmentAgentId: acceptance.config?.verifierAgentId,
-              modelConfig,
+              reviewerAgentId,
               requirement: acceptance.requirement,
               surface: check.surface,
             }),

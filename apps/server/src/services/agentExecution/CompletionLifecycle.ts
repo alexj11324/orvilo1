@@ -12,6 +12,7 @@ import {
   type RecordOperationStartParams,
 } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
+import { TaskModel } from '@/database/models/task';
 import { recomputeTopicUsage } from '@/database/models/topicUsage';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import { WorkModel } from '@/database/models/work';
@@ -229,7 +230,15 @@ export class CompletionLifecycle {
     // void-ing it) so `dispatchHooks` can await it before the completion gate runs
     // — a fast run can otherwise complete first and the gate would no-op on a plan
     // that lands moments later. (instantiateVerifyPlanOnStart never rejects.)
-    if (params.taskId && !params.parentOperationId && !params.skipTaskVerification) {
+    const task = params.taskId
+      ? await new TaskModel(this.serverDB, this.userId, this.workspaceId).findById(params.taskId)
+      : null;
+    if (
+      params.taskId &&
+      task?.automationMode &&
+      !params.parentOperationId &&
+      !params.skipTaskVerification
+    ) {
       this.verifyPlanInstantiations.set(
         params.operationId,
         instantiateVerifyPlanOnStart(
@@ -965,10 +974,27 @@ export class CompletionLifecycle {
         );
       }
 
+      const operation = await this.agentOperationModel.findById(operationId);
+      const issueTask = operation?.taskId
+        ? await new TaskModel(this.serverDB, this.userId, this.workspaceId).findById(
+            operation.taskId,
+          )
+        : null;
+      if (operation?.appContext?.issueReviewCycleId) {
+        const { completeIssueReviewOperation } = await import('../task/review');
+        await completeIssueReviewOperation(
+          this.serverDB,
+          this.userId,
+          operationId,
+          reason,
+          this.workspaceId,
+        );
+      }
+
       // Delivery checker: on a successful completion, run the confirmed verify
       // plan against the deliverable. Fire-and-forget and self-guarded — a run
       // without an opted-in plan is a no-op, and failures never affect the run.
-      if (reason === 'done') {
+      if (reason === 'done' && (!operation?.taskId || issueTask?.automationMode)) {
         // The task's verify plan is instantiated fire-and-forget at run start; a
         // fast or no-op run can reach completion before it settles. Await the
         // in-flight instantiation (if any) so the gate sees the confirmed plan

@@ -204,6 +204,18 @@ export class DeviceGateway {
     );
   }
 
+  /** Queue expiry needs confirmed absence; a failed gateway read is not device silence. */
+  async queryDevicePresence(
+    userId: string,
+    deviceId: string,
+    workspaceId?: string,
+  ): Promise<boolean> {
+    const client = this.getClient();
+    if (!client) throw new Error('Device gateway is not configured');
+    const devices = await client.queryDeviceList(userId, workspaceId);
+    return devices.some((device) => device.deviceId === deviceId);
+  }
+
   async queryDeviceSystemInfo(
     userId: string,
     deviceId: string,

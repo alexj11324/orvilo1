@@ -1,19 +1,11 @@
 'use client';
 
-import { type VerifierType, verifierTypes } from '@orvilo/const/verify';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import type { VerifyCriterionDraft } from '@/services/verify';
@@ -54,21 +46,12 @@ export const CriterionEditor = ({
   const { t } = useTranslation('verify');
   const [draft, setDraft] = useState<VerifyCriterionDraft>(initial);
   const [saving, setSaving] = useState(false);
-  const verifierType = draft.verifierType ?? 'llm';
+  const verifierType = draft.verifierType ?? 'agent';
   const isProgram = verifierType === 'program';
   const instructionLinked = hasLinkedInstruction(initial);
 
   const patch = (value: Partial<VerifyCriterionDraft>) =>
     setDraft((previous) => ({ ...previous, ...value }));
-
-  const verifierOptions = useMemo(
-    () =>
-      verifierTypes.map((type) => ({
-        label: t(`criterion.verifierType.${type}` as const),
-        value: type,
-      })),
-    [t],
-  );
 
   const handleSave = async () => {
     const title = draft.title.trim();
@@ -113,31 +96,6 @@ export const CriterionEditor = ({
           value={draft.description ?? ''}
           onChange={(event) => patch({ description: event.target.value })}
         />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <div className="text-xs text-muted-foreground">{t('criterion.verifierLabel')}</div>
-        <Select
-          items={verifierOptions}
-          value={verifierType}
-          onValueChange={(value) => patch({ verifierType: value as VerifierType })}
-        >
-          <SelectTrigger size="normal">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {verifierOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                <div className="flex flex-col gap-0.5">
-                  <div>{option.label}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {t(`criterion.verifierTypeDesc.${option.value as VerifierType}` as const)}
-                  </div>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       <div className="flex flex-col gap-1.5">

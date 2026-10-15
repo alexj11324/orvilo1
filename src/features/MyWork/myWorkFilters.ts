@@ -159,7 +159,7 @@ export const MY_WORK_FILTER_DIRECTORY_FIELDS: readonly WorkQueryField[] = [
   'labelId',
   'projectId',
   'triageStatus',
-  'reviewerUserId',
+  'reviewerAgentId',
   'cycleId',
   'createdAt',
   'updatedAt',

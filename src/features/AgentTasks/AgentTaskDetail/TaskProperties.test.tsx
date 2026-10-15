@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import AssigneeAgentSelector from '../features/AssigneeAgentSelector';
 import TaskExecutionBadge from '../features/TaskExecutionBadge';
 import TaskProperties from './TaskProperties';
 
@@ -130,6 +131,50 @@ describe('TaskProperties', () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it('searches the full reviewer catalog and prevents unsupported keyboard selection', async () => {
+    const onChange = vi.fn();
+    render(
+      <AssigneeAgentSelector
+        defaultOpen
+        agentDisabledReasons={{ pi: 'This runtime cannot record an Issue review verdict.' }}
+        catalogLoading={false}
+        catalogAgents={[
+          {
+            id: 'pi',
+            name: 'Pi reviewer',
+            title: null,
+            type: 'agent',
+            pinned: false,
+            updatedAt: new Date(),
+          },
+          {
+            id: 'unlisted',
+            name: 'Unlisted OpenCode reviewer',
+            title: null,
+            type: 'agent',
+            pinned: false,
+            updatedAt: new Date(),
+          },
+        ]}
+        onChange={onChange}
+      >
+        Choose reviewer
+      </AssigneeAgentSelector>,
+    );
+    const user = userEvent.setup();
+    const search = screen.getByRole('textbox');
+    await waitFor(() =>
+      expect(screen.getByText('This runtime cannot record an Issue review verdict.')).toBeVisible(),
+    );
+    await user.type(search, 'Pi reviewer');
+    await user.keyboard('{Enter}');
+    expect(onChange).not.toHaveBeenCalled();
+    await user.clear(search);
+    await user.type(search, 'Unlisted OpenCode');
+    await user.keyboard('{Enter}');
+    expect(onChange).toHaveBeenCalledWith('unlisted', expect.objectContaining({ id: 'unlisted' }));
   });
 
   it.each(['{Enter}', ' '])(
@@ -307,6 +352,30 @@ describe('TaskProperties', () => {
       expect(execution.textContent).toContain('taskDetail.execution.hint.needsAgent');
     } finally {
       delete detail.workflowCategory;
+    }
+  });
+
+  it('shows rework after a reviewer failure without waiting for manual acceptance', () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    const original = { ...detail };
+    Object.assign(detail, {
+      agentId: 'agent-1',
+      dispatchPhase: 'succeeded',
+      status: 'paused',
+      workflowCategory: 'in_progress',
+      config: { issueReview: { state: 'submitted', consecutiveFailures: 1, repairPending: true } },
+    });
+    try {
+      render(<TaskProperties />);
+      expect(screen.getByText('taskDetail.execution.view.reworkRequired')).toBeTruthy();
+      expect(screen.queryByText('taskDetail.execution.view.awaitingAcceptance')).toBeNull();
+      expect(screen.queryByText('taskDetail.execution.hint.awaitingAcceptance')).toBeNull();
+      expect(screen.queryByText('succeeded')).toBeNull();
+    } finally {
+      for (const key of Object.keys(detail)) delete detail[key];
+      Object.assign(detail, original);
     }
   });
 

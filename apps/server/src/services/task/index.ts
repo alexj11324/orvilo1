@@ -18,6 +18,7 @@ import type {
   TaskWorkflowCategory,
   WorkspaceData,
 } from '@orvilo/types';
+import { executionParkedReason } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 
 import { AgentModel } from '@/database/models/agent';
@@ -130,6 +131,7 @@ export interface CreateTaskInput {
   parentTaskId?: string;
   priority?: number | null;
   projectId?: string;
+  reviewerAgentId?: string | null;
   schedulePattern?: string;
   scheduleTimezone?: string;
   sortOrder?: number;
@@ -217,6 +219,16 @@ export class TaskService {
    */
   async createTask(input: CreateTaskInput, mutation: TaskMutationContext = {}): Promise<TaskItem> {
     await this.assertAssigneeAgentBelongsToUser(input.assigneeAgentId);
+    if (input.reviewerAgentId) {
+      await this.assertReviewerCanReview(input.reviewerAgentId);
+      await this.assertAssigneeAgentBelongsToUser(input.reviewerAgentId);
+      await assertCanUseWorkspaceAgent({
+        agentId: input.reviewerAgentId,
+        db: this.db,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+    }
 
     const taskInput = input;
     const createData: CreateTaskInput & { config?: Record<string, unknown> } = {
@@ -290,6 +302,10 @@ export class TaskService {
       }
     }
 
+    if (task.workflowCategory === 'in_review') {
+      const { startIssueReview } = await import('./review');
+      await startIssueReview(this.db, this.userId, task.id, {}, this.workspaceId);
+    }
     return task;
   }
 
@@ -737,6 +753,14 @@ export class TaskService {
       });
     }
     options?.onStatusCommitted?.();
+    if (
+      task.workflowCategory === 'in_review' &&
+      resolved.workflowCategory !== 'in_review' &&
+      actor
+    ) {
+      const { startIssueReview } = await import('./review');
+      await startIssueReview(this.db, this.userId, task.id, {}, this.workspaceId);
+    }
 
     // A person's plain move is logged inside `updateWithLog`. Every other
     // write went through an unlogged writer: the system reacting to a run
@@ -757,7 +781,7 @@ export class TaskService {
     // A terminal transition abandons the task's merge pipeline — tear down
     // any provisioned worktrees its runs left behind. Best-effort: cleanup
     // must never break the status change itself.
-    if (TERMINAL_TASK_STATUSES.has(status)) {
+    if (status !== 'completed' && TERMINAL_TASK_STATUSES.has(status)) {
       await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
         task.id,
       );
@@ -839,32 +863,42 @@ export class TaskService {
       }
     }
 
-    const unlocked: string[] = [];
-    const paused: string[] = [];
+    const completion =
+      status === 'completed'
+        ? await this.finalizeCompletedTask(task)
+        : status === 'canceled'
+          ? await new TaskRunnerService(this.db, this.userId, this.workspaceId)
+              .cascadeOnCompletion(task.id)
+              .then((cascade) => ({ paused: cascade.paused, unlocked: cascade.started }))
+          : { paused: [], unlocked: [] };
+    return { ...completion, task };
+  }
+
+  /** Finish a committed Done transition without issuing a second status mutation. */
+  async finalizeCompletedTask(task: TaskItem) {
+    const current = await this.taskModel.findById(task.id);
+    if (current?.workflowCategory !== 'done') return { paused: [], unlocked: [] };
+    await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
+      task.id,
+    );
     let allSubtasksDone = false;
     let checkpointTriggered = false;
-
-    if (status === 'completed' || status === 'canceled') {
-      if (status === 'completed' && task.parentTaskId) {
-        const parentTask = await this.taskModel.findById(task.parentTaskId);
-        if (parentTask && this.taskModel.shouldPauseAfterComplete(parentTask, task.identifier)) {
-          await this.taskModel.updateStatus(parentTask.id, 'paused');
-          checkpointTriggered = true;
-        }
-        allSubtasksDone = await this.taskModel.areAllSubtasksCompleted(task.parentTaskId);
+    if (task.parentTaskId) {
+      const parentTask = await this.taskModel.findById(task.parentTaskId);
+      if (parentTask && this.taskModel.shouldPauseAfterComplete(parentTask, task.identifier)) {
+        await this.taskModel.updateStatus(parentTask.id, 'paused');
+        checkpointTriggered = true;
       }
-
-      // Unlock blocked tasks and actually kick them off via the runner.
-      const runner = new TaskRunnerService(this.db, this.userId, this.workspaceId);
-      const cascade = await runner.cascadeOnCompletion(task.id);
-      unlocked.push(...cascade.started);
-      paused.push(...cascade.paused);
+      allSubtasksDone = await this.taskModel.areAllSubtasksCompleted(task.parentTaskId);
     }
-
+    const cascade = await new TaskRunnerService(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).cascadeOnCompletion(task.id);
     return {
-      paused,
-      task,
-      unlocked,
+      paused: cascade.paused,
+      unlocked: cascade.started,
       ...(checkpointTriggered && { checkpointTriggered: true }),
       ...(allSubtasksDone && { allSubtasksDone: true, parentTaskId: task.parentTaskId }),
     };
@@ -1216,6 +1250,18 @@ export class TaskService {
     return { failed, kickedOff, plan };
   }
 
+  private async assertReviewerCanReview(agentId: string): Promise<void> {
+    const agent = await this.agentModel.getAgentConfigForExecution(agentId);
+    const { agentCanMountBuiltinToolSurface } =
+      await import('../aiAgent/pipeline/resolveExecutionBinding');
+    if (!agent || !agentCanMountBuiltinToolSurface(agent, agent.model)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Reviewer runtime cannot mount submitTaskReview.',
+      });
+    }
+  }
+
   private async assertAssigneeAgentBelongsToUser(assigneeAgentId?: string | null): Promise<void> {
     if (!assigneeAgentId) return;
     // `existsById` already applies the workspace + visibility predicate, so a
@@ -1341,6 +1387,16 @@ export class TaskService {
     actor: { agentId?: string | null; userId?: string | null } = {},
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
+    if (data.reviewerAgentId) {
+      await this.assertReviewerCanReview(data.reviewerAgentId);
+      await this.assertAssigneeAgentBelongsToUser(data.reviewerAgentId);
+      await assertCanUseWorkspaceAgent({
+        agentId: data.reviewerAgentId,
+        db: this.db,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+    }
     if (data.projectId) {
       const project = await this.projectModel.findManageableById(data.projectId);
       if (!project) throw new TRPCError({ code: 'NOT_FOUND', message: 'Project not found' });
@@ -1357,7 +1413,7 @@ export class TaskService {
       ? { ...data, runReservationExpiresAt: null, runReservationId: null }
       : data;
 
-    return this.withAssigneeUserLock(data.assigneeUserId, (db) =>
+    const result = await this.withAssigneeUserLock(data.assigneeUserId, (db) =>
       new TaskModel(db, this.userId, this.workspaceId).updateWithLog(
         taskId,
         guardedData,
@@ -1365,6 +1421,14 @@ export class TaskService {
         mutation,
       ),
     );
+    if (
+      result?.workflowCategory === 'in_review' &&
+      (data.workflowCategory === 'in_review' || data.reviewerAgentId)
+    ) {
+      const { startIssueReview } = await import('./review');
+      await startIssueReview(this.db, this.userId, result.id, {}, this.workspaceId);
+    }
+    return result;
   }
 
   /**
@@ -1746,17 +1810,17 @@ export class TaskService {
       ),
     ];
     const issueTaskIds = [task.id, ...allDescendantIds];
-    const subtaskAgents =
+    const childAgents =
       subtaskAssigneeIds.length > 0
         ? await this.agentModel.getAgentAvatarsByIds(subtaskAssigneeIds, issueTaskIds)
         : [];
-    const subtaskAgentMap = new Map(subtaskAgents.map((a) => [a.id, a]));
+    const childAgentMap = new Map(childAgents.map((a) => [a.id, a]));
 
     const buildSubtaskTree = (parentId: string): TaskDetailSubtask[] | undefined => {
       const children = childrenMap.get(parentId);
       if (!children || children.length === 0) return undefined;
       return children.map((s) => {
-        const agent = s.assigneeAgentId ? subtaskAgentMap.get(s.assigneeAgentId) : undefined;
+        const agent = s.assigneeAgentId ? childAgentMap.get(s.assigneeAgentId) : undefined;
         const runningTopic = runningTopicByTaskId.get(s.id);
         return {
           ...(agent
@@ -1779,7 +1843,7 @@ export class TaskService {
           identifier: s.identifier,
           name: s.name,
           priority: s.priority,
-          reviewerUserId: s.reviewerUserId,
+          reviewerAgentId: s.reviewerAgentId,
           ...(runningTopic?.topicId
             ? {
                 runningTopic: {
@@ -1909,7 +1973,7 @@ export class TaskService {
       // Property events carry values, not participant ids.
       if (log.type !== 'assignee_agent' && log.type !== 'assignee_user' && log.type !== 'reviewer')
         continue;
-      const target = log.type === 'assignee_agent' ? agentIds : userIds;
+      const target = log.type === 'assignee_user' ? userIds : agentIds;
       for (const id of [log.payload?.fromId, log.payload?.toId]) if (id) target.add(id);
     }
 
@@ -2063,6 +2127,18 @@ export class TaskService {
               : // Genuinely nobody: the runner's system fallback.
                 undefined;
 
+        if (log.type === 'review_waiting' && typeof log.payload?.reason === 'string') {
+          return [
+            {
+              author,
+              id: log.id,
+              time: toISO(log.createdAt),
+              type: 'review_waiting',
+              reviewWaiting: { reason: log.payload.reason },
+            },
+          ];
+        }
+
         const propertyChange = activityLogPropertyChange(
           withReadableContainerNames(log, readableContainers),
           activityIssueRefs,
@@ -2097,7 +2173,7 @@ export class TaskService {
         // actor reads as the system (falsely crediting it for an agent's work).
         const resolveSide = (id?: string | null): TaskDetailActivityAuthor | null => {
           if (!id) return null;
-          return authorMap.get(id) ?? stub(id, kind === 'agent' ? 'agent' : 'user');
+          return authorMap.get(id) ?? stub(id, kind === 'member' ? 'user' : 'agent');
         };
         return [
           {
@@ -2184,6 +2260,7 @@ export class TaskService {
       labels: taskLabels.map(toTaskLabelSummary),
       name: task.name,
       parent,
+      parkedReason: executionParkedReason(task.context),
       priority: task.priority,
       projectId: task.projectId,
       schedule:
@@ -2194,7 +2271,7 @@ export class TaskService {
               timezone: task.scheduleTimezone,
             }
           : undefined,
-      reviewerUserId: task.reviewerUserId,
+      reviewerAgentId: task.reviewerAgentId,
       startedAt: task.startedAt ? new Date(task.startedAt).toISOString() : undefined,
       status: heartbeatStatus ?? task.status,
       dispatchPhase: task.dispatchPhase,

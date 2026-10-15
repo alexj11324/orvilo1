@@ -8,6 +8,7 @@ import {
   agentInterventionResolutions,
   agentInterventions,
   agentOperations,
+  agents,
   messagePlugins,
   messages,
   taskDispatches,
@@ -22,6 +23,7 @@ import { TaskModel } from '../task';
 const db = await getTestDB();
 const ownerId = 'attention-owner';
 const otherId = 'attention-other';
+const reviewerAgentId = 'attention-reviewer';
 const model = new TaskModel(db, ownerId);
 let sequence = 0;
 
@@ -115,6 +117,7 @@ beforeEach(async () => {
   await db.delete(tasks);
   await db.delete(users);
   await db.insert(users).values([{ id: ownerId }, { id: otherId }]);
+  await db.insert(agents).values({ id: reviewerAgentId, slug: reviewerAgentId, userId: ownerId });
   sequence = 0;
 });
 
@@ -133,7 +136,7 @@ describe('TaskModel attention groups', () => {
     await model.updateStatus(failed.id, 'failed');
     await createTask();
     const normal2 = await createTask();
-    const review = await createTask();
+    const review = await createTask({ reviewerAgentId });
     await model.updateStatus(review.id, 'paused', { workflowCategory: 'in_review' });
     const attentionReasons: TaskAttentionReason[] = ['needs_input', 'needs_input'];
     const groups = [
@@ -176,7 +179,7 @@ describe('TaskModel attention groups', () => {
     await createTask();
     const failed = await createTask();
     const normal2 = await createTask();
-    const review = await createTask();
+    const review = await createTask({ reviewerAgentId });
     for (const [task, status] of [
       [failed, 'failed'],
       [review, 'paused'],

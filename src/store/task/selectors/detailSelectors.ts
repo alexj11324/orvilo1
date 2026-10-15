@@ -81,16 +81,15 @@ const taskFiles = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?
 
 const taskDescription = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.description;
 
-const taskAgentId = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.agentId;
+const taskAssigneeAgentId = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.agentId;
 
 // Human assignee (workspace member). `detail.userId` is populated from the
 // server-side `tasks.assignee_user_id` column.
 const taskAssigneeUserId = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.userId;
 
-// Review-phase owner: the member accountable while the task sits paused for
-// review. Falls back to assignee→creator server-side on the paused transition.
-const taskReviewerUserId = (s: TaskStoreState, taskId?: string) =>
-  taskDetail(s, taskId)?.reviewerUserId;
+// The Issue has one explicitly chosen reviewer Agent.
+const taskReviewerAgentId = (s: TaskStoreState, taskId?: string) =>
+  taskDetail(s, taskId)?.reviewerAgentId;
 
 // TODO: Once the frontend store switches to reading from detail.model / detail.provider returned by the backend getTaskDetail procedure
 const taskModel = (s: TaskStoreState, taskId?: string) =>
@@ -182,12 +181,12 @@ const activeTopicDrawerTopicId = (s: TaskStoreState) => s.activeTopicDrawerTopic
  * since the topic may have no parent task.
  */
 const topicDrawerAgentId = (s: TaskStoreState, taskId?: string) =>
-  s.activeTopicDrawerAgentId ?? taskAgentId(s, taskId ?? s.activeTaskId);
+  s.activeTopicDrawerAgentId ?? taskAssigneeAgentId(s, taskId ?? s.activeTaskId);
 
 const topicDrawerTitle = (s: TaskStoreState) => s.activeTopicDrawerTitle;
 
 export const taskDetailSelectors = {
-  activeTaskAgentId: (s: TaskStoreState) => taskAgentId(s, s.activeTaskId),
+  activeTaskAgentId: (s: TaskStoreState) => taskAssigneeAgentId(s, s.activeTaskId),
   activeTaskAssigneeUserId: (s: TaskStoreState) => taskAssigneeUserId(s, s.activeTaskId),
   activeTaskAutomationMode: (s: TaskStoreState) => taskAutomationMode(s, s.activeTaskId),
   activeTaskCheckpoint: (s: TaskStoreState) => taskCheckpoint(s, s.activeTaskId),
@@ -210,7 +209,7 @@ export const taskDetailSelectors = {
   activeTaskPeriodicInterval: (s: TaskStoreState) => taskPeriodicInterval(s, s.activeTaskId),
   activeTaskPriority: (s: TaskStoreState) => taskPriority(s, s.activeTaskId),
   activeTaskProvider: (s: TaskStoreState) => taskProvider(s, s.activeTaskId),
-  activeTaskReviewerUserId: (s: TaskStoreState) => taskReviewerUserId(s, s.activeTaskId),
+  activeTaskReviewerAgentId: (s: TaskStoreState) => taskReviewerAgentId(s, s.activeTaskId),
   activeTaskScheduleMaxExecutions: (s: TaskStoreState) =>
     taskScheduleMaxExecutions(s, s.activeTaskId),
   activeTaskSchedulePattern: (s: TaskStoreState) => taskSchedulePattern(s, s.activeTaskId),
@@ -237,7 +236,7 @@ export const taskDetailSelectors = {
   isTaskBlocked,
   isTaskDetailLoading,
   isTaskDetailLoadingFor,
-  taskAgentId,
+  taskAssigneeAgentId,
   taskAssigneeUserId,
   taskAutomationMode,
   taskCheckpoint,
@@ -261,7 +260,7 @@ export const taskDetailSelectors = {
   taskPeriodicInterval,
   taskPriority,
   taskProvider,
-  taskReviewerUserId,
+  taskReviewerAgentId,
   taskSaveStatus: (s: TaskStoreState) => taskSaveStatusFor(s, s.activeTaskId),
   taskSaveStatusFor,
   taskScheduleMaxExecutions,

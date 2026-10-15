@@ -32,6 +32,13 @@ describe('HeterogeneousAgentCtr lazy implementation', () => {
     vi.clearAllMocks();
   });
 
+  it('reports absence without initializing the native runtime', async () => {
+    const controller = new HeterogeneousAgentCtr({} as App);
+    await expect(controller.hasOrviloHeteroExec({ operationId: 'missing' })).resolves.toBe(false);
+    expect(implementationMocks.constructor).not.toHaveBeenCalled();
+    expect(implementationMocks.afterAppReady).not.toHaveBeenCalled();
+  });
+
   it('defers the heavy implementation and initializes it exactly once on first use', async () => {
     const app = {} as App;
     const controller = new HeterogeneousAgentCtr(app);

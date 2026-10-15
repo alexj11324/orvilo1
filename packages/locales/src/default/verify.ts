@@ -1,4 +1,6 @@
 export default {
+  'acceptance.checks.waitingDevice': 'Waiting for verification: reviewer Agent device offline',
+  'acceptance.checks.initiatingMessage': 'Request sent to the reviewer Agent',
   'flow.graphView': 'Graph',
   'flow.outlineView': 'Steps',
   'flow.plan.requestChanges': 'Request changes',

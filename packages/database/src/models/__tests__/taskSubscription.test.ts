@@ -3,7 +3,14 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { tasks, taskSubscriptions, users, workspaceMembers, workspaces } from '../../schemas';
+import {
+  agents,
+  tasks,
+  taskSubscriptions,
+  users,
+  workspaceMembers,
+  workspaces,
+} from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 import { TaskSubscriptionModel } from '../taskSubscription';
@@ -13,6 +20,7 @@ const userId = 'sub-user';
 const workspaceId = 'sub-ws';
 
 beforeEach(async () => {
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
   await serverDB.insert(users).values({ id: userId });
   await serverDB.insert(workspaces).values({
@@ -22,9 +30,13 @@ beforeEach(async () => {
     slug: 'sub-ws',
   });
   await serverDB.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+  await serverDB
+    .insert(agents)
+    .values({ id: 'sub-reviewer-agent', slug: 'sub-reviewer-agent', userId, workspaceId });
 });
 
 afterEach(async () => {
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
 });
 
@@ -152,7 +164,7 @@ describe('TaskSubscriptionModel', () => {
       assigneeUserId: userId,
       instruction: 'Stay mine',
       name: 'Still assigned',
-      reviewerUserId: userId,
+      reviewerAgentId: 'sub-reviewer-agent',
     });
     const model = new TaskSubscriptionModel(serverDB, userId, workspaceId);
     await model.subscribe(task.id);
@@ -160,7 +172,7 @@ describe('TaskSubscriptionModel', () => {
 
     const after = await tasks.findById(task.id);
     expect(after?.assigneeUserId).toBe(userId);
-    expect(after?.reviewerUserId).toBe(userId);
+    expect(after?.reviewerAgentId).toBe('sub-reviewer-agent');
     expect(await model.listActiveTaskIds()).toEqual([]);
   });
 });

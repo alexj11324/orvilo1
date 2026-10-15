@@ -20,6 +20,7 @@ export interface VerifierPromptInput {
   goal: string;
   instruction?: string;
   taskDocuments?: VerifierTaskDocument[];
+  taskId?: string | null;
 }
 
 const describeEvidence = (evidence: VerifierPromptEvidence[] | undefined): string => {
@@ -55,7 +56,10 @@ export const buildVerifierPrompt = ({
   goal,
   instruction,
   taskDocuments,
-}: VerifierPromptInput): string => `## Check to verify
+  taskId,
+}: VerifierPromptInput): string => `Please review this delivery for ${taskId ? `Issue ${taskId}` : 'the Issue'}.
+
+## Check to verify
 checkItemId: ${checkItem.id}
 Title: ${checkItem.title}${checkItem.description ? `\nSummary: ${checkItem.description}` : ''}${
   instruction
@@ -83,4 +87,4 @@ ${deliverable}`
 }
 
 ## Your task
-Investigate whether the deliverable satisfies this check, judging against the run goal and the judging instruction. Weight the captured evidence above as primary Data; gather more yourself only where it's missing or insufficient. When done, call \`submitVerifyResult\` exactly once with checkItemId="${checkItem.id}" and your verdict (passed / failed / uncertain) plus evidence and reasoning.`;
+Investigate whether the deliverable satisfies this check, judging against the run goal and the judging instruction. Weight the captured evidence above as primary Data; gather more yourself only where it's missing or insufficient. When done, call \`submitVerifyResult\` exactly once with checkItemId="${checkItem.id}" and your verdict (passed / failed / uncertain) plus evidence and reasoning as strings. Use your available runtime tools to inspect the deliverable where needed. A prose reply alone does not record the verdict.`;

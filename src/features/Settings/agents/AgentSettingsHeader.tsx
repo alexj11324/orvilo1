@@ -22,7 +22,10 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useHomeStore } from '@/store/home';
 import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
-import { getDeleteErrorMessageKey } from '@/utils/forbiddenError';
+import {
+  getAgentAssignmentDeleteErrorMessage,
+  getDeleteErrorMessageKey,
+} from '@/utils/forbiddenError';
 
 interface AgentSettingsHeaderProps {
   agentId: string;
@@ -72,7 +75,10 @@ const AgentSettingsHeader = memo<AgentSettingsHeaderProps>(({ agentId }) => {
         try {
           await removeAgent(agentId);
         } catch (error) {
-          toast.error(t(getDeleteErrorMessageKey(error), { ns: 'common' }));
+          toast.error(
+            getAgentAssignmentDeleteErrorMessage(error) ??
+              t(getDeleteErrorMessageKey(error), { ns: 'common' }),
+          );
           return;
         }
         toast.success(t('confirmRemoveSessionSuccess', { ns: 'chat' }));

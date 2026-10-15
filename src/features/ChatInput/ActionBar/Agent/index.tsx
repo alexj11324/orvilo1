@@ -1,4 +1,3 @@
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { CHAT_TOPIC_URL } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { memo, useCallback, useState } from 'react';
@@ -13,9 +12,8 @@ import { selectAgentForConversation } from '@/features/Conversation/selectAgent'
 import AgentList from '@/features/Home/AgentSelect/AgentList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
-import { useInitBuiltinAgent } from '@/hooks/useInitBuiltinAgent';
 import { useAgentStore } from '@/store/agent';
-import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
+import { agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { useGlobalStore } from '@/store/global';
 import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
@@ -102,22 +100,11 @@ const Agent = memo(() => {
   const [open, setOpen] = useState(false);
   const { error, mutate } = useFetchAgentList();
   const workspaceAwareNavigate = useWorkspaceAwareNavigate();
-  // The task agent is a virtual row that never reaches the sidebar list — it
-  // must be provisioned here so the dropdown can offer it (AgentList injects
-  // it once `builtinAgentIdMap` resolves).
-  useInitBuiltinAgent(BUILTIN_AGENT_SLUGS.taskAgent);
-
-  const taskAgentId = useAgentStore(builtinAgentSelectors.taskAgentId);
   const runtimeType = useAgentStore((s) =>
     resolveAgentRuntimeType(agentSelectors.getAgentConfigById(agentId)(s)),
   );
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
-  // The task agent is a virtual row — its label comes from the same fallback
-  // the task-manager selector uses, not the agent meta map.
-  const title = agentDisplayName(
-    meta,
-    agentId === taskAgentId ? t('taskManager.agent', { ns: 'topic' }) : t('untitledAgent'),
-  );
+  const title = agentDisplayName(meta, t('untitledAgent'));
 
   const handleSelect = useCallback(
     (id: string) => {
@@ -140,10 +127,7 @@ const Agent = memo(() => {
       // Open topic: the pick offers the two explicit handoff modes — the
       // switch is never silent, and the copy says what each mode does.
       const toMeta = agentSelectors.getAgentMetaById(id)(useAgentStore.getState());
-      const toName = agentDisplayName(
-        toMeta,
-        id === taskAgentId ? t('taskManager.agent', { ns: 'topic' }) : t('untitledAgent'),
-      );
+      const toName = agentDisplayName(toMeta, t('untitledAgent'));
       const topicId = activeTopicId;
       createModal({
         content: (
@@ -172,7 +156,7 @@ const Agent = memo(() => {
         width: 420,
       });
     },
-    [agentId, t, taskAgentId, workspaceAwareNavigate],
+    [agentId, t, workspaceAwareNavigate],
   );
 
   return (
@@ -192,7 +176,6 @@ const Agent = memo(() => {
         style={{ padding: 0, width: 280 }}
       >
         <AgentList
-          includeTaskAgent
           activeAgentId={agentId}
           error={error}
           onRetry={() => mutate()}

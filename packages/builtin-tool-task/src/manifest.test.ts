@@ -61,3 +61,19 @@ describe('Task edit concurrency contract', () => {
     });
   });
 });
+
+describe('automatic reviewer assignment contract', () => {
+  it('requires a reviewer runtime that can record an Issue review', () => {
+    const view = TaskManifest.api.find((api) => api.name === TaskApiName.viewTask);
+    const edit = TaskManifest.api.find((api) => api.name === TaskApiName.editTask);
+    expect(view?.description).toContain('canReviewIssues=true');
+    expect(edit?.parameters).toMatchObject({
+      properties: {
+        reviewerAgentId: {
+          description: expect.stringContaining('canReviewIssues=true'),
+        },
+      },
+    });
+    expect(view?.description).toContain('cannot be assigned as reviewer');
+  });
+});

@@ -34,7 +34,8 @@ export const TaskManifest: BuiltinToolManifest = {
       parameters: {
         properties: {
           instruction: {
-            description: 'Detailed instruction for what the task should accomplish.',
+            description:
+              'The editable Issue description: what to deliver and its acceptance criteria.',
             type: 'string',
           },
           assigneeAgentId: {
@@ -86,7 +87,7 @@ export const TaskManifest: BuiltinToolManifest = {
             items: {
               properties: {
                 instruction: {
-                  description: 'Detailed instruction for what the task should accomplish.',
+                  description: 'The editable Issue description, including its acceptance criteria.',
                   type: 'string',
                 },
                 assigneeAgentId: {
@@ -191,7 +192,7 @@ export const TaskManifest: BuiltinToolManifest = {
     },
     {
       description:
-        'View details of a specific task. If identifier is omitted, this only works when there is a current task context.',
+        'View details of a specific Issue and its usable reviewer Agents. Choose an Agent with canReviewIssues=true; a runtime that cannot mount the review tool cannot be assigned as reviewer. If identifier is omitted, this only works when there is a current task context.',
       name: TaskApiName.viewTask,
       parameters: {
         properties: {
@@ -202,6 +203,31 @@ export const TaskManifest: BuiltinToolManifest = {
           },
         },
         required: [],
+        type: 'object',
+      },
+    },
+    {
+      description:
+        'Record the verdict for the Issue you were asked to review. Read its description and investigate the delivered work with your runtime tools, then call this exactly once. A fail requires a comment explaining what is missing. Pass moves the Issue to Done; fail posts your comment and returns it to its assignee. A prose reply alone does not record a verdict. This call is authorized only for the current reviewer Agent run.',
+      humanIntervention: 'never',
+      name: TaskApiName.submitTaskReview,
+      parameters: {
+        additionalProperties: false,
+        properties: {
+          identifier: {
+            description: 'The Issue identifier in your review request.',
+            minLength: 1,
+            type: 'string',
+          },
+          verdict: { enum: ['pass', 'fail'], type: 'string' },
+          comment: {
+            description:
+              'A normal Issue comment. Required for fail; say what the assignee must fix.',
+            minLength: 1,
+            type: 'string',
+          },
+        },
+        required: ['identifier', 'verdict'],
         type: 'object',
       },
     },
@@ -262,7 +288,7 @@ export const TaskManifest: BuiltinToolManifest = {
     },
     {
       description:
-        "Edit a task's fields (name, description, instruction, priority), assignee (agent or workspace member), parent, or project or dependencies (batched). Before changing either assignee, call viewTask and pass its domainRevision as expectedDomainRevision. Status changes go through updateTaskStatus; schedule configuration goes through setTaskSchedule.",
+        "Edit a task's fields (name, description, instruction, priority), assignee (agent or workspace member), reviewer Agent, parent, or project or dependencies (batched). Before changing either assignee or the reviewer, call viewTask and pass its domainRevision as expectedDomainRevision. Status changes go through updateTaskStatus; schedule configuration goes through setTaskSchedule.",
       name: TaskApiName.editTask,
       parameters: {
         properties: {
@@ -271,6 +297,11 @@ export const TaskManifest: BuiltinToolManifest = {
               'Identifiers of tasks this task should block on (e.g. ["TASK-2", "TASK-3"]).',
             items: { type: 'string' },
             type: 'array',
+          },
+          reviewerAgentId: {
+            description:
+              'Reviewer Agent ID. Choose a usable workspace Agent from viewTask with canReviewIssues=true, including yourself. A delivered Issue needs a reviewer before entering review. Set at any pre-review stage; null clears it only outside review.',
+            type: ['string', 'null'],
           },
           assigneeAgentId: {
             description:
@@ -289,7 +320,7 @@ export const TaskManifest: BuiltinToolManifest = {
           },
           expectedDomainRevision: {
             description:
-              'The latest domainRevision returned by viewTask. Required when changing assigneeAgentId or assigneeUserId; also fences other field edits. If the task changed, view it again and reconsider the edit instead of repeating a stale revision.',
+              'The latest domainRevision returned by viewTask. Required when changing assigneeAgentId, assigneeUserId or reviewerAgentId; also fences other field edits. If the task changed, view it again and reconsider the edit instead of repeating a stale revision.',
             minimum: 0,
             type: 'integer',
           },
@@ -443,11 +474,6 @@ export const TaskManifest: BuiltinToolManifest = {
           requirement: {
             description:
               'One-sentence acceptance requirement describing what "done" means for this task (e.g. "All unit tests pass and the new endpoint returns 200"). The server synthesizes acceptance criteria from it when no explicit criteria are given. Pass null to clear.',
-            type: ['string', 'null'],
-          },
-          verifierAgentId: {
-            description:
-              'Agent ID that executes the verify run. Omit to use the built-in verify agent. Pass null to clear an existing value.',
             type: ['string', 'null'],
           },
           verifyCriteriaIds: {

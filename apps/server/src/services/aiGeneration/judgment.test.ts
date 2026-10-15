@@ -217,9 +217,10 @@ describe('runAcpJudgment', () => {
       taskId: 'task-9',
       title: '[judgment] verify.judge',
       trigger: 'acp_judgment',
+      skipTaskVerification: true,
       userInterventionConfig: { approvalMode: 'headless' },
     });
-    // Operation/attempt/budget/intent recorded on the durable row.
+    // A task-scoped administrative judgment must not recursively verify itself.
     expect(execArgs.appContext).toMatchObject({
       judgment: {
         attempt: 2,

@@ -1,0 +1,53 @@
+{
+  "result": {
+    "at": "2026-10-13T18:24:58.260Z",
+    "sourceCommit": "283ac16eb803599a828f61b1bdd22ff203948041",
+    "operationId": "op_1791915694742_agt_UHKRqDtsjqgs_tpc_vojCbZUUdFYq_sU0pAcWo",
+    "topicId": "tpc_vojCbZUUdFYq",
+    "status": "done",
+    "error": null,
+    "messages": [
+      {
+        "role": "user",
+        "content": "For this isolated runtime check, run the read-only shell command printenv XDG_DATA_HOME and reply with only that directory path. Do not inspect any other environment variable, edit files, or call Issue tools."
+      },
+      {
+        "role": "assistant",
+        "content": "..."
+      },
+      {
+        "role": "tool",
+        "content": "/private/tmp/issue769-orchestrator-data\n"
+      },
+      {
+        "role": "assistant",
+        "content": "/private/tmp/issue769-orchestrator-data"
+      }
+    ]
+  },
+  "start": {
+    "at": "2026-10-13T18:21:35.010Z",
+    "sourceCommit": "283ac16eb803599a828f61b1bdd22ff203948041",
+    "agentId": "agt_UHKRqDtsjqgs",
+    "assistantMessageId": "msg_k4zEdRJEFTDCySdCFc",
+    "autoStarted": false,
+    "createdAt": "2026-10-13T18:21:34.988Z",
+    "heteroType": "opencode",
+    "message": "Waiting for the saved Agent device to reconnect.",
+    "operationId": "op_1791915694742_agt_UHKRqDtsjqgs_tpc_vojCbZUUdFYq_sU0pAcWo",
+    "remoteAdmission": "pending",
+    "status": "idle",
+    "success": true,
+    "timestamp": "2026-10-13T18:21:34.988Z",
+    "topicId": "tpc_vojCbZUUdFYq",
+    "userMessageId": "msg_OO4hBfg1ZgCgPQsctQ",
+    "queue": {
+      "state": "waiting",
+      "queuedAt": "2026-10-13T18:21:34.979Z",
+      "offlineSince": "2026-10-13T18:21:34.979Z",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "args": ["--model", "opencode/mimo-v2.6-flash-free"],
+      "persistsEnv": false
+    }
+  }
+}

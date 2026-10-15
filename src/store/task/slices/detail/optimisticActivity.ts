@@ -17,12 +17,12 @@ export interface BuildOptimisticAssignmentInput {
   assigneeAgentId?: string | null;
   assigneeUserId?: string | null;
   /** The assignees before this edit, for the no-op check and the `from` side. */
-  current: { agentId?: string | null; reviewerUserId?: string | null; userId?: string | null };
+  current: { agentId?: string | null; reviewerAgentId?: string | null; userId?: string | null };
   now: string;
+  /** `undefined` = slot untouched, `null` = cleared. Mirrors `TaskUpdatePayload`. */
+  reviewerAgentId?: string | null;
   /** Display metadata for the newly chosen reviewer, handed in by the picker that has it. */
   reviewerTarget?: TaskDetailActivityAuthor;
-  /** `undefined` = slot untouched, `null` = cleared. Mirrors `TaskUpdatePayload`. */
-  reviewerUserId?: string | null;
   /** Display metadata for the newly chosen assignee, handed in by the picker that has it. */
   target?: TaskDetailActivityAuthor;
 }
@@ -44,7 +44,7 @@ export const buildOptimisticAssignmentActivities = ({
   current,
   now,
   reviewerTarget,
-  reviewerUserId,
+  reviewerAgentId,
   target,
 }: BuildOptimisticAssignmentInput): TaskDetailActivity[] => {
   if (!actor) return [];
@@ -88,12 +88,12 @@ export const buildOptimisticAssignmentActivities = ({
     });
   }
 
-  if (reviewerUserId !== undefined && reviewerUserId !== (current.reviewerUserId ?? null)) {
+  if (reviewerAgentId !== undefined && reviewerAgentId !== (current.reviewerAgentId ?? null)) {
     rows.push({
       assignment: {
-        from: side(current.reviewerUserId, 'user'),
+        from: side(current.reviewerAgentId, 'agent'),
         kind: 'reviewer',
-        to: side(reviewerUserId, 'user', reviewerTarget),
+        to: side(reviewerAgentId, 'agent', reviewerTarget),
       },
       author: actor,
       id: `${OPTIMISTIC_ACTIVITY_ID_PREFIX}assignment-reviewer-${now}`,

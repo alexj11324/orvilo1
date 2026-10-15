@@ -97,9 +97,9 @@ import {
   getVisibleTaskStatuses,
   normalizeTaskListViewOptions,
 } from './listViewOptions';
-import { shouldRenderTaskAgentPanelToggle } from './taskAgentPanelToggle';
 import TaskList from './TaskList';
 import TaskListVisibilityFilter from './TaskListVisibilityFilter';
+import { shouldRenderTaskPanelToggle } from './taskPanelToggle';
 import TasksGroupConfig from './TasksGroupConfig';
 
 const styles = {
@@ -147,7 +147,7 @@ export const getTaskPageHeaderVisibility = ({
 
   return {
     showBreadcrumb: isScoped,
-    showTaskAgentPanelToggle: !projectId && shouldRenderTaskAgentPanelToggle(isMobile),
+    showTaskAgentPanelToggle: !projectId && shouldRenderTaskPanelToggle(isMobile),
     // The visibility chip is the issues surface's filter entry; a project
     // scope is still a workspace list, so hiding it there was collateral of
     // the `!projectId` header gates — not intent. Agent scope stays without

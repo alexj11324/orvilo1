@@ -1,13 +1,14 @@
 import debug from 'debug';
 
+import { AgentOperationModel } from '@/database/models/agentOperation';
 import { GoalModel } from '@/database/models/goal';
 import { TaskModel } from '@/database/models/task';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { OrviloDatabase } from '@/database/type';
 
 import { AcceptanceService, buildAcceptanceCheckUnion } from './acceptanceService';
-import { resolveVerifyModelConfig } from './modelConfig';
 import { VerifyPlanGeneratorService } from './planGenerator';
+import { resolveIssueReviewer } from './reviewerAgent';
 import { resolveTaskAcceptance } from './taskAcceptance';
 
 const log = debug('orvilo-server:verify-plan-instantiation');
@@ -40,6 +41,10 @@ export const instantiateVerifyPlanOnStart = async (
   workspaceId?: string,
 ): Promise<void> => {
   try {
+    const operation = await new AgentOperationModel(db, userId, workspaceId).findById(
+      params.operationId,
+    );
+    if (operation?.metadata?.skipTaskVerification === true) return;
     const taskModel = new TaskModel(db, userId, workspaceId);
 
     const task = await taskModel.findById(params.taskId);
@@ -103,28 +108,27 @@ export const instantiateVerifyPlanOnStart = async (
     // spend one generation call splitting the requirement into named criteria,
     // so the checklist reads as distinguishable items instead of one generic
     // "Task delivery acceptance" row.
-    const modelConfig = holistic
-      ? await resolveVerifyModelConfig(
-          db,
-          userId,
-          { verifierAgentId: verifyConfig.verifierAgentId },
-          workspaceId,
-        )
-      : undefined;
+    let reviewerAgentId: string | undefined;
+    if (holistic && task?.reviewerAgentId) {
+      try {
+        reviewerAgentId = await resolveIssueReviewer(db, userId, params.taskId, workspaceId);
+      } catch (error) {
+        log('reviewer unavailable while preparing plan: %O', error);
+      }
+    }
     await planGenerator.generateDraftPlan({
       // Ground the generated criteria in the acceptance text, not just the title.
       context: requirement,
       // Configured rubric/criteria ARE the plan — no AI proposal on that path.
-      enableAiGeneration: holistic,
+      enableAiGeneration: holistic && Boolean(reviewerAgentId),
       goal,
       // Still fall back to the single agent-type holistic check when the
       // generation fails or returns nothing, so verify runs either way.
       holisticFallback: holistic,
-      modelConfig,
+      reviewerAgentId,
       operationId: params.operationId,
       requirement,
       verifyCriteriaIds: verifyConfig.verifyCriteriaIds,
-      verifierAgentId: verifyConfig.verifierAgentId,
       verifyRubricId: verifyConfig.verifyRubricId,
     });
 

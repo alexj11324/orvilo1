@@ -1,7 +1,6 @@
 /**
  * @vitest-environment happy-dom
  */
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -12,7 +11,7 @@ const mocks = vi.hoisted(() => {
   const agentState = {
     activeAgentId: undefined as string | undefined,
     builtinAgentIdMap: {
-      'task-agent': 'agt_task',
+      'task-agent': 'agt_orchestrator',
       'inbox': 'agt_inbox',
     },
     setActiveAgentId: vi.fn((id: string) => {
@@ -42,13 +41,12 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-const harness = vi.hoisted(() => ({ offered: true }));
-vi.mock(import('@/features/HeterogeneousAgent/builtinHarness'), async (importOriginal) => ({
-  ...(await importOriginal()),
-  useBuiltinHarnessOffered: () => harness.offered,
+const preference = vi.hoisted(() => ({
+  orchestratorAgentId: 'agt_orchestrator' as string | undefined,
+  loading: false,
 }));
-vi.mock('@/features/DefaultAgent/useFallbackAgentId', () => ({
-  useFallbackAgentId: () => (harness.offered ? 'agt_inbox' : 'agt_default'),
+vi.mock('@/features/DefaultAgent/useDefaultAgentPreference', () => ({
+  useDefaultAgentPreference: () => preference,
 }));
 vi.mock('@/components/Skeleton/Conversation/Segment', () => ({
   default: () => <div data-testid="loading" />,
@@ -106,6 +104,8 @@ const SelectAgentButton = ({ agentId }: { agentId: string }) => {
 
 describe('TaskAgentProvider', () => {
   beforeEach(() => {
+    preference.orchestratorAgentId = 'agt_orchestrator';
+    preference.loading = false;
     mocks.agentState.activeAgentId = undefined;
     mocks.agentState.setActiveAgentId.mockClear();
     mocks.chatState.activeAgentId = undefined;
@@ -123,18 +123,17 @@ describe('TaskAgentProvider', () => {
     cleanup();
   });
 
-  it('initializes builtin agents and builds task list context', () => {
+  it('uses the configured Orchestrator without initializing builtin agents', () => {
     render(
       <TaskAgentProvider>
         <div>content</div>
       </TaskAgentProvider>,
     );
 
-    expect(mocks.initBuiltinAgent).toHaveBeenCalledWith(BUILTIN_AGENT_SLUGS.inbox);
-    expect(mocks.initBuiltinAgent).toHaveBeenCalledWith(BUILTIN_AGENT_SLUGS.taskAgent);
+    expect(mocks.initBuiltinAgent).not.toHaveBeenCalled();
     expect(mocks.providerContexts.at(-1)).toMatchObject({
-      agentId: 'agt_task',
-      defaultTaskAssigneeAgentId: 'agt_inbox',
+      agentId: 'agt_orchestrator',
+      defaultTaskAssigneeAgentId: 'agt_orchestrator',
       scope: 'task',
       topicId: null,
       viewedTask: { type: 'list' },
@@ -224,27 +223,32 @@ describe('TaskAgentProvider', () => {
     });
   });
 
-  // The panel must not bind its conversation to the built-in task agent while
-  // that agent's harness is withheld; it opens on the user's default Agent.
-  it('defaults to the default Agent while the built-in harness is withheld', async () => {
-    harness.offered = false;
-    try {
-      render(
-        <TaskAgentProvider>
-          <div>content</div>
-        </TaskAgentProvider>,
-      );
-
-      await waitFor(() => {
-        expect(mocks.providerContexts.at(-1)?.agentId).toBe('agt_default');
-      });
-      expect(mocks.agentState.setActiveAgentId).toHaveBeenCalledWith('agt_default');
-    } finally {
-      harness.offered = true;
-    }
+  it('allows an explicit Agent when no Orchestrator is configured', async () => {
+    preference.orchestratorAgentId = undefined;
+    render(
+      <TaskAgentProvider>
+        <SelectAgentButton agentId="agt_custom" />
+      </TaskAgentProvider>,
+    );
+    expect(mocks.providerContexts.at(-1)?.agentId).toBe('');
+    expect(screen.queryByTestId('loading')).toBeNull();
+    fireEvent.click(screen.getByText('select agent'));
+    await waitFor(() => expect(mocks.providerContexts.at(-1)?.agentId).toBe('agt_custom'));
   });
 
-  it('defaults to the task agent when the global active agent comes from another page', async () => {
+  it('waits for the workspace preference to load before choosing a default', () => {
+    preference.orchestratorAgentId = undefined;
+    preference.loading = true;
+    render(
+      <TaskAgentProvider>
+        <div>content</div>
+      </TaskAgentProvider>,
+    );
+    expect(screen.getByTestId('loading')).toBeTruthy();
+    expect(mocks.providerContexts).toHaveLength(0);
+  });
+
+  it('defaults to the Orchestrator when the global active agent comes from another page', async () => {
     mocks.agentState.activeAgentId = 'agt_orvilo';
     mocks.chatState.activeAgentId = 'agt_orvilo';
     mocks.chatState.activeTopicId = 'tpc_orvilo';
@@ -256,10 +260,10 @@ describe('TaskAgentProvider', () => {
     );
 
     await waitFor(() => {
-      expect(mocks.providerContexts.at(-1)?.agentId).toBe('agt_task');
+      expect(mocks.providerContexts.at(-1)?.agentId).toBe('agt_orchestrator');
     });
-    expect(mocks.agentState.setActiveAgentId).toHaveBeenCalledWith('agt_task');
-    expect(mocks.chatState.activeAgentId).toBe('agt_task');
+    expect(mocks.agentState.setActiveAgentId).toHaveBeenCalledWith('agt_orchestrator');
+    expect(mocks.chatState.activeAgentId).toBe('agt_orchestrator');
     expect(mocks.chatState.switchTopic).toHaveBeenCalledWith(null, {
       scope: 'task',
       skipRefreshMessage: true,
@@ -305,7 +309,7 @@ describe('TaskAgentProvider', () => {
     );
 
     await waitFor(() => {
-      expect(mocks.chatState.activeAgentId).toBe('agt_task');
+      expect(mocks.chatState.activeAgentId).toBe('agt_orchestrator');
     });
 
     mocks.chatState.switchTopic.mockClear();
@@ -333,7 +337,7 @@ describe('TaskAgentProvider', () => {
     );
 
     await waitFor(() => {
-      expect(mocks.chatState.activeAgentId).toBe('agt_task');
+      expect(mocks.chatState.activeAgentId).toBe('agt_orchestrator');
     });
 
     fireEvent.click(screen.getByText('select agent'));
@@ -356,9 +360,9 @@ describe('TaskAgentProvider', () => {
     );
 
     await waitFor(() => {
-      expect(mocks.providerContexts.at(-1)?.agentId).toBe('agt_task');
+      expect(mocks.providerContexts.at(-1)?.agentId).toBe('agt_orchestrator');
     });
-    expect(mocks.agentState.setActiveAgentId).toHaveBeenLastCalledWith('agt_task');
+    expect(mocks.agentState.setActiveAgentId).toHaveBeenLastCalledWith('agt_orchestrator');
     expect(mocks.chatState.switchTopic).toHaveBeenCalledWith(null, {
       scope: 'task',
       skipRefreshMessage: true,
@@ -373,7 +377,7 @@ describe('TaskAgentProvider', () => {
     );
 
     await waitFor(() => {
-      expect(mocks.chatState.activeAgentId).toBe('agt_task');
+      expect(mocks.chatState.activeAgentId).toBe('agt_orchestrator');
     });
 
     mocks.chatState.switchTopic.mockClear();
@@ -393,7 +397,7 @@ describe('TaskAgentProvider', () => {
   });
 
   it('resets transient state on scoped agent sync even without an active topic', async () => {
-    mocks.agentState.activeAgentId = 'agt_task';
+    mocks.agentState.activeAgentId = 'agt_orchestrator';
     mocks.chatState.activeAgentId = 'agt_previous';
     mocks.chatState.activeTopicId = null;
 
@@ -409,6 +413,6 @@ describe('TaskAgentProvider', () => {
         skipRefreshMessage: true,
       });
     });
-    expect(mocks.chatState.activeAgentId).toBe('agt_task');
+    expect(mocks.chatState.activeAgentId).toBe('agt_orchestrator');
   });
 });

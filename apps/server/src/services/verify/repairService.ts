@@ -85,15 +85,12 @@ export const createRepairRunner = (params: {
   agentId?: string | null;
   db: OrviloDatabase;
   maxRepairRounds: number;
-  model?: string | null;
-  provider?: string | null;
   taskId?: string | null;
   topicId?: string | null;
   userId: string;
   workspaceId?: string;
 }): RepairSpawner | undefined => {
-  const { agentId, db, maxRepairRounds, model, provider, taskId, topicId, userId, workspaceId } =
-    params;
+  const { agentId, db, maxRepairRounds, taskId, topicId, userId, workspaceId } = params;
   if (!agentId || !topicId) return undefined;
 
   return async ({ instruction, operationId, verifyMessageId }) => {
@@ -114,11 +111,9 @@ export const createRepairRunner = (params: {
       agentId,
       appContext: { topicId },
       autoStart: true,
-      ...(model ? { model } : {}),
       ...(verifyMessageId ? { parentMessageId: verifyMessageId } : {}),
       parentOperationId: operationId,
       prompt: instruction,
-      ...(provider ? { provider } : {}),
       suppressUserMessage: true,
       ...(taskId ? { taskId } : {}),
       userInterventionConfig: { approvalMode: 'headless' },
@@ -203,8 +198,6 @@ export const maybeAutoRepair = async (
       run.metadata as VerifyRunMetadata | null,
       workspaceId,
     ),
-    model: op?.model,
-    provider: op?.provider,
     taskId: taskOperation?.taskId,
     topicId: op?.topicId,
     userId,

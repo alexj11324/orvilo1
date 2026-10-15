@@ -17,6 +17,8 @@ class TaskService {
 
   getDetail = async (id: string) => lambdaClient.task.detail.query({ id });
 
+  listReviewerAgents = async () => lambdaClient.task.listReviewerAgents.query();
+
   list = async (params: {
     /** Keyset cursor: rows strictly after this `(orderBy timestamp, seq)` position. */
     after?: { at: Date | string; seq: number };
@@ -138,6 +140,7 @@ class TaskService {
     name?: string;
     parentTaskId?: string;
     priority?: number;
+    reviewerAgentId?: string;
     projectId?: string;
     schedulePattern?: string;
     scheduleTimezone?: string;
@@ -205,7 +208,7 @@ class TaskService {
       priority?: number;
       /** Owning project; `null` unassigns the task from its project. */
       projectId?: string | null;
-      reviewerUserId?: string | null;
+      reviewerAgentId?: string | null;
       // schedulePattern: cron expression for scheduled automation (e.g. '0 9 * * *')
       schedulePattern?: string | null;
       // scheduleTimezone: IANA timezone for the cron expression (e.g. 'Asia/Shanghai')

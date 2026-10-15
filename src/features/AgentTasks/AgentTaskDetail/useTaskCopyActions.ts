@@ -21,7 +21,7 @@ export const useTaskCopyActions = () => {
   const appOrigin = useAppOrigin();
   const activeWorkspaceSlug = useActiveWorkspaceSlug();
   const taskId = useTaskDetailTaskId();
-  const taskAgentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
+  const taskAssigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeAgentId);
   const taskTitle = useTaskDetailSelector(taskDetailSelectors.taskName);
   const taskIdentifier = useTaskDetailSelector(
     (s, scopedTaskId) => taskDetailSelectors.taskDetail(s, scopedTaskId)?.identifier,
@@ -47,7 +47,9 @@ export const useTaskCopyActions = () => {
 
   // Carry the title into the copied link so a pasted URL says what the task is.
   // The URL is app origin + route only; the title enters solely as a slug.
-  const taskPath = taskRef ? taskDetailPath(taskRef, taskAgentId ?? undefined, taskTitle) : '';
+  const taskPath = taskRef
+    ? taskDetailPath(taskRef, taskAssigneeAgentId ?? undefined, taskTitle)
+    : '';
   const taskUrl = taskId
     ? `${appOrigin}${buildWorkspaceAwarePath(taskPath, activeWorkspaceSlug)}`
     : '';

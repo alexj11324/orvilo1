@@ -1,4 +1,6 @@
 export default {
+  'taskManager.orchestratorRequired':
+    'Choose an Agent or configure an Orchestrator to manage Issues.',
   'actions.addNewTopic': 'Start New Topic',
   'actions.addNewTopicInProject': 'Start new topic in {{directory}}',
   'actions.recentTopics': 'Recent topics',

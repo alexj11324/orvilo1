@@ -63,7 +63,7 @@ export interface JudgeFeedbackDomainsParams {
 }
 
 /**
- * Lightweight task-agent service for feedback domain routing.
+ * Lightweight feedback Agent service for feedback domain routing.
  *
  * Use when:
  * - A satisfaction signal must be routed into one or more durable domains

@@ -9,14 +9,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { type SidebarAgentItem } from '@/database/repositories/home';
 import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
-import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
 import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import { AgentModalProvider } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import AgentItem from '@/features/PageEditor/Copilot/AgentSelector/AgentItem';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
-import { useAgentStore } from '@/store/agent';
-import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 
@@ -46,16 +43,9 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
   );
   const hasPrivateAgents = useHomeStore(homeAgentListSelectors.hasPrivateAgents);
   const isAgentListInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
-  const taskAgentId = useAgentStore(builtinAgentSelectors.taskAgentId);
-  const taskAgentData = useAgentStore((s) => s.agentMap[taskAgentId || '']);
 
   useFetchAgentList();
   const keepListed = useKeepSidebarListed();
-  const builtinOffered = useBuiltinHarnessOffered();
-
-  // Workspace bucket: pinned + grouped + ungrouped. In personal mode this is the entire
-  // list (private buckets are empty). The builtin task agent is shared content, so it
-  // is injected at the top of this bucket when missing — keeping the prior behavior.
   const workspaceAgents = useMemo<SidebarAgentItem[]>(() => {
     const groupedItems = agentGroups.flatMap((group) => group.items);
     const merged = keepListed(
@@ -64,32 +54,8 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
       ),
     );
 
-    if (builtinOffered && taskAgentId && !merged.some((agent) => agent.id === taskAgentId)) {
-      return [
-        {
-          avatar: taskAgentData?.avatar || null,
-          description: taskAgentData?.description || null,
-          id: taskAgentId,
-          pinned: false,
-          title: t('taskManager.agent', { ns: 'topic' }),
-          type: 'agent' as const,
-          updatedAt: new Date(),
-        },
-        ...merged,
-      ];
-    }
-
     return merged;
-  }, [
-    pinnedAgents,
-    agentGroups,
-    ungroupedAgents,
-    taskAgentId,
-    taskAgentData,
-    t,
-    keepListed,
-    builtinOffered,
-  ]);
+  }, [pinnedAgents, agentGroups, ungroupedAgents, keepListed]);
 
   const privateAgents = useMemo<SidebarAgentItem[]>(() => {
     const groupedItems = privateAgentGroups.flatMap((group) => group.items);

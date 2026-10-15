@@ -1,5 +1,7 @@
 # Slimming 05 — Standalone Acceptance product surface (ORV-103)
 
+> Historical retirement audit. The [2026-10-14 product contract](./product-scope.md) replaces the task-scoped Verify completion mapping below with Issue Checklist, Reviewer, distinct human decisions and real merge facts. Preserve consumer/evidence history; migrate active Checklist and history readers before retiring old producers. The recorded checks below describe their original revision, not permission to run local tsgo today.
+
 ## Audit verdict
 
 The standalone Acceptance platform was already retired by the earlier

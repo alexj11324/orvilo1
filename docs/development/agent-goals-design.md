@@ -1,5 +1,7 @@
 # Agent Goals: a durable goal loop on top of Tasks
 
+> Historical design, superseded on 2026-10-14 by the [product contract](./product-scope.md). Its independent Goal aggregate, Goal/Verify planning and service boundaries are not current implementation requirements. Retain this proposal for provenance; current work uses Issue, Checklist, configured Agent/ACP and internal Orchestrator planning.
+
 ## Summary
 
 An agent goal should not be another kind of chat session or a process that stays alive forever.

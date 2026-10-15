@@ -29,6 +29,10 @@ Guidelines for using AI coding agents in this opensource Orvilo repository.
 
 - **Implementation simplicity**: Apply Ponytail before code work: trace the affected flow, reuse existing code and platform features, then make the smallest correct change. Preserve the safety and verification requirements below. The repo marketplace pins the plugin. For Codex CLI, run `codex plugin marketplace add .` and `codex plugin add ponytail@orvilo` once from this repository; the project config then enables it here. Codex Desktop discovers the marketplace after restart.
 
+## Product Contract
+
+Read [docs/development/product-scope.md](./docs/development/product-scope.md) before changing Issue intake, planning, dependencies, delivery/Checklist/Reviewer, Agent authorization or runtime configuration, recurring automation, context sources, or Slack. It is the sole current product contract; domain skills describe implementation, and historical designs do not override it. A documented requirement is not evidence of implementation or deployment.
+
 ## Code Ownership
 
 For the full repository map or help locating a code layer, read the `project-overview` skill.
@@ -48,22 +52,22 @@ Before changing SPA routes, read the `spa-routes` skill. Register common Web/Ele
 
 ## Development
 
-### Starting the Dev Environment
+### Default: local Electron development
 
-Full local setup — Postgres/Redis, migrations, seeds, troubleshooting — lives in [docs/development/local-setup.md](./docs/development/local-setup.md).
+Development and UI acceptance use the real Electron app with the existing local development backend by default. Agents may start local services and use the seed login workflow without asking the user to select a local backend each time. Use [docs/development/local-setup.md](./docs/development/local-setup.md) for Postgres/Redis, migrations, seeds and troubleshooting. Preserve existing `.env` configuration and unrelated running development environments.
 
 ```bash
-# SPA dev mode (frontend only, proxies API to localhost:3010)
-bun run dev:spa
+# Local backend + isolated Electron profile, already signed in as the seed user
+bun run dev:desktop:skip-login
 
-# Full-stack dev (Next.js + Vite SPA concurrently)
+# Electron renderer only, using its configured backend
+bun run dev:desktop
+
+# Full local stack: Next.js + Vite SPA
 bun run dev
 
-# Standalone Hono backend service
+# Standalone Hono backend
 pnpm --filter @orvilo/server dev
-
-# Desktop app already signed in as the local seed user (no login page, no browser)
-bun run dev:desktop:skip-login
 ```
 
 `dev:desktop:skip-login` needs the seed user and `DATABASE_URL` in `.env`; see the
@@ -75,6 +79,8 @@ section of the local setup guide describes. That command does not attach a
 gateway; an Electron that is not already on the local gateway must be started
 with `skip-login`. Do not stop for a person and do not reload the page to
 recover the session.
+
+For cloud-specific acceptance, use `https://orvilo.aspectlylabs.com` with the real cloud identity and workspace. Record the renderer and backend revisions and the actual environment used; local verification does not prove a cloud deployment.
 
 After `dev:spa` starts, the terminal prints a **Debug Proxy** URL:
 
@@ -106,7 +112,7 @@ Use Brave with a copy of the currently used Brave profile when comparing Orvilo 
 - Find the active profile under `~/Library/Application Support/BraveSoftware/Brave-Browser` (check `profile.last_used` in `Local State`). Copy the user-data directory to a private temporary directory outside the repository. Exclude `Singleton*` locks, `Crashpad/`, and `BrowserMetrics*`; set the copy's top directory to mode `700` after copying because `rsync -a` can restore its original mode. Never commit or upload the copy, which contains session data.
 - Start a separate Brave instance with `--user-data-dir=<copy> --profile-directory=<active-profile> --remote-debugging-address=127.0.0.1 --remote-debugging-port=<port> --no-first-run`. Do not restart the original Brave instance or point CDP at its live profile.
 - Verify the copied instance by reading `http://127.0.0.1:<port>/json/version` and `/json/list`, then navigate to the Linear workspace and confirm it is authenticated. Cookies in the copy alone do not prove login. Give agents the loopback endpoint only after these checks pass.
-- Run the Orvilo candidate against the intended local revision and populated fixture. Compare both pages through CDP using DOM, computed styles, real control clicks, persistence after reload, and screenshots before claiming parity.
+- Run the Orvilo candidate in real Electron against the intended local renderer revision and the existing populated cloud workspace. Record the cloud deployment revision separately. Compare both pages through CDP using DOM, computed styles, real control clicks, persistence after reload, and screenshots before claiming parity. Local fixtures prove the selected local environment.
 
 ### Git Workflow
 
@@ -168,9 +174,7 @@ Opening or marking a PR ready is a checkpoint for that decision, not a trigger t
   pi, etc.) must drive the Electron desktop app (`apps/desktop`). The Chrome/Web SPA cannot spawn
   local binaries — detection and spawn live in `apps/desktop/src/main` — so web runs only count as
   evidence for web-only flows.
-- Acceptance that exercises an agent end-to-end on opencode must use the free model
-  `opencode/mimo-v2.6-flash-free` (verified working; other `-free` Zen models are far slower — e.g.
-  `nemotron-3.5-lightning-free` streams for minutes before replying).
+- Agent acceptance follows the saved runtime configuration and evidence requirements in the [product contract](./docs/development/product-scope.md#10-实现与验证边界). Record the effective configuration; do not substitute a fixed probe model.
 
 Tests, lint, and type-check remain separate quality gates; they do not replace product verification.
 

@@ -1,6 +1,6 @@
 ---
 name: project-overview
-description: 'Use for the OSS repository map, code-layer lookup, apps/packages/src ownership and business stubs.'
+description: 'Use for the repository map, code-layer lookup, apps/packages/src ownership and current alias/deployment sources.'
 user-invocable: false
 ---
 
@@ -12,14 +12,14 @@ user-invocable: false
 
 ## Project Description
 
-Open-source, modern-design AI Agent Workspace: **Orvilo** (previously LobeChat).
+Open-source Agent delivery workspace for developers and small teams: **Orvilo**, evolving independently from LobeHub. The [product contract](../../../docs/development/product-scope.md) owns current product semantics; this skill maps implementation locations and does not claim the contract is already implemented.
 This repo is the **open-source root** (`github.com/alexj11324/orvilo1`, package `orvilo`).
 
 **Supported platforms:**
 
 - Web desktop/mobile
 - Desktop (Electron) — `apps/desktop`
-- Mobile app (React Native) — **separate repo, already launched** (not in this monorepo)
+- Native mobile implementations are outside this repository map; inspect their owning repository before making availability claims.
 
 **Logo emoji:** 🤯
 
@@ -75,7 +75,8 @@ git submodules.
 │   ├── locales/              # i18n source of truth: packages/locales/src/default/
 │   ├── env/                  # env schemas (@/envs/* → packages/env/src/*)
 │   ├── app-config/
-│   ├── business/             # Open-source stubs (config, const, model-bank, model-runtime) — overridden by cloud
+│   ├── business/             # Business package boundaries (config, const, model-bank, model-runtime)
+│   ├── business-server/      # First target of @/business/server/*
 │   ├── types/
 │   └── utils/
 └── src/
@@ -88,7 +89,7 @@ git submodules.
     ├── spa/                  # SPA entries + router config
     │   ├── entry.{web,mobile,desktop,popup}.tsx
     │   └── router/
-    ├── business/             # Open-source stubs (client/server) — cloud repo provides real impls
+    ├── business/             # Client/server business boundaries; inspect current aliases/consumers
     ├── features/             # Domain business components
     ├── store/                # ~30 zustand stores — `ls` for the full set
     └── ...                   # components, hooks, layout, libs, services, types, utils
@@ -96,26 +97,26 @@ git submodules.
 
 ## Architecture Map
 
-| Layer            | Location                                                              |
-| ---------------- | --------------------------------------------------------------------- |
-| UI Components    | `src/components`, `src/features`                                      |
-| SPA Pages        | `src/routes/`                                                         |
-| React Router     | `src/spa/router/`                                                     |
-| Global Providers | `src/layout`                                                          |
-| Zustand Stores   | `src/store`                                                           |
-| Client Services  | `src/services/`                                                       |
-| REST API         | `apps/server/src/router-hono` (Next shells under `src/app/(backend)`) |
-| tRPC Routers     | `apps/server/src/routers/{async\|lambda\|mobile\|tools}`              |
-| Server Services  | `apps/server/src/services` (can access DB)                            |
-| Server Modules   | `apps/server/src/modules` (no DB access)                              |
-| Feature Flags    | `apps/server/src/featureFlags`                                        |
-| Global Config    | `apps/server/src/globalConfig`                                        |
-| DB Schema        | `packages/database/src/schemas`                                       |
-| DB Model         | `packages/database/src/models`                                        |
-| DB Repository    | `packages/database/src/repositories`                                  |
-| Third-party      | `src/libs` (analytics, oidc, etc.)                                    |
-| Builtin Tools    | `packages/builtin-tool-*`, `packages/builtin-tools`                   |
-| Open-source stub | `src/business/*`, `packages/business/*` (this repo)                   |
+| Layer               | Location                                                                  |
+| ------------------- | ------------------------------------------------------------------------- |
+| UI Components       | `src/components`, `src/features`                                          |
+| SPA Pages           | `src/routes/`                                                             |
+| React Router        | `src/spa/router/`                                                         |
+| Global Providers    | `src/layout`                                                              |
+| Zustand Stores      | `src/store`                                                               |
+| Client Services     | `src/services/`                                                           |
+| REST API            | `apps/server/src/router-hono` (Next shells under `src/app/(backend)`)     |
+| tRPC Routers        | `apps/server/src/routers/{async\|lambda\|mobile\|tools}`                  |
+| Server Services     | `apps/server/src/services` (can access DB)                                |
+| Server Modules      | `apps/server/src/modules` (no DB access)                                  |
+| Feature Flags       | `apps/server/src/featureFlags`                                            |
+| Global Config       | `apps/server/src/globalConfig`                                            |
+| DB Schema           | `packages/database/src/schemas`                                           |
+| DB Model            | `packages/database/src/models`                                            |
+| DB Repository       | `packages/database/src/repositories`                                      |
+| Third-party         | `src/libs` (analytics, oidc, etc.)                                        |
+| Builtin Tools       | `packages/builtin-tool-*`, `packages/builtin-tools`                       |
+| Business boundaries | `src/business/*`, `packages/business/*`, `packages/business-server/src/*` |
 
 ## Data Flow
 
@@ -123,18 +124,10 @@ git submodules.
 React UI → Store Actions → Client Service → TRPC Lambda → Server Services → DB Model → PostgreSQL
 ```
 
-## Note: Relationship to the Cloud Repo
+## Alias and Deployment Sources
 
-This open-source repo is consumed by a **separate, private cloud (SaaS) repo**
-as a git submodule mounted at `aspectlylabs/`. The cloud repo provides:
+Use this repository's current `tsconfig.json` and app build configs to resolve imports. In the root map, `@/server/*` resolves to `apps/server/src/*`; `@/business/server/*` checks `packages/business-server/src/*` before `src/business/server/*`; `@/*` resolves to `src/*`. Verify the owning app's configuration when tracing a call. A directory called `business` is not proof that a private overlay replaces it or that it is unused.
 
-- **`src/business/{client,server}`** and **`packages/business/*`** implementations
-  that override the stubs shipped here.
-- Cloud-only routes (e.g. `(cloud)/`, `embed/`), cloud-only stores (e.g.
-  `subscription/`), cloud-only TRPC routers (billing, budget, risk control, …),
-  and Vercel cron routes under `src/app/(backend)/cron/`.
-- File-resolution order in cloud: `@/store/x` → cloud `src/store/x` first, then
-  `aspectlylabs/packages/store/src/x`, then `aspectlylabs/src/store/x`. **Cloud override wins.**
+[docs/environments.md](../../../docs/environments.md) owns deploy targets and [branch-model.md](../../../docs/development/branch-model.md) owns branch semantics. The production backend deployment workflow is `.github/workflows/deploy-orvilo1.yml` in this repository. Historical private SaaS overlay/submodule resolution descriptions do not define the current development or deployment path.
 
-When working in this repo alone, ignore the cloud layer — the stubs
-`src/business/` and `packages/business/` are the source of truth here.
+[AGENTS.md](../../../AGENTS.md#default-local-electron-development) owns development and runtime verification: local Electron and the existing local backend are the default. Record the actual renderer/backend revisions; cloud acceptance additionally records the deployed revision. A repository map or build result cannot prove product acceptance.

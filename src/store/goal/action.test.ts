@@ -7,7 +7,7 @@ import { useGoalStore } from './index';
 
 vi.mock('@/libs/swr', () => ({ mutate: vi.fn(), useClientDataSWR: vi.fn() }));
 vi.mock('@/services/goal', () => ({
-  goalService: { delete: vi.fn(), list: vi.fn() },
+  goalService: { list: vi.fn() },
 }));
 
 beforeEach(() => {
@@ -157,20 +157,5 @@ describe('GoalAction', () => {
       goalListVisibleLimit: 20,
       goalViewMode: 'card',
     });
-  });
-
-  it('deletes a goal through the goal endpoint and removes it from local state', async () => {
-    useGoalStore.getState().useFetchGoals('agent-1');
-    const options = vi.mocked(useClientDataSWR).mock.calls[0][2] as {
-      onSuccess: (value: { goals: Array<{ goal: { id: string } }> }) => void;
-    };
-    options.onSuccess({ goals: [{ goal: { id: 'goal-1' } }, { goal: { id: 'goal-2' } }] });
-
-    await useGoalStore.getState().deleteGoal('agent-1', 'goal-1');
-
-    expect(goalService.delete).toHaveBeenCalledWith('goal-1');
-    expect(useGoalStore.getState().goalListByAgentId['agent-1']).toEqual([
-      { goal: { id: 'goal-2' } },
-    ]);
   });
 });

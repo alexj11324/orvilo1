@@ -12,6 +12,7 @@ import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 import { AcceptanceService } from './acceptanceService';
+import { assertLegacyVerificationWritable } from './retirement';
 import { VerifyStatusService } from './statusService';
 
 const log = debug('orvilo-server:verify-repair');
@@ -90,6 +91,7 @@ export const createRepairRunner = (params: {
   userId: string;
   workspaceId?: string;
 }): RepairSpawner | undefined => {
+  assertLegacyVerificationWritable();
   const { agentId, db, maxRepairRounds, taskId, topicId, userId, workspaceId } = params;
   if (!agentId || !topicId) return undefined;
 
@@ -164,6 +166,7 @@ export const maybeAutoRepair = async (
   operationId: string,
   workspaceId?: string,
 ): Promise<void> => {
+  assertLegacyVerificationWritable();
   const operationModel = new AgentOperationModel(db, userId, workspaceId);
   const run = await new VerifyRunModel(db, userId, workspaceId).findByOperation(operationId);
   const plan = (run?.plan ?? []) as VerifyCheckItem[];
@@ -260,6 +263,7 @@ export class VerifyRepairService {
     operationId: string,
     spawner?: RepairSpawner,
   ): Promise<{ repairOperationId: string } | null> {
+    assertLegacyVerificationWritable();
     const failures = await this.collectRepairable(operationId);
     if (failures.length === 0) return null;
     if (!spawner) {

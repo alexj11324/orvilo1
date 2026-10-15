@@ -8,93 +8,16 @@ import type {
   WorkspaceData,
 } from '@orvilo/types';
 
-import { AcceptanceModel } from '@/database/models/acceptance';
 import type { BriefModel } from '@/database/models/brief';
-import { GoalModel } from '@/database/models/goal';
 import { IssueDeliveryModel, sameIssueDeliveryProof } from '@/database/models/issueDelivery';
 import type { TaskModel } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import type { TaskTopicModel } from '@/database/models/taskTopic';
-import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
-import { VerifyCriterionModel } from '@/database/models/verifyCriterion';
-import { VerifyRubricModel } from '@/database/models/verifyRubric';
-import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { OrviloDatabase } from '@/database/type';
 import { extractFileIdsFromEditorData } from '@/server/services/file/extractFileIdsFromEditorData';
 import { resolveAttachmentMetadata } from '@/server/services/file/resolveAttachments';
-import { resolveTaskAttemptBudget } from '@/server/services/goal/recoveryPolicy';
-import { resolveTaskAcceptance } from '@/server/services/verify/taskAcceptance';
 
 import { renderAutomationInput } from './automationInput';
-
-/** Cap on unresolved checks carried into the next round's prompt. */
-const MAX_GOAL_FAILED_CHECKS = 8;
-
-/**
- * For a goal task that already ran at least one round, collect what the next
- * round must know: the previous round's unresolved checks (with the verifier's
- * why/suggestion) and the user's reject comment, both read off the task's
- * acceptance aggregate. Best-effort — any lookup failure degrades to the bare
- * round counters so prompt building never blocks a run.
- */
-const resolveGoalLoopContext = async (
-  task: TaskItem,
-  deps: BuildTaskPromptDeps,
-): Promise<TaskRunPromptGoalLoop | undefined> => {
-  const { db, userId, workspaceId } = deps;
-  const goal = await new GoalModel(db, userId, workspaceId).findByGraphTask(task.id);
-  if (!goal || !task.totalTopics) return undefined;
-
-  const budget = resolveTaskAttemptBudget(goal);
-  const context: TaskRunPromptGoalLoop = {
-    maxRounds: Number.isFinite(budget) ? budget : null,
-    round: (task.totalTopics || 0) + 1,
-  };
-
-  try {
-    const acceptance = await new AcceptanceModel(db, userId, workspaceId).findBySubject(
-      'task',
-      task.id,
-    );
-    if (!acceptance) return context;
-
-    const runs = await new VerifyRunModel(db, userId, workspaceId).listByAcceptance(acceptance.id);
-    const last = runs.at(-1);
-    if (!last) return context;
-
-    if (last.userDecision === 'reject') {
-      const comment = (last.decisionDetail as { comment?: string } | null)?.comment;
-      if (comment) context.rejectComment = comment;
-    }
-
-    const automaticReview = [...runs].reverse().find((run) => run.metadata?.goalReview)
-      ?.metadata?.goalReview;
-    if (automaticReview && automaticReview.status !== 'passed') {
-      context.automaticReviewFeedback = automaticReview.feedback;
-    }
-
-    const plan = (last.plan ?? []) as Array<{ id: string; title: string }>;
-    const results = await new VerifyCheckResultModel(db, userId, workspaceId).listByRun(last.id);
-    const byItem = new Map(results.map((r) => [r.checkItemId, r]));
-    const failed = plan
-      .filter((item) => {
-        const r = byItem.get(item.id);
-        return (
-          !!r &&
-          r.status !== 'errored' &&
-          (r.status === 'failed' || r.verdict === 'failed' || r.verdict === 'uncertain')
-        );
-      })
-      .map((item) => {
-        const r = byItem.get(item.id);
-        return { title: item.title, why: r?.suggestion || r?.toulmin?.reasoning || undefined };
-      });
-    if (failed.length > 0) context.failedChecks = failed.slice(0, MAX_GOAL_FAILED_CHECKS);
-    return context;
-  } catch {
-    return context;
-  }
-};
 
 export interface BuildTaskPromptDeps {
   briefModel: BriefModel;
@@ -195,7 +118,6 @@ export async function buildTaskPrompt(
 ): Promise<BuiltTaskPrompt> {
   const { briefModel, db, taskModel, taskTopicModel, userId, workspaceId } = deps;
   const inherited = opts?.contractContent;
-  const skipTaskVerification = !task.automationMode || opts?.skipTaskVerification === true;
 
   const [topics, briefs, comments, subtasks, liveDependencies, documents] = await Promise.all([
     !opts?.independentOccurrence && task.totalTopics && task.totalTopics > 0
@@ -364,68 +286,7 @@ export async function buildTaskPrompt(
 
   const taskFiles = toFileMetas(taskFileIds);
 
-  // Delivery-acceptance context: resolve the Task's Acceptance policy and the
-  // referenced criteria so the builder knows
-  // what to self-evidence while it works. Run-time handles (verifyRunId /
-  // checkItemId) don't exist yet at prompt-build time — the verify skill
-  // resolves those at runtime from the builder's operationId.
-  // Recurring tasks (schedule / heartbeat) never get a verify plan (see
-  // instantiateVerifyPlanOnStart) — don't tell the builder to self-evidence
-  // acceptance criteria whose run-time plan will never exist.
-  // On an inherited contract the verify gate comes from the contract — the
-  // live Acceptance row may have been edited since the attempt started, and
-  // that edit must not retroactively change this run's requirements.
-  const resolvedAcceptance =
-    inherited || task.automationMode || skipTaskVerification
-      ? undefined
-      : await resolveTaskAcceptance(db, userId, task.id, workspaceId).catch(() => undefined);
-  const verifyConfig = resolvedAcceptance?.config;
-  const verifyEnabled =
-    !skipTaskVerification &&
-    (inherited
-      ? (inherited.verify?.enabled ?? false)
-      : !!resolvedAcceptance && verifyConfig?.enabled !== false);
-  let verifyCriteria: Array<{
-    required?: boolean;
-    requiredEvidence?: Array<{ hint?: string; type: string }>;
-    title: string;
-  }> = inherited?.verify?.criteria ?? [];
-  if (
-    verifyEnabled &&
-    verifyConfig &&
-    (verifyConfig.verifyRubricId || verifyConfig.verifyCriteriaIds?.length)
-  ) {
-    const criterionModel = new VerifyCriterionModel(db, userId, workspaceId);
-    const rubricModel = new VerifyRubricModel(db, userId, workspaceId);
-    const collected = (
-      await Promise.all([
-        verifyConfig.verifyRubricId
-          ? rubricModel.getCriteria(verifyConfig.verifyRubricId).catch(() => [])
-          : Promise.resolve([]),
-        verifyConfig.verifyCriteriaIds?.length
-          ? criterionModel.findByIds(verifyConfig.verifyCriteriaIds).catch(() => [])
-          : Promise.resolve([]),
-      ])
-    ).flat();
-    const seen = new Set<string>();
-    verifyCriteria = collected
-      .filter((c) => !seen.has(c.id) && seen.add(c.id))
-      .map((c) => {
-        const raw = (c.verifierConfig as Record<string, unknown> | null)?.requiredEvidence;
-        return {
-          required: c.required,
-          requiredEvidence: Array.isArray(raw)
-            ? (raw as Array<{ hint?: string; type: string }>)
-            : undefined,
-          title: c.title,
-        };
-      });
-  }
-
-  const goalLoop = skipTaskVerification ? undefined : await resolveGoalLoopContext(task, deps);
-
   const prompt = buildTaskRunPrompt({
-    ...(goalLoop ? { goalLoop } : {}),
     activities: {
       briefs: briefs.map((b: any) => ({
         createdAt: b.createdAt,
@@ -502,18 +363,9 @@ export async function buildTaskPrompt(
       name: task.name,
       parentIdentifier,
       priority: task.priority,
-      review: taskModel.getReviewConfig(task) as any,
       schedulePattern: task.schedulePattern,
       scheduleTimezone: task.scheduleTimezone,
       status: statusById[task.id] ?? 'backlog',
-      verify: verifyEnabled
-        ? {
-            criteria: verifyCriteria,
-            enabled: true,
-            maxIterations: inherited?.verify?.maxIterations ?? verifyConfig?.maxIterations,
-            requirement: inherited?.verify?.requirement ?? resolvedAcceptance?.requirement,
-          }
-        : undefined,
       subtasks: subtasks.map((s: any) => ({
         blockedBy: subtaskDepMap.get(s.id),
         identifier: s.identifier,
@@ -543,25 +395,17 @@ export async function buildTaskPrompt(
   });
 
   const contractContent: TaskExecutionContractContent = inherited
-    ? { ...inherited, ...(skipTaskVerification ? { verify: { enabled: false } } : {}) }
+    ? { ...inherited, verify: { enabled: false } }
     : {
         dependencies: contractDependencies,
         instruction: task.instruction,
-        verify: verifyEnabled
-          ? {
-              criteria: verifyCriteria,
-              enabled: true,
-              maxIterations: verifyConfig?.maxIterations,
-              requirement: resolvedAcceptance?.requirement,
-            }
-          : { enabled: false },
+        verify: { enabled: false },
       };
 
   return {
-    acceptanceEnabled: verifyEnabled,
+    acceptanceEnabled: false,
     contractContent,
     fileIds: opts?.occurrence?.fileIds ?? allFileIds,
-    ...(goalLoop ? { goalLoop } : {}),
     prompt,
   };
 }

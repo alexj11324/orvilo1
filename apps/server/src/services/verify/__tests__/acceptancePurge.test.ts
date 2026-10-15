@@ -39,7 +39,6 @@ describe('acceptancePurge', () => {
   let acceptanceId: string;
   let runIds: string[];
   let fileIds: string[];
-  let keeperFileId: string;
   let SHARED_HASH: string;
   let SOLO_HASH: string;
   let PAIR_HASH: string;
@@ -119,7 +118,6 @@ describe('acceptancePurge', () => {
       ])
       .returning({ id: files.id });
     fileIds = inserted.slice(0, 3).map((f) => f.id);
-    keeperFileId = inserted[3].id;
 
     const [acceptance] = await serverDB
       .insert(acceptances)
@@ -199,140 +197,22 @@ describe('acceptancePurge', () => {
     });
   });
 
-  it('purges files, runs and the acceptance, deleting only unreferenced objects from S3', async () => {
+  it('preserves historical rows and files when stale purge callers run', async () => {
     await expect(
       purgeAcceptance(serverDB, fileService, userId, undefined, acceptanceId),
-    ).resolves.toEqual({ deletedFiles: 3, deletedRuns: 2 });
-
-    expect(fileService.deleteFiles).toHaveBeenCalledTimes(1);
-    expect(fileService.deleteFiles).toHaveBeenCalledWith(['solo.mp4']);
-
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
     await expect(
-      serverDB.query.files.findMany({ where: inArray(files.id, fileIds) }),
-    ).resolves.toHaveLength(0);
+      purgeVerifyRun(serverDB, fileService, userId, undefined, runIds[0]),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    expect(fileService.deleteFiles).not.toHaveBeenCalled();
     await expect(
-      serverDB.query.files.findFirst({ where: eq(files.id, keeperFileId) }),
+      serverDB.query.acceptances.findFirst({ where: eq(acceptances.id, acceptanceId) }),
     ).resolves.toBeDefined();
     await expect(
       serverDB.query.verifyRuns.findMany({ where: inArray(verifyRuns.id, runIds) }),
-    ).resolves.toHaveLength(0);
-    await expect(
-      serverDB.query.acceptances.findFirst({ where: eq(acceptances.id, acceptanceId) }),
-    ).resolves.toBeUndefined();
-  });
-
-  it('keeps files still referenced by another run or not owned by the report', async () => {
-    const libraryFileId = await seedFile({ fileHash: null, source: null, url: 'library.pdf' });
-    const otherAcceptanceId = await seedAcceptance();
-    const otherRunId = await seedRound(otherAcceptanceId, 1, [fileIds[2]]);
-    await serverDB.insert(verifyEvidence).values({
-      checkResultId: (await serverDB.query.verifyCheckResults.findFirst({
-        where: eq(verifyCheckResults.verifyRunId, runIds[0]),
-      }))!.id,
-      fileId: libraryFileId,
-      type: 'screenshot',
-      userId,
-    });
-
-    await expect(
-      purgeAcceptance(serverDB, fileService, userId, undefined, acceptanceId),
-    ).resolves.toEqual({ deletedFiles: 2, deletedRuns: 2 });
-
-    expect(fileService.deleteFiles).not.toHaveBeenCalled();
-    await expect(
-      serverDB.query.files.findMany({ where: inArray(files.id, [fileIds[2], libraryFileId]) }),
     ).resolves.toHaveLength(2);
-    const otherEvidence = await serverDB
-      .select({ fileId: verifyEvidence.fileId })
-      .from(verifyEvidence)
-      .innerJoin(verifyCheckResults, eq(verifyCheckResults.id, verifyEvidence.checkResultId))
-      .where(eq(verifyCheckResults.verifyRunId, otherRunId));
-    expect(otherEvidence.map((row) => row.fileId)).toEqual([fileIds[2]]);
-  });
-
-  it('deletes rows but leaves storage alone when REMOVE_GLOBAL_FILE is off', async () => {
-    envMock.serverDBEnv.REMOVE_GLOBAL_FILE = false;
-
-    await expect(
-      purgeAcceptance(serverDB, fileService, userId, undefined, acceptanceId),
-    ).resolves.toEqual({ deletedFiles: 3, deletedRuns: 2 });
-
-    expect(fileService.deleteFiles).not.toHaveBeenCalled();
     await expect(
       serverDB.query.files.findMany({ where: inArray(files.id, fileIds) }),
-    ).resolves.toHaveLength(0);
-    await expect(
-      serverDB.query.globalFiles.findFirst({ where: eq(globalFiles.hashId, SOLO_HASH) }),
-    ).resolves.toBeDefined();
-  });
-
-  it('removes hashless evidence objects from storage by url', async () => {
-    const hashless = await seedFile({ fileHash: null, url: 'raw.log' });
-    await seedRound(acceptanceId, 3, [hashless]);
-
-    await expect(
-      purgeAcceptance(serverDB, fileService, userId, undefined, acceptanceId),
-    ).resolves.toEqual({ deletedFiles: 4, deletedRuns: 3 });
-
-    expect(fileService.deleteFiles).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(fileService.deleteFiles).mock.calls[0][0].sort()).toEqual([
-      'raw.log',
-      'solo.mp4',
-    ]);
-  });
-
-  it('still purges rows and rounds when the storage delete fails', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(fileService.deleteFiles).mockRejectedValueOnce(new Error('s3 down'));
-
-    await expect(
-      purgeAcceptance(serverDB, fileService, userId, undefined, acceptanceId),
-    ).resolves.toEqual({ deletedFiles: 3, deletedRuns: 2 });
-
-    await expect(
-      serverDB.query.verifyRuns.findMany({ where: inArray(verifyRuns.id, runIds) }),
-    ).resolves.toHaveLength(0);
-    await expect(
-      serverDB.query.acceptances.findFirst({ where: eq(acceptances.id, acceptanceId) }),
-    ).resolves.toBeUndefined();
-  });
-
-  it('removes storage objects before the rounds go away', async () => {
-    let runsAtStorageDelete: unknown[] = [];
-    vi.mocked(fileService.deleteFiles).mockImplementation(async () => {
-      runsAtStorageDelete = await serverDB.query.verifyRuns.findMany({
-        where: inArray(verifyRuns.id, runIds),
-      });
-    });
-
-    await purgeAcceptance(serverDB, fileService, userId, undefined, acceptanceId);
-
-    expect(runsAtStorageDelete).toHaveLength(2);
-  });
-
-  it('purges a single round and leaves the acceptance in place', async () => {
-    await expect(
-      purgeVerifyRun(serverDB, fileService, userId, undefined, runIds[1]),
-    ).resolves.toEqual({ deletedFiles: 1 });
-
-    expect(fileService.deleteFiles).toHaveBeenCalledWith(['solo.mp4']);
-    await expect(
-      serverDB.query.verifyRuns.findMany({ where: inArray(verifyRuns.id, runIds) }),
-    ).resolves.toHaveLength(1);
-    await expect(
-      serverDB.query.acceptances.findFirst({ where: eq(acceptances.id, acceptanceId) }),
-    ).resolves.toBeDefined();
-  });
-
-  it("does not touch another user's acceptance", async () => {
-    const strangerId = await createTestUser(serverDB);
-    await expect(
-      purgeAcceptance(serverDB, fileService, strangerId, undefined, acceptanceId),
-    ).resolves.toEqual({ deletedFiles: 0, deletedRuns: 0 });
-    expect(fileService.deleteFiles).not.toHaveBeenCalled();
-    await expect(
-      serverDB.query.acceptances.findFirst({ where: eq(acceptances.id, acceptanceId) }),
-    ).resolves.toBeDefined();
-    await cleanupTestUser(serverDB, strangerId);
+    ).resolves.toHaveLength(3);
   });
 });

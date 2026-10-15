@@ -19,7 +19,6 @@ import { AgentOperationModel } from '@/database/models/agentOperation';
 import { TaskModel } from '@/database/models/task';
 import { VerifyReviewPredictionModel } from '@/database/models/verifyReviewPrediction';
 import { VerifyRunModel } from '@/database/models/verifyRun';
-import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import { users } from '@/database/schemas';
 import type { AcceptanceItem } from '@/database/schemas/verify';
 import { acceptances } from '@/database/schemas/verify';
@@ -41,6 +40,8 @@ import {
   shouldSurfaceProposal,
   VerifyReviewPredictorService,
 } from '@/server/services/verify';
+import { canReadAcceptanceArchive } from '@/server/services/verify/archiveAccess';
+import { assertLegacyVerificationWritable } from '@/server/services/verify/retirement';
 import { resolveIssueReviewer } from '@/server/services/verify/reviewerAgent';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
@@ -66,7 +67,12 @@ const acceptanceProcedure = wsCompatProcedure.use(serverDatabase).use(async (opt
 
 // Writes: workspace mode requires at least the member role (viewers are
 // read-only); personal mode passes through unrestricted.
-const acceptanceWriteProcedure = acceptanceProcedure.use(requireWorkspaceRoleWhenScoped('member'));
+const acceptanceWriteProcedure = acceptanceProcedure
+  .use(requireWorkspaceRoleWhenScoped('member'))
+  .use(({ next }) => {
+    assertLegacyVerificationWritable();
+    return next();
+  });
 
 /**
  * Resolve an acceptance for WRITING, with a service bound to the scope the row
@@ -108,21 +114,7 @@ const resolveAcceptanceForWrite = async (
   };
 };
 
-const canReadAcceptance = async (
-  ctx: { serverDB: OrviloDatabase; userId?: string | null },
-  acceptance: AcceptanceItem,
-) => {
-  if (ctx.userId && ctx.userId === acceptance.userId) return true;
-  if (acceptance.visibility === 'public') return true;
-  if (!ctx.userId || !acceptance.workspaceId) return false;
-  // Membership in the acceptance's OWN workspace — not the viewer's currently
-  // active one, which may be a different workspace entirely.
-  const member = await new WorkspaceMemberModel(ctx.serverDB, ctx.userId).getMember(
-    acceptance.workspaceId,
-    ctx.userId,
-  );
-  return Boolean(member);
-};
+const canReadAcceptance = canReadAcceptanceArchive;
 
 /** Max rows one multi-select sweep may touch — the list itself is capped at 200. */
 const PURGE_PREVIEW_LIMIT = 20;
@@ -242,7 +234,7 @@ export const acceptanceRouter = router({
         input.subjectType,
         input.subjectId,
       );
-      if (!acceptance) return null;
+      if (!acceptance || !(await canReadAcceptance(ctx, acceptance))) return null;
 
       // `delivered` alone is ambiguous for the subject's status surface: a
       // converged delivery waiting for sign-off and a failed one waiting for a
@@ -353,13 +345,13 @@ export const acceptanceRouter = router({
       }
 
       const isOwner = Boolean(ctx.userId) && ctx.userId === acceptance.userId;
-      if (!isOwner && !(await canReadAcceptance(ctx, acceptance))) {
+      if (!(await canReadAcceptance(ctx, acceptance))) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Acceptance not found' });
       }
 
       // The one rule the write path enforces — same helper, so the page can
       // never advertise an action the mutation would refuse.
-      const canReview = await canManageAcceptance(ctx, acceptance);
+      const canReview = false;
 
       // Sub-reads (rounds / results / evidence) are ownership-scoped models, so
       // read them AS the aggregate's owner — same pattern as the evidence file

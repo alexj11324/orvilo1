@@ -64,41 +64,31 @@ describe('verify rubric config commands', () => {
     await program.parseAsync(['node', 'orvilo', 'verify', ...args]);
   };
 
-  it('passes maxRepairRounds config when creating a rubric', async () => {
-    await run(['rubric', 'create', '-t', 'Standard', '--max-repair-rounds', '3']);
-
-    expect(mockTrpcClient.verify.createRubric.mutate).toHaveBeenCalledWith({
-      config: { maxRepairRounds: 3 },
-      description: undefined,
-      title: 'Standard',
-    });
-  });
-  it('executes the Issue review without server model or batch flags', async () => {
-    await run(['execute', 'op-1', '--goal', 'Ship it', '--deliverable', 'Delivered']);
-    expect(mockTrpcClient.verify.executeVerify.mutate).toHaveBeenCalledWith({
-      deliverable: 'Delivered',
-      goal: 'Ship it',
-      operationId: 'op-1',
-    });
-  });
-
-  it('omits config when no max-repair-rounds flag is given', async () => {
-    await run(['rubric', 'create', '-t', 'Standard']);
-
-    expect(mockTrpcClient.verify.createRubric.mutate).toHaveBeenCalledWith({
-      config: undefined,
-      description: undefined,
-      title: 'Standard',
-    });
-  });
-
-  it('updates only the config when max-repair-rounds is passed', async () => {
-    await run(['rubric', 'update', 'rub-1', '--max-repair-rounds', '0']);
-
-    expect(mockTrpcClient.verify.updateRubric.mutate).toHaveBeenCalledWith({
-      id: 'rub-1',
-      value: { config: { maxRepairRounds: 0 } },
-    });
+  it('registers only historical read commands', () => {
+    const program = new Command();
+    registerVerifyCommand(program);
+    const verify = program.commands.find((command) => command.name() === 'verify')!;
+    expect(verify.commands.map((command) => command.name())).toEqual([
+      'criterion',
+      'rubric',
+      'plan',
+    ]);
+    for (const command of verify.commands) {
+      expect(command.commands.map((child) => child.name())).not.toEqual(
+        expect.arrayContaining(['create']),
+      );
+      expect(command.commands.map((child) => child.name())).not.toEqual(
+        expect.arrayContaining(['update']),
+      );
+      expect(command.commands.map((child) => child.name())).not.toEqual(
+        expect.arrayContaining(['delete']),
+      );
+    }
+    expect(
+      verify.commands
+        .find((command) => command.name() === 'plan')
+        ?.commands.map((command) => command.name()),
+    ).toEqual(['state']);
   });
 
   it('views a rubric and prints its repair-round config', async () => {

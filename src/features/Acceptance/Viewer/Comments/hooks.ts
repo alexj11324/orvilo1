@@ -79,8 +79,8 @@ export const useAcceptanceComments = (acceptanceId: string | undefined) => {
 
   return {
     approvals,
-    canApprove: data.canApprove,
-    canComment: data.canComment,
+    canApprove: false,
+    canComment: false,
     /**
      * A failed read is not a permission answer. Without this the page falls
      * back to `canComment: false` and tells the owner to sign in, which is

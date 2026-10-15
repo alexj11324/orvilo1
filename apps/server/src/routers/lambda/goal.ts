@@ -12,6 +12,7 @@ import { GoalService } from '@/server/services/goal';
 import { advanceGoal } from '@/server/services/goal/advanceGoal';
 import { GoalManagerService, goalPlanSchema } from '@/server/services/goal/manager';
 import { submitPlanningResult } from '@/server/services/goal/planningSubmission';
+import { assertGoalExecutionAvailable } from '@/server/services/goal/retirement';
 import { scheduleGoalAdvance } from '@/server/services/goal/scheduler';
 import {
   HeteroOperationPrincipalError,
@@ -36,7 +37,14 @@ const goalProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =>
     },
   }),
 );
-const goalWriteProcedure = goalProcedure.use(withScopedPermission('agent:update'));
+const goalWriteProcedure = goalProcedure.use(withScopedPermission('agent:update')).use((opts) => {
+  assertGoalExecutionAvailable();
+  return opts.next();
+});
+const operationGoalWriteProcedure = heteroAuthedProcedure.use((opts) => {
+  assertGoalExecutionAvailable();
+  return opts.next();
+});
 const idInput = z.object({ id: z.string() });
 
 function mapGoalError(error: unknown, operation: string): never {
@@ -56,7 +64,7 @@ const planningResultInput = z.object({
 });
 
 export const goalRouter = router({
-  submitOperationDraft: heteroAuthedProcedure
+  submitOperationDraft: operationGoalWriteProcedure
     .use(serverDatabase)
     .input(planningResultInput)
     .mutation(async ({ ctx, input }) => {
@@ -91,7 +99,7 @@ export const goalRouter = router({
       submitPlanningResult(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined, input),
     ),
   // A plan is an operation result; the turn token further restricts ingestion to its Goal.
-  submitOperationPlan: heteroAuthedProcedure
+  submitOperationPlan: operationGoalWriteProcedure
     .use(serverDatabase)
     .input(
       idInput.extend({

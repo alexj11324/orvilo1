@@ -11,6 +11,7 @@ import { AiAgentService } from '@/server/services/aiAgent';
 import { readDeviceQueue } from '@/server/services/aiAgent/deviceQueue';
 
 import type { VerifierAgentRunner } from './executor';
+import { assertLegacyVerificationWritable } from './retirement';
 import { resolveIssueReviewer } from './reviewerAgent';
 import { settleVerifierCheckFromTerminal } from './verifierTerminal';
 
@@ -24,6 +25,7 @@ export const createVerifierAgentRunner = (params: {
   userId: string;
   workspaceId?: string;
 }): VerifierAgentRunner | undefined => {
+  assertLegacyVerificationWritable();
   const { db, deliverable, taskId, userId, workspaceId } = params;
   if (!taskId) return undefined;
 

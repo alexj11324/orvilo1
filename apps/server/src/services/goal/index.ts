@@ -72,6 +72,7 @@ import {
   resolveTaskMaxSteps,
   VERIFY_SETTLE_GRACE_MS,
 } from './recoveryPolicy';
+import { assertGoalExecutionAvailable } from './retirement';
 import { GoalSupervisorService } from './supervisor';
 import { claimGoalTask } from './taskClaim';
 import { TaskRecoveryCoordinator } from './taskRecoveryCoordinator';
@@ -210,6 +211,7 @@ export class GoalService {
   };
 
   create = async (input: CreateGoalGraphInput): Promise<GoalGraphSnapshot> => {
+    assertGoalExecutionAvailable();
     if (input.projectId) {
       const project = await new ProjectModel(
         this.db,
@@ -381,6 +383,7 @@ export class GoalService {
       value: number;
     },
   ) => {
+    assertGoalExecutionAvailable();
     const goal = await this.goalModel.findById(goalId);
     if (!goal) throw new TRPCError({ code: 'NOT_FOUND', message: 'Goal not found' });
 
@@ -504,6 +507,7 @@ export class GoalService {
      */
     mode: 'merge' | 'replace' = 'replace',
   ) => {
+    assertGoalExecutionAvailable();
     const before = await this.coordinatorGraph.getGraph(goalId);
     if (!before) throw new TRPCError({ code: 'NOT_FOUND', message: 'Goal not found' });
     const parkedOnGate = this.isParkedOnMeasuredGate(before);
@@ -528,6 +532,7 @@ export class GoalService {
   };
 
   setAcceptanceCriteria = async (goalId: string, criteriaIds: string[]) => {
+    assertGoalExecutionAvailable();
     const goal = await this.goalModel.findById(goalId);
     if (!goal) throw new TRPCError({ code: 'NOT_FOUND', message: 'Goal not found' });
     await this.goalModel.update(goalId, {
@@ -696,6 +701,7 @@ export class GoalService {
     (await this.goalModel.findById(goalId))?.status;
 
   addNode = async (goalId: string, input: CreateGoalNodeInput) => {
+    assertGoalExecutionAvailable();
     const node = await this.graphModel.createNode(goalId, input);
     if (!node) throw new TRPCError({ code: 'NOT_FOUND', message: 'Goal not found' });
     return node;
@@ -707,6 +713,7 @@ export class GoalService {
     targetNodeId: string,
     kind: GoalEdgeKind,
   ) => {
+    assertGoalExecutionAvailable();
     const edge = await this.graphModel.createEdge(goalId, sourceNodeId, targetNodeId, kind);
     if (!edge) throw new TRPCError({ code: 'NOT_FOUND', message: 'Goal not found' });
     return edge;
@@ -721,6 +728,7 @@ export class GoalService {
    * they are ordinary tasks with their own history and acceptance.
    */
   delete = async (goalId: string) => {
+    assertGoalExecutionAvailable();
     let graph = await this.graphModel.getGraph(goalId);
     const managed = !!graph?.goal.config?.manager;
     const supervised =
@@ -829,6 +837,7 @@ export class GoalService {
   };
 
   pause = async (goalId: string) => {
+    assertGoalExecutionAvailable();
     const graph = await this.requireGraph(goalId);
     // From here the pause is the person's, so no later measurement lifts it.
     // Written even when the goal is already paused — that transition is a
@@ -947,6 +956,7 @@ export class GoalService {
    * an already-running Task keeps the contract it was dispatched with.
    */
   updateRequirement = async (goalId: string, requirement: string) => {
+    assertGoalExecutionAvailable();
     const goal = await this.goalModel.update(goalId, { requirement });
     if (!goal) throw new TRPCError({ code: 'NOT_FOUND', message: 'Goal not found' });
     return goal;
@@ -965,6 +975,7 @@ export class GoalService {
     agentId: string,
     options?: { goalOnly?: boolean },
   ): Promise<{ goal: GoalItem; reassignedTaskIds: string[] }> => {
+    assertGoalExecutionAvailable();
     await assertAgentUsableBy(this.db, agentId, {
       userId: this.userId,
       workspaceId: this.workspaceId,
@@ -1023,6 +1034,7 @@ export class GoalService {
     goalId: string,
     options?: { agentId?: string },
   ): Promise<{ goal: GoalItem; restartedTaskIds: string[] }> => {
+    assertGoalExecutionAvailable();
     if (options?.agentId) {
       await assertAgentUsableBy(this.db, options.agentId, {
         userId: this.userId,
@@ -1131,6 +1143,7 @@ export class GoalService {
       maxTotalCost?: number | null;
     },
   ) => {
+    assertGoalExecutionAvailable();
     const before = await this.requireGraph(goalId);
     const wasBinding = await this.evaluateBudget(before.goal, before);
 
@@ -1199,6 +1212,7 @@ export class GoalService {
   };
 
   resume = async (goalId: string) => {
+    assertGoalExecutionAvailable();
     const graph = await this.requireGraph(goalId);
     const status = graph.decisions.some((decision) => decision.status === 'pending')
       ? 'review'
@@ -1209,6 +1223,7 @@ export class GoalService {
   };
 
   decide = async (goalId: string, decisionId: string, optionId: string, resolution?: string) => {
+    assertGoalExecutionAvailable();
     const graph = await this.requireGraph(goalId);
     const decision = graph.decisions.find((item) => item.id === decisionId);
     if (!decision || decision.status !== 'pending') {
@@ -1271,6 +1286,7 @@ export class GoalService {
    * runtime's event array.
    */
   tick = async (goalId: string, options?: GoalTickOptions): Promise<GoalTickResult> => {
+    assertGoalExecutionAvailable();
     const at = Date.now();
     const graph = await this.requireGraph(goalId);
     if (graph.goal.config?.manager) {

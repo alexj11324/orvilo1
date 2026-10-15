@@ -2,14 +2,16 @@ import { randomUUID } from 'node:crypto';
 
 import type { GoalStatus } from '@orvilo/const/goal';
 import type { GoalNodeStatus, GoalSupervisionState } from '@orvilo/types';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, exists, inArray, isNull, or, sql } from 'drizzle-orm';
 
 import type { GoalItem, NewGoal } from '../schemas/goal';
 import { goals } from '../schemas/goal';
 import { goalNodeDecisions, goalNodes } from '../schemas/goalGraph';
+import { projects } from '../schemas/project';
 import { tasks, taskTopics } from '../schemas/task';
 import { topics } from '../schemas/topic';
 import type { OrviloDatabase } from '../type';
+import { buildProjectReadableWhere } from '../utils/projectReadable';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 
 /** States after which a goal's loop no longer advances. */
@@ -49,6 +51,29 @@ export class GoalModel {
   private ownership = () =>
     buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, goals);
 
+  /** Project visibility also bounds historical Goal metadata and graph reads. */
+  private readable = () =>
+    and(
+      this.ownership(),
+      or(
+        isNull(goals.projectId),
+        exists(
+          this.db
+            .select({ one: sql`1` })
+            .from(projects)
+            .where(
+              and(
+                eq(projects.id, goals.projectId),
+                buildProjectReadableWhere(this.db, {
+                  userId: this.userId,
+                  workspaceId: this.workspaceId,
+                }),
+              ),
+            ),
+        ),
+      ),
+    );
+
   /** Visibility-aware task scope for recursive raw-SQL carrier aggregation. */
   private taskOwnershipSql = (alias?: string) => {
     const prefix = alias ? sql.raw(`${alias}.`) : sql.raw('');
@@ -70,7 +95,7 @@ export class GoalModel {
     const [row] = await this.db
       .select()
       .from(goals)
-      .where(and(eq(goals.id, id), this.ownership()))
+      .where(and(eq(goals.id, id), this.readable()))
       .limit(1);
     return row;
   };
@@ -330,7 +355,7 @@ export class GoalModel {
     // task-carried flow have no `goal_nodes`, so they would render as a
     // zero-task goal page that can never advance; they stay out of the list
     // until something backfills them into graphs.
-    const conditions = [this.ownership(), GoalModel.hasGraphSql];
+    const conditions = [this.readable(), GoalModel.hasGraphSql];
     if (agentId) conditions.push(eq(goals.agentId, agentId));
     if (projectId) conditions.push(eq(goals.projectId, projectId));
     if (statuses && statuses.length > 0) conditions.push(inArray(goals.status, statuses));

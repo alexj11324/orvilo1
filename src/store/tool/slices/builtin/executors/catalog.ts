@@ -4,7 +4,6 @@ import { auvExecutor } from '@orvilo/builtin-tool-auv/client/executor';
 import { calculatorExecutor } from '@orvilo/builtin-tool-calculator/executor';
 import { cloudSandboxExecutor } from '@orvilo/builtin-tool-cloud-sandbox/executor';
 import { credsExecutor } from '@orvilo/builtin-tool-creds/executor';
-import { goalExecutor } from '@orvilo/builtin-tool-goal/client/executor';
 import { groupAgentBuilderExecutor } from '@orvilo/builtin-tool-group-agent-builder/executor';
 import { groupManagementExecutor } from '@orvilo/builtin-tool-group-management/executor';
 import { knowledgeBaseExecutor } from '@orvilo/builtin-tool-knowledge-base/client/executor';
@@ -64,7 +63,6 @@ export const builtinToolExecutors = [
   credsExecutor,
   groupAgentBuilderExecutor,
   groupManagementExecutor,
-  goalExecutor,
   knowledgeBaseExecutor,
   localSystemExecutorWithGitEffects,
   memoryExecutor,

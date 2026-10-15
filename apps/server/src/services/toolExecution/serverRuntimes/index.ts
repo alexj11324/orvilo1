@@ -7,9 +7,9 @@
  * - Per-request runtimes (e.g., CloudSandbox - needs topicId, userId)
  *
  * Runtime modules are loaded lazily per identifier: several of them
- * (goal / goalSupervisor / task / ...) import service-layer modules that reach
+ * (task / groupManagement / ...) import service-layer modules that reach
  * back into `services/aiAgent`, so static imports here would close an import
- * cycle (`aiAgent → runToolSurface → serverRuntimes → goal → aiAgent`). Keeping
+ * cycle (`aiAgent → runToolSurface → serverRuntimes → task → aiAgent`). Keeping
  * this module a leaf in the static graph keeps `lint:circular` clean. The map
  * keys are the registration identifiers — `__tests__/registry.test.ts` asserts
  * each loaded module's `identifier` matches its key.
@@ -24,8 +24,6 @@ const runtimeLoaders: Record<string, () => Promise<ServerRuntimeRegistration>> =
   'agent-signal-reflection': async () =>
     (await import('./agentSignalReflection')).agentSignalReflectionRuntime,
   'agent-signal-review': async () => (await import('./agentSignalReview')).agentSignalReviewRuntime,
-  'orvilo-acceptance-evidence': async () =>
-    (await import('./acceptanceEvidence')).acceptanceEvidenceRuntime,
   'orvilo-activator': async () => (await import('./activator')).activatorRuntime,
   'orvilo-agent': async () => (await import('./orviloAgent')).orviloAgentRuntime,
   'orvilo-agent-builder': async () => (await import('./agentBuilder')).agentBuilderRuntime,
@@ -36,8 +34,6 @@ const runtimeLoaders: Record<string, () => Promise<ServerRuntimeRegistration>> =
   'orvilo-cloud-sandbox': async () => (await import('./cloudSandbox')).cloudSandboxRuntime,
   'orvilo-computer-use': async () => (await import('./auv')).auvRuntime,
   'orvilo-creds': async () => (await import('./creds')).credsRuntime,
-  'orvilo-goal': async () => (await import('./goal')).goalRuntime,
-  'orvilo-goal-supervisor': async () => (await import('./goalSupervisor')).goalSupervisorRuntime,
   'orvilo-group-agent-builder': async () =>
     (await import('./groupAgentBuilder')).groupAgentBuilderRuntime,
   'orvilo-group-management': async () => (await import('./groupManagement')).groupManagementRuntime,
@@ -52,7 +48,6 @@ const runtimeLoaders: Record<string, () => Promise<ServerRuntimeRegistration>> =
   'orvilo-topic-reference': async () => (await import('./topicReference')).topicReferenceRuntime,
   'orvilo-user-interaction': async () => (await import('./userInteraction')).userInteractionRuntime,
   'orvilo-user-memory': async () => (await import('./memory')).memoryRuntime,
-  'orvilo-verify': async () => (await import('./verifyResult')).verifyResultRuntime,
   'orvilo-web-browsing': async () => (await import('./webBrowsing')).webBrowsingRuntime,
   'orvilo-web-onboarding': async () => (await import('./webOnboarding')).webOnboardingRuntime,
   'orvilo-task': async () => (await import('./task')).taskRuntime,

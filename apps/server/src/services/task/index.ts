@@ -56,6 +56,7 @@ import {
 } from '@/database/utils/taskDependencyLock';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 import { resolveDeviceWorkingDirectory } from '@/server/services/aiAgent/resolveDeviceWorkingDirectory';
+import { assertLegacyVerificationWritable } from '@/server/services/verify/retirement';
 
 import { assertCanUseWorkspaceAgent } from '../../routers/lambda/_helpers/workspaceAgentGuard';
 import { AiAgentService } from '../aiAgent';
@@ -223,6 +224,11 @@ export class TaskService {
    * default model don't silently affect this task.
    */
   async createTask(input: CreateTaskInput, mutation: TaskMutationContext = {}): Promise<TaskItem> {
+    if (
+      input.config &&
+      (Object.hasOwn(input.config, 'verify') || Object.hasOwn(input.config, 'review'))
+    )
+      assertLegacyVerificationWritable();
     await this.assertAssigneeAgentBelongsToUser(input.assigneeAgentId);
     if (input.reviewerAgentId) {
       await this.assertReviewerCanReview(input.reviewerAgentId);
@@ -487,6 +493,7 @@ export class TaskService {
     id: string;
     topicId?: string;
   }): Promise<ReviewResult> {
+    assertLegacyVerificationWritable();
     const task = await this.resolveOrThrow(input.id);
 
     const reviewConfig = this.taskModel.getReviewConfig(task);
@@ -1517,6 +1524,11 @@ export class TaskService {
     actor: { agentId?: string | null; userId?: string | null } = {},
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
+    if (
+      data.config &&
+      (Object.hasOwn(data.config, 'verify') || Object.hasOwn(data.config, 'review'))
+    )
+      assertLegacyVerificationWritable();
     if (data.reviewerAgentId) {
       await this.assertReviewerCanReview(data.reviewerAgentId);
       await this.assertAssigneeAgentBelongsToUser(data.reviewerAgentId);

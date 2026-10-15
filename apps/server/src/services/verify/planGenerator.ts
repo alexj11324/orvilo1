@@ -19,6 +19,7 @@ import type { VerifyCriterionItem } from '@/database/schemas/verify';
 import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 
+import { assertLegacyVerificationWritable } from './retirement';
 import { resolveIssueReviewer } from './reviewerAgent';
 import { RawGeneratedCriteriaSchema } from './schema';
 
@@ -176,6 +177,7 @@ export class VerifyPlanGeneratorService {
     maxCriteria?: number;
     taskId: string;
   }): Promise<CriterionDraft[]> {
+    assertLegacyVerificationWritable();
     const reviewerAgentId = await resolveIssueReviewer(
       this.db,
       this.userId,
@@ -238,6 +240,7 @@ export class VerifyPlanGeneratorService {
    * in a linked document, mirroring the rubric path.
    */
   async createCriteriaFromDrafts(drafts: CriterionDraft[]): Promise<string[]> {
+    assertLegacyVerificationWritable();
     const ids: string[] = [];
     for (const [index, draft] of drafts.entries()) {
       // Reuse the existing instruction doc when re-persisting a hydrated criterion;
@@ -280,6 +283,7 @@ export class VerifyPlanGeneratorService {
    * Returns the plan items.
    */
   async generateDraftPlan(params: GeneratePlanParams): Promise<VerifyCheckItem[]> {
+    assertLegacyVerificationWritable();
     const items: VerifyCheckItem[] = [];
 
     // 1. Instantiate the mounted rubric's criteria (in rubric order).

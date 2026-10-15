@@ -3,7 +3,7 @@
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
-import { CheckerDock, RunResult } from '@/features/Acceptance';
+import { RunResult } from '@/features/Acceptance';
 import { useVerifyState } from '@/features/Acceptance/hooks';
 import { phaseCardBackground, phaseFromStatus } from '@/features/Acceptance/utils';
 
@@ -50,7 +50,6 @@ const VerifyMessage = memo<VerifyMessageProps>(({ id }) => {
         }}
       >
         <RunResult embedded operationId={operationId} round={ordinal} />
-        <CheckerDock embedded operationId={operationId} />
       </div>
     </div>
   );

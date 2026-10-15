@@ -2,7 +2,6 @@
 // main column's standalone blocks (recents, tasks) are rendered by
 // HomeModeContent rather than HomeInbox.
 export const HOME_INBOX_WIDGET_KEYS = [
-  'goals',
   'needsYou',
   'unread',
   'running',
@@ -30,7 +29,7 @@ export type HomeWidgetKey = (typeof HOME_WIDGET_KEYS)[number];
  *
  * That makes membership a fact about the page, not a taste call: the main
  * column carries the agent feeds and the two task blocks, and the rail carries
- * goals, news and suggestions (`RAIL_INBOX_PROPS` hides needs-you, running and
+ * news and suggestions (`RAIL_INBOX_PROPS` hides needs-you, running and
  * unread from the rail; `ownsRailSections` decides the rest). A widget that
  * moves columns must move groups with it.
  *
@@ -40,7 +39,7 @@ export type HomeWidgetKey = (typeof HOME_WIDGET_KEYS)[number];
 export const HOME_WIDGET_GROUPS = [
   { key: 'agent', widgets: ['unread', 'needsYou', 'running', 'recents'] },
   { key: 'task', widgets: ['tasks', 'scheduledTasks'] },
-  { key: 'rail', widgets: ['goals', 'news', 'usage', 'suggestions'] },
+  { key: 'rail', widgets: ['news', 'usage', 'suggestions'] },
 ] as const satisfies ReadonlyArray<{ key: string; widgets: readonly HomeWidgetKey[] }>;
 
 export type HomeWidgetGroupKey = (typeof HOME_WIDGET_GROUPS)[number]['key'];
@@ -129,8 +128,6 @@ export const isHomeMinimalLayout = (hiddenWidgets: string[], usageActive = false
 // fetch powers needsYou AND news. Narrowing either pair back to one key lets a
 // hidden widget silence a failure that explains the other's absence.
 const HOME_SECTION_WIDGET_COVERAGE: Record<string, HomeWidgetKey[]> = {
-  'goals': ['goals'],
-  'goals-error': ['goals'],
   'needsYou': ['needsYou'],
   'needsYou-error': ['needsYou', 'news'],
   'needsYou-loading': ['needsYou'],

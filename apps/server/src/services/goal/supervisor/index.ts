@@ -23,6 +23,7 @@ import { findUsableAgentExecutionBinding } from '@/database/utils/agent-access';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { agentCanMountBuiltinToolSurface } from '@/server/services/aiAgent/pipeline/resolveExecutionBinding';
 
+import { assertGoalExecutionAvailable } from '../retirement';
 import { scheduleGoalAdvance } from '../scheduler';
 import { claimGoalTask } from '../taskClaim';
 import {
@@ -42,6 +43,7 @@ export class GoalSupervisorService {
   ) {}
 
   stop = async (graph: GoalGraphSnapshot) => {
+    assertGoalExecutionAvailable();
     const state = graph.goal.config?.supervisorState;
     if (!state) return;
     const operations = new AgentOperationModel(this.db, this.userId, this.workspaceId);
@@ -131,6 +133,7 @@ export class GoalSupervisorService {
     nodeId: string,
     task: TaskItem,
   ): Promise<GoalTickResult | null> => {
+    assertGoalExecutionAvailable();
     if (!graph.goal.config?.supervision?.enabled) return null;
     const goalId = graph.goal.id;
     const waiting = async (message: string): Promise<GoalTickResult> => {
@@ -460,6 +463,7 @@ export class GoalSupervisorService {
   };
 
   updateIncident = async (goalId: string, id: string, patch: Partial<GoalSupervisionIncident>) => {
+    assertGoalExecutionAvailable();
     await this.db.transaction(async (tx) => {
       const model = new GoalModel(tx, this.userId, this.workspaceId);
       const goal = await model.lockById(goalId);
@@ -494,6 +498,7 @@ export class GoalSupervisorService {
   };
 
   recordDispatch = async (graph: GoalGraphSnapshot, taskId: string, operationId: string) => {
+    assertGoalExecutionAvailable();
     const incident = graph.goal.config?.supervisorState?.incidents.findLast(
       (item) => item.taskId === taskId && item.status === 'retrying',
     );
@@ -508,6 +513,7 @@ export class GoalSupervisorService {
     human = false,
     acceptedOperationId?: string,
   ) => {
+    assertGoalExecutionAvailable();
     for (const incident of graph.goal.config?.supervisorState?.incidents ?? []) {
       if (
         incident.taskId !== taskId ||

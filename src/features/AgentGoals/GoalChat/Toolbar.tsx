@@ -1,5 +1,5 @@
 import { agentDisplayName } from '@orvilo/types';
-import { Clock3Icon, PanelRightCloseIcon, PlusIcon } from 'lucide-react';
+import { Clock3Icon, PanelRightCloseIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
 import NavHeader from '@/features/NavHeader';
-import TopicItem from '@/features/PageEditor/Copilot/TopicSelector/TopicItem';
+import NavItem from '@/features/NavPanel/components/NavItem';
 import { useFetchAgentChatTopics } from '@/hooks/useFetchChatTopics';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -20,7 +20,7 @@ interface ToolbarProps {
   onCollapse: () => void;
 }
 
-/** Topic title + new-conversation + history — the agent's conversation list. */
+/** Historical conversation selection without transcript mutations. */
 const Toolbar = memo<ToolbarProps>(({ onCollapse }) => {
   const { t } = useTranslation('chat');
   const [topicPopoverOpen, setTopicPopoverOpen] = useState(false);
@@ -67,12 +67,6 @@ const Toolbar = memo<ToolbarProps>(({ onCollapse }) => {
       }
       right={
         <>
-          <ActionIcon
-            icon={PlusIcon}
-            size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-            title={t('goalChat.newTopic')}
-            onClick={() => switchTopic(null)}
-          />
           <Popover
             open={isLoadingTopics ? false : topicPopoverOpen}
             onOpenChange={setTopicPopoverOpen}
@@ -97,13 +91,14 @@ const Toolbar = memo<ToolbarProps>(({ onCollapse }) => {
                   style={{ padding: 8, maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
                 >
                   {topics!.map((topic) => (
-                    <TopicItem
+                    <NavItem
                       active={topic.id === activeTopicId}
                       key={topic.id}
-                      topicId={topic.id}
-                      topicTitle={topic.title}
-                      onClose={() => setTopicPopoverOpen(false)}
-                      onTopicChange={(id) => switchTopic(id)}
+                      title={topic.title || t('untitled', { ns: 'topic' })}
+                      onClick={() => {
+                        void switchTopic(topic.id);
+                        setTopicPopoverOpen(false);
+                      }}
                     />
                   ))}
                 </div>

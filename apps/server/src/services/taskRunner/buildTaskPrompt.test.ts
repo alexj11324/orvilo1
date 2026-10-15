@@ -139,13 +139,31 @@ describe('buildTaskPrompt delivery acceptance', () => {
 
   it('uses ordinary Issue review instead of the old acceptance section even with a verify config', async () => {
     const task = await new TaskModel(db, userId).create({
-      config: { verify: { enabled: true, requirement: 'The report is delivered as a document.' } },
+      config: {
+        verify: { enabled: true, requirement: 'The report is delivered as a document.' },
+        review: {
+          enabled: true,
+          rubrics: [
+            {
+              id: 'legacy',
+              type: 'contains',
+              name: 'Legacy rubric',
+              config: { value: 'legacy-rubric-secret' },
+              weight: 1,
+            },
+          ],
+          autoRetry: true,
+          maxIterations: 3,
+          judge: {},
+        },
+      },
       instruction: 'Write the report.',
     });
 
     const result = await buildFor(task.id);
 
     expect(result.prompt).not.toContain('Verify — delivery acceptance');
+    expect(result.prompt).not.toContain('legacy-rubric-secret');
     expect(result.acceptanceEnabled).toBe(false);
   });
 

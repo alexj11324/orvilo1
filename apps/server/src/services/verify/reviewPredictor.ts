@@ -19,6 +19,7 @@ import { AiGenerationService } from '@/server/services/aiGeneration';
 import { FileService } from '@/server/services/file';
 
 import { resolveModelReadableFrameUrl } from './modelFrames';
+import { assertLegacyVerificationWritable } from './retirement';
 import type { ReviewEvidenceRow } from './reviewEvidence';
 import { formatTextEvidence, TEXT_EVIDENCE_TYPES } from './reviewEvidence';
 import { describeWithheldEvidence } from './reviewInspection';
@@ -144,6 +145,7 @@ export class VerifyReviewPredictorService {
    * finished batch from the previous run's leftovers.
    */
   async resetPending(checkResultIds: string[], reviewerAgentId: string) {
+    assertLegacyVerificationWritable();
     await this.predictionModel.resetUnadjudicated(checkResultIds, {
       model: reviewerAgentId,
       promptVersion: REVIEW_PREDICT_PROMPT_VERSION,
@@ -162,6 +164,7 @@ export class VerifyReviewPredictorService {
    * already been answered, returns null.
    */
   async predict(params: PredictReviewParams) {
+    assertLegacyVerificationWritable();
     const { checkResultId, reviewerAgentId } = params;
 
     const result = await this.resultModel.findById(checkResultId);

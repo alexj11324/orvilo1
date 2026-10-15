@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import { acceptanceEvidenceRuntime } from '../acceptanceEvidence';
 import { activatorRuntime } from '../activator';
 import { agentBuilderRuntime } from '../agentBuilder';
 import { agentDocumentsRuntime } from '../agentDocuments';
@@ -13,11 +12,9 @@ import { briefRuntime } from '../brief';
 import { calculatorRuntime } from '../calculator';
 import { cloudSandboxRuntime } from '../cloudSandbox';
 import { credsRuntime } from '../creds';
-import { goalRuntime } from '../goal';
-import { goalSupervisorRuntime } from '../goalSupervisor';
 import { groupAgentBuilderRuntime } from '../groupAgentBuilder';
 import { groupManagementRuntime } from '../groupManagement';
-import { getServerRuntimeIdentifiers, hasServerRuntime } from '../index';
+import { getServerRuntime, getServerRuntimeIdentifiers, hasServerRuntime } from '../index';
 import { knowledgeBaseRuntime } from '../knowledgeBase';
 import { localSystemRuntime } from '../localSystem';
 import { memoryRuntime } from '../memory';
@@ -30,7 +27,6 @@ import { skillsRuntime } from '../skills';
 import { taskRuntime } from '../task';
 import { topicReferenceRuntime } from '../topicReference';
 import { userInteractionRuntime } from '../userInteraction';
-import { verifyResultRuntime } from '../verifyResult';
 import { webBrowsingRuntime } from '../webBrowsing';
 import { webOnboardingRuntime } from '../webOnboarding';
 
@@ -38,7 +34,6 @@ import { webOnboardingRuntime } from '../webOnboarding';
 // module's registration — a drifted key would make `hasServerRuntime` answer
 // for the wrong tool. Keep this list in sync with `index.ts`'s loaders.
 const ALL_REGISTRATIONS = [
-  acceptanceEvidenceRuntime,
   activatorRuntime,
   agentBuilderRuntime,
   agentDocumentsRuntime,
@@ -51,8 +46,6 @@ const ALL_REGISTRATIONS = [
   calculatorRuntime,
   cloudSandboxRuntime,
   credsRuntime,
-  goalRuntime,
-  goalSupervisorRuntime,
   groupAgentBuilderRuntime,
   groupManagementRuntime,
   knowledgeBaseRuntime,
@@ -67,12 +60,19 @@ const ALL_REGISTRATIONS = [
   taskRuntime,
   topicReferenceRuntime,
   userInteractionRuntime,
-  verifyResultRuntime,
   webBrowsingRuntime,
   webOnboardingRuntime,
 ];
 
 describe('serverRuntimes registry', () => {
+  it.each(['orvilo-goal', 'orvilo-goal-supervisor', 'orvilo-verify', 'orvilo-acceptance-evidence'])(
+    'does not execute the retired %s tool',
+    async (identifier) => {
+      expect(hasServerRuntime(identifier)).toBe(false);
+      await expect(getServerRuntime(identifier, {} as never)).resolves.toBeUndefined();
+    },
+  );
+
   it('loader keys exactly cover the registered identifiers', () => {
     const registrationIds = ALL_REGISTRATIONS.map((r) => r.identifier).sort();
     expect(getServerRuntimeIdentifiers().sort()).toEqual(registrationIds);

@@ -877,7 +877,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'scheduled', expect.anything());
     });
 
-    it('keeps a capped schedule task pending until its confirmed Verify run settles', async () => {
+    it('settles a capped schedule without waiting on archived Verify state', async () => {
       const task = baseTask({
         automationMode: 'schedule',
         config: { schedule: { maxExecutions: 1 } } as any,
@@ -898,9 +898,13 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      expect(updateStatus).toHaveBeenCalledWith('task-1', 'scheduled', { error: null });
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'completed', expect.anything());
-      expect((service as any).taskModel.releaseRunReservation).not.toHaveBeenCalled();
+      expect(updateStatus).toHaveBeenCalledWith(
+        'task-1',
+        'completed',
+        expect.objectContaining({ error: null, workflowCategory: 'done' }),
+      );
+      expect(verifyFindByOperation).not.toHaveBeenCalled();
+      expect((service as any).taskModel.releaseRunReservation).toHaveBeenCalled();
     });
 
     it('schedule-mode task with no scheduleStartedAt (pre-PR) still parks at "scheduled"', async () => {
@@ -1248,7 +1252,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect((service as any).taskModel.releaseRunReservation).toHaveBeenCalled();
     });
 
-    it('does not re-arm a verify-bound heartbeat before Verify releases the lease', async () => {
+    it('re-arms normal heartbeat without consulting the retired Verify engine', async () => {
       const task = baseTask({ automationMode: 'heartbeat', status: 'running' });
       findById.mockResolvedValue(task);
       verifyFindByOperation.mockResolvedValue({ planConfirmedAt: new Date(), status: 'running' });
@@ -1263,16 +1267,9 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       });
 
       expect(updateStatus).toHaveBeenCalledWith('task-1', 'scheduled', { error: null });
-      expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
-      expect((service as any).taskModel.releaseRunReservation).not.toHaveBeenCalled();
-    });
-
-    it('does not re-arm a heartbeat that a user paused while Verify settled', async () => {
-      findById.mockResolvedValue(baseTask({ automationMode: 'heartbeat', status: 'paused' }));
-
-      await service.rearmHeartbeatAfterVerify('task-1');
-
-      expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
+      expect(fakeScheduler.scheduleNextTopic).toHaveBeenCalledTimes(1);
+      expect((service as any).taskModel.releaseRunReservation).toHaveBeenCalled();
+      expect(verifyFindByOperation).not.toHaveBeenCalled();
     });
 
     it('stops lifecycle side effects when a user supersedes the completion lease', async () => {
@@ -1293,7 +1290,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
     });
 
-    it('drives a Verify verdict that settled before the topic callback', async () => {
+    it('does not drive an archived Verify verdict from a topic callback', async () => {
       const task = baseTask({ automationMode: 'heartbeat' });
       findById.mockResolvedValue(task);
       verifyFindByOperation.mockResolvedValue({
@@ -1311,12 +1308,8 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      expect(deferredVerifyDrive).toHaveBeenCalledWith(
-        expect.anything(),
-        'user-1',
-        'op-1',
-        undefined,
-      );
+      expect(deferredVerifyDrive).not.toHaveBeenCalled();
+      expect(verifyFindByOperation).not.toHaveBeenCalled();
     });
 
     it('ordinary Issue defers its creator callback until the reviewer passes', async () => {
@@ -1339,7 +1332,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(bridge).not.toHaveBeenCalled();
     });
 
-    it('re-drives the original Verify run after a corrective integration settles', async () => {
+    it('does not revive old Verify after corrective integration', async () => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);
       vi.spyOn(service as any, 'generateHandoff').mockResolvedValue(undefined);
@@ -1356,13 +1349,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-corrective',
       });
 
-      expect(deferredVerifyDrive).toHaveBeenCalledWith(
-        expect.anything(),
-        'user-1',
-        'op-original',
-        undefined,
-      );
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
+      expect(deferredVerifyDrive).not.toHaveBeenCalled();
     });
   });
 

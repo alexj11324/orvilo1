@@ -10,6 +10,7 @@ import { z } from 'zod';
 import type { OrviloDatabase } from '@/database/type';
 
 import { generateGoalObject } from './generation';
+import { assertGoalExecutionAvailable } from './retirement';
 
 const planSchema = z
   .object({
@@ -52,6 +53,7 @@ export class GoalExplorationPlanner {
     input: GoalExploreInput,
     options?: { agentId?: string | null },
   ): Promise<GoalExplorationPlan> {
+    assertGoalExecutionAvailable();
     const result = await generateGoalObject(
       this.db,
       this.userId,

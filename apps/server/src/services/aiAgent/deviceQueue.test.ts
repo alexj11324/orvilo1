@@ -189,11 +189,11 @@ const payload: DeviceQueuePayload = {
 };
 const hooks = [
   {
-    id: 'reviewer-terminal',
+    id: 'completion-notification',
     type: 'onComplete',
     webhook: {
       body: { checkItemId: 'check', parentOperationId: 'parent' },
-      url: '/api/workflows/verify/on-verifier-complete',
+      url: '/api/workflows/notify/on-complete',
     },
   },
 ];
@@ -227,10 +227,7 @@ describe('ordinary offline device queue', () => {
     expect(await queueOfflineDeviceRun(db, 'user', 'original-op', payload)).toBe(true);
     const stored = rows.get('original-op')!;
     expect(stored.status).toBe('idle');
-    expect(readDeviceQueue(stored.metadata)?.verifyCheck).toEqual({
-      parentOperationId: 'parent',
-      checkItemId: 'check',
-    });
+    expect(readDeviceQueue(stored.metadata)?.verifyCheck).toBeUndefined();
     expect(JSON.stringify(stored.metadata)).not.toContain('fresh-secret');
     await Promise.all([sweepQueuedDeviceOperations({ db }), sweepQueuedDeviceOperations({ db })]);
     expect(dispatch).toHaveBeenCalledTimes(1);
@@ -336,33 +333,14 @@ describe('ordinary offline device queue', () => {
     expect(rows.get('original-op')?.status).toBe('interrupted');
   });
 
-  it('does not send a queued check when its manual decision lands during launch preparation', async () => {
+  it('never replays a persisted legacy Verify check after reconnect', async () => {
+    const operation = rows.get('original-op')!;
+    operation.metadata = { _hooks: [{ ...hooks[0], id: 'reviewer-terminal' }] };
     await queueOfflineDeviceRun(db, 'user', 'original-op', payload);
-    sign.mockImplementation(async () => {
-      decision.mockReturnValue('accepted');
-      return 'fresh-secret';
+    expect(readDeviceQueue(operation.metadata)?.verifyCheck).toEqual({
+      checkItemId: 'check',
+      parentOperationId: 'parent',
     });
-    await sweepQueuedDeviceOperations({ db });
-    expect(dispatch).not.toHaveBeenCalled();
-    expect(rows.get('original-op')?.status).toBe('interrupted');
-  });
-
-  it.each(['replacement', null])(
-    'cancels the parked check when its Issue reviewer becomes %s',
-    async (nextReviewer) => {
-      await queueOfflineDeviceRun(db, 'user', 'original-op', payload);
-      if (nextReviewer) reviewer.mockResolvedValue(nextReviewer);
-      else reviewer.mockRejectedValue(new Error('Set a reviewer Agent on the Issue.'));
-      await sweepQueuedDeviceOperations({ db });
-      expect(dispatch).not.toHaveBeenCalled();
-      expect(sign).not.toHaveBeenCalled();
-      expect(rows.get('original-op')?.status).toBe('interrupted');
-    },
-  );
-
-  it('cancels the parked check after an aggregate manual decision', async () => {
-    await queueOfflineDeviceRun(db, 'user', 'original-op', payload);
-    runDecision.mockReturnValue('accepted');
     await sweepQueuedDeviceOperations({ db });
     expect(dispatch).not.toHaveBeenCalled();
     expect(sign).not.toHaveBeenCalled();

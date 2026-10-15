@@ -12,6 +12,8 @@ import { AgentOperationModel } from '@/database/models/agentOperation';
 import { agentOperations } from '@/database/schemas/agentOperations';
 import type { OrviloDatabase } from '@/database/type';
 
+import { assertGoalExecutionAvailable } from './retirement';
+
 const schemas = new Map<string, GenerateObjectSchema>([
   ['goal.criteriaDraft', GOAL_CRITERIA_DRAFT_JSON_SCHEMA],
   ['goal.decompose', GOAL_DECOMPOSE_JSON_SCHEMA],
@@ -26,6 +28,7 @@ export const submitPlanningResult = async (
   workspaceId: string | undefined,
   input: { operationId: string; token: string; result: unknown },
 ) => {
+  assertGoalExecutionAvailable();
   const operation = await new AgentOperationModel(db, userId, workspaceId).findById(
     input.operationId,
   );

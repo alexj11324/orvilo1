@@ -2,20 +2,13 @@
 
 import type { VerifyAgentPlanConfig } from '@orvilo/types';
 import { cn } from 'cn';
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { Badge } from '@/components/reui/badge';
-import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
-import {
-  checkHeadMeta,
-  type CheckReviewInput,
-  FocusedCheckDetails,
-  useAcceptanceBundle,
-} from '@/features/Acceptance';
-import { canReviewAcceptance } from '@/features/Acceptance/Viewer/visibility';
+import { checkHeadMeta, FocusedCheckDetails, useAcceptanceBundle } from '@/features/Acceptance';
 import { verifyService } from '@/services/verify';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
@@ -35,7 +28,6 @@ const Body = memo(() => {
   const portal = useChatStore(chatPortalSelectors.acceptanceCheckPortal);
   const openAcceptance = useChatStore((state) => state.openAcceptance);
   const { data, error, isLoading, mutate } = useAcceptanceBundle(portal?.acceptanceId ?? null);
-  const [reviewPending, setReviewPending] = useState(false);
   const check = data?.checks.find((item) => item.id === portal?.checkId);
 
   /**
@@ -49,22 +41,6 @@ const Body = memo(() => {
     openTopicDrawer(resolved.topicId, {
       title: t('acceptance.checks.viewTrace', { ns: 'verify' }),
     });
-  };
-
-  const handleReview = async (input: CheckReviewInput): Promise<boolean> => {
-    if (!data) return false;
-
-    try {
-      setReviewPending(true);
-      await verifyService.reviewChecks({ id: data.acceptance.id, ...input });
-      await mutate();
-      return true;
-    } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : t('taskDetail.acceptance.reviewError'));
-      return false;
-    } finally {
-      setReviewPending(false);
-    }
   };
 
   if (isLoading) {
@@ -140,11 +116,11 @@ const Body = memo(() => {
         </div>
       )}
       <FocusedCheckDetails
-        canReview={canReviewAcceptance(data)}
+        canReview={false}
         check={check}
-        reviewPending={reviewPending}
+        reviewPending={false}
         onOpenTrace={openVerifierTrace}
-        onReview={handleReview}
+        onReview={async () => false}
         onRound={() => openAcceptance(data.acceptance.id)}
       />
     </div>

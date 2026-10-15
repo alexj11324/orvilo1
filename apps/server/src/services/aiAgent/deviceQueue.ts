@@ -3,15 +3,14 @@ import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import type { AcpBuiltinToolSpec } from '@orvilo/types';
 import { AEGIS_PACK_ENV, ChatErrorType, resolveHarnessAdapter } from '@orvilo/types';
 import { toRecord } from '@orvilo/utils/object';
-import { and, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, inArray, sql } from 'drizzle-orm';
 
 import { AgentModel } from '@/database/models/agent';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { TopicModel } from '@/database/models/topic';
-import { VerifyRunModel } from '@/database/models/verifyRun';
-import { agentOperations, verifyCheckResults } from '@/database/schemas';
+import { agentOperations } from '@/database/schemas';
 import type { AgentOperationItem } from '@/database/schemas/agentOperations';
 import type { OrviloDatabase } from '@/database/type';
 import { signHeteroOperationJWT } from '@/libs/trpc/utils/internalJwt';
@@ -25,16 +24,9 @@ import type { EmbeddedDispatchContext } from '@/server/services/controlPlane/emb
 import { deviceGateway } from '@/server/services/deviceGateway';
 import { resolveDeviceDispatchAuthorizationFailure } from '@/server/services/deviceGateway/dispatchAuthorization';
 import { resolveAttachmentsByFileIds } from '@/server/services/file/resolveAttachments';
-import { resolveIssueReviewer } from '@/server/services/verify/reviewerAgent';
 
 /** Reuse the existing five-minute reconnect/recovery window. */
 export const DEVICE_QUEUE_GRACE_MS = 5 * 60_000;
-
-const reviewerOperationMatch = (operationId: string) =>
-  or(
-    eq(verifyCheckResults.verifierOperationId, operationId),
-    sql`${verifyCheckResults.metadata}->>'reviewerOperationId' = ${operationId}`,
-  );
 
 /** Prepared run data only. Credentials and signed file URLs are minted at launch. */
 export interface DeviceQueuePayload {
@@ -176,10 +168,6 @@ export async function finishQueuedDeviceOperation(
   if (!queue || !['error', 'interrupted'].includes(operation.status)) return;
   const model = new AgentOperationModel(db, operation.userId, workspaceId);
   const reason = operation.status === 'error' ? 'error' : 'interrupted';
-  await db
-    .update(verifyCheckResults)
-    .set({ metadata: sql`coalesce(${verifyCheckResults.metadata}, '{}'::jsonb) - 'waitingReason'` })
-    .where(reviewerOperationMatch(operation.id));
   await new CompletionLifecycle(db, operation.userId, workspaceId).completeOperation(
     {
       agentId: operation.agentId ?? undefined,
@@ -398,39 +386,8 @@ async function queuedLaunchStillAllowed(
   )
     return false;
   const queuedCheck = readDeviceQueue(current.metadata)?.verifyCheck;
-  if (queuedCheck) {
-    const model = new AgentOperationModel(db, operation.userId, operation.workspaceId ?? undefined);
-    const parent = await model.findById(queuedCheck.parentOperationId);
-    const run = await new VerifyRunModel(
-      db,
-      operation.userId,
-      operation.workspaceId ?? undefined,
-    ).findByOperation(queuedCheck.parentOperationId);
-    if (!parent || run?.userDecision) return false;
-    try {
-      if (
-        (await resolveIssueReviewer(
-          db,
-          operation.userId,
-          parent.taskId,
-          operation.workspaceId ?? undefined,
-        )) !== operation.agentId
-      )
-        return false;
-    } catch (error) {
-      console.error('[device-queue] Issue reviewer unavailable', {
-        operationId: operation.id,
-        error,
-      });
-      return false;
-    }
-    const [check] = await db
-      .select({ userDecision: verifyCheckResults.userDecision })
-      .from(verifyCheckResults)
-      .where(reviewerOperationMatch(operation.id))
-      .limit(1);
-    if (check?.userDecision) return false;
-  }
+  // Persisted old Verify checks cannot launch after the engine is retired.
+  if (queuedCheck) return false;
   return true;
 }
 
@@ -543,12 +500,6 @@ export async function sweepQueuedDeviceOperations(input: {
         operationId: operation.id,
         topicId: queue.payload.topicId,
       });
-      await db
-        .update(verifyCheckResults)
-        .set({
-          metadata: sql`coalesce(${verifyCheckResults.metadata}, '{}'::jsonb) - 'waitingReason'`,
-        })
-        .where(reviewerOperationMatch(operation.id));
       if (outcome.outcome === 'terminal') {
         await finalizeHeteroDispatchError(deps, {
           agentId: queue.payload.agentId,

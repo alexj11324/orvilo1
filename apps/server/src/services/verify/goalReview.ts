@@ -6,6 +6,7 @@ import type { OrviloDatabase } from '@/database/type';
 
 import { AcceptanceService, buildAcceptanceCheckUnion } from './acceptanceService';
 import { mapWithConcurrency } from './concurrency';
+import { assertLegacyVerificationWritable } from './retirement';
 import { resolveIssueReviewer } from './reviewerAgent';
 import { REVIEW_PREDICT_CONCURRENCY, VerifyReviewPredictorService } from './reviewPredictor';
 
@@ -17,6 +18,7 @@ export const reviewGoalDelivery = async (
   operationId: string,
   workspaceId?: string,
 ): Promise<VerifyRunMetadata['goalReview']> => {
+  assertLegacyVerificationWritable();
   const goal = await new GoalModel(db, userId, workspaceId).findByGraphTask(taskId);
   if (!goal) return;
 

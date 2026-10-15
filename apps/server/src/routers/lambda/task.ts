@@ -81,6 +81,7 @@ import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 import { runTaskWatchdog } from '@/server/services/taskWatchdog';
 import { AcceptanceService } from '@/server/services/verify/acceptanceService';
+import { assertLegacyVerificationWritable } from '@/server/services/verify/retirement';
 import { resolveTaskAcceptance } from '@/server/services/verify/taskAcceptance';
 import { hasWorkspaceScopedPermission } from '@/server/services/workspacePermission';
 import {
@@ -1337,8 +1338,11 @@ export const taskRouter = router({
       });
     }
     try {
-      const parsedVerify = taskVerifyConfigPatchSchema.safeParse(createInput.config?.verify);
-      const { verify: _legacyVerify, ...taskConfig } = createInput.config ?? {};
+      if (
+        createInput.config &&
+        (Object.hasOwn(createInput.config, 'verify') || Object.hasOwn(createInput.config, 'review'))
+      )
+        assertLegacyVerificationWritable();
       // Board `+` presets: a workflow-category target resolves against the
       // team's imported states (exact match → stamp the state; otherwise keep
       // the bare category — the board groups on it regardless). Creating into
@@ -1363,28 +1367,8 @@ export const taskRouter = router({
       const task = await ctx.taskService.createTask({
         ...createInput,
         ...workflowPreset,
-        config: parsedVerify.success ? taskConfig : createInput.config,
         createdByAgentId: creator.agentId ?? undefined,
       });
-      try {
-        if (parsedVerify.success) {
-          const { requirement, ...rawConfig } = parsedVerify.data;
-          const config = Object.fromEntries(
-            Object.entries(rawConfig).filter(([, value]) => value != null),
-          );
-          await new AcceptanceService(
-            ctx.serverDB,
-            ctx.userId,
-            ctx.workspaceId ?? undefined,
-          ).ensureForSubject('task', task.id, {
-            config,
-            requirement: requirement ?? undefined,
-          });
-        }
-      } catch (error) {
-        await ctx.taskModel.delete(task.id).catch(() => {});
-        throw error;
-      }
       // Creating a task already assigned to another member notifies them.
       notifyAssignedBestEffort(ctx, task);
       return { data: task, message: 'Task created', success: true };
@@ -2297,6 +2281,13 @@ export const taskRouter = router({
     try {
       const model = ctx.taskModel;
       const task = await resolveOrThrow(model, input.id);
+      if (
+        task.projectId &&
+        !(await new ProjectModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined).findById(
+          task.projectId,
+        ))
+      )
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
       return { data: model.getReviewConfig(task) || null, success: true };
     } catch (error) {
       if (error instanceof TRPCError) throw error;
@@ -2339,6 +2330,7 @@ export const taskRouter = router({
       ),
     )
     .mutation(async ({ input, ctx }) => {
+      assertLegacyVerificationWritable();
       const { id, review } = input;
       try {
         const model = ctx.taskModel;
@@ -2400,6 +2392,7 @@ export const taskRouter = router({
       ),
     )
     .mutation(async ({ input, ctx }) => {
+      assertLegacyVerificationWritable();
       const { id, verify } = input;
       try {
         const model = ctx.taskModel;
@@ -3021,6 +3014,8 @@ export const taskRouter = router({
     .input(idInput.merge(z.object({ config: z.record(z.string(), z.unknown()) })))
     .mutation(async ({ input, ctx }) => {
       const { id, config } = input;
+      if (Object.hasOwn(config, 'verify') || Object.hasOwn(config, 'review'))
+        assertLegacyVerificationWritable();
       try {
         const model = ctx.taskModel;
         const resolved = await resolveOrThrow(model, id);

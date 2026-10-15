@@ -85,7 +85,7 @@ describe('Issue reviewer execution admission (server integration)', () => {
     });
 
   it('starts zero runs when no Issue reviewer is selected', async () => {
-    await expect(run()).rejects.toThrow('Set a reviewer Agent');
+    expect(run).toThrow('Standalone Acceptance/Verify is retired');
     expect(execAgent).not.toHaveBeenCalled();
   });
   it('starts zero runs when the selected runtime cannot mount the result tool', async () => {
@@ -94,14 +94,14 @@ describe('Issue reviewer execution admission (server integration)', () => {
       .update(agents)
       .set({ agencyConfig: { heterogeneousProvider: { type: 'pi' } } })
       .where(eq(agents.id, reviewerId));
-    await expect(run()).rejects.toThrow('cannot mount submitVerifyResult');
+    expect(run).toThrow('Standalone Acceptance/Verify is retired');
     expect(execAgent).not.toHaveBeenCalled();
   });
   it('reads the current Issue binding rather than a parent or acceptance default', async () => {
     await db.update(tasks).set({ reviewerAgentId: reviewerId }).where(eq(tasks.id, taskId));
     await expect(resolveIssueReviewer(db, userId, taskId, workspaceId)).resolves.toBe(reviewerId);
     await db.update(tasks).set({ reviewerAgentId: null }).where(eq(tasks.id, taskId));
-    await expect(run()).rejects.toThrow('Set a reviewer Agent');
+    expect(run).toThrow('Standalone Acceptance/Verify is retired');
     expect(execAgent).not.toHaveBeenCalled();
   });
 });

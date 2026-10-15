@@ -29,7 +29,11 @@ import {
   WebOnboardingIdentifier,
   WebOnboardingManifest,
 } from '@orvilo/builtin-tool-web-onboarding';
-import { alwaysOnToolIds } from '@orvilo/builtin-tools';
+import {
+  AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS,
+  alwaysOnToolIds,
+  builtinTools,
+} from '@orvilo/builtin-tools';
 import { getBuiltinRenderDisplayControl } from '@orvilo/builtin-tools/displayControls';
 import { builtinToolIdentifiers } from '@orvilo/builtin-tools/identifiers';
 import { getBuiltinInspector } from '@orvilo/builtin-tools/inspectors';
@@ -49,6 +53,21 @@ describe('builtin tool registry', () => {
 
   beforeAll(() => {
     registerBuiltinToolSurfaces();
+  });
+
+  it.each(['orvilo-goal', 'orvilo-goal-supervisor', 'orvilo-verify', 'orvilo-acceptance-evidence'])(
+    'does not advertise the retired %s tool',
+    (identifier) => {
+      expect(builtinTools.some((tool) => tool.identifier === identifier)).toBe(false);
+      expect(builtinToolIdentifiers).not.toContain(identifier);
+      expect(AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS.has(identifier)).toBe(false);
+    },
+  );
+
+  it('retains the inspector and result renderer for historical Goal messages', () => {
+    expect(getBuiltinInspector('orvilo-goal', 'createGoal')).toBeDefined();
+    expect(getBuiltinRender('orvilo-goal', 'createGoal')).toBeDefined();
+    expect(getBuiltinIntervention('orvilo-goal', 'createGoal')).toBeUndefined();
   });
 
   it('includes web onboarding in builtin identifiers', () => {

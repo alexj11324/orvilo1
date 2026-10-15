@@ -24,13 +24,10 @@ import { useBriefStore } from '@/store/brief';
 import { briefListSelectors } from '@/store/brief/selectors';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
-import { goalSelectors, useGoalStore } from '@/store/goal';
 import { useUserStore } from '@/store/user';
 import { authSelectors, userProfileSelectors } from '@/store/user/slices/auth/selectors';
 
-import GoalsRailCard from './GoalsRailCard';
 import { filterHiddenWidgetSections } from './hiddenWidgets';
-import { buildHomeGoalEntries } from './homeGoals';
 import { resolveInboxBlockState } from './inboxBlockState';
 import InboxBriefCard from './InboxBriefCard';
 import MarkAllReadButton from './MarkAllReadButton';
@@ -168,23 +165,6 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
   // reason: WYSIWYG paging self-heals any offset/data divergence.
   const shownNewsOffset = newsSWR.data ? resolveShownNewsOffset(newsSWR.data.day) : 0;
 
-  // Goals are the one home feed that is not about today: they run for days, so
-  // the dashboard is where you check on them.
-  const showGoals = isLogin === true && showRailSections;
-  const useFetchHomeGoals = useGoalStore((s) => s.useFetchHomeGoals);
-  const goalsSWR = useFetchHomeGoals(showGoals, cacheScope);
-  const goals = useGoalStore(goalSelectors.homeGoals(cacheScope));
-  const isGoalsInit = useGoalStore(goalSelectors.isHomeGoalsInitialized(cacheScope));
-  // The goal rail reads the goal's own lifecycle state (`goals.status`), so it
-  // no longer needs a separate acceptance read to decide each pile.
-  const goalEntries = useMemo(
-    () => (showGoals ? buildHomeGoalEntries(goals) : []),
-    [goals, showGoals],
-  );
-
-  const goalsCollapsed = useGlobalStore(systemStatusSelectors.homeGoalsCollapsed);
-  const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
-
   const topics = useHomeInboxTopics(isLogin);
   const recommendationsVisible = useRecommendationsVisible();
   const hiddenWidgets = useGlobalStore(systemStatusSelectors.hiddenHomeWidgets);
@@ -290,35 +270,6 @@ const HomeInbox = memo<HomeInboxProps>((props) => {
     key === toggleSectionKey ? scopeToggle : undefined;
 
   const sections: InboxSection[] = [];
-
-  // A goal feed failure must not be silent: without this the card just vanishes,
-  // which is indistinguishable from having no open goals — the one reading a
-  // long-running goal surface can least afford.
-  if (showGoals && goalsSWR.error && !isGoalsInit)
-    sections.push({
-      key: 'goals-error',
-      label: t('inbox.goals.title'),
-      node: (
-        <AsyncError
-          error={goalsSWR.error}
-          variant={'inline'}
-          onRetry={() => void goalsSWR.mutate()}
-        />
-      ),
-    });
-
-  // First: a goal is the longest-lived thing on the page, and the only one whose
-  // absence from the rail leaves it with no home at all.
-  if (goalEntries.length > 0)
-    sections.push({
-      collapsed: goalsCollapsed,
-      count: goalEntries.length,
-      key: 'goals',
-      label: t('inbox.goals.title'),
-      node: <GoalsRailCard bare={isRail} entries={goalEntries} />,
-      onCollapsedChange: (next) =>
-        updateSystemStatus({ homeGoalsCollapsed: next }, 'toggleHomeGoals'),
-    });
 
   if (!isMain && !hideNeedsYou && needsYou.length > 0)
     sections.push(

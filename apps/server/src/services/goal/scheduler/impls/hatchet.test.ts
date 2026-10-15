@@ -1,42 +1,27 @@
 // @vitest-environment node
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
+import { runGoalSweep } from '@/server/router-hono/workflows/goal/handlers/sweep';
 
+import { scheduleGoalAdvance } from '../index';
 import { HatchetGoalScheduler } from './hatchet';
+import { LocalGoalScheduler } from './local';
 
-const mocks = vi.hoisted(() => ({ enqueueHatchetTask: vi.fn() }));
+const mocks = vi.hoisted(() => ({ enqueueHatchetTask: vi.fn(), getServerDB: vi.fn() }));
+vi.mock('@/libs/hatchet', () => ({ enqueueHatchetTask: mocks.enqueueHatchetTask }));
+vi.mock('@/database/server', () => ({ getServerDB: mocks.getServerDB }));
 
-vi.mock('@/libs/hatchet', () => mocks);
-
-describe('HatchetGoalScheduler', () => {
-  const scheduler = new HatchetGoalScheduler();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('schedules an owner-scoped goal advance', async () => {
-    mocks.enqueueHatchetTask.mockResolvedValue('hatchet-run:run-1');
-
-    const id = await scheduler.scheduleAdvance({
-      delay: 5,
-      goalId: 'goal-1',
-      trigger: 'create',
-      userId: 'user-1',
-      workspaceId: 'workspace-1',
-    });
-
-    expect(id).toBe('hatchet-run:run-1');
-    expect(mocks.enqueueHatchetTask).toHaveBeenCalledWith(
-      HATCHET_TASK_NAMES.goalAdvance,
-      {
-        goalId: 'goal-1',
-        trigger: 'create',
-        userId: 'user-1',
-        workspaceId: 'workspace-1',
-      },
-      { delayMs: 5000 },
-    );
+describe('retired Goal scheduling', () => {
+  it('does not publish, scan or set a local timer for persisted callbacks', async () => {
+    const timer = vi.spyOn(globalThis, 'setTimeout');
+    const params = { goalId: 'old-goal', userId: 'owner' };
+    await scheduleGoalAdvance(params);
+    expect(await new HatchetGoalScheduler().scheduleAdvance(params)).toBe('goal-retired');
+    expect(await new LocalGoalScheduler().scheduleAdvance(params)).toBe('goal-retired');
+    expect(await runGoalSweep()).toMatchObject({ advanced: 0, skipped: 'goal_retired' });
+    expect(mocks.enqueueHatchetTask).not.toHaveBeenCalled();
+    expect(mocks.getServerDB).not.toHaveBeenCalled();
+    expect(timer).not.toHaveBeenCalled();
+    timer.mockRestore();
   });
 });

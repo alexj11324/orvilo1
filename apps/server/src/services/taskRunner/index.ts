@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
 import { TaskIdentifier as TaskSkillIdentifier } from '@orvilo/builtin-skills';
-import { AcceptanceEvidenceIdentifier } from '@orvilo/builtin-tool-acceptance-evidence';
 import { BriefIdentifier } from '@orvilo/builtin-tool-brief';
 import { TaskIdentifier as TaskToolIdentifier } from '@orvilo/builtin-tool-task';
 import { INBOX_SESSION_ID } from '@orvilo/const';
@@ -1006,7 +1005,6 @@ export class TaskRunnerService {
       };
 
       const checkpoint = this.taskModel.getCheckpointConfig(task);
-      const reviewConfig = this.taskModel.getReviewConfig(task);
       // Default mode is 'auto' — brief synthesis happens programmatically in
       // TaskLifecycleService.synthesizeTopicBrief. 'agent' is an explicit
       // escape hatch that re-mounts the legacy createBrief tool surface.
@@ -1019,15 +1017,9 @@ export class TaskRunnerService {
       // Mount BriefIdentifier (createBrief + requestCheckpoint) only in the
       // legacy 'agent' path; in 'auto' the agent must not also call
       // createBrief or we'd double up.
-      if (briefMode === 'agent' && !reviewConfig?.enabled && checkpoint.onAgentRequest !== false) {
+      if (briefMode === 'agent' && checkpoint.onAgentRequest !== false) {
         pluginIds.push(BriefIdentifier);
       }
-      // The Acceptance runs inside the Task, so the builder needs listCriteria +
-      // submitEvidence for the whole run — not only in the post-run evidence
-      // turn, which mounts this tool exclusively and therefore can only ever
-      // restate text it already wrote.
-      if (acceptanceEnabled) pluginIds.push(AcceptanceEvidenceIdentifier);
-
       const initialWorkingDirectory =
         workspaceOverride?.workingDirectory ?? provisioned?.workingDirectory;
       const initialWorkingDirectoryConfig =

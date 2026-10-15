@@ -11,6 +11,8 @@ import { WorkModel } from '@/database/models/work';
 import type { OrviloDatabase } from '@/database/type';
 import type { ToolExecutionContext } from '@/server/services/toolExecution/types';
 
+import { assertGoalExecutionAvailable } from '../retirement';
+
 const scopeSchema = z.object({ goalId: z.string().min(1), incidentId: z.string().min(1) });
 const resolutionSchema = scopeSchema
   .extend({
@@ -36,6 +38,7 @@ export class GoalSupervisorTools {
       db: OrviloDatabase,
     ) => Promise<unknown>,
   ) => {
+    assertGoalExecutionAvailable();
     try {
       const data = await this.context.serverDB!.transaction(async (tx) => {
         const scope = await this.authorize(tx, scopeSchema.parse(params));

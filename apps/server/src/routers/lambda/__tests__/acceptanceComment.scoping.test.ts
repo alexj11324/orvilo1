@@ -91,59 +91,30 @@ describe('acceptanceCommentRouter create reference scoping', () => {
   const caller = (userId: string) =>
     acceptanceCommentRouter.createCaller({ jwtPayload: { userId }, userId } as any);
 
-  it('rejects an agent the caller cannot use', async () => {
+  it('rejects every stale comment write before accepting any agent, round or evidence reference', async () => {
+    await expect(
+      caller(ownerId).create({
+        acceptanceId,
+        authorAgentId: ownAgentId,
+        clientId: randomUUID(),
+        content: 'new comment',
+        contextRunId: ownRunId,
+        anchor: { checkItemId: 'c1', evidenceId: ownEvidenceId, rect },
+      }),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
     await expect(
       caller(ownerId).create({
         acceptanceId,
         authorAgentId: foreignAgentId,
-        clientId: `c-${randomUUID()}`,
-        content: 'signed as someone else',
-      }),
-    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
-  });
-
-  it('attributes an agent the caller owns', async () => {
-    const { data } = await caller(ownerId).create({
-      acceptanceId,
-      authorAgentId: ownAgentId,
-      clientId: `c-${randomUUID()}`,
-      content: 'signed as my own agent',
-    });
-
-    expect(data.author).toMatchObject({ id: ownAgentId, type: 'agent' });
-  });
-
-  it('rejects a round belonging to another acceptance', async () => {
-    await expect(
-      caller(ownerId).create({
-        acceptanceId,
-        clientId: `c-${randomUUID()}`,
-        content: 'quoting a foreign round',
+        clientId: randomUUID(),
+        content: 'foreign reference',
         contextRunId: foreignRunId,
-      }),
-    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
-  });
-
-  it('rejects evidence belonging to another acceptance', async () => {
-    await expect(
-      caller(ownerId).create({
-        acceptanceId,
         anchor: { checkItemId: 'c1', evidenceId: foreignEvidenceId, rect },
-        clientId: `c-${randomUUID()}`,
-        content: 'pinned to foreign evidence',
       }),
-    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
-  });
-
-  it('accepts the acceptance own round and evidence', async () => {
-    const { data } = await caller(ownerId).create({
-      acceptanceId,
-      anchor: { checkItemId: 'c1', evidenceId: ownEvidenceId, rect },
-      clientId: `c-${randomUUID()}`,
-      content: 'pinned to my own evidence',
-      contextRunId: ownRunId,
-    });
-
-    expect(data).toMatchObject({ contextRoundIndex: 1, evidenceId: ownEvidenceId });
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    await expect(serverDB.query.acceptanceComments.findMany()).resolves.toHaveLength(0);
+    await expect(
+      serverDB.query.verifyRuns.findFirst({ where: (table, { eq }) => eq(table.id, ownRunId) }),
+    ).resolves.toMatchObject({ acceptanceId });
   });
 });

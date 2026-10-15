@@ -105,7 +105,7 @@ const CommentCard = memo<CommentCardProps>(
             } satisfies DropdownItem,
           ]
         : []),
-      ...(comment.canDelete && onDelete
+      ...(reactable && comment.canDelete && onDelete
         ? [
             {
               danger: true,

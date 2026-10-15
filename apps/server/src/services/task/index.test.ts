@@ -346,6 +346,34 @@ describe('TaskService', () => {
     });
   });
 
+  it.each(['verify', 'review'] as const)(
+    'rejects retired config.%s before creating or updating an Issue',
+    async (key) => {
+      const service = new TaskService(db, userId);
+      await expect(
+        service.createTask({
+          instruction: 'New Issue',
+          config: { [key]: { enabled: true } } as never,
+        }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+      await expect(
+        service.updateTaskWithAssigneeLock('task', {
+          config: { [key]: { enabled: true } } as never,
+        }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+      expect(mockTaskModel.create).not.toHaveBeenCalled();
+      expect(mockTaskModel.update).not.toHaveBeenCalled();
+      expect(mockTaskModel.findById).not.toHaveBeenCalled();
+    },
+  );
+
+  it('rejects the retired rubric runner before reading current Issue state', async () => {
+    await expect(
+      new TaskService(db, userId).runReview({ id: 'task', content: 'delivery' }),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    expect(mockTaskModel.findById).not.toHaveBeenCalled();
+  });
+
   describe('deleteTopic', () => {
     it('marks a confirmed interrupted topic terminal before cleaning its worktrees', async () => {
       mockTaskTopicModel.findByTopicId.mockResolvedValue({

@@ -1,30 +1,14 @@
-import { t } from 'i18next';
 import { useCallback } from 'react';
 
-import { toast } from '@/components/toast';
 import { useClientDataSWR } from '@/libs/swr';
 import { verifyKeys } from '@/libs/swr/keys';
 // Workspace-aware mutate: applies the same `augmentKey` treatment
 // useClientDataSWR uses on its keys, so a mutate here actually matches the
 // tray's subscription (a raw `swr` mutate would miss the augmented key).
-import { mutate as scopedMutate } from '@/libs/swr/mutate';
 import { verifyService } from '@/services/verify';
 
 import { openGoalModal } from './GoalModal';
 import type { TrayCheck } from './types';
-
-/**
- * A dropped/offline connection (`fetch` rejects with a TypeError, or the browser
- * reports itself offline) versus a request the server actively rejected — the
- * two call for different copy, so the user knows whether to retry or reconnect.
- */
-const isNetworkError = (error: unknown): boolean => {
-  if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
-  const message = error instanceof Error ? error.message : String(error);
-  return /fetch failed|failed to fetch|networkerror|load failed|err_(?:network|internet)/i.test(
-    message,
-  );
-};
 
 const genId = () => `chk_${Math.random().toString(36).slice(2, 10)}`;
 
@@ -55,40 +39,12 @@ const read = async (topicId: string): Promise<TopicGoal> => {
   };
 };
 
-// Optimistically publish `next` to the shared SWR key so every consumer (the
-// tray + the "+" menu path) reflects it immediately, then run the write and
-// revalidate. If the write fails (topic deleted mid-edit, offline, server
-// error), roll the optimistic value back to the server truth and surface an
-// error instead of leaving a phantom unsaved edit on screen; rethrow so the
-// caller (e.g. the modal) can keep itself open rather than treating the edit as
-// done.
-const commit = async (topicId: string, next: TopicGoal, write: () => Promise<unknown>) => {
-  await scopedMutate(swrKey(topicId), next, { revalidate: false });
-  try {
-    await write();
-  } catch (error) {
-    await scopedMutate(swrKey(topicId));
-    toast.error(
-      isNetworkError(error)
-        ? t('acceptance.tray.saveFailed.network', { ns: 'verify' })
-        : t('acceptance.tray.saveFailed.server', { ns: 'verify' }),
-    );
-    throw error;
-  }
-  await scopedMutate(swrKey(topicId));
+const persistChecks = async (_topicId: string, _goal: string, _checks: TrayCheck[]) => {
+  throw new Error('Standalone Acceptance is read-only. Use the Issue Checklist.');
 };
-
-const persistChecks = (topicId: string, goal: string, checks: TrayCheck[]) =>
-  commit(topicId, { checks, goal }, () =>
-    verifyService.saveAcceptanceChecklist(
-      'topic',
-      topicId,
-      checks.map((c) => ({ id: c.id, method: c.method || undefined, name: c.name })),
-    ),
-  );
-
-const persistGoal = (topicId: string, goal: string, checks: TrayCheck[]) =>
-  commit(topicId, { checks, goal }, () => verifyService.saveAcceptanceGoal('topic', topicId, goal));
+const persistGoal = async (_topicId: string, _goal: string, _checks: TrayCheck[]) => {
+  throw new Error('Standalone Acceptance is read-only. Use the Issue Checklist.');
+};
 
 /**
  * Set the topic's Goal without a mounted tray (used by the composer "+" →

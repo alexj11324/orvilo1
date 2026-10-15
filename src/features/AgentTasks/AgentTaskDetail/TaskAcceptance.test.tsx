@@ -217,10 +217,10 @@ describe('TaskAcceptance', () => {
     expect(mocks.subjectArgs).toEqual(['task', null]);
   });
 
-  it('renders the configured criteria in the same slot before an acceptance aggregate exists', () => {
+  it('does not offer a legacy config editor before an archive exists', () => {
     render(<TaskAcceptance />);
 
-    expect(screen.getByTestId('task-acceptance-criteria')).toBeInTheDocument();
+    expect(screen.queryByTestId('task-acceptance-criteria')).not.toBeInTheDocument();
     expect(mocks.subjectArgs).toEqual(['task', 'task-database-231']);
   });
 
@@ -302,7 +302,7 @@ describe('TaskAcceptance', () => {
     expect(mocks.openAcceptance).toHaveBeenCalledWith('acceptance-1');
   });
 
-  it('mounts the live Acceptance checklist and decision bar in the task result panel', () => {
+  it('mounts the archive checklist without a decision bar in the task result panel', () => {
     mocks.acceptanceSubject = { id: 'acceptance-1' };
     mocks.bundle = {
       acceptance: { id: 'acceptance-1', requirement: 'Everything is verifiable.' },
@@ -316,7 +316,7 @@ describe('TaskAcceptance', () => {
     expect(scope).toHaveAttribute('data-acceptance-id', 'acceptance-1');
     expect(scope).toHaveAttribute('data-embedded');
     expect(screen.getByTestId('acceptance-check-inventory')).toBeInTheDocument();
-    expect(screen.getByTestId('acceptance-decision')).toBeInTheDocument();
+    expect(screen.queryByTestId('acceptance-decision')).not.toBeInTheDocument();
     // No collapsible 交付验收 section header — the inventory brings its own.
     expect(screen.queryByText('taskDetail.acceptance.title')).not.toBeInTheDocument();
   });
@@ -339,7 +339,7 @@ describe('TaskAcceptance', () => {
   it('falls back to the configured criteria in the result panel before an acceptance exists', () => {
     render(<TaskAcceptance variant={'result'} />);
 
-    expect(screen.getByTestId('task-acceptance-criteria')).toBeInTheDocument();
+    expect(screen.queryByTestId('task-acceptance-criteria')).not.toBeInTheDocument();
     expect(screen.queryByTestId('acceptance-scope')).not.toBeInTheDocument();
   });
 
@@ -364,7 +364,7 @@ describe('TaskAcceptance', () => {
     expect(screen.getByText('Check 11')).toBeInTheDocument();
   });
 
-  it('removes the acceptance and clears the task verify config from the header delete button', async () => {
+  it('keeps owner archive rows readable without deletion or config controls', async () => {
     mocks.acceptanceSubject = { id: 'acceptance-1' };
     mocks.bundle = {
       acceptance: { id: 'acceptance-1', requirement: 'Everything is verifiable.' },
@@ -374,54 +374,11 @@ describe('TaskAcceptance', () => {
 
     render(<TaskAcceptance />);
 
-    fireEvent.click(screen.getByText('taskDetail.acceptance.remove'));
-    expect(mocks.openDeleteConfirm).toHaveBeenCalledTimes(1);
-    expect(mocks.openDeleteConfirm).toHaveBeenCalledWith(
-      expect.objectContaining({
-        description: 'taskDetail.acceptance.removeConfirm.content',
-        ids: ['acceptance-1'],
-      }),
-    );
+    expect(screen.queryByText('taskDetail.acceptance.remove')).not.toBeInTheDocument();
+    expect(screen.getByText('Create task')).toBeInTheDocument();
+    expect(mocks.openDeleteConfirm).not.toHaveBeenCalled();
+    expect(mocks.updateVerifyConfig).not.toHaveBeenCalled();
     expect(mocks.deleteAcceptance).not.toHaveBeenCalled();
-
-    const opts = mocks.openDeleteConfirm.mock.calls[0][0] as {
-      onDelete: (purge: boolean) => Promise<void>;
-    };
-    await opts.onDelete(true);
-
-    expect(mocks.deleteAcceptance).toHaveBeenCalledWith('acceptance-1', true);
-    expect(mocks.updateVerifyConfig).toHaveBeenCalledWith('T-231', {
-      enabled: false,
-      requirement: null,
-      verifyCriteriaIds: null,
-    });
-    // Config clears BEFORE the aggregate is deleted: the inverse order could
-    // destroy the record and then fail, leaving a stale config to recreate it.
-    expect(mocks.updateVerifyConfig.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.deleteAcceptance.mock.invocationCallOrder[0],
-    );
-    expect(mocks.mutateSubject).toHaveBeenCalled();
-  });
-
-  it('aborts removal without deleting the aggregate when the config clear fails', async () => {
-    mocks.acceptanceSubject = { id: 'acceptance-1' };
-    mocks.bundle = {
-      acceptance: { id: 'acceptance-1', requirement: 'Everything is verifiable.' },
-      checks: [{ category: 'Setup', id: 'c1', seq: 1, title: 'Create task' }],
-      isOwner: true,
-    };
-    mocks.updateVerifyConfig.mockRejectedValueOnce(new Error('config write failed'));
-
-    render(<TaskAcceptance />);
-
-    fireEvent.click(screen.getByText('taskDetail.acceptance.remove'));
-    const opts = mocks.openDeleteConfirm.mock.calls[0][0] as {
-      onDelete: (purge: boolean) => Promise<void>;
-    };
-    await expect(opts.onDelete(false)).rejects.toThrow('config write failed');
-
-    expect(mocks.deleteAcceptance).not.toHaveBeenCalled();
-    expect(mocks.mutateSubject).not.toHaveBeenCalled();
   });
 
   it('hides the remove button when the viewer does not own the acceptance', () => {

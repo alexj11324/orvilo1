@@ -13,6 +13,8 @@ import type {
 import { verifyRuns } from '@/database/schemas/verify';
 import type { OrviloDatabase } from '@/database/type';
 
+import { assertLegacyVerificationWritable } from './retirement';
+
 const log = debug('orvilo-server:verify-acceptance-merge');
 
 /** What a merge moved — surfaced to the caller so the UI can report it. */
@@ -166,6 +168,7 @@ export const mergeAcceptanceRounds = async ({
   userId,
   workspaceId,
 }: MergeRoundsParams): Promise<AcceptanceMergeSummary> => {
+  assertLegacyVerificationWritable();
   const runModel = new VerifyRunModel(db, userId, workspaceId);
   const resultModel = new VerifyCheckResultModel(db, userId, workspaceId);
 

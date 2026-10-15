@@ -16,6 +16,7 @@ import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 
 import { countStats, meanConfidence, rollupVerdict } from './reportRollup';
+import { assertLegacyVerificationWritable } from './retirement';
 import { ReportNarrativeSchema } from './schema';
 
 const log = debug('orvilo-server:verify-reporter');
@@ -61,6 +62,7 @@ export class VerifyReporterService {
   }
 
   async generateReport(params: GenerateReportParams) {
+    assertLegacyVerificationWritable();
     const { verifyRunId, goal, deliverable, reviewerAgentId } = params;
 
     const results = await this.resultModel.listByRun(verifyRunId);

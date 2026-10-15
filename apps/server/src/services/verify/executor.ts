@@ -10,6 +10,7 @@ import type { OrviloDatabase } from '@/database/type';
 
 import { coverageGaps, readRequiredEvidence } from './evidenceCoverage';
 import { planItemToPendingResult } from './resultSnapshot';
+import { assertLegacyVerificationWritable } from './retirement';
 import { VerifyStatusService } from './statusService';
 
 const log = debug('orvilo-server:verify-executor');
@@ -78,6 +79,7 @@ export class VerifyExecutorService {
    * Results land asynchronously through submitVerifyResult. Recomputes the rollup at the end.
    */
   async execute(params: ExecuteVerifyParams): Promise<void> {
+    assertLegacyVerificationWritable();
     // Resolve (or lazily create) the verification session bound to this Agent Run.
     const run = await this.runModel.ensureForOperation(params.operationId);
     if (run.userDecision) return;

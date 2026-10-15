@@ -508,7 +508,7 @@ describe('TaskIntegrationService', () => {
     );
   });
 
-  it('resumes a confirmed Verify plan after the initial clean merge publishes', async () => {
+  it('settles the clean merge without resuming a retired Verify plan', async () => {
     const record = seedRecord();
     mockTaskModel.findById.mockResolvedValue(baseTask({ instruction: 'ship it' }));
     mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(record));
@@ -532,19 +532,9 @@ describe('TaskIntegrationService', () => {
       taskTopicId: 'topic_1',
     });
 
-    expect(outcome).toBe('hold');
-    expect(mockAfter).toHaveBeenCalledTimes(1);
-    await mockAfter.mock.calls[0][0]();
-    expect(runVerifyOnCompletion).toHaveBeenCalledWith(
-      expect.anything(),
-      'user-1',
-      {
-        deliverable: 'delivered result',
-        goal: 'ship it',
-        operationId: 'op-original',
-      },
-      'ws-1',
-    );
+    expect(outcome).toBe('settled');
+    expect(mockAfter).not.toHaveBeenCalled();
+    expect(runVerifyOnCompletion).not.toHaveBeenCalled();
   });
 
   it('resumes publishing an already merged candidate after callback recovery', async () => {
@@ -776,7 +766,7 @@ describe('TaskIntegrationService', () => {
     );
   });
 
-  it('resumes the original Verify plan only after a corrective merge publishes', async () => {
+  it('settles a corrective merge without reviving its original Verify plan', async () => {
     const corrective = seedRecord({
       attempts: 1,
       expectedHeadSha: 'task123',
@@ -815,8 +805,9 @@ describe('TaskIntegrationService', () => {
       taskTopicId: 'topic_1',
     });
 
-    expect(outcome).toBe('hold');
-    expect(mockAfter).toHaveBeenCalledTimes(1);
+    expect(outcome).toBe('settled');
+    expect(mockAfter).not.toHaveBeenCalled();
+    expect(runVerifyOnCompletion).not.toHaveBeenCalled();
   });
 
   it('retries a local corrective conflict in its owned worktree without remote review', async () => {

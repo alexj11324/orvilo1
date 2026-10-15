@@ -7,24 +7,19 @@ import { useIsMediumViewport } from '@/hooks/useIsMobile';
 
 import { useAcceptanceScope } from './AcceptanceScope';
 import AcceptanceCheckInventory from './Checks/AcceptanceCheckInventory';
-import AcceptanceCheckOwnerToolbar from './Checks/AcceptanceCheckOwnerToolbar';
 import AcceptanceDiscussion from './Comments/AcceptanceDiscussion';
 import { commentIdFromHash } from './Comments/anchor';
 import { messageThreads } from './Comments/discussionTimeline';
 import { useAcceptanceComments } from './Comments/hooks';
-import ReviewerApprovalBar from './Comments/ReviewerApprovalBar';
 import AcceptanceOriginTopic from './Conversation/AcceptanceOriginTopic';
 import AcceptanceResources from './Evidence/AcceptanceResources';
 import { AcceptanceFlow } from './Flow/AcceptanceFlow';
 import { getFlowNodeCount, resolveAcceptanceTab } from './Flow/flowNavigation';
 import AcceptanceGoal from './Header/AcceptanceGoal';
-import AcceptanceGoalEdit from './Header/AcceptanceGoalEdit';
 import AcceptanceIdentity from './Header/AcceptanceIdentity';
-import AcceptanceStatusControl from './Header/AcceptanceStatusControl';
 import type { AcceptanceTabKey } from './Header/AcceptanceTabs';
 import AcceptanceTabs from './Header/AcceptanceTabs';
 import { flowPlanPhase } from './Plan/planReview';
-import AcceptanceDecision from './Review/AcceptanceDecision';
 import { checksForTurn } from './turnChecks';
 import { useAcceptanceBundle } from './useAcceptanceBundle';
 import { useAcceptanceTurn } from './useAcceptanceTurn';
@@ -39,7 +34,7 @@ interface AcceptancePageProps {
  * the tabs draw no line of their own, so the two never double up.
  */
 export const AcceptanceOverview = ({
-  onDraftToComposer,
+  onDraftToComposer: _onDraftToComposer,
 }: Pick<AcceptancePageProps, 'onDraftToComposer'>) => {
   const md = useIsMediumViewport();
   const { acceptanceId, embedded } = useAcceptanceScope();
@@ -70,11 +65,8 @@ export const AcceptanceOverview = ({
     <>
       <div className="flex flex-col flex-none pbs-5 pbe-0 border-be border-solid border-divider">
         <div className="flex flex-col gap-3 w-full max-w-230 mx-auto px-6 [@media(width<=767px)]:px-4">
-          <AcceptanceIdentity
-            statusSlot={<AcceptanceStatusControl />}
-            topicSlot={<AcceptanceOriginTopic />}
-          />
-          <AcceptanceGoal editSlot={<AcceptanceGoalEdit />} />
+          <AcceptanceIdentity topicSlot={<AcceptanceOriginTopic />} />
+          <AcceptanceGoal />
           {/* The requirement needs room to land before the tabs start a new
               thought — at the band's uniform gap it read as another row of
               the same list. */}
@@ -95,25 +87,12 @@ export const AcceptanceOverview = ({
         className="flex flex-col gap-4 w-full max-w-230 mx-auto px-6 [@media(width<=767px)]:px-4 py-5"
         style={{ ...(tab === 'flow' ? { maxWidth: 1500 } : undefined) }}
       >
-        {/* Deciding belongs where the evidence is. The discussion is a
-            conversation; ending one there put the closing act under a thread
-            that says nothing about whether the checks passed. Both faces of
-            the act move together — the owner's decision bar and the
-            reviewer's "fine by me" — or a reviewer would lose the affordance
-            entirely. */}
         {tab === 'discussion' ? (
           <AcceptanceDiscussion />
         ) : tab === 'flow' ? (
-          <>
-            <AcceptanceFlow />
-            <AcceptanceDecision onDraftToComposer={onDraftToComposer} />
-          </>
+          <AcceptanceFlow />
         ) : tab === 'checks' ? (
-          <>
-            <AcceptanceCheckInventory toolbar={<AcceptanceCheckOwnerToolbar />} />
-            <ReviewerApprovalBar />
-            <AcceptanceDecision onDraftToComposer={onDraftToComposer} />
-          </>
+          <AcceptanceCheckInventory />
         ) : (
           <AcceptanceResources />
         )}

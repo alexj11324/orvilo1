@@ -23,6 +23,7 @@ import { AiGenerationService } from '@/server/services/aiGeneration';
 import { AcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 
 import { generateGoalObject } from './generation';
+import { assertGoalExecutionAvailable } from './retirement';
 
 const log = debug('orvilo-server:goal-criteria-generator');
 const DEFAULT_MAX_CRITERIA = 4;
@@ -105,6 +106,7 @@ export class GoalCriteriaGeneratorService {
     goal: string;
     maxCriteria?: number;
   }): Promise<GoalCriterionDraft[]> {
+    assertGoalExecutionAvailable();
     const plan = await this.generatePlan(params);
 
     return plan?.criteria ?? [];
@@ -117,6 +119,7 @@ export class GoalCriteriaGeneratorService {
     goal: string;
     maxCriteria?: number;
   }): Promise<GoalPlanDraft | undefined> {
+    assertGoalExecutionAvailable();
     const maxCriteria = params.maxCriteria ?? DEFAULT_MAX_CRITERIA;
     if (!params.agentId)
       throw new AcpJudgmentBindingError(
@@ -178,6 +181,7 @@ export class GoalCriteriaGeneratorService {
     agentId?: string | null;
     requirement: string;
   }): Promise<GoalDecompositionDraft | undefined> {
+    assertGoalExecutionAvailable();
     const raw = await generateGoalObject(
       this.db,
       this.userId,

@@ -1,6 +1,7 @@
 import type { AcceptanceConfig, TaskVerifyConfig } from '@orvilo/types';
 
 import { AcceptanceModel } from '@/database/models/acceptance';
+import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import type { AcceptanceItem } from '@/database/schemas/verify';
 import type { OrviloDatabase } from '@/database/type';
@@ -21,9 +22,8 @@ const toAcceptanceConfig = (verify: TaskVerifyConfig): AcceptanceConfig => ({
 /**
  * Resolve the Acceptance that owns a Task's completion contract.
  *
- * `tasks.config.verify` is read only as a legacy compatibility source. The first
- * read materializes it into the Task's Acceptance; all new flows write the
- * Acceptance directly.
+ * Return only persisted historical policies. Reading legacy task config or an
+ * inherited policy must never materialize or update Acceptance rows.
  */
 export const resolveTaskAcceptance = async (
   db: OrviloDatabase,
@@ -39,13 +39,16 @@ export const resolveTaskAcceptance = async (
   let inheritedConfig: AcceptanceConfig | undefined;
   let inheritedRequirement: string | undefined;
   let policyAcceptance: AcceptanceItem | undefined;
-  let taskProjectId: string | null | undefined;
 
   while (currentTaskId && !seen.has(currentTaskId)) {
     seen.add(currentTaskId);
     const task = await taskModel.findById(currentTaskId);
     if (!task) break;
-    if (currentTaskId === taskId) taskProjectId = task.projectId;
+    if (
+      task.projectId &&
+      !(await new ProjectModel(db, userId, workspaceId).findById(task.projectId))
+    )
+      return undefined;
 
     const acceptance =
       currentTaskId === taskId
@@ -80,16 +83,9 @@ export const resolveTaskAcceptance = async (
     };
   }
 
-  const acceptance = ownAcceptance
-    ? (await acceptanceModel.updatePolicy(ownAcceptance.id, {
-        config: inheritedConfig ?? {},
-        requirement: inheritedRequirement,
-      }))!
-    : await acceptanceModel.ensureForSubject('task', taskId, {
-        config: inheritedConfig,
-        projectId: taskProjectId,
-        requirement: inheritedRequirement,
-      });
+  // Historical reads never create or synchronize a child policy.
+  if (!policyAcceptance) return undefined;
+  const acceptance = policyAcceptance;
 
   return {
     acceptance,

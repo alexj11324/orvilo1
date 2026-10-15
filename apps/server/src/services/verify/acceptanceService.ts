@@ -44,6 +44,7 @@ import {
 
 import { type AcceptanceMergeSummary, mergeAcceptanceRounds } from './acceptanceMerge';
 import { computeFalseFlags } from './feedbackService';
+import { assertLegacyVerificationWritable } from './retirement';
 
 const log = debug('orvilo-server:verify-acceptance');
 
@@ -533,6 +534,7 @@ export class AcceptanceService {
     subjectId: string,
     defaults?: { config?: AcceptanceConfig; requirement?: string; title?: string },
   ): Promise<AcceptanceItem> => {
+    assertLegacyVerificationWritable();
     await this.assertSubjectExists(subjectType, subjectId);
     const projectId = await this.resolveSubjectProjectId(subjectType, subjectId);
     return this.acceptanceModel.ensureForSubject(subjectType, subjectId, {
@@ -575,6 +577,7 @@ export class AcceptanceService {
    * aggregate status (a new round re-opens a rejected loop).
    */
   attachRun = async (runId: string, acceptanceId: string): Promise<VerifyRunItem> => {
+    assertLegacyVerificationWritable();
     const acceptance = await this.acceptanceModel.findById(acceptanceId);
     if (!acceptance) throw new Error(`Acceptance "${acceptanceId}" not found`);
 
@@ -583,6 +586,7 @@ export class AcceptanceService {
 
   /** Attach a Task run using policy scope while preserving report visibility. */
   attachPolicyRun = async (runId: string, acceptanceId: string): Promise<VerifyRunItem> => {
+    assertLegacyVerificationWritable();
     const acceptance = await this.acceptanceModel.findPolicyById(acceptanceId);
     if (!acceptance) throw new Error(`Acceptance "${acceptanceId}" not found`);
 
@@ -729,6 +733,7 @@ export class AcceptanceService {
    * was promoted into. Merging is what makes them one review surface again.
    */
   merge = async (sourceId: string, targetId: string): Promise<AcceptanceMergeSummary> => {
+    assertLegacyVerificationWritable();
     if (sourceId === targetId) throw new Error('An acceptance cannot be merged into itself');
 
     const source = await this.acceptanceModel.findById(sourceId);
@@ -773,6 +778,7 @@ export class AcceptanceService {
    * round newer than the decision arrives.
    */
   recomputeStatus = async (acceptanceId: string): Promise<AcceptanceStatus | null> => {
+    assertLegacyVerificationWritable();
     const acceptance = await this.acceptanceModel.findPolicyById(acceptanceId);
     if (!acceptance) return null;
     if (acceptance.status === 'accepted' || acceptance.status === 'closed') {
@@ -843,6 +849,7 @@ export class AcceptanceService {
     groups: AcceptanceCheckGroup[],
     expectedVersion: number,
   ) => {
+    assertLegacyVerificationWritable();
     const acceptance = await this.acceptanceModel.findById(acceptanceId);
     if (!acceptance) throw new Error('Acceptance not found');
     const { results, runs } = await this.loadRounds(acceptanceId);
@@ -879,6 +886,7 @@ export class AcceptanceService {
    * completes a task subject that verification alone didn't settle.
    */
   accept = async (acceptanceId: string, comment?: string): Promise<AcceptanceItem> => {
+    assertLegacyVerificationWritable();
     const acceptance = await this.requireDecidableAcceptance(acceptanceId);
 
     if (acceptance.subjectType === 'task')
@@ -903,6 +911,7 @@ export class AcceptanceService {
    * decision detail through the prompt builder.
    */
   reject = async (acceptanceId: string, comment: string): Promise<AcceptanceItem> => {
+    assertLegacyVerificationWritable();
     const acceptance = await this.requireDecidableAcceptance(acceptanceId);
     const runs = await this.runModel.listByAcceptance(acceptanceId);
     const { current } = await this.resolveDecisionBinding(acceptance, runs);
@@ -934,6 +943,7 @@ export class AcceptanceService {
       rejectIntent?: AcceptanceRejectIntent;
     },
   ): Promise<{ resultIds: string[] }> => {
+    assertLegacyVerificationWritable();
     const acceptance = await this.acceptanceModel.findById(acceptanceId);
     if (!acceptance) throw new Error(`Acceptance "${acceptanceId}" not found`);
 

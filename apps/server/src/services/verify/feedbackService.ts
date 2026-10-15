@@ -3,6 +3,8 @@ import type { VerifyCheckDecisionDetail, VerifyUserDecision, VerifyVerdict } fro
 import { VerifyCheckResultModel } from '@/database/models/verifyCheckResult';
 import type { OrviloDatabase } from '@/database/type';
 
+import { assertLegacyVerificationWritable } from './retirement';
+
 /**
  * Ground-truth derived from comparing the user's decision against the verifier's
  * verdict. Drives the data flywheel (nightly FP/FN aggregation by verifier_type).
@@ -37,6 +39,7 @@ export class VerifyFeedbackService {
     decision: VerifyUserDecision,
     detail?: VerifyCheckDecisionDetail,
   ): Promise<boolean> {
+    assertLegacyVerificationWritable();
     const result = await this.resultModel.findById(resultId);
     if (!result) return false;
 

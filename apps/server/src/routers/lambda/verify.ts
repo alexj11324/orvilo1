@@ -29,13 +29,13 @@ import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
 import { VerifyReportModel } from '@/database/models/verifyReport';
 import { VerifyRubricModel } from '@/database/models/verifyRubric';
 import { VerifyRunModel } from '@/database/models/verifyRun';
-import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import {
   verifyCheckResults,
   verifyEvidence,
   verifyReports,
   verifyRuns,
 } from '@/database/schemas/verify';
+import type { OrviloDatabase } from '@/database/type';
 import { isUuid } from '@/database/utils/uuid';
 import { publicProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -54,6 +54,11 @@ import {
   VerifyPlanGeneratorService,
   VerifyReporterService,
 } from '@/server/services/verify';
+import {
+  canReadArchiveTopic,
+  canReadVerifyRunArchive,
+} from '@/server/services/verify/archiveAccess';
+import { assertLegacyVerificationWritable } from '@/server/services/verify/retirement';
 import { resolveIssueReviewer } from '@/server/services/verify/reviewerAgent';
 
 import { assertWorkspaceRowManageable } from './_helpers/assertWorkspaceRowManageable';
@@ -284,14 +289,22 @@ const verifyProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =
 
 // Writes: workspace mode requires at least the member role, gating viewers
 // out (read-only role) while personal mode passes through unrestricted.
-const verifyWriteProcedure = verifyProcedure.use(requireWorkspaceRoleWhenScoped('member'));
+const verifyWriteProcedure = verifyProcedure
+  .use(requireWorkspaceRoleWhenScoped('member'))
+  .use(({ next }) => {
+    assertLegacyVerificationWritable();
+    return next();
+  });
 
 const publicVerifyReportProcedure = publicProcedure.use(serverDatabase);
 
-const resolveVerifyRun = async (ctx: { runModel: VerifyRunModel }, verifyRunId: string) => {
+const resolveVerifyRun = async (
+  ctx: { runModel: VerifyRunModel; serverDB: OrviloDatabase; userId?: string | null },
+  verifyRunId: string,
+) => {
   const run = await ctx.runModel.findById(verifyRunId);
 
-  if (!run) {
+  if (!run || !(await canReadVerifyRunArchive(ctx, run))) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Verification run not found' });
   }
 
@@ -299,7 +312,12 @@ const resolveVerifyRun = async (ctx: { runModel: VerifyRunModel }, verifyRunId: 
 };
 
 const resolveCheckResult = async (
-  ctx: { resultModel: VerifyCheckResultModel },
+  ctx: {
+    resultModel: VerifyCheckResultModel;
+    runModel: VerifyRunModel;
+    serverDB: OrviloDatabase;
+    userId?: string | null;
+  },
   checkResultId: string,
 ) => {
   const result = await ctx.resultModel.findById(checkResultId);
@@ -308,6 +326,18 @@ const resolveCheckResult = async (
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Verification check result not found' });
   }
 
+  if (result.verifyRunId) await resolveVerifyRun(ctx, result.verifyRunId);
+  else if (
+    result.operationId &&
+    !(await canReadVerifyRunArchive(ctx, {
+      acceptanceId: null,
+      operationId: result.operationId,
+      userId: result.userId,
+      workspaceId: result.workspaceId,
+      visibility: 'private',
+    }))
+  )
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Verification check result not found' });
   return result;
 };
 
@@ -402,7 +432,22 @@ export const verifyRouter = router({
     .query(async ({ ctx, input }) => {
       if (!(await ctx.criterionModel.findById(input.id)))
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Check asset not found' });
-      return ctx.resultModel.listByCriterion(input.id, input.limit);
+      const results = await ctx.resultModel.listByCriterion(input.id, input.limit);
+      const readable = await Promise.all(
+        results.map(async (result) => {
+          if (!result.verifyRunId)
+            return canReadVerifyRunArchive(ctx, {
+              acceptanceId: null,
+              operationId: result.operationId,
+              userId: result.userId,
+              workspaceId: result.workspaceId,
+              visibility: 'private',
+            });
+          const run = await ctx.runModel.findById(result.verifyRunId);
+          return Boolean(run && (await canReadVerifyRunArchive(ctx, run)));
+        }),
+      );
+      return results.filter((_result, index) => readable[index]);
     }),
 
   updateCriterion: verifyWriteProcedure
@@ -697,7 +742,17 @@ export const verifyRouter = router({
         ctx.userId,
         ctx.workspaceId ?? undefined,
       ).findById(input.operationId);
-      if (!op) return null;
+      if (
+        !op ||
+        !(await canReadVerifyRunArchive(ctx, {
+          acceptanceId: null,
+          operationId: op.id,
+          userId: op.userId,
+          workspaceId: op.workspaceId,
+          visibility: 'private',
+        }))
+      )
+        return null;
       return { threadId: op.threadId ?? null, topicId: op.topicId ?? null };
     }),
 
@@ -707,7 +762,8 @@ export const verifyRouter = router({
       // The model / token / latency of an LLM verifier's judgment, surfaced in
       // the result detail panel.
       const row = await ctx.tracingModel.findById(input.tracingId);
-      if (!row) return null;
+      if (!row || (row.topicId && !(await canReadArchiveTopic(ctx, row.topicId, row.workspaceId))))
+        return null;
       return {
         inputTokens: row.inputTokens ?? null,
         latencyMs: row.latencyMs ?? null,
@@ -719,7 +775,11 @@ export const verifyRouter = router({
 
   getVerifyState: verifyProcedure
     .input(z.object({ operationId: z.string() }))
-    .query(async ({ ctx, input }) => ctx.runModel.getStateByOperation(input.operationId)),
+    .query(async ({ ctx, input }) => {
+      const run = await ctx.runModel.findByOperation(input.operationId);
+      if (!run || !(await canReadVerifyRunArchive(ctx, run))) return null;
+      return ctx.runModel.getStateByOperation(input.operationId);
+    }),
 
   skipPlan: verifyWriteProcedure
     .input(z.object({ operationId: z.string() }))
@@ -794,14 +854,18 @@ export const verifyRouter = router({
         ctx.workspaceId ?? undefined,
       );
       const run = await ctx.runModel.findByOperation(input.operationId);
-      return run ? ctx.resultModel.listByRun(run.id) : [];
+      return run && (await canReadVerifyRunArchive(ctx, run))
+        ? ctx.resultModel.listByRun(run.id)
+        : [];
     }),
 
   listResults: verifyProcedure
     .input(z.object({ operationId: z.string() }))
     .query(async ({ ctx, input }) => {
       const run = await ctx.runModel.findByOperation(input.operationId);
-      return run ? ctx.resultModel.listByRun(run.id) : [];
+      return run && (await canReadVerifyRunArchive(ctx, run))
+        ? ctx.resultModel.listByRun(run.id)
+        : [];
     }),
 
   // ---- feedback (data flywheel) ----
@@ -848,9 +912,10 @@ export const verifyRouter = router({
       }),
     ),
 
-  getRun: verifyProcedure
-    .input(verifyRunIdInputSchema)
-    .query(async ({ ctx, input }) => ctx.runModel.findById(input.verifyRunId)),
+  getRun: verifyProcedure.input(verifyRunIdInputSchema).query(async ({ ctx, input }) => {
+    const run = await ctx.runModel.findById(input.verifyRunId);
+    return run && (await canReadVerifyRunArchive(ctx, run)) ? run : null;
+  }),
 
   // Delete a whole verification session: the run row cascades to its check
   // results (→ their evidence) and its report via the schema FKs, and the
@@ -871,16 +936,24 @@ export const verifyRouter = router({
     return { id: run.id, success: true };
   }),
 
-  listRuns: verifyProcedure.query(async ({ ctx }) => ctx.runModel.query()),
+  listRuns: verifyProcedure.query(async ({ ctx }) => {
+    const runs = await ctx.runModel.query();
+    const readable = await Promise.all(runs.map((run) => canReadVerifyRunArchive(ctx, run)));
+    return runs.filter((_run, index) => readable[index]);
+  }),
 
   listReportSummaries: verifyProcedure
     .input(listReportSummariesInputSchema)
     .query(async ({ ctx, input }) => {
-      const { items: runs, nextCursor } = await ctx.runModel.queryPage({
+      const { items: candidates, nextCursor } = await ctx.runModel.queryPage({
         cursor: input?.cursor,
         limit: input?.limit,
         q: input?.q,
       });
+      const readable = await Promise.all(
+        candidates.map((run) => canReadVerifyRunArchive(ctx, run)),
+      );
+      const runs = candidates.filter((_run, index) => readable[index]);
       const reports = await Promise.all(runs.map((run) => ctx.reportModel.findByRun(run.id)));
 
       const items = runs.map((run, index) => {
@@ -1272,15 +1345,7 @@ export const verifyRouter = router({
       if (!found) return null;
 
       const isOwner = Boolean(ctx.userId) && ctx.userId === found.userId;
-      let canRead = isOwner || found.visibility === 'public';
-      if (!canRead && ctx.userId && found.workspaceId) {
-        const member = await new WorkspaceMemberModel(ctx.serverDB, ctx.userId).getMember(
-          found.workspaceId,
-          ctx.userId,
-        );
-        canRead = Boolean(member);
-      }
-      if (!canRead) return null;
+      if (!(await canReadVerifyRunArchive(ctx, found))) return null;
       // `origin` points at the author's private topic/agent — never hand it to a
       // visitor holding nothing but the shared link.
       const { origin: _origin, ...publicMetadata } = found.metadata ?? {};

@@ -28,6 +28,7 @@ import { tasks } from '../schemas/task';
 import { works, workVersions } from '../schemas/work';
 import type { OrviloDatabase, Transaction } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
+import { GoalModel } from './goal';
 import { hasActiveExecution, isAutomationArmed } from './taskExecutionSql';
 import { workOwnership } from './work/context';
 
@@ -106,12 +107,7 @@ export class GoalGraphModel {
   };
 
   getGraph = async (goalId: string): Promise<GoalGraphSnapshot | undefined> => {
-    // Ordinary graph refreshes must not queue behind a coordinator's write lock.
-    const [goal] = await this.db
-      .select()
-      .from(goals)
-      .where(and(eq(goals.id, goalId), this.ownership()))
-      .limit(1);
+    const goal = await new GoalModel(this.db, this.userId, this.workspaceId).findById(goalId);
     if (!goal) return undefined;
 
     const [nodes, edges, decisions, events, linkedWorkVersions] = await Promise.all([

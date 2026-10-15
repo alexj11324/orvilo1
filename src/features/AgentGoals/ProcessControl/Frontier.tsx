@@ -1,18 +1,14 @@
 'use client';
 
-import type { AcceptanceStatus, GoalDecisionOption } from '@orvilo/types';
+import type { AcceptanceStatus } from '@orvilo/types';
 import { cn } from 'cn';
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { createElement, Fragment, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { TASK_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import { Badge } from '@/components/reui/badge';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { openAddGoalTaskModal } from '@/features/AgentGoals/AddTaskModal';
 import RunIntegrationTag from '@/features/AgentTasks/AgentTaskDetail/RunIntegrationTag';
 import type { DispatchNoticeCopy } from '@/features/AgentTasks/shared/dispatchNotice';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';
@@ -52,14 +48,7 @@ const styles = {
   option: 'grid grid-cols-[128px_1fr] gap-2 items-baseline',
 };
 
-export interface FrontierActions {
-  addTask: (title: string, description?: string) => Promise<void>;
-  decide: (decisionId: string, optionId: string, resolution?: string) => void;
-}
-
 interface FrontierProps {
-  actions: FrontierActions;
-  canEdit: boolean;
   graph: GoalGraphView;
   /** Why ready tasks are not being started on their own, when the server says so. */
   notice?: DispatchNoticeCopy;
@@ -67,27 +56,6 @@ interface FrontierProps {
   /** The coordinator is still decomposing — the empty list is a promise, not a lull. */
   planning?: boolean;
 }
-
-/** Server option ids are stable; their labels are English strings from the coordinator. */
-const useOptionLabel = () => {
-  const { t } = useTranslation('chat');
-  return (option: GoalDecisionOption) => {
-    switch (option.id) {
-      case 'fail': {
-        return t('goalProcess.gate.option.fail');
-      }
-      case 'retire': {
-        return t('goalProcess.gate.option.retire');
-      }
-      case 'retry': {
-        return t('goalProcess.gate.option.retry');
-      }
-      default: {
-        return option.label;
-      }
-    }
-  };
-};
 
 const RowGlyph = memo<{ kind: FrontierItem['kind']; view: GoalNodeView }>(({ kind, view }) => {
   switch (kind) {
@@ -251,17 +219,13 @@ const AcceptanceChip = memo<{ view: GoalNodeView }>(({ view }) => {
 AcceptanceChip.displayName = 'GoalAcceptanceChip';
 
 const FrontierRow = memo<{
-  actions: FrontierActions;
-  canEdit: boolean;
   item: FrontierItem;
   numbers: Map<string, number>;
   onSelect: (nodeId: string) => void;
   /** A gate's ledger is the ledger of the Task it was opened for. */
   subject?: GoalNodeView;
-}>(({ actions, canEdit, item, numbers, onSelect, subject }) => {
+}>(({ item, numbers, onSelect, subject }) => {
   const { t } = useTranslation('chat');
-  const optionLabel = useOptionLabel();
-  const [note, setNote] = useState('');
   const { view } = item;
   const { node } = view;
   const deps = view.dependsOn.map((id) => numbers.get(id)).filter(Boolean);
@@ -298,8 +262,6 @@ const FrontierRow = memo<{
                   : t('goalProcess.tag.retired'),
             }
           : null;
-
-  const stop = (event: React.MouseEvent) => event.stopPropagation();
 
   return (
     <div
@@ -368,55 +330,6 @@ const FrontierRow = memo<{
           )}
           {item.kind === 'stale' && <StaleBody view={view} />}
           <AttemptLedger view={subject ?? view} />
-          {item.kind === 'gate' && canEdit && (
-            // A click here is aimed at the note field or a decision button —
-            // never at "open this node".
-            <div className="flex flex-col gap-3.5" onClick={stop}>
-              <div className="flex flex-col gap-1">
-                <span className={styles.label}>{t('goalProcess.gate.noteLabel')}</span>
-                <Textarea
-                  placeholder={t('goalProcess.gate.notePlaceholder')}
-                  rows={1}
-                  value={note}
-                  onChange={(event) => setNote(event.target.value)}
-                />
-              </div>
-              {/* Actions close the card: read the situation, add guidance, then decide. */}
-              <div className="flex gap-2">
-                {view.decision?.options?.map((option) => (
-                  <TooltipProvider key={option.id}>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <span style={{ display: 'inline-flex' }}>
-                            <Button
-                              size="compact"
-                              variant={
-                                option.id === view.decision?.recommendedOptionId
-                                  ? 'default'
-                                  : 'outline'
-                              }
-                              onClick={(event) => {
-                                stop(event);
-                                actions.decide(
-                                  view.decision!.id,
-                                  option.id,
-                                  note.trim() || undefined,
-                                );
-                              }}
-                            >
-                              {optionLabel(option)}
-                            </Button>
-                          </span>
-                        }
-                      />
-                      <TooltipContent>{option.description}</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -425,20 +338,7 @@ const FrontierRow = memo<{
 
 FrontierRow.displayName = 'GoalFrontierRow';
 
-/** Opening a modal keeps the frontier header quiet — the brief gets a real form. */
-const AddTaskButton = memo<{ onAdd: FrontierActions['addTask'] }>(({ onAdd }) => {
-  const { t } = useTranslation('chat');
-  return (
-    <Button size="sm" variant="ghost" onClick={() => openAddGoalTaskModal({ onAdd })}>
-      <Plus />
-      {t('goalProcess.frontier.add')}
-    </Button>
-  );
-});
-
-AddTaskButton.displayName = 'GoalAddTaskButton';
-
-const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, notice, onSelect, planning }) => {
+const Frontier = memo<FrontierProps>(({ graph, notice, onSelect, planning }) => {
   const { t } = useTranslation('chat');
   const [showBlocked, setShowBlocked] = useState(false);
 
@@ -461,7 +361,6 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, notice, onSelec
             </div>
           )}
         </div>
-        {canEdit && <AddTaskButton onAdd={actions.addTask} />}
       </div>
       {notice && (
         <p className="text-xs text-muted-foreground" data-testid="goal-dispatch-notice">
@@ -505,8 +404,6 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, notice, onSelec
                 />
               )}
               <FrontierRow
-                actions={actions}
-                canEdit={canEdit}
                 item={item}
                 numbers={numbers}
                 subject={item.view.gateSubjectId ? graph.byId[item.view.gateSubjectId] : undefined}
@@ -536,8 +433,6 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, notice, onSelec
                       />
                     )}
                     <FrontierRow
-                      actions={actions}
-                      canEdit={canEdit}
                       item={{ key: view.node.id, kind: 'ready', rank: 3, view }}
                       numbers={numbers}
                       onSelect={onSelect}

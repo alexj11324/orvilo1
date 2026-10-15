@@ -120,7 +120,7 @@ export const TypoBar = memo<TypoBarProps>(({ editor }) => {
     <ChatInputActionBar
       left={<ChatInputActions items={items} />}
       style={{
-        background: 'var(--ant-color-fill-quaternary)',
+        background: 'var(--fill-quaternary)',
         borderTopLeftRadius: 8,
         borderTopRightRadius: 8,
       }}

@@ -49,7 +49,7 @@ const TitleTags = memo(() => {
           <ChatHistoryTitleMenu title={fallbackTopicTitle} />
           <span
             style={{
-              color: 'var(--ant-color-text-quaternary)',
+              color: 'var(--foreground-quaternary)',
               flexShrink: 0,
               fontSize: 14,
             }}

@@ -29,7 +29,7 @@ export const AcceptedNote = memo<{ review: AcceptanceCheckReviewEntry }>(({ revi
   const hydrated = useIsHydrated();
   return (
     <div className="flex items-center gap-1.5">
-      <BadgeCheck color={'var(--ant-color-text-quaternary)'} size={13} />
+      <BadgeCheck color={'var(--foreground-quaternary)'} size={13} />
       <div className="text-xs text-muted-foreground">
         {t('acceptance.review.acceptedNote', {
           time: hydrated ? formatAbsoluteDateTime(review.createdAt) : '',
@@ -44,7 +44,7 @@ export const IgnoredNote = memo<{ review: AcceptanceCheckReviewEntry }>(({ revie
   const hydrated = useIsHydrated();
   return (
     <div className="flex items-center gap-1.5">
-      <Ban color={'var(--ant-color-text-quaternary)'} size={13} />
+      <Ban color={'var(--foreground-quaternary)'} size={13} />
       <div className="text-xs text-muted-foreground">
         {t('acceptance.review.ignoredNote', {
           time: hydrated ? formatAbsoluteDateTime(review.createdAt) : '',
@@ -190,7 +190,7 @@ export const IterationTimeline = memo<{
                       entry.review.action === 'accept'
                         ? 'var(--success)'
                         : entry.review.action === 'ignore'
-                          ? 'var(--ant-color-text-quaternary)'
+                          ? 'var(--foreground-quaternary)'
                           : 'var(--destructive)',
                   }}
                 />
@@ -211,7 +211,7 @@ export const IterationTimeline = memo<{
             failed: 'var(--destructive)',
             passed: 'var(--success)',
             uncertain: 'var(--warning)',
-          }[step.state as string] ?? 'var(--ant-color-text-quaternary)';
+          }[step.state as string] ?? 'var(--foreground-quaternary)';
 
         return (
           <div className="flex gap-3" key={entry.key}>
@@ -220,7 +220,7 @@ export const IterationTimeline = memo<{
                 className={styles.stepDot}
                 style={{
                   background: isCurrent ? stateColor : 'var(--card)',
-                  borderColor: isCurrent ? stateColor : 'var(--ant-color-text-quaternary)',
+                  borderColor: isCurrent ? stateColor : 'var(--foreground-quaternary)',
                 }}
               />
               {!isLast && <div className={styles.stepRail} />}

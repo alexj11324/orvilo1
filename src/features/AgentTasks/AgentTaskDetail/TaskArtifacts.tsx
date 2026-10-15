@@ -68,8 +68,8 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
     <div
       className="flex items-center gap-1 pr-2"
       style={{
-        border: `1px solid ${'var(--ant-color-border)'}`,
-        borderRadius: 'var(--ant-border-radius-lg)',
+        border: `1px solid ${'var(--border)'}`,
+        borderRadius: 'var(--radius-overlay)',
       }}
     >
       <Button
@@ -78,7 +78,7 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
         onClick={() => void openDocumentModal(node.documentId)}
       >
         {createElement(inaccessible ? FileLock2Icon : FileTextIcon, {
-          color: 'var(--ant-color-text-secondary)',
+          color: 'var(--muted-foreground)',
           size: 18,
           strokeWidth: 1.5,
           style: { flexShrink: 0 },

@@ -22,7 +22,7 @@ const RowSkeleton = memo<{ width: string }>(({ width }) => (
     <div className="flex flex-col flex-1">
       <Skeleton
         style={{
-          borderRadius: 'var(--ant-border-radius)',
+          borderRadius: 'var(--radius-card)',
           height: 14,
           margin: 0,
           maxHeight: 14,
@@ -48,7 +48,7 @@ const TopicListSkeleton = memo(() => (
         <div className="flex items-center h-6" style={{ paddingInline: '8px 4px' }}>
           <Skeleton
             style={{
-              borderRadius: 'var(--ant-border-radius-sm)',
+              borderRadius: 'var(--radius-input)',
               height: 12,
               maxHeight: 12,
               maxWidth: group.header,

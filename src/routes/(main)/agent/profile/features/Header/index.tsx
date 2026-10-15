@@ -335,7 +335,7 @@ const Header = memo(() => {
               key: 'agent-info',
               label: (
                 <span
-                  style={{ color: 'var(--ant-color-text-tertiary)', fontSize: 12, lineHeight: 1.6 }}
+                  style={{ color: 'var(--foreground-tertiary)', fontSize: 12, lineHeight: 1.6 }}
                 >
                   {[
                     authorName,

@@ -76,7 +76,7 @@ const NoteFileItem = memo<NoteFileItemProps>(
           <div
             className={cn(
               'floatingChunkBadge',
-              'absolute z-3 inset-be-2 end-2 rounded-(--radius-button) opacity-0 bg-card shadow-(--ant-box-shadow-tertiary) transition-opacity duration-(--orvilo-motion-mid) ease-[ease]',
+              'absolute z-3 inset-be-2 end-2 rounded-(--radius-button) opacity-0 bg-card shadow-(--shadow-raised) transition-opacity duration-(--orvilo-motion-mid) ease-[ease]',
             )}
             onClick={(event) => event.stopPropagation()}
           >
@@ -98,7 +98,7 @@ const NoteFileItem = memo<NoteFileItemProps>(
                 className={cn(
                   cn(
                     'floatingChunkBadge',
-                    'cursor-pointer absolute z-3 inset-be-2 end-2 rounded-(--radius-button) opacity-0 bg-card shadow-(--ant-box-shadow-tertiary) transition-opacity duration-(--orvilo-motion-mid) ease-[ease]',
+                    'cursor-pointer absolute z-3 inset-be-2 end-2 rounded-(--radius-button) opacity-0 bg-card shadow-(--shadow-raised) transition-opacity duration-(--orvilo-motion-mid) ease-[ease]',
                   ),
                   CLICKABLE_FOCUS_RING,
                 )}

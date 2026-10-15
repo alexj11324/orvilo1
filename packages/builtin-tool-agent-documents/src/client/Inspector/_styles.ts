@@ -10,7 +10,7 @@ export const inspectorChipStyles = {
   chip: 'inline-flex shrink min-w-0 max-w-70 items-center truncate rounded-full bg-accent py-0.5 ps-2 pe-2 text-xs leading-[inherit] text-foreground',
   /** Compact, code-styled chip for raw identifiers */
   idChip:
-    'shrink-0 rounded-full bg-accent py-0.5 ps-2 pe-2 [font-family:var(--ant-font-family-code)] text-xs leading-[inherit] text-muted-foreground',
+    'shrink-0 rounded-full bg-accent py-0.5 ps-2 pe-2 [font-family:var(--font-mono)] text-xs leading-[inherit] text-muted-foreground',
   /** Inline middot used between segments */
   separator: 'shrink-0 text-foreground-quaternary',
   /** Secondary, lower-contrast chip for metadata (counts, target scope, …) */

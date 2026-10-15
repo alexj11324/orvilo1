@@ -39,7 +39,7 @@ export const ListTasksInspector = memo<BuiltinInspectorProps<ListTasksParams, Li
           {t('builtins.orvilo-task.apiName.listTasks')}
         </span>
         {filterText && (
-          <span className="text-xs" style={{ color: 'var(--ant-color-text-tertiary)' }}>
+          <span className="text-xs" style={{ color: 'var(--foreground-tertiary)' }}>
             {' · '}
             {filterText}
           </span>

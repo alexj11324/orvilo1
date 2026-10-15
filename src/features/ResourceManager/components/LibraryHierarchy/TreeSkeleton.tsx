@@ -6,7 +6,7 @@ import { memo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const styles = {
-  container: 'flex gap-1.5 items-center h-8 py-1 px-2 rounded-(--ant-border-radius-sm)',
+  container: 'flex gap-1.5 items-center h-8 py-1 px-2 rounded-(--radius-input)',
 };
 
 interface TreeSkeletonItemProps {

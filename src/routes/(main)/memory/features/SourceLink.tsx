@@ -23,7 +23,7 @@ const SourceLink = memo<{ source?: MemorySource | null }>(({ source }) => {
       }}
     >
       <Link2 data-icon="inline-start" />
-      <div className="truncate" style={{ color: 'var(--ant-color-text-secondary)' }}>
+      <div className="truncate" style={{ color: 'var(--muted-foreground)' }}>
         {title}
       </div>
     </Link>

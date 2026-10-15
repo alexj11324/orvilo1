@@ -25,7 +25,7 @@ const DetailsLoading = memo(() => {
         style={{
           height: 54,
 
-          borderBottom: `1px solid ${'var(--ant-color-border)'}`,
+          borderBottom: `1px solid ${'var(--border)'}`,
         }}
       >
         <Skeleton style={{ height: 36, width: 120 }} />

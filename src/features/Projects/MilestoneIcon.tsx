@@ -28,7 +28,7 @@ interface MilestoneIconProps {
  */
 const MilestoneIcon = memo<MilestoneIconProps>(({ muted, size = MILESTONE_ICON_SIZE, style }) => (
   <DiamondIcon
-    {...(muted ? { color: 'var(--ant-color-text-description)' } : MILESTONE_ICON_PAINT)}
+    {...(muted ? { color: 'var(--foreground-description)' } : MILESTONE_ICON_PAINT)}
     size={size}
     style={style}
   />

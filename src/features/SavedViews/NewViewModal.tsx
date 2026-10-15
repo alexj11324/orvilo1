@@ -188,7 +188,7 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
         <div
           className="flex flex-col gap-1 p-3"
           style={{
-            background: 'var(--ant-color-fill-quaternary, rgba(0,0,0,0.02))',
+            background: 'var(--fill-quaternary, rgba(0,0,0,0.02))',
             borderRadius: 8,
           }}
         >

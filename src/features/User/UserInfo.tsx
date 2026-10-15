@@ -30,7 +30,7 @@ const UserInfo = memo<UserInfoProps>(({ avatarProps, onClick, ...rest }) => {
         className={cn('flex items-center gap-2.5', CLICKABLE_FOCUS_RING)}
         onClick={onClick}
       >
-        <UserAvatar background={'var(--ant-color-fill)'} size={36} {...(avatarProps as any)} />
+        <UserAvatar background={'var(--fill)'} size={36} {...(avatarProps as any)} />
         <div className="flex flex-col flex-1">
           <div className="font-bold" style={{ lineHeight: 1.4 }}>
             {nickname}

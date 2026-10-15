@@ -31,15 +31,15 @@ const styles = {
   bar: '[container:runtimebar_/_inline-size] flex-none h-7 py-0 px-1',
   fullAccessLabel: '[@container_runtimebar_(width_<_600px)]:hidden',
   sdkRuntime:
-    'cursor-default flex flex-none gap-1.5 items-center py-0.5 px-1 rounded-(--radius-chip) text-xs text-info whitespace-nowrap bg-[color-mix(in_srgb,_var(--ant-color-info-bg)_55%,_transparent)] bg-none',
+    'cursor-default flex flex-none gap-1.5 items-center py-0.5 px-1 rounded-(--radius-chip) text-xs text-info whitespace-nowrap bg-[color-mix(in_srgb,_var(--info-wash)_55%,_transparent)] bg-none',
   sdkRuntimeClosing: 'text-foreground-description bg-fill-quaternary bg-none',
   sdkRuntimeError:
-    'text-destructive bg-[color-mix(in_srgb,_var(--ant-color-error-bg)_55%,_transparent)] bg-none',
+    'text-destructive bg-[color-mix(in_srgb,_var(--destructive-wash)_55%,_transparent)] bg-none',
   sdkRuntimeIdle: 'text-muted-foreground bg-fill-quaternary bg-none',
   sdkRuntimeMonitoring:
-    'text-warning bg-[color-mix(in_srgb,_var(--ant-color-warning-bg)_55%,_transparent)] bg-none',
+    'text-warning bg-[color-mix(in_srgb,_var(--warning-wash)_55%,_transparent)] bg-none',
   sdkRuntimeStale:
-    'text-warning bg-[color-mix(in_srgb,_var(--ant-color-warning-bg)_55%,_transparent)] bg-none',
+    'text-warning bg-[color-mix(in_srgb,_var(--warning-wash)_55%,_transparent)] bg-none',
   leftGroup:
     '[scrollbar-width:none] overflow-x-auto overflow-y-hidden flex-1 min-w-0 [&::-webkit-scrollbar]:hidden [@container_runtimebar_(width_<_720px)]:[&_[data-workspace-label]]:max-w-[clamp(0px,_calc(33.333cqw_-_100px),_120px)]',
   rightGroup: 'flex-none',

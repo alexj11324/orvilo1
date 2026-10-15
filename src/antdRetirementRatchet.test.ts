@@ -30,7 +30,7 @@ const SKIPPED_DIRS = new Set([
 ]);
 
 const BASELINE = {
-  antVarReferences: 619,
+  antVarReferences: 59,
   importingFiles: {
     '@ant-design/cssinjs': 4,
     '@lobehub/ui': 280,
@@ -43,7 +43,7 @@ type RetiredModule = keyof typeof BASELINE.importingFiles;
 
 const RETIRED_IMPORT =
   /(?:from\s+|import\s*\(\s*|import\s+)["']((?:antd|antd-style|@ant-design\/cssinjs|@lobehub\/ui)(?:\/[^"']*)?)["']/g;
-const ANT_VAR_REFERENCE = /var\(--ant-/g;
+const ANT_VAR_REFERENCE = /(?<![\w-])--ant-[a-z]/g;
 
 const collectSources = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -84,7 +84,7 @@ const sources = SCANNED_ROOTS.flatMap((root) => collectSources(path.join(REPO_RO
 const current = measureRetiredUsage(sources);
 
 describe('antd retirement ratchet', () => {
-  it('does not add var(--ant-*) references', () => {
+  it('does not add --ant-* references (var() and Tailwind (--x) forms)', () => {
     expect(current.antVarReferences).toBeLessThanOrEqual(BASELINE.antVarReferences);
   });
 

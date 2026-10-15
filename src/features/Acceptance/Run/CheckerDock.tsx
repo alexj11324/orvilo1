@@ -40,7 +40,7 @@ const styles = {
     'grid grid-cols-[20px_minmax(0,1fr)_auto] items-start gap-2 py-3 not-last:border-b not-last:border-sidebar-border',
   chevron: 'flex-none text-foreground-quaternary',
   clickable:
-    'cursor-pointer transition-[background] duration-150 ease-(--ant-motion-ease-out) hover:bg-fill-quaternary',
+    'cursor-pointer transition-[background] duration-150 ease-(--orvilo-motion-ease-out) hover:bg-fill-quaternary',
   desc: 'mt-0.75 text-xs leading-5 text-foreground-tertiary',
   dock: 'overflow-hidden rounded-(--radius-card) border border-border bg-popover',
   head: 'flex cursor-pointer items-center justify-between gap-3 px-3 py-2.75',
@@ -64,10 +64,10 @@ const statusIcon = (
       return { color: 'var(--destructive-text)', icon: XCircle, spin: false };
     }
     case 'skipped': {
-      return { color: 'var(--ant-color-text-quaternary)', icon: CircleAlert, spin: false };
+      return { color: 'var(--foreground-quaternary)', icon: CircleAlert, spin: false };
     }
     default: {
-      return { color: 'var(--ant-color-text-quaternary)', icon: Circle, spin: false };
+      return { color: 'var(--foreground-quaternary)', icon: Circle, spin: false };
     }
   }
 };
@@ -157,7 +157,7 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
             style={{ color: 'var(--warning-text)' }}
             ringColor={
               isDarkMode
-                ? 'var(--ant-color-warning-border)'
+                ? 'var(--warning-border)'
                 : `color-mix(in srgb, var(--warning) 45%, transparent)`
             }
           />
@@ -324,9 +324,9 @@ const CheckerDock = memo<CheckerDockProps>(({ operationId, embedded }) => {
           </div>
         </div>
         {expanded ? (
-          <ChevronDown color={'var(--ant-color-text-tertiary)'} size={16} />
+          <ChevronDown color={'var(--foreground-tertiary)'} size={16} />
         ) : (
-          <ChevronUp color={'var(--ant-color-text-tertiary)'} size={16} />
+          <ChevronUp color={'var(--foreground-tertiary)'} size={16} />
         )}
       </div>
       {expanded && body}

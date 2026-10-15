@@ -19,7 +19,7 @@ const CliDetectionTimeoutState = ({
 
   return (
     <GuideShell
-      icon={<ClockAlert color={'var(--ant-color-warning)'} size={20} />}
+      icon={<ClockAlert color={'var(--warning)'} size={20} />}
       title={t('cliDetectionTimeoutGuide.title', { name: config.title })}
       variant={variant}
       actions={

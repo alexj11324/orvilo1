@@ -21,7 +21,7 @@ const ScoreItem = memo<ScoreItemProps>(({ required, check, desc, title }) => {
           ? 'var(--success)'
           : required
             ? 'var(--destructive)'
-            : 'var(--ant-color-text-quaternary)',
+            : 'var(--foreground-quaternary)',
       })}
       <div className="flex flex-col gap-1">
         <Title level={3}>{title}</Title>

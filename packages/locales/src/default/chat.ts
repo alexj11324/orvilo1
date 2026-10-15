@@ -2136,8 +2136,6 @@ export default {
   'taskDetail.subIssue.createNew': 'Create new sub-issue',
   'taskDetail.subIssue.removeFromParent': 'Remove from parent {{identifier}}',
   'taskDetail.subIssue.rowActions': 'Actions for {{identifier}}',
-  'taskDetail.subIssue.sortByStatus': 'Sort by status',
-  'taskDetail.subIssue.sortManual': 'Manual order',
   'taskDetail.subtasks': 'Sub-issues',
   'taskDetail.addSubtask': 'Add sub-issue',
   'taskDetail.resources.add': 'Add link, pull request or document',

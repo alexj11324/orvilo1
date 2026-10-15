@@ -1,7 +1,7 @@
 import { type TreeDataNode } from '@lobehub/ui/base-ui';
 import { Tree } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask } from '@orvilo/types';
-import { ArrowDownWideNarrow, MoreHorizontal, PlayCircle, Plus } from 'lucide-react';
+import { MoreHorizontal, PlayCircle, Plus, SlidersHorizontal } from 'lucide-react';
 import type { MouseEvent } from 'react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -36,7 +36,9 @@ import { styles } from '../shared/style';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import AddSubIssueMenu from './AddSubIssueMenu';
 import RunSubtasksPreview from './RunSubtasksPreview';
-import { sortSubtasksByStatus } from './subtaskOrdering';
+import type { SubtaskOrdering } from './subtaskOrdering';
+import { sortSubtasks } from './subtaskOrdering';
+import SubtaskOrderingMenu from './SubtaskOrderingMenu';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskDetailSectionHeader from './TaskDetailSectionHeader';
 
@@ -220,10 +222,10 @@ const TaskSubtasks = memo(() => {
   }
   const [isExpanded, setIsExpanded] = useState(true);
   const [isPlanning, setIsPlanning] = useState(false);
-  // Linear keeps a sort control in the Sub-issues header; the client-side
-  // toggle orders rows by Issue status (board column order) or restores the
-  // server's own order.
-  const [sortByStatus, setSortByStatus] = useState(false);
+  // Linear keeps an ordering menu in the Sub-issues header — a
+  // display-options control that sorts rows at every level of the tree or
+  // restores the server's own ("manual") order.
+  const [ordering, setOrdering] = useState<SubtaskOrdering>('manual');
   const [contextMenu, setContextMenu] = useState<{
     anchor: { getBoundingClientRect: () => DOMRect };
     items: NativeContextMenuItem[];
@@ -298,10 +300,7 @@ const TaskSubtasks = memo(() => {
     [canEditTask, subtaskMap, openRowMenu],
   );
 
-  const orderedSubtasks = useMemo(
-    () => (sortByStatus ? sortSubtasksByStatus(subtasks) : subtasks),
-    [sortByStatus, subtasks],
-  );
+  const orderedSubtasks = useMemo(() => sortSubtasks(subtasks, ordering), [subtasks, ordering]);
 
   const treeData = useMemo(() => {
     if (orderedSubtasks.length === 0) return [];
@@ -385,18 +384,20 @@ const TaskSubtasks = memo(() => {
           <>
             {hasSubtasks && (
               <>
-                <ActionIcon
-                  active={sortByStatus}
-                  aria-label={t('taskDetail.subIssue.sortByStatus')}
-                  aria-pressed={sortByStatus}
-                  icon={ArrowDownWideNarrow}
-                  size="small"
-                  title={
-                    sortByStatus
-                      ? t('taskDetail.subIssue.sortManual')
-                      : t('taskDetail.subIssue.sortByStatus')
+                <SubtaskOrderingMenu
+                  align="end"
+                  value={ordering}
+                  trigger={
+                    // No `title`: its tooltip wrapper would take the menu
+                    // trigger's props.
+                    <ActionIcon
+                      active={ordering !== 'manual'}
+                      aria-label={t('taskList.form.ordering')}
+                      icon={SlidersHorizontal}
+                      size="small"
+                    />
                   }
-                  onClick={() => setSortByStatus((prev) => !prev)}
+                  onValueChange={setOrdering}
                 />
                 <ActionIcon
                   disabled={!canEditTask || isPlanning}

@@ -96,7 +96,7 @@ const TitleSection = memo(() => {
           variant="ghost"
           style={{
             opacity: isHoveringTitle ? 1 : 0,
-            transition: `opacity ${'var(--ant-motion-duration-mid)'} ${'var(--ant-motion-ease-in-out)'}`,
+            transition: `opacity ${'var(--orvilo-motion-mid)'} ${'var(--orvilo-motion-ease-in-out)'}`,
             width: 'fit-content',
           }}
           onClick={() => {

@@ -5,7 +5,7 @@ import type { AcceptanceCheck, AcceptanceCheckState } from './types';
 
 export const STATE_META: Record<AcceptanceCheckState, { color: string; icon: typeof Check }> = {
   failed: { color: 'var(--destructive)', icon: XCircle },
-  not_executed: { color: 'var(--ant-color-text-quaternary)', icon: CircleDashed },
+  not_executed: { color: 'var(--foreground-quaternary)', icon: CircleDashed },
   passed: { color: 'var(--success)', icon: Check },
   uncertain: { color: 'var(--warning)', icon: HelpCircle },
 };

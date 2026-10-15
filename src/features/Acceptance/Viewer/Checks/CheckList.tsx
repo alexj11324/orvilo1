@@ -346,7 +346,7 @@ const CheckList = memo<CheckListProps>(
                   />
                 )}
                 <ChevronRight
-                  color={'var(--ant-color-text-quaternary)'}
+                  color={'var(--foreground-quaternary)'}
                   size={14}
                   style={{
                     transform: collapsed ? 'none' : 'rotate(90deg)',
@@ -371,16 +371,12 @@ const CheckList = memo<CheckListProps>(
                       >
                         <div className="flex items-center gap-1.5">
                           <MessageSquareText
+                            color={stale ? 'var(--foreground-quaternary)' : 'var(--destructive)'}
                             size={13}
-                            color={
-                              stale ? 'var(--ant-color-text-quaternary)' : 'var(--destructive)'
-                            }
                           />
                           <div
                             style={{
-                              color: stale
-                                ? 'var(--ant-color-text-tertiary)'
-                                : 'var(--destructive)',
+                              color: stale ? 'var(--foreground-tertiary)' : 'var(--destructive)',
                               fontSize: 12,
                             }}
                           >

@@ -334,7 +334,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
         <div
           className="flex items-center justify-between"
           style={{
-            borderTop: `1px solid ${'var(--ant-color-border-secondary)'}`,
+            borderTop: `1px solid ${'var(--divider)'}`,
             padding: '8px 16px',
           }}
         >
@@ -363,10 +363,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'human'} size={16} />
-                      <div
-                        className="text-xs"
-                        style={{ color: 'var(--ant-color-text-description)' }}
-                      >
+                      <div className="text-xs" style={{ color: 'var(--foreground-description)' }}>
                         {t('createTask.member')}
                       </div>
                     </>
@@ -391,10 +388,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'agent'} size={16} />
-                      <div
-                        className="text-xs"
-                        style={{ color: 'var(--ant-color-text-description)' }}
-                      >
+                      <div className="text-xs" style={{ color: 'var(--foreground-description)' }}>
                         {t('createTask.assignee')}
                       </div>
                     </>

@@ -46,7 +46,7 @@ type LabelOption =
 
 const styles = {
   searchInput:
-    'w-full rounded-(--radius-input) border-0 border-be border-divider bg-transparent dark:bg-transparent px-2.5 py-1.5 text-sm leading-5.5 text-foreground outline-none placeholder:text-(--ant-color-text-placeholder)',
+    'w-full rounded-(--radius-input) border-0 border-be border-divider bg-transparent dark:bg-transparent px-2.5 py-1.5 text-sm leading-5.5 text-foreground outline-none placeholder:text-(--foreground-placeholder)',
 };
 
 /** tRPC surfaces the router's CONFLICT as `error.data.code`. */

@@ -23,8 +23,8 @@ interface TaskTriggerTagProps {
 const FLEX_MIN_WIDTH_0 = { minWidth: 0 };
 const PILL_STYLE: CSSProperties = {
   alignItems: 'center',
-  background: 'var(--ant-color-bg-container)',
-  border: `1px solid ${'var(--ant-color-border-secondary)'}`,
+  background: 'var(--card)',
+  border: `1px solid ${'var(--divider)'}`,
   borderRadius: 24,
   display: 'flex',
   gap: 4,
@@ -86,7 +86,7 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
             className="block truncate"
             style={{
               ...FLEX_MIN_WIDTH_0,
-              color: data ? undefined : 'var(--ant-color-text-placeholder)',
+              color: data ? undefined : 'var(--foreground-placeholder)',
               fontSize: 12,
               fontWeight: 400,
               lineHeight: 1.4,
@@ -106,9 +106,9 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
       <SimpleTooltip title={data.tooltip}>
         <div style={PILL_STYLE}>
           {automationMode === 'event' ? (
-            <RadioTowerIcon size={16} style={{ color: 'var(--ant-color-text-description)' }} />
+            <RadioTowerIcon size={16} style={{ color: 'var(--foreground-description)' }} />
           ) : (
-            <ClockIcon size={16} style={{ color: 'var(--ant-color-text-description)' }} />
+            <ClockIcon size={16} style={{ color: 'var(--foreground-description)' }} />
           )}
           <div className="truncate block text-xs text-muted-foreground" style={FLEX_MIN_WIDTH_0}>
             {data.primary}

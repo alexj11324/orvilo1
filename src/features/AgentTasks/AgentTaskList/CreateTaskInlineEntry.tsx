@@ -578,8 +578,8 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
       <div
         className="relative overflow-hidden rounded-(--radius-card) border"
         style={{
-          borderColor: 'var(--ant-color-border-secondary)',
-          background: 'var(--ant-color-bg-container)',
+          borderColor: 'var(--divider)',
+          background: 'var(--card)',
         }}
         onKeyDownCapture={handleKeyDown}
       >
@@ -635,7 +635,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
         <div
           className="flex items-center justify-between"
           style={{
-            borderTop: `1px solid ${'var(--ant-color-border-secondary)'}`,
+            borderTop: `1px solid ${'var(--divider)'}`,
             display: isReviewing ? 'none' : undefined,
             paddingBlock: 8,
             paddingInline: '8px 16px',
@@ -666,10 +666,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'human'} size={16} />
-                      <div
-                        className="text-xs"
-                        style={{ color: 'var(--ant-color-text-description)' }}
-                      >
+                      <div className="text-xs" style={{ color: 'var(--foreground-description)' }}>
                         {t('createTask.member')}
                       </div>
                     </>
@@ -694,10 +691,7 @@ const CreateTaskInlineEntry = memo<CreateTaskInlineEntryProps>((props) => {
                   ) : (
                     <>
                       <UnassignedAssigneeIcon kind={'agent'} size={16} />
-                      <div
-                        className="text-xs"
-                        style={{ color: 'var(--ant-color-text-description)' }}
-                      >
+                      <div className="text-xs" style={{ color: 'var(--foreground-description)' }}>
                         {t('createTask.assignee')}
                       </div>
                     </>

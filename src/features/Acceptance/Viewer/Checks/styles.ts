@@ -3,7 +3,7 @@ export const styles = {
   staleRegions: 'mt-1 border-s-2 border-sidebar-border py-2.5 ps-3 opacity-75 hover:opacity-100',
   chip: 'rounded-(--radius-chip) bg-accent px-1.5 text-xs leading-5 whitespace-nowrap text-foreground-tertiary',
   chipClickable: 'cursor-pointer hover:bg-selected hover:text-foreground',
-  emptyCard: 'rounded-(--ant-border-radius-lg) border border-sidebar-border bg-card px-4 py-12',
+  emptyCard: 'rounded-(--radius-overlay) border border-sidebar-border bg-card px-4 py-12',
   celebrateIcon: 'animate-[acceptance-celebrate-pop_0.45s_cubic-bezier(0.34,1.56,0.64,1)_both]',
   groupCard: 'bg-card',
   groupHeader:

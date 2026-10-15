@@ -23,26 +23,26 @@ import { useIsDark } from '@/hooks/useIsDark';
  * hue is left to say who, not to carry contrast.
  */
 export const ACCEPTANCE_AUTHOR_COLORS = [
-  'var(--ant-geekblue-10)',
-  'var(--ant-magenta-10)',
-  'var(--ant-gold-10)',
-  'var(--ant-cyan-10)',
-  'var(--ant-purple-10)',
-  'var(--ant-lime-10)',
-  'var(--ant-orange-10)',
-  'var(--ant-blue-10)',
+  'var(--palette-geekblue-10)',
+  'var(--palette-magenta-10)',
+  'var(--palette-gold-10)',
+  'var(--palette-cyan-10)',
+  'var(--palette-purple-10)',
+  'var(--palette-lime-10)',
+  'var(--palette-orange-10)',
+  'var(--palette-blue-10)',
 ] as const;
 
 /** The same hues at the step that is mid-tone on the dark end of the scale. */
 export const ACCEPTANCE_AUTHOR_COLORS_DARK = [
-  'var(--ant-geekblue-7)',
-  'var(--ant-magenta-7)',
-  'var(--ant-gold-7)',
-  'var(--ant-cyan-7)',
-  'var(--ant-purple-7)',
-  'var(--ant-lime-7)',
-  'var(--ant-orange-7)',
-  'var(--ant-blue-7)',
+  'var(--palette-geekblue-7)',
+  'var(--palette-magenta-7)',
+  'var(--palette-gold-7)',
+  'var(--palette-cyan-7)',
+  'var(--palette-purple-7)',
+  'var(--palette-lime-7)',
+  'var(--palette-orange-7)',
+  'var(--palette-blue-7)',
 ] as const;
 
 /** Deterministic, order-independent: the same author keeps their slot across rounds and reloads. */

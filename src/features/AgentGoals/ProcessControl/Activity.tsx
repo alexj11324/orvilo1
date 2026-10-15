@@ -29,7 +29,7 @@ const styles = {
   attempt: 'py-1.5 [&+&]:[border-block-start:1px_dashed_var(--sidebar-border)]',
   body: 'pt-0 pb-2.5 ps-10.5 pe-2.25',
   mono: 'font-mono tabular-nums',
-  row: 'cursor-pointer py-1.5 px-2.25 rounded-(--ant-border-radius-sm) hover:bg-fill-quaternary',
+  row: 'cursor-pointer py-1.5 px-2.25 rounded-(--radius-input) hover:bg-fill-quaternary',
   time: 'flex-none ms-auto',
 };
 

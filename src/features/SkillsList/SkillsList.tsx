@@ -83,7 +83,7 @@ interface SkillsListProps {
 
 const styles = {
   chevron:
-    'shrink-0 text-foreground-tertiary transition-transform duration-(--orvilo-motion-fast) ease-(--ant-motion-ease-in-out) motion-reduce:transition-none',
+    'shrink-0 text-foreground-tertiary transition-transform duration-(--orvilo-motion-fast) ease-(--orvilo-motion-ease-in-out) motion-reduce:transition-none',
   chevronExpanded: 'rotate-90',
   childItem:
     'cursor-pointer h-8 pe-2 rounded-(--radius-button) text-sm leading-5.5 text-foreground hover:bg-accent',

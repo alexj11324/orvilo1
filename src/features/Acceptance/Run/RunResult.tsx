@@ -81,7 +81,7 @@ const RunResult = memo<RunResultProps>(({ operationId, round = 1, embedded }) =>
 
   const counts = countResults(results ?? []);
   const badgeColorMap = {
-    default: 'var(--ant-color-text-tertiary)',
+    default: 'var(--foreground-tertiary)',
     error: 'var(--destructive-text)',
     success: 'var(--success-text)',
     warning: 'var(--warning-text)',

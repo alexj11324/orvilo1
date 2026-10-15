@@ -79,10 +79,10 @@ const setSkillDragImage = (event: React.DragEvent, label: string): void => {
   const preview = document.createElement('div');
   Object.assign(preview.style, {
     alignItems: 'center',
-    background: resolveCssVar('var(--ant-color-bg-elevated)', host),
-    border: `1px solid ${resolveCssVar('var(--ant-color-border-secondary)', host)}`,
+    background: resolveCssVar('var(--popover)', host),
+    border: `1px solid ${resolveCssVar('var(--divider)', host)}`,
     borderRadius: '10px',
-    color: resolveCssVar('var(--ant-color-text)', host),
+    color: resolveCssVar('var(--foreground)', host),
     display: 'inline-flex',
     fontSize: '13px',
     gap: '8px',
@@ -109,7 +109,7 @@ const setSkillDragImage = (event: React.DragEvent, label: string): void => {
   if (iconSvg) {
     const iconClone = iconSvg.cloneNode(true) as SVGElement;
     iconClone.style.flexShrink = '0';
-    iconClone.style.color = resolveCssVar('var(--ant-color-text-tertiary)', host);
+    iconClone.style.color = resolveCssVar('var(--foreground-tertiary)', host);
     preview.append(iconClone);
   }
 

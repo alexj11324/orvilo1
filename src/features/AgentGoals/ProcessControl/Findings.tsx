@@ -23,7 +23,7 @@ const styles = {
   body: 'pt-0 pb-2.5 ps-7.5 pe-2',
   source: 'flex-none max-w-[40%] text-end',
   time: 'flex-none min-w-15 text-end',
-  row: 'cursor-pointer p-2 rounded-(--ant-border-radius-sm) hover:bg-fill-quaternary',
+  row: 'cursor-pointer p-2 rounded-(--radius-input) hover:bg-fill-quaternary',
 };
 
 const FindingRow = memo<{

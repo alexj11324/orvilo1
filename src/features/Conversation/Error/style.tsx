@@ -5,7 +5,7 @@ import { memo } from 'react';
 import Avatar from '@/components/Avatar';
 
 export const styles = {
-  container: 'rounded-(--radius-card) border border-(--ant-color-split) bg-card text-foreground',
+  container: 'rounded-(--radius-card) border border-(--split-divider) bg-card text-foreground',
   desc: 'text-center text-foreground-tertiary',
   form: 'w-full max-w-90 [@media(width<=768px)]:max-w-[90%]',
 };
@@ -58,7 +58,7 @@ export const FormAction = memo<
         <Avatar
           animation={animation}
           avatar={avatar}
-          background={background ?? 'var(--ant-color-fill-content)'}
+          background={background ?? 'var(--fill-content)'}
           shape={'square'}
           size={80}
         />

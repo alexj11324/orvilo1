@@ -64,6 +64,12 @@ cd apps/desktop
 bun run build:cli
 ```
 
+On start the launcher clears only the watch builds' outputs, `dist/main` and
+`dist/preload`; it leaves `dist/renderer` in place so `bun run dev:static`
+(`DESKTOP_RENDERER_STATIC=1`) can serve a renderer prebuilt with
+`bun run build:renderer`. Concurrent dev instances still share `dist/main` and
+`dist/preload`, so a rebuild in one restarts Electron in the others.
+
 Check that the launcher reported no CLI build failure, then launch Electron from an environment where `opencode --version`
 works. In a disposable integration environment, install the CLI under a private
 tools directory and put its `bin` directory on the desktop process's PATH.

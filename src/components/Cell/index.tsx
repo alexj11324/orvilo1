@@ -27,11 +27,10 @@ const Cell = memo<CellProps>(({ label, icon, onClick, type }) => {
       onClick={onClick}
     >
       <div className={'flex gap-3 items-center'}>
-        {icon &&
-          createElement(icon, { size: 20, style: { color: 'var(--ant-color-primary-border)' } })}
+        {icon && createElement(icon, { size: 20, style: { color: 'var(--primary-border)' } })}
         {label}
       </div>
-      {createElement(ChevronRight, { size: 16, style: { color: 'var(--ant-color-border)' } })}
+      {createElement(ChevronRight, { size: 16, style: { color: 'var(--border)' } })}
     </div>
   );
 });

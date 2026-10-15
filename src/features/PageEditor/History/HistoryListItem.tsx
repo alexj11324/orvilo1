@@ -30,15 +30,15 @@ const styles = {
   description: 'truncate text-xs leading-5 text-foreground-tertiary',
   rowMain: 'min-w-0 flex-1 overflow-hidden',
   actions:
-    'pointer-events-none absolute inset-y-1/2 end-2.5 flex -translate-y-1/2 items-center gap-0.5 opacity-0 transition-opacity duration-(--orvilo-motion-mid) ease-(--ant-motion-ease-in-out) motion-reduce:transition-none group-hover/history-row:pointer-events-auto group-focus-within/history-row:pointer-events-auto group-hover/history-row:opacity-100 group-focus-within/history-row:opacity-100',
+    'pointer-events-none absolute inset-y-1/2 end-2.5 flex -translate-y-1/2 items-center gap-0.5 opacity-0 transition-opacity duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-in-out) motion-reduce:transition-none group-hover/history-row:pointer-events-auto group-focus-within/history-row:pointer-events-auto group-hover/history-row:opacity-100 group-focus-within/history-row:opacity-100',
   currentBadge: 'm-0 h-5 shrink-0 py-0 text-xs leading-5',
-  row: 'group/history-row relative flex cursor-pointer items-center gap-2 py-2 px-4 transition-[background-color] duration-(--orvilo-motion-mid) ease-(--ant-motion-ease-in-out) motion-reduce:transition-none hover:bg-fill-quaternary focus-within:bg-fill-quaternary',
+  row: 'group/history-row relative flex cursor-pointer items-center gap-2 py-2 px-4 transition-[background-color] duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-in-out) motion-reduce:transition-none hover:bg-fill-quaternary focus-within:bg-fill-quaternary',
   rowCurrent: 'cursor-default hover:bg-transparent focus-within:bg-transparent',
   rowRight: 'relative ms-auto flex shrink-0 items-center gap-2',
   rowTime: 'shrink-0 text-sm leading-5.5 font-semibold tabular-nums text-foreground',
   rowTimeCurrent: 'text-primary-text',
   sourceTag:
-    'm-0 h-5 shrink-0 py-0 text-xs leading-5 transition-opacity duration-(--orvilo-motion-mid) ease-(--ant-motion-ease-in-out) motion-reduce:transition-none group-hover/history-row:opacity-0 group-focus-within/history-row:opacity-0',
+    'm-0 h-5 shrink-0 py-0 text-xs leading-5 transition-opacity duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-in-out) motion-reduce:transition-none group-hover/history-row:opacity-0 group-focus-within/history-row:opacity-0',
 };
 
 export interface HistoryListItemProps {

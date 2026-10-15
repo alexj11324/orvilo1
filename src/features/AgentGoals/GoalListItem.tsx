@@ -68,7 +68,7 @@ export const OrchestrationWorkflowListItem = memo<GoalItemProps>(
           totalRunCost={item.totalRunCost}
           totalRunDuration={item.totalRunDuration}
         />
-        <ArrowRightIcon color={'var(--ant-color-text-quaternary)'} size={16} />
+        <ArrowRightIcon color={'var(--foreground-quaternary)'} size={16} />
       </div>
     );
   },

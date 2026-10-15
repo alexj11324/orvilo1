@@ -114,7 +114,7 @@ const SearchResults = memo<SearchResultsProps>(({ libraryId, query }) => {
     >
       <span className="anticon" role="img">
         <SearchXIcon
-          color={'var(--ant-color-text-quaternary)'}
+          color={'var(--foreground-quaternary)'}
           fill={'transparent'}
           height={32}
           size={32}

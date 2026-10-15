@@ -27,7 +27,7 @@ const styles = {
   controlRow: 'flex flex-none items-center gap-1',
   controls: 'flex flex-none items-center gap-1 rounded-full bg-selected p-0.5',
   listening:
-    'bg-primary text-primary-foreground transition-[color,background-color] duration-(--orvilo-motion-mid) ease-in-out hover:bg-primary-hover hover:text-primary-hover-foreground active:bg-(--ant-color-primary-active) active:text-[contrast-color(var(--ant-color-primary-active))] focus-visible:ring-0 focus-visible:shadow-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-current focus-visible:-outline-offset-3 motion-reduce:transition-none',
+    'bg-primary text-primary-foreground transition-[color,background-color] duration-(--orvilo-motion-mid) ease-in-out hover:bg-primary-hover hover:text-primary-hover-foreground active:bg-(--primary-active) active:text-[contrast-color(var(--primary-active))] focus-visible:ring-0 focus-visible:shadow-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-current focus-visible:-outline-offset-3 motion-reduce:transition-none',
   listeningStatus: 'sr-only',
   spin: 'inline-flex',
   status:

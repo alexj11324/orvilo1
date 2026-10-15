@@ -47,7 +47,7 @@ const GroupAvatarComponent = memo<GroupAvatarComponentProps>(
       return [
         {
           avatar: userAvatar || nickName || username,
-          style: { color: 'var(--ant-color-text)' },
+          style: { color: 'var(--foreground)' },
         },
         ...displayAvatars,
       ];

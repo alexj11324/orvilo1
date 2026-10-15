@@ -49,13 +49,13 @@ steps aside because a root `.env` exists.
 
 ## Run modes
 
-| Command                            | Starts                                                                                                                                            | Port                          |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| `bun run dev`                      | Next.js + Vite SPA + Clerk accounts portal concurrently (full stack)                                                                              | app 3010, SPA 9876, auth 3018 |
-| `bun run dev:spa`                  | Vite SPA only; proxies API calls to `localhost:3010` and prints a Debug Proxy URL for developing against the production backend                   | 9876                          |
-| `bun run dev:desktop:skip-login`   | Next.js behind the Clerk stub + Electron with an isolated temporary profile; signs the local seed user in (renderer and main process), no browser | app 3010, CDP 9263            |
-| `pnpm --filter @orvilo/server dev` | Standalone Hono backend service                                                                                                                   | —                             |
-| `bunx next start`                  | Production build serve (after `bun run build`)                                                                                                    | 3010 (`-p` to override)       |
+| Command                            | Starts                                                                                                                                                                                                                                     | Port                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `bun run dev`                      | Next.js + Vite SPA + Clerk accounts portal concurrently (full stack)                                                                                                                                                                       | app 3010, SPA 9876, auth 3018                               |
+| `bun run dev:spa`                  | Vite SPA only; proxies API calls to `localhost:3010` and prints a Debug Proxy URL for developing against the production backend                                                                                                            | 9876                                                        |
+| `bun run dev:desktop:skip-login`   | Next.js behind the Clerk stub, the local device gateway, the local Agent Gateway, and Electron with an isolated temporary profile; signs the local seed user in (renderer and main process) and points Next and Electron at those gateways | app 3010, CDP 9263, device gateway 8787, Agent Gateway 8788 |
+| `pnpm --filter @orvilo/server dev` | Standalone Hono backend service                                                                                                                                                                                                            | —                                                           |
+| `bunx next start`                  | Production build serve (after `bun run build`)                                                                                                                                                                                             | 3010 (`-p` to override)                                     |
 
 **`bun run dev` derives local auth URLs from its selected ports.** It sets
 `APP_URL` and `INTERNAL_APP_URL` to the selected Next origin, then starts the
@@ -127,8 +127,10 @@ placeholder with its matching `CLERK_ISSUER`, and an unset secret key gets one t
 sign-in page needs a real development instance.
 
 `bun run dev:desktop:skip-login` does all of this in one command: it starts the
-stub, the Next.js server and Electron on a temporary profile, then signs the
-seed user in, main process included. It preserves `CLERK_SECRET_KEY` from the
+stub, a local device gateway that trusts the same `JWKS_KEY`, the Next.js
+server and Electron on a temporary profile, then signs the seed user in, main
+process included, and points Next and Electron at that gateway. It does not
+use `device-gateway.aspectlylabs.com`. It preserves `CLERK_SECRET_KEY` from the
 shell or `.env`; when absent, a local stub-only placeholder lets the server
 check seeded sessions. Normal Clerk sign-in still requires a real key.
 When `JWKS_KEY` is absent, it reuses `.records/env/agent-testing-jwks.json` or generates and privately saves a local signing key there without changing `.env`.
@@ -136,6 +138,20 @@ When `JWKS_KEY` is absent, it reuses `.records/env/agent-testing-jwks.json` or g
 Electron instance that is already running in (CDP port from
 `ORVILO_DESKTOP_CDP_PORT`, default 9263). Both read `DATABASE_URL` from `.env`
 when the shell does not set it, and need the seed user to exist.
+
+If the renderer is already on `/onboarding`, that is the signed-out boot path,
+not a handoff to a person. Read the live CDP port (for example
+`http://127.0.0.1:<port>/json/version`), set `ORVILO_DESKTOP_CDP_PORT` to it, and
+run `bun run dev:desktop:login-local` when that Electron is already aimed at the
+local stubbed server and already using the local device gateway. `login-local`
+cannot change the gateway URL of a process that is already running; if that
+Electron is still pointed at the production gateway, start it with
+`bun run dev:desktop:skip-login` instead. Use `bun run dev:desktop:skip-login`
+only when you intend to start the local stack. Do not reload the page to
+recover a session. Do not use either command to recreate a cloud workspace that
+the lost session was viewing: a slug that existed only against
+orvilo.aspectlylabs.com does not come back. Do not switch backends and treat
+the new page as the same candidate.
 
 A seeded renderer session does **not** authorize the Electron main process or
 connect an execution device. To do that as well without signing in by hand,
@@ -153,9 +169,24 @@ connected execution device. A packaged build ignores the variable. For real loca
 
 ## Running Issues on this machine (device gateway)
 
-An Issue run reaches your computer through the device gateway. The desktop app connects to the hosted one (`device-gateway.aspectlylabs.com`) by default, which trusts only tokens signed by production. A local dev server signs with its own `JWKS_KEY`, so against it no device can connect and every run ends in "No bound device" until a gateway that trusts the local key is running.
+An Issue run reaches your computer through the device gateway. Packaged desktop
+builds connect to the hosted gateway (`device-gateway.aspectlylabs.com`), which
+trusts only tokens signed by production. A local dev server signs with its own
+`JWKS_KEY`, so that hosted gateway will not accept a local token.
 
-The gateway is a separate Go service kept in the public repository [`alexj11324/orvilo-gateway`](https://github.com/alexj11324/orvilo-gateway) (the same commit production builds from). One script builds and runs it locally at a pinned commit:
+`bun run dev:desktop:skip-login` starts a device gateway that trusts the local key,
+points Next and Electron at `http://localhost:8787`, and fails if that gateway
+does not come up. It also starts the local Agent Gateway on `http://localhost:8788`
+and sets `ENABLE_AGENT_GATEWAY`, `AGENT_GATEWAY_URL`, and
+`AGENT_GATEWAY_SERVICE_TOKEN` on Next. Sending a message needs that Agent Gateway;
+the device gateway only connects this computer. It does not fall back to the
+production gateways. The e2e mock on port 3407 is a separate test double and is
+not either of these processes.
+
+To start the gateway on its own (for a stack that is not using skip-login), use
+the same script skip-login calls. The gateway is a separate Go service kept in
+the public repository [`alexj11324/orvilo-gateway`](https://github.com/alexj11324/orvilo-gateway)
+(the same commit production builds from):
 
 ```bash
 # 1. Gateway, in its own terminal. JWKS_KEY is the value the dev server runs with.
@@ -168,7 +199,7 @@ eval "$(.agents/acceptance/scripts/agent-gateway/local-device-gateway-setup.sh e
 DEVICE_GATEWAY_URL=http://localhost:8787 .agents/acceptance/scripts/electron-dev.sh start <id>
 ```
 
-It needs `go` and `git`. The service token is generated once into `.records/env/device-gateway.token` and is never printed. The desktop app still has to be signed in through its own sign-in before the device connects; a seeded web session is not enough.
+It needs `go` and `git`. The service token is generated once into `.records/env/device-gateway.token` and is never printed. A seeded renderer session is not enough to connect this machine: the desktop main process needs its own access token, which `skip-login` already completes.
 
 ## Ports
 
@@ -181,6 +212,8 @@ It needs `go` and `git`. The service token is generated once into `.records/env/
 | 6379 | Redis                                                    |
 | 3406 | Mock LLM (OpenAI-compatible, e2e)                        |
 | 3407 | Mock agent gateway (e2e)                                 |
+| 8787 | Local device gateway (`dev:desktop:skip-login`)          |
+| 8788 | Local Agent Gateway (`dev:desktop:skip-login`)           |
 
 The Docker e2e path uses different ports on purpose — app `:3006`, Postgres
 `:5433` — so both paths can coexist; see `e2e/docs/local-setup.md`.

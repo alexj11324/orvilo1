@@ -47,7 +47,7 @@ const Prompts = memo<PromptsProps>(({ mode, activeKey = [], setActiveKey }) => {
                   {
                     dataIndex: 'name',
                     render: (_, record) => (
-                      <span className={styles.code} style={{ color: 'var(--ant-gold)' }}>
+                      <span className={styles.code} style={{ color: 'var(--palette-gold-6)' }}>
                         {record.name}
                       </span>
                     ),
@@ -63,7 +63,7 @@ const Prompts = memo<PromptsProps>(({ mode, activeKey = [], setActiveKey }) => {
                           height: '1em',
                           color: record.required
                             ? 'var(--success)'
-                            : 'var(--ant-color-text-description)',
+                            : 'var(--foreground-description)',
                           fill: 'transparent',
                         })}
                       </span>

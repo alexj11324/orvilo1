@@ -261,7 +261,10 @@ export function createDevOrchestrator({
   }
 
   function start() {
-    rmSync(path.join(desktopRoot, 'dist'), { force: true, recursive: true });
+    // Only the watch builds' outputs: `dev:static` serves a prebuilt dist/renderer.
+    for (const bundle of [MAIN_BUNDLE, PRELOAD_BUNDLE]) {
+      rmSync(path.dirname(bundle), { force: true, recursive: true });
+    }
     buildCli();
     children.push(
       spawnVite(['--config', 'vite.renderer.config.ts']),

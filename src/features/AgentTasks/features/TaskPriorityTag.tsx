@@ -45,11 +45,11 @@ export const PRIORITY_META: Record<number, PriorityMeta> = {
 
 const styles = {
   searchInput:
-    'w-full rounded-(--radius-input) border-0 bg-transparent dark:bg-transparent px-2.5 py-1 text-sm leading-5.5 text-foreground outline-none placeholder:text-(--ant-color-text-placeholder)',
+    'w-full rounded-(--radius-input) border-0 bg-transparent dark:bg-transparent px-2.5 py-1 text-sm leading-5.5 text-foreground outline-none placeholder:text-(--foreground-placeholder)',
   showingCaption: 'px-2.5 py-0.5 text-xs leading-5 text-foreground-tertiary',
   trigger:
     'inline-flex cursor-pointer items-center text-foreground-description transition-[color] duration-(--orvilo-motion-mid) ease-[ease] motion-reduce:transition-none hover:text-foreground',
-  triggerUrgent: 'inline-flex cursor-pointer items-center text-(--ant-orange)',
+  triggerUrgent: 'inline-flex cursor-pointer items-center text-(--palette-orange-6)',
   triggerDisabled:
     'cursor-not-allowed opacity-50 hover:text-foreground-description hover:filter-none',
 };

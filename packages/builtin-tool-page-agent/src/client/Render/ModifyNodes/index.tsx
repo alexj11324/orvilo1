@@ -45,7 +45,7 @@ export const ModifyNodesRender = memo<BuiltinRenderProps<ModifyNodesArgs, Modify
     const results = pluginState?.results ?? [];
 
     return (
-      <div className="w-full rounded-(--ant-border-radius) border border-sidebar-border bg-card">
+      <div className="w-full rounded-(--radius-card) border border-sidebar-border bg-card">
         {operations.map((op, index) => {
           const meta = actionMeta[op.action];
           const details = getOperationDetails(op);

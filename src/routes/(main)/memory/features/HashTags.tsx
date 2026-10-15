@@ -18,7 +18,7 @@ const HashTags = memo<HashTagsProps>(({ hashTags }) => {
             key={index}
             variant="secondary"
             style={{
-              color: 'var(--ant-color-text-description)',
+              color: 'var(--foreground-description)',
               gap: 2,
               marginRight: 12,
               paddingInline: 0,

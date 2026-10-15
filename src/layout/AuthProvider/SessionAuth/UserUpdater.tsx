@@ -123,7 +123,7 @@ const UserUpdater = memo(({ children }: PropsWithChildren) => {
         <div
           className="flex flex-col items-center justify-center gap-4"
           style={{
-            background: 'var(--ant-color-bg-layout)',
+            background: 'var(--background)',
             inset: 0,
             padding: 24,
             position: 'fixed',

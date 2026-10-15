@@ -19,7 +19,7 @@ const TaskAvatar: FC<PropsWithChildren> = ({ children }) => {
           top: -4,
         }}
       >
-        <ListTodo color={'var(--ant-color-text-description)'} size={10} />
+        <ListTodo color={'var(--foreground-description)'} size={10} />
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import React, { memo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const styles = {
-  container: 'rounded-(--ant-border-radius-lg) border border-sidebar-border p-2',
+  container: 'rounded-(--radius-overlay) border border-sidebar-border p-2',
   meta: 'text-xs',
 };
 

@@ -81,8 +81,8 @@ const LoginConfirmClient = memo<LoginConfirmProps>(({ uid, clientMetadata }) => 
         <div
           className="flex flex-col p-4 border"
           style={{
-            borderColor: 'var(--ant-color-border-secondary)',
-            background: 'var(--ant-color-bg-container)',
+            borderColor: 'var(--divider)',
+            background: 'var(--card)',
           }}
         >
           {isUserStateInit ? (

@@ -1,6 +1,5 @@
 'use client';
 
-import type { IEditor } from '@lobehub/editor';
 import { EDITOR_DEBOUNCE_TIME, EDITOR_MAX_WAIT } from '@orvilo/const';
 import type { DocumentItem } from '@orvilo/database/schemas';
 import { debounce } from 'es-toolkit/compat';
@@ -15,6 +14,7 @@ import { isSkillMarkdownDocument, parseSkillMarkdownFrontmatter } from '@/utils/
 import { setNamespace } from '@/utils/storeDebug';
 
 import type { DocumentStore } from '../../store';
+import type { DocumentEditorPort } from '../../types';
 import type { DocumentContentFormat, DocumentSourceType } from '../editor/initialState';
 
 const n = setNamespace('document/document');
@@ -31,7 +31,7 @@ export interface InitDocumentParams {
   content?: string | null;
   contentFormat?: DocumentContentFormat;
   documentId: string;
-  editor: IEditor;
+  editor: DocumentEditorPort;
   editorData?: unknown;
 
   sourceType: DocumentSourceType;
@@ -49,7 +49,7 @@ export interface UseFetchDocumentOptions {
   /**
    * Editor instance to load content into
    */
-  editor?: IEditor;
+  editor?: DocumentEditorPort;
   /**
    * Source type for the document. Defaults to 'page'.
    */

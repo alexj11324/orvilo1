@@ -1,6 +1,5 @@
 'use client';
 
-import type { IEditor } from '@lobehub/editor';
 import type { EditorState as OrviloEditorState } from '@lobehub/editor/react';
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
@@ -14,6 +13,7 @@ import { composeSkillMarkdown, parseSkillMarkdownFrontmatter } from '@/utils/ski
 import { setNamespace } from '@/utils/storeDebug';
 
 import type { DocumentStore } from '../../store';
+import type { DocumentEditorPort } from '../../types';
 import type { DocumentDispatch } from './reducer';
 import { documentReducer } from './reducer';
 
@@ -227,7 +227,7 @@ export class EditorActionImpl {
     );
   };
 
-  onEditorInit = async (editor: IEditor): Promise<void> => {
+  onEditorInit = async (editor: DocumentEditorPort): Promise<void> => {
     const { activeDocumentId, documents } = this.#get();
     if (!editor || !activeDocumentId) return;
 

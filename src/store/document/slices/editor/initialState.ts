@@ -1,7 +1,8 @@
 'use client';
 
-import type { IEditor } from '@lobehub/editor';
 import type { EditorState as OrviloEditorState } from '@lobehub/editor/react';
+
+import type { DocumentEditorPort } from '../../types';
 
 /**
  * Document source type - determines which service to use for persistence
@@ -93,7 +94,7 @@ export interface EditorState {
   /**
    * Shared editor instance
    */
-  editor: IEditor | undefined;
+  editor: DocumentEditorPort | undefined;
   /**
    * Editor state from useEditorState hook
    */

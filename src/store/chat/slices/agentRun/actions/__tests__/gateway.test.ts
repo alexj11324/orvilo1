@@ -2457,54 +2457,65 @@ describe('GatewayActionImpl', () => {
       expect(associateMessageWithOperation).toHaveBeenCalledWith('ast-1', 'op-existing');
     });
 
-    it('mints a fresh op when the bound local op already terminated', async () => {
-      const startOperation = vi.fn(() => ({ operationId: 'gw-op-new' }));
-      const state: Record<string, any> = {
-        activeAgentId: 'agent-1',
-        gatewayConnections: {},
-        messagesMap: { 'agent-1_topic-1': [{ createdAt: 1, id: 'ast-1' }] },
-        operations: {
-          'op-done': {
-            id: 'op-done',
-            metadata: { serverOperationId: 'server-op-1' },
-            status: 'completed',
-            type: 'execServerAgentRuntime',
+    it.each([
+      { aborted: false, isAborting: false, status: 'completed' },
+      { aborted: false, isAborting: false, status: 'cancelled' },
+      { aborted: false, isAborting: true, status: 'running' },
+      { aborted: true, isAborting: false, status: 'running' },
+    ])(
+      'mints a fresh op instead of reusing a stale bound local op ($status, $isAborting, $aborted)',
+      async ({ aborted, isAborting, status }) => {
+        const controller = new AbortController();
+        if (aborted) controller.abort();
+        const startOperation = vi.fn(() => ({ operationId: 'gw-op-new' }));
+        const state: Record<string, any> = {
+          activeAgentId: 'agent-1',
+          gatewayConnections: {},
+          messagesMap: { 'agent-1_topic-1': [{ createdAt: 1, id: 'ast-1' }] },
+          operations: {
+            'op-done': {
+              abortController: controller,
+              id: 'op-done',
+              metadata: { isAborting, serverOperationId: 'server-op-1' },
+              status,
+              type: 'execServerAgentRuntime',
+            },
           },
-        },
-        topicDataMap: {},
-      };
-      const set = vi.fn((updater: any) => {
-        if (typeof updater === 'function') Object.assign(state, updater(state));
-        else Object.assign(state, updater);
-      });
-      const get = vi.fn(() => ({
-        ...state,
-        associateMessageWithOperation: vi.fn(),
-        connectToGateway: vi.fn(),
-        onOperationCancel: vi.fn(),
-        startOperation,
-      })) as any;
+          topicDataMap: {},
+        };
+        const set = vi.fn((updater: any) => {
+          if (typeof updater === 'function') Object.assign(state, updater(state));
+          else Object.assign(state, updater);
+        });
+        const get = vi.fn(() => ({
+          ...state,
+          associateMessageWithOperation: vi.fn(),
+          connectToGateway: vi.fn(),
+          onOperationCancel: vi.fn(),
+          startOperation,
+        })) as any;
 
-      (globalThis as any).window = {
-        global_serverConfigStore: {
-          getState: () => ({ serverConfig: { agentGatewayUrl: 'https://gateway.test.com' } }),
-        },
-      };
-      vi.mocked(aiAgentService.refreshGatewayToken).mockResolvedValue({
-        token: 'fresh-token',
-      } as any);
-      const action = new GatewayActionImpl(set as any, get, undefined);
+        (globalThis as any).window = {
+          global_serverConfigStore: {
+            getState: () => ({ serverConfig: { agentGatewayUrl: 'https://gateway.test.com' } }),
+          },
+        };
+        vi.mocked(aiAgentService.refreshGatewayToken).mockResolvedValue({
+          token: 'fresh-token',
+        } as any);
+        const action = new GatewayActionImpl(set as any, get, undefined);
 
-      await action.reconnectToGatewayOperation({
-        assistantMessageId: 'ast-1',
-        operationId: 'server-op-1',
-        topicId: 'topic-1',
-      });
+        await action.reconnectToGatewayOperation({
+          assistantMessageId: 'ast-1',
+          operationId: 'server-op-1',
+          topicId: 'topic-1',
+        });
 
-      expect(startOperation).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'execServerAgentRuntime' }),
-      );
-    });
+        expect(startOperation).toHaveBeenCalledWith(
+          expect.objectContaining({ type: 'execServerAgentRuntime' }),
+        );
+      },
+    );
 
     // Agent-share visitor surface: a visitor has no owner-scoped access to the
     // creator's topic/operation rows, so the reconnect must route through the

@@ -1,4 +1,3 @@
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { TRACING_SCENARIOS } from '@orvilo/const';
 import type { TracingOptions } from '@orvilo/llm-generation-tracing';
 import {
@@ -24,12 +23,10 @@ const log = debug('orvilo-server:verify-reporter');
 export interface GenerateReportParams {
   deliverable: string;
   goal: string;
-  modelConfig: { model: string; provider: string };
   /**
-   * Preferred ACP binding for the narrative judgment (task-pinned verifier).
-   * Falls back to the builtin verify agent slug, then the env binding.
+   * Reviewer selected by the live task; its saved runtime owns the narrative.
    */
-  verifierAgentId?: string;
+  reviewerAgentId: string;
   /** The verification session to summarize (the canonical run-anchor). */
   verifyRunId: string;
 }
@@ -47,6 +44,7 @@ export interface GenerateReportParams {
 export class VerifyReporterService {
   private readonly db: OrviloDatabase;
   private readonly userId: string;
+  private readonly workspaceId?: string;
   private readonly resultModel: VerifyCheckResultModel;
   private readonly evidenceModel: VerifyEvidenceModel;
   private readonly reportModel: VerifyReportModel;
@@ -55,6 +53,7 @@ export class VerifyReporterService {
   constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
+    this.workspaceId = workspaceId;
     this.resultModel = new VerifyCheckResultModel(db, userId, workspaceId);
     this.evidenceModel = new VerifyEvidenceModel(db, userId, workspaceId);
     this.reportModel = new VerifyReportModel(db, userId, workspaceId);
@@ -62,7 +61,7 @@ export class VerifyReporterService {
   }
 
   async generateReport(params: GenerateReportParams) {
-    const { verifyRunId, goal, deliverable, modelConfig, verifierAgentId } = params;
+    const { verifyRunId, goal, deliverable, reviewerAgentId } = params;
 
     const results = await this.resultModel.listByRun(verifyRunId);
     if (results.length === 0) {
@@ -107,12 +106,12 @@ export class VerifyReporterService {
       verdict,
     });
 
-    const narrative = await this.buildNarrative(chain, modelConfig, verifierAgentId);
+    const narrative = await this.buildNarrative(chain, reviewerAgentId);
 
     return this.reportModel.upsertByRun({
       content: narrative?.content ?? null,
       failedChecks: stats.failed,
-      generatedBy: modelConfig.model,
+      generatedBy: reviewerAgentId,
       overallConfidence: meanConfidence(results),
       passedChecks: stats.passed,
       reviewedByUser: false,
@@ -127,23 +126,20 @@ export class VerifyReporterService {
   /** Generate the narrative, degrading to no prose (stats-only card) on failure. */
   private async buildNarrative(
     chain: ReturnType<typeof chainVerifyReport>,
-    modelConfig: { model: string; provider: string },
-    verifierAgentId?: string,
+    reviewerAgentId: string,
   ) {
     try {
-      const ai = new AiGenerationService(this.db, this.userId);
+      const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
       const raw = await ai.generateObject(
         {
-          ...chain,
-          model: modelConfig.model,
-          provider: modelConfig.provider,
+          messages: chain.messages.map((message) => ({ ...message, role: 'user' as const })),
           schema: REPORT_NARRATIVE_JSON_SCHEMA,
         },
         {
           judgment: {
             binding: {
-              agentId: verifierAgentId,
-              slug: BUILTIN_AGENT_SLUGS.verifyAgent,
+              agentId: reviewerAgentId,
+              allowEnvFallback: false,
             },
             purpose: 'verify.report',
           },

@@ -64,10 +64,12 @@ afterEach(async () => {
 });
 
 describe('buildTaskPrompt Goal loop context', () => {
-  it('uses the per-Task attempt budget for a Goal Graph Task', async () => {
+  it('uses Issue description and comments instead of Acceptance loop feedback for graph work', async () => {
     const taskModel = new TaskModel(db, userId);
     const task = await taskModel.create({
-      instruction: 'Close the remaining acceptance gap.',
+      instruction:
+        'Close the remaining acceptance gap. The exported document must include its table.',
+      description: 'Short report summary',
     });
     await taskModel.update(task.id, { totalTopics: 1 });
     const goal = await new GoalModel(db, userId).create({
@@ -98,6 +100,11 @@ describe('buildTaskPrompt Goal loop context', () => {
         },
       },
     });
+    await taskModel.addComment({
+      taskId: task.id,
+      userId,
+      content: 'Reviewer feedback: restore the exported table.',
+    });
     const currentTask = await taskModel.findById(task.id);
 
     const result = await buildTaskPrompt(currentTask!, {
@@ -108,12 +115,10 @@ describe('buildTaskPrompt Goal loop context', () => {
       userId,
     });
 
-    expect(result.prompt).toContain('Automatic Acceptance review:');
-    expect(result.prompt).toContain('Review feedback on the last delivery');
-    expect(result.prompt).not.toContain('User feedback on the last delivery');
-    expect(result.prompt).toContain('Restore the table and submit fresh evidence.');
-    expect(result.prompt).toContain('Goal loop — round 2 of 2');
-    expect(result.prompt).not.toContain('round 2 of 20');
+    expect(result.prompt).toContain('The exported document must include its table.');
+    expect(result.prompt).toContain('Reviewer feedback: restore the exported table.');
+    expect(result.prompt).not.toContain('Automatic Acceptance review:');
+    expect(result.goalLoop).toBeUndefined();
   });
 });
 
@@ -130,7 +135,7 @@ describe('buildTaskPrompt delivery acceptance', () => {
     });
   };
 
-  it('renders the acceptance section for a plain task with a verify config', async () => {
+  it('uses ordinary Issue review instead of the old acceptance section even with a verify config', async () => {
     const task = await new TaskModel(db, userId).create({
       config: { verify: { enabled: true, requirement: 'The report is delivered as a document.' } },
       instruction: 'Write the report.',
@@ -138,7 +143,8 @@ describe('buildTaskPrompt delivery acceptance', () => {
 
     const result = await buildFor(task.id);
 
-    expect(result.prompt).toContain('Verify — delivery acceptance');
+    expect(result.prompt).not.toContain('Verify — delivery acceptance');
+    expect(result.acceptanceEnabled).toBe(false);
   });
 
   it('omits the acceptance section for a recurring task', async () => {

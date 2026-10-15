@@ -36,7 +36,10 @@ import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
-import { getDeleteErrorMessageKey } from '@/utils/forbiddenError';
+import {
+  getAgentAssignmentDeleteErrorMessage,
+  getDeleteErrorMessageKey,
+} from '@/utils/forbiddenError';
 
 import { useRevealSidebarSection } from '../../../../hooks';
 import { getAgentPublishErrorKey } from './agentMenuVisibility';
@@ -392,7 +395,10 @@ export const useAgentDropdownMenu = ({
                               await removeAgent(id);
                               toast.success(t('confirmRemoveSessionSuccess'));
                             } catch (error) {
-                              toast.error(t(getDeleteErrorMessageKey(error), { ns: 'common' }));
+                              toast.error(
+                                getAgentAssignmentDeleteErrorMessage(error) ??
+                                  t(getDeleteErrorMessageKey(error), { ns: 'common' }),
+                              );
                             }
                           },
                           title: t('delete', { ns: 'common' }),

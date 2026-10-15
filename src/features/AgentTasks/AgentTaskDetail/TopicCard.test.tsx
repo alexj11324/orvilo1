@@ -30,8 +30,8 @@ vi.mock('@/hooks/useActivityTime', () => ({
 // None of these render for this activity; they are stubbed only to keep the
 // reply editor's upload stack and the verify feature out of the module graph.
 vi.mock('./RunReplyEditor', () => ({ default: () => null }));
-vi.mock('./RunVerifyDetail', () => ({ default: () => null }));
-vi.mock('./RunVerifyTag', () => ({ default: () => null }));
+vi.mock('./RunVerifyDetail', () => ({ default: () => <span>Acceptance checklist</span> }));
+vi.mock('./RunVerifyTag', () => ({ default: () => <span>Accepted</span> }));
 
 vi.mock('@/features/AgentProfileCard/AgentProfilePopup', () => ({
   default: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -52,6 +52,15 @@ describe('TopicCard', () => {
   afterEach(() => {
     cleanup();
     useHomeStore.setState({ ungroupedAgents: [] });
+  });
+
+  it('shows the delivery without a second acceptance status or checklist', () => {
+    render(<TopicCard activity={{ ...activity, verify: { total: 1 } } as TaskDetailActivity} />, {
+      wrapper: MemoryRouter,
+    });
+    expect(screen.getByRole('link', { name: 'primes.py' })).toBeVisible();
+    expect(screen.queryByText('Accepted')).not.toBeInTheDocument();
+    expect(screen.queryByText('Acceptance checklist')).not.toBeInTheDocument();
   });
 
   it('renders runtime branding for an agent author whose avatar is initials', () => {

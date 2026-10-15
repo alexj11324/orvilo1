@@ -2,10 +2,16 @@ import { normalizeListTasksParams, UNFINISHED_TASK_STATUSES } from '@orvilo/buil
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskDependencyError } from '@/database/models/taskDependency';
+import type * as taskReview from '@/server/services/task/review';
 
 import { createTaskRuntime, taskRuntime } from '../task';
 
 const verifyMocks = vi.hoisted(() => ({ createCriteriaFromDrafts: vi.fn() }));
+const reviewMocks = vi.hoisted(() => ({ submitIssueReview: vi.fn() }));
+vi.mock('@/server/services/task/review', async (importOriginal) => ({
+  ...(await importOriginal<typeof taskReview>()),
+  ...reviewMocks,
+}));
 const automationInputMocks = vi.hoisted(() => ({ findByTaskId: vi.fn() }));
 vi.mock('@/database/models/taskTopic', () => ({
   TaskTopicModel: vi.fn().mockImplementation(function () {
@@ -117,6 +123,92 @@ describe('taskRuntime.factory', () => {
 });
 
 describe('createTaskRuntime', () => {
+  describe('submitTaskReview', () => {
+    const makeRuntime = (overrides: Record<string, unknown> = {}) =>
+      createTaskRuntime({
+        agentId: 'agt-reviewer',
+        agentModel: {} as never,
+        db: {} as never,
+        operationId: 'op-reviewer',
+        taskCaller: {} as never,
+        taskId: 'task-1',
+        taskModel: {
+          resolve: vi.fn().mockResolvedValue({
+            config: { issueReview: { cycleId: 'cycle-1' } },
+            id: 'task-1',
+            identifier: 'T-1',
+          }),
+        } as never,
+        taskService: {} as never,
+        userId: 'user-1',
+        workspaceId: 'ws-1',
+        ...overrides,
+      });
+
+    beforeEach(() => {
+      reviewMocks.submitIssueReview.mockReset();
+      reviewMocks.submitIssueReview.mockResolvedValue({
+        commentId: 'cmt-review',
+        stopped: false,
+        task: { identifier: 'T-1', workflowCategory: 'in_progress' },
+      });
+    });
+
+    it('records a failed review through the authenticated reviewer run', async () => {
+      const result = await makeRuntime().submitTaskReview({
+        comment: 'The export is missing its title.',
+        identifier: 'T-1',
+        verdict: 'fail',
+      });
+
+      expect(result).toMatchObject({
+        state: { commentId: 'cmt-review', workflowCategory: 'in_progress' },
+        success: true,
+      });
+      expect(reviewMocks.submitIssueReview.mock.calls[0][2]).toMatchObject({
+        actorAgentId: 'agt-reviewer',
+        cycleId: 'cycle-1',
+        operationId: 'op-reviewer',
+        taskId: 'task-1',
+      });
+    });
+
+    it.each([{ agentId: undefined }, { operationId: undefined }, { taskId: undefined }])(
+      'rejects a verdict without an authenticated review run: %o',
+      async (missing) => {
+        const result = await makeRuntime(missing).submitTaskReview({
+          identifier: 'T-1',
+          verdict: 'pass',
+        });
+        expect(result.success).toBe(false);
+        expect(reviewMocks.submitIssueReview).not.toHaveBeenCalled();
+      },
+    );
+
+    it('does not let a reviewer run judge a different Issue', async () => {
+      const result = await makeRuntime({
+        taskModel: {
+          resolve: vi.fn().mockResolvedValue({
+            config: { issueReview: { cycleId: 'other-cycle' } },
+            id: 'other-task',
+          }),
+        },
+      }).submitTaskReview({ identifier: 'T-2', verdict: 'pass' });
+      expect(result.success).toBe(false);
+      expect(reviewMocks.submitIssueReview).not.toHaveBeenCalled();
+    });
+
+    it('requires a useful comment for a failed review', async () => {
+      const result = await makeRuntime().submitTaskReview({
+        comment: ' ',
+        identifier: 'T-1',
+        verdict: 'fail',
+      });
+      expect(result.success).toBe(false);
+      expect(reviewMocks.submitIssueReview).not.toHaveBeenCalled();
+    });
+  });
+
   describe('readAutomationInput', () => {
     const makeRuntime = (overrides: Record<string, unknown> = {}) => {
       const findById = vi.fn().mockResolvedValue({ id: 'task-1', content: 'Mutable definition' });
@@ -643,6 +735,25 @@ describe('createTaskRuntime', () => {
       const taskCaller = { update: vi.fn().mockResolvedValue({}) } as any;
       return { agentModel, taskCaller, taskModel, taskService };
     };
+
+    it.each(['agt-reviewer', null])(
+      'sets the delivered Issue reviewer to %s',
+      async (reviewerAgentId) => {
+        const deps = makeDeps();
+        const runtime = createTaskRuntime({
+          agentModel: deps.agentModel as never,
+          taskCaller: deps.taskCaller,
+          taskModel: deps.taskModel as never,
+          taskService: deps.taskService,
+        });
+        const result = await runtime.editTask({ identifier: 'T-1', reviewerAgentId });
+        expect(result.success).toBe(true);
+        expect(result.content).toContain(
+          reviewerAgentId ? `reviewer agent → ${reviewerAgentId}` : 'reviewer cleared',
+        );
+        expect(deps.taskCaller.update).toHaveBeenCalledWith({ id: 'task-1', reviewerAgentId });
+      },
+    );
 
     it('leaves dependencies untouched when the revision-fenced field update fails', async () => {
       const deps = makeDeps();

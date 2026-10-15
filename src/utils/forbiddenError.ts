@@ -1,4 +1,19 @@
+import { isRecord } from '@orvilo/utils/object';
+
 import { TransferErrorCode } from '@/types/transferError';
+
+/** Preserve the actionable, access-filtered Issue list from the Agent deletion guard. */
+export const getAgentAssignmentDeleteErrorMessage = (error: unknown): string | undefined => {
+  if (!isRecord(error) || !isRecord(error.data)) return;
+  if (error.data.code !== 'PRECONDITION_FAILED' && error.data.httpStatus !== 412) return;
+
+  const prefix = 'Reassign Issues before deleting their Agent: ';
+  return typeof error.message === 'string' &&
+    error.message.startsWith(prefix) &&
+    error.message.slice(prefix.length).trim()
+    ? error.message
+    : undefined;
+};
 
 /**
  * Detect a tRPC FORBIDDEN (HTTP 403) error thrown by workspace row-level

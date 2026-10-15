@@ -84,6 +84,7 @@ const ROW_TYPE_ICON = {
   property: ArrowLeftRight,
   comment: MessageCircle,
   created: CirclePlus,
+  review_waiting: Timer,
   topic: CircleDot,
 } as const;
 
@@ -121,6 +122,10 @@ const toBriefItem = (act: TaskDetailActivity): BriefItem | null => {
 };
 
 const getRowText = (act: TaskDetailActivity, t: TFunction<'chat'>): string => {
+  if (act.type === 'review_waiting')
+    return t('taskDetail.review.notRun', {
+      reason: act.reviewWaiting?.reason ?? act.content ?? '',
+    });
   if (act.type === 'comment') return act.content || t('taskDetail.activities.fallback.comment');
   if (act.type === 'topic') return act.title || t('taskDetail.activities.fallback.topic');
   if (act.type === 'created') return t('taskDetail.activities.fallback.created');

@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { VerifyPlanGeneratorService } from '../planGenerator';
 
+vi.mock('../reviewerAgent', () => ({
+  resolveIssueReviewer: vi.fn().mockResolvedValue('reviewer-1'),
+}));
+
 // Mock the model modules the generator constructs (holistic fallback).
 const {
   confirmPlanMock,
@@ -71,6 +75,19 @@ describe('generateDraftPlan — holistic fallback', () => {
     setPlanMock.mockClear();
     getCriteriaMock.mockResolvedValue([]);
     findByIdsMock.mockResolvedValue([]);
+  });
+
+  it('prepares a holistic plan without starting an unbound criteria judgment', async () => {
+    generateObjectMock.mockClear();
+    await new VerifyPlanGeneratorService(db, 'user-1').generateDraftPlan({
+      enableAiGeneration: true,
+      goal: 'Ship the feature',
+      holisticFallback: true,
+      operationId: 'op-unbound',
+    });
+    expect(lastPlan()).toHaveLength(1);
+    expect(lastPlan()[0].verifierType).toBe('agent');
+    expect(generateObjectMock).not.toHaveBeenCalled();
   });
 
   it('synthesizes one agent-type holistic check from the requirement when no criteria', async () => {
@@ -168,9 +185,20 @@ describe('generateCriteria tracing', () => {
 
     await new VerifyPlanGeneratorService(db, 'user-1').generateCriteria({
       goal: 'Ship the feature',
-      modelConfig: { model: 'test-model', provider: 'test-provider' },
+      taskId: 'task-1',
     });
 
+    expect(generateObjectMock.mock.calls[0][0]).not.toHaveProperty('model');
+    expect(generateObjectMock.mock.calls[0][0]).not.toHaveProperty('provider');
+    expect(
+      generateObjectMock.mock.calls[0][0].messages.every(
+        (message: { role: string }) => message.role === 'user',
+      ),
+    ).toBe(true);
+    expect(generateObjectMock.mock.calls[0][1].judgment.binding).toEqual({
+      agentId: 'reviewer-1',
+      allowEnvFallback: false,
+    });
     expect(generateObjectMock).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({

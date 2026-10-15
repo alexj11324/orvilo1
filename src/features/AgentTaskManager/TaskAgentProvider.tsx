@@ -1,4 +1,3 @@
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import type { ConversationContext } from '@orvilo/types';
 import { isChatGroupSessionId } from '@orvilo/types';
 import type { ReactNode } from 'react';
@@ -7,12 +6,9 @@ import { useMatch, useSearchParams } from 'react-router';
 
 import ConversationSegmentSkeleton from '@/components/Skeleton/Conversation/Segment';
 import { ConversationProvider } from '@/features/Conversation';
-import { useFallbackAgentId } from '@/features/DefaultAgent/useFallbackAgentId';
-import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
-import { useInitBuiltinAgent } from '@/hooks/useInitBuiltinAgent';
+import { useDefaultAgentPreference } from '@/features/DefaultAgent/useDefaultAgentPreference';
 import { useOperationState } from '@/hooks/useOperationState';
 import { useAgentStore } from '@/store/agent';
-import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { useGlobalStore } from '@/store/global';
@@ -36,12 +32,7 @@ export const useTaskAgentSelection = () => use(TaskAgentSelectionContext);
 
 export const TaskAgentProvider = memo<TaskAgentProviderProps>((props) => {
   const { children, preferredAgentId, viewedTaskId } = props;
-  useInitBuiltinAgent(BUILTIN_AGENT_SLUGS.inbox);
-  useInitBuiltinAgent(BUILTIN_AGENT_SLUGS.taskAgent);
-
-  const fallbackAgentId = useFallbackAgentId();
-  const builtinOffered = useBuiltinHarnessOffered();
-  const taskAgentId = useAgentStore(builtinAgentSelectors.taskAgentId);
+  const { orchestratorAgentId, loading } = useDefaultAgentPreference();
   const setActiveAgentId = useAgentStore((s) => s.setActiveAgentId);
   const activeTopicId = useChatStore((s) => s.activeTopicId);
   const [searchParams] = useSearchParams();
@@ -62,8 +53,7 @@ export const TaskAgentProvider = memo<TaskAgentProviderProps>((props) => {
     scopedSelection.scopeAgentId === preferredAgentId
       ? scopedSelection.agentId
       : preferredAgentId || routedAgentId;
-  // The built-in task agent is the panel's default only where its harness is offered.
-  const defaultPanelAgentId = builtinOffered ? taskAgentId : fallbackAgentId;
+  const defaultPanelAgentId = orchestratorAgentId;
   const selectedAgentId = scopedSelectedAgentId || preferredAgentId || defaultPanelAgentId;
 
   const selectTaskAgent = useCallback(
@@ -77,8 +67,7 @@ export const TaskAgentProvider = memo<TaskAgentProviderProps>((props) => {
   useEffect(() => {
     if (!selectedAgentId) return;
 
-    // Completing a handoff (routed or clicked task agent) is an explicit
-    // last-used write; the taskAgent default fallback never counts.
+    // Explicit picks update the remembered Agent; the Orchestrator default does not.
     if (selectedAgentId !== defaultPanelAgentId) {
       useGlobalStore.getState().updateSystemStatus({ lastUsedAgentId: selectedAgentId });
     }
@@ -120,14 +109,14 @@ export const TaskAgentProvider = memo<TaskAgentProviderProps>((props) => {
   const context = useMemo<ConversationContext>(
     () => ({
       agentId: selectedAgentId || '',
-      defaultTaskAssigneeAgentId: fallbackAgentId,
+      defaultTaskAssigneeAgentId: orchestratorAgentId,
       scope: 'task',
       topicId: activeTopicId,
       viewedTask: resolvedViewedTaskId
         ? { taskId: resolvedViewedTaskId, type: 'detail' }
         : { type: 'list' },
     }),
-    [activeTopicId, fallbackAgentId, resolvedViewedTaskId, selectedAgentId],
+    [activeTopicId, orchestratorAgentId, resolvedViewedTaskId, selectedAgentId],
   );
 
   const chatKey = useMemo(() => messageMapKey(context), [context]);
@@ -135,7 +124,7 @@ export const TaskAgentProvider = memo<TaskAgentProviderProps>((props) => {
   const messages = useChatStore((s) => s.dbMessagesMap[chatKey]);
   const operationState = useOperationState(context);
 
-  if (!taskAgentId) return <ConversationSegmentSkeleton />;
+  if (loading && !selectedAgentId) return <ConversationSegmentSkeleton />;
 
   return (
     <TaskAgentSelectionContext value={selectTaskAgent}>

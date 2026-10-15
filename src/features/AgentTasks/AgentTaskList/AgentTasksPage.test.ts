@@ -19,7 +19,7 @@ import {
   compareTaskItems,
   DEFAULT_TASK_LIST_VIEW_OPTIONS,
 } from './listViewOptions';
-import { shouldRenderTaskAgentPanelToggle } from './taskAgentPanelToggle';
+import { shouldRenderTaskPanelToggle } from './taskPanelToggle';
 
 const taskUpdatedAt = (id: string, updatedAt: string): TaskListItem =>
   ({ id, identifier: id, status: 'backlog', updatedAt: new Date(updatedAt) }) as TaskListItem;
@@ -215,13 +215,13 @@ describe('AgentTasksPage', () => {
     });
   });
 
-  describe('shouldRenderTaskAgentPanelToggle', () => {
+  describe('shouldRenderTaskPanelToggle', () => {
     it('should render the task agent panel toggle on desktop layouts', () => {
-      expect(shouldRenderTaskAgentPanelToggle(false)).toBe(true);
+      expect(shouldRenderTaskPanelToggle(false)).toBe(true);
     });
 
     it('should hide the task agent panel toggle on mobile layouts', () => {
-      expect(shouldRenderTaskAgentPanelToggle(true)).toBe(false);
+      expect(shouldRenderTaskPanelToggle(true)).toBe(false);
     });
   });
 

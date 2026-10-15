@@ -41,6 +41,10 @@ export interface AgentOperationAppContext {
    * instead of treating the missing surface as approval.
    */
   interventionApprovalMode?: 'allow-list' | 'auto-run' | 'headless' | 'manual';
+  /** Server-bound ordinary Issue reviewer session. */
+  issueReviewCycleId?: string;
+  /** Fences an automatic assignee continuation to its reviewer feedback. */
+  issueReviewRepairCycleId?: string;
   /** ACP judgment-run marker — see `ExecAgentAppContext.judgment`. */
   judgment?: AgentOperationJudgmentContext;
   scope?: string | null;

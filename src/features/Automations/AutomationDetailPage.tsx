@@ -131,7 +131,7 @@ const AutomationStatusSwitch = memo(() => {
 
 const AgentChip = memo(() => {
   const { t } = useTranslation('automation');
-  const agentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
+  const agentId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeAgentId);
   const taskIdentifier = useTaskDetailTaskId();
   const visibility = useTaskDetailSelector(taskDetailSelectors.taskVisibility);
   const meta = useAgentDisplayMeta(agentId ?? undefined);

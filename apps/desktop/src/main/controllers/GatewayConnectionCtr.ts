@@ -148,6 +148,8 @@ export default class GatewayConnectionCtr extends ControllerModule {
   static override readonly groupName = 'gatewayConnection';
 
   /** In-memory registry for running hetero agent tasks (openclaw / hermes / local-cli dispatch). */
+  private readonly startingTasks = new Set<string>();
+
   private readonly platformTasks = new Map<string, PlatformTaskEntry>();
   private readonly platformTaskKillTimers = new Map<number, NodeJS.Timeout>();
 
@@ -337,6 +339,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
       await this.waitForPlatformProcessTreeExit(existing.pid, PLATFORM_CANCEL_FORCE_MS);
     }
 
+    this.startingTasks.add(taskId);
     try {
       const serverUrl = await this.remoteServerConfigCtr.getRemoteServerUrl();
       if (!serverUrl) {
@@ -415,6 +418,8 @@ export default class GatewayConnectionCtr extends ControllerModule {
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
       return { reason, status: 'rejected' };
+    } finally {
+      this.startingTasks.delete(taskId);
     }
   }
 
@@ -600,22 +605,40 @@ export default class GatewayConnectionCtr extends ControllerModule {
       case 'runHeteroTask': {
         // runHeteroTask returns a pre-stringified JSON payload — pass it through
         // as `content` and surface the parsed shape as `state`.
-        const json = await this.runHeteroTask(
-          args as {
-            agentId?: string;
-            agentType: string;
-            cwd?: string;
-            operationId: string;
-            parentOperationId?: string;
-            platformAgentId?: string;
-            prompt: string;
-            runGeneration?: number;
-            taskId: string;
-            topicId: string;
-            workspaceId?: string;
-          },
-        );
-        return { content: json, state: safeJsonParse(json), success: true };
+        const { taskId } = args as { taskId: string };
+        this.startingTasks.add(taskId);
+        try {
+          const json = await this.runHeteroTask(
+            args as {
+              agentId?: string;
+              agentType: string;
+              cwd?: string;
+              operationId: string;
+              parentOperationId?: string;
+              platformAgentId?: string;
+              prompt: string;
+              runGeneration?: number;
+              taskId: string;
+              topicId: string;
+              workspaceId?: string;
+            },
+          );
+          return { content: json, state: safeJsonParse(json), success: true };
+        } finally {
+          this.startingTasks.delete(taskId);
+        }
+      }
+
+      case 'getHeteroTaskStatus': {
+        const { taskId } = (args ?? {}) as { taskId?: string };
+        if (typeof taskId !== 'string' || !taskId) throw new Error('taskId is required');
+        const result = {
+          active:
+            this.startingTasks.has(taskId) ||
+            this.platformTasks.has(taskId) ||
+            (await this.heterogeneousAgentCtr.hasOrviloHeteroExec({ operationId: taskId })),
+        };
+        return { content: JSON.stringify(result), state: result, success: true };
       }
 
       case 'cancelHeteroTask': {

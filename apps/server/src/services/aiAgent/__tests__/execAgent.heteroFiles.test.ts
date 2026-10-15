@@ -1000,6 +1000,25 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     expect(dispatchParams.args).toEqual(['--model', 'opus', '--effort', 'high']);
   });
 
+  it('forwards saved Agent env to ordinary device dispatch without replacing its source identity', async () => {
+    heteroAgentConfig.agencyConfig = {
+      boundDeviceId: 'device-1',
+      executionTarget: 'device',
+      heterogeneousProvider: {
+        type: 'claude-code',
+        env: {
+          XDG_DATA_HOME: '/saved-agent-marker',
+          ORVILO_AGENT_ID: 'must-not-replace-source-agent',
+        },
+      },
+    } as typeof heteroAgentConfig.agencyConfig;
+    await service.execAgent({ agentId: 'agent-1', prompt: 'Run with the saved environment' });
+    expect(mockDispatchAgentRun.mock.calls[0][0].env).toMatchObject({
+      XDG_DATA_HOME: '/saved-agent-marker',
+      ORVILO_AGENT_ID: 'agent-1',
+    });
+  });
+
   it('persists CLI-device routing so a stop request reaches the dispatched writer', async () => {
     heteroAgentConfig.agencyConfig = {
       boundDeviceId: 'device-1',

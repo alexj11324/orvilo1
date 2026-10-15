@@ -211,6 +211,42 @@ describe('task dispatch recovery', () => {
     expect(mocks.updateHeartbeat).toHaveBeenCalledWith('task-1');
   });
 
+  it('preserves an ordinary offline queue instead of abandoning its idle operation', async () => {
+    mocks.findById.mockResolvedValue(
+      operation('idle', {
+        updatedAt: new Date(Date.now() - 10 * 60 * 1000),
+        metadata: {
+          deviceQueue: {
+            state: 'waiting',
+            queuedAt: new Date().toISOString(),
+            offlineSince: new Date().toISOString(),
+            payload: {
+              agentId: 'agent',
+              agentType: 'opencode',
+              assistantMessageId: 'assistant',
+              channel: 'agent_run_request',
+              deviceId: 'saved-device',
+              prompt: 'Original task request',
+              topicId: 'topic-1',
+            },
+          },
+        },
+      }),
+    );
+    await expect(
+      processTaskDispatchRecovery({
+        db: {} as never,
+        dispatchId: 'dispatch-1',
+        workspaceId: 'workspace-1',
+      }),
+    ).resolves.toMatchObject({ outcome: 'active', operationId: 'operation-1' });
+    expect(mocks.releaseRecovery).toHaveBeenCalledWith(
+      expect.objectContaining({ phase: 'running', reason: 'runtime_idle' }),
+    );
+    expect(mocks.updateHeartbeat).toHaveBeenCalledWith('task-1');
+    expect(mocks.onTopicComplete).not.toHaveBeenCalled();
+  });
+
   it('counts a stale async-tool wait with no live child toward the bound', async () => {
     mocks.findById.mockResolvedValue(
       operation('waiting_for_async_tool', {

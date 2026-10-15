@@ -91,6 +91,7 @@ export const needsBudget = (task?: TaskItem | null, status?: string | null): boo
   // A candidate with no task yet will need one created and then dispatched.
   if (task === undefined) return true;
   if (task === null) return false;
+  if (task.workflowCategory === 'done' || task.workflowCategory === 'in_review') return false;
   // A failure the coordinator can retry spends money too.
   const resolved = status ?? task.status;
   if (resolved === 'paused') {
@@ -284,7 +285,8 @@ export const decideNextMove = ({
   // old single-node frontier made them: the running node stayed eligible, was
   // re-picked every tick, and reported `waiting_external`, which ends the
   // advance before anything behind it is even considered.
-  const statusOf = (task: TaskItem): string => statusById?.get(task.id) ?? task.status;
+  const statusOf = (task: TaskItem): string =>
+    task.workflowCategory === 'done' ? 'completed' : (statusById?.get(task.id) ?? task.status);
 
   const inFlight = graph.nodes.filter((node) => {
     const task = tasksById.get(node.taskId ?? '');
@@ -299,7 +301,12 @@ export const decideNextMove = ({
     if (candidate.blockedBy.length > 0) continue;
 
     const task = candidate.node.taskId ? tasksById.get(candidate.node.taskId) : undefined;
-    if (isInFlight(task, task ? statusOf(task) : null)) {
+    if (
+      isInFlight(task, task ? statusOf(task) : null) ||
+      (task &&
+        task.workflowCategory !== 'done' &&
+        (task.workflowCategory === 'in_review' || statusOf(task) === 'completed'))
+    ) {
       waitingOn ??= { node: candidate.node, task: task! };
       continue;
     }
@@ -516,12 +523,22 @@ const decideForTask = (
   graph: GoalGraphSnapshot,
   capacity = true,
 ): CandidateMove => {
-  if (status === 'completed') {
+  if (task.workflowCategory === 'done') {
     return {
       ...base,
       branch: 'consume_completed',
       message: `Task ${task.identifier} completed`,
       outcome: 'advanced',
+    };
+  }
+
+  if (task.workflowCategory === 'in_review' || status === 'completed') {
+    return {
+      ...base,
+      branch: 'task_running',
+      message: `Issue ${task.identifier} is waiting for review`,
+      outcome: 'waiting_external',
+      taskId: task.id,
     };
   }
 

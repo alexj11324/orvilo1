@@ -101,10 +101,10 @@ export class FlatListBuilder {
           });
 
           // Check if tasks have different agentIds (groupTasks) or same agentId (tasks)
-          const taskAgentIds = new Set(
+          const assigneeAgentIds = new Set(
             taskChildren.map((childId) => this.messageMap.get(childId)?.agentId).filter(Boolean),
           );
-          const isGroupTasks = taskAgentIds.size > 1;
+          const isGroupTasks = assigneeAgentIds.size > 1;
 
           // Create appropriate virtual message based on agent diversity
           const tasksMessage = isGroupTasks

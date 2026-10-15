@@ -11,15 +11,23 @@ const mocks = vi.hoisted(() => ({
   model: vi.fn(),
   settings: vi.fn(),
   generate: vi.fn(),
+  orchestrator: vi.fn(),
+  exists: vi.fn(),
+  use: vi.fn(),
 }));
 vi.mock('@/server/services/providerBinding/execution', () => ({
   resolveOrviloProviderBinding: mocks.binding,
 }));
 vi.mock('@/database/models/agent', () => ({
   AgentModel: class {
+    existsById = mocks.exists;
+    getOrchestratorSourceAgentId = mocks.orchestrator;
     getAgentConfig = mocks.agent;
     getAgentModelConfig = mocks.model;
   },
+}));
+vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
+  assertCanUseWorkspaceAgent: mocks.use,
 }));
 vi.mock('@/database/models/user', () => ({
   UserModel: class {
@@ -35,11 +43,26 @@ vi.mock('@/server/services/aiGeneration', () => ({
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.agent.mockResolvedValue({ agencyConfig: { heterogeneousProvider: { type: 'codex' } } });
+  mocks.exists.mockResolvedValue(true);
   mocks.settings.mockResolvedValue({
     systemAgent: { expertise: { model: 'fallback', provider: 'openai' } },
   });
 });
 describe('optional builtin work (#623)', () => {
+  it('uses the selected CLI Agent for task intent without reading a server model', async () => {
+    await expect(
+      resolveLightweightJudgment({} as never, 'user', 'goal', 'codex', 'ws'),
+    ).resolves.toEqual({ binding: { agentId: 'codex', allowEnvFallback: false } });
+    expect(mocks.binding).not.toHaveBeenCalled();
+    expect(mocks.model).not.toHaveBeenCalled();
+    expect(mocks.settings).not.toHaveBeenCalled();
+  });
+  it('uses the configured Orchestrator for unassigned task intent', async () => {
+    mocks.orchestrator.mockResolvedValue('orchestrator');
+    await expect(resolveLightweightJudgment({} as never, 'user', 'goal')).resolves.toEqual({
+      binding: { agentId: 'orchestrator', allowEnvFallback: false },
+    });
+  });
   it('reports a stable precondition without invoking a model for intent', async () => {
     await expect(
       new TaskIntentService({} as never, 'user').analyze({ instruction: 'Ship it' }),

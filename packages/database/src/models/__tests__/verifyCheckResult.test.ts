@@ -286,6 +286,135 @@ describe('VerifyCheckResultModel', () => {
     );
   });
 
+  it('accepts exactly one concurrent reviewer verdict for the assigned check', async () => {
+    const model = new VerifyCheckResultModel(serverDB, userId);
+    const check = await model.create({
+      checkItemId: 'review-check',
+      verifierType: 'agent',
+      verifyRunId,
+      verifierOperationId: operationId,
+    });
+    const receipts = await Promise.all([
+      model.recordReviewerVerdict(verifyRunId, 'review-check', operationId, {
+        status: 'passed',
+        verdict: 'passed',
+      }),
+      model.recordReviewerVerdict(verifyRunId, 'review-check', operationId, {
+        status: 'passed',
+        verdict: 'passed',
+      }),
+    ]);
+    expect(receipts.sort()).toEqual([false, true]);
+    await expect(
+      model.recordReviewerVerdict(verifyRunId, 'review-check', operationId, {
+        status: 'failed',
+        verdict: 'failed',
+      }),
+    ).resolves.toBe(false);
+    expect(await model.findById(check.id)).toMatchObject({ status: 'passed', verdict: 'passed' });
+  });
+
+  it('never overwrites an existing manual decision or a check owned by another reviewer', async () => {
+    const model = new VerifyCheckResultModel(serverDB, userId);
+    const check = await model.create({
+      checkItemId: 'manual-check',
+      verifierType: 'agent',
+      verifyRunId,
+      verifierOperationId: operationId,
+      userDecision: 'accepted',
+      status: 'passed',
+    });
+    await expect(
+      model.recordReviewerVerdict(verifyRunId, 'manual-check', operationId, {
+        status: 'failed',
+        verdict: 'failed',
+      }),
+    ).resolves.toBe(false);
+    expect(await model.findById(check.id)).toMatchObject({
+      status: 'passed',
+      userDecision: 'accepted',
+      verdict: null,
+    });
+    await model.create({
+      checkItemId: 'other-check',
+      verifierType: 'agent',
+      verifyRunId,
+      verifierOperationId: operationId,
+    });
+    await expect(
+      model.recordReviewerVerdict(verifyRunId, 'other-check', 'unassigned-operation', {
+        status: 'passed',
+        verdict: 'passed',
+      }),
+    ).resolves.toBe(false);
+    await expect(
+      new VerifyCheckResultModel(serverDB, 'someone-else').recordReviewerVerdict(
+        verifyRunId,
+        'other-check',
+        operationId,
+        { status: 'passed', verdict: 'passed' },
+      ),
+    ).resolves.toBe(false);
+  });
+
+  it('preserves aggregate acceptance made before the pending check was created', async () => {
+    const model = new VerifyCheckResultModel(serverDB, userId);
+    await new VerifyRunModel(serverDB, userId).setDecision(verifyRunId, 'accept');
+    const check = await model.create({
+      checkItemId: 'late-check',
+      verifierType: 'agent',
+      verifyRunId,
+      verifierOperationId: operationId,
+    });
+    await expect(
+      model.recordReviewerVerdict(verifyRunId, 'late-check', operationId, {
+        status: 'failed',
+        verdict: 'failed',
+      }),
+    ).resolves.toBe(false);
+    expect(await model.findById(check.id)).toMatchObject({
+      verdict: null,
+      userDecision: null,
+      status: 'pending',
+    });
+    expect((await new VerifyRunModel(serverDB, userId).findById(verifyRunId))?.userDecision).toBe(
+      'accept',
+    );
+  });
+
+  it('requires the provisional reviewer operation binding before its FK is linked', async () => {
+    const model = new VerifyCheckResultModel(serverDB, userId);
+    await model.create({ checkItemId: 'unbound-check', verifierType: 'agent', verifyRunId });
+    await expect(
+      model.recordReviewerVerdict(verifyRunId, 'unbound-check', operationId, {
+        status: 'passed',
+        verdict: 'passed',
+      }),
+    ).resolves.toBe(false);
+    const check = await model.create({
+      checkItemId: 'provisional-check',
+      verifierType: 'agent',
+      verifyRunId,
+      metadata: { reviewerOperationId: operationId },
+    });
+    await expect(
+      model.recordReviewerVerdict(verifyRunId, 'provisional-check', 'unassigned-operation', {
+        status: 'passed',
+        verdict: 'passed',
+      }),
+    ).resolves.toBe(false);
+    await expect(
+      model.recordReviewerVerdict(verifyRunId, 'provisional-check', operationId, {
+        status: 'passed',
+        verdict: 'passed',
+      }),
+    ).resolves.toBe(true);
+    expect(await model.findById(check.id)).toMatchObject({
+      verdict: 'passed',
+      verifierOperationId: operationId,
+    });
+  });
+
   it('updates a result by its stable (verifyRunId, checkItemId) key', async () => {
     const model = new VerifyCheckResultModel(serverDB, userId);
     await model.create({ checkItemId: 'a', checkItemIndex: 0, verifierType: 'llm', verifyRunId });

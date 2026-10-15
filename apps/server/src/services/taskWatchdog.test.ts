@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   updateStatusIfReservation: vi.fn(),
 }));
 
+vi.mock('./task/review', () => ({ sweepIssueReviews: vi.fn() }));
 vi.mock('@/database/models/brief', () => ({
   BriefModel: vi.fn(function () {
     return { create: mocks.briefCreate };

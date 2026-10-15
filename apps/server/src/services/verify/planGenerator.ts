@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { TRACING_SCENARIOS, VERIFY_INSTRUCTION_FILE_TYPE } from '@orvilo/const';
 import { HOLISTIC_CHECK_TITLE, isProgrammaticTestCheck } from '@orvilo/const/verify';
 import type { TracingOptions } from '@orvilo/llm-generation-tracing';
@@ -20,6 +19,7 @@ import type { VerifyCriterionItem } from '@/database/schemas/verify';
 import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 
+import { resolveIssueReviewer } from './reviewerAgent';
 import { RawGeneratedCriteriaSchema } from './schema';
 
 const log = debug('orvilo-server:verify-plan-generator');
@@ -40,13 +40,11 @@ export interface GeneratePlanParams {
    */
   holisticFallback?: boolean;
   maxAiCriteria?: number;
-  /** Required only when `enableAiGeneration` is true. */
-  modelConfig?: { model: string; provider: string };
   operationId: string;
   /** One-sentence acceptance the holistic check verifies against (falls back to `goal`). */
   requirement?: string;
   /** Preferred ACP binding for the criteria-generation judgment. */
-  verifierAgentId?: string | null;
+  reviewerAgentId?: string;
   /** Ad-hoc criteria mounted on the agent (`agencyConfig.verifyCriteriaIds`). */
   verifyCriteriaIds?: string[];
   /** Reusable rubric mounted on the agent (`agencyConfig.verifyRubricId`). */
@@ -136,6 +134,7 @@ const criterionToCheckItem = (
 export class VerifyPlanGeneratorService {
   private readonly db: OrviloDatabase;
   private readonly userId: string;
+  private readonly workspaceId?: string;
   private readonly criterionModel: VerifyCriterionModel;
   private readonly rubricModel: VerifyRubricModel;
   private readonly runModel: VerifyRunModel;
@@ -156,6 +155,7 @@ export class VerifyPlanGeneratorService {
   ) {
     this.db = db;
     this.userId = userId;
+    this.workspaceId = workspaceId;
     this.callerAgentVisibility = callerAgentVisibility;
     this.criterionModel = new VerifyCriterionModel(db, userId, workspaceId);
     this.rubricModel = new VerifyRubricModel(db, userId, workspaceId);
@@ -174,23 +174,33 @@ export class VerifyPlanGeneratorService {
     context?: string;
     goal: string;
     maxCriteria?: number;
-    modelConfig: { model: string; provider: string };
+    taskId: string;
   }): Promise<CriterionDraft[]> {
+    const reviewerAgentId = await resolveIssueReviewer(
+      this.db,
+      this.userId,
+      params.taskId,
+      this.workspaceId,
+    );
     const maxCriteria = params.maxCriteria ?? DEFAULT_MAX_AI_CRITERIA;
-    const raw = await new AiGenerationService(this.db, this.userId).generateObject(
+    const raw = await new AiGenerationService(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).generateObject(
       {
-        ...chainVerifyPlan({
+        messages: chainVerifyPlan({
           context: params.context,
           goal: params.goal,
           maxCriteria,
-        }),
-        ...params.modelConfig,
+        }).messages.map((message) => ({ ...message, role: 'user' as const })),
         schema: GENERATED_CRITERIA_JSON_SCHEMA,
         thinking: { type: 'disabled' },
       },
       {
         judgment: {
-          binding: { slug: BUILTIN_AGENT_SLUGS.verifyAgent },
+          binding: { agentId: reviewerAgentId, allowEnvFallback: false },
+          taskId: params.taskId,
           purpose: 'verify.planGen',
         },
         kind: 'judgment',
@@ -291,16 +301,16 @@ export class VerifyPlanGeneratorService {
     }
 
     // 3. AI-generate complementary criteria (the "auto-create verify" path).
-    if (params.enableAiGeneration && params.modelConfig) {
+    // A plan can be prepared before a reviewer is selected; completion still requires one.
+    if (params.enableAiGeneration && params.reviewerAgentId) {
       try {
         const generated = await this.generateCriteriaWithAi({
           context: params.context,
           existingTitles: items.map((i) => i.title),
           goal: params.goal,
           maxCriteria: params.maxAiCriteria ?? DEFAULT_MAX_AI_CRITERIA,
-          modelConfig: params.modelConfig,
           operationId: params.operationId,
-          verifierAgentId: params.verifierAgentId,
+          reviewerAgentId: params.reviewerAgentId,
         });
         for (const item of generated) {
           items.push({ ...item, index: items.length });
@@ -331,9 +341,8 @@ export class VerifyPlanGeneratorService {
     existingTitles: string[];
     goal: string;
     maxCriteria: number;
-    modelConfig: { model: string; provider: string };
     operationId: string;
-    verifierAgentId?: string | null;
+    reviewerAgentId: string;
   }): Promise<VerifyCheckItem[]> {
     const chain = chainVerifyPlan({
       context: params.context,
@@ -342,20 +351,18 @@ export class VerifyPlanGeneratorService {
       maxCriteria: params.maxCriteria,
     });
 
-    const ai = new AiGenerationService(this.db, this.userId);
+    const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
     const raw = await ai.generateObject(
       {
-        ...chain,
-        model: params.modelConfig.model,
-        provider: params.modelConfig.provider,
+        messages: chain.messages.map((message) => ({ ...message, role: 'user' as const })),
         schema: GENERATED_CRITERIA_JSON_SCHEMA,
         thinking: { type: 'disabled' },
       },
       {
         judgment: {
           binding: {
-            agentId: params.verifierAgentId,
-            slug: BUILTIN_AGENT_SLUGS.verifyAgent,
+            agentId: params.reviewerAgentId,
+            allowEnvFallback: false,
           },
           parentOperationId: params.operationId,
           purpose: 'verify.planGen',

@@ -16,6 +16,7 @@ const api = vi.hoisted(() => ({
   contractContext: vi.fn(),
   confirmModal: vi.fn((options: { onOk: () => void }) => options.onOk()),
   runMutation: vi.fn(),
+  canEdit: true,
 }));
 
 vi.mock('@/features/HeterogeneousAgent/builtinHarness', async (importOriginal) => ({
@@ -37,7 +38,21 @@ vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   confirmModal: api.confirmModal,
 }));
-vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ allowed: true }) }));
+vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ allowed: api.canEdit }) }));
+vi.mock('../features/ReviewerAgentSelector', () => ({
+  ReviewerAgentSelector: ({
+    currentAgentId,
+    children,
+  }: {
+    currentAgentId?: string | null;
+    children: ReactNode;
+  }) =>
+    createElement(
+      'div',
+      { 'data-testid': 'reviewer-picker', 'data-current-agent-id': currentAgentId ?? '' },
+      children,
+    ),
+}));
 vi.mock('@/features/ResourcePermission/useResourceAccess', () => ({
   useResourceAccess: () => api.access,
 }));
@@ -133,6 +148,7 @@ describe('Issue execution recovery', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     api.access = { canUseResource: true, isAccessResolved: true };
+    api.canEdit = true;
     api.runMutation.mockResolvedValue({ success: true });
     seedTask();
   });
@@ -186,6 +202,54 @@ describe('Issue execution recovery', () => {
     },
   );
 
+  it.each([null, 'pi-reviewer'])(
+    'shows review-required waiting with reviewer %s',
+    (reviewerAgentId) => {
+      seedTask({
+        status: 'completed',
+        dispatchPhase: 'succeeded',
+        workflowCategory: 'in_review',
+        parkedReason: 'review_required',
+        reviewerAgentId,
+        error: 'Reviewer cannot mount the acceptance submit tool',
+      });
+      renderExecution();
+
+      expect(screen.getByRole('status')).toHaveTextContent('taskDetail.review.waitingReviewer');
+      expect(
+        screen.getByText('Reviewer cannot mount the acceptance submit tool'),
+      ).toBeInTheDocument();
+      expect(screen.getByTestId('reviewer-picker')).toHaveAttribute(
+        'data-current-agent-id',
+        reviewerAgentId ?? '',
+      );
+      expect(
+        screen.getByRole('button', {
+          name: reviewerAgentId
+            ? 'taskDetail.property.changeReviewer'
+            : 'taskDetail.property.addReviewer',
+        }),
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId('task-execution')).not.toBeInTheDocument();
+      expect(api.runMutation).not.toHaveBeenCalled();
+    },
+  );
+
+  it('keeps review-required waiting and its error visible without edit controls for read-only viewers', () => {
+    api.canEdit = false;
+    seedTask({
+      parkedReason: 'review_required',
+      reviewerAgentId: 'pi-reviewer',
+      error: 'Reviewer cannot mount the acceptance submit tool',
+    });
+    renderExecution();
+    expect(screen.getByRole('status')).toHaveTextContent('taskDetail.review.waitingReviewer');
+    expect(
+      screen.getByText('Reviewer cannot mount the acceptance submit tool'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
   it('does not run when the pending-contract-edits confirmation is declined', async () => {
     api.contractContext.mockResolvedValue({
       data: { pendingConstraintEdits: true, contract: { revision: 2 } },
@@ -234,6 +298,7 @@ describe('Issue execution recovery', () => {
 describe('Issue header run control', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    api.canEdit = true;
     seedTask();
   });
 

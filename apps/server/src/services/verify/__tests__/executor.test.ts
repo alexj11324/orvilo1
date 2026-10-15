@@ -47,11 +47,13 @@ vi.mock('@/database/models/verifyCheckResult', () => ({
 }));
 vi.mock('@/database/models/verifyRun', () => ({
   VerifyRunModel: vi.fn(function () {
-    return { ensureForOperation: mocks.runEnsureForOperation };
+    return {
+      ensureForOperation: mocks.runEnsureForOperation,
+      findByOperation: mocks.runEnsureForOperation,
+    };
   }),
 }));
-vi.mock('@/server/services/aiGeneration', async (importOriginal) => ({
-  ...((await importOriginal()) as Record<string, unknown>),
+vi.mock('@/server/services/aiGeneration', () => ({
   AiGenerationService: vi.fn(function () {
     return { generateObject: mocks.aiGenerateObject };
   }),
@@ -105,12 +107,16 @@ describe('VerifyExecutorService', () => {
       ],
       planConfirmedAt: new Date(),
     });
-    const runVerifierAgent = vi.fn().mockResolvedValue({ verifierOperationId: 'verifier-op-1' });
+    const runVerifierAgent = vi.fn().mockResolvedValue({
+      verifierOperationId: 'verifier-op-1',
+      initiatingMessage: 'Inspect the output',
+      waitingReason: 'Reviewer is queued',
+    });
 
     await new VerifyExecutorService({} as never, 'user-1').execute({
       deliverable: 'story',
       goal: 'write a story',
-      modelConfig: { model: 'model', provider: 'provider' },
+      reviewerAgentId: 'reviewer-1',
       operationId: 'builder-op-1',
       runVerifierAgent,
     });
@@ -124,7 +130,11 @@ describe('VerifyExecutorService', () => {
     expect(mocks.resultUpdateByCheckItem).toHaveBeenCalledWith(
       'run-1',
       'word-count',
-      expect.objectContaining({ status: 'running', verifierOperationId: 'verifier-op-1' }),
+      expect.objectContaining({
+        status: 'running',
+        verifierOperationId: 'verifier-op-1',
+        metadata: { initiatingMessage: 'Inspect the output', waitingReason: 'Reviewer is queued' },
+      }),
     );
   });
 
@@ -151,7 +161,7 @@ describe('VerifyExecutorService', () => {
     await new VerifyExecutorService({} as never, 'user-1').execute({
       deliverable: 'document link',
       goal: 'verify document',
-      modelConfig: { model: 'model', provider: 'provider' },
+      reviewerAgentId: 'reviewer-1',
       operationId: 'builder-op-doc',
       runVerifierAgent,
     });
@@ -201,7 +211,7 @@ describe('VerifyExecutorService', () => {
     await new VerifyExecutorService({} as never, 'user-1').execute({
       deliverable: 'stored transcript',
       goal: 'verify the complete CLI output',
-      modelConfig: { model: 'model', provider: 'provider' },
+      reviewerAgentId: 'reviewer-1',
       operationId: 'builder-op-text',
       runVerifierAgent,
     });
@@ -220,91 +230,78 @@ describe('VerifyExecutorService', () => {
     expect(mocks.aiGenerateObject).not.toHaveBeenCalled();
   });
 
-  it('hydrates document evidence content before sending it to the judge', async () => {
+  it('hydrates document evidence before giving it to the reviewer', async () => {
     mocks.runEnsureForOperation.mockResolvedValue({
       id: 'run-1',
-      plan: [
-        {
-          id: 'document-evidence',
-          index: 0,
-          required: true,
-          title: 'Supplier list',
-          verifierType: 'llm',
-        },
-      ],
       planConfirmedAt: new Date(),
+      plan: [{ id: 'doc', index: 0, title: 'Document', required: true, verifierType: 'llm' }],
     });
+    mocks.resultListByRun.mockReset().mockResolvedValue([]);
+    mocks.documentFindByIds.mockResolvedValue([
+      { id: 'document-1', content: 'captured document content' },
+    ]);
     mocks.evidenceListByRun.mockResolvedValue([
       {
-        checkItemId: 'document-evidence',
-        content: null,
-        documentId: 'docs_123',
-        type: 'markdown',
+        checkItemId: 'doc',
+        documentId: 'document-1',
+        description: 'Document evidence',
+        type: 'text',
       },
     ]);
-    mocks.documentFindByIds.mockResolvedValue([
-      { content: '# Suppliers\n- Vendor A: $100', id: 'docs_123' },
-    ]);
-    mocks.resultListByRun.mockReset().mockResolvedValue([]);
-    mocks.aiGenerateObject.mockResolvedValue({
-      confidence: 1,
-      evidence: 'supplier and quote listed',
-      reasoning: 'document contains both fields',
-      verdict: 'passed',
-    });
-
+    const runVerifierAgent = vi.fn().mockResolvedValue({ verifierOperationId: 'review-op' });
     await new VerifyExecutorService({} as never, 'user-1').execute({
-      deliverable: 'supplier report',
-      goal: 'find supplier quotes',
-      modelConfig: { model: 'model', provider: 'provider' },
-      operationId: 'builder-op-doc',
+      operationId: 'op-1',
+      reviewerAgentId: 'reviewer-1',
+      goal: 'ship',
+      deliverable: 'done',
+      runVerifierAgent,
     });
-
-    expect(mocks.documentFindByIds).toHaveBeenCalledWith(['docs_123']);
-    expect(mocks.aiGenerateObject.mock.calls[0][0].messages[1].content).toContain(
-      '# Suppliers\n- Vendor A: $100',
+    expect(runVerifierAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        evidence: [expect.objectContaining({ content: 'captured document content' })],
+      }),
     );
+    expect(mocks.aiGenerateObject).not.toHaveBeenCalled();
   });
 
-  it('falls back to single-item judging when a batch omits a check id', async () => {
+  it('runs every text check in a separate reviewer session using the result tool', async () => {
     mocks.runEnsureForOperation.mockResolvedValue({
       id: 'run-1',
-      plan: [
-        { id: 'a', index: 0, required: true, title: 'A', verifierType: 'llm' },
-        { id: 'b', index: 1, required: true, title: 'B', verifierType: 'llm' },
-      ],
       planConfirmedAt: new Date(),
+      plan: ['a', 'b'].map((id) => ({
+        id,
+        index: 0,
+        title: id,
+        required: true,
+        verifierType: 'llm',
+      })),
     });
     mocks.resultListByRun.mockReset().mockResolvedValue([]);
-    mocks.aiGenerateObject
-      .mockResolvedValueOnce({
-        verdicts: [
-          { checkItemId: 'a', confidence: 1, evidence: 'ok', reasoning: 'ok', verdict: 'passed' },
-        ],
-      })
-      .mockResolvedValueOnce({
-        confidence: 1,
-        evidence: 'ok',
-        reasoning: 'ok',
-        verdict: 'passed',
-      });
-
+    const runVerifierAgent = vi.fn().mockImplementation(async ({ checkItem }) => ({
+      verifierOperationId: `review-${checkItem.id}`,
+      initiatingMessage: `Review ${checkItem.id}`,
+    }));
     await new VerifyExecutorService({} as never, 'user-1').execute({
-      deliverable: 'done',
-      goal: 'ship',
-      modelConfig: { model: 'model', provider: 'provider' },
       operationId: 'op-1',
+      reviewerAgentId: 'reviewer-1',
+      goal: 'ship',
+      deliverable: 'done',
+      runVerifierAgent,
     });
-
-    expect(mocks.aiGenerateObject).toHaveBeenCalledTimes(2);
-    expect(mocks.resultUpdateByCheckItem).toHaveBeenCalledWith(
-      'run-1',
-      'b',
-      expect.objectContaining({ status: 'passed' }),
-    );
+    expect(runVerifierAgent).toHaveBeenCalledTimes(2);
+    for (const id of ['a', 'b'])
+      expect(mocks.resultUpdateByCheckItem).toHaveBeenCalledWith(
+        'run-1',
+        id,
+        expect.objectContaining({
+          verifierOperationId: `review-${id}`,
+          metadata: expect.objectContaining({ initiatingMessage: `Review ${id}` }),
+        }),
+      );
+    expect(mocks.aiGenerateObject).not.toHaveBeenCalled();
   });
 
-  it('loads screenshot content into a vision-model message', async () => {
+  it('routes visual evidence to the saved reviewer without a model catalog lookup', async () => {
     mocks.modelProperty.mockResolvedValue({ vision: true });
     mocks.runEnsureForOperation.mockResolvedValue({
       id: 'run-1',
@@ -338,17 +335,138 @@ describe('VerifyExecutorService', () => {
       verdict: 'passed',
     });
 
+    const runVerifierAgent = vi.fn().mockResolvedValue({ verifierOperationId: 'visual-review' });
     await new VerifyExecutorService({} as never, 'user-1').execute({
       deliverable: 'done',
       goal: 'ship',
-      modelConfig: { model: 'vision-model', provider: 'provider' },
+      reviewerAgentId: 'reviewer-1',
       operationId: 'op-1',
+      runVerifierAgent,
     });
 
-    const request = mocks.aiGenerateObject.mock.calls[0][0];
-    expect(request.messages[1].content).toContainEqual({
-      image_url: { detail: 'high', url: 'https://files.example/image.png' },
-      type: 'image_url',
+    expect(runVerifierAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        evidence: [expect.objectContaining({ fileId: 'file-1', type: 'screenshot' })],
+      }),
+    );
+    expect(mocks.aiGenerateObject).not.toHaveBeenCalled();
+    expect(mocks.modelProperty).not.toHaveBeenCalled();
+  });
+  it('does not start another check after a person accepted the pending result', async () => {
+    mocks.runEnsureForOperation.mockResolvedValue({
+      id: 'run-1',
+      planConfirmedAt: new Date(),
+      plan: [
+        {
+          id: 'manual',
+          index: 0,
+          required: true,
+          title: 'Accepted pending',
+          verifierType: 'agent',
+        },
+      ],
     });
+    mocks.resultListByRun
+      .mockReset()
+      .mockResolvedValue([{ checkItemId: 'manual', status: 'running', userDecision: 'accepted' }]);
+    const runVerifierAgent = vi.fn();
+    await new VerifyExecutorService({} as never, 'user-1').execute({
+      operationId: 'op-1',
+      reviewerAgentId: 'reviewer-1',
+      goal: 'ship',
+      deliverable: 'done',
+      runVerifierAgent,
+    });
+    expect(runVerifierAgent).not.toHaveBeenCalled();
+    expect(mocks.aiGenerateObject).not.toHaveBeenCalled();
+  });
+  it('preserves completed checks when a partially completed plan is reclaimed', async () => {
+    mocks.runEnsureForOperation.mockResolvedValue({
+      id: 'run-1',
+      planConfirmedAt: new Date(),
+      plan: [
+        {
+          id: 'finished',
+          index: 0,
+          required: true,
+          title: 'Already passed',
+          verifierType: 'agent',
+        },
+      ],
+    });
+    mocks.resultListByRun
+      .mockReset()
+      .mockResolvedValue([{ checkItemId: 'finished', status: 'passed', verdict: 'passed' }]);
+    const runVerifierAgent = vi.fn();
+    await new VerifyExecutorService({} as never, 'user-1').execute({
+      operationId: 'op-1',
+      reviewerAgentId: 'reviewer-1',
+      goal: 'ship',
+      deliverable: 'done',
+      runVerifierAgent,
+    });
+    expect(runVerifierAgent).not.toHaveBeenCalled();
+    expect(mocks.resultUpdateByCheckItem).not.toHaveBeenCalled();
+  });
+  it('does not materialize or launch checks after an aggregate delivery decision', async () => {
+    mocks.runEnsureForOperation.mockResolvedValue({
+      id: 'run-1',
+      userDecision: 'accept',
+      planConfirmedAt: new Date(),
+      plan: [
+        { id: 'not-yet-created', index: 0, title: 'Check', required: true, verifierType: 'llm' },
+      ],
+    });
+    const runVerifierAgent = vi.fn();
+    await new VerifyExecutorService({} as never, 'user-1').execute({
+      operationId: 'op-1',
+      reviewerAgentId: 'reviewer-1',
+      goal: 'ship',
+      deliverable: 'done',
+      runVerifierAgent,
+    });
+    expect(mocks.resultCreateMany).not.toHaveBeenCalled();
+    expect(runVerifierAgent).not.toHaveBeenCalled();
+  });
+  it('binds a fresh retry after an earlier reviewer error without a verdict', async () => {
+    mocks.runEnsureForOperation.mockResolvedValue({
+      id: 'run-1',
+      planConfirmedAt: new Date(),
+      plan: [
+        { id: 'retry', index: 0, title: 'Retry check', required: true, verifierType: 'agent' },
+      ],
+    });
+    mocks.resultListByRun.mockReset().mockResolvedValue([
+      {
+        checkItemId: 'retry',
+        status: 'errored',
+        verdict: null,
+        verifierOperationId: 'old-op',
+        completedAt: new Date(),
+        toulmin: { limitation: 'prior error' },
+      },
+    ]);
+    const runVerifierAgent = vi.fn().mockResolvedValue({
+      verifierOperationId: 'new-op',
+      initiatingMessage: 'Fresh review request',
+    });
+    await new VerifyExecutorService({} as never, 'user-1').execute({
+      operationId: 'op-1',
+      reviewerAgentId: 'reviewer-1',
+      goal: 'ship',
+      deliverable: 'done',
+      runVerifierAgent,
+    });
+    expect(mocks.resultUpdateByCheckItem).toHaveBeenCalledWith(
+      'run-1',
+      'retry',
+      expect.objectContaining({
+        verifierOperationId: 'new-op',
+        status: 'running',
+        completedAt: null,
+        toulmin: null,
+        suggestion: null,
+      }),
+    );
   });
 });

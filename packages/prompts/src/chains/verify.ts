@@ -1,9 +1,7 @@
-import type { VerifyCheckItem, VerifyEvidenceType } from '@orvilo/types';
+import type { VerifyEvidenceType } from '@orvilo/types';
 
 /** Bump when the plan-gen prompt meaningfully changes (tracing partition key). */
 export const VERIFY_PLAN_PROMPT_VERSION = 'v3';
-/** Bump when the judge prompt meaningfully changes. */
-export const VERIFY_JUDGE_PROMPT_VERSION = 'v2';
 /** Bump when the report prompt meaningfully changes. */
 export const VERIFY_REPORT_PROMPT_VERSION = 'v1';
 /**
@@ -35,7 +33,6 @@ export const VERIFY_EVIDENCE_MODALITIES = [
   'video',
 ] as const;
 export const VERIFY_EVIDENCE_SCOPES = ['deliverable', 'run_evidence', 'task_artifacts'] as const;
-export const VERIFY_VERDICTS = ['passed', 'failed', 'uncertain'] as const;
 /**
  * `unjudgeable` is not a softer reject: it means no capture could ever settle
  * this check from the reviewer's side, because performing it requires acting on
@@ -93,50 +90,6 @@ export const GENERATED_CRITERIA_JSON_SCHEMA = {
     type: 'object' as const,
   },
   strict: true,
-};
-
-const toulminJsonProperties = {
-  confidence: { maximum: 1, minimum: 0, type: 'number' },
-  counterEvidence: { type: 'string' },
-  evidence: { type: 'string' },
-  limitation: { type: 'string' },
-  reasoning: { type: 'string' },
-  suggestion: { type: 'string' },
-  verdict: { enum: [...VERIFY_VERDICTS], type: 'string' },
-} as const;
-
-const toulminRequired = ['verdict', 'confidence', 'evidence', 'reasoning'];
-
-export const SINGLE_VERDICT_JSON_SCHEMA = {
-  name: 'verify_verdict',
-  schema: {
-    additionalProperties: false,
-    properties: { ...toulminJsonProperties },
-    required: toulminRequired,
-    type: 'object' as const,
-  },
-  strict: false,
-};
-
-export const BATCH_VERDICT_JSON_SCHEMA = {
-  name: 'verify_verdicts',
-  schema: {
-    additionalProperties: false,
-    properties: {
-      verdicts: {
-        items: {
-          additionalProperties: false,
-          properties: { checkItemId: { type: 'string' }, ...toulminJsonProperties },
-          required: ['checkItemId', ...toulminRequired],
-          type: 'object',
-        },
-        type: 'array',
-      },
-    },
-    required: ['verdicts'],
-    type: 'object' as const,
-  },
-  strict: false,
 };
 
 export const REPORT_NARRATIVE_JSON_SCHEMA = {
@@ -262,19 +215,6 @@ export interface JudgeEvidence {
   type: VerifyEvidenceType;
 }
 
-export interface JudgePromptInput {
-  /** The artifacts / agent output to judge against. */
-  deliverable: string;
-  goal: string;
-  /** Each item carries its resolved judging instruction + any captured evidence. */
-  items: (Pick<VerifyCheckItem, 'id' | 'title'> & {
-    evidence?: JudgeEvidence[];
-    instruction?: string;
-  })[];
-  /** Single mode judges one item; batch mode judges all `items`. */
-  mode: 'single' | 'batch';
-}
-
 export const describeEvidence = (evidence: JudgeEvidence[] | undefined): string => {
   if (!evidence?.length) return '';
   const lines = evidence.map((e) => {
@@ -289,62 +229,6 @@ export const describeEvidence = (evidence: JudgeEvidence[] | undefined): string 
     return `  - (${e.type})${caption}${payload}`;
   });
   return `\nEvidence captured during the run:\n${lines.join('\n')}`;
-};
-
-const describeItem = (item: JudgePromptInput['items'][number]) => {
-  const instruction = item.instruction ? `\n${item.instruction}` : '';
-  return `${item.title}${instruction}${describeEvidence(item.evidence)}`;
-};
-
-export const chainVerifyJudge = ({ goal, deliverable, items, mode }: JudgePromptInput) => {
-  const system = [
-    'You are a rigorous delivery checker. Judge whether the deliverable satisfies each criterion using the Toulmin argument model.',
-    'For every criterion output:',
-    '- verdict: "passed" | "failed" | "uncertain" (the Claim).',
-    '- confidence: 0..1 (the Qualifier).',
-    '- evidence: the concrete data from the deliverable supporting your claim (the Data).',
-    '- reasoning: why that evidence supports the verdict (the Warrant).',
-    '- counterEvidence: evidence pointing the other way, if any (the Rebuttal).',
-    '- limitation: what you could not verify and why (the Rebuttal).',
-    '- suggestion: a concrete fix when the verdict is failed/uncertain.',
-    'Artifacts listed under "Evidence captured during the run" are primary Data only when their contents are attached or quoted. Never treat mere existence, a filename, or a caption as proof of what an artifact depicts.',
-    'Be skeptical: default to "uncertain" rather than "passed" when evidence is missing.',
-    mode === 'batch'
-      ? 'Return one verdict object per criterion, each tagged with its exact checkItemId.'
-      : 'Return a single verdict object for the one criterion below.',
-  ].join('\n');
-
-  const criteriaBlock =
-    mode === 'batch'
-      ? items.map((i) => `- [${i.id}] ${describeItem(i)}`).join('\n')
-      : describeItem(items[0]);
-
-  const user = [
-    `## Run goal\n${goal}`,
-    `\n## Criteria\n${criteriaBlock}`,
-    `\n## Deliverable\n${deliverable}`,
-  ].join('\n');
-
-  const visualEvidence =
-    mode === 'single' ? (items[0]?.evidence ?? []).filter((evidence) => evidence.accessUrl) : [];
-
-  return {
-    messages: [
-      { content: system, role: 'system' as const },
-      visualEvidence.length > 0
-        ? {
-            content: [
-              { text: user, type: 'text' as const },
-              ...visualEvidence.map((evidence) => ({
-                image_url: { detail: 'high' as const, url: evidence.accessUrl! },
-                type: 'image_url' as const,
-              })),
-            ],
-            role: 'user' as const,
-          }
-        : { content: user, role: 'user' as const },
-    ],
-  };
 };
 
 export interface ReportPromptItem {

@@ -43,12 +43,16 @@ describe('resolveAssignmentActivityCopy', () => {
   });
 
   it('reads the reviewer slot as a review ownership change', () => {
-    const reviewer = { avatar: null, id: 'user_carol', name: 'Carol', type: 'user' } as const;
+    const reviewer = { avatar: null, id: 'agent_carol', name: 'Carol', type: 'agent' } as const;
     expect(
       resolveAssignmentActivityCopy({ from: null, kind: 'reviewer', to: reviewer }).verbKey,
     ).toBe('taskDetail.activities.assignment.reviewerAssigned');
     expect(
       resolveAssignmentActivityCopy({ from: reviewer, kind: 'reviewer', to: null }).verbKey,
     ).toBe('taskDetail.activities.assignment.reviewerUnassigned');
+    expect(
+      resolveAssignmentActivityCopy({ from: reviewer, kind: 'reviewer', to: null })
+        .deletedTargetKey,
+    ).toBe('taskDetail.activities.assignment.deletedAgent');
   });
 });

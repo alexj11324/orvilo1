@@ -7,6 +7,7 @@ import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useTranslation } from 'react-i18next';
 
 import { confirmModal } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { type SidebarAgentItem } from '@/database/repositories/home';
@@ -28,12 +29,20 @@ import { blockedPickerTriggerStyle } from './pickerTriggerStyles';
 import { SimpleTooltip } from './SimpleTooltip';
 
 interface AssigneeAgentSelectorProps {
+  agentDisabledReasons?: Record<string, string>;
+  /** A specialized picker can supply the full server-authorized catalog. */
+  catalogAgents?: SidebarAgentItem[];
+  catalogError?: unknown;
+  catalogLoading?: boolean;
   children: ReactNode;
   /** Render the trigger as a real Button (the Issue rail's value cell). */
   control?: PickerControl;
   currentAgentId?: string | null;
+  defaultOpen?: boolean;
   disabled?: boolean;
-  onChange?: (agentId: string | null) => void;
+  label?: string;
+  onCatalogRetry?: () => void;
+  onChange?: (agentId: string | null, agent?: SidebarAgentItem) => void;
   /**
    * Running-task mode: instead of a bare assignee update, the pick routes
    * through `task.handoff` — an execution-ownership transfer that fences
@@ -60,10 +69,25 @@ const matchesSearch = (agent: SidebarAgentItem, query: string) =>
   );
 
 const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
-  ({ children, control, currentAgentId, disabled, onChange, onHandoff, taskIdentifier }) => {
+  ({
+    children,
+    catalogAgents,
+    catalogError,
+    catalogLoading,
+    agentDisabledReasons,
+    onCatalogRetry,
+    control,
+    currentAgentId,
+    defaultOpen,
+    disabled,
+    label,
+    onChange,
+    onHandoff,
+    taskIdentifier,
+  }) => {
     const { t } = useTranslation(['chat', 'common', 'topic']);
     const { allowed: canEditTask, reason } = usePermission('create_content');
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] = useState(defaultOpen ?? false);
     const [search, setSearch] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const listRef = useRef<HTMLDivElement>(null);
@@ -91,6 +115,7 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
     const builtinOffered = useBuiltinHarnessOffered();
 
     const workspaceAgents = useMemo<SidebarAgentItem[]>(() => {
+      if (catalogAgents) return catalogAgents;
       const groupedItems = agentGroups.flatMap((group) => group.items);
       const available = keep([...pinnedAgents, ...groupedItems, ...ungroupedAgents]).filter(
         (agent) => agent.type === 'agent',
@@ -114,6 +139,7 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
 
       return available;
     }, [
+      catalogAgents,
       pinnedAgents,
       agentGroups,
       ungroupedAgents,
@@ -125,11 +151,12 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
     ]);
 
     const privateAgents = useMemo<SidebarAgentItem[]>(() => {
+      if (catalogLoading !== undefined) return [];
       const groupedItems = privateAgentGroups.flatMap((group) => group.items);
       return keep([...privatePinnedAgents, ...groupedItems, ...privateUngroupedAgents]).filter(
         (agent) => agent.type === 'agent',
       );
-    }, [keep, privateAgentGroups, privatePinnedAgents, privateUngroupedAgents]);
+    }, [catalogLoading, keep, privateAgentGroups, privatePinnedAgents, privateUngroupedAgents]);
 
     const query = search.trim().toLowerCase();
     const filteredPrivate = useMemo(
@@ -169,11 +196,16 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
 
     const handleAgentChange = useCallback(
       (agentId: string | null, agent?: SidebarAgentItem) => {
-        if (!canEditTask || agentId === (currentAgentId ?? null)) return;
+        if (
+          !canEditTask ||
+          (agentId && agentDisabledReasons?.[agentId]) ||
+          agentId === (currentAgentId ?? null)
+        )
+          return;
         setOpen(false);
         setSearch('');
         if (onChange) {
-          onChange(agentId);
+          onChange(agentId, agent);
           return;
         }
         if (onHandoff) {
@@ -211,6 +243,7 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
       },
       [
         canEditTask,
+        agentDisabledReasons,
         currentAgentId,
         onChange,
         onHandoff,
@@ -267,7 +300,13 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
           key={option.key}
           onMouseEnter={() => setActiveIndex(optionIndex)}
         >
-          {option.kind === 'agent' ? (
+          {option.kind === 'agent' && agentDisabledReasons?.[option.agent.id] ? (
+            <NavItem
+              disabled
+              description={agentDisabledReasons[option.agent.id]}
+              title={agentDisplayName(option.agent, t('untitledAgent', { ns: 'chat' }))}
+            />
+          ) : option.kind === 'agent' ? (
             <AgentItem
               active={active}
               agent={option.agent}
@@ -303,11 +342,18 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
-          {...pickerTriggerRender(children, control, undefined, t('taskDetail.agent'))}
+          {...pickerTriggerRender(children, control, undefined, label ?? t('taskDetail.agent'))}
         />
         <PopoverContent align="start" className="w-65 gap-0 p-0">
           <Suspense fallback={<SkeletonList rows={6} />}>
-            {isAgentListInit ? (
+            {catalogError ? (
+              <div className="flex flex-col gap-2 p-3" role="alert">
+                <span className="text-sm">{t('taskDetail.reviewerPicker.loadFailed')}</span>
+                <Button size="sm" variant="outline" onClick={onCatalogRetry}>
+                  {t('taskDetail.reviewerPicker.reload')}
+                </Button>
+              </div>
+            ) : (catalogLoading !== undefined ? !catalogLoading : isAgentListInit) ? (
               <div className="flex flex-col" onClick={(event) => event.stopPropagation()}>
                 <Input
                   autoFocus
@@ -344,7 +390,7 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
                     )}
                     {filteredWorkspace.length > 0 && (
                       <>
-                        {hasPrivateAgents && (
+                        {hasPrivateAgents && catalogLoading === undefined && (
                           <div className={styles.sectionHeader}>
                             {t('taskManager.agentSelector.workspaceGroup', { ns: 'topic' })}
                           </div>

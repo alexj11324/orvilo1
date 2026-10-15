@@ -455,13 +455,13 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
           });
           if (!moved) return false;
           if (Object.keys(fieldPatch).length > 0) {
-            await taskService.update(task.identifier, { ...fieldPatch, ...anchors });
+            await updateTask(task.identifier, { ...fieldPatch, ...anchors });
           } else if (canReorderWithinGroup) {
             await taskService.update(task.identifier, anchors);
           }
           return true;
         }
-        await taskService.update(task.identifier, { ...fieldPatch, ...anchors });
+        await updateTask(task.identifier, { ...fieldPatch, ...anchors });
         return true;
       }
 

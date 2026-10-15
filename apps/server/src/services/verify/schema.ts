@@ -4,7 +4,6 @@ import {
   VERIFY_EVIDENCE_SCOPES,
   VERIFY_EVIDENCE_TYPES,
   VERIFY_ON_FAIL_ACTIONS,
-  VERIFY_VERDICTS,
   VERIFY_VERIFIER_TYPES,
 } from '@orvilo/prompts';
 import { z } from 'zod';
@@ -36,33 +35,6 @@ export const RawGeneratedCriteriaSchema = z.object({
 });
 
 export type RawGeneratedCriteria = z.infer<typeof RawGeneratedCriteriaSchema>;
-
-// ============================================
-// LLM Judge — Toulmin verdict for one or many check items
-// ============================================
-
-const toulminVerdictFields = {
-  confidence: z.number().min(0).max(1),
-  // `.nullish()` (null | undefined), not `.optional()`: the judge JSON schema is
-  // non-strict and lists these as optional, so the provider returns them as
-  // explicit `null` (not omitted). `.optional()` rejects null → whole parse fails.
-  counterEvidence: z.string().nullish(),
-  evidence: z.string().nullish(),
-  limitation: z.string().nullish(),
-  reasoning: z.string().nullish(),
-  suggestion: z.string().nullish(),
-  verdict: z.enum(VERIFY_VERDICTS),
-};
-
-/** Per-criterion judge output (1:1 — one generateObject per check item). */
-export const SingleVerdictSchema = z.object(toulminVerdictFields);
-export type SingleVerdict = z.infer<typeof SingleVerdictSchema>;
-
-/** Batch judge output — N verdicts keyed by stable check item id. */
-export const BatchVerdictSchema = z.object({
-  verdicts: z.array(z.object({ ...toulminVerdictFields, checkItemId: z.string() })),
-});
-export type BatchVerdict = z.infer<typeof BatchVerdictSchema>;
 
 // ============================================
 // Report — LLM narrative over a run's check results + evidence

@@ -799,7 +799,7 @@
   "savedViews.fields.ownerUserId": "负责人",
   "savedViews.fields.priority": "优先级",
   "savedViews.fields.projectId": "项目",
-  "savedViews.fields.reviewerUserId": "审核人",
+  "savedViews.fields.reviewerAgentId": "审核 Agent",
   "savedViews.fields.status": "状态",
   "savedViews.fields.subscribed": "已订阅",
   "savedViews.fields.teamId": "团队",

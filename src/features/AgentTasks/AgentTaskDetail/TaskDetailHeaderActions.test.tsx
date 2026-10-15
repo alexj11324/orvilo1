@@ -111,31 +111,34 @@ vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
 }));
 vi.mock('@/libs/swr', () => ({
   mutate: vi.fn(),
+  useClientDataSWRWithSync: () => ({ data: undefined }),
   useClientDataSWR: (key: unknown[] | null) => ({
     data: {
       data:
-        key?.[0] === 'project/teams'
-          ? [{ id: 'team-1', name: 'Engineering' }]
-          : key?.[0] === 'task:descriptionHistory'
-            ? {
-                current: { domainRevision: 3, editorData: null, instruction: 'Current contents' },
-                versions: [
-                  {
-                    authorUserId: null,
-                    captureSource: 'baseline',
-                    createdAt: new Date('2026-10-01'),
-                    domainRevision: 2,
-                    editorData: null,
-                    id: 'history-old',
-                    instruction: 'Older contents',
-                  },
-                ],
-              }
-            : key?.[0] === 'issue-resources'
-              ? mocks.resources
-              : key?.[0] === 'task:recurrence'
-                ? mocks.recurrence
-                : null,
+        key?.[0] === 'task/reviewer-agents'
+          ? [{ canReviewIssues: true, id: 'reviewer-1', name: 'Reviewer' }]
+          : key?.[0] === 'project/teams'
+            ? [{ id: 'team-1', name: 'Engineering' }]
+            : key?.[0] === 'task:descriptionHistory'
+              ? {
+                  current: { domainRevision: 3, editorData: null, instruction: 'Current contents' },
+                  versions: [
+                    {
+                      authorUserId: null,
+                      captureSource: 'baseline',
+                      createdAt: new Date('2026-10-01'),
+                      domainRevision: 2,
+                      editorData: null,
+                      id: 'history-old',
+                      instruction: 'Older contents',
+                    },
+                  ],
+                }
+              : key?.[0] === 'issue-resources'
+                ? mocks.resources
+                : key?.[0] === 'task:recurrence'
+                  ? mocks.recurrence
+                  : null,
     },
     mutate:
       key?.[0] === 'issue-resources'

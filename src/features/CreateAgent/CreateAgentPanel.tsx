@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import type { CreateAgentParams } from '@/services/agent';
 import {
   createOnboardingAgentOnce,
@@ -58,6 +59,7 @@ const CreateAgentPanel = ({
   const form = useAgentRuntimeForm({ builtinOnly, initialType, visibility: selectedVisibility });
   const createAgent = useAgentStore((s) => s.createAgent);
   const [name, setName] = useState('');
+  const [instructions, setInstructions] = useState('');
   const [nameTouched, setNameTouched] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<unknown>();
@@ -83,8 +85,24 @@ const CreateAgentPanel = ({
       if (!saved.current) {
         if (!intent.current) {
           const runtime = await form.prepare();
+          const provider = runtime.agencyConfig?.heterogeneousProvider;
+          const agentInstructions = instructions.trim();
           intent.current = {
-            config: { ...runtime, name: name.trim(), title: name.trim() },
+            config: {
+              ...runtime,
+              name: name.trim(),
+              title: name.trim(),
+              ...(agentInstructions
+                ? provider && provider.type !== 'orvilo'
+                  ? {
+                      agencyConfig: {
+                        ...runtime.agencyConfig,
+                        heterogeneousProvider: { ...provider, systemContext: agentInstructions },
+                      },
+                    }
+                  : { systemRole: agentInstructions }
+                : {}),
+            },
             groupId,
             visibility: selectedVisibility,
           };
@@ -189,6 +207,26 @@ const CreateAgentPanel = ({
           ) : (
             <span className="text-muted-foreground">{t('createAgent.visibility.personal')}</span>
           )}
+          <Field>
+            <FieldLabel htmlFor={`${fieldId}-instructions`}>
+              {t('createAgent.instructions')}
+            </FieldLabel>
+            <Button
+              disabled={locked}
+              size="sm"
+              type="button"
+              variant="ghost"
+              onClick={() => setInstructions(t('createAgent.reviewerStarter'))}
+            >
+              {t('createAgent.useReviewerStarter')}
+            </Button>
+            <Textarea
+              disabled={locked}
+              id={`${fieldId}-instructions`}
+              value={instructions}
+              onChange={(event) => setInstructions(event.target.value)}
+            />
+          </Field>
           {groupId && <p className="text-muted-foreground">{t('createAgent.categoryPreserved')}</p>}
         </CollapsibleContent>
       </Collapsible>

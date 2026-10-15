@@ -10,6 +10,7 @@ import {
   agents,
   briefs,
   documents,
+  notifications,
   tasks,
   teamMembers,
   teams,
@@ -94,6 +95,7 @@ const derivedStatus = async (id: string) => {
 
 beforeEach(async () => {
   await serverDB.delete(workspaces);
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: userId2 }]);
   // Project creation provisions a coordinator through Prime inheritance.
@@ -102,6 +104,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await serverDB.delete(workspaces);
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
 });
 
@@ -467,80 +470,6 @@ describe('TaskModel', () => {
       const task = await model1.create({ instruction: 'User 1 task' });
       const result = await model2.update(task.id, { name: 'Hacked' });
       expect(result).toBeNull();
-    });
-
-    it('backfills the reviewer from the member assignee on the paused transition', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-
-      const updated = await model.update(task.id, { status: 'paused' });
-
-      expect(await derivedStatus(task.id)).toBe('paused');
-      expect(updated!.reviewerUserId).toBe(userId2);
-    });
-
-    it('falls back to the creator when no member assignee exists', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ instruction: 'Do X' });
-
-      const updated = await model.update(task.id, { status: 'paused' });
-
-      expect(updated!.reviewerUserId).toBe(userId);
-    });
-
-    it('keeps an explicitly chosen reviewer over the backfill', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-
-      const updated = await model.update(task.id, {
-        reviewerUserId: userId,
-        status: 'paused',
-      });
-
-      expect(updated!.reviewerUserId).toBe(userId);
-    });
-
-    it('lets an explicit null clear the reviewer even while pausing', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-
-      const updated = await model.update(task.id, {
-        reviewerUserId: null,
-        status: 'paused',
-      });
-
-      expect(updated!.reviewerUserId).toBeNull();
-    });
-
-    it('does not touch the reviewer on non-paused transitions', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-
-      const updated = await model.update(task.id, { status: 'running' });
-
-      expect(updated!.reviewerUserId).toBeNull();
-    });
-
-    it('keeps a previously stored reviewer on a later pause', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-      await model.update(task.id, { reviewerUserId: userId });
-
-      const updated = await model.update(task.id, { status: 'paused' });
-
-      expect(updated!.reviewerUserId).toBe(userId);
-    });
-  });
-
-  describe('updateStatusIfCurrent', () => {
-    it('backfills the reviewer when the transition lands on paused', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-      await dispatchFixture(task.id, 'running');
-
-      const updated = await model.updateStatusIfCurrent(task.id, 'running', 'paused');
-
-      expect(updated!.reviewerUserId).toBe(userId2);
     });
   });
 
@@ -2850,6 +2779,8 @@ describe('TaskModel', () => {
       // Both sides derive the same legacy status ('backlog'), which is why
       // this move used to leave no trace at all.
       await model.updateWithLog(task.id, { workflowCategory: 'in_progress' }, { userId });
+      await createAgent('workflow-reviewer');
+      await model.update(task.id, { reviewerAgentId: 'workflow-reviewer' });
       await model.updateWithLog(task.id, { workflowCategory: 'in_review' }, { userId });
 
       const activities = await model.getActivities(task.id);
@@ -3520,7 +3451,6 @@ describe('TaskModel', () => {
       await model.updateVerifyConfig(task.id, {
         enabled: true,
         maxIterations: 3,
-        verifierAgentId: 'agt_codex',
         verifyRubricId: 'rub_1',
       });
 
@@ -3530,7 +3460,6 @@ describe('TaskModel', () => {
       expect(config.verify).toEqual({
         enabled: true,
         maxIterations: 3,
-        verifierAgentId: 'agt_codex',
         verifyRubricId: 'rub_1',
       });
     });
@@ -3542,11 +3471,11 @@ describe('TaskModel', () => {
         instruction: 'Test',
       });
 
-      await model.updateVerifyConfig(task.id, { verifierAgentId: 'agt_codex' });
+      await model.updateVerifyConfig(task.id, { maxIterations: 4 });
 
       expect(model.getVerifyConfig((await model.findById(task.id))!)).toEqual({
         enabled: true,
-        verifierAgentId: 'agt_codex',
+        maxIterations: 4,
         verifyRubricId: 'rub_1',
       });
     });
@@ -3556,13 +3485,13 @@ describe('TaskModel', () => {
       const task = await model.create({
         config: {
           provider: 'anthropic',
-          verify: { enabled: true, verifierAgentId: 'agt_codex', verifyRubricId: 'rub_1' },
+          verify: { enabled: true, verifyRubricId: 'rub_1' },
         },
         instruction: 'Test',
       });
 
-      // Switch back to the default verifier + drop the rubric, keep enabled.
-      await model.updateVerifyConfig(task.id, { verifierAgentId: null, verifyRubricId: null });
+      // Drop the rubric while keeping the gate enabled.
+      await model.updateVerifyConfig(task.id, { verifyRubricId: null });
 
       const updated = (await model.findById(task.id))!;
       const config = updated.config as Record<string, any>;
@@ -4508,7 +4437,7 @@ describe('TaskModel', () => {
       expect((await outsider.findById(draft.id))?.id).toBe(draft.id);
     });
 
-    it('still lets assignees, reviewers, team members, and workspace admins find the task', async () => {
+    it('lets workspace members find shared Issues independently of assignment', async () => {
       const alice = new TaskModel(serverDB, userId, wsId);
       const bob = new TaskModel(serverDB, userId2, wsId);
       const assigned = await alice.create({
@@ -4521,7 +4450,6 @@ describe('TaskModel', () => {
       const reviewed = await alice.create({
         instruction: 'Review on the private team',
         name: 'Review on the private team',
-        reviewerUserId: userId2,
         teamId: privateTeamId,
         visibility: 'public',
       });
@@ -4722,5 +4650,312 @@ describe('TaskModel', () => {
       const { total } = await me.list({ assigneeUserId: userId });
       expect(total).toBe(1);
     });
+  });
+});
+
+describe('Issue review cycle', () => {
+  const model = new TaskModel(serverDB, userId);
+  const setup = async () => {
+    await createAgent('issue-reviewer');
+    return model.create({
+      name: 'Review issue',
+      instruction: 'Acceptance criterion',
+      reviewerAgentId: 'issue-reviewer',
+      workflowCategory: 'in_review',
+    });
+  };
+  const start = async (id: string, operationId: string) => {
+    const review = await model.claimIssueReview(id);
+    expect(review).not.toBeNull();
+    const input = { cycleId: review!.cycleId, actorAgentId: 'issue-reviewer', operationId };
+    expect(await model.bindIssueReviewOperation(id, input)).toBe(true);
+    await serverDB.insert(agentOperations).values({
+      id: operationId,
+      agentId: 'issue-reviewer',
+      taskId: id,
+      userId,
+      status: 'running',
+    });
+    return input;
+  };
+  it('posts a normal Agent comment and completes once across ordinary saves', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-pass');
+    await model.update(task.id, { name: 'Changed title', instruction: 'Criteria' });
+    const result = await model.recordIssueReviewVerdict(task.id, {
+      ...input,
+      verdict: 'pass',
+      comment: 'Passed',
+    });
+    expect(result?.task.workflowCategory).toBe('done');
+    expect(
+      await model.recordIssueReviewVerdict(task.id, {
+        ...input,
+        verdict: 'pass',
+        comment: 'Duplicate',
+      }),
+    ).toBeNull();
+    const comments = await serverDB
+      .select()
+      .from(taskComments)
+      .where(eq(taskComments.taskId, task.id));
+    expect(comments.map((comment) => [comment.authorAgentId, comment.content])).toEqual([
+      ['issue-reviewer', 'Passed'],
+    ]);
+  });
+  it('fences stale verdicts after manual leave and return and isolates user scope', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-stale');
+    await model.update(task.id, { workflowCategory: 'in_progress' });
+    await model.update(task.id, { workflowCategory: 'in_review' });
+    expect((await model.claimIssueReview(task.id))?.cycleId).not.toBe(input.cycleId);
+    expect(await model.recordIssueReviewVerdict(task.id, { ...input, verdict: 'pass' })).toBeNull();
+    expect(await new TaskModel(serverDB, userId2).claimIssueReview(task.id)).toBeNull();
+  });
+  it('keeps missing verdicts in review and fences the old operation', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-missing');
+    expect(await model.releaseIssueReview(task.id, { ...input, reason: 'Device offline' })).toBe(
+      true,
+    );
+    expect((await model.findById(task.id))?.workflowCategory).toBe('in_review');
+    expect(await model.recordIssueReviewVerdict(task.id, { ...input, verdict: 'pass' })).toBeNull();
+    const activities = await serverDB
+      .select()
+      .from(taskActivities)
+      .where(eq(taskActivities.taskId, task.id));
+    expect(activities.at(-1)).toMatchObject({
+      type: 'review_waiting',
+      payload: { reason: 'Device offline' },
+    });
+  });
+  it('preserves a queued review operation while recording one waiting activity', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-queued');
+    const waiting = { ...input, reason: 'Device offline', keepOperation: true };
+    expect(await model.releaseIssueReview(task.id, waiting)).toBe(true);
+    expect(await model.releaseIssueReview(task.id, waiting)).toBe(true);
+    expect(
+      await serverDB.select().from(taskActivities).where(eq(taskActivities.taskId, task.id)),
+    ).toHaveLength(1);
+    expect(
+      (await model.recordIssueReviewVerdict(task.id, { ...input, verdict: 'pass' }))?.task
+        .workflowCategory,
+    ).toBe('done');
+  });
+  it('fences reviewer changes and manual legacy status writes, but preserves a no-op category', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-property');
+    await model.update(task.id, { workflowCategory: 'in_review' });
+    expect((await model.claimIssueReview(task.id))?.cycleId).toBe(input.cycleId);
+    await createAgent('new-reviewer');
+    await model.update(task.id, { reviewerAgentId: 'new-reviewer' });
+    expect(await model.recordIssueReviewVerdict(task.id, { ...input, verdict: 'pass' })).toBeNull();
+    const review = await model.claimIssueReview(task.id);
+    await model.updateStatusForIds([task.id], 'paused');
+    expect((await model.claimIssueReview(task.id))?.cycleId).not.toBe(review?.cycleId);
+  });
+  it('retains repair intent until handoff and fences it after a manual move', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-repair');
+    await model.recordIssueReviewVerdict(task.id, {
+      ...input,
+      verdict: 'fail',
+      comment: 'Fix criteria',
+    });
+    expect(await model.isIssueReviewRepairCurrent(task.id, input)).toBe(true);
+    await model.update(task.id, {
+      status: 'running',
+      workflowCategory: 'in_progress',
+      workflowStateId: 'doing',
+      preserveIssueReviewCycle: true,
+    });
+    expect(await model.isIssueReviewRepairCurrent(task.id, input)).toBe(true);
+    expect(
+      (await TaskModel.queryPendingIssueReviews(serverDB, { createdByUserId: userId })).map(
+        (row) => row.id,
+      ),
+    ).toContain(task.id);
+    expect(await model.completeIssueReviewRepair(task.id, input)).toBe(true);
+    expect(await model.completeIssueReviewRepair(task.id, input)).toBe(false);
+    await model.update(task.id, { workflowCategory: 'done' });
+    expect(await model.isIssueReviewRepairCurrent(task.id, input)).toBe(false);
+    expect(await model.releaseIssueReviewRepair(task.id, input)).toBe(false);
+  });
+  it('preserves the authoritative verdict and manual invalidation across stale whole-config saves', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-stale-config');
+    const staleConfig = (await model.findById(task.id))!.config;
+    await model.recordIssueReviewVerdict(task.id, {
+      ...input,
+      verdict: 'fail',
+      comment: 'Fix criteria',
+    });
+    await model.update(task.id, { config: staleConfig });
+    expect((await model.findById(task.id))?.config).toMatchObject({
+      issueReview: { state: 'submitted', consecutiveFailures: 1, repairPending: true },
+    });
+    await model.update(task.id, { workflowCategory: 'in_review', config: staleConfig });
+    expect((await model.claimIssueReview(task.id))?.cycleId).not.toBe(input.cycleId);
+    expect(await model.recordIssueReviewVerdict(task.id, { ...input, verdict: 'pass' })).toBeNull();
+  });
+  it('fences a custom state change within In review and timestamps a fresh binding', async () => {
+    const task = await setup();
+    const review = await model.claimIssueReview(task.id);
+    await serverDB
+      .update(tasks)
+      .set({ updatedAt: new Date('2000-01-01') })
+      .where(eq(tasks.id, task.id));
+    const input = {
+      cycleId: review!.cycleId,
+      actorAgentId: 'issue-reviewer',
+      operationId: 'review-new-binding',
+    };
+    expect(await model.bindIssueReviewOperation(task.id, input)).toBe(true);
+    expect((await model.findById(task.id))!.updatedAt.getTime()).toBeGreaterThan(
+      Date.now() - 10_000,
+    );
+    await model.update(task.id, {
+      workflowStateId: 'custom-review-status',
+      workflowCategory: 'in_review',
+    });
+    expect((await model.claimIssueReview(task.id))?.cycleId).not.toBe(input.cycleId);
+  });
+  it('rejects late repair settlement under the row lock before its mutation callback', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-late-settle');
+    await model.recordIssueReviewVerdict(task.id, {
+      ...input,
+      verdict: 'fail',
+      comment: 'Fix criteria',
+    });
+    await model.update(task.id, {
+      workflowStateId: 'manual-paused',
+      workflowCategory: 'in_progress',
+    });
+    const current = (await model.findById(task.id))!;
+    let callbackRan = false;
+    const settled = await model.updateStatusForExecutionContract(
+      task.id,
+      'completed',
+      {
+        assigneeAgentId: current.assigneeAgentId,
+        executionGeneration: current.executionGeneration,
+        policyRevision: current.policyRevision,
+        requirementRevision: current.requirementRevision,
+      },
+      { workflowCategory: 'done', expectedIssueReviewCycleId: input.cycleId },
+      {},
+      async () => {
+        callbackRan = true;
+        return true;
+      },
+    );
+    expect(settled).toBeNull();
+    expect(callbackRan).toBe(false);
+    expect(await model.findById(task.id)).toMatchObject({
+      workflowCategory: 'in_progress',
+      workflowStateId: 'manual-paused',
+    });
+  });
+  it('leaves the manual pause and reservation untouched when a stale repair tries to reserve', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-stale-reserve');
+    await model.recordIssueReviewVerdict(task.id, {
+      ...input,
+      verdict: 'fail',
+      comment: 'Fix criteria',
+    });
+    await serverDB
+      .update(agentOperations)
+      .set({ status: 'done' })
+      .where(eq(agentOperations.id, input.operationId));
+    await model.update(task.id, {
+      workflowStateId: 'paused-by-person',
+      status: 'paused',
+      error: 'Owner paused',
+    });
+    const before = (await model.findById(task.id))!;
+    expect(
+      await model.reserveRun(
+        task.id,
+        'stale-repair',
+        new Date(),
+        30 * 60_000,
+        undefined,
+        input.cycleId,
+      ),
+    ).toBe(false);
+    expect(await model.findById(task.id)).toMatchObject({
+      context: before.context,
+      error: 'Owner paused',
+      runReservationId: before.runReservationId,
+      runReservationExpiresAt: before.runReservationExpiresAt,
+      workflowStateId: 'paused-by-person',
+    });
+    expect(await model.reserveRun(task.id, 'manual-resume')).toBe(true);
+  });
+  it('counts consecutive failures once and stops repair with one inbox entry at three', async () => {
+    const task = await setup();
+    for (let index = 1; index <= 3; index++) {
+      const input = await start(task.id, `review-fail-${index}`);
+      const result = await model.recordIssueReviewVerdict(task.id, {
+        ...input,
+        verdict: 'fail',
+        comment: `Missing ${index}`,
+      });
+      expect(result).toMatchObject({
+        repairPending: index < 3,
+        stopped: index === 3,
+        task: { workflowCategory: 'in_progress' },
+      });
+      expect(
+        await model.recordIssueReviewVerdict(task.id, {
+          ...input,
+          verdict: 'fail',
+          comment: 'Duplicate',
+        }),
+      ).toBeNull();
+      if (index < 3) await model.update(task.id, { workflowCategory: 'in_review' });
+    }
+    expect(
+      await serverDB.select().from(taskComments).where(eq(taskComments.taskId, task.id)),
+    ).toHaveLength(4);
+    const inbox = await serverDB
+      .select()
+      .from(notifications)
+      .where(eq(notifications.resourceId, task.id));
+    expect(inbox.map((notification) => notification.userId)).toEqual([userId]);
+  });
+  it('notifies only the assigned human owner when the creator is a different user', async () => {
+    const task = await setup();
+    await model.update(task.id, { assigneeUserId: userId2 });
+    for (let index = 1; index <= 3; index++) {
+      const input = await start(task.id, `review-owner-fail-${index}`);
+      await model.recordIssueReviewVerdict(task.id, {
+        ...input,
+        verdict: 'fail',
+        comment: `Missing ${index}`,
+      });
+      if (index < 3) await model.update(task.id, { workflowCategory: 'in_review' });
+    }
+    const inbox = await serverDB
+      .select()
+      .from(notifications)
+      .where(eq(notifications.resourceId, task.id));
+    expect(inbox.map((notification) => notification.userId)).toEqual([userId2]);
+  });
+  it('refuses the wrong operation Agent and direct SQL entry without a reviewer', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-wrong-agent');
+    await createAgent('other-reviewer');
+    await serverDB
+      .update(agentOperations)
+      .set({ agentId: 'other-reviewer' })
+      .where(eq(agentOperations.id, input.operationId));
+    expect(await model.recordIssueReviewVerdict(task.id, { ...input, verdict: 'pass' })).toBeNull();
+    await expect(
+      serverDB.update(tasks).set({ reviewerAgentId: null }).where(eq(tasks.id, task.id)),
+    ).rejects.toThrow();
   });
 });

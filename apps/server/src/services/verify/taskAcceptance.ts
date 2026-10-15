@@ -14,7 +14,6 @@ export interface ResolvedTaskAcceptance {
 const toAcceptanceConfig = (verify: TaskVerifyConfig): AcceptanceConfig => ({
   enabled: verify.enabled,
   maxIterations: verify.maxIterations,
-  verifierAgentId: verify.verifierAgentId,
   verifyCriteriaIds: verify.verifyCriteriaIds,
   verifyRubricId: verify.verifyRubricId,
 });

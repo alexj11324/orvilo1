@@ -16,7 +16,7 @@ const TaskDetailAssignee = memo(() => {
   const { t } = useTranslation('chat');
   const taskId = useTaskDetailTaskId();
   const status = useTaskDetailSelector(taskDetailSelectors.taskStatus) as TaskStatus | undefined;
-  const assigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
+  const assigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeAgentId);
   const visibility = useTaskDetailSelector(taskDetailSelectors.taskVisibility);
   const assigneeMeta = useAgentDisplayMeta(assigneeAgentId);
   const handoffTask = useTaskStore((s) => s.handoffTask);

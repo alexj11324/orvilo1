@@ -15,6 +15,7 @@ import {
   computeKanbanPosition,
   effectiveTaskPosition,
   externalKanbanTaskPatch,
+  externalTaskColumnKey,
   externalVisibleKanbanColumns,
   findKanbanColumn,
   getKanbanAssigneeUpdate,
@@ -38,6 +39,7 @@ import {
   resolveKanbanDragTask,
   resolveKanbanDropColumn,
   taskKanbanColumnKey,
+  taskMatchesExternalColumn,
   taskMatchesKanbanColumn,
   taskStatusBoardColumnKey,
   taskStatusChoiceIsCurrent,
@@ -961,5 +963,25 @@ describe('column paging recovery', () => {
 
   it('does not cap externally paginated cursor boards', () => {
     expect(kanbanColumnPagingAction({ atLimit: true, external: true })).toBe('loadMore');
+  });
+});
+
+describe('reviewer work-query columns', () => {
+  it('groups cards by their reviewer and writes the reviewer on a drop', () => {
+    const reviewed = task('reviewed', null, null, { reviewerAgentId: 'reviewer-1' });
+    expect(externalTaskColumnKey(reviewed, 'reviewer')).toBe('rv:reviewer-1');
+    expect(taskMatchesExternalColumn(reviewed, 'reviewer', 'rv:reviewer-1')).toBe(true);
+    expect(taskMatchesExternalColumn(reviewed, 'reviewer', 'rv:reviewer-2')).toBe(false);
+    expect(externalTaskColumnKey(task('unassigned'), 'reviewer')).toBe('rv:none');
+    expect(
+      externalKanbanTaskPatch('reviewer', {
+        droppable: true,
+        key: 'rv:reviewer-2',
+        targetStatus: null,
+      }),
+    ).toEqual({ reviewerAgentId: 'reviewer-2' });
+    expect(
+      externalKanbanTaskPatch('reviewer', { droppable: true, key: 'rv:none', targetStatus: null }),
+    ).toEqual({ reviewerAgentId: null });
   });
 });

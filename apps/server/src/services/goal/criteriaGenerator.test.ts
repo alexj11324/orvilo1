@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { GoalCriteriaGeneratorService } from './criteriaGenerator';
 
-const { generateObject, resolveGoalModelConfig } = vi.hoisted(() => ({
+const { generateObject, resolveGoalModelConfig, reviewer } = vi.hoisted(() => ({
   generateObject: vi.fn(),
+  reviewer: vi.fn(),
   resolveGoalModelConfig: vi.fn(),
 }));
 
@@ -14,10 +15,12 @@ vi.mock('@/server/services/aiGeneration', () => ({
 }));
 
 vi.mock('./modelConfig', () => ({ resolveGoalModelConfig }));
+vi.mock('@/server/services/verify/reviewerAgent', () => ({ resolveIssueReviewer: reviewer }));
 
 describe('GoalCriteriaGeneratorService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    reviewer.mockResolvedValue('reviewer-1');
     resolveGoalModelConfig.mockResolvedValue({ model: 'goal-model', provider: 'goal-provider' });
     generateObject.mockResolvedValue({
       criteria: [],
@@ -26,16 +29,26 @@ describe('GoalCriteriaGeneratorService', () => {
     });
   });
 
-  it('uses the dedicated goal model, prompt version, schema, and tracing scenario', async () => {
+  it('uses the explicitly selected coordinator without resolving a model or provider', async () => {
     await new GoalCriteriaGeneratorService({} as any, 'user-1', 'workspace-1').generate({
+      agentId: 'coordinator-1',
       goal: 'Publish a benchmark paper',
     });
 
-    expect(resolveGoalModelConfig).toHaveBeenCalledWith({}, 'user-1', undefined, 'workspace-1');
+    expect(resolveGoalModelConfig).not.toHaveBeenCalled();
+    expect(generateObject.mock.calls[0][0]).not.toHaveProperty('model');
+    expect(generateObject.mock.calls[0][0]).not.toHaveProperty('provider');
+    expect(
+      generateObject.mock.calls[0][0].messages.every(
+        (message: { role: string }) => message.role === 'user',
+      ),
+    ).toBe(true);
+    expect(generateObject.mock.calls[0][1].judgment.binding).toEqual({
+      agentId: 'coordinator-1',
+      allowEnvFallback: false,
+    });
     expect(generateObject).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'goal-model',
-        provider: 'goal-provider',
         schema: expect.objectContaining({ name: 'goal_criteria_draft' }),
       }),
       expect.objectContaining({
@@ -46,6 +59,14 @@ describe('GoalCriteriaGeneratorService', () => {
         },
       }),
     );
+  });
+
+  it('blocks drafting without an explicitly selected coordinator', async () => {
+    await expect(
+      new GoalCriteriaGeneratorService({} as never, 'user-1').generatePlan({ goal: 'Ship' }),
+    ).rejects.toThrow('Select a coordinator Agent');
+    expect(generateObject).not.toHaveBeenCalled();
+    expect(resolveGoalModelConfig).not.toHaveBeenCalled();
   });
 
   it('traces executable decomposition with its updated prompt cohort and validates the output', async () => {
@@ -97,7 +118,10 @@ describe('GoalCriteriaGeneratorService', () => {
     });
 
     await expect(
-      new GoalCriteriaGeneratorService({} as any, 'user-1').generate({ goal: 'Ship it' }),
+      new GoalCriteriaGeneratorService({} as any, 'user-1').generate({
+        agentId: 'coordinator-1',
+        goal: 'Ship it',
+      }),
     ).resolves.toEqual([]);
   });
 
@@ -109,10 +133,12 @@ describe('GoalCriteriaGeneratorService', () => {
     });
     const service = new GoalCriteriaGeneratorService({} as any, 'user-1');
 
-    await expect(service.generate({ goal: 'Publish a benchmark paper' })).resolves.toEqual([
-      { title: 'Benchmark is published', verifierType: 'agent' },
-    ]);
-    await expect(service.generatePlan({ goal: 'Publish a benchmark paper' })).resolves.toEqual({
+    await expect(
+      service.generate({ agentId: 'coordinator-1', goal: 'Publish a benchmark paper' }),
+    ).resolves.toEqual([{ title: 'Benchmark is published', verifierType: 'agent' }]);
+    await expect(
+      service.generatePlan({ agentId: 'coordinator-1', goal: 'Publish a benchmark paper' }),
+    ).resolves.toEqual({
       criteria: [{ title: 'Benchmark is published', verifierType: 'agent' }],
       instruction: 'Publish the benchmark paper.',
       title: 'Publish benchmark paper',

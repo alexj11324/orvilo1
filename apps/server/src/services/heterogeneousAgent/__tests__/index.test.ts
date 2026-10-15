@@ -611,6 +611,7 @@ describe('HeterogeneousAgentService', () => {
     });
 
     it('fires both onComplete and onError (reason=error) hooks on a failed run', async () => {
+      const findById = vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(null);
       const { service } = createService({ operationId: 'op-hook-error' });
       const { onComplete, onError } = registerHook('op-hook-error');
 
@@ -630,6 +631,7 @@ describe('HeterogeneousAgentService', () => {
         operationId: 'op-hook-error',
         reason: 'error',
       });
+      findById.mockRestore();
     });
 
     // Verify-lifecycle alignment: heteroFinish must route the terminal transition

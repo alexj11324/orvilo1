@@ -32,6 +32,7 @@ import AssigneeMemberSelector from './AssigneeMemberSelector';
 import AssigneeUserAvatar from './AssigneeUserAvatar';
 import { formatTaskItemDate } from './formatTaskItemDate';
 import IssueStatusPicker from './IssueStatusPicker';
+import { ReviewerAgentSelector } from './ReviewerAgentSelector';
 import { SimpleTooltip } from './SimpleTooltip';
 import TaskPriorityTag from './TaskPriorityTag';
 import TaskSubtaskProgressTag from './TaskSubtaskProgressTag';
@@ -115,7 +116,6 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
   const { t, i18n } = useTranslation('common');
   const { t: tChat } = useTranslation('chat');
   const fetchTaskDetail = useTaskStore((s) => s.fetchTaskDetail);
-  const updateTask = useTaskStore((s) => s.updateTask);
   const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
   const taskDetail = useTaskStore((s) => s.taskDetailMap[task.identifier]);
   const { items: contextMenuItems, onContextMenu: handleContextMenuOpen } = useTaskItemContextMenu(
@@ -255,47 +255,32 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
       data-collab-id={`task:${task.id}:assignee`}
       data-collab-id-alt={`task:${task.identifier}:assignee`}
     >
-      {task.workflowCategory === 'in_review'
-        ? // In review: the member slot shows who owns the review — the
-          // reviewer (auto-stamped as assignee → creator), not the executor.
-          shouldShowMemberAssignee(activeWorkspaceId, task.reviewerUserId) && (
-            <AssigneeMemberSelector
-              currentUserId={task.reviewerUserId}
-              taskCreatorId={task.createdByUserId}
-              taskIdentifier={task.identifier}
-              taskVisibility={task.visibility}
-              onChange={(userId) => void updateTask(task.identifier, { reviewerUserId: userId })}
-            >
-              {task.reviewerUserId ? (
-                <SimpleTooltip title={tChat('taskDetail.reviewer')}>
-                  <AssigneeUserAvatar userId={task.reviewerUserId} />
-                </SimpleTooltip>
-              ) : (
-                <SimpleTooltip title={tChat('taskDetail.reviewer')}>
-                  <UnassignedAssigneeIcon kind={'human'} />
-                </SimpleTooltip>
-              )}
-            </AssigneeMemberSelector>
-          )
-        : shouldShowMemberAssignee(activeWorkspaceId, task.assigneeUserId) && (
-            <AssigneeMemberSelector
-              currentUserId={task.assigneeUserId}
-              disabled={status === 'running'}
-              taskCreatorId={task.createdByUserId}
-              taskIdentifier={task.identifier}
-              taskVisibility={task.visibility}
-            >
-              {task.assigneeUserId ? (
-                <AssigneeUserAvatar tooltip={status !== 'running'} userId={task.assigneeUserId} />
-              ) : (
-                <SimpleTooltip
-                  title={status === 'running' ? undefined : tChat('taskList.assignTo')}
-                >
-                  <UnassignedAssigneeIcon kind={'human'} />
-                </SimpleTooltip>
-              )}
-            </AssigneeMemberSelector>
-          )}
+      {task.workflowCategory === 'in_review' ? (
+        <ReviewerAgentSelector
+          currentAgentId={task.reviewerAgentId}
+          taskIdentifier={task.identifier}
+        >
+          <AssigneeAvatar agentId={task.reviewerAgentId} />
+        </ReviewerAgentSelector>
+      ) : (
+        shouldShowMemberAssignee(activeWorkspaceId, task.assigneeUserId) && (
+          <AssigneeMemberSelector
+            currentUserId={task.assigneeUserId}
+            disabled={status === 'running'}
+            taskCreatorId={task.createdByUserId}
+            taskIdentifier={task.identifier}
+            taskVisibility={task.visibility}
+          >
+            {task.assigneeUserId ? (
+              <AssigneeUserAvatar tooltip={status !== 'running'} userId={task.assigneeUserId} />
+            ) : (
+              <SimpleTooltip title={status === 'running' ? undefined : tChat('taskList.assignTo')}>
+                <UnassignedAssigneeIcon kind={'human'} />
+              </SimpleTooltip>
+            )}
+          </AssigneeMemberSelector>
+        )
+      )}
       <AssigneeAgentSelector
         currentAgentId={task.assigneeAgentId}
         disabled={status === 'running'}

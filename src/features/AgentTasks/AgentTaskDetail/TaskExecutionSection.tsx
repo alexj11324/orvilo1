@@ -6,6 +6,7 @@ import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
+import { ReviewerAgentSelector } from '../features/ReviewerAgentSelector';
 import TaskExecutionBadge from '../features/TaskExecutionBadge';
 import {
   EXECUTION_KIND_LABEL_KEYS,
@@ -102,6 +103,7 @@ const useIssueExecutionView = (): { reason?: string | null; view: IssueExecution
       dispatchPhase: detail.dispatchPhase,
       dispatchWaitingReason: detail.dispatchWaitingReason,
       latestRunStatus: latestRun?.status,
+      issueReview: detail.config?.issueReview,
       orchestrationAdmission: detail.orchestrationAdmission,
       status: detail.status,
       workflowCategory: detail.workflowCategory,
@@ -118,6 +120,30 @@ const TaskExecutionSection = memo(() => {
   const { t } = useTranslation('chat');
   const { readOnly } = useIssueDetailCapabilities();
   const { reason, view } = useIssueExecutionView();
+  const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
+  const taskId = useTaskDetailTaskId();
+
+  if (detail?.parkedReason === 'review_required') {
+    return (
+      <div className="flex min-w-0 flex-col gap-1.5" role="status">
+        <p className="text-sm text-warning-text">{t('taskDetail.review.waitingReviewer')}</p>
+        {detail.error && detail.error !== 'Delivery is waiting for a reviewer Agent' && (
+          <p className="text-xs text-muted-foreground">{detail.error}</p>
+        )}
+        {!readOnly && (
+          <ReviewerAgentSelector currentAgentId={detail.reviewerAgentId} taskIdentifier={taskId}>
+            <Button size="sm" variant="outline">
+              {t(
+                detail.reviewerAgentId
+                  ? 'taskDetail.property.changeReviewer'
+                  : 'taskDetail.property.addReviewer',
+              )}
+            </Button>
+          </ReviewerAgentSelector>
+        )}
+      </div>
+    );
+  }
 
   if (!view) return null;
 
@@ -151,7 +177,12 @@ const TaskExecutionSection = memo(() => {
           {String(t(hint.key as never, hint.params as never))}
         </p>
       ))}
-      {view.showFailureReason && <RunFailureReason reason={reason} />}
+      {(view.showFailureReason || (detail?.workflowCategory === 'in_review' && !!detail.error)) && (
+        <RunFailureReason
+          reason={detail?.workflowCategory === 'in_review' ? detail.error : reason}
+        />
+      )}
+
       {view.action && !readOnly && (
         <TaskExecutionAction action={view.action} blocked={view.actionBlocked} />
       )}

@@ -76,7 +76,7 @@ const DIRECTORY_FIELD_ICONS: Partial<Record<WorkQueryField, StatusVisual['icon']
   labelId: TagIcon,
   priority: SignalIcon,
   projectId: PROJECT_ENTITY_ICON,
-  reviewerUserId: UserRoundCheckIcon,
+  reviewerAgentId: UserRoundCheckIcon,
   status: STATUS_PROPERTY_ICON,
   teamId: UsersIcon,
   triageStatus: InboxIcon,

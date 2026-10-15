@@ -31,6 +31,7 @@ const {
   mockComposeDevicePrimeRun,
   mockDeviceFindByDeviceId,
   mockDeviceFindWorkspaceDeviceById,
+  mockDevicePresence,
   mockDispatchAgentRun,
   mockDispatchHeteroAgent,
   mockExecuteToolCall,
@@ -44,6 +45,7 @@ const {
   mockComposeDevicePrimeRun: vi.fn(),
   mockDeviceFindByDeviceId: vi.fn(),
   mockDeviceFindWorkspaceDeviceById: vi.fn(),
+  mockDevicePresence: vi.fn(),
   mockDispatchAgentRun: vi.fn(),
   mockDispatchHeteroAgent: vi.fn(),
   mockExecuteToolCall: vi.fn(),
@@ -297,6 +299,7 @@ vi.mock('@/server/services/deviceGateway', () => ({
     executeToolCall: mockExecuteToolCall,
     isConfigured: false,
     queryDeviceList: vi.fn().mockResolvedValue([]),
+    queryDevicePresence: mockDevicePresence,
     resolveDeviceWorkspaceId: vi.fn().mockResolvedValue(undefined),
   },
 }));
@@ -366,6 +369,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     mockGetHeterogeneousResumeSessionId.mockResolvedValue(undefined);
     mockDeviceFindByDeviceId.mockResolvedValue(undefined);
     mockDeviceFindWorkspaceDeviceById.mockResolvedValue(undefined);
+    mockDevicePresence.mockResolvedValue(true);
     // `clearAllMocks` keeps the last-set implementation — re-establish the
     // auth-pass default so a test that stubs BINDING_INVALID can't leak it
     // into later tests.
@@ -645,6 +649,46 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
   });
 
   describe('device-capable targets without a bound device fail before dispatch', () => {
+    it('queues an authorized offline device as the same ordinary operation without terminal hooks', async () => {
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      const parked = vi
+        .spyOn(AgentOperationModel.prototype, 'parkForDevice')
+        .mockResolvedValue(true);
+      const completed = vi
+        .spyOn(CompletionLifecycle.prototype, 'completeOperation')
+        .mockResolvedValue(undefined);
+      mockDispatchAgentRun.mockResolvedValue({
+        error: 'DEVICE_CHANNEL_UNAVAILABLE',
+        errorCode: DeviceTransportErrorCode.DeviceChannelUnavailable,
+        success: false,
+      });
+      const result = await service.execAgent({
+        agentId: 'agent-1',
+        prompt: 'Keep my original request',
+      });
+      expect(result).toMatchObject({
+        autoStarted: false,
+        status: 'idle',
+        success: true,
+        topicId: 'topic-1',
+      });
+      expect(parked).toHaveBeenCalledWith(
+        result.operationId,
+        expect.objectContaining({
+          state: 'waiting',
+          payload: expect.objectContaining({
+            assistantMessageId: result.assistantMessageId,
+            deviceId: 'device-001',
+            prompt: 'Keep my original request',
+            topicId: result.topicId,
+          }),
+        }),
+      );
+      expect(recordStartSpy).toHaveBeenCalledTimes(1);
+      expect(completed).not.toHaveBeenCalled();
+      expect(JSON.stringify(parked.mock.calls)).not.toContain('op-jwt');
+    });
+
     it.each(['auto', 'device'] as const)(
       'reports the bound-device error for an unbound %s target',
       async (executionTarget) => {
@@ -891,6 +935,23 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
         error: 'provider_disabled',
         success: false,
       });
+    });
+
+    it('queues a known offline Prime device before registering a canonical runtime', async () => {
+      await useAgencyConfig({
+        boundDeviceId: 'device-001',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'orvilo' },
+      });
+      mockDevicePresence.mockResolvedValue(false);
+      vi.spyOn(AgentOperationModel.prototype, 'parkForDevice').mockResolvedValue(true);
+      const result = await service.execAgent({
+        agentId: 'agent-1',
+        prompt: 'Original Prime request',
+      });
+      expect(result).toMatchObject({ status: 'idle', success: true, autoStarted: false });
+      expect(mockComposeDevicePrimeRun).not.toHaveBeenCalled();
+      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
     });
   });
 });

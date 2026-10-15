@@ -74,7 +74,7 @@ beforeEach(() => {
 });
 const params = {
   checkResultId: 'r1',
-  modelConfig: { model: 'review-model', provider: 'review-provider' },
+  reviewerAgentId: 'review-agent',
 };
 const review = () => new VerifyReviewPredictorService({} as OrviloDatabase, 'u1');
 
@@ -85,6 +85,17 @@ describe('Goal review evidence', () => {
       status: 'judged',
     });
     expect(JSON.stringify(mocks.generate.mock.calls[0][0].messages)).toContain('SUM(A1:A3) = 42');
+    expect(mocks.generate.mock.calls[0][0]).not.toHaveProperty('model');
+    expect(mocks.generate.mock.calls[0][0]).not.toHaveProperty('provider');
+    expect(
+      mocks.generate.mock.calls[0][0].messages.every(
+        (message: { role: string }) => message.role === 'user',
+      ),
+    ).toBe(true);
+    expect(mocks.generate.mock.calls[0][1].judgment.binding).toEqual({
+      agentId: 'review-agent',
+      allowEnvFallback: false,
+    });
     expect(mocks.generate.mock.calls[0][1].tracing).toMatchObject({
       promptVersion: REVIEW_PREDICT_PROMPT_VERSION,
       scenario: expect.any(String),
@@ -92,8 +103,8 @@ describe('Goal review evidence', () => {
     });
     expect(mocks.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'review-model',
-        provider: 'review-provider',
+        model: 'review-agent',
+        provider: 'acp',
         promptVersion: REVIEW_PREDICT_PROMPT_VERSION,
       }),
     );
@@ -215,11 +226,11 @@ describe('Goal review evidence', () => {
     ['Service unavailable', 'Service unavailable'],
     [
       { errorType: 'InvalidProviderAPIKey', request: { apiKey: 'private-key' } },
-      'Review model review-provider/review-model could not run (InvalidProviderAPIKey). Check the provider configuration and retry the review.',
+      'Reviewer Agent review-agent could not run (InvalidProviderAPIKey). Check the Agent configuration and retry the review.',
     ],
     [
       { unexpected: true },
-      'Review model review-provider/review-model could not run. Check the provider configuration and retry the review.',
+      'Reviewer Agent review-agent could not run. Check the Agent configuration and retry the review.',
     ],
   ])('preserves an actionable reason for provider failure %#', async (error, reason) => {
     mocks.generate.mockRejectedValue(error);

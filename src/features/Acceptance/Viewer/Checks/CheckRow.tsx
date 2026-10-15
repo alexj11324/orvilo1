@@ -138,6 +138,14 @@ export const AcceptanceCheckRow = memo<{
     const title = checkDisplayTitle(check.title, t('acceptance.checks.holisticTitle'));
     const counts = evidenceCounts(check.evidence);
     const visualization = readVisualizationManifest(check.result?.metadata);
+    const initiatingMessage =
+      typeof check.result?.metadata?.initiatingMessage === 'string'
+        ? check.result.metadata.initiatingMessage
+        : undefined;
+    const waitingReason =
+      typeof check.result?.metadata?.waitingReason === 'string'
+        ? check.result.metadata.waitingReason
+        : undefined;
 
     const reviewState = userReviewState(check);
     // The decision is stamped on the check's result row — a never-executed
@@ -661,6 +669,24 @@ export const AcceptanceCheckRow = memo<{
                 onConfirm={() => openReject(check.prediction ?? undefined)}
                 onToggle={setProposalOpen}
               />
+            )}
+            {waitingReason && (
+              <p className="text-sm text-warning-text" role="status">
+                {t('acceptance.checks.waitingDevice')}
+              </p>
+            )}
+            {check.result?.status === 'errored' && check.result.toulmin?.limitation && (
+              <p className="whitespace-pre-wrap text-sm text-warning-text" role="status">
+                {check.result.toulmin.limitation}
+              </p>
+            )}
+            {initiatingMessage && (
+              <details className="rounded-(--radius-card) bg-fill-quaternary p-2.5 text-sm">
+                <summary className="cursor-pointer">
+                  {t('acceptance.checks.initiatingMessage')}
+                </summary>
+                <div className="whitespace-pre-wrap pt-2">{initiatingMessage}</div>
+              </details>
             )}
             {/* The verifier's account of what it saw. Clamping it to two lines
               hid the middle of the argument behind an ellipsis with no way to

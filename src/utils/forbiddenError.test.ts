@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getAgentAssignmentDeleteErrorMessage,
   getDeleteErrorMessageKey,
   isForbiddenError,
   isHistoryMigratingError,
@@ -8,6 +9,36 @@ import {
 } from './forbiddenError';
 
 const trpcError = (data: Record<string, unknown>) => Object.assign(new Error('x'), { data });
+
+describe('getAgentAssignmentDeleteErrorMessage', () => {
+  const message =
+    'Reassign Issues before deleting their Agent: T-3 (Reviewer picker and constraint QA)';
+
+  it('preserves the named Issues on the Agent assignment refusal', () => {
+    expect(
+      getAgentAssignmentDeleteErrorMessage(
+        Object.assign(new Error(message), {
+          data: { code: 'PRECONDITION_FAILED', httpStatus: 412 },
+        }),
+      ),
+    ).toBe(message);
+    expect(getAgentAssignmentDeleteErrorMessage({ message, data: { httpStatus: 412 } })).toBe(
+      message,
+    );
+  });
+
+  it('does not expose unrelated server failures or replace permission refusals', () => {
+    for (const error of [
+      null,
+      new Error(message),
+      { message, data: { code: 'FORBIDDEN', httpStatus: 403 } },
+      { message: 'private server details', data: { code: 'PRECONDITION_FAILED' } },
+      { message: 'Reassign Issues before deleting their Agent: ', data: { httpStatus: 412 } },
+    ]) {
+      expect(getAgentAssignmentDeleteErrorMessage(error)).toBeUndefined();
+    }
+  });
+});
 
 describe('isForbiddenError', () => {
   it('matches FORBIDDEN code or 403 status', () => {

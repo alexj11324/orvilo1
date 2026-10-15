@@ -117,11 +117,11 @@ describe('AgentSelectorAction', () => {
     ];
   });
 
-  it('adds the builtin task agent and filters out group sessions', () => {
+  it('offers configured Agents without injecting a virtual Agent', () => {
     render(<AgentSelectorAction onAgentChange={vi.fn()} />);
 
     expect(mocks.fetchAgentList).toHaveBeenCalledOnce();
-    expect(document.body.textContent).toContain('Task Manager');
+    expect(document.body.textContent).not.toContain('Task Manager');
     expect(document.body.textContent).toContain('Custom Agent');
     expect(document.body.textContent).not.toContain('Custom Group');
   });

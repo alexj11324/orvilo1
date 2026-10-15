@@ -150,7 +150,6 @@ export interface GenerateDraftPlanInput {
   enableAiGeneration?: boolean;
   goal: string;
   maxAiCriteria?: number;
-  modelConfig?: { model: string; provider: string };
   operationId: string;
   verifyCriteriaIds?: string[];
   verifyRubricId?: string | null;
@@ -329,10 +328,8 @@ export class VerifyService {
     lambdaClient.verify.updateRun.mutate({ value: { title }, verifyRunId });
 
   executeVerify = (input: {
-    batchLlm?: boolean;
     deliverable: string;
     goal: string;
-    modelConfig: { model: string; provider: string };
     operationId: string;
   }): Promise<VerifyCheckResultItem[]> =>
     lambdaClient.verify.executeVerify.mutate(input) as Promise<VerifyCheckResultItem[]>;
@@ -346,7 +343,7 @@ export class VerifyService {
     context?: string;
     goal: string;
     maxCriteria?: number;
-    modelConfig: { model: string; provider: string };
+    taskId: string;
   }): Promise<VerifyCriterionDraft[]> =>
     lambdaClient.verify.generateCriteria.mutate(input) as Promise<VerifyCriterionDraft[]>;
 

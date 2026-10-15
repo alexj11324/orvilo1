@@ -26,7 +26,7 @@ import {
   linearSyncRetryDelayMs,
 } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
-import type { TaskModel } from '@/database/models/task';
+import { type TaskModel, TaskReviewerRequiredError } from '@/database/models/task';
 import { TeamModel } from '@/database/models/team';
 import { tasks } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
@@ -676,6 +676,20 @@ export class LinearSyncWorker {
         if (outcome !== 'pending-binding' && outcome !== 'paused') result.processed += 1;
       } catch (error) {
         if (error instanceof LinearSyncLeaseLostError) continue;
+        if (error instanceof TaskReviewerRequiredError) {
+          const settled = await this.model.updateInbox(
+            row.id,
+            {
+              lastError: error.message,
+              lockedUntil: null,
+              processedAt: new Date(),
+              status: 'processed',
+            },
+            lease,
+          );
+          if (settled) result.processed += 1;
+          continue;
+        }
         if (error instanceof LinearRemoteAuthError) {
           const settled = await this.model.updateInbox(
             row.id,
@@ -2013,6 +2027,17 @@ export class LinearSyncWorker {
         if (outcome !== 'pending-binding' && outcome !== 'paused') result.processed += 1;
         if (outcome === 'pending-binding' || outcome === 'paused') pageBlocked = true;
       } catch (error) {
+        if (error instanceof TaskReviewerRequiredError) {
+          await this.model.recordImportReceipt({
+            bindingId: binding.id,
+            lastError: error.message,
+            linearIssueId: issue.id,
+            phase,
+            status: 'processed',
+          });
+          result.processed += 1;
+          continue;
+        }
         pageBlocked = true;
         await this.model.recordImportReceipt({
           bindingId: binding.id,
@@ -2539,6 +2564,7 @@ export class LinearSyncWorker {
     };
 
     let pageBlocked = false;
+    let skippedReviewReason: string | undefined;
     const seenIssueIds = new Set<string>();
     for (const issue of page.issues) {
       // Per-issue remote fetches can stretch a bounded page past the lock
@@ -2571,6 +2597,11 @@ export class LinearSyncWorker {
         if (outcome !== 'pending-binding' && outcome !== 'paused') result.processed += 1;
         if (outcome === 'pending-binding' || outcome === 'paused') pageBlocked = true;
       } catch (error) {
+        if (error instanceof TaskReviewerRequiredError) {
+          skippedReviewReason = `TASK_REVIEWER_REQUIRED: ${issue.identifier || issue.id} needs a reviewer agent before entering review.`;
+          result.processed += 1;
+          continue;
+        }
         pageBlocked = true;
         result.failed += 1;
         console.error('[linear:scope-import]', error);
@@ -2588,6 +2619,7 @@ export class LinearSyncWorker {
       cursors: { issuesByTeam },
       issuesFailed: scope.issuesFailed + result.failed,
       issuesImported: scope.issuesImported + result.imported,
+      ...(skippedReviewReason ? { lastError: skippedReviewReason } : {}),
     });
     return result;
   }

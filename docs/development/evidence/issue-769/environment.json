@@ -1,0 +1,66 @@
+{
+  "cloudDeployment": "Not used for these receipts",
+  "device": "Personal local device; public gateway IPC used to disconnect and reconnect",
+  "kind": "Real local Electron with isolated seed-user workspace and schema-only QA PostgreSQL database",
+  "reviewerRuntime": "OpenCode ACP",
+  "savedModel": "opencode/mimo-v2.6-flash-free",
+  "scope": "Disposable QA text-delivery criteria and existing Electron controls; desktop only",
+  "screenshots": [
+    {
+      "file": "offline-grace-final-accepted-light.jpg",
+      "format": "JPEG",
+      "pixels": [2582, 1806]
+    },
+    {
+      "file": "offline-grace-final-error-light.jpg",
+      "format": "JPEG",
+      "pixels": [2582, 1806]
+    },
+    {
+      "file": "offline-reconnect-waiting-dark.jpg",
+      "format": "JPEG",
+      "pixels": [2582, 1806]
+    },
+    {
+      "file": "orchestrator-auto-review-passed-light.jpg",
+      "format": "JPEG",
+      "pixels": [2582, 1806]
+    },
+    {
+      "file": "reconnected-passed-dark.jpg",
+      "format": "JPEG",
+      "pixels": [2582, 1806]
+    },
+    {
+      "file": "review-entry-picker-dark.jpg",
+      "format": "JPEG",
+      "pixels": [2400, 1600]
+    },
+    {
+      "file": "reviewer-changed-activity-dark.jpg",
+      "format": "JPEG",
+      "pixels": [2582, 1806]
+    },
+    {
+      "file": "reviewer-cleared-activity-light.jpg",
+      "format": "JPEG",
+      "pixels": [2582, 1806]
+    },
+    {
+      "file": "reviewer-delete-named-error-dark.jpg",
+      "format": "JPEG",
+      "pixels": [2582, 1806]
+    },
+    {
+      "file": "reviewer-instructions-example-dark.jpg",
+      "format": "JPEG",
+      "pixels": [2582, 1806]
+    },
+    {
+      "file": "unsupported-reviewer-waiting-light.jpg",
+      "format": "JPEG",
+      "pixels": [2582, 1806]
+    }
+  ],
+  "sourceCommit": "d32cb6b4b5a7679c56c7880c6a111658f6f622b1"
+}

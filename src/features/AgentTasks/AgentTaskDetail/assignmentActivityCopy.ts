@@ -41,9 +41,10 @@ export const resolveAssignmentActivityCopy = (
 
   return {
     systemActorKey: 'taskDetail.activities.assignment.systemActor',
-    deletedTargetKey: isAgentSlot
-      ? 'taskDetail.activities.assignment.deletedAgent'
-      : 'taskDetail.activities.assignment.deletedMember',
+    deletedTargetKey:
+      isAgentSlot || isReviewerSlot
+        ? 'taskDetail.activities.assignment.deletedAgent'
+        : 'taskDetail.activities.assignment.deletedMember',
     verbKey: isReviewerSlot
       ? assigned
         ? 'taskDetail.activities.assignment.reviewerAssigned'

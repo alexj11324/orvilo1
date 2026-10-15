@@ -13,9 +13,9 @@ const mocks = vi.hoisted(() => ({
   acceptance: vi.fn(),
   rounds: vi.fn(),
   predict: vi.fn(),
-  reviewModel: vi.fn(),
+  task: vi.fn(),
 }));
-vi.mock('../goalReviewModelConfig', () => ({ resolveGoalReviewModelConfig: mocks.reviewModel }));
+vi.mock('../reviewerAgent', () => ({ resolveIssueReviewer: mocks.task }));
 vi.mock('@/database/models/verifyEvidence', () => ({
   VerifyEvidenceModel: vi.fn(function () {
     return { listByCheckResult: vi.fn().mockResolvedValue([]) };
@@ -66,10 +66,7 @@ const result = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.reviewModel.mockResolvedValue({
-    model: 'configured-model',
-    provider: 'configured-provider',
-  });
+  mocks.task.mockResolvedValue('live-reviewer');
   mocks.goal.mockResolvedValue({ id: 'goal1' });
   mocks.run.mockResolvedValue({
     id: 'r1',
@@ -184,19 +181,18 @@ describe('Goal automatic Acceptance review', () => {
     expect(await reviewGoalDelivery(db, 'u1', 't1', 'op1')).toMatchObject({ status: 'rejected' });
   });
 
-  it('uses the resolved reviewer instead of requiring the Google pin', async () => {
+  it('uses the live task reviewer instead of the Acceptance snapshot', async () => {
+    mocks.acceptance.mockResolvedValue({ id: 'a1', config: { verifierAgentId: 'stale-agent' } });
     await reviewGoalDelivery(db, 'u1', 't1', 'op1');
-    expect(mocks.predict.mock.calls[0][0].modelConfig).toEqual({
-      model: 'configured-model',
-      provider: 'configured-provider',
-    });
+    expect(mocks.predict.mock.calls[0][0].reviewerAgentId).toBe('live-reviewer');
+    expect(mocks.predict.mock.calls[0][0]).not.toHaveProperty('modelConfig');
   });
 
   it('holds with configuration guidance when no reviewer is available', async () => {
-    mocks.reviewModel.mockResolvedValue(undefined);
+    mocks.task.mockRejectedValue(new Error('Configure a reviewer Agent on the task'));
     const review = await reviewGoalDelivery(db, 'u1', 't1', 'op1');
     expect(review?.status).toBe('errored');
-    expect(review?.feedback).toContain('Configure an available model');
+    expect(review?.feedback).toContain('Configure a reviewer Agent');
     expect(mocks.predict).not.toHaveBeenCalled();
   });
 
@@ -205,9 +201,9 @@ describe('Goal automatic Acceptance review', () => {
       runs: [{ id: 'r1', roundIndex: 1, plan: [check] }],
       results: [{ ...result, userDecision: 'accepted' }],
     });
-    mocks.reviewModel.mockResolvedValue(undefined);
+    mocks.task.mockRejectedValue(new Error('Configure a reviewer Agent on the task'));
     expect((await reviewGoalDelivery(db, 'u1', 't1', 'op1'))?.status).toBe('passed');
-    expect(mocks.reviewModel).not.toHaveBeenCalled();
+    expect(mocks.predict).not.toHaveBeenCalled();
   });
 
   it('holds on a reviewer error instead of approving or requesting a product fix', async () => {

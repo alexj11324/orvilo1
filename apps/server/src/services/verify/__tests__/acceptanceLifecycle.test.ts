@@ -1,12 +1,12 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type * as AcceptanceServiceModule from '../acceptanceService';
 import { instantiateVerifyPlanOnStart } from '../planInstantiation';
 import { createRepairRunner } from '../repairService';
 
 const mocks = vi.hoisted(() => ({
   goalFind: vi.fn(),
+  buildAcceptanceCheckUnion: vi.fn(),
   loadRounds: vi.fn(),
   acceptanceAttachPolicyRun: vi.fn(),
   acceptanceEnsureForSubject: vi.fn(),
@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   ensureForOperation: vi.fn(),
   generateDraftPlan: vi.fn(),
   operationFindById: vi.fn(),
-  resolveModelConfig: vi.fn(),
+  resolveReviewer: vi.fn(),
   runFindByOperation: vi.fn(),
   setMetadata: vi.fn(),
   setPlan: vi.fn(),
@@ -30,8 +30,8 @@ vi.mock('@/database/models/goal', () => ({
   }),
 }));
 
-vi.mock('../acceptanceService', async (original) => ({
-  ...(await original<typeof AcceptanceServiceModule>()),
+vi.mock('../acceptanceService', () => ({
+  buildAcceptanceCheckUnion: mocks.buildAcceptanceCheckUnion,
   AcceptanceService: vi.fn(function () {
     return {
       loadRounds: mocks.loadRounds,
@@ -54,8 +54,8 @@ vi.mock('../taskAcceptance', () => ({
   resolveTaskAcceptance: mocks.taskAcceptanceResolve,
 }));
 
-vi.mock('../modelConfig', () => ({
-  resolveVerifyModelConfig: mocks.resolveModelConfig,
+vi.mock('../reviewerAgent', () => ({
+  resolveIssueReviewer: mocks.resolveReviewer,
 }));
 
 vi.mock('@/database/models/task', () => ({
@@ -94,6 +94,23 @@ const db = {} as any;
 const plan = [{ id: 'check-1', required: true }];
 
 describe('Verify acceptance lifecycle', () => {
+  it('does not create an Acceptance round for an administrative operation at cross-request completion', async () => {
+    mocks.operationFindById.mockResolvedValue({ metadata: { skipTaskVerification: true } });
+    mocks.taskFindById.mockResolvedValue({
+      name: 'Delivered Issue',
+      reviewerAgentId: 'reviewer-1',
+    });
+    mocks.taskAcceptanceResolve.mockResolvedValue({
+      acceptance: { id: 'a1' },
+      config: { enabled: true, verifyCriteriaIds: ['check-1'] },
+      requirement: 'Exact final reply',
+    });
+    await instantiateVerifyPlanOnStart(db, 'u1', { operationId: 'admin-op', taskId: 't1' });
+    expect(mocks.generateDraftPlan).not.toHaveBeenCalled();
+    expect(mocks.confirmPlan).not.toHaveBeenCalled();
+    expect(mocks.acceptanceAttachPolicyRun).not.toHaveBeenCalled();
+  });
+
   it('reuses the Goal acceptance checklist and supplemental check ids on a repair attempt', async () => {
     mocks.goalFind.mockResolvedValue({ id: 'goal-1' });
     mocks.taskAcceptanceResolve.mockResolvedValue({
@@ -110,6 +127,9 @@ describe('Verify acceptance lifecycle', () => {
       runs: [{ id: 'r1', roundIndex: 1, plan: previousPlan }],
       results: [],
     });
+    mocks.buildAcceptanceCheckUnion.mockReturnValue(
+      previousPlan.map((planItem) => ({ id: planItem.id, planItem })),
+    );
     mocks.ensureForOperation.mockResolvedValue({ id: 'retry' });
     await instantiateVerifyPlanOnStart(db, 'u1', { operationId: 'op2', taskId: 't1' });
     expect(mocks.setPlan).toHaveBeenCalledWith('retry', previousPlan);
@@ -182,11 +202,15 @@ describe('Verify acceptance lifecycle', () => {
   it('AI-decomposes an undecomposed requirement into named criteria, holistic as fallback', async () => {
     mocks.taskAcceptanceResolve.mockResolvedValue({
       acceptance: { id: 'acceptance-1' },
-      config: { enabled: true, verifierAgentId: 'verifier-1' },
+      config: { enabled: true },
       requirement: 'Deliver a runnable repro under ~/WikiSkill-Repro',
     });
-    mocks.taskFindById.mockResolvedValue({ instruction: 'Build the repro', name: 'Repro' });
-    mocks.resolveModelConfig.mockResolvedValue({ model: 'model-1', provider: 'provider-1' });
+    mocks.taskFindById.mockResolvedValue({
+      instruction: 'Build the repro',
+      name: 'Repro',
+      reviewerAgentId: 'verifier-1',
+    });
+    mocks.resolveReviewer.mockResolvedValue('verifier-1');
     mocks.runFindByOperation
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: 'run-1', plan });
@@ -196,18 +220,13 @@ describe('Verify acceptance lifecycle', () => {
       taskId: 'task-1',
     });
 
-    expect(mocks.resolveModelConfig).toHaveBeenCalledWith(
-      db,
-      'user-1',
-      { verifierAgentId: 'verifier-1' },
-      undefined,
-    );
+    expect(mocks.resolveReviewer).toHaveBeenCalledWith(db, 'user-1', 'task-1', undefined);
     expect(mocks.generateDraftPlan).toHaveBeenCalledWith(
       expect.objectContaining({
         context: 'Deliver a runnable repro under ~/WikiSkill-Repro',
         enableAiGeneration: true,
         holisticFallback: true,
-        modelConfig: { model: 'model-1', provider: 'provider-1' },
+        reviewerAgentId: 'verifier-1',
       }),
     );
   });
@@ -227,7 +246,7 @@ describe('Verify acceptance lifecycle', () => {
       taskId: 'task-1',
     });
 
-    expect(mocks.resolveModelConfig).not.toHaveBeenCalled();
+    expect(mocks.resolveReviewer).not.toHaveBeenCalled();
     expect(mocks.generateDraftPlan).toHaveBeenCalledWith(
       expect.objectContaining({ enableAiGeneration: false, holisticFallback: false }),
     );

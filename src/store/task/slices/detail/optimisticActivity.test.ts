@@ -74,17 +74,17 @@ describe('buildOptimisticAssignmentActivities', () => {
   it('logs a reviewer row when the review owner moves', () => {
     const rows = buildOptimisticAssignmentActivities({
       actor,
-      current: { agentId: null, reviewerUserId: null, userId: null },
+      current: { agentId: null, reviewerAgentId: null, userId: null },
       now,
-      reviewerTarget: { avatar: null, id: 'user_carol', name: 'Carol', type: 'user' },
-      reviewerUserId: 'user_carol',
+      reviewerTarget: { avatar: null, id: 'agent_carol', name: 'Carol', type: 'agent' },
+      reviewerAgentId: 'agent_carol',
     });
 
     expect(rows).toHaveLength(1);
     expect(rows[0].assignment).toEqual({
       from: null,
       kind: 'reviewer',
-      to: { avatar: null, id: 'user_carol', name: 'Carol', type: 'user' },
+      to: { avatar: null, id: 'agent_carol', name: 'Carol', type: 'agent' },
     });
   });
 
@@ -92,9 +92,9 @@ describe('buildOptimisticAssignmentActivities', () => {
     expect(
       buildOptimisticAssignmentActivities({
         actor,
-        current: { agentId: null, reviewerUserId: 'user_carol', userId: null },
+        current: { agentId: null, reviewerAgentId: 'user_carol', userId: null },
         now,
-        reviewerUserId: 'user_carol',
+        reviewerAgentId: 'user_carol',
       }),
     ).toEqual([]);
   });

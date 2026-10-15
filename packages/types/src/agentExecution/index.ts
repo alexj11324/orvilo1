@@ -167,6 +167,10 @@ export interface ExecAgentAppContext {
    * recursive sub-agent dispatch.
    */
   isSubAgent?: boolean;
+  /** Server-bound ordinary Issue reviewer session. */
+  issueReviewCycleId?: string;
+  /** Fences an automatic assignee continuation to its reviewer feedback. */
+  issueReviewRepairCycleId?: string;
   /**
    * ACP judgment-run marker. Present on operations dispatched by the retained
    * judgment path (`AiGenerationService.generateObject` with `kind: 'judgment'`

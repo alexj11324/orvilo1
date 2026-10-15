@@ -1,4 +1,3 @@
-import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { TRACING_SCENARIOS } from '@orvilo/const';
 import type { TracingOptions } from '@orvilo/llm-generation-tracing';
 import {
@@ -59,15 +58,12 @@ export interface PredictReviewParams {
   includeTextEvidence?: boolean;
   /** The check's detailed judging rubric, when the criterion links one. */
   instructionDocumentId?: string | null;
-  /**
-   * Preferred ACP binding for the review judgment (the Acceptance's pinned
-   * verifier agent). Falls back to the builtin verify agent, then the
-   * operator env binding; unresolved → an `errored` prediction row.
-   */
-  judgmentAgentId?: string | null;
-  modelConfig: { model: string; provider: string };
   /** The acceptance's requirement, used as the scope test. */
   requirement?: string | null;
+  /**
+   * Reviewer selected by the live task. Its saved runtime owns this judgment.
+   */
+  reviewerAgentId: string;
   surface?: string | null;
 }
 
@@ -97,21 +93,17 @@ export const shouldSurfaceProposal = <
 /**
  * Whether a stored row is the opinion of the reviewer currently in service.
  *
- * Rows from an earlier pin (a different model, or an older prompt version)
- * stay in the table for the comparison set, but they are not what the page
- * shows or what a fresh request is waiting on: reading the newest row across
- * models let a stale verdict satisfy "the batch finished" the moment the
- * current model's row was cleared for re-judging.
+ * Existing identity columns store provider `acp` and the reviewer Agent ID.
+ * Historical reviewer or prompt cohorts remain queryable but cannot satisfy
+ * the current review request.
  */
 export const isCurrentReviewPrediction = (
   prediction: { id?: string; model: string; promptVersion: string; provider: string },
-  modelConfig: { model: string; provider: string },
-  automaticPredictionIds?: ReadonlySet<string>,
+  reviewerAgentId: string,
 ): boolean =>
-  Boolean(prediction.id && automaticPredictionIds?.has(prediction.id)) ||
-  (prediction.provider === modelConfig.provider &&
-    prediction.model === modelConfig.model &&
-    prediction.promptVersion === REVIEW_PREDICT_PROMPT_VERSION);
+  prediction.provider === 'acp' &&
+  prediction.model === reviewerAgentId &&
+  prediction.promptVersion === REVIEW_PREDICT_PROMPT_VERSION;
 
 /**
  * Produces an automated second opinion on a check the verifier already judged.
@@ -151,11 +143,11 @@ export class VerifyReviewPredictorService {
    * BEFORE the batch is dispatched — the reset is what lets a poller tell a
    * finished batch from the previous run's leftovers.
    */
-  async resetPending(checkResultIds: string[], modelConfig: { model: string; provider: string }) {
+  async resetPending(checkResultIds: string[], reviewerAgentId: string) {
     await this.predictionModel.resetUnadjudicated(checkResultIds, {
-      model: modelConfig.model,
+      model: reviewerAgentId,
       promptVersion: REVIEW_PREDICT_PROMPT_VERSION,
-      provider: modelConfig.provider,
+      provider: 'acp',
     });
   }
 
@@ -170,7 +162,7 @@ export class VerifyReviewPredictorService {
    * already been answered, returns null.
    */
   async predict(params: PredictReviewParams) {
-    const { checkResultId, modelConfig } = params;
+    const { checkResultId, reviewerAgentId } = params;
 
     const result = await this.resultModel.findById(checkResultId);
     if (!result) return null;
@@ -182,8 +174,8 @@ export class VerifyReviewPredictorService {
     // avoids paying for an opinion that already has its answer.
     const existing = await this.predictionModel.findAdjudicated(
       checkResultId,
-      modelConfig.provider,
-      modelConfig.model,
+      'acp',
+      reviewerAgentId,
       REVIEW_PREDICT_PROMPT_VERSION,
     );
     if (existing) {
@@ -243,16 +235,14 @@ export class VerifyReviewPredictorService {
       const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
       raw = await ai.generateObject(
         {
-          ...chain,
-          model: modelConfig.model,
-          provider: modelConfig.provider,
+          messages: chain.messages.map((message) => ({ ...message, role: 'user' as const })),
           schema: REVIEW_PREDICTION_JSON_SCHEMA,
         },
         {
           judgment: {
             binding: {
-              agentId: params.judgmentAgentId,
-              slug: BUILTIN_AGENT_SLUGS.verifyAgent,
+              agentId: params.reviewerAgentId,
+              allowEnvFallback: false,
             },
             // Visual evidence rides the judgment turn as attached files.
             fileIds: visuals.map((visual) => visual.fileId),
@@ -276,7 +266,7 @@ export class VerifyReviewPredictorService {
       const errorType = pickTrimmedString(detail?.errorType);
       const reason =
         message ??
-        `Review model ${modelConfig.provider}/${modelConfig.model} could not run${errorType ? ` (${errorType})` : ''}. Check the provider configuration and retry the review.`;
+        `Reviewer Agent ${reviewerAgentId} could not run${errorType ? ` (${errorType})` : ''}. Check the Agent configuration and retry the review.`;
       return this.record(params, 'errored', reason);
     }
 
@@ -300,8 +290,8 @@ export class VerifyReviewPredictorService {
       comment: prediction.comment ?? undefined,
       confidence: prediction.confidence ?? undefined,
       latencyMs: Date.now() - startedAt,
-      model: modelConfig.model,
-      provider: modelConfig.provider,
+      model: reviewerAgentId,
+      provider: 'acp',
       promptVersion: REVIEW_PREDICT_PROMPT_VERSION,
       rationale: prediction.rationale ?? undefined,
       status: 'judged',
@@ -320,9 +310,9 @@ export class VerifyReviewPredictorService {
   private record(params: PredictReviewParams, status: 'errored' | 'skipped', reason: string) {
     return this.predictionModel.upsert({
       checkResultId: params.checkResultId,
-      model: params.modelConfig.model,
+      model: params.reviewerAgentId,
       promptVersion: REVIEW_PREDICT_PROMPT_VERSION,
-      provider: params.modelConfig.provider,
+      provider: 'acp',
       status,
       statusReason: reason,
     });

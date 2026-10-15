@@ -77,9 +77,8 @@ export const recomputeRepairAncestors = async (
 interface ReportContext {
   deliverable: string;
   goal: string;
-  modelConfig: { model: string; provider: string };
   /** Preferred ACP binding for the report-narrative judgment. */
-  verifierAgentId?: string;
+  reviewerAgentId: string;
 }
 
 /**
@@ -107,6 +106,7 @@ export const driveTaskFromVerify = async (
     // Only act on a terminally settled run (skip pending / verifying / repairing).
     if (run?.status !== 'passed' && run?.status !== 'failed' && run?.status !== 'errored') return;
     if ((run.metadata as { taskDrivenAt?: string } | null)?.taskDrivenAt) return; // already drove
+    const manualAcceptance = run.userDecision === 'accept';
     const operationModel = new AgentOperationModel(db, userId, workspaceId);
     const op = await operationModel.findById(operationId);
     const taskOperation = await resolveTaskOperation(operationModel, operationId);
@@ -315,7 +315,7 @@ export const driveTaskFromVerify = async (
     // attempt would only re-deliver into the same broken review.
     if (!(await renewTaskDrive())) return;
     const goalReview =
-      run.status === 'passed'
+      run.status === 'passed' && !manualAcceptance
         ? await reviewGoalDelivery(db, userId, taskOperation.taskId, operationId, workspaceId)
         : undefined;
     if (!(await renewTaskDrive())) return;
@@ -334,7 +334,7 @@ export const driveTaskFromVerify = async (
     // the human decision gate instead of completing silently. The verify
     // verdict stays `passed`; only the task's auto-completion is downgraded.
     // Missing closeout → requires review, never a hard fail or a retry.
-    if (outcome === 'passed') {
+    if (outcome === 'passed' && !manualAcceptance) {
       const aegisVerdict = evaluateAegisEvidenceRequirement(op.metadata);
       if (aegisVerdict === 'requires-review') {
         log(
@@ -420,6 +420,7 @@ export const driveTaskFromVerify = async (
                   : undefined
                 : expectedContract,
             expectedStatus: currentTask.status,
+            manualAcceptance,
             onStatusCommitted: () => {
               completionReservationActive = false;
               completionLeaseFailure = undefined;

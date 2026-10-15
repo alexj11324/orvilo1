@@ -29,6 +29,7 @@ import { evidenceDescriptionForFile } from './verifyHelpers';
 const { mockTrpcClient } = vi.hoisted(() => ({
   mockTrpcClient: {
     verify: {
+      executeVerify: { mutate: vi.fn() },
       createRubric: { mutate: vi.fn() },
       getRubric: { query: vi.fn() },
       updateRubric: { mutate: vi.fn() },
@@ -51,6 +52,7 @@ describe('verify rubric config commands', () => {
     mockTrpcClient.verify.createRubric.mutate.mockReset().mockResolvedValue({ id: 'rub-1' });
     mockTrpcClient.verify.updateRubric.mutate.mockReset().mockResolvedValue(undefined);
     mockTrpcClient.verify.getRubric.query.mockReset();
+    mockTrpcClient.verify.executeVerify.mutate.mockReset().mockResolvedValue([]);
   });
 
   afterEach(() => consoleSpy.mockRestore());
@@ -69,6 +71,14 @@ describe('verify rubric config commands', () => {
       config: { maxRepairRounds: 3 },
       description: undefined,
       title: 'Standard',
+    });
+  });
+  it('executes the Issue review without server model or batch flags', async () => {
+    await run(['execute', 'op-1', '--goal', 'Ship it', '--deliverable', 'Delivered']);
+    expect(mockTrpcClient.verify.executeVerify.mutate).toHaveBeenCalledWith({
+      deliverable: 'Delivered',
+      goal: 'Ship it',
+      operationId: 'op-1',
     });
   });
 

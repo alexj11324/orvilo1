@@ -258,3 +258,23 @@ describe('settleSourceLoads', () => {
     expect(settled.unavailable).toEqual(['resource_transfer']);
   });
 });
+
+describe('ActionSourceRegistry agent reviewers', () => {
+  it('does not grant input permission when an agent ID matches a user ID', async () => {
+    const registry = new ActionSourceRegistry(
+      dbFor({
+        id: 'task-1',
+        workspaceId: 'ws1',
+        reviewerAgentId: 'reviewer-1',
+        assigneeUserId: 'assignee-1',
+        createdByUserId: 'creator-1',
+      }),
+      'reviewer-1',
+      'ws1',
+      false,
+    );
+    await expect(
+      registry.getAuthorized({ kind: 'acp_input', requestId: 'task-1' }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
+});

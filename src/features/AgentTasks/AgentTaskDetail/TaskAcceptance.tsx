@@ -48,6 +48,7 @@ import GoalRoundTimeline from './GoalRoundTimeline';
 import { resolveTaskAcceptanceRequirement } from './resolveTaskAcceptanceProjection';
 import { TaskAcceptanceHeader } from './TaskAcceptanceHeader';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import TaskReviewerProperty from './TaskReviewerProperty';
 import TaskVerifyConfig from './TaskVerifyConfig';
 
 const LoadingStatusIcon = EXECUTION_STATUS_VISUALS.running.icon;
@@ -91,13 +92,25 @@ const CompactCheckRow = memo<CompactCheckRowProps>(({ check, onOpen }) => {
   const meta = checkHeadMeta(check);
 
   return (
-    <CriterionRow
-      data-task-acceptance-check={check.id}
-      icon={<meta.icon className="flex-none size-4" color={meta.color} size={16} />}
-      seq={check.seq}
-      title={checkDisplayTitle(check.title, t('acceptance.checks.holisticTitle'))}
-      onOpen={onOpen}
-    />
+    <div>
+      <CriterionRow
+        data-task-acceptance-check={check.id}
+        icon={<meta.icon className="flex-none size-4" color={meta.color} size={16} />}
+        seq={check.seq}
+        title={checkDisplayTitle(check.title, t('acceptance.checks.holisticTitle'))}
+        onOpen={onOpen}
+      />
+      {typeof check.result?.metadata?.waitingReason === 'string' && (
+        <p className="px-3 text-xs text-warning-text" role="status">
+          {t('acceptance.checks.waitingDevice')}
+        </p>
+      )}
+      {check.result?.status === 'errored' && check.result.toulmin?.limitation && (
+        <p className="px-3 text-xs text-warning-text" role="status">
+          {check.result.toulmin.limitation}
+        </p>
+      )}
+    </div>
   );
 });
 
@@ -193,7 +206,13 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
   // Before the first Acceptance round exists, the configured criteria ARE the
   // delivery acceptance. Keep them in this single slot; once a round exists,
   // replace the definitions with their live/result projection below.
-  if (!acceptanceSubject && !subjectError) return <TaskVerifyConfig />;
+  if (!acceptanceSubject && !subjectError)
+    return (
+      <div className="flex flex-col gap-2">
+        <TaskReviewerProperty />
+        <TaskVerifyConfig />
+      </div>
+    );
 
   // Removing the acceptance drops the aggregate (round reports detach) AND
   // clears the task's verify config — otherwise the section would fall back to
@@ -250,6 +269,7 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
       <AcceptanceScope embedded acceptanceId={acceptanceSubject.id}>
         <AcceptanceBundleGate height={160}>
           <div className="flex flex-col gap-4">
+            <TaskReviewerProperty />
             <AcceptanceCheckInventory toolbar={reportButton} />
             <AcceptanceDecision />
           </div>
@@ -274,6 +294,7 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
     return (
       <div className="flex flex-col gap-2">
         {header}
+        <TaskReviewerProperty />
         <div className={`flex flex-col ${styles.body}`}>
           <AcceptanceError onRetry={() => void mutateSubject()} />
         </div>
@@ -284,6 +305,7 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
   return (
     <div className="flex flex-col gap-2">
       {header}
+      <TaskReviewerProperty />
       <Collapsible open={sectionExpanded}>
         <CollapsibleContent>
           <div className={`flex flex-col gap-3.5 ${styles.body}`}>

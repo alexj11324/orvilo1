@@ -5,6 +5,7 @@ import { t } from 'i18next';
 import { useCallback } from 'react';
 
 import { toast } from '@/components/toast';
+import { pickReviewerAgent } from '@/features/AgentTasks/features/ReviewerAgentSelector';
 import { shouldAutoRunForWorkflowMove } from '@/features/AgentTasks/features/shouldAutoRunForWorkflowMove';
 import { runTaskWithContractCheck } from '@/features/AgentTasks/shared/runWithContractCheck';
 import { cascadeStatusForBoardKey } from '@/features/MyWork/workQueryBoard';
@@ -47,7 +48,13 @@ export const useIssueStatusMove = () => {
 
   return useCallback(
     async (input: { taskIdentifier: string; target: IssueStatusMoveTarget }): Promise<boolean> => {
-      const { data: task } = await taskService.find(input.taskIdentifier);
+      let { data: task } = await taskService.find(input.taskIdentifier);
+      if (input.target.category === 'in_review' && !task.reviewerAgentId) {
+        const reviewerAgentId = await pickReviewerAgent();
+        if (!reviewerAgentId) return false;
+        await updateTask(input.taskIdentifier, { reviewerAgentId });
+        ({ data: task } = await taskService.find(input.taskIdentifier));
+      }
       const previousCategory = task.workflowCategory;
       // The write already committed — a read-back failure must not surface as
       // a failed save. A cascade also changed sub-issues, whose rows live in

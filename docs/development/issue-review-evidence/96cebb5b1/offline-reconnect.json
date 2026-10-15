@@ -1,0 +1,130 @@
+{
+  "capturedAt": "2026-10-13T17:58:47.446Z",
+  "comments": [
+    {
+      "id": "cmt_ffc8riiGUxzi",
+      "content": "Final reply is exactly ISSUE776_OFFLINE_OK, matching the sole stated acceptance criterion (the reviewer only judges the final reply).",
+      "author_agent_id": "agt_UHKRqDtsjqgs",
+      "created_at": "2026-10-13T17:51:58.317Z"
+    }
+  ],
+  "deliveries": [
+    {
+      "topicId": "tpc_O236TZqLrSSU",
+      "operationId": "op_1791913585121_agt_byif1Y2m45BF_tpc_O236TZqLrSSU_afrqHp7e",
+      "finalReply": "ISSUE776_OFFLINE_OK"
+    }
+  ],
+  "environment": "Real Electron app, isolated local Next backend and real local gateways; one physical macOS device; two saved OpenCode Agents.",
+  "nativeSessions": [
+    {
+      "id": "tpc_O236TZqLrSSU",
+      "native_session_id": "ses_ec9a073c2ffefdReuQsXulpSdn"
+    },
+    {
+      "id": "tpc_zDEmeup7znlZ",
+      "native_session_id": "ses_ec99c302bffeZiuhNhX087gdjG"
+    }
+  ],
+  "operations": [
+    {
+      "id": "op_1791913585121_agt_byif1Y2m45BF_tpc_O236TZqLrSSU_afrqHp7e",
+      "agentId": "agt_byif1Y2m45BF",
+      "topicId": "tpc_O236TZqLrSSU",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "status": "done",
+      "createdAt": "2026-10-13T17:46:25.136Z"
+    },
+    {
+      "id": "op_1791913667766_agt_UHKRqDtsjqgs_tpc_zDEmeup7znlZ_aI9jwVmF",
+      "agentId": "agt_UHKRqDtsjqgs",
+      "topicId": "tpc_zDEmeup7znlZ",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "status": "done",
+      "createdAt": "2026-10-13T17:47:47.784Z"
+    }
+  ],
+  "queueReplay": {
+    "originalOperationId": "op_1791913667766_agt_UHKRqDtsjqgs_tpc_zDEmeup7znlZ_aI9jwVmF",
+    "queuedAt": "2026-10-13T17:47:47.955Z",
+    "offlineSince": "2026-10-13T17:47:47.955Z",
+    "afterStatus": "done",
+    "afterQueue": null,
+    "disconnect": {
+      "action": "disconnect",
+      "result": {
+        "success": true
+      },
+      "environment": "owned local QA Electron port9298"
+    },
+    "reconnect": {
+      "action": "connect",
+      "result": {
+        "success": true
+      },
+      "environment": "owned local QA Electron port9298"
+    }
+  },
+  "review": {
+    "state": "submitted",
+    "cycleId": "839cd2e0-6456-4287-b3b7-cc557fcd5cc3",
+    "retryReason": "Reviewer device offline; waiting for reconnect.",
+    "repairPending": false,
+    "reviewerAgentId": "agt_UHKRqDtsjqgs",
+    "consecutiveFailures": 0,
+    "deliveryOperationId": "op_1791913585121_agt_byif1Y2m45BF_tpc_O236TZqLrSSU_afrqHp7e",
+    "reviewerOperationId": "op_1791913667766_agt_UHKRqDtsjqgs_tpc_zDEmeup7znlZ_aI9jwVmF"
+  },
+  "sourceCommit": "96cebb5b1daaf8f2e4e76463b03de3046fb30b58",
+  "task": {
+    "id": "task_cTrb7UxXTpyt",
+    "identifier": "T-20",
+    "status": "done",
+    "description": "Acceptance criterion: the final reply is exactly ISSUE776_OFFLINE_OK. For this isolated QA run, first use the shell to sleep for 30 seconds; then reply exactly ISSUE776_OFFLINE_OK. Do not edit files or ask for human input. The reviewer only judges the final reply and submits one pass or fail verdict.",
+    "assigneeAgentId": "agt_byif1Y2m45BF",
+    "reviewerAgentId": "agt_UHKRqDtsjqgs"
+  },
+  "transcripts": [
+    {
+      "topicId": "tpc_zDEmeup7znlZ",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Review Issue T-20: Issue 776 offline reviewer reconnect QA\n\nIssue description (including acceptance criteria):\nAcceptance criterion: the final reply is exactly ISSUE776_OFFLINE_OK. For this isolated QA run, first use the shell to sleep for 30 seconds; then reply exactly ISSUE776_OFFLINE_OK. Do not edit files or ask for human input. The reviewer only judges the final reply and submits one pass or fail verdict.\n\nDelivered final reply:\nISSUE776_OFFLINE_OK\n\nWorking directory: /private/tmp/issue769-qa-repo\n\nCheck the delivery against the Issue description. Record exactly one verdict by calling submitTaskReview with identifier T-20, verdict pass or fail, and a comment explaining what is missing when failing."
+        },
+        {
+          "role": "assistant",
+          "content": "...",
+          "tools": [
+            {
+              "apiName": "orvilo_cc_orvilo-task__viewTask",
+              "resultMessageId": "msg_r1VPi3TS8EeyupXkRy"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "content": "T-20 Issue 776 offline reviewer reconnect QA\nStatus: ◐ paused     Priority: -\nInstruction: Acceptance criterion: the final reply is exactly ISSUE776_OFFLINE_OK. For this isolated QA run, first use the shell to sleep for 30 seconds; then reply exactly ISSUE776_OFFLINE_OK. Do not edit files or ask for human input. The reviewer only judges the final reply and submits one pass or fail verdict.\nDomain revision: 2 (use as expectedDomainRevision when editing)\nAgent: agt_byif1Y2m45BF\nTopics: 1\nCreated: 2026-10-13T17:46:22.147Z\n\nCheckpoint: (not configured, default: onAgentRequest=true)\n\nActivities:\n  💬 2026-10-13T17:46:25.121Z Topic #1 Issue 776 offline reviewer reconnect QA ✓ completed  tpc_O236TZqLrSSU\n  🔁 2026-10-13T17:47:47.576Z system changed workflow: backlog → in_review  1daf550a-2e8b-420b-a81e-49361f90884f\nUsable reviewer Agents: [{\"canReviewIssues\":true,\"id\":\"agt_UHKRqDtsjqgs\",\"name\":\"Issue 769 editable reviewer instructions QA\"},{\"canReviewIssues\":false,\"id\":\"agt_5XozdSi7TDzp\",\"name\":\"Issue 769 unsupported pi reviewer\"},{\"canReviewIssues\":true,\"id\":\"agt_byif1Y2m45BF\",\"name\":\"Issue 769 OpenCode\"}]. Set reviewerAgentId with editTask before this delivered Issue enters review. Choose canReviewIssues=true; unsupported runtimes cannot be assigned as reviewer."
+        },
+        {
+          "role": "assistant",
+          "content": "The delivered final reply is exactly `ISSUE776_OFFLINE_OK`, matching the acceptance criterion verbatim. Per the Issue description, the reviewer only judges the final reply.",
+          "tools": [
+            {
+              "apiName": "orvilo_cc_orvilo-task__submitTaskReview",
+              "resultMessageId": "msg_fs256AX2W4dDC8L2cr"
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "content": "Issue T-20 review recorded. Status: done."
+        },
+        {
+          "role": "assistant",
+          "content": "**Verdict: pass** (T-20 → Done)\n\nEvidence:\n- Issue description's acceptance criterion: \"the final reply is exactly ISSUE776_OFFLINE_OK\" and \"The reviewer only judges the final reply\"\n- Delivered reply: `ISSUE776_OFFLINE_OK` — exact match\n- No files edited; verdict recorded exactly once via `submitTaskReview`\n\nNote: the criterion also mentioned a 30-second shell sleep before replying, but per the Issue's own scoping (\"The reviewer only judges the final reply\"), the verdict is based solely on the final reply text."
+        }
+      ]
+    }
+  ]
+}

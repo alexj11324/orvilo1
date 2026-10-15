@@ -2998,6 +2998,24 @@ describe('HeterogeneousAgentCtr', () => {
       nextFakeProc = null;
     });
 
+    it('reports pending and spawned wrappers until exit without signalling the process', async () => {
+      const proc = createGatewayCliProc();
+      nextFakeProc = proc;
+      const ctr = new HeterogeneousAgentCtr({
+        appStoragePath,
+        storeManager: { get: vi.fn() },
+      } as any);
+      expect(ctr.hasOrviloHeteroExec({ operationId: params.operationId })).toBe(false);
+      const ack = ctr.spawnOrviloHeteroExec(params);
+      expect(ctr.hasOrviloHeteroExec({ operationId: params.operationId })).toBe(true);
+      proc.emit('spawn');
+      await ack;
+      expect(ctr.hasOrviloHeteroExec({ operationId: params.operationId })).toBe(true);
+      expect(proc.kill).not.toHaveBeenCalled();
+      proc.emit('exit', 0);
+      expect(ctr.hasOrviloHeteroExec({ operationId: params.operationId })).toBe(false);
+    });
+
     it('uses the self-contained embedded CLI instead of a global orvilo from PATH', async () => {
       const proc = createGatewayCliProc();
       nextFakeProc = proc;

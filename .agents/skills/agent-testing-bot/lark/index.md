@@ -1,5 +1,8 @@
 # Lark / 飞书 Bot Testing
 
+> Historical Messenger acceptance recipe. Its adapter/IPC surface was retired.
+> Do not run this as current product verification. See [the current entry point](../SKILL.md).
+
 **App name:** `Lark` or `飞书` | **Process name:** `Lark` or `飞书`
 
 See [references/osascript.md](../../../acceptance/references/osascript.md) for shared patterns.

@@ -27,13 +27,6 @@ Orvilo 将登录委托给由 Clerk 提供支持的账户门户。以下环境变
 - 默认值：`-`
 - 示例：`.aspectlylabs.com`
 
-#### `AUTH_COOKIE_PREFIX`
-
-- 类型：可选
-- 说明：旧版 Better Auth Cookie 命名空间（`<prefix>.session_token`），仅用于清理。旧版及尚未绑定 Clerk 的会话需重新登录，对新的 `orvilo_auth` Cookie 无影响。
-- 默认值：`better-auth`
-- 示例：`my-orvilo`
-
 #### `AUTH_SESSION_TTL_SECONDS`
 
 - 类型：可选
@@ -51,7 +44,7 @@ Orvilo 将登录委托给由 Clerk 提供支持的账户门户。以下环境变
 #### `AUTH_EMAIL_VERIFICATION`
 
 - 类型：可选
-- 说明：设为 `1` 时在门户要求邮箱验证。
+- 说明：设为 `1` 时暴露邮箱验证展示标志；实际校验策略在 Clerk 配置。
 - 默认值：`0`
 - 示例：`1`
 
@@ -179,3 +172,8 @@ Orvilo 将登录委托给由 Clerk 提供支持的账户门户。以下环境变
 
 - 类型：可选
 - 说明：Resend 外发邮件的发件人地址。
+
+## 已退役配置
+
+`AUTH_COOKIE_PREFIX`、`AUTH_SECRET`、`AUTH_SSO_PROVIDERS` 及 Better Auth 提供商变量
+不再由当前认证运行时读取。旧 Cookie 不再被接受；登录和注册策略请在 Clerk 中配置。

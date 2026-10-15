@@ -165,6 +165,42 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     );
   });
 
+  it('requires deployment-owned signing keys in both Compose templates', () => {
+    for (const file of ['.env.example', '.env.zh-CN.example']) {
+      const example = readFileSync(path.join(deployDirectory, file), 'utf8');
+      expect(example).toMatch(/^JWKS_KEY=$/m);
+      expect(example).toMatch(/^CLERK_SECRET_KEY=/m);
+      expect(example).not.toMatch(/^AUTH_SECRET=/m);
+    }
+  });
+
+  it('uses the current Clerk auth contract in the Grafana deployment recipe', () => {
+    const grafana = parse(
+      readFileSync(path.join(deployDirectory, '../production/grafana/docker-compose.yml'), 'utf8'),
+    );
+    expect(grafana.services.casdoor).toBeUndefined();
+    expect(grafana.services.orvilo.environment).toContain('KEY_VAULTS_SECRET=${KEY_VAULTS_SECRET}');
+    expect(grafana.services.orvilo.environment.join(' ')).not.toMatch(
+      /AUTH_SECRET|AUTH_SSO_PROVIDERS/,
+    );
+    expect(grafana.services.orvilo.entrypoint).not.toContain('AUTH_CASDOOR_ISSUER');
+    for (const file of ['.env.example', '.env.zh-CN.example']) {
+      const example = readFileSync(
+        path.join(deployDirectory, '../production/grafana', file),
+        'utf8',
+      );
+      expect(example).toMatch(/^CLERK_SECRET_KEY=/m);
+      expect(example).toMatch(/^AUTH_ACCOUNTS_URL=/m);
+      expect(example).not.toMatch(/^AUTH_URL=/m);
+    }
+  });
+
+  it('delivers worker collaboration events over the internal gateway endpoint', () => {
+    const gateway = 'COLLABORATION_GATEWAY_URL=http://collaboration-gateway:3012';
+    expect(compose.services.orvilo.environment).toContain(gateway);
+    expect(compose.services['hatchet-worker'].environment).toContain(gateway);
+  });
+
   it('packages the Hatchet worker in the deployment image and keeps it out of the web container', () => {
     const worker = compose.services['hatchet-worker'];
 

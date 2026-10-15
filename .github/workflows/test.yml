@@ -74,6 +74,9 @@ jobs:
       - name: Install deps
         run: pnpm install
 
+      - name: Check authentication tooling
+        run: node --test scripts/dockerPrebuild.test.mjs scripts/generate-oidc-jwk.test.mjs
+
       - name: Typecheck
         # Two runs lost their runner during tsgo without a TypeScript diagnostic.
         # Keep the full check, reduce Go's memory/concurrency pressure, and record
@@ -108,6 +111,11 @@ jobs:
           git remote add origin "https://github.com/${REPOSITORY}.git"
           git fetch --no-tags --depth=1 origin "${REF_SHA}"
           git checkout --force FETCH_HEAD
+
+      - name: Check current repository contracts
+        run: |
+          node scripts/ci/checkRepositoryContracts.mjs
+          node --test scripts/ci/checkRepositoryContracts.test.mjs scripts/repositoryAudit.test.mjs
 
       - name: Check slimming boundary
         run: node scripts/slimming/census.mjs --check

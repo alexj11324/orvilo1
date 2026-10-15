@@ -30,21 +30,21 @@ Orvilo delegates sign-in to a dedicated **accounts portal** powered by [Clerk](h
 | `CLERK_AUTHORIZED_PARTIES` | Optional | Comma-separated `azp` allowlist for session token exchange.                                           |
 | `CLERK_JWT_KEY`            | Optional | PEM public key for fully offline session-JWT verification (skips JWKS fetch).                         |
 | `AUTH_COOKIE_DOMAIN`       | Optional | Parent domain for the session cookie (e.g. `.aspectlylabs.com`) so the portal and app share auth.     |
-| `AUTH_SESSION_TTL_SECONDS` | Optional | App session lifetime in seconds (default 30 days).                                                    |
+| `AUTH_SESSION_TTL_SECONDS` | Optional | Idle session lifetime (default 7 days); absolute lifetime is capped at 30 days.                       |
 
 See [Authentication environment variables](/docs/self-hosting/environment-variables/auth) for the full reference.
 
 ## Sign-In Methods
 
-Email/password, magic link, OAuth providers, and MFA are configured in the Clerk dashboard backing the accounts portal — not in Orvilo env vars. Feature flags forwarded to the portal:
+Email/password, magic link, OAuth providers, and MFA are configured in the Clerk dashboard backing the accounts portal — not in Orvilo env vars. Presentation metadata exposed to the portal (actual access policies, including email verification, must be configured in Clerk):
 
-| Environment Variable          | Description                                              |
-| ----------------------------- | -------------------------------------------------------- |
-| `AUTH_DISABLE_EMAIL_PASSWORD` | Hide the email/password form on the portal sign-in page. |
-| `AUTH_ENABLE_MAGIC_LINK`      | Enable magic-link sign-in on the portal.                 |
-| `AUTH_EMAIL_VERIFICATION`     | Require email verification on the portal.                |
+| Environment Variable          | Description                                                                      |
+| ----------------------------- | -------------------------------------------------------------------------------- |
+| `AUTH_DISABLE_EMAIL_PASSWORD` | Hide the email/password form on the portal sign-in page.                         |
+| `AUTH_ENABLE_MAGIC_LINK`      | Enable magic-link sign-in on the portal.                                         |
+| `AUTH_EMAIL_VERIFICATION`     | Expose the email-verification presentation flag; configure enforcement in Clerk. |
 
 ## Legacy Notes
 
-- Earlier Orvilo versions used Better Auth. The library and its `/api/auth/*` endpoints have been removed; sessions issued by it (`<prefix>.session_token` cookies) are still honored until they expire, then users re-sign in via the portal.
+- Earlier Orvilo versions used Better Auth. The library and its `/api/auth/*` endpoints have been removed; legacy cookies (`<prefix>.session_token`) and unbound sessions are rejected. Users must sign in again through the Clerk portal.
 - Better Auth–era tables (`account`, `auth_sessions` legacy rows, etc.) are left in place for data retention.

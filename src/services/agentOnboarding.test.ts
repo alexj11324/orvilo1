@@ -226,29 +226,36 @@ describe('first agent create response reconciliation', () => {
     expect(resumed.config?.agencyConfig?.boundDeviceId).toBe('original-device');
     expect(create).toHaveBeenCalledTimes(1);
   });
-  it('unlocks a rejected create intent so corrected fields can be submitted', async () => {
-    const checkpoint = { requestId: 'rejected-intent', attempted: false };
-    const rejection = TRPCClientError.from({
-      error: {
-        message: 'Invalid Agent config',
-        code: -32600,
-        data: { code: 'BAD_REQUEST', httpStatus: 400 },
-      },
-    });
-    const create = vi
-      .fn()
-      .mockRejectedValueOnce(rejection)
-      .mockResolvedValueOnce({ agentId: 'corrected-agent' });
-    await expect(
-      createOnboardingAgentOnce(checkpoint, { config: { title: 'Original' } }, create),
-    ).rejects.toThrow('Invalid Agent config');
-    expect(checkpoint.attempted).toBe(false);
-    await expect(
-      createOnboardingAgentOnce(checkpoint, { config: { title: 'Corrected' } }, create),
-    ).resolves.toMatchObject({ agentId: 'corrected-agent', config: { title: 'Corrected' } });
-    expect(api.sidebar).not.toHaveBeenCalled();
-    expect(create).toHaveBeenCalledTimes(2);
-  });
+  it.each([
+    ['BAD_REQUEST', 400],
+    ['PRECONDITION_FAILED', 412],
+    ['FORBIDDEN', 403],
+  ])(
+    'unlocks a %s create rejection so corrected fields can be submitted',
+    async (code, httpStatus) => {
+      const checkpoint = { requestId: 'rejected-intent', attempted: false };
+      const rejection = TRPCClientError.from({
+        error: {
+          message: 'Invalid Agent config',
+          code: -32600,
+          data: { code, httpStatus },
+        },
+      });
+      const create = vi
+        .fn()
+        .mockRejectedValueOnce(rejection)
+        .mockResolvedValueOnce({ agentId: 'corrected-agent' });
+      await expect(
+        createOnboardingAgentOnce(checkpoint, { config: { title: 'Original' } }, create),
+      ).rejects.toThrow('Invalid Agent config');
+      expect(checkpoint.attempted).toBe(false);
+      await expect(
+        createOnboardingAgentOnce(checkpoint, { config: { title: 'Corrected' } }, create),
+      ).resolves.toMatchObject({ agentId: 'corrected-agent', config: { title: 'Corrected' } });
+      expect(api.sidebar).not.toHaveBeenCalled();
+      expect(create).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it('does not retry creation when the authoritative reconciliation request fails', async () => {
     api.sidebar.mockRejectedValue(new Error('cannot confirm existing rows'));

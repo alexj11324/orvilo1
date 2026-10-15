@@ -77,6 +77,10 @@ export const topics = pgTable(
     // Full per-model cost / usage breakdowns for slice-and-dice analytics.
     cost: jsonb('cost').$type<Record<string, unknown>>(),
     usage: jsonb('usage').$type<Record<string, unknown>>(),
+    // Retired runtime pins: runs use the Agent's saved model. Kept in the schema
+    // until the migration that drops them lands, so schema and database agree.
+    model: text('model'),
+    provider: text('provider'),
 
     /**
      * Visitor identity for agent-share originated topics.
@@ -105,6 +109,8 @@ export const topics = pgTable(
       .where(isNotNull(t.projectWorkingDirectoryId)),
     index('topics_trigger_idx').on(t.trigger),
     index('topics_status_idx').on(t.status),
+    index('topics_model_idx').on(t.model),
+    index('topics_provider_idx').on(t.provider),
     index('topics_user_id_completed_at_idx').on(t.userId, t.completedAt),
     index('topics_sender_id_idx').on(t.senderId),
     index('topics_workspace_id_idx').on(t.workspaceId),

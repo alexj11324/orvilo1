@@ -22,6 +22,8 @@ const belongsPrivatelyToWorkspace = (config: unknown, workspaceId: string) => {
 };
 
 /** Reconcile a committed row after a lost create response before trying again. */
+const PRE_INSERT_REJECTIONS = new Set(['BAD_REQUEST', 'FORBIDDEN', 'PRECONDITION_FAILED']);
+
 export const createOnboardingAgentOnce = async (
   checkpoint: FirstAgentCreationCheckpoint,
   params: CreateAgentParams,
@@ -58,8 +60,9 @@ export const createOnboardingAgentOnce = async (
     const result = await createAgent({ ...params, config });
     return { ...result, config };
   } catch (cause) {
-    // Validation refused the mutation before insertion; the user can correct it.
-    if (cause instanceof TRPCClientError && cause.data?.code === 'BAD_REQUEST')
+    // Validation (input, host/model precondition or host authorization) refused
+    // the mutation before insertion; the user can correct it and retry.
+    if (cause instanceof TRPCClientError && PRE_INSERT_REJECTIONS.has(cause.data?.code))
       checkpoint.attempted = false;
     throw cause;
   }

@@ -217,20 +217,20 @@ describe('Footer help menu tracking', () => {
       ([event]) => event?.name === 'home_footer_menu_opened',
     );
     expect(openedCall).toBeTruthy();
-    // `feedback` is an unconditional own item, so it stands in for the set.
-    expect((openedCall![0].properties.keys as string).split(',')).toContain('feedback');
+    // Get App remains an unconditional own item.
+    expect((openedCall![0].properties.keys as string).split(',')).toContain('get-app');
   }, 20000);
 
   it('tracks a unified click event when a footer entry is clicked', async () => {
     const user = userEvent.setup();
-    await renderFooter();
+    await renderFooter({ showChangelog: true });
 
     await user.click(screen.getByRole('button', { name: 'Help' }));
-    await user.click(await screen.findByText('Feedback'));
+    await user.click(await screen.findByText('Changelog'));
 
     expect(analyticsTrack).toHaveBeenCalledWith({
       name: 'home_footer_menu_clicked',
-      properties: { key: 'feedback', spm: 'homepage.footer.feedback.clicked' },
+      properties: { key: 'changelog', spm: 'homepage.footer.changelog.clicked' },
     });
   }, 20000);
 
@@ -264,7 +264,7 @@ describe('Footer help menu tracking', () => {
 
     expect(await screen.findByText('Docs')).toBeInTheDocument();
     expect(screen.queryByText('Discord')).not.toBeInTheDocument();
-    expect(screen.getByText('Feedback')).toBeInTheDocument();
+    expect(screen.queryByText('Feedback')).not.toBeInTheDocument();
     expect(screen.getByText('Changelog')).toBeInTheDocument();
   }, 20000);
 
@@ -288,7 +288,8 @@ describe('Footer help menu tracking', () => {
 
     await user.click(screen.getByRole('button', { name: 'Help' }));
 
-    expect(await screen.findByText('Feedback')).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Get App' })).toBeInTheDocument();
+    expect(screen.queryByText('Feedback')).not.toBeInTheDocument();
     expect(screen.queryByText('Docs')).not.toBeInTheDocument();
     expect(screen.queryByText('Changelog')).not.toBeInTheDocument();
   }, 20000);
@@ -330,7 +331,7 @@ describe('Footer help menu tracking', () => {
     );
     const keys = (openedCall![0].properties.keys as string).split(',');
     // own items are tracked and reported as exposure...
-    expect(keys).toContain('feedback');
+    expect(keys).toContain('get-app');
     // ...but billboard items (which emit their own billboard_* events) are not,
     // so their CTR denominator never gets an orphaned exposure.
     expect(keys).not.toContain('billboard-promo');

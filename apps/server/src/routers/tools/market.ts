@@ -95,6 +95,9 @@ const exportAndUploadFileSchema = z.object({
   topicId: z.string(),
 });
 
+export type ExecInSandboxInput = z.infer<typeof execInSandboxSchema>;
+export type ExportAndUploadFileInput = z.infer<typeof exportAndUploadFileSchema>;
+
 // Schema for cloud MCP endpoint call
 export interface CallToolResult {
   error?: {

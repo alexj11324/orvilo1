@@ -11,13 +11,6 @@ for (const width of [1280, 900]) {
           waitUntil: 'domcontentloaded',
         });
         await expect(page.getByTestId('open-api-key')).toBeVisible();
-        await expect(page.getByTestId('mcp-feature').locator('[data-slot="card"]')).toHaveCount(2);
-        for (const card of await page
-          .getByTestId('mcp-feature')
-          .locator('[data-slot="card"]')
-          .all()) {
-          await expect(card).toHaveCSS('border-radius', '8px');
-        }
         await expect(
           page.getByTestId('badge-probes').locator('[data-slot="badge"]').first(),
         ).toHaveCSS('border-radius', '4px');
@@ -75,26 +68,8 @@ for (const width of [1280, 900]) {
 for (const motion of ['disabled', 'reduced']) {
   test(`actual API key portal and loader stop under ${motion} motion`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: motion === 'reduced' ? 'reduce' : 'no-preference' });
-    await page.addInitScript(() => {
-      const state = window as typeof window & {
-        mcpFirstPaint?: { opacity: string; transform: string };
-      };
-      new MutationObserver(() => {
-        const header = document.querySelector('[data-testid="mcp-feature"] > div > div');
-        if (header && !state.mcpFirstPaint) {
-          const style = getComputedStyle(header);
-          state.mcpFirstPaint = { opacity: style.opacity, transform: style.transform };
-        }
-      }).observe(document, { childList: true, subtree: true });
-    });
     await page.goto(`/design.html?theme=dark&motion=${motion}`, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('mcp-feature')).toBeVisible();
-    const firstPaint = await page.evaluate(
-      () =>
-        (window as typeof window & { mcpFirstPaint?: { opacity: string; transform: string } })
-          .mcpFirstPaint,
-    );
-    expect(firstPaint).toEqual({ opacity: '1', transform: 'none' });
+    await expect(page.getByTestId('task-feature')).toBeVisible();
     await expect(
       page.getByTestId('task-feature').locator('[data-slot="accordion-arrow"]'),
     ).toHaveCSS('transition-duration', '0s');

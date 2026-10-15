@@ -10,6 +10,7 @@ import { resolveClientLocalSandbox } from '@/helpers/localSandbox';
 import { archiveToolResultViaServer } from '@/services/toolResultArchive';
 import { operationSelectors } from '@/store/chat/slices/operation';
 import { type ChatStore } from '@/store/chat/store';
+import { useToolStore } from '@/store/tool';
 import { hasExecutor } from '@/store/tool/slices/builtin/executors';
 import { type StoreSetter } from '@/store/types';
 import { safeParseJSON } from '@/utils/safeParseJSON';

@@ -13,7 +13,7 @@ import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import { projects, taskDispatches, tasks, taskTopics } from '@/database/schemas';
+import { agentOperations, projects, taskDispatches, tasks, taskTopics } from '@/database/schemas';
 import { acceptances, verifyCheckResults, verifyRuns } from '@/database/schemas/verify';
 import { TaskService } from '@/server/services/task';
 import { IssueChecklistService } from '@/server/services/task/checklist';
@@ -3024,6 +3024,15 @@ describe('Task Router Integration', () => {
 
       await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
+      // The execution mock returns this ID; continuation authorizes its persisted identity.
+      await serverDB.insert(agentOperations).values({
+        id: 'op_test',
+        userId,
+        agentId: testAgentId,
+        topicId: testTopicId,
+        taskId: task.data.id,
+        status: 'running',
+      });
 
       await expect(caller.run({ continueTopicId: 'tpc_test', id: task.data.id })).rejects.toThrow(
         /active dispatch/,

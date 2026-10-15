@@ -14,7 +14,7 @@ vi.mock('@/server/services/slackIntegration', () => ({
 vi.mock('@/libs/hatchet', () => ({ enqueueHatchetTask: mocks.enqueue }));
 
 const app = new Hono().post('/slack', slackWebhook);
-const deliver = (body: object, signatureOverride?: string) => {
+const deliver = async (body: object, signatureOverride?: string) => {
   const raw = JSON.stringify(body);
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const signature = `v0=${createHmac('sha256', 'test-secret').update(`v0:${timestamp}:${raw}`).digest('hex')}`;

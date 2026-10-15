@@ -146,10 +146,8 @@ const actionsFor = (
     return ['submit_answers', 'skip_interaction', 'stop'];
   }
 
-  // Custom forms expose Submit / Skip / Stop. Keep cancel_interaction in
-  // the reserved v2 union, but never advertise it until an operation-wide
-  // atomic cancel emitter exists across Web and Mobile.
-  return ['submit_custom', 'skip_interaction', 'stop'];
+  // Historical custom forms remain Review-only; no custom result writer remains.
+  return ['stop'];
 };
 
 /**

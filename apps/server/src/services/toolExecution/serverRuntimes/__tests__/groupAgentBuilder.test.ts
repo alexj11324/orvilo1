@@ -120,6 +120,13 @@ describe('groupAgentBuilderRuntime', () => {
     ]);
   });
 
+  it('does not expose retired marketplace management delegates', async () => {
+    const runtime = await createRuntime();
+    expect(runtime).not.toHaveProperty('searchMarketTools');
+    expect(runtime).not.toHaveProperty('installPlugin');
+    expect(runtime).toHaveProperty('updateConfig');
+  });
+
   // The bug: gateway mode executes every builtin tool server-side, and a missing
   // registry entry makes `executeBuiltinTool` throw "is not implemented", so no
   // member ever reaches the group.

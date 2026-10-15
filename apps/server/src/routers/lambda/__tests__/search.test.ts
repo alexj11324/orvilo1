@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveMarketUserContext } from '@/libs/trpc/lambda/middleware';
-import { DiscoverService } from '@/server/services/discover';
 import { createFtsSearchRepo } from '@/server/services/ftsSearch';
 
 import { searchRouter } from '../search';
@@ -22,7 +21,6 @@ vi.mock('@/libs/trpc/lambda/middleware', () => ({
   serverDatabase: ({ next }: { next: (opts: { ctx: { serverDB: object } }) => unknown }) =>
     next({ ctx: { serverDB: {} } }),
 }));
-vi.mock('@/server/services/discover', () => ({ DiscoverService: vi.fn() }));
 vi.mock('@/server/services/ftsSearch', () => ({ createFtsSearchRepo: vi.fn() }));
 vi.mock('../_helpers/knowledgeBaseAccess', () => ({
   getRestrictedKnowledgeBaseIds: vi.fn().mockResolvedValue(['restricted-kb']),
@@ -35,9 +33,6 @@ describe('searchRouter', () => {
     vi.clearAllMocks();
     search.mockResolvedValue([]);
     vi.mocked(createFtsSearchRepo).mockResolvedValue({ search } as any);
-    vi.mocked(DiscoverService).mockImplementation(() => {
-      throw new Error('Retired marketplace must not be reached');
-    });
   });
 
   it('returns scoped FTS results without resolving marketplace identity or services', async () => {
@@ -62,7 +57,6 @@ describe('searchRouter', () => {
       }),
     );
     expect(resolveMarketUserContext).not.toHaveBeenCalled();
-    expect(DiscoverService).not.toHaveBeenCalled();
   });
 
   it.each([undefined, 'workspace-1'])(
@@ -96,7 +90,6 @@ describe('searchRouter', () => {
         code: 'BAD_REQUEST',
       });
       expect(createFtsSearchRepo).not.toHaveBeenCalled();
-      expect(DiscoverService).not.toHaveBeenCalled();
     },
   );
 
@@ -105,6 +98,5 @@ describe('searchRouter', () => {
 
     await expect(caller.query({ query: '  ' })).resolves.toEqual([]);
     expect(createFtsSearchRepo).not.toHaveBeenCalled();
-    expect(DiscoverService).not.toHaveBeenCalled();
   });
 });

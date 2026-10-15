@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { skillsRuntime } from '../skills';
+
 const mocks = vi.hoisted(() => {
   const sandboxService = {
     callTool: vi.fn(),
@@ -156,10 +158,8 @@ describe('skillsRuntime', () => {
         .map((mode) => ({ api, mode })),
     ),
   )(
-    'preserves sandbox $mode errors through the $api execution pipeline',
+    'preserves sandbox $mode errors through the $api runtime',
     async ({ api, mode }) => {
-      const { skillsRuntime } = await import('../skills');
-      const { ToolExecutionService } = await import('../../index');
       const error = { name: 'MarketAPIError', message: 'Forbidden' };
       mocks.sandboxService.callTool.mockResolvedValue({ error, result: null, success: false });
       mocks.sandboxService.exportAndUploadFile.mockResolvedValue({
@@ -187,20 +187,7 @@ describe('skillsRuntime', () => {
         api === 'exportFile'
           ? runtime.exportFile({ path: '/page.html', filename: 'page.html' })
           : runtime[api]({ command: 'echo example', description: 'Example' });
-      const service = new ToolExecutionService({
-        builtinToolsExecutor: { execute } as never,
-        mcpService: {} as never,
-      });
-      const result = await service.executeTool(
-        {
-          apiName: api,
-          arguments: '{}',
-          id: 'refusal',
-          identifier: 'orvilo-skills',
-          type: 'builtin',
-        },
-        { toolManifestMap: {} },
-      );
+      const result = await execute();
       expect(result.success).toBe(false);
       if (mode === 'stderr') {
         expect(result.content).toContain('Forbidden');
@@ -208,13 +195,16 @@ describe('skillsRuntime', () => {
         expect(result.error?.code).not.toBe('FORBIDDEN');
         return;
       }
-      expect(JSON.parse(result.content).error).toMatchObject({
-        code: 'FORBIDDEN',
-        kind: 'stop',
-        message: 'Forbidden',
-        hint: expect.stringContaining('Do not retry'),
-      });
-      expect(result.error).toMatchObject({ code: 'FORBIDDEN', kind: 'stop' });
+      expect(result.error).toMatchObject(
+        mode === 'thrown'
+          ? {
+              code: 'FORBIDDEN',
+              hint: expect.stringContaining('Do not retry'),
+              kind: 'stop',
+              message: 'Forbidden',
+            }
+          : error,
+      );
     },
     30_000,
   );

@@ -21,7 +21,6 @@ import { builtinAgentSelectors } from '@/store/agent/selectors/builtinAgentSelec
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
-import { globalHelpers } from '@/store/global/helpers';
 
 import { useCommandMenuContext } from './CommandMenuContext';
 import { type CommandMenuSearchResult, type ThemeMode } from './types';
@@ -79,7 +78,6 @@ export const useCommandMenu = () => {
   } = useSWR<CommandMenuSearchResult[]>(
     hasSearch ? ['search', searchQuery, agentId, typeFilter, workspaceId] : null,
     async () => {
-      const locale = globalHelpers.getCurrentLanguage();
       const limitPerType = typeFilter
         ? COMMAND_MENU_TYPED_LIMIT_PER_TYPE
         : COMMAND_MENU_MIXED_LIMIT_PER_TYPE;
@@ -93,7 +91,6 @@ export const useCommandMenu = () => {
           ? lambdaClient.search.query.query({
               agentId,
               limitPerType,
-              locale,
               query: searchQuery,
               type: ftsType,
             })

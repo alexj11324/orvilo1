@@ -85,7 +85,19 @@ const envelope = (
 
 const memoryState = (): StateAdapter => {
   const values = new Map<string, unknown>();
+  const unsupported = async () => {
+    throw new Error('Unexpected state operation in concurrent Slack runtime test');
+  };
   return {
+    appendToList: unsupported,
+    dequeue: unsupported,
+    enqueue: unsupported,
+    extendLock: unsupported,
+    forceReleaseLock: unsupported,
+    getList: unsupported,
+    queueDepth: unsupported,
+    subscribe: unsupported,
+    unsubscribe: unsupported,
     connect: async () => {},
     disconnect: async () => {},
     get: async <T>(key: string) => (values.get(key) as T) ?? null,
@@ -107,7 +119,7 @@ const memoryState = (): StateAdapter => {
       expiresAt: Date.now() + ttlMs,
     }),
     releaseLock: async () => {},
-  } as StateAdapter;
+  };
 };
 
 const dependencies = (): SlackChatDependencies => ({

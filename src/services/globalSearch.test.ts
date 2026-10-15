@@ -136,7 +136,6 @@ describe('globalSearchService.searchAll', () => {
     expect(ftsQuery).toHaveBeenCalledWith({
       agentId: 'a-1',
       limitPerType: 8,
-      locale: 'zh-CN',
       query: 'ship it',
       type: undefined,
     });

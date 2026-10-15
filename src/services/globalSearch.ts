@@ -130,7 +130,6 @@ class GlobalSearchService {
         ? lambdaClient.search.query.query({
             agentId: input.agentId,
             limitPerType,
-            locale: input.locale,
             query,
             type: sources.ftsType,
           })

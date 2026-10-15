@@ -253,7 +253,13 @@ describe('toolEngineering', () => {
       mockInstalledPluginManifestList = () => [
         {
           identifier: 'old-third-party',
-          api: [{ name: 'run', parameters: { type: 'object', properties: {} } }],
+          api: [
+            {
+              description: 'Historical external tool',
+              name: 'run',
+              parameters: { type: 'object', properties: {} },
+            },
+          ],
           meta: { title: 'Old MCP' },
         } as ToolManifest,
       ];

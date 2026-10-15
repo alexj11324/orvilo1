@@ -56,6 +56,16 @@ describe('triggerHatchetWorkflow', () => {
     expect(isHatchetWorkflowPath('/api/workflows/agent-signal/run')).toBe(true);
   });
 
+  it.each([
+    '/api/workflows/onboarding/task-recommendations/process',
+    '/api/workflows/onboarding/understanding/process-collected',
+    '/api/workflows/onboarding/understanding/process-detailed-persona',
+    '/api/workflows/onboarding/understanding/process-providers',
+  ])('does not admit retired onboarding workflow %s', (path) => {
+    expect(isHatchetWorkflowPath(path)).toBe(false);
+    expect(isHatchetWorkflowPath('/api/workflows/task/on-topic-complete')).toBe(true);
+  });
+
   it('stores the private payload in Postgres and sends only opaque ids to Hatchet', async () => {
     const payload = { prompt: 'private text', userId: 'user-1' };
 

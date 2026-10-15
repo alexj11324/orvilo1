@@ -2,7 +2,6 @@ import { AgentManagementManifest } from '@orvilo/builtin-tool-agent-management';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentModel } from '@/database/models/agent';
-import { DiscoverService } from '@/server/services/discover';
 
 import { agentManagementRuntime } from '../agentManagement';
 
@@ -32,12 +31,6 @@ vi.mock('@/database/models/agent', () => ({
       queryAgents: mockQueryAgents,
       updateConfig: mockUpdateConfig,
     };
-  }),
-}));
-
-vi.mock('@/server/services/discover', () => ({
-  DiscoverService: vi.fn(() => {
-    throw new Error('Marketplace is unavailable');
   }),
 }));
 
@@ -352,7 +345,7 @@ describe('agentManagementRuntime', () => {
       });
     });
 
-    it('searches workspace Agents even when Discover is unavailable', async () => {
+    it('searches workspace Agents through the workspace-scoped model', async () => {
       mockQueryAgents.mockResolvedValue(makeAgents(1));
       mockCountAgents.mockResolvedValue(1);
 
@@ -363,7 +356,6 @@ describe('agentManagementRuntime', () => {
         agents: [expect.objectContaining({ id: 'agent-0' })],
         totalCount: 1,
       });
-      expect(DiscoverService).not.toHaveBeenCalled();
     });
 
     it('handles search failure', async () => {

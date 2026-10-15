@@ -25,7 +25,6 @@ import {
   UserInteractionIdentifier,
 } from '@orvilo/builtin-tool-user-interaction';
 import {
-  WebOnboardingApiName,
   WebOnboardingIdentifier,
   WebOnboardingManifest,
 } from '@orvilo/builtin-tool-web-onboarding';
@@ -443,9 +442,9 @@ describe('builtin tool registry', () => {
     expect(getBuiltinIntervention('qoder', UserInteractionApiName.askUserQuestion)).toBeDefined();
   });
 
-  it('exposes the marketplace APIs under the web onboarding manifest', () => {
+  it('keeps retired marketplace APIs out of the web onboarding manifest', () => {
     const apiNames = WebOnboardingManifest.api.map((entry) => entry.name);
-    expect(apiNames).toContain(WebOnboardingApiName.showAgentMarketplace);
-    expect(apiNames).toContain(WebOnboardingApiName.submitAgentPick);
+    expect(apiNames).not.toContain('showAgentMarketplace');
+    expect(apiNames).not.toContain('submitAgentPick');
   });
 });

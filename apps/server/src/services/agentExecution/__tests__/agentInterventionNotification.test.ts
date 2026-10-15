@@ -207,7 +207,7 @@ describe('buildRuntimeInterventionNotification', () => {
       userId: 'user-1',
     });
 
-    expect(result?.items[0].allowedActions).toEqual(['submit_custom', 'skip_interaction', 'stop']);
+    expect(result?.items[0].allowedActions).toEqual(['stop']);
     expect(result?.items[0].allowedActions).not.toContain('cancel_interaction');
     expect(result?.items[0]).not.toHaveProperty('detail');
     expect(result?.items[0]).not.toHaveProperty('request');
@@ -223,7 +223,7 @@ describe('buildRuntimeInterventionNotification', () => {
       userId: 'user-1',
     });
     expect(result?.items[0]).toMatchObject({
-      allowedActions: ['submit_custom', 'skip_interaction', 'stop'],
+      allowedActions: ['stop'],
       interactionKind: 'custom',
       surface: 'form',
     });

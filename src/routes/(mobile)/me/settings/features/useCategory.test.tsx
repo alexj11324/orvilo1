@@ -117,7 +117,7 @@ describe('mobile settings useCategory', () => {
     const toolsGroup = result.current.find((group) => group.key === SettingsGroupKey.Tools);
     const developerGroup = result.current.find((group) => group.key === SettingsGroupKey.Developer);
 
-    expect(toolsGroup?.items.map((item) => item.key)).not.toContain(SettingsTabs.OAuthApps);
+    expect(toolsGroup?.items.map((item) => item.key) ?? []).not.toContain(SettingsTabs.OAuthApps);
     expect(developerGroup?.items.map((item) => item.key)).not.toContain(SettingsTabs.OAuthApps);
   });
 

@@ -14,14 +14,6 @@ const mockCreateSandboxService = vi.hoisted(() =>
     };
   }),
 );
-const mockMarketSDK = vi.hoisted(() => ({
-  skills: {
-    callTool: vi.fn(),
-    listLiveTools: vi.fn(),
-    listTools: vi.fn(),
-  },
-}));
-
 vi.mock('@/libs/trpc/lambda/middleware', () => ({
   marketUserInfo: vi.fn(function (opts: any) {
     return opts.next({ ctx: opts.ctx });
@@ -38,20 +30,6 @@ vi.mock('@/libs/trpc/lambda/middleware', () => ({
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
   ...(await importOriginal<typeof WorkspaceModel>()),
   getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
-}));
-
-vi.mock('@/libs/trpc/lambda/middleware/marketSDK', () => ({
-  marketSDK: vi.fn(function (opts: any) {
-    return opts.next({
-      ctx: {
-        ...opts.ctx,
-        marketSDK: mockMarketSDK,
-      },
-    });
-  }),
-  requireMarketAuth: vi.fn(function (opts: any) {
-    return opts.next({ ctx: opts.ctx });
-  }),
 }));
 
 vi.mock('@/server/services/file', () => ({
@@ -82,25 +60,6 @@ describe('tools marketRouter', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
-  });
-
-  it('returns a stable unavailable code before sandbox execution when Market is unconfigured', async () => {
-    vi.stubEnv('MARKET_BASE_URL', '');
-    const caller = marketRouter.createCaller({ serverDB: {}, userId: 'user-1' } as any);
-
-    await expect(
-      caller.execInSandbox({
-        params: { command: 'orvilo agent view agt_1' },
-        toolName: 'runCommand',
-        topicId: 'topic-1',
-      }),
-    ).rejects.toMatchObject({
-      cause: { data: { code: 'MARKET_UNAVAILABLE' } },
-      code: 'SERVICE_UNAVAILABLE',
-    });
-    expect(mockPreprocessLhCommand).not.toHaveBeenCalled();
-    expect(mockCreateSandboxService).not.toHaveBeenCalled();
-    expect(mockSandboxCallTool).not.toHaveBeenCalled();
   });
 
   it('should pass workspace scope when preprocessing sandbox orvilo commands', async () => {
@@ -165,60 +124,5 @@ describe('tools marketRouter', () => {
     expect(mockCreateSandboxService).toHaveBeenCalledWith(
       expect.objectContaining({ topicId: 'topic-1', userId: 'caller-user' }),
     );
-  });
-
-  it('should fall back to static tools when live discovery fails', async () => {
-    const caller = marketRouter.createCaller({ userId: 'user-1' } as any);
-    mockMarketSDK.skills.listLiveTools.mockRejectedValue(new Error('Live discovery failed'));
-    mockMarketSDK.skills.listTools.mockResolvedValue({
-      tools: [
-        {
-          description: 'Run a PostHog query',
-          inputSchema: { properties: { query: { type: 'string' } }, type: 'object' },
-          name: 'query',
-        },
-      ],
-    });
-
-    await expect(caller.connectListTools({ provider: 'posthog' })).resolves.toEqual({
-      provider: 'posthog',
-      tools: [
-        {
-          description: 'Run a PostHog query',
-          inputSchema: { properties: { query: { type: 'string' } }, type: 'object' },
-          name: 'query',
-        },
-      ],
-    });
-
-    expect(mockMarketSDK.skills.listLiveTools).toHaveBeenCalledWith('posthog');
-    expect(mockMarketSDK.skills.listTools).toHaveBeenCalledWith('posthog');
-  });
-
-  it('should preserve failed tool call error payloads', async () => {
-    const caller = marketRouter.createCaller({ userId: 'user-1' } as any);
-    mockMarketSDK.skills.callTool.mockResolvedValue({
-      data: null,
-      error: { code: 'POSTHOG_QUERY_FAILED', message: 'Query failed' },
-      success: false,
-    });
-
-    await expect(
-      caller.connectCallTool({
-        args: { query: 'select * from events' },
-        provider: 'posthog',
-        toolName: 'query',
-      }),
-    ).resolves.toEqual({
-      data: null,
-      error: { code: 'POSTHOG_QUERY_FAILED', message: 'Query failed' },
-      success: false,
-    });
-
-    expect(mockMarketSDK.skills.callTool).toHaveBeenCalledWith('posthog', {
-      args: { query: 'select * from events' },
-      tool: 'query',
-      topicId: undefined,
-    });
   });
 });

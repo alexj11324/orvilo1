@@ -17,11 +17,7 @@
  * agents, roster insert, and workspace access-level inheritance — so an agent
  * created by the assistant is indistinguishable from one created through the UI.
  */
-import type {
-  GetAvailableModelsParams,
-  InstallPluginParams,
-  SearchMarketToolsParams,
-} from '@orvilo/builtin-tool-agent-builder';
+import type { GetAvailableModelsParams } from '@orvilo/builtin-tool-agent-builder';
 import type {
   BatchCreateAgentsParams,
   BatchCreateAgentsState,
@@ -652,9 +648,6 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
       getAvailableModels: (params: GetAvailableModelsParams): Promise<ToolExecutionResult> =>
         builder.getAvailableModels(params),
 
-      searchMarketTools: (params: SearchMarketToolsParams): Promise<ToolExecutionResult> =>
-        builder.searchMarketTools(params),
-
       updateConfig: async (
         params: UpdateAgentConfigWithIdParams,
         ctx: ToolExecutionContext,
@@ -702,26 +695,6 @@ export const groupAgentBuilderRuntime: ServerRuntimeRegistration = {
         }
 
         return builder.updateConfig(rest, withEditingAgent(ctx, agentId));
-      },
-
-      installPlugin: async (
-        params: InstallPluginParams,
-        ctx: ToolExecutionContext,
-      ): Promise<ToolExecutionResult> => {
-        const groupId = resolveGroupId(ctx);
-        const agentId = groupId ? await findSupervisorAgentId(groupId) : undefined;
-
-        if (!agentId) {
-          return {
-            content: 'No supervisor agent found',
-            error: { message: 'No supervisor agent found', type: 'NoAgentContext' },
-            success: false,
-          };
-        }
-
-        if (groupId) await assertGroupEditable(groupId);
-
-        return builder.installPlugin(params, withEditingAgent(ctx, agentId));
       },
     };
   },

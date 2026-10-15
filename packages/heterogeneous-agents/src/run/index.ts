@@ -19,3 +19,10 @@ export {
   RESUME_RETRY_PATTERNS,
   type TurnEventSummary,
 } from './turnOutcome';
+export {
+  type HeteroRunClient,
+  type HeteroTurnAgentSource,
+  type HeteroTurnResult,
+  runHeteroTurn,
+  type RunHeteroTurnParams,
+} from './runHeteroTurn';

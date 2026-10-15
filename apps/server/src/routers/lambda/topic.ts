@@ -33,10 +33,12 @@ import { HeteroSessionImporterRepo } from '@/database/repositories/heteroSession
 import { TopicImporterRepo } from '@/database/repositories/topicImporter';
 import { chatGroups } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
-import { router } from '@/libs/trpc/lambda';
+import { heteroAuthedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { FileService } from '@/server/services/file';
 import { createFtsSearchRepo } from '@/server/services/ftsSearch';
+import { HeteroOperationPrincipalError } from '@/server/services/heterogeneousAgent/operationPrincipal';
+import { getOperationReferencedTopicTranscript } from '@/server/services/heterogeneousAgent/topicReference';
 import { after } from '@/server/utils/scheduleAfterResponse';
 import { type BatchTaskResult } from '@/types/service';
 
@@ -250,6 +252,42 @@ const recordTopicShareAudit = async (
 };
 
 export const topicRouter = router({
+  getReferencedTopicTranscript: heteroAuthedProcedure
+    .use(serverDatabase)
+    .input(
+      z.object({
+        includeMessages: z.boolean().default(true),
+        limit: z.number().int().min(1).max(500).default(50),
+        offset: z.number().int().min(0).default(0),
+        operationId: z.string().min(1),
+        topicId: z.string(),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      if (ctx.heteroAuthKind !== 'operation' || !ctx.heteroOperation) {
+        throw new TRPCError({
+          code: 'UNAUTHORIZED',
+          message: 'An operation-bound token is required',
+        });
+      }
+      try {
+        return await getOperationReferencedTopicTranscript({
+          ...input,
+          claims: ctx.heteroOperation,
+          db: ctx.serverDB,
+          workspaceId: ctx.workspaceId ?? undefined,
+        });
+      } catch (error) {
+        if (!(error instanceof HeteroOperationPrincipalError)) throw error;
+        throw new TRPCError({
+          cause: error,
+          code:
+            error.status === 401 ? 'UNAUTHORIZED' : error.status === 409 ? 'CONFLICT' : 'FORBIDDEN',
+          message: error.message,
+        });
+      }
+    }),
+
   getTopicDetail: topicProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {

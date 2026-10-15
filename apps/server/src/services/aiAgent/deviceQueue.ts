@@ -269,6 +269,7 @@ export async function dispatchQueuedDeviceRun(
         'hetero:ingest',
         'hetero:finish',
         'hetero:intervention:read',
+        ...(operation.appContext?.sourceMessageId ? ['topic:reference:read' as const] : []),
         ...(payload.builtinTools?.length ? ['hetero:tool:exec' as const] : []),
       ],
       operationId: operation.id,

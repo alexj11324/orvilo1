@@ -1,7 +1,8 @@
 import type { Command } from 'commander';
 import pc from 'picocolors';
 
-import { getTrpcClient } from '../../api/client';
+import { createLambdaClient, getTrpcClient } from '../../api/client';
+import { resolveServerUrl } from '../../settings';
 import { timeAgo } from '../../utils/format';
 import { log } from '../../utils/logger';
 
@@ -266,13 +267,28 @@ export function registerTopicViewCommand(topic: Command) {
       const pagination = includeMessages
         ? resolvePagination(options)
         : { from: 1, limit: DEFAULT_LIMIT, offset: 0 };
-      const client = await getTrpcClient();
-      const result = await client.topic.getTopicTranscript.query({
+      const input = {
         includeMessages,
         limit: pagination.limit,
         offset: pagination.offset,
         topicId: id,
-      });
+      };
+      const operationId = process.env.ORVILO_OPERATION_ID;
+      const operationJwt = process.env.ORVILO_OPERATION_JWT;
+      const result = await (async () => {
+        if (operationId || operationJwt) {
+          if (!operationId || !operationJwt) {
+            throw new Error('Operation-scoped topic reads require an operation ID and token.');
+          }
+          const client = createLambdaClient(
+            { serverUrl: resolveServerUrl(), token: operationJwt, tokenType: 'jwt' },
+            process.env.ORVILO_WORKSPACE_ID,
+          );
+          return client.topic.getReferencedTopicTranscript.query({ ...input, operationId });
+        }
+        const client = await getTrpcClient();
+        return client.topic.getTopicTranscript.query(input);
+      })();
 
       const messages = result.items as TranscriptMessage[];
       const topicDetail = result.topic as TopicDetail;

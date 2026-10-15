@@ -500,6 +500,19 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
     });
 
+    it('grants reference-only reads bound to the fresh persisted user turn', async () => {
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      await service.execAgent({ agentId: 'agent-1', prompt: 'Continue this conversation' });
+      const { signHeteroOperationJWT } = await import('@/libs/trpc/utils/internalJwt');
+      const signed = vi.mocked(signHeteroOperationJWT).mock.calls[0]?.[0];
+      expect(signed?.capabilities).toContain('topic:reference:read');
+      expect(recordStartSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          appContext: expect.objectContaining({ sourceMessageId: 'msg-1' }),
+        }),
+      );
+    });
+
     // Nothing has been sent to a runtime yet, so this is a known failure. A
     // throw here made the task runner park the run as "outcome unknown".
     it('reports a token signing failure as a failed start, before anything is dispatched', async () => {

@@ -271,6 +271,19 @@ describe('ordinary offline device queue', () => {
     },
   );
 
+  it.each([undefined, 'source-user-message'])(
+    'preserves the reference-only grant for a user-anchored queued operation (%s)',
+    async (sourceMessageId) => {
+      rows.get('original-op')!.appContext = { sourceMessageId };
+      expect(await queueOfflineDeviceRun(db, 'user', 'original-op', payload)).toBe(true);
+      await sweepQueuedDeviceOperations({ db });
+      expect(sign).toHaveBeenCalledOnce();
+      expect(sign.mock.calls[0][0].capabilities.includes('topic:reference:read')).toBe(
+        !!sourceMessageId,
+      );
+    },
+  );
+
   it('rehydrates current saved Agent env at reconnect without storing it in the queue', async () => {
     savedAgentConfig.mockResolvedValue({
       agencyConfig: {

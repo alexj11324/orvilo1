@@ -894,6 +894,8 @@ export const dispatchHeteroAgent = async (
         'hetero:ingest',
         'hetero:finish',
         'hetero:intervention:read',
+        // The read endpoint still requires an explicit user reference on this branch.
+        ...(userMessageId ? (['topic:reference:read'] as const) : []),
         // Only granted when the run actually mounts builtin tools — the
         // `execBuiltinTool` endpoint rejects the capability otherwise.
         ...(builtinToolSpecs?.length ? (['hetero:tool:exec'] as const) : []),

@@ -1154,6 +1154,86 @@ describe('TaskTopicModel', () => {
         topicId: 'tpc_child',
       });
     });
+
+    it('hides a private Project handoff and its spend from a member without a grant', async () => {
+      const workspaceId = 'ws_private_project_handoff';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Private handoff',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: userId2, workspaceId },
+      ]);
+      await serverDB.insert(projects).values([
+        {
+          id: 'proj_private_handoff',
+          identifier: 'PHND',
+          name: 'Private handoff',
+          userId,
+          visibility: 'private',
+          workspaceId,
+        },
+        {
+          id: 'proj_public_handoff',
+          identifier: 'PHNP',
+          name: 'Public handoff',
+          userId,
+          visibility: 'public',
+          workspaceId,
+        },
+      ]);
+      const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
+      const ownerTopics = new TaskTopicModel(serverDB, userId, workspaceId);
+      const memberTopics = new TaskTopicModel(serverDB, userId2, workspaceId);
+      const hidden = await ownerTasks.create({
+        instruction: 'Private delivery',
+        name: 'Hidden delivery',
+        projectId: 'proj_private_handoff',
+      });
+      const visible = await ownerTasks.create({
+        instruction: 'Public delivery',
+        name: 'Visible delivery',
+        projectId: 'proj_public_handoff',
+      });
+      await createTopic('tpc_hidden_handoff');
+      await createTopic('tpc_visible_handoff');
+      await ownerTopics.add(hidden.id, 'tpc_hidden_handoff', { seq: 1 });
+      await ownerTopics.add(visible.id, 'tpc_visible_handoff', { seq: 1 });
+      await ownerTopics.updateHandoff(hidden.id, 'tpc_hidden_handoff', {
+        summary: 'private run notes',
+      });
+      await serverDB
+        .update(topics)
+        .set({ totalCost: 4 })
+        .where(eq(topics.id, 'tpc_hidden_handoff'));
+      await serverDB
+        .update(topics)
+        .set({ totalCost: 1 })
+        .where(eq(topics.id, 'tpc_visible_handoff'));
+
+      const hiddenRows = await memberTopics.findWithHandoffByTaskIds([hidden.id, visible.id], 10);
+      expect(hiddenRows.map((row) => row.topicId)).toEqual(['tpc_visible_handoff']);
+      expect((await memberTopics.sumRunCostByTaskIds([hidden.id, visible.id])).totalCost).toBe(1);
+
+      await serverDB.insert(projectMembers).values({
+        projectId: 'proj_private_handoff',
+        role: 'contributor',
+        userId: userId2,
+        workspaceId,
+      });
+      const granted = await memberTopics.findWithHandoffByTaskIds([hidden.id, visible.id], 10);
+      expect(granted.map((row) => row.topicId).sort()).toEqual([
+        'tpc_hidden_handoff',
+        'tpc_visible_handoff',
+      ]);
+      expect(granted.find((row) => row.topicId === 'tpc_hidden_handoff')?.handoff).toMatchObject({
+        summary: 'private run notes',
+      });
+      expect((await memberTopics.sumRunCostByTaskIds([hidden.id, visible.id])).totalCost).toBe(5);
+    });
   });
 
   describe('updateHandoff', () => {

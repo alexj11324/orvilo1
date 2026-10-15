@@ -1066,8 +1066,9 @@ export class TaskTopicModel {
         totalTokens: sql<string>`coalesce(sum(${topics.totalTokens}), 0)`,
       })
       .from(taskTopics)
+      .innerJoin(tasks, eq(taskTopics.taskId, tasks.id))
       .leftJoin(topics, eq(taskTopics.topicId, topics.id))
-      .where(and(inArray(taskTopics.taskId, taskIds), this.ownership()))
+      .where(and(inArray(taskTopics.taskId, taskIds), this.ownership(), this.parentTaskReadable()))
       .groupBy(taskTopics.taskId);
 
     const byTask = rows.map((row) => ({
@@ -1114,7 +1115,7 @@ export class TaskTopicModel {
       .from(taskTopics)
       .innerJoin(tasks, eq(taskTopics.taskId, tasks.id))
       .leftJoin(topics, eq(taskTopics.topicId, topics.id))
-      .where(and(inArray(taskTopics.taskId, taskIds), this.ownership()))
+      .where(and(inArray(taskTopics.taskId, taskIds), this.ownership(), this.parentTaskReadable()))
       .orderBy(desc(taskTopics.createdAt), desc(taskTopics.seq))
       .limit(limit);
   }

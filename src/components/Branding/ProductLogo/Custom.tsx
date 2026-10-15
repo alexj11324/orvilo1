@@ -1,5 +1,4 @@
 import { type IconType } from '@lobehub/icons';
-import { type LobeChatProps } from '@lobehub/ui/brand';
 import { BRANDING_LOGO_URL, BRANDING_NAME } from '@orvilo/business-const';
 import { cn } from 'cn';
 import { type HTMLAttributes, type ReactNode } from 'react';
@@ -62,57 +61,65 @@ const Divider: IconType = (({ ref, size = '1em', style, ...rest }) => (
   </svg>
 )) as IconType;
 
-const CustomLogo = memo<LobeChatProps>(({ extra, size = 32, className, style, type, ...rest }) => {
-  let logoComponent: ReactNode;
+export interface ProductLogoProps extends HTMLAttributes<HTMLDivElement> {
+  extra?: ReactNode;
+  size?: number;
+  type?: '3d' | 'flat' | 'mono' | 'text' | 'combine';
+}
 
-  switch (type) {
-    case '3d':
-    case 'flat': {
-      logoComponent = <CustomImageLogo size={size} style={style} {...rest} />;
-      break;
+const CustomLogo = memo<ProductLogoProps>(
+  ({ extra, size = 32, className, style, type, ...rest }) => {
+    let logoComponent: ReactNode;
+
+    switch (type) {
+      case '3d':
+      case 'flat': {
+        logoComponent = <CustomImageLogo size={size} style={style} {...rest} />;
+        break;
+      }
+      case 'mono': {
+        logoComponent = (
+          <CustomImageLogo size={size} style={{ filter: 'grayscale(100%)', ...style }} {...rest} />
+        );
+        break;
+      }
+      case 'text': {
+        logoComponent = <CustomTextLogo size={size} style={style} {...rest} />;
+        break;
+      }
+      case 'combine': {
+        logoComponent = (
+          <>
+            <CustomImageLogo size={size} />
+            <CustomTextLogo size={size} style={{ marginInlineStart: Math.round(size / 4) }} />
+          </>
+        );
+
+        if (!extra)
+          logoComponent = <div className={'flex flex-none items-center'}>{logoComponent}</div>;
+
+        break;
+      }
+      default: {
+        logoComponent = <CustomImageLogo size={size} style={style} {...rest} />;
+        break;
+      }
     }
-    case 'mono': {
-      logoComponent = (
-        <CustomImageLogo size={size} style={{ filter: 'grayscale(100%)', ...style }} {...rest} />
-      );
-      break;
-    }
-    case 'text': {
-      logoComponent = <CustomTextLogo size={size} style={style} {...rest} />;
-      break;
-    }
-    case 'combine': {
-      logoComponent = (
-        <>
-          <CustomImageLogo size={size} />
-          <CustomTextLogo size={size} style={{ marginInlineStart: Math.round(size / 4) }} />
-        </>
-      );
 
-      if (!extra)
-        logoComponent = <div className={'flex flex-none items-center'}>{logoComponent}</div>;
+    if (!extra) return logoComponent;
 
-      break;
-    }
-    default: {
-      logoComponent = <CustomImageLogo size={size} style={style} {...rest} />;
-      break;
-    }
-  }
+    const extraSize = Math.round((size / 3) * 1.9);
 
-  if (!extra) return logoComponent;
-
-  const extraSize = Math.round((size / 3) * 1.9);
-
-  return (
-    <div className={cn('flex items-center', className)} style={{ flex: 'none' }}>
-      {logoComponent}
-      <Divider className="flex-none leading-none text-divider" size={extraSize} />
-      <div className="whitespace-nowrap font-normal" style={{ fontSize: extraSize }}>
-        {extra}
+    return (
+      <div className={cn('flex items-center', className)} style={{ flex: 'none' }}>
+        {logoComponent}
+        <Divider className="flex-none leading-none text-divider" size={extraSize} />
+        <div className="whitespace-nowrap font-normal" style={{ fontSize: extraSize }}>
+          {extra}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 export default CustomLogo;

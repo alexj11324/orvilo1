@@ -1,9 +1,8 @@
 'use client';
 
-import { type TabBarProps } from '@lobehub/ui/mobile';
 import { cn } from 'cn';
 import { Inbox, MessageSquare, SquareUser, User } from 'lucide-react';
-import { memo, useMemo } from 'react';
+import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -21,6 +20,13 @@ const styles = {
   ),
 };
 
+interface NavBarItem {
+  icon: (active: boolean) => ReactNode;
+  key: SidebarTabKey;
+  onClick: () => void;
+  title: string;
+}
+
 const NavBar = memo(() => {
   const { t } = useTranslation('common');
   const activeKey = useActiveTabKey();
@@ -28,46 +34,43 @@ const NavBar = memo(() => {
 
   // Chat stays reachable. Inbox is the work-attention tab: native banners,
   // the desktop bell, and this bar all land on `/inbox`.
-  const items: TabBarProps['items'] = useMemo(
-    () =>
-      [
-        {
-          icon: (active: boolean) => (
-            <MessageSquare className={cn('size-4', active && styles.active)} />
-          ),
-          key: SidebarTabKey.Chat,
-          onClick: () => {
-            navigate('/agent');
-          },
-          title: t('tab.chat'),
+  const items: NavBarItem[] = useMemo(
+    () => [
+      {
+        icon: (active: boolean) => (
+          <MessageSquare className={cn('size-4', active && styles.active)} />
+        ),
+        key: SidebarTabKey.Chat,
+        onClick: () => {
+          navigate('/agent');
         },
-        {
-          icon: (active: boolean) => <Inbox className={cn('size-4', active && styles.active)} />,
-          key: SidebarTabKey.Inbox,
-          onClick: () => {
-            navigate('/inbox');
-          },
-          title: t('tab.inbox'),
+        title: t('tab.chat'),
+      },
+      {
+        icon: (active: boolean) => <Inbox className={cn('size-4', active && styles.active)} />,
+        key: SidebarTabKey.Inbox,
+        onClick: () => {
+          navigate('/inbox');
         },
-        {
-          icon: (active: boolean) => (
-            <SquareUser className={cn('size-4', active && styles.active)} />
-          ),
-          key: SidebarTabKey.MyWork,
-          onClick: () => {
-            navigate('/my-issues');
-          },
-          title: t('tab.myWork'),
+        title: t('tab.inbox'),
+      },
+      {
+        icon: (active: boolean) => <SquareUser className={cn('size-4', active && styles.active)} />,
+        key: SidebarTabKey.MyWork,
+        onClick: () => {
+          navigate('/my-issues');
         },
-        {
-          icon: (active: boolean) => <User className={cn('size-4', active && styles.active)} />,
-          key: SidebarTabKey.Me,
-          onClick: () => {
-            navigate('/me', { escape: true });
-          },
-          title: t('tab.me'),
+        title: t('tab.myWork'),
+      },
+      {
+        icon: (active: boolean) => <User className={cn('size-4', active && styles.active)} />,
+        key: SidebarTabKey.Me,
+        onClick: () => {
+          navigate('/me', { escape: true });
         },
-      ] as TabBarProps['items'],
+        title: t('tab.me'),
+      },
+    ],
     [navigate, t],
   );
 
@@ -89,10 +92,8 @@ const NavBar = memo(() => {
               )}
               onClick={item.onClick}
             >
-              {typeof item.icon === 'function' ? item.icon(active) : item.icon}
-              <span className="w-full truncate text-sm leading-5.5">
-                {typeof item.title === 'function' ? item.title(active) : item.title}
-              </span>
+              {item.icon(active)}
+              <span className="w-full truncate text-sm leading-5.5">{item.title}</span>
             </Button>
           );
         })}

@@ -1,18 +1,11 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { CheckCircle2 } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { inspectorTextStyles, shinyTextStyles } from '@/styles';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  done: css`
-    color: ${cssVar.colorSuccess};
-  `,
-}));
 
 export const FinishOnboardingInspector = memo<
   BuiltinInspectorProps<Record<string, never>, Record<string, unknown>>
@@ -22,10 +15,10 @@ export const FinishOnboardingInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root} style={{ gap: 6 }}>
-      <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+      <span className={isArgumentsStreaming || isLoading ? shinyTextStyles.shinyText : ''}>
         {t('builtins.orvilo-web-onboarding.apiName.finishOnboarding')}
       </span>
-      {succeeded && <CheckCircle2 className={styles.done} size={14} />}
+      {succeeded && <CheckCircle2 className="text-success" size={14} />}
     </div>
   );
 });

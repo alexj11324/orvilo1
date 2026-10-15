@@ -1,16 +1,13 @@
-import { createGlobalStyle } from 'antd-style';
+import { createElement } from 'react';
 
-import antdOverride from './antdOverride';
 import { flexLayout } from './flexLayout';
 import global from './global';
 
-const prefixCls = 'ant';
+const globalStyleText = [global, flexLayout].join('\n');
 
-export const GlobalStyle = createGlobalStyle(({ theme }) => [
-  global({ prefixCls, token: theme }),
-  flexLayout,
-  antdOverride({ prefixCls, token: theme }),
-]);
+/** Mount only for the AppTheme document; importing the barrel does not install CSS. */
+export const GlobalStyle = () =>
+  createElement('style', { 'data-orvilo-global-style': '' }, globalStyleText);
 
 export { BaseGlobalStyle } from './baseReset';
 export { shinyTextStyles } from './loading';

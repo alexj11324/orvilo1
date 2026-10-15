@@ -51,8 +51,8 @@ modal) hosts the groups in this IA order:
 | Connection        | `ExternalAgentConnectionSettings.tsx` | external agents only (remote availability + local CLI tabs)  |
 | Model & reasoning | `AgentModelSettings.tsx`              | any agent with a heterogeneous provider (builtin + external) |
 | Execution         | `AgentDeviceSettings.tsx`             | every agent — the single device component                    |
-| Access            | `AgentAccessSettings.tsx`             | workspace-scoped agents only; exactly one honest row         |
-| Advanced          | `AgentAdvancedSettings.tsx`           | every agent — the diagnostics link only                      |
+| Access            | `AgentUseSettings.tsx`                | workspace-scoped agents only; the member list (2026/10/12)   |
+| Advanced          | `AgentAdvancedSettings.tsx`           | Agent profile page only — the diagnostics link               |
 
 Builtin order: Model & reasoning → Execution → Access → Advanced. External
 order: Connection → Model & reasoning → Execution → Access → Advanced. A

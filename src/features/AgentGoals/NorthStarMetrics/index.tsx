@@ -28,10 +28,10 @@ import Sparkline from './Sparkline';
  */
 
 const styles = {
-  card: 'flex-1 min-w-59 max-w-85 py-2.5 px-3.5 border border-sidebar-border rounded-(--ant-border-radius-lg) bg-card',
-  metValue: 'text-success',
-  stale: 'text-warning',
-  track: 'overflow-hidden h-1 rounded-[2px] bg-selected',
+  card: 'flex-1 min-w-59 max-w-85 py-2.5 px-3.5 border border-sidebar-border rounded-(--radius-card) bg-card',
+  metValue: 'text-success-text',
+  stale: 'text-warning-text',
+  track: 'overflow-hidden h-1 rounded-full bg-selected',
 };
 
 const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string }>(
@@ -46,11 +46,11 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
     return (
       <div className={`flex flex-col gap-1.5 ${styles.card}`}>
         <div className="flex items-center gap-2 justify-between">
-          <div className="truncate min-w-0 text-[12px] text-muted-foreground">{card.label}</div>
+          <div className="truncate min-w-0 text-xs text-muted-foreground">{card.label}</div>
           <div className="flex items-center gap-1">
             {card.met && (
               <Badge size="sm" variant="success">
-                <Check size={11} /> {t('goalProcess.northStar.met')}
+                <Check className="size-4" size={16} /> {t('goalProcess.northStar.met')}
               </Badge>
             )}
             {/* Recording stays available after the target is met: the world
@@ -61,11 +61,12 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
                 <TooltipTrigger
                   render={
                     <Button
+                      className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                       size="sm"
                       variant="ghost"
                       onClick={() => openRecordObservationModal(goalId, card.key, card.label)}
                     >
-                      <Plus size={13} />
+                      <Plus className="size-4" size={16} />
                     </Button>
                   }
                 />
@@ -76,10 +77,10 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
         </div>
         <div className="flex items-center gap-2 justify-between">
           <div className="flex items-baseline gap-1.5">
-            <div className={cn('text-[20px] font-bold', card.met ? styles.metValue : '')}>
+            <div className={cn('text-xl font-semibold', card.met ? styles.metValue : '')}>
               {formatMetricValue(card.current)}
             </div>
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t(`goalProcess.northStar.op.${card.op}` as const)} {formatMetricValue(card.target)}
               {card.unit ? ` ${card.unit}` : ''}
             </div>
@@ -88,15 +89,14 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
         </div>
         <div className={styles.track}>
           <div
+            className="h-full rounded-full"
             style={{
               background: card.met ? 'var(--success)' : 'var(--info)',
-              borderRadius: 2,
-              height: '100%',
               width: `${card.percent}%`,
             }}
           />
         </div>
-        <div className={cn('text-[11px] text-muted-foreground', card.stale ? styles.stale : '')}>
+        <div className={cn('text-xs text-muted-foreground', card.stale ? styles.stale : '')}>
           {freshness}
           {card.stale ? ` · ${t('goalProcess.northStar.staleWarning')}` : ''}
         </div>
@@ -134,12 +134,15 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
   if (!criteria?.length)
     return (
       <div className="flex items-center gap-3" style={{ paddingBlock: 4 }}>
-        <Target color={'var(--ant-color-text-quaternary)'} size={16} />
-        <div className="text-[13px] text-muted-foreground">
-          {t('goalProcess.northStar.emptyHint')}
-        </div>
+        <Target color={'var(--foreground-quaternary)'} size={16} />
+        <div className="text-sm text-muted-foreground">{t('goalProcess.northStar.emptyHint')}</div>
         {canEdit && (
-          <Button size="sm" variant="ghost" onClick={() => openDeclareMetricModal(goalId)}>
+          <Button
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+            size="sm"
+            variant="ghost"
+            onClick={() => openDeclareMetricModal(goalId)}
+          >
             {t('goalProcess.northStar.declare.title')}
           </Button>
         )}
@@ -178,11 +181,13 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
           <TooltipTrigger
             render={
               <Button
+                className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+                size="compact"
                 style={{ alignSelf: 'center' }}
                 variant="ghost"
                 onClick={() => openDeclareMetricModal(goalId)}
               >
-                <Plus size={14} />
+                <Plus className="size-4" size={16} />
               </Button>
             }
           />

@@ -38,8 +38,8 @@ export const SearchInspector = memo<BuiltinInspectorProps<SearchQuery, UniformSe
             <span style={{ marginInlineStart: 4 }}>({resultCount})</span>
           ) : (
             <span
-              className="text-[12px]"
-              style={{ marginInlineStart: 4, color: 'var(--ant-color-text-description)' }}
+              className="text-xs"
+              style={{ marginInlineStart: 4, color: 'var(--foreground-description)' }}
             >
               ({t('builtins.orvilo-web-browsing.inspector.noResults')})
             </span>

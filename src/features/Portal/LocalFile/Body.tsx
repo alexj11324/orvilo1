@@ -1,7 +1,6 @@
 import type { MarkdownProps } from '@lobehub/ui';
 import { Image, Markdown } from '@lobehub/ui';
 import { isDesktop } from '@orvilo/const';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { CodeIcon, ExternalLinkIcon, EyeIcon, RefreshCwIcon } from 'lucide-react';
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
@@ -58,15 +57,12 @@ const ImagePreview = memo<ImagePreviewProps>(({ blob, filename }) => {
   if (!imageSrc) return <Loading />;
 
   return (
-    <div
-      className="flex flex-col items-center justify-center h-[100%] w-[100%]"
-      style={{ overflow: 'auto' }}
-    >
+    <div className="flex flex-col items-center justify-center h-full w-full overflow-auto">
       <Image
         alt={filename}
+        className={'max-w-full'}
         objectFit={'contain'}
         src={imageSrc}
-        style={{ maxWidth: '100%' }}
         variant={'borderless'}
       />
     </div>
@@ -79,38 +75,12 @@ ImagePreview.displayName = 'ImagePreview';
 
 const MARKDOWN_EXTS = new Set(['md', 'mdx', 'markdown']);
 
-const frontmatterStyles = createStaticStyles(({ css }) => ({
-  card: css`
-    margin-block: 8px 12px;
-    margin-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  key: css`
-    flex-shrink: 0;
-
-    width: 96px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  row: css`
-    padding-block: 8px;
-    padding-inline: 12px;
-
-    &:not(:last-child) {
-      border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  value: css`
-    min-width: 0;
-    font-size: 12px;
-    white-space: pre-wrap;
-  `,
-}));
+const frontmatterStyles = {
+  card: '[margin-block:calc(var(--spacing)*2)_calc(var(--spacing)*3)] mx-3 rounded-(--radius-card) border border-divider bg-card',
+  key: 'shrink-0 w-24 font-mono text-xs leading-5 text-muted-foreground',
+  row: 'py-2 px-3 [&:not(:last-child)]:[border-block-end:1px_solid_var(--divider)]',
+  value: 'min-w-0 text-xs leading-5 whitespace-pre-wrap',
+};
 
 interface SkillFrontmatterPreviewCardProps {
   metadata: SkillMarkdownMetadataItem[];
@@ -120,9 +90,9 @@ const SkillFrontmatterPreviewCard = memo<SkillFrontmatterPreviewCardProps>(({ me
   if (metadata.length === 0) return null;
 
   return (
-    <div className={cx('flex flex-col', frontmatterStyles.card)} style={{ flexShrink: 0 }}>
+    <div className={cn('flex flex-col shrink-0', frontmatterStyles.card)}>
       {metadata.map((item) => (
-        <div className={cx('flex flex-row items-start', frontmatterStyles.row)} key={item.key}>
+        <div className={cn('flex flex-row items-start', frontmatterStyles.row)} key={item.key}>
           <div className={cn(frontmatterStyles.key)}>{item.key}</div>
           <div className={cn(frontmatterStyles.value)}>{item.value}</div>
         </div>
@@ -295,7 +265,7 @@ const TextPreviewPane = memo<TextPreviewPaneProps>(
         topicId={activeTopicId}
         workingDirectory={workingDirectory}
       >
-        <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1 min-h-0 h-full overflow-hidden">
           <PublishHtmlArtifactLiveBar />
           <PreviewToolbar
             deviceId={deviceId}
@@ -313,18 +283,26 @@ const TextPreviewPane = memo<TextPreviewPaneProps>(
                 )}
                 {canRender && (
                   <ToggleGroup
+                    className="rounded-(--radius-button)"
+                    size="compact"
                     value={[mode]}
                     variant="outline"
                     onValueChange={(value) => {
                       if (value.length > 0) setMode(value[0] as TextPreviewMode);
                     }}
                   >
-                    <ToggleGroupItem value="render">
-                      <EyeIcon size={14} />
+                    <ToggleGroupItem
+                      className="rounded-(--radius-button) transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid) motion-reduce:transition-none"
+                      value="render"
+                    >
+                      <EyeIcon size={16} />
                       {t('workingPanel.localFile.preview.render')}
                     </ToggleGroupItem>
-                    <ToggleGroupItem value="raw">
-                      <CodeIcon size={14} />
+                    <ToggleGroupItem
+                      className="rounded-(--radius-button) transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid) motion-reduce:transition-none"
+                      value="raw"
+                    >
+                      <CodeIcon size={16} />
                       {t(
                         isHtml
                           ? 'workingPanel.localFile.preview.source'
@@ -344,14 +322,13 @@ const TextPreviewPane = memo<TextPreviewPaneProps>(
               </>
             }
           />
-          <div
-            className="flex flex-col flex-1 h-[100%]"
-            style={{ minHeight: 0, overflow: 'hidden' }}
-          >
+          <div className="flex flex-col flex-1 min-h-0 h-full overflow-hidden">
             {/* The rendered-markdown branch scrolls here; the HTML preview and
                 the code editor each own their scrolling, and the editor needs
                 that so its gutter and status bar stay pinned. */}
-            <div style={{ flex: 1, minHeight: 0, overflow: showSourceView ? 'hidden' : 'auto' }}>
+            <div
+              className={cn('flex-1 min-h-0', showSourceView ? 'overflow-hidden' : 'overflow-auto')}
+            >
               {isMarkdown && mode === 'render' ? (
                 <>
                   <SkillFrontmatterPreviewCard metadata={frontmatterMetadata} />
@@ -486,7 +463,7 @@ const ActiveFileView = memo<ActiveFileViewProps>(
 
     if (error || !preview) {
       return (
-        <div className="flex flex-col items-center justify-center h-[100%] w-[100%]">
+        <div className="flex flex-col items-center justify-center h-full w-full">
           <SimpleEmpty
             description={t(
               sandboxTopicId
@@ -522,7 +499,7 @@ const ActiveFileView = memo<ActiveFileViewProps>(
 
     if (preview.type !== 'text') {
       return (
-        <div className="flex flex-col items-center justify-center h-[100%] w-[100%]">
+        <div className="flex flex-col items-center justify-center h-full w-full">
           <SimpleEmpty description={t('workingPanel.localFile.binary')} />
         </div>
       );
@@ -573,7 +550,7 @@ const Body = memo(() => {
   if (!activeFile) return null;
 
   return (
-    <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflow: 'hidden' }}>
+    <div className="flex flex-col flex-1 min-h-0 h-full overflow-hidden">
       <ActiveFileView
         activeTopicId={activeTopicId}
         allowExternalFilePreview={activeFile.allowExternalFilePreview}

@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar, keyframes } from 'antd-style';
 import { cn } from 'cn';
 import { FileText, FolderPlus, Search, X } from 'lucide-react';
 import { createElement, memo, useEffect, useState } from 'react';
@@ -10,79 +9,15 @@ import ActionIcon from '@/components/ActionIcon';
 import { useConversationStore } from '@/features/Conversation/store';
 import { useGlobalStore } from '@/store/global';
 
-const reveal = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`;
-
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    cursor: pointer;
-
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 6px;
-    align-items: flex-start;
-
-    min-width: 0;
-    min-height: 135px;
-    padding: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    text-align: start;
-
-    background: ${cssVar.colorBgContainer};
-
-    transition:
-      background 0.15s,
-      border-color 0.15s;
-
-    &:hover {
-      border-color: ${cssVar.colorBorder};
-      background: ${cssVar.colorFillQuaternary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -1px;
-    }
-  `,
-  cardDesc: css`
-    font-size: 12px;
-    font-weight: 450;
-    line-height: 1.5;
-    color: ${cssVar.colorTextDescription};
-  `,
-  cardTitle: css`
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.4;
-    color: ${cssVar.colorText};
-  `,
-  header: css`
-    font-size: 12px;
-    font-weight: 450;
-    color: ${cssVar.colorTextDescription};
-  `,
-  icon: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-  root: css`
-    animation: ${reveal} 0.45s ease;
-
-    @media (prefers-reduced-motion: reduce) {
-      animation: none;
-    }
-  `,
-}));
+const styles = {
+  card: 'flex min-h-33.75 min-w-0 flex-1 cursor-pointer flex-col items-start gap-1.5 rounded-(--radius-card) border border-divider bg-card p-4 text-start transition-[background-color,border-color] duration-(--orvilo-motion-fast) ease-[ease] hover:border-border hover:bg-fill-quaternary focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring/50 focus-visible:outline-offset-[-1px] motion-reduce:transition-none',
+  cardDesc: 'text-sm leading-5.5 font-normal text-foreground-description',
+  cardTitle: 'text-sm leading-5.5 font-medium text-foreground',
+  header: 'text-sm leading-5.5 font-normal text-foreground-description',
+  icon: 'text-muted-foreground',
+  // Nonessential appearance follows DESIGN's 100–200ms state-change window.
+  root: 'animate-[orvilo-agent-example-reveal_var(--orvilo-motion-mid,200ms)_ease] motion-reduce:animate-none',
+} as const;
 
 const EXAMPLES = [
   {
@@ -143,16 +78,19 @@ const ExamplePrompts = memo(() => {
     <div className={cn('flex flex-col gap-2 px-4', styles.root)} data-testid="inbox-agent-examples">
       <div className="flex items-center justify-between">
         <span className={styles.header}>{t('examples.title')}</span>
-        <ActionIcon
-          aria-label={t('examples.dismiss')}
-          icon={X}
-          size={{ blockSize: 24, size: 14 }}
-          title={t('examples.dismiss')}
-          variant={'borderless'}
-          onClick={() => updateSystemStatus({ inboxAgentExamplesDismissed: true })}
-        />
+        <span className="inline-flex flex-none pointer-coarse:p-1.5">
+          <ActionIcon
+            aria-label={t('examples.dismiss')}
+            className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-1.75 pointer-coarse:after:content-['']"
+            icon={X}
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+            title={t('examples.dismiss')}
+            variant={'borderless'}
+            onClick={() => updateSystemStatus({ inboxAgentExamplesDismissed: true })}
+          />
+        </span>
       </div>
-      <div className="flex gap-2" style={{ alignItems: 'stretch' }}>
+      <div className="flex items-stretch gap-2">
         {EXAMPLES.map(({ icon, key, titleKey, descKey }) => (
           <button
             className={styles.card}

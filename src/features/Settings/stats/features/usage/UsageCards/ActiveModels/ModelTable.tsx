@@ -1,5 +1,4 @@
 import { CategoryBar, useThemeColorRange } from '@lobehub/charts';
-import { cssVar } from 'antd-style';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -109,13 +108,16 @@ const ModelTable = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveUse
 
   const renderInnerIcon = (id: string, color: string) => {
     const baseStyle = {
-      boxShadow: `0 0 0 2px ${cssVar.colorBgContainer}, 0 0 0 4px ${color}`,
-      boxSizing: 'content-box' as const,
+      boxShadow: `0 0 0 2px var(--card), 0 0 0 4px ${color}`,
     };
-    return (groupBy ?? GroupBy.Model) === GroupBy.Provider ? (
-      <ProviderIcon provider={id} style={baseStyle} />
-    ) : (
-      <ModelIcon model={id} style={baseStyle} />
+    return (
+      <span className="inline-flex shrink-0 rounded-full box-content" style={baseStyle}>
+        {(groupBy ?? GroupBy.Model) === GroupBy.Provider ? (
+          <ProviderIcon provider={id} />
+        ) : (
+          <ModelIcon model={id} />
+        )}
+      </span>
     );
   };
 
@@ -123,13 +125,10 @@ const ModelTable = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveUse
     if (groupBy === GroupBy.User) {
       const display = resolveUser?.(key);
       return (
-        <div
-          className={'flex min-w-0'}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
-        >
+        <div className="flex min-w-0 items-center gap-2 text-sm leading-5.5">
           <Avatar
             avatar={remoteAvatarSrc(display?.avatar || display?.name || key) || undefined}
-            background={cssVar.colorFillSecondary}
+            background="var(--selected)"
             name={display?.name || key}
             shape={'circle'}
             size={24}
@@ -140,10 +139,7 @@ const ModelTable = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveUse
       );
     }
     return (
-      <div
-        className={'flex min-w-0'}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
-      >
+      <div className="flex min-w-0 items-center gap-2 text-sm leading-5.5">
         {groupBy === GroupBy.Provider ? (
           <ProviderIcon provider={key} size={24} />
         ) : (
@@ -169,12 +165,12 @@ const ModelTable = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveUse
             <AccordionTrigger>
               <div className="flex min-w-0 items-center gap-2">
                 {renderOuterLabel(key)}
-                <Badge>{item.childrens.length}</Badge>
+                <Badge className="h-auto leading-5">{item.childrens.length}</Badge>
               </div>
             </AccordionTrigger>
             <AccordionContent>
               {
-                <div className={'flex min-w-0'} style={{ flexDirection: 'column' }}>
+                <div className="flex min-w-0 flex-col">
                   <CategoryBar
                     colors={themeColorRange}
                     showLabels={false}
@@ -193,25 +189,32 @@ const ModelTable = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveUse
                         render: (value, record, index) => {
                           return (
                             <div
-                              className={'flex min-w-0'}
+                              className="flex min-w-0 items-center gap-3 text-sm leading-5.5"
                               key={value}
-                              style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
                             >
                               {renderInnerIcon(record.id, themeColorRange[index])}
                               {value}
                             </div>
                           );
                         },
-                        title: t(innerColumnKey),
+                        title: <span className="text-xs leading-5">{t(innerColumnKey)}</span>,
                         width: 200,
                       },
                       {
                         dataIndex: 'spend',
                         key: 'spend',
                         render: (value) => {
-                          return `$${formatPrice(value)}`;
+                          return (
+                            <span className="text-sm leading-5.5 tabular-nums">
+                              {`$${formatPrice(value)}`}
+                            </span>
+                          );
                         },
-                        title: t('usage.activeModels.table.spend'),
+                        title: (
+                          <span className="text-xs leading-5">
+                            {t('usage.activeModels.table.spend')}
+                          </span>
+                        ),
                       },
                     ]}
                   />

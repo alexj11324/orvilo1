@@ -1,5 +1,4 @@
 import type { TaskAutomationMode } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { ClockIcon, RadioTowerIcon } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
@@ -24,8 +23,8 @@ interface TaskTriggerTagProps {
 const FLEX_MIN_WIDTH_0 = { minWidth: 0 };
 const PILL_STYLE: CSSProperties = {
   alignItems: 'center',
-  background: cssVar.colorBgContainer,
-  border: `1px solid ${cssVar.colorBorderSecondary}`,
+  background: 'var(--card)',
+  border: `1px solid ${'var(--divider)'}`,
   borderRadius: 24,
   display: 'flex',
   gap: 4,
@@ -87,7 +86,7 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
             className="block truncate"
             style={{
               ...FLEX_MIN_WIDTH_0,
-              color: data ? undefined : cssVar.colorTextPlaceholder,
+              color: data ? undefined : 'var(--foreground-placeholder)',
               fontSize: 12,
               fontWeight: 400,
               lineHeight: 1.4,
@@ -107,14 +106,11 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
       <SimpleTooltip title={data.tooltip}>
         <div style={PILL_STYLE}>
           {automationMode === 'event' ? (
-            <RadioTowerIcon size={16} style={{ color: cssVar.colorTextDescription }} />
+            <RadioTowerIcon size={16} style={{ color: 'var(--foreground-description)' }} />
           ) : (
-            <ClockIcon size={16} style={{ color: cssVar.colorTextDescription }} />
+            <ClockIcon size={16} style={{ color: 'var(--foreground-description)' }} />
           )}
-          <div
-            className="truncate block text-[12px] text-muted-foreground"
-            style={FLEX_MIN_WIDTH_0}
-          >
+          <div className="truncate block text-xs text-muted-foreground" style={FLEX_MIN_WIDTH_0}>
             {data.primary}
           </div>
         </div>

@@ -16,8 +16,8 @@ import {
 
 const styles = {
   cardGrid: 'grid grid-cols-[1fr] gap-3 [@media(width>=900px)]:grid-cols-[1fr_1fr]',
-  cardSummary: 'line-clamp-2 text-[12px] text-muted-foreground',
-  cardTitle: 'text-[13px] font-medium text-foreground',
+  cardSummary: 'line-clamp-2 text-xs text-muted-foreground',
+  cardTitle: 'text-(length:--text-dense) font-medium text-foreground',
 };
 
 interface AutomationTemplateGalleryProps {
@@ -52,8 +52,8 @@ const AutomationTemplateGallery = memo<AutomationTemplateGalleryProps>(
         {persistent ? (
           <div className="flex items-start gap-4 justify-between">
             <div className="flex flex-col gap-1">
-              <div className="text-[14px] font-semibold">{t('templates.section')}</div>
-              <div className="text-[12px] text-muted-foreground">{t('templates.gallery_cta')}</div>
+              <div className="text-sm font-semibold">{t('templates.section')}</div>
+              <div className="text-xs text-muted-foreground">{t('templates.gallery_cta')}</div>
             </div>
             <Button size="sm" onClick={onStartBlank}>
               <PlusIcon data-icon="inline-start" />
@@ -62,11 +62,14 @@ const AutomationTemplateGallery = memo<AutomationTemplateGalleryProps>(
           </div>
         ) : (
           <div className="flex flex-col items-center gap-1" style={{ textAlign: 'center' }}>
-            <div className="flex items-center justify-center h-[40px] w-[40px]">
-              <AlarmClockIcon color={'var(--ant-color-text-quaternary)'} size={40} />
+            <div className="flex items-center justify-center h-10 w-10">
+              <AlarmClockIcon color={'var(--foreground-quaternary)'} size={40} />
             </div>
-            <div className="text-[16px] font-semibold">{t('page.empty.title')}</div>
-            <div className="text-[13px] text-muted-foreground" style={{ maxWidth: 480 }}>
+            <div className="text-base font-semibold">{t('page.empty.title')}</div>
+            <div
+              className="text-(length:--text-dense) text-muted-foreground"
+              style={{ maxWidth: 480 }}
+            >
               {t('page.empty.hint')}
             </div>
           </div>
@@ -95,7 +98,7 @@ const AutomationTemplateGallery = memo<AutomationTemplateGalleryProps>(
                   {...clickableProps()}
                   key={id}
                   className={cn(
-                    'flex flex-col gap-1 p-4 border cursor-pointer hover:bg-[var(--ant-color-fill-tertiary)]',
+                    'flex flex-col gap-1 p-4 border cursor-pointer hover:bg-muted',
                     CLICKABLE_FOCUS_RING,
                   )}
                   style={{

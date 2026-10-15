@@ -1,5 +1,4 @@
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
-import { cssVar } from 'antd-style';
 import { Link2 } from 'lucide-react';
 import { memo } from 'react';
 
@@ -24,7 +23,7 @@ const SourceLink = memo<{ source?: MemorySource | null }>(({ source }) => {
       }}
     >
       <Link2 data-icon="inline-start" />
-      <div className="truncate" style={{ color: cssVar.colorTextSecondary }}>
+      <div className="truncate" style={{ color: 'var(--muted-foreground)' }}>
         {title}
       </div>
     </Link>

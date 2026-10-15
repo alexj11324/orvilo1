@@ -89,10 +89,10 @@ export const ConfiguredAgentRow = ({
   const ready = status === 'ready';
 
   return (
-    <div className="flex items-center gap-1 rounded-md hover:bg-accent">
+    <div className="flex items-center gap-1 rounded-(--radius-button) hover:bg-accent">
       <Button
         aria-pressed={active}
-        className="h-auto min-w-0 flex-1 justify-start gap-2 px-2 py-1.5 text-left"
+        className="h-auto min-w-0 flex-1 justify-start gap-2 px-2 py-1.5 text-left [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
         disabled={!ready}
         variant="ghost"
         onClick={() => onSelect(row.id)}
@@ -106,11 +106,16 @@ export const ConfiguredAgentRow = ({
             </span>
           )}
         </span>
-        {row.pinned && <PinIcon aria-hidden size={12} />}
+        {row.pinned && <PinIcon aria-hidden size={16} />}
         {active && <CheckIcon aria-hidden className="shrink-0 text-primary" size={16} />}
       </Button>
       {!ready && !loading && (
-        <Button size="xs" variant="ghost" onClick={() => onConfigure(row.id)}>
+        <Button
+          className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+          size="compact"
+          variant="ghost"
+          onClick={() => onConfigure(row.id)}
+        >
           {t('agentPicker.configure')}
         </Button>
       )}

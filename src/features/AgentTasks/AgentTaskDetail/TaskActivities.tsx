@@ -5,7 +5,6 @@ import type {
   TaskDetailActivityAuthor,
   TaskDetailPropertyChange,
 } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import type { TFunction } from 'i18next';
 import {
   ArrowLeftRight,
@@ -172,7 +171,7 @@ const RelativeTime = memo<{ time?: string }>(({ time }) => {
   const { text, title } = useActivityTime(time);
   if (!text) return null;
   return (
-    <span style={{ color: cssVar.colorTextQuaternary, marginInlineStart: 4 }} title={title}>
+    <span style={{ color: 'var(--foreground-quaternary)', marginInlineStart: 4 }} title={title}>
       · {text}
     </span>
   );
@@ -189,7 +188,7 @@ const FeedLine = memo<{ children: ReactNode; mark: ReactNode; time?: string }>(
       <div className={styles.activityMark}>{mark}</div>
       <div
         className="truncate block"
-        style={{ color: cssVar.colorTextSecondary, flex: 1, minWidth: 0 }}
+        style={{ color: 'var(--muted-foreground)', flex: 1, minWidth: 0 }}
       >
         {children}
         <RelativeTime time={time} />
@@ -214,7 +213,7 @@ const RowMark = ({
   ) : author?.avatar ? (
     <Avatar avatar={author.avatar} size={16} />
   ) : (
-    createElement(icon, { color: cssVar.colorTextTertiary, size: 14 })
+    createElement(icon, { color: 'var(--foreground-tertiary)', size: 14 })
   );
 
 /** Compact one-line row for created / topic / comment bookkeeping. */

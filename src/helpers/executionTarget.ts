@@ -1,4 +1,4 @@
-import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
+import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents/config';
 import type {
   AgentDeviceOverride,
   DeviceExecutionTarget,
@@ -403,10 +403,6 @@ export const executionPlanToManifestExecutionEnv = (
   plan.kind === 'device' && plan.target === 'local' && plan.deviceId === localDeviceId
     ? 'local'
     : plan.kind;
-
-/** Device tools (local-system / remote-device proxy) only exist in device-capable sessions. */
-export const isDeviceCapablePlan = (plan: ExecutionPlan): boolean =>
-  plan.kind === 'device' || plan.kind === 'device-unrouted';
 
 /**
  * The run is committed to ONE device: either already routed (`device`, which

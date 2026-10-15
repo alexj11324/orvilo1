@@ -2,7 +2,6 @@ import { useEditor } from '@lobehub/editor/react';
 import { LexicalRenderer } from '@lobehub/editor/renderer';
 import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { CornerDownRight, Link2, MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -200,12 +199,11 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
 
   return (
     <div
-      className={`relative flex flex-col gap-2 overflow-hidden rounded-md border px-2 py-3 transition-shadow ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''}`}
+      className={`relative flex flex-col gap-2 overflow-hidden rounded-(--radius-card) border px-2 py-3 transition-[box-shadow] duration-(--orvilo-motion-mid) motion-reduce:transition-none transition-orvilo-task-comment-highlight ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''}`}
       id={commentId ? commentAnchorId(commentId) : undefined}
       style={{
-        borderColor: cssVar.colorBorderSecondary,
-        borderRadius: cssVar.borderRadiusLG,
-        background: cssVar.colorBgContainer,
+        borderColor: 'var(--divider)',
+        background: 'var(--card)',
       }}
     >
       <div className="flex items-center gap-2">
@@ -222,7 +220,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
           {activity.author?.name || t('taskDetail.activities.fallback.comment')}
         </div>
         {relTime && (
-          <div className="text-[12px] text-muted-foreground" title={relTimeTitle}>
+          <div className="text-xs text-muted-foreground" title={relTimeTitle}>
             {relTime}
           </div>
         )}
@@ -243,11 +241,11 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
         ) : (
           <Button
             className="self-start text-muted-foreground"
-            size="xs"
+            size="compact"
             variant="ghost"
             onClick={handleOpenRun}
           >
-            <CornerDownRight data-icon="inline-start" />
+            <CornerDownRight className="size-4" data-icon="inline-start" size={16} />
             {t('taskDetail.comment.replyToRun', { seq: replyToRun.seq })}
           </Button>
         ))}
@@ -267,10 +265,10 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
           <div className="flex items-center justify-between gap-2">
             <AttachmentUploadButton onFiles={handleAttach} />
             <div className="flex gap-2">
-              <Button disabled={submitting} size="sm" onClick={handleCancel}>
+              <Button disabled={submitting} size="normal" onClick={handleCancel}>
                 {t('taskDetail.comment.cancel')}
               </Button>
-              <Button loading={submitting} size="sm" variant="default" onClick={handleSave}>
+              <Button loading={submitting} size="normal" variant="default" onClick={handleSave}>
                 {t('taskDetail.comment.save')}
               </Button>
             </div>
@@ -299,7 +297,7 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
                 <ActionIcon
                   aria-label={t('more', { ns: 'common' })}
                   icon={MoreHorizontal}
-                  size={'small'}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 />
               }
             />

@@ -1,10 +1,23 @@
-import { Flexbox, Popover } from '@lobehub/ui';
-import { Select, Switch, Tag, Text } from '@lobehub/ui/base-ui';
-import { theme } from 'antd';
+import { cn } from 'cn';
 import { type ExtendParamsType } from 'model-bank';
 import { memo, type ReactNode, type SyntheticEvent, useMemo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxClear,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  useComboboxAnchor,
+} from '@/components/ui/combobox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import CodexMaxReasoningEffortSlider from '@/features/ModelSwitchPanel/components/ControlsForm/CodexMaxReasoningEffortSlider';
 import DeepSeekReasoningEffortSlider, {
   DeepSeekV4GAReasoningEffortSlider,
@@ -391,8 +404,11 @@ type ExtendParamsDefinition = {
 };
 
 interface ExtendParamsSelectProps {
-  onChange?: (value: ExtendParamsType[]) => void;
-  value?: ExtendParamsType[];
+  'aria-label'?: string;
+  'disabled'?: boolean;
+  'id'?: string;
+  'onChange'?: (value: ExtendParamsType[]) => void;
+  'value'?: ExtendParamsType[];
 }
 
 export const normalizeExtendParamsValue = (
@@ -404,6 +420,21 @@ export const normalizeExtendParamsValue = (
   }
 
   return value.filter((item) => definitionMap.has(item));
+};
+
+// These widths belong to the finite preview catalog above, not render-time styles.
+const PREVIEW_WIDTH_CLASSES: Record<number, string> = {
+  200: 'min-w-50 w-50',
+  240: 'min-w-60 w-60',
+  250: 'min-w-62.5 w-62.5',
+  260: 'min-w-65 w-65',
+  280: 'min-w-70 w-70',
+  300: 'min-w-75 w-75',
+  340: 'min-w-85 w-85',
+  350: 'min-w-87.5 w-87.5',
+  400: 'min-w-100 w-100',
+  460: 'min-w-115 w-115',
+  500: 'min-w-125 w-125',
 };
 
 const PreviewContent = ({
@@ -423,12 +454,7 @@ const PreviewContent = ({
   previewFallback: string;
   previewWidth?: number;
 }) => {
-  const { token } = theme.useToken();
-  const containerStyle = previewWidth
-    ? { minWidth: previewWidth, width: previewWidth }
-    : { minWidth: 240 };
-
-  const stop = (e: SyntheticEvent) => e.stopPropagation();
+  const stop = (event: SyntheticEvent) => event.stopPropagation();
 
   return (
     <div
@@ -444,251 +470,262 @@ const PreviewContent = ({
       onPointerUp={stop}
       onPointerUpCapture={stop}
     >
-      <Flexbox gap={12} style={containerStyle}>
-        <Text style={{ whiteSpace: 'normal' }} type={'secondary'}>
-          {hint}
-        </Text>
-        <Flexbox gap={12}>
-          <Flexbox
-            gap={8}
-            style={{
-              background: token.colorBgElevated,
-              border: `1px solid ${token.colorBorderSecondary}`,
-              borderRadius: 10,
-              padding: 12,
-              width: previewWidth,
-            }}
-          >
-            <Flexbox horizontal align={'center'} gap={8}>
-              <Text strong>{label}</Text>
-              {parameterTag ? <Tag color={'cyan'}>{parameterTag}</Tag> : null}
-            </Flexbox>
+      <div
+        className={cn(
+          'flex flex-col gap-3',
+          previewWidth ? PREVIEW_WIDTH_CLASSES[previewWidth] : 'min-w-60',
+        )}
+      >
+        <p className="text-sm whitespace-normal text-muted-foreground">{hint}</p>
+        <div className="flex flex-col gap-3">
+          <div className="flex w-full flex-col gap-2 rounded-(--radius-card) border border-divider bg-popover p-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">{label}</span>
+              {parameterTag ? <Badge variant="secondary">{parameterTag}</Badge> : null}
+            </div>
             {desc ? (
-              <Text style={{ fontSize: 12, whiteSpace: 'normal' }} type={'secondary'}>
-                {desc}
-              </Text>
+              <p className="text-xs whitespace-normal text-muted-foreground">{desc}</p>
             ) : null}
             {preview ? (
-              <div aria-hidden style={{ opacity: 0.72, pointerEvents: 'none', width: '100%' }}>
+              <div aria-hidden inert className="pointer-events-none w-full opacity-[0.72]">
                 {preview}
               </div>
             ) : (
-              <Text type={'secondary'}>{previewFallback}</Text>
+              <p className="text-sm text-muted-foreground">{previewFallback}</p>
             )}
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-const ExtendParamsSelect = memo<ExtendParamsSelectProps>(({ value, onChange }) => {
-  const { t } = useTranslation('modelProvider');
-  const { t: tChat } = useTranslation('chat');
+const ExtendParamsSelect = memo<ExtendParamsSelectProps>(
+  ({ 'aria-label': ariaLabel, disabled, id, value, onChange }) => {
+    const { t } = useTranslation('modelProvider');
+    const { t: tChat } = useTranslation('chat');
+    const anchor = useComboboxAnchor();
 
-  // Preview controls are read-only examples; the form only stores supported parameter keys.
-  const previewControls = useMemo<Partial<Record<ExtendParamsType, ReactNode>>>(
-    () => ({
-      codexMaxReasoningEffort: <CodexMaxReasoningEffortSlider value="medium" />,
-      deepseekV4GAReasoningEffort: <DeepSeekV4GAReasoningEffortSlider value="high" />,
-      deepseekV4ReasoningEffort: <DeepSeekReasoningEffortSlider value="high" />,
-      qwen38ReasoningEffort: <Qwen38ReasoningEffortSlider value="xhigh" />,
-      disableContextCaching: <Switch checked disabled />,
-      effort: <EffortSlider value="high" />,
-      enableAdaptiveThinking: <Switch checked disabled />,
-      enableReasoning: <Switch checked disabled />,
-      preserveThinking: <Switch checked disabled />,
-      gpt5ReasoningEffort: <GPT5ReasoningEffortSlider value="medium" />,
-      gpt5_1ReasoningEffort: <GPT51ReasoningEffortSlider value="none" />,
-      gpt5_2ProReasoningEffort: <GPT52ProReasoningEffortSlider value="medium" />,
-      gpt5_2ReasoningEffort: <GPT52ReasoningEffortSlider value="none" />,
-      gpt5_6ReasoningEffort: <GPT56ReasoningEffortSlider value="medium" />,
-      gpt6ReasoningEffort: <GPT6ReasoningEffortSlider value="medium" />,
-      glm5_2ReasoningEffort: <GLM52ReasoningEffortSlider value="max" />,
-      glm5_3ReasoningEffort: <GLM53ReasoningEffortSlider value="max" />,
-      grok4_20ReasoningEffort: <Grok420ReasoningEffortSlider value="medium" />,
-      grok4_3ReasoningEffort: <Grok43ReasoningEffortSlider value="low" />,
-      grok4_5ReasoningEffort: <Grok45ReasoningEffortSlider value="high" />,
-      grok4_6ReasoningEffort: <Grok46ReasoningEffortSlider value="high" />,
-      hy3ReasoningEffort: <Hy3ReasoningEffortSlider value="high" />,
-      kimiK3ReasoningEffort: <KimiK3ReasoningEffortSlider value="max" />,
-      ring2_6ReasoningEffort: <Ring26ReasoningEffortSlider value="high" />,
-      imageAspectRatio: <ImageAspectRatioSelect value="1:1" />,
-      imageAspectRatio2: <ImageAspectRatio2Select value="1:1" />,
-      imageResolution: <ImageResolutionSlider value="1K" />,
-      imageResolution2: <ImageResolution2Slider value="1K" />,
-      opus47Effort: <Opus47EffortSlider value="high" />,
-      reasoningBudgetToken: <ReasoningTokenSlider defaultValue={1 * 1024} />,
-      reasoningBudgetToken32k: <ReasoningTokenSlider32k defaultValue={1 * 1024} />,
-      reasoningBudgetToken80k: <ReasoningTokenSlider80k defaultValue={1 * 1024} />,
-      reasoningEffort: <ReasoningEffortSlider value="medium" />,
-      reasoningMode: <ReasoningModeSegmented value="standard" />,
-      step3_5ReasoningEffort: <Step3_5ReasoningEffortSlider value="low" />,
-      textVerbosity: <TextVerbositySlider value="medium" />,
-      thinking: <ThinkingSlider value="auto" />,
-      thinkingBudget: <ThinkingBudgetSlider defaultValue={2 * 1024} />,
-      thinkingLevel: <ThinkingLevelSlider value="high" />,
-      thinkingLevel2: <ThinkingLevel2Slider value="high" />,
-      thinkingLevel3: <ThinkingLevel3Slider value="high" />,
-      thinkingLevel4: <ThinkingLevel4Slider value="minimal" />,
-      urlContext: <Switch checked disabled />,
-    }),
-    [],
-  );
+    // Preview controls are read-only examples; the form only stores supported parameter keys.
+    const previewControls = useMemo<Partial<Record<ExtendParamsType, ReactNode>>>(
+      () => ({
+        codexMaxReasoningEffort: <CodexMaxReasoningEffortSlider value="medium" />,
+        deepseekV4GAReasoningEffort: <DeepSeekV4GAReasoningEffortSlider value="high" />,
+        deepseekV4ReasoningEffort: <DeepSeekReasoningEffortSlider value="high" />,
+        qwen38ReasoningEffort: <Qwen38ReasoningEffortSlider value="xhigh" />,
+        disableContextCaching: <Switch checked disabled />,
+        effort: <EffortSlider value="high" />,
+        enableAdaptiveThinking: <Switch checked disabled />,
+        enableReasoning: <Switch checked disabled />,
+        preserveThinking: <Switch checked disabled />,
+        gpt5ReasoningEffort: <GPT5ReasoningEffortSlider value="medium" />,
+        gpt5_1ReasoningEffort: <GPT51ReasoningEffortSlider value="none" />,
+        gpt5_2ProReasoningEffort: <GPT52ProReasoningEffortSlider value="medium" />,
+        gpt5_2ReasoningEffort: <GPT52ReasoningEffortSlider value="none" />,
+        gpt5_6ReasoningEffort: <GPT56ReasoningEffortSlider value="medium" />,
+        gpt6ReasoningEffort: <GPT6ReasoningEffortSlider value="medium" />,
+        glm5_2ReasoningEffort: <GLM52ReasoningEffortSlider value="max" />,
+        glm5_3ReasoningEffort: <GLM53ReasoningEffortSlider value="max" />,
+        grok4_20ReasoningEffort: <Grok420ReasoningEffortSlider value="medium" />,
+        grok4_3ReasoningEffort: <Grok43ReasoningEffortSlider value="low" />,
+        grok4_5ReasoningEffort: <Grok45ReasoningEffortSlider value="high" />,
+        grok4_6ReasoningEffort: <Grok46ReasoningEffortSlider value="high" />,
+        hy3ReasoningEffort: <Hy3ReasoningEffortSlider value="high" />,
+        kimiK3ReasoningEffort: <KimiK3ReasoningEffortSlider value="max" />,
+        ring2_6ReasoningEffort: <Ring26ReasoningEffortSlider value="high" />,
+        imageAspectRatio: <ImageAspectRatioSelect value="1:1" />,
+        imageAspectRatio2: <ImageAspectRatio2Select value="1:1" />,
+        imageResolution: <ImageResolutionSlider value="1K" />,
+        imageResolution2: <ImageResolution2Slider value="1K" />,
+        opus47Effort: <Opus47EffortSlider value="high" />,
+        reasoningBudgetToken: <ReasoningTokenSlider defaultValue={1 * 1024} />,
+        reasoningBudgetToken32k: <ReasoningTokenSlider32k defaultValue={1 * 1024} />,
+        reasoningBudgetToken80k: <ReasoningTokenSlider80k defaultValue={1 * 1024} />,
+        reasoningEffort: <ReasoningEffortSlider value="medium" />,
+        reasoningMode: <ReasoningModeSegmented value="standard" />,
+        step3_5ReasoningEffort: <Step3_5ReasoningEffortSlider value="low" />,
+        textVerbosity: <TextVerbositySlider value="medium" />,
+        thinking: <ThinkingSlider value="auto" />,
+        thinkingBudget: <ThinkingBudgetSlider defaultValue={2 * 1024} />,
+        thinkingLevel: <ThinkingLevelSlider value="high" />,
+        thinkingLevel2: <ThinkingLevel2Slider value="high" />,
+        thinkingLevel3: <ThinkingLevel3Slider value="high" />,
+        thinkingLevel4: <ThinkingLevel4Slider value="minimal" />,
+        urlContext: <Switch checked disabled />,
+      }),
+      [],
+    );
 
-  const previewFallback = String(
-    t('providerModels.item.modelConfig.extendParams.previewFallback', {
-      defaultValue: 'Preview unavailable',
-    }),
-  );
+    const previewFallback = String(
+      t('providerModels.item.modelConfig.extendParams.previewFallback', {
+        defaultValue: 'Preview unavailable',
+      }),
+    );
 
-  const definitions = useMemo<ExtendParamsDefinition[]>(() => {
-    const descOverrides: Partial<Record<ExtendParamsType, ReactNode>> = {
-      disableContextCaching: (() => {
-        const original = tChat('extendParams.disableContextCaching.desc', { defaultValue: '' });
+    const definitions = useMemo<ExtendParamsDefinition[]>(() => {
+      const descOverrides: Partial<Record<ExtendParamsType, ReactNode>> = {
+        disableContextCaching: (() => {
+          const original = tChat('extendParams.disableContextCaching.desc', { defaultValue: '' });
 
-        const sanitized = original.replace(/（<\d>.*?<\/\d>）/u, '');
-
-        return (
-          sanitized || (
-            <Trans i18nKey={'extendParams.disableContextCaching.desc'} ns={'chat'}>
-              单条对话生成成本最高可降低 90%，响应速度提升 4 倍。开启后将自动禁用历史消息数限制
-            </Trans>
-          )
-        );
-      })(),
-      enableReasoning: (() => {
-        const original = tChat('extendParams.enableReasoning.desc', { defaultValue: '' });
-
-        const sanitized = original.replace(/（<\d>.*?<\/\d>）/u, '');
-
-        return (
-          sanitized || (
-            <Trans i18nKey={'extendParams.enableReasoning.desc'} ns={'chat'}>
-              开启后模型会先进行推理，适合复杂问题。
-            </Trans>
-          )
-        );
-      })(),
-    };
-
-    return EXTEND_PARAMS_OPTIONS.map((item) => {
-      const descKey = `extendParams.${item.key}.desc`;
-      const rawDesc = tChat(descKey as any, { defaultValue: '' });
-      const normalizedDesc =
-        typeof rawDesc === 'string' && rawDesc !== '' && rawDesc !== descKey ? rawDesc : undefined;
-      const desc = descOverrides[item.key] ?? normalizedDesc;
-      const meta = PREVIEW_META[item.key];
-      // Use alias key for title if available (synced with ControlsForm.tsx)
-      const titleKey = TITLE_KEY_ALIASES[item.key] ?? item.key;
-      const baseLabel = String(
-        tChat(`extendParams.${titleKey}.title` as any, { defaultValue: item.key }),
-      );
-
-      const label =
-        meta?.labelOverride ||
-        (meta?.labelSuffix && `${baseLabel}${meta.labelSuffix}`) ||
-        baseLabel;
-
-      return {
-        desc,
-        hint: String(t(item.hintKey as any)),
-        key: item.key,
-        label,
-        parameterTag: meta?.tag,
-        preview: previewControls[item.key],
-        previewWidth: meta?.previewWidth,
-      };
-    });
-  }, [previewControls, t, tChat]);
-
-  const definitionMap = useMemo(() => {
-    return new Map(definitions.map((item) => [item.key, item]));
-  }, [definitions]);
-
-  const options = useMemo(
-    () =>
-      definitions.map((item) => ({
-        label: item.label,
-        value: item.key,
-      })),
-    [definitions],
-  );
-
-  const placeholder = String(t('providerModels.item.modelConfig.extendParams.placeholder'));
-  const handleChange = (val: ExtendParamsType[]) => {
-    onChange?.(normalizeExtendParamsValue(val, definitionMap));
-  };
-
-  return (
-    <Flexbox gap={8}>
-      <Select
-        allowClear
-        mode={'multiple'}
-        options={options}
-        placeholder={placeholder}
-        popupMatchSelectWidth={false}
-        style={{ width: '100%' }}
-        value={value}
-        optionRender={(option) => {
-          const def = definitionMap.get(option.value as ExtendParamsType);
-          if (!def) return option.label;
+          const sanitized = original.replace(/（<\d>.*?<\/\d>）/u, '');
 
           return (
-            <Popover
-              placement={'right'}
-              content={
-                <PreviewContent
-                  desc={def.desc}
-                  hint={def.hint}
-                  label={def.label}
-                  parameterTag={def.parameterTag}
-                  preview={def.preview}
-                  previewFallback={previewFallback}
-                  previewWidth={def.previewWidth}
-                />
-              }
-            >
-              <Flexbox gap={4}>
-                <Text>{def.label}</Text>
-                <Text style={{ fontSize: 12 }} type={'secondary'}>
-                  {def.hint}
-                </Text>
-              </Flexbox>
-            </Popover>
+            sanitized || (
+              <Trans i18nKey={'extendParams.disableContextCaching.desc'} ns={'chat'}>
+                单条对话生成成本最高可降低 90%，响应速度提升 4 倍。开启后将自动禁用历史消息数限制
+              </Trans>
+            )
           );
-        }}
-        onChange={(val) => handleChange(val as ExtendParamsType[])}
-      />
-      {value && value.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {value.map((key) => {
-            const def = definitionMap.get(key);
-            if (!def) return null;
-            return (
-              <Popover
-                key={key}
-                placement={'top'}
-                content={
-                  <PreviewContent
-                    desc={def.desc}
-                    hint={def.hint}
-                    label={def.label}
-                    parameterTag={def.parameterTag}
-                    preview={def.preview}
-                    previewFallback={previewFallback}
-                    previewWidth={def.previewWidth}
-                  />
-                }
-              >
-                <Tag color={'processing'}>{def.label}</Tag>
-              </Popover>
-            );
-          })}
-        </div>
-      )}
-    </Flexbox>
-  );
-});
+        })(),
+        enableReasoning: (() => {
+          const original = tChat('extendParams.enableReasoning.desc', { defaultValue: '' });
+
+          const sanitized = original.replace(/（<\d>.*?<\/\d>）/u, '');
+
+          return (
+            sanitized || (
+              <Trans i18nKey={'extendParams.enableReasoning.desc'} ns={'chat'}>
+                开启后模型会先进行推理，适合复杂问题。
+              </Trans>
+            )
+          );
+        })(),
+      };
+
+      return EXTEND_PARAMS_OPTIONS.map((item) => {
+        const descKey = `extendParams.${item.key}.desc`;
+        const rawDesc = tChat(descKey as any, { defaultValue: '' });
+        const normalizedDesc =
+          typeof rawDesc === 'string' && rawDesc !== '' && rawDesc !== descKey
+            ? rawDesc
+            : undefined;
+        const desc = descOverrides[item.key] ?? normalizedDesc;
+        const meta = PREVIEW_META[item.key];
+        // Use alias key for title if available (synced with ControlsForm.tsx)
+        const titleKey = TITLE_KEY_ALIASES[item.key] ?? item.key;
+        const baseLabel = String(
+          tChat(`extendParams.${titleKey}.title` as any, { defaultValue: item.key }),
+        );
+
+        const label =
+          meta?.labelOverride ||
+          (meta?.labelSuffix && `${baseLabel}${meta.labelSuffix}`) ||
+          baseLabel;
+
+        return {
+          desc,
+          hint: String(t(item.hintKey as any)),
+          key: item.key,
+          label,
+          parameterTag: meta?.tag,
+          preview: previewControls[item.key],
+          previewWidth: meta?.previewWidth,
+        };
+      });
+    }, [previewControls, t, tChat]);
+
+    const definitionMap = useMemo(() => {
+      return new Map(definitions.map((item) => [item.key, item]));
+    }, [definitions]);
+
+    const options = useMemo(() => definitions.map((item) => item.key), [definitions]);
+
+    const placeholder = String(t('providerModels.item.modelConfig.extendParams.placeholder'));
+    const handleChange = (val: ExtendParamsType[]) => {
+      onChange?.(normalizeExtendParamsValue(val, definitionMap));
+    };
+
+    return (
+      <div className="flex flex-col gap-2">
+        <Combobox
+          multiple
+          disabled={disabled}
+          itemToStringLabel={(key: ExtendParamsType) => definitionMap.get(key)?.label ?? key}
+          items={options}
+          value={value ?? []}
+          onValueChange={(next) => handleChange(next)}
+        >
+          <ComboboxChips className="w-full" ref={anchor} visualSize="normal">
+            {(value ?? []).map((key) => (
+              <ComboboxChip key={key}>{definitionMap.get(key)?.label ?? key}</ComboboxChip>
+            ))}
+            <ComboboxChipsInput
+              aria-label={ariaLabel ?? placeholder}
+              disabled={disabled}
+              id={id}
+              placeholder={placeholder}
+            />
+            <ComboboxClear aria-label={t('clear', { ns: 'common' })} disabled={disabled} />
+          </ComboboxChips>
+          <ComboboxContent anchor={anchor} className="w-auto min-w-(--anchor-width)">
+            <ComboboxEmpty>{t('cmdk.noResults', { ns: 'common' })}</ComboboxEmpty>
+            <ComboboxList>
+              {(key: ExtendParamsType) => {
+                const def = definitionMap.get(key);
+                if (!def) return null;
+                return (
+                  <ComboboxItem key={key} value={key}>
+                    <Popover>
+                      <PopoverTrigger
+                        openOnHover
+                        nativeButton={false}
+                        render={<div className="flex w-full flex-col gap-1" />}
+                        tabIndex={-1}
+                      >
+                        <span className="text-sm">{def.label}</span>
+                        <span className="text-xs text-muted-foreground">{def.hint}</span>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto" side="right">
+                        <PreviewContent
+                          desc={def.desc}
+                          hint={def.hint}
+                          label={def.label}
+                          parameterTag={def.parameterTag}
+                          preview={def.preview}
+                          previewFallback={previewFallback}
+                          previewWidth={def.previewWidth}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </ComboboxItem>
+                );
+              }}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
+        {value && value.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {value.map((key) => {
+              const def = definitionMap.get(key);
+              if (!def) return null;
+              return (
+                <Popover key={key}>
+                  <PopoverTrigger
+                    openOnHover
+                    className="inline-flex min-h-7 items-center pointer-coarse:min-h-11 rounded-(--radius-chip) border border-divider bg-selected px-2 text-xs text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    type="button"
+                  >
+                    {def.label}
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto" side="top">
+                    <PreviewContent
+                      desc={def.desc}
+                      hint={def.hint}
+                      label={def.label}
+                      parameterTag={def.parameterTag}
+                      preview={def.preview}
+                      previewFallback={previewFallback}
+                      previewWidth={def.previewWidth}
+                    />
+                  </PopoverContent>
+                </Popover>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  },
+);
 
 export default ExtendParamsSelect;

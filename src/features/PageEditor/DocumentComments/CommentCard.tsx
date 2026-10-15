@@ -1,7 +1,6 @@
 import { ChatInput, ChatInputActionBar, useEditor } from '@lobehub/editor/react';
 import { Markdown } from '@lobehub/ui';
 import type { DocumentCommentItem } from '@orvilo/types';
-import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronRight, MessageCircle, Pencil, Trash } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
@@ -24,6 +23,8 @@ import { useActivityTime } from '@/hooks/useActivityTime';
 import { useEnterToSend } from '@/hooks/useEnterToSend';
 import { useLocalStorageState } from '@/hooks/useLocalStorageState';
 import { documentCommentService } from '@/services/documentComment';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/slices/settings/selectors';
 
 import DocumentCommentEditor, {
   type DocumentCommentEditorRef,
@@ -56,9 +57,14 @@ const CommentContent = memo<Pick<DocumentCommentItem, 'content' | 'editorData'>>
   ({ content, editorData }) => (
     <div className={styles.commentContent}>
       {hasDocumentCommentEditorData(editorData) ? (
-        <RichTextMessage editorState={editorData} variant={'default'} />
+        <RichTextMessage
+          editorState={editorData}
+          fontSize={14}
+          lineHeight={22 / 14}
+          variant={'default'}
+        />
       ) : (
-        <Markdown fontSize={16} variant={'chat'}>
+        <Markdown fontSize={14} lineHeight={22 / 14} variant={'chat'}>
           {content}
         </Markdown>
       )}
@@ -100,12 +106,81 @@ const CommentCard = memo<CommentCardProps>(
     useEffect(() => {
       const node = cardRef.current;
       if (focusToken === undefined || !node) return;
-      // Honor reduced motion: jump instead of gliding; the steady highlight itself stays.
-      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      node.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+      const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const motionDisabled = () =>
+        userGeneralSettingsSelectors.animationMode(useUserStore.getState()) === 'disabled' ||
+        media.matches;
+      const scrollOwners: HTMLElement[] = [];
+      for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+        const overflow = getComputedStyle(parent);
+        const isViewport = parent === document.scrollingElement;
+        if (
+          (isViewport || /auto|scroll|hidden/.test(overflow.overflowY)) &&
+          parent.scrollHeight > parent.clientHeight
+        ) {
+          scrollOwners.push(parent);
+        } else if (
+          /auto|scroll|hidden/.test(overflow.overflowX) &&
+          parent.scrollWidth > parent.clientWidth
+        ) {
+          scrollOwners.push(parent);
+        }
+      }
+      let ownsSmoothScroll = !motionDisabled();
+      const stopOwnedScroll = () => {
+        if (!ownsSmoothScroll) return;
+        ownsSmoothScroll = false;
+        for (const parent of scrollOwners) {
+          parent.scrollTo({
+            behavior: 'instant',
+            left: parent.scrollLeft,
+            top: parent.scrollTop,
+          });
+        }
+      };
+      const stopIfDisabled = () => {
+        if (motionDisabled()) stopOwnedScroll();
+      };
+      const releaseForUserInput = () => {
+        ownsSmoothScroll = false;
+      };
+      const remaining = new Set(scrollOwners);
+      const scrollEndHandlers = scrollOwners.map((parent) => {
+        const onScrollEnd = () => {
+          remaining.delete(parent);
+          if (!remaining.size) ownsSmoothScroll = false;
+        };
+        const onPointerDown = (event: PointerEvent) => {
+          // A button click bubbles through its scroller too. Only a direct
+          // scroller interaction can release this owner's native operation.
+          if (event.target === parent) releaseForUserInput();
+        };
+        parent.addEventListener('scrollend', onScrollEnd);
+        parent.addEventListener('wheel', releaseForUserInput, { passive: true });
+        parent.addEventListener('touchmove', releaseForUserInput, { passive: true });
+        parent.addEventListener('pointerdown', onPointerDown, { passive: true });
+        return { onPointerDown, onScrollEnd, parent };
+      });
+      const unsubscribe = useUserStore.subscribe(stopIfDisabled);
+      media.addEventListener('change', stopIfDisabled);
+      // Read again at the actual native operation. The existing highlight dwell
+      // is separate from animation and remains visible when motion is disabled.
+      node.scrollIntoView({ behavior: motionDisabled() ? 'instant' : 'smooth', block: 'center' });
       node.classList.add(styles.highlighted);
-      const timer = setTimeout(() => node.classList.remove(styles.highlighted), 2400);
+      const timer = setTimeout(() => {
+        ownsSmoothScroll = false;
+        node.classList.remove(styles.highlighted);
+      }, 2400);
       return () => {
+        stopOwnedScroll();
+        unsubscribe();
+        media.removeEventListener('change', stopIfDisabled);
+        for (const { onPointerDown, onScrollEnd, parent } of scrollEndHandlers) {
+          parent.removeEventListener('scrollend', onScrollEnd);
+          parent.removeEventListener('wheel', releaseForUserInput);
+          parent.removeEventListener('touchmove', releaseForUserInput);
+          parent.removeEventListener('pointerdown', onPointerDown);
+        }
         clearTimeout(timer);
         node.classList.remove(styles.highlighted);
       };
@@ -175,41 +250,38 @@ const CommentCard = memo<CommentCardProps>(
 
     return (
       <div
+        className={cn('flex flex-col', styles.card, variant === 'reply' && styles.replyCard)}
         data-document-comment-id={comment.id}
         ref={cardRef}
-        className={cx(
-          'flex flex-col',
-          `${styles.card} ${variant === 'reply' ? styles.replyCard : ''}`,
-        )}
       >
-        <div className={cx('flex flex-row items-center gap-2', styles.header)}>
+        <div className={cn('flex flex-row items-center gap-2', styles.header)}>
           <Avatar
             avatar={comment.author.avatar || authorName}
             size={variant === 'reply' ? 28 : 32}
           />
-          <div className="text-[14px] font-semibold">{authorName}</div>
+          <div className="text-sm font-semibold">{authorName}</div>
           {replyToName && (
             <>
-              <ChevronRight aria-hidden className={styles.replyTargetIcon} size={14} />
-              <div className="text-[14px] font-semibold">{replyToName}</div>
+              <ChevronRight aria-hidden className={styles.replyTargetIcon} size={16} />
+              <div className="text-sm font-semibold">{replyToName}</div>
             </>
           )}
           {comment.author.status === 'former' && (
-            <div className={cn('text-[12px]', styles.meta)}>
+            <div className={cn('text-xs', styles.meta)}>
               {t('pageEditor.comments.author.former')}
             </div>
           )}
           {time && (
-            <div className={cn('text-[14px]', styles.meta)} title={timeTitle}>
+            <div className={cn('text-xs leading-5', styles.meta)} title={timeTitle}>
               {time}
             </div>
           )}
           {edited && !deleted && (
-            <div className={cn('text-[12px]', styles.meta)}>{t('pageEditor.comments.edited')}</div>
+            <div className={cn('text-xs', styles.meta)}>{t('pageEditor.comments.edited')}</div>
           )}
         </div>
 
-        <div className={`${styles.body} ${variant === 'reply' ? styles.replyBody : ''}`}>
+        <div className={cn(styles.body, variant === 'reply' && styles.replyBody)}>
           {deleted ? (
             <div className={cn(styles.deleted)}>{t('pageEditor.comments.deleted')}</div>
           ) : editing ? (
@@ -238,7 +310,7 @@ const CommentCard = memo<CommentCardProps>(
                     <div className="flex flex-row gap-2">
                       <Button
                         disabled={mutating}
-                        size="sm"
+                        size="normal"
                         variant="outline"
                         onClick={() => setEditing(false)}
                       >
@@ -246,7 +318,7 @@ const CommentCard = memo<CommentCardProps>(
                       </Button>
                       <Button
                         loading={mutating}
-                        size="sm"
+                        size="normal"
                         variant="default"
                         disabled={
                           attachmentState.hasIncompleteAttachments ||
@@ -293,9 +365,10 @@ const CommentCard = memo<CommentCardProps>(
 
         {!optimistic && !editing && (onReply || comment.canEdit || comment.canDelete) && (
           <div
-            className={cx(
+            className={cn(
               'flex flex-row gap-1',
-              `${styles.actions} ${variant === 'reply' ? styles.replyCardActions : ''}`,
+              styles.actions,
+              variant === 'reply' && styles.replyCardActions,
             )}
           >
             {onReply && (
@@ -304,7 +377,7 @@ const CommentCard = memo<CommentCardProps>(
                 aria-pressed={replying}
                 disabled={mutating}
                 icon={MessageCircle}
-                size={'small'}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={t('pageEditor.comments.replyAction')}
                 onClick={onReply}
               />
@@ -314,7 +387,7 @@ const CommentCard = memo<CommentCardProps>(
                 aria-label={t('pageEditor.comments.edit')}
                 disabled={mutating}
                 icon={Pencil}
-                size={'small'}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={t('pageEditor.comments.edit')}
                 onClick={handleEdit}
               />
@@ -324,7 +397,7 @@ const CommentCard = memo<CommentCardProps>(
                 aria-label={t('pageEditor.comments.delete')}
                 icon={Trash}
                 loading={mutating}
-                size={'small'}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={t('pageEditor.comments.delete')}
                 onClick={handleDelete}
               />

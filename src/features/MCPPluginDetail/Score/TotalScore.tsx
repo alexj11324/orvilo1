@@ -10,13 +10,13 @@ import { sortItemsByPriority } from '../../MCP/calculateScore';
 const getGradeColor = (grade: string): string => {
   switch (grade) {
     case 'a': {
-      return 'var(--success)';
+      return 'var(--success-text)';
     }
     case 'b': {
-      return 'var(--warning)';
+      return 'var(--warning-text)';
     }
     case 'f': {
-      return 'var(--destructive)';
+      return 'var(--destructive-text)';
     }
     default: {
       return 'var(--muted-foreground)';
@@ -25,20 +25,20 @@ const getGradeColor = (grade: string): string => {
 };
 
 const styles = {
-  colorDot: 'size-2 rounded-[50%]',
-  container: 'p-6 border border-sidebar-border rounded-[12px] bg-(--ant-color-fill-quaternary)',
-  description: '[margin-block-start:8px] text-[14px] text-muted-foreground',
+  colorDot: 'size-2 rounded-full',
+  container: 'p-6 border border-sidebar-border rounded-(--radius-card) bg-fill-quaternary',
+  description: 'mbs-2 text-sm text-muted-foreground',
   gradeBadge:
-    'flex-none size-8 border-2 border-solid border-current rounded-[50%] text-[16px] font-bold',
-  gradeInfo: 'flex gap-3 items-center [margin-block-start:12px]',
+    'flex-none size-8 border-2 border-solid border-current rounded-full text-base font-semibold',
+  gradeInfo: 'flex gap-3 items-center mbs-3',
   itemList: 'my-2 mx-0 ps-4 [&_li]:my-1 [&_li]:mx-0',
-  legend: 'flex gap-4 [margin-block-start:8px] text-[12px]',
+  legend: 'flex gap-4 mbs-2 text-xs',
   legendItem: 'flex gap-1 items-center',
-  progressContainer: '[margin-block-start:16px]',
-  scoreText: 'text-[24px] font-semibold text-foreground',
+  progressContainer: 'mbs-4',
+  scoreText: 'text-2xl font-semibold text-foreground',
   sectionTitle:
-    '[margin-block:12px_6px] mx-0 [padding-block-start:8px] [border-block-start:1px_solid_var(--sidebar-border)] text-[14px] font-semibold text-foreground first-of-type:[padding-block-start:0] first-of-type:[border-block-start:none]',
-  tooltipContent: 'max-w-100 leading-[1.5]',
+    'mbs-3 mbe-1.5 mx-0 pbs-2 border-bs border-sidebar-border text-sm leading-5.5 font-semibold text-foreground first-of-type:pbs-0 first-of-type:border-bs-0',
+  tooltipContent: 'max-w-100 text-sm leading-5.5',
 };
 
 interface ScoreItem {
@@ -84,7 +84,7 @@ const TotalScore = memo<TotalScoreProps>(({ scoreResult, scoreItems = [], isVali
   // Generate tooltip content
   const renderTooltipContent = () => (
     <div className={styles.tooltipContent}>
-      <div style={{ fontSize: '14px', marginBottom: '12px' }}>
+      <div className="mb-3 text-sm leading-5.5">
         <strong>
           {totalScore}/{maxScore} {t('mcp.details.totalScore.scoreInfo.points')} (
           {Math.round(percentage)}%)
@@ -109,7 +109,7 @@ const TotalScore = memo<TotalScoreProps>(({ scoreResult, scoreItems = [], isVali
 
       {incompleteRequired.length > 0 && (
         <>
-          <div className={styles.sectionTitle} style={{ color: 'var(--destructive)' }}>
+          <div className={cn(styles.sectionTitle, 'text-destructive-text')}>
             {t('mcp.details.totalScore.popover.incompleteRequired', {
               count: incompleteRequired.length,
             })}
@@ -141,7 +141,7 @@ const TotalScore = memo<TotalScoreProps>(({ scoreResult, scoreItems = [], isVali
 
       {incompleteOptional.length > 0 && (
         <>
-          <div className={styles.sectionTitle} style={{ color: 'var(--muted-foreground)' }}>
+          <div className={cn(styles.sectionTitle, 'text-muted-foreground')}>
             {t('mcp.details.totalScore.popover.incompleteOptional', {
               count: incompleteOptional.length,
             })}
@@ -158,13 +158,10 @@ const TotalScore = memo<TotalScoreProps>(({ scoreResult, scoreItems = [], isVali
   );
 
   return (
-    <div
-      className="flex flex-col gap-3 p-4"
-      style={{ border: `1px solid var(--border)`, borderRadius: 'var(--ant-border-radius-lg)' }}
-    >
+    <div className="flex flex-col gap-3 rounded-(--radius-card) border border-border p-4">
       <div className="flex items-start justify-between">
         <div className="flex flex-col">
-          <h2 style={{ fontWeight: 'bold', margin: 0 }}>
+          <h2 className="m-0 text-xl leading-7 font-semibold">
             {t(`mcp.details.scoreLevel.${grade}.fullTitle`)}
           </h2>
           <div className={styles.description}>{t(`mcp.details.scoreLevel.${grade}.desc`)}</div>
@@ -187,7 +184,7 @@ const TotalScore = memo<TotalScoreProps>(({ scoreResult, scoreItems = [], isVali
           <PopoverTrigger
             openOnHover
             render={
-              <span style={{ display: 'inline-flex' }}>
+              <span className="inline-flex">
                 <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full"
@@ -207,7 +204,7 @@ const TotalScore = memo<TotalScoreProps>(({ scoreResult, scoreItems = [], isVali
           />
           <PopoverContent side="bottom">
             <div>
-              <div style={{ fontWeight: 'bold', marginBottom: 8 }}>
+              <div className="mb-2 text-sm leading-5.5 font-semibold">
                 {t('mcp.details.totalScore.popover.title')}
               </div>
               {renderTooltipContent()}
@@ -234,13 +231,13 @@ const TotalScore = memo<TotalScoreProps>(({ scoreResult, scoreItems = [], isVali
       </div>
 
       <div className={styles.gradeInfo}>
-        <span style={{ fontSize: '16px', fontWeight: 600 }}>
+        <span className="text-base leading-6 font-semibold">
           {totalScore}/{maxScore} {t('mcp.details.totalScore.scoreInfo.points')}
         </span>
-        <span style={{ color: getGradeColor(grade), fontWeight: 600 }}>
+        <span className="font-semibold" style={{ color: getGradeColor(grade) }}>
           {Math.round(percentage)}%
         </span>
-        <span style={{ color: getGradeColor(grade), fontSize: '14px' }}>
+        <span className="text-sm leading-5.5" style={{ color: getGradeColor(grade) }}>
           {t('mcp.details.totalScore.scoreInfo.requiredItems')}: {completedRequiredItems}/
           {totalRequiredItems} {t('mcp.details.totalScore.scoreInfo.items')}
         </span>

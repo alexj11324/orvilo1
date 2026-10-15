@@ -1,7 +1,6 @@
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { copyImageToClipboard, sanitizeSVGContent } from '@orvilo/utils/client';
 import { snapdom } from '@zumer/snapdom';
-import { css, cx } from 'antd-style';
 import { CopyIcon, DownloadIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,22 +17,6 @@ import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 
 import { SimpleTooltip } from '../../../SimpleTooltip';
-
-const svgContainer = css`
-  width: 100%;
-  height: 100%;
-
-  > svg {
-    width: 100%;
-    height: 100%;
-  }
-`;
-
-const actions = css`
-  position: absolute;
-  inset-block-end: 8px;
-  inset-inline-end: 8px;
-`;
 
 const DOM_ID = 'artfact-svg';
 interface SVGRendererProps {
@@ -92,16 +75,13 @@ const SVGRenderer = ({ content }: SVGRendererProps) => {
   };
 
   return (
-    <div
-      className="flex flex-col items-center h-[100%] svg-renderer"
-      style={{ position: 'relative' }}
-    >
+    <div className="svg-renderer relative flex h-full flex-col items-center">
       <div
-        className={cx('flex flex-col items-center justify-center', cx(svgContainer))}
+        className="flex h-full w-full flex-col items-center justify-center [&>svg]:h-full [&>svg]:w-full"
         dangerouslySetInnerHTML={{ __html: sanitizedContent }}
         id={DOM_ID}
       />
-      <div className={cx('flex flex-row gap-1', cx(actions))}>
+      <div className="absolute inset-be-2 end-2 flex flex-row gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -122,6 +102,7 @@ const SVGRenderer = ({ content }: SVGRendererProps) => {
         <SimpleTooltip title={t('artifacts.svg.copyAsImage')}>
           <Button
             aria-label={t('artifacts.svg.copyAsImage')}
+            size="compact"
             variant="outline"
             onClick={async () => {
               const dataUrl = await generatePng();

@@ -128,7 +128,7 @@ export default function Composer({
             },
           }}
           groupClassName={cn(
-            'h-auto flex-col rounded-[8px] border-border bg-card shadow-xs has-disabled:bg-card has-disabled:opacity-100 dark:bg-card dark:has-disabled:bg-card',
+            'h-auto flex-col rounded-(--radius-card) border-border bg-card shadow-xs has-disabled:bg-card has-disabled:opacity-100 dark:bg-card dark:has-disabled:bg-card',
             expand && 'min-h-0 flex-1',
           )}
         >

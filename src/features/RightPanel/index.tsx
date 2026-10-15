@@ -1,5 +1,4 @@
 import { DraggablePanel, type DraggablePanelProps } from '@lobehub/ui/base-ui';
-import { cssVar } from 'antd-style';
 import { memo, Suspense, useState } from 'react';
 
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
@@ -57,7 +56,7 @@ const RightPanel = memo<RightPanelProps>(
 
     return (
       <DraggablePanel
-        backgroundColor={cssVar.colorBgContainer}
+        backgroundColor={'var(--card)'}
         expand={expand}
         expandable={false}
         maxWidth={maxWidth}

@@ -43,7 +43,7 @@ const AgentInfo = memo(() => {
   if (isLoading) {
     return (
       <div className="flex flex-col gap-3">
-        <Skeleton className="rounded-md shrink-0" style={{ width: 64, height: 64 }} />
+        <Skeleton className="rounded-(--radius-card) shrink-0" style={{ width: 64, height: 64 }} />
         <Skeleton style={{ height: 32, width: 200 }} />
         <div className="flex flex-col" style={{ width: 'min(100%, 640px)' }}>
           <div className="flex flex-col gap-2">
@@ -58,7 +58,7 @@ const AgentInfo = memo(() => {
   return (
     <div className="flex flex-col gap-3">
       <AgentRuntimeIcon size={64} type={runtimeType} />
-      <div className="text-[24px] font-bold">{displayTitle}</div>
+      <div className="text-2xl font-bold">{displayTitle}</div>
       <div className="flex flex-col" style={{ width: 'min(100%, 640px)' }}>
         <Markdown fontSize={fontSize} variant={'chat'}>
           {message}

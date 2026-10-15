@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 
 import { CodeBlock, CodeBlockCopyButton } from '@/components/ui/code-block';
@@ -14,24 +14,12 @@ import {
   tryParseJson,
 } from './utils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  exitCode: css`
-    margin-inline-start: 8px;
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-  `,
-  exitCodeError: css`
-    color: ${cssVar.colorError};
-  `,
-  exitCodeSuccess: css`
-    color: ${cssVar.colorSuccess};
-  `,
-  sectionLabel: css`
-    margin-block-end: 4px;
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  exitCode: 'ms-2 font-mono text-xs leading-5',
+  exitCodeError: 'text-destructive-text',
+  exitCodeSuccess: 'text-success-text',
+  sectionLabel: 'mbe-1 text-xs leading-5 text-muted-foreground',
+};
 
 const GithubRunCommandRender = memo<
   BuiltinRenderProps<GithubRunCommandArgs, GithubRunCommandState>
@@ -72,9 +60,9 @@ const GithubRunCommandRender = memo<
           </div>
           <CodeBlock
             wrap
+            className="max-h-40 overflow-auto px-2"
             code={`gh ${normalized}`}
             language={'sh'}
-            style={{ maxHeight: 160, overflow: 'auto', paddingInline: 8 }}
             variant="ghost"
           >
             <CodeBlockCopyButton />
@@ -86,9 +74,9 @@ const GithubRunCommandRender = memo<
           <div className={styles.sectionLabel}>Output</div>
           <CodeBlock
             wrap
+            className="max-h-90 overflow-auto px-2"
             code={outputBody}
             language={outputLanguage}
-            style={{ maxHeight: 360, overflow: 'auto', paddingInline: 8 }}
             variant="ghost"
           >
             {outputLanguage === 'json' ? undefined : <CodeBlockCopyButton />}
@@ -97,14 +85,12 @@ const GithubRunCommandRender = memo<
       )}
       {stderr && (
         <div>
-          <div className={styles.sectionLabel} style={{ color: cssVar.colorError }}>
-            Stderr
-          </div>
+          <div className={cn(styles.sectionLabel, 'text-destructive-text')}>Stderr</div>
           <CodeBlock
             wrap
+            className="max-h-50 overflow-auto px-2"
             code={stderr}
             language={'text'}
-            style={{ maxHeight: 200, overflow: 'auto', paddingInline: 8 }}
             variant="ghost"
           >
             <CodeBlockCopyButton />

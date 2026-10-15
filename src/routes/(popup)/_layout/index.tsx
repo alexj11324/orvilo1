@@ -1,7 +1,6 @@
 'use client';
 
 import { HotkeyScopeEnum } from '@orvilo/const/hotkeys';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { type FC } from 'react';
 import { HotkeysProvider } from 'react-hotkeys-hook';
@@ -14,11 +13,9 @@ import { topicSelectors } from '@/store/chat/selectors';
 
 import PopupTitleBar from './TitleBar';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  container: 'bg-card',
+};
 
 const PopupLayout: FC = () => {
   const topicTitle = useChatStore((s) => topicSelectors.currentActiveTopic(s)?.title);
@@ -29,15 +26,9 @@ const PopupLayout: FC = () => {
 
   return (
     <HotkeysProvider initiallyActiveScopes={[HotkeyScopeEnum.Global]}>
-      <div
-        className={cn('flex flex-col', styles.container)}
-        style={{ height: '100%', width: '100%', overflow: 'hidden' }}
-      >
+      <div className={cn('flex flex-col h-full w-full overflow-hidden', styles.container)}>
         <PopupTitleBar title={topicTitle} />
-        <div
-          className="flex flex-col flex-1"
-          style={{ minHeight: 0, overflow: 'hidden', position: 'relative' }}
-        >
+        <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
           <Outlet />
         </div>
         <ProtocolUrlHandler />

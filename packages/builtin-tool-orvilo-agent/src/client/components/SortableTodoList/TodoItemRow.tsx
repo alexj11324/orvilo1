@@ -18,8 +18,8 @@ const styles = {
   dragHandle: 'w-4 shrink-0 opacity-0 transition-opacity duration-200 ease-[ease]',
   itemRow:
     'w-full border-b border-dashed border-sidebar-border py-2.5 ps-1 pe-3 hover:[&_.drag-handle]:opacity-100 hover:[&_.delete-icon]:opacity-100',
-  textCompleted: 'text-(--ant-color-text-quaternary) line-through',
-  textProcessing: 'text-(--ant-color-warning-text)',
+  textCompleted: 'text-foreground-quaternary line-through',
+  textProcessing: 'text-(--warning-text)',
 };
 
 interface TodoItemRowProps {

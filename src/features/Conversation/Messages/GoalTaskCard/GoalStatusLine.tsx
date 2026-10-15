@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import type { TargetIcon } from 'lucide-react';
 import {
@@ -19,44 +18,27 @@ import { useTranslation } from 'react-i18next';
 import type { GoalTaskPhase } from './goalTaskProgress';
 
 const PHASE_META = {
-  achieved: { color: cssVar.colorSuccess, icon: CheckCircle2Icon, spin: false },
-  canceled: { color: cssVar.colorTextTertiary, icon: CircleSlashIcon, spin: false },
-  error: { color: cssVar.colorError, icon: AlertTriangleIcon, spin: false },
-  paused: { color: cssVar.colorTextTertiary, icon: PauseCircleIcon, spin: false },
-  repairing: { color: cssVar.colorWarning, icon: RefreshCwIcon, spin: true },
-  review: { color: cssVar.colorWarning, icon: StampIcon, spin: false },
-  running: { color: cssVar.colorInfo, icon: LoaderCircleIcon, spin: true },
-  verifying: { color: cssVar.colorInfo, icon: LoaderCircleIcon, spin: true },
-  waiting: { color: cssVar.colorTextSecondary, icon: Clock3Icon, spin: false },
+  achieved: { color: 'var(--success-text)', icon: CheckCircle2Icon, spin: false },
+  canceled: { color: 'var(--foreground-tertiary)', icon: CircleSlashIcon, spin: false },
+  error: { color: 'var(--destructive-text)', icon: AlertTriangleIcon, spin: false },
+  paused: { color: 'var(--foreground-tertiary)', icon: PauseCircleIcon, spin: false },
+  repairing: { color: 'var(--warning-text)', icon: RefreshCwIcon, spin: true },
+  review: { color: 'var(--warning-text)', icon: StampIcon, spin: false },
+  running: { color: 'var(--info-text)', icon: LoaderCircleIcon, spin: true },
+  verifying: { color: 'var(--info-text)', icon: LoaderCircleIcon, spin: true },
+  waiting: { color: 'var(--muted-foreground)', icon: Clock3Icon, spin: false },
 } as const satisfies Record<
   GoalTaskPhase,
   { color: string; icon: typeof TargetIcon; spin: boolean }
 >;
 
-const styles = createStaticStyles(({ css }) => ({
-  progress: css`
-    overflow: hidden;
-
-    width: 72px;
-    height: 3px;
-    border-radius: 2px;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  progressFill: css`
-    height: 100%;
-    border-radius: inherit;
-    background: ${cssVar.colorSuccess};
-    transition: width 0.25s ease;
-  `,
-  status: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  statusIcon: css`
-    flex-shrink: 0;
-  `,
-}));
+const styles = {
+  progress: 'overflow-hidden w-18 h-0.75 rounded-full bg-selected',
+  progressFill:
+    'h-full rounded-[inherit] bg-success transition-[width] duration-(--orvilo-motion-mid) ease-[ease]',
+  status: 'text-xs text-foreground-tertiary',
+  statusIcon: 'shrink-0 size-4',
+};
 
 export interface GoalStatusLineProps {
   passed: number;
@@ -83,7 +65,7 @@ const GoalStatusLine = memo<GoalStatusLineProps>(({ passed, phase, progress, tot
           <meta.icon
             className={cn(styles.statusIcon, meta.spin ? 'animate-spin' : undefined)}
             color={meta.color}
-            size={12}
+            size={16}
           />
           <div className={styles.status}>{t(`goalTask.status.${phase}`)}</div>
           <div className={styles.status}>·</div>

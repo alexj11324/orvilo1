@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ClipboardCheckIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -106,13 +105,13 @@ const normalizeGroupBy = (value: TaskGroupBy | string | undefined, fallback: Tas
 const renderGroupTitle = (group: TaskGroupMeta, count: number, sub?: boolean) => (
   <div className="flex items-center justify-between gap-2">
     <TaskGroupLabel group={group} />
-    <div className="text-[12px] text-muted-foreground">{count}</div>
+    <div className="text-xs text-muted-foreground">{count}</div>
     {sub ? (
       <Separator
         className="flex-1"
         style={{
           background: 'transparent',
-          borderTop: `1px solid ${cssVar.colorBorder}`,
+          borderTop: `1px solid ${'var(--border)'}`,
           height: 'auto',
           margin: 0,
         }}
@@ -145,7 +144,7 @@ const TaskGroupHeader = memo<{
             style={{
               paddingBlock: 4,
               paddingInline: 12,
-              background: cssVar.colorFillQuaternary,
+              background: 'var(--fill-quaternary)',
               borderRadius: 6,
             }}
           >
@@ -356,7 +355,7 @@ const TaskList = memo<TaskListProps>((props) => {
             borderRadius: 6,
             paddingBlock: 1,
             paddingInline: 2,
-            ...(selected ? { background: cssVar.colorFillTertiary } : undefined),
+            ...(selected ? { background: 'var(--muted)' } : undefined),
           }}
           onClickCapture={
             // Peek mode intercepts plain clicks in the capture phase — before
@@ -407,7 +406,7 @@ const TaskList = memo<TaskListProps>((props) => {
             <Separator
               style={{
                 background: 'transparent',
-                borderTop: `1px dashed ${cssVar.colorBorderSecondary}`,
+                borderTop: `1px dashed ${'var(--divider)'}`,
                 height: 'auto',
                 margin: 0,
               }}

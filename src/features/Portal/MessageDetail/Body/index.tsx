@@ -1,18 +1,9 @@
 import { Markdown } from '@lobehub/ui';
-import { css, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { useEffect } from 'react';
 
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors, dbMessageSelectors } from '@/store/chat/selectors';
-
-const md = css`
-  overflow: scroll;
-
-  > div {
-    padding-block-end: 40px;
-  }
-`;
 
 const MessageDetailBody = () => {
   const [messageDetailId, clearPortalStack] = useChatStore((s) => [
@@ -28,12 +19,12 @@ const MessageDetailBody = () => {
     if (!message) {
       clearPortalStack();
     }
-  }, [message]);
+  }, [clearPortalStack, message]);
 
   return (
-    <div className="flex flex-col h-[100%] px-2" style={{ paddingBlock: '0 12px' }}>
+    <div className="flex h-full flex-col px-2 pbs-0 pbe-3">
       {!!content && (
-        <Markdown className={cx(md)} variant={'chat'}>
+        <Markdown className="overflow-scroll [&>div]:pbe-10" variant={'chat'}>
           {content}
         </Markdown>
       )}

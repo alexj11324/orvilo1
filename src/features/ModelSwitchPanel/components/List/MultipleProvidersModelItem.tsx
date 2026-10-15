@@ -13,7 +13,7 @@ import {
   menuSharedStyles,
 } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { Check } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -84,8 +84,7 @@ export const MultipleProvidersModelItem = memo<MultipleProvidersModelItemProps>(
         }}
       >
         <DropdownMenuSubmenuTrigger
-          className={cx(menuSharedStyles.item, isActive && styles.menuItemActive)}
-          style={{ paddingBlock: 8, paddingInline: 8 }}
+          className={cn(menuSharedStyles.item, styles.menuRow, isActive && styles.menuItemActive)}
           onClick={() => {
             if (defaultProviderRestricted) {
               onRestrictedModelClick?.();
@@ -109,13 +108,13 @@ export const MultipleProvidersModelItem = memo<MultipleProvidersModelItemProps>(
         </DropdownMenuSubmenuTrigger>
         <DropdownMenuPortal>
           <DropdownMenuPositioner anchor={null} placement="right" sideOffset={12}>
-            <DropdownMenuPopup className={cx(styles.detailPopup, styles.dropdownMenu)}>
+            <DropdownMenuPopup className={cn(styles.detailPopup, styles.dropdownMenu)}>
               <ModelDetailPanel
                 model={data.model.id}
                 provider={(activeProvider ?? data.providers[0]).id}
               />
               <DropdownMenuGroup>
-                <DropdownMenuGroupLabel>
+                <DropdownMenuGroupLabel className={styles.groupCaption}>
                   {t('ModelSwitchPanel.useModelFrom')}
                 </DropdownMenuGroupLabel>
                 {data.providers.map((p) => {
@@ -125,6 +124,7 @@ export const MultipleProvidersModelItem = memo<MultipleProvidersModelItemProps>(
 
                   return (
                     <DropdownMenuItem
+                      className={styles.menuRow}
                       key={key}
                       onClick={() => {
                         if (providerRestricted) {
@@ -135,12 +135,12 @@ export const MultipleProvidersModelItem = memo<MultipleProvidersModelItemProps>(
                         void selectModel(p.id);
                       }}
                     >
-                      <DropdownMenuItemIcon>
+                      <DropdownMenuItemIcon className={styles.menuGlyph}>
                         {isProviderActive ? <Check size={16} /> : null}
                       </DropdownMenuItemIcon>
                       <DropdownMenuItemLabel>
                         <Flexbox horizontal align="center" gap={8}>
-                          <Flexbox horizontal align="center" style={{ flex: 'none' }}>
+                          <Flexbox horizontal align="center" className="flex-none">
                             <ProviderItemRender
                               logo={p.logo}
                               name={p.name}

@@ -18,11 +18,11 @@ const styles = {
   acceptance: 'min-w-0',
   metric: 'justify-self-end whitespace-nowrap',
   metrics:
-    'grid grid-cols-[minmax(178px,1fr)_72px_48px_64px] gap-x-3 items-center w-[min(100%,390px)] min-w-[390px]',
+    'grid grid-cols-[minmax(178px,1fr)_72px_48px_64px] gap-x-3 items-center w-[min(100%,390px)] min-w-97.5',
   needsYou: 'justify-self-end text-warning whitespace-nowrap',
-  progress: 'overflow-hidden w-16 h-1 rounded-(--ant-border-radius-xs) bg-selected',
+  progress: 'overflow-hidden w-16 h-1 rounded-(--radius-chip) bg-selected',
   progressValue:
-    'h-full rounded-[inherit] bg-success [transition:width_0.2s_var(--ant-motion-ease-out)]',
+    'h-full rounded-[inherit] bg-success [transition:width_0.2s_var(--orvilo-motion-ease-out)]',
 };
 
 export interface GoalProgressProps {
@@ -52,41 +52,38 @@ export const GoalProgress = memo<GoalProgressProps>(
               <div className={styles.progressValue} style={{ width: `${progress}%` }} />
             </div>
             <div
-              className="truncate min-w-0 text-[12px]"
-              style={{ color: 'var(--ant-color-text-tertiary)' }}
+              className="truncate min-w-0 text-xs"
+              style={{ color: 'var(--foreground-tertiary)' }}
             >
               {t('goalList.taskProgress', { done: taskDone, total: taskTotal })}
             </div>
           </div>
         ) : (
-          <div
-            className="truncate min-w-0 text-[12px]"
-            style={{ color: 'var(--ant-color-text-tertiary)' }}
-          >
+          <div className="truncate min-w-0 text-xs" style={{ color: 'var(--foreground-tertiary)' }}>
             {t('goalList.noTasks')}
           </div>
         )}
         {pendingDecisions > 0 ? (
-          <div className={cn('text-[12px]', styles.needsYou)}>
+          <div className={cn('text-xs', styles.needsYou)}>
             {t('goalList.needsYou', { count: pendingDecisions })}
           </div>
         ) : (
           <div
-            className={cn('text-[12px]', styles.metric)}
-            style={{ color: 'var(--ant-color-text-tertiary)' }}
+            className={cn('text-xs', styles.metric)}
+            style={{ color: 'var(--foreground-tertiary)' }}
           >
             {t('goalList.findings', { count: findingCount })}
           </div>
         )}
         <div
-          className={cn('text-[12px]', styles.metric)}
-          style={{ color: 'var(--ant-color-text-tertiary)' }}
+          className={cn('text-xs', styles.metric)}
+          style={{ color: 'var(--foreground-tertiary)' }}
         >
           {formatGoalDuration(totalRunDuration)}
         </div>
         <div
-          className={cn('text-[12px]', styles.metric)}
-          style={{ color: 'var(--ant-color-text-tertiary)' }}
+          className={cn('text-xs', styles.metric)}
+          style={{ color: 'var(--foreground-tertiary)' }}
         >
           {formatGoalCost(totalRunCost)}
         </div>

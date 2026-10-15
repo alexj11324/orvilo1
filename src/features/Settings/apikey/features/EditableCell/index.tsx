@@ -109,6 +109,7 @@ const EditableCell = memo<EditableCellProps>(
                 defaultValue={value as string}
                 placeholder={placeholder}
                 ref={inputRef}
+                visualSize="small"
                 onKeyDown={handleKeyDown}
               />
             </div>

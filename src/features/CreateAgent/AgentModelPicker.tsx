@@ -85,6 +85,12 @@ export const AgentModelPicker = ({
             </ComboboxItem>
           )}
         </ComboboxList>
+        {loading && (
+          <div className="flex items-center gap-2 p-2 text-sm text-muted-foreground" role="status">
+            <Spinner className="size-3.5" />
+            {t('createAgent.model.loading')}
+          </div>
+        )}
         {error !== undefined && (
           <div className="p-2 text-sm text-destructive">
             {t('createAgent.model.error')}

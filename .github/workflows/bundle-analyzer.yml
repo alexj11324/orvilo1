@@ -25,16 +25,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        run: pnpm i
-
-      - name: Ensure lockfile exists
-        run: |
-          # pnpm 12 reads only auth/registry keys from .npmrc, and `lockfile: false`
-          # lives in pnpm-workspace.yaml — force lockfile generation with the CLI flag.
-          if [ ! -f "pnpm-lock.yaml" ]; then
-            echo "Generating pnpm-lock.yaml..."
-            pnpm i --lockfile
-          fi
+        run: pnpm i --frozen-lockfile
 
       - name: Generate build secrets
         id: generate-secret

@@ -95,6 +95,7 @@ const ConfirmBody = ({ config }: ConfirmBodyProps) => {
         </Button>
         <Button
           disabled={restOk.disabled || loading}
+          size={restOk.size}
           variant={restOk.danger ? 'destructive' : 'default'}
           onClick={(e: MouseEvent<HTMLButtonElement>) => {
             okOnClick?.(e);

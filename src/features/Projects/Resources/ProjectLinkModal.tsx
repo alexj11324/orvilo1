@@ -1,4 +1,3 @@
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { t as translate } from 'i18next';
 import { Link2Icon } from 'lucide-react';
@@ -23,114 +22,19 @@ interface ProjectLinkModalProps {
   projectId: string;
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  actions: css`
-    margin-block-start: 16px;
-
-    button {
-      height: 32px;
-      padding-block: 0;
-      padding-inline: 12px;
-      border-color: transparent;
-      border-radius: 9999px;
-
-      font-size: 13px;
-      font-weight: 500;
-      line-height: normal;
-    }
-  `,
-  cancelButton: css`
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorBgElevated};
-    box-shadow: 0 0 0 1px ${cssVar.colorBorderSecondary};
-
-    &:hover:not(:disabled) {
-      border-color: transparent;
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  field: css`
-    margin-block-start: 16px;
-
-    label {
-      display: block;
-
-      margin-block-end: 4px;
-
-      font-size: 16px;
-      font-weight: 400;
-      line-height: 24px;
-    }
-  `,
-  formBody: css`
-    padding: 32px;
-  `,
-  labelText: css`
-    font-size: 13px;
-    font-weight: 500;
-    line-height: normal;
-    color: ${cssVar.colorText};
-  `,
-  optionalText: css`
-    font-size: 12px;
-    font-weight: 450;
-    line-height: normal;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  input: css`
-    height: 32px;
-    padding-block: 6px;
-    padding-inline: 12px;
-    border-radius: 8px;
-
-    font-size: 13px;
-    font-weight: 400;
-    line-height: normal;
-  `,
-  popup: css`
-    flex-direction: column;
-    justify-content: flex-start;
-
-    &::before,
-    &::after {
-      content: '';
-      min-height: 0;
-    }
-
-    &::before {
-      flex: 1 1 0;
-    }
-
-    &::after {
-      flex: 2 1 0;
-    }
-
-    > div {
-      flex: 0 0 auto;
-
-      border: 1px solid ${cssVar.colorBorderSecondary};
-      border-radius: 12px;
-
-      background: ${cssVar.colorBgElevated};
-      box-shadow: none;
-    }
-  `,
-  primaryButton: css`
-    color: lch(100% 5 286.91deg);
-    background: lch(53% 52.26 286.91deg);
-
-    &:hover:not(:disabled) {
-      border-color: transparent;
-      color: lch(100% 5 286.91deg);
-      background: lch(49% 52.26 286.91deg);
-    }
-  `,
-  title: css`
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 23px;
-  `,
-}));
+const styles = {
+  actions: 'mbs-4',
+  cancelButton: 'text-foreground',
+  field:
+    'mbs-4 [&_label]:mbe-1 [&_label]:block [&_label]:text-sm [&_label]:leading-5.5 [&_label]:font-normal',
+  formBody: 'p-8',
+  labelText: 'text-sm leading-5.5 font-medium text-foreground',
+  optionalText: 'text-xs leading-5 font-normal text-muted-foreground',
+  input: 'rounded-(--radius-input) text-sm leading-5.5 font-normal',
+  popup: 'border border-divider rounded-(--radius-overlay) bg-popover shadow-none',
+  primaryButton: 'text-primary-foreground bg-primary',
+  title: 'text-base leading-6 font-semibold',
+};
 
 export function ProjectLinkForm({ link, projectId }: ProjectLinkModalProps) {
   const { t } = useTranslation('project');
@@ -180,7 +84,7 @@ export function ProjectLinkForm({ link, projectId }: ProjectLinkModalProps) {
       }}
     >
       <div className={styles.formBody}>
-        <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
+        <div className="flex flex-row items-center gap-2">
           <Link2Icon size={16} />
           <span className={styles.title}>
             {t(link ? 'resources.link.editHeading' : 'resources.link.addHeading')}
@@ -193,12 +97,13 @@ export function ProjectLinkForm({ link, projectId }: ProjectLinkModalProps) {
           <Input
             autoFocus
             required
-
             disabled={pending}
+
             id={`${id}-url`}
             maxLength={8192}
             placeholder="https://…"
             value={url}
+            visualSize="normal"
             onChange={(event) => setUrl(event.target.value)}
           />
         </div>
@@ -209,11 +114,12 @@ export function ProjectLinkForm({ link, projectId }: ProjectLinkModalProps) {
           </label>
           <Input
             aria-label={t('resources.link.title')}
-
             disabled={pending}
+
             id={`${id}-title`}
             maxLength={255}
             value={title}
+            visualSize="normal"
             onChange={(event) => setTitle(event.target.value)}
           />
         </div>
@@ -224,14 +130,17 @@ export function ProjectLinkForm({ link, projectId }: ProjectLinkModalProps) {
             variant="inline"
           />
         )}
-        <div
-          className={cn('flex flex-row', styles.actions)}
-          style={{ justifyContent: 'flex-end', gap: 16 }}
-        >
-          <Button disabled={pending} variant="outline" onClick={close}>
+        <div className={cn(cn('flex flex-row', styles.actions), 'justify-end gap-4')}>
+          <Button disabled={pending} size="lg" variant="outline" onClick={close}>
             {t('resources.link.cancel')}
           </Button>
-          <Button aria-busy={pending} disabled={pending || pending} type="submit" variant="default">
+          <Button
+            aria-busy={pending}
+            disabled={pending || pending}
+            size="lg"
+            type="submit"
+            variant="default"
+          >
             {pending && <Spinner />}
             {t(savedId ? 'resources.link.save' : 'resources.link.add')}
           </Button>
@@ -243,17 +152,16 @@ export function ProjectLinkForm({ link, projectId }: ProjectLinkModalProps) {
 
 export const openProjectLinkModal = (props: ProjectLinkModalProps) =>
   createModal({
-    classNames: { popup: styles.popup },
+    classNames: {
+      popup: styles.popup,
+      close: 'hidden',
+      content: 'overflow-y-auto p-0',
+      header: 'hidden',
+    },
     content: <ProjectLinkForm {...props} />,
     footer: null,
-    styles: {
-      backdrop: { background: 'lch(0 0 0 / 0.25)', opacity: 0.95 },
-      close: { display: 'none' },
-      content: { overflow: 'hidden auto', padding: 0 },
-      header: { display: 'none' },
-    },
     title: translate(props.link ? 'resources.link.editHeading' : 'resources.link.addHeading', {
       ns: 'project',
     }),
-    width: 540,
+    width: 640,
   });

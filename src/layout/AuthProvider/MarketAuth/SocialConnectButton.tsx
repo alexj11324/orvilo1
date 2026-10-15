@@ -1,7 +1,6 @@
 'use client';
 
 import { SiGithub, SiX } from '@icons-pack/react-simple-icons';
-import { cssVar } from 'antd-style';
 import { ArrowRight, Link2Off, Loader2 } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -48,8 +47,8 @@ export const SocialConnectButton = memo<SocialConnectButtonProps>(
         <div
           className="flex items-center justify-between gap-3"
           style={{
-            background: cssVar.colorFillQuaternary,
-            borderRadius: cssVar.borderRadiusLG,
+            background: 'var(--fill-quaternary)',
+            borderRadius: 'var(--radius-overlay)',
             padding: '8px 12px',
           }}
         >

@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 
@@ -36,7 +35,7 @@ const TaskDetailSectionHeader = memo<TaskDetailSectionHeaderProps>(
           variant="ghost"
           onClick={onToggle}
         >
-          <Icon aria-hidden color={cssVar.colorTextDescription} size={16} />
+          <Icon aria-hidden color={'var(--foreground-description)'} size={16} />
           <span>{title}</span>
           {typeof count === 'number' && (
             <span className="text-xs font-normal text-muted-foreground tabular-nums">{count}</span>
@@ -44,7 +43,7 @@ const TaskDetailSectionHeader = memo<TaskDetailSectionHeaderProps>(
           <AccordionArrowIcon
             aria-hidden
             isOpen={open}
-            style={{ color: cssVar.colorTextDescription }}
+            style={{ color: 'var(--foreground-description)' }}
           />
         </Button>
         {trailing}

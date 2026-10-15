@@ -1,7 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
-
 import { Skeleton } from '@/components/ui/skeleton';
 
 export interface SkeletonBarProps {
@@ -13,7 +11,7 @@ export interface SkeletonBarProps {
 const SkeletonBar = ({ height, width = '100%', radius }: SkeletonBarProps) => (
   <Skeleton
     style={{
-      borderRadius: radius ?? cssVar.borderRadius,
+      borderRadius: radius ?? 'var(--radius-card)',
       height,
       margin: 0,
       maxHeight: height,

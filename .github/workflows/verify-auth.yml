@@ -61,7 +61,7 @@ jobs:
 
       - name: Install deps
         if: steps.detect.outputs.should_build == 'true'
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build Auth
         if: steps.detect.outputs.should_build == 'true'

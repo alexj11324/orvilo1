@@ -1,0 +1,8 @@
+/* The public Image className targets its outer frame. Repeating this owned class
+   outranks the retained unlayered Image root without touching its internal image,
+   loading/error/preview slots or changing authored evidence dimensions. */
+.image.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

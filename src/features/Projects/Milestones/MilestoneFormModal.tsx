@@ -65,32 +65,29 @@ const MilestoneFormContent = ({ milestone, projectId }: MilestoneFormContentProp
 
   return (
     <>
-      <div className="flex flex-col" style={{ gap: 12, padding: 16 }}>
-        <div className="flex flex-col" style={{ gap: 6 }}>
-          <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
-            {t('create.milestone.name')}
-          </span>
+      <div className="flex flex-col gap-3 p-4">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium">{t('create.milestone.name')}</span>
           <Input
             autoFocus
             maxLength={255}
             placeholder={t('create.milestone.name')}
             value={name}
+            visualSize="normal"
             onChange={(event) => setName(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter' && !event.nativeEvent.isComposing) void submit();
             }}
           />
         </div>
-        <div className="flex flex-col" style={{ gap: 6 }}>
-          <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
-            {t('milestones.form.targetDate')}
-          </span>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium">{t('milestones.form.targetDate')}</span>
           <DatePicker
             allowClear
             aria-label={t('milestones.form.targetDate')}
             format="YYYY/MM/DD"
             placeholder={t('create.milestone.date')}
-            prefix={<CalendarIcon size={13} />}
+            prefix={<CalendarIcon size={16} />}
             value={date ? dayjs(date) : null}
             onChange={(value) => {
               const picked = Array.isArray(value) ? value[0] : value;
@@ -98,10 +95,8 @@ const MilestoneFormContent = ({ milestone, projectId }: MilestoneFormContentProp
             }}
           />
         </div>
-        <div className="flex flex-col" style={{ gap: 6 }}>
-          <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
-            {t('create.milestone.description')}
-          </span>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium">{t('create.milestone.description')}</span>
           <Textarea
             placeholder={t('create.milestone.description')}
             rows={3}
@@ -111,12 +106,13 @@ const MilestoneFormContent = ({ milestone, projectId }: MilestoneFormContentProp
         </div>
       </div>
       <ModalFooter>
-        <Button variant="outline" onClick={close}>
+        <Button size="lg" variant="outline" onClick={close}>
           {t('common:cancel')}
         </Button>
         <Button
           aria-busy={saving}
           disabled={!name.trim() || saving}
+          size="lg"
           variant="default"
           onClick={() => void submit()}
         >

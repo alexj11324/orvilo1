@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -53,10 +52,10 @@ const GuideShell = ({
           >
             <Avatar
               avatar={icon}
-              background={cssVar.colorFillQuaternary}
+              background={'var(--fill-quaternary)'}
               shape={'square'}
               size={compact ? 32 : 48}
-              style={{ color: cssVar.colorText }}
+              style={{ color: 'var(--foreground)' }}
             />
             <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
               <div style={{ fontSize: compact ? 14 : 16, fontWeight: 600 }}>{title}</div>
@@ -108,8 +107,8 @@ const GuideShell = ({
       style={{
         gap: compact ? 12 : 16,
         padding: compact ? 12 : 16,
-        borderColor: cssVar.colorBorderSecondary,
-        background: cssVar.colorBgElevated,
+        borderColor: 'var(--divider)',
+        background: 'var(--popover)',
         overflow: 'hidden',
         width: '100%',
       }}

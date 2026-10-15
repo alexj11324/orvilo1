@@ -10,11 +10,11 @@ import {
   TextArea,
   useModalContext,
 } from '@lobehub/ui/base-ui';
-import { Form } from 'antd';
 import { AiProviderBaseURLSchema } from 'model-bank/aiProvider';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
 import { ProviderIcon } from '@/components/OrviloIcons';
 import { useAiInfraStore } from '@/store/aiInfra/store';
 import { type CreateAiProviderParams } from '@/types/aiProvider';

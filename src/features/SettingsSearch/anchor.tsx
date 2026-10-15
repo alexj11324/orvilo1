@@ -1,8 +1,12 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, type PropsWithChildren, useEffect } from 'react';
 import { useLocation } from 'react-router';
+
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
+
+import styles from './SettingsAnchor.module.css';
 
 export const SETTINGS_ANCHOR_ATTR = 'data-settings-anchor';
 /**
@@ -18,35 +22,6 @@ const POLL_INTERVAL = 100;
 // navigation — poll for a few seconds before giving up (fall back to a plain
 // tab switch, which is still a correct result).
 const POLL_TIMEOUT = 3000;
-
-const styles = createStaticStyles(({ css }) => ({
-  anchor: css`
-    scroll-margin-block-start: 80px;
-  `,
-  highlight: css`
-    border-radius: ${cssVar.borderRadius};
-    animation: settings-search-highlight 1.2s ease-in-out 2;
-
-    @keyframes settings-search-highlight {
-      0%,
-      100% {
-        background: transparent;
-      }
-
-      50% {
-        /* One step above colorPrimaryBg — plain Bg is barely visible in dark mode */
-        background: ${cssVar.colorPrimaryBgHover};
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      /* Keep the locate cue, drop the flashing: a steady highlight that the
-         removal timer clears */
-      background: ${cssVar.colorPrimaryBgHover};
-      animation: none;
-    }
-  `,
-}));
 
 /**
  * Marks a settings section / item as a search target. Wrap the group title or
@@ -79,15 +54,20 @@ export const scrollToSettingsAnchor = (anchor: string) => {
       return;
     }
 
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduceMotion =
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      userGeneralSettingsSelectors.animationMode(useUserStore.getState()) === 'disabled';
     el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
 
     // Highlight the whole form row / group header instead of the bare label
     // text so the flash is visible at a glance.
     const target =
       el.closest(`.ant-form-item, .ant-collapse-header, [${SETTINGS_ANCHOR_ROW_ATTR}]`) ?? el;
-    target.classList.add(styles.highlight);
-    setTimeout(() => target.classList.remove(styles.highlight), HIGHLIGHT_DURATION);
+    target.classList.add(styles.highlight, 'orvilo-motion-scope');
+    setTimeout(
+      () => target.classList.remove(styles.highlight, 'orvilo-motion-scope'),
+      HIGHLIGHT_DURATION,
+    );
   };
 
   tryScroll();

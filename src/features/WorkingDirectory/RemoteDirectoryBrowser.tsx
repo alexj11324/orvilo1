@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { ArrowUpIcon, FolderIcon, HouseIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -69,10 +68,15 @@ export const RemoteDirectoryBrowser = ({
           placeholder={t('workingDirectory.placeholder')}
           style={{ flex: 1, minWidth: 0 }}
           value={displayedPath}
+          visualSize="compact"
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && navigate(displayedPath.trim() || undefined)}
         />
-        <Button disabled={loading} onClick={() => navigate(displayedPath.trim() || undefined)}>
+        <Button
+          disabled={loading}
+          size="compact"
+          onClick={() => navigate(displayedPath.trim() || undefined)}
+        >
           {t('workingDirectory.openPath')}
         </Button>
       </div>
@@ -107,7 +111,7 @@ export const RemoteDirectoryBrowser = ({
                 role={'button'}
                 tabIndex={loading || !entry.readable ? -1 : 0}
                 title={entry.name}
-                titleColor={cssVar.colorText}
+                titleColor={'var(--foreground)'}
                 description={
                   entry.readable ? undefined : (
                     <div className="text-muted-foreground">
@@ -132,7 +136,7 @@ export const RemoteDirectoryBrowser = ({
                 >
                   {t('workingDirectory.foldersLoadFailed')}
                 </div>
-                <Button disabled={loading} onClick={() => void retry()}>
+                <Button disabled={loading} size="lg" onClick={() => void retry()}>
                   {tCommon('retry')}
                 </Button>
               </div>
@@ -142,7 +146,12 @@ export const RemoteDirectoryBrowser = ({
               </div>
             ) : null}
             {hasMore && !error && (
-              <Button disabled={loading} loading={isLoadingMore} onClick={() => void loadMore()}>
+              <Button
+                disabled={loading}
+                loading={isLoadingMore}
+                size="lg"
+                onClick={() => void loadMore()}
+              >
                 {t('workingDirectory.loadMoreFolders')}
               </Button>
             )}
@@ -155,15 +164,16 @@ export const RemoteDirectoryBrowser = ({
         </div>
       )}
       <div className="flex flex-wrap justify-between gap-2">
-        <Button disabled={loading} onClick={() => onManual(displayedPath)}>
+        <Button disabled={loading} size="lg" onClick={() => onManual(displayedPath)}>
           {t('workingDirectory.enterPathManually')}
         </Button>
         <div className="flex gap-2">
-          <Button disabled={loading} onClick={onCancel}>
+          <Button disabled={loading} size="lg" onClick={onCancel}>
             {tCommon('cancel')}
           </Button>
           <Button
             loading={loading}
+            size="lg"
             disabled={
               !directory || isLoading || (draft !== undefined && draft.trim() !== directory.path)
             }

@@ -54,7 +54,9 @@ const IssueContentBody = memo<
         title={t('taskDetail.notFound.title')}
         extra={
           <Link to={'/tasks'}>
-            <Button variant="default">{t('taskDetail.notFound.backToTasks')}</Button>
+            <Button size="lg" variant="default">
+              {t('taskDetail.notFound.backToTasks')}
+            </Button>
           </Link>
         }
       />

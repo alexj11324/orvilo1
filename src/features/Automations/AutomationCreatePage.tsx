@@ -183,6 +183,7 @@ const AutomationCreatePage = memo(() => {
           <Button
             disabled={!canCreate}
             loading={submitting}
+            size="compact"
             title={canCreate ? undefined : reason}
             variant="outline"
             onClick={submit}
@@ -203,6 +204,7 @@ const AutomationCreatePage = memo(() => {
             <div className="flex flex-col items-start gap-2" role="status">
               <div className="text-muted-foreground">{t('create.saved_configuration')}</div>
               <Button
+                size="lg"
                 variant="outline"
                 onClick={() => navigate(automationDetailPath(createdIdentifier))}
               >
@@ -216,6 +218,7 @@ const AutomationCreatePage = memo(() => {
             placeholder={t('create.title_placeholder')}
             style={{ fontSize: 20, fontWeight: 600 }}
             value={name}
+            visualSize="normal"
             onChange={(e) => setNameOverride(e.target.value)}
           />
           <div className="flex">
@@ -236,12 +239,12 @@ const AutomationCreatePage = memo(() => {
                 }}
               >
                 <AssigneeAvatar agentId={assigneeAgentId} size={20} />
-                <div className="text-[13px]">
+                <div className="text-(length:--text-dense)">
                   {assigneeAgentId && assigneeMeta
                     ? agentDisplayName(assigneeMeta)
                     : t('instructions.agent_placeholder')}
                 </div>
-                <ChevronRight color={'var(--ant-color-text-tertiary)'} size={14} />
+                <ChevronRight color={'var(--foreground-tertiary)'} size={14} />
               </div>
             </AssigneeAgentSelector>
           </div>
@@ -251,7 +254,9 @@ const AutomationCreatePage = memo(() => {
             onChange={setDraft}
           />
           <div className="flex flex-col gap-2">
-            <div className="text-[13px] font-semibold">{t('instructions.section')}</div>
+            <div className="text-(length:--text-dense) font-semibold">
+              {t('instructions.section')}
+            </div>
             <Textarea
               className="min-h-[calc(4lh+0.75rem)]"
               disabled={configurationLocked}

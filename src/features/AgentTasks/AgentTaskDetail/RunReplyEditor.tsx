@@ -1,5 +1,4 @@
 import { ChatInput, Editor, SendButton, useEditor } from '@lobehub/editor/react';
-import { cssVar } from 'antd-style';
 import { ChevronLeft } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -46,7 +45,7 @@ const RunReplyEditor = memo<RunReplyEditorProps>(({ onSubmit, onCancel, placehol
           <Button
             disabled={submitting}
             size="sm"
-            style={{ color: cssVar.colorTextDescription }}
+            style={{ color: 'var(--foreground-description)' }}
             variant="ghost"
             onClick={onCancel}
           >

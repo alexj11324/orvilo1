@@ -1,6 +1,5 @@
 'use client';
 
-import { css, cx } from 'antd-style';
 import { ChevronRight, FileUp, LibraryBig, PlusIcon, TypeIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,14 +13,7 @@ import ActionDropdown, {
   type ActionDropdownMenuItems,
 } from '../ChatInput/ActionBar/components/ActionDropdown';
 
-const hotArea = css`
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: transparent;
-  }
-`;
+const hotArea = "before:absolute before:inset-0 before:bg-transparent before:content-['']";
 
 interface AttachmentMenuProps {
   disabled?: boolean;
@@ -42,12 +34,11 @@ const AttachmentMenu = memo<AttachmentMenuProps>(
           children: [
             {
               closeOnClick: false,
-              icon: <FileUp size={18} />,
+              icon: <FileUp size={16} />,
               key: 'upload',
               label: (
                 <Upload
                   multiple
-
                   beforeUpload={(file, fileList) => {
                     if (file === fileList.at(-1)) {
                       setOpen(false);
@@ -56,14 +47,14 @@ const AttachmentMenu = memo<AttachmentMenuProps>(
                     return false;
                   }}
                 >
-                  <div className={cx(hotArea)}>
+                  <div className={hotArea}>
                     {t('upload.action.fileOrImageUpload', { ns: 'chat' })}
                   </div>
                 </Upload>
               ),
             },
             {
-              icon: <LibraryBig size={18} />,
+              icon: <LibraryBig size={16} />,
               key: 'library',
               label: t('pageEditor.comments.attachments.chooseLibrary', { ns: 'file' }),
               onClick: () => {
@@ -98,7 +89,7 @@ const AttachmentMenu = memo<AttachmentMenuProps>(
           aria-label={title}
           disabled={disabled}
           icon={PlusIcon}
-          size={{ blockSize: 32, size: 18 }}
+          size={{ blockSize: 32, size: 16 }}
           title={title}
           onClick={() => setOpen(true)}
         />

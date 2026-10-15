@@ -1,7 +1,6 @@
 'use client';
 import { SiDiscord } from '@icons-pack/react-simple-icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -45,13 +44,13 @@ const AuthErrorPage = memo(() => {
               rel="noopener noreferrer"
               target="_blank"
             >
-              <SiDiscord fill={cssVar.colorText} /> {t('actions.discord')}
+              <SiDiscord fill={'var(--foreground)'} /> {t('actions.discord')}
             </a>
           )}
         </div>
       }
     >
-      <div className="text-muted-foreground" style={{ fontFamily: cssVar.fontFamilyCode }}>
+      <div className="text-muted-foreground" style={{ fontFamily: 'var(--font-mono)' }}>
         ErrorCode: {error || 'UNKNOWN'}
       </div>
     </AuthCard>

@@ -6,8 +6,8 @@ import Avatar from '@/components/Avatar';
 
 export const styles = {
   container: 'rounded-(--radius-card) text-foreground',
-  desc: 'text-(--ant-color-text-tertiary) text-center',
-  form: 'w-full max-w-[300px] [padding-block:12px]',
+  desc: 'text-foreground-tertiary text-center',
+  form: 'w-full max-w-75 [padding-block:12px]',
 };
 
 export const FormAction = memo<
@@ -40,10 +40,10 @@ export const FormAction = memo<
         <Avatar
           animation={animation}
           avatar={avatar}
-          background={background ?? 'var(--ant-color-fill-content)'}
+          background={background ?? 'var(--fill-content)'}
           size={80}
         />
-        <div className="flex flex-col gap-2 w-[100%]">
+        <div className="flex flex-col gap-2 w-full">
           <div
             className="flex flex-col"
             style={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}

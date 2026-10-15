@@ -8,10 +8,11 @@ import { useTranslation } from 'react-i18next';
 import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { DeleteTaskParams, DeleteTaskState } from '../../../types';
+import statusTextStyles from '../statusText.module.css';
 
 const styles = {
   identifierChip:
-    'shrink-0 rounded-[999px] border border-dashed border-[var(--ant-color-error-border)] bg-transparent px-2 py-0.5 font-mono text-[12px] text-destructive line-through ms-1.5',
+    'shrink-0 rounded-(--radius-chip) border border-dashed border-destructive-border bg-transparent px-2 py-0.5 font-mono text-xs text-destructive-text line-through ms-1.5',
 };
 
 export const DeleteTaskInspector = memo<BuiltinInspectorProps<DeleteTaskParams, DeleteTaskState>>(
@@ -23,8 +24,10 @@ export const DeleteTaskInspector = memo<BuiltinInspectorProps<DeleteTaskParams, 
     return (
       <div className={inspectorTextStyles.root}>
         <span
-          className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}
-          style={{ color: 'var(--destructive)' }}
+          className={cn(
+            (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
+            statusTextStyles.destructiveText,
+          )}
         >
           {t('builtins.orvilo-task.apiName.deleteTask')}
         </span>

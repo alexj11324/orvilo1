@@ -295,14 +295,28 @@ export class GatewayClient extends EventEmitter {
    * logs. Never logs the token itself.
    */
   private describeTokenExpiry(): string {
+    const exp = this.readTokenExpiry();
+    if (exp === 'unparsable') return 'token exp: unparsable';
+    if (exp === undefined) return 'token exp: none';
+    return `token exp: ${new Date(exp).toISOString()}${Date.now() >= exp ? ' (EXPIRED)' : ''}`;
+  }
+
+  /** The token's `exp` in epoch ms; `undefined` when it carries none. */
+  private readTokenExpiry(): number | 'unparsable' | undefined {
     try {
       const payload = JSON.parse(Buffer.from(this.token.split('.')[1], 'base64url').toString());
-      if (typeof payload.exp !== 'number') return 'token exp: none';
-      const expired = Date.now() >= payload.exp * 1000;
-      return `token exp: ${new Date(payload.exp * 1000).toISOString()}${expired ? ' (EXPIRED)' : ''}`;
+      if (typeof payload.exp !== 'number') return undefined;
+      const exp = payload.exp * 1000;
+      // Outside the Date range `toISOString()` throws, inside the open handler.
+      return Number.isNaN(new Date(exp).getTime()) ? 'unparsable' : exp;
     } catch {
-      return 'token exp: unparsable';
+      return 'unparsable';
     }
+  }
+
+  private isTokenExpired(): boolean {
+    const exp = this.readTokenExpiry();
+    return typeof exp === 'number' && Date.now() >= exp;
   }
 
   // ─── WebSocket Event Handlers ───
@@ -337,6 +351,15 @@ export class GatewayClient extends EventEmitter {
 
         case 'auth_failed': {
           const reason = (message as any).reason || 'Unknown reason';
+          // Backoff reconnects reuse the cached token. Once it has expired the
+          // gateway rejects it with auth_failed, which a fresh token fixes, so
+          // hand it to the auth_expired path and keep the connection
+          // recoverable. Stopping here left the device offline for good.
+          if (this.isTokenExpired()) {
+            this.logger.warn(`Authentication failed on an expired token: ${reason}`);
+            this.emit('auth_expired');
+            break;
+          }
           this.logger.error(`Authentication failed: ${reason}`);
           this.emit('auth_failed', reason);
           this.disconnect();

@@ -173,6 +173,7 @@ const TaskIssueDefinitionForm = ({
             id={`${inputId}-name`}
             maxLength={255}
             value={name}
+            visualSize="normal"
             onChange={(event) => setName(event.target.value)}
           />
         </label>
@@ -195,7 +196,7 @@ const TaskIssueDefinitionForm = ({
           </legend>
           {COPY_FIELDS.map((field) => (
             <label
-              className="flex cursor-pointer items-center gap-2 rounded-md p-2 hover:bg-accent"
+              className="flex cursor-pointer items-center gap-2 rounded-(--radius-button) p-2 hover:bg-accent"
               key={field}
             >
               <Checkbox
@@ -222,6 +223,7 @@ const TaskIssueDefinitionForm = ({
               minLength={3}
               pattern="[A-Za-z0-9]+"
               value={identifier}
+              visualSize="normal"
               onChange={(event) => setIdentifier(event.target.value)}
             />
             <span className="text-xs text-muted-foreground">
@@ -236,6 +238,7 @@ const TaskIssueDefinitionForm = ({
               id={`${inputId}-issueName`}
               maxLength={255}
               value={issueName}
+              visualSize="normal"
               onChange={(event) => setIssueName(event.target.value)}
             />
           </label>
@@ -251,6 +254,7 @@ const TaskIssueDefinitionForm = ({
               id={`${inputId}-date`}
               type="date"
               value={dueDate}
+              visualSize="normal"
               onChange={(event) => setDueDate(event.target.value)}
             />
           </label>
@@ -260,6 +264,7 @@ const TaskIssueDefinitionForm = ({
               {(['day', 'week', 'month', 'year'] as const).map((value) => (
                 <Button
                   aria-pressed={cadence === value}
+                  className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                   disabled={pending}
                   key={value}
                   size="sm"
@@ -282,6 +287,7 @@ const TaskIssueDefinitionForm = ({
               min={1}
               type="number"
               value={interval}
+              visualSize="normal"
               onChange={(event) => setInterval(Number(event.target.value))}
             />
           </label>
@@ -293,6 +299,7 @@ const TaskIssueDefinitionForm = ({
               id={`${inputId}-timezone`}
               maxLength={100}
               value={timezone}
+              visualSize="normal"
               onChange={(event) => setTimezone(event.target.value)}
             />
           </label>
@@ -305,20 +312,39 @@ const TaskIssueDefinitionForm = ({
         </p>
       ) : null}
       {error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-sm text-destructive-text" role="alert">
           {error}
         </p>
       ) : null}
       <div className="flex justify-end gap-2">
-        <Button disabled={pending} type="button" variant="outline" onClick={close}>
+        <Button
+          className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+          disabled={pending}
+          size="lg"
+          type="button"
+          variant="outline"
+          onClick={close}
+        >
           {t(templateId ? 'close' : 'cancel', { ns: 'common' })}
         </Button>
         {templateId ? (
-          <Button loading={pending} type="button" onClick={() => void createFromTemplate()}>
+          <Button
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+            loading={pending}
+            size="lg"
+            type="button"
+            onClick={() => void createFromTemplate()}
+          >
             {t('taskDetail.menu.createFromTemplate')}
           </Button>
         ) : (
-          <Button disabled={kind !== 'recurring' && !name.trim()} loading={pending} type="submit">
+          <Button
+            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+            disabled={kind !== 'recurring' && !name.trim()}
+            loading={pending}
+            size="lg"
+            type="submit"
+          >
             {t(`taskDetail.menu.submit.${kind}`)}
           </Button>
         )}

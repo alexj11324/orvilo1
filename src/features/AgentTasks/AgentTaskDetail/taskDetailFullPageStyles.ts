@@ -1,21 +1,10 @@
-import { createStaticStyles } from 'antd-style';
-
 /**
  * Geometry for the routed issue page; split and Portal keep their own width.
  * The main/rail switch lives in one place — the `task-detail` container query
- * in `taskDetailLayoutStyles` — so the page only sets gutters and caps the
- * content width instead of redefining the breakpoint.
+ * in `taskDetailLayoutStyles`. WorkSurfaceDocument owns the fixed gutters and
+ * document cap; the header stays within that inherited content width.
  */
-export const taskDetailFullPageStyles = createStaticStyles(({ css }) => ({
-  document: css`
-    width: 100%;
-    margin-inline: 0;
-    padding-inline: 24px;
-
-    [data-task-detail-header] {
-      max-width: 1120px;
-      margin-inline: auto;
-      padding-block-start: 5px;
-    }
-  `,
-}));
+export const taskDetailFullPageStyles = {
+  document:
+    'w-full [&_[data-task-detail-header]]:max-w-full [&_[data-task-detail-header]]:mx-auto [&_[data-task-detail-header]]:pbs-1.25',
+};

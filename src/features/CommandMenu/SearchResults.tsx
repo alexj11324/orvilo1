@@ -18,6 +18,7 @@ import {
 import { memo, type ReactNode, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { BUILTIN_MEMORY_UI_ENABLED } from '@/config/routes/settings';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
@@ -307,21 +308,26 @@ const SearchResults = memo<SearchResultsProps>(
     }
 
     const renderActionsAffordance = (target: CommandMenuWorkResult) => (
-      <button
+      <Button
         aria-label={t('cmdk.resultActions.label')}
         className={styles.itemActionsButton}
+        size="compact"
         tabIndex={-1}
         title={`${t('cmdk.resultActions.label')} →`}
         type="button"
+        variant="ghost"
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
           onOpenResultActions(target);
         }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+        }}
       >
         <span className={styles.itemActionsKey}>→</span>
-        <MoreHorizontalIcon size={14} />
-      </button>
+        <MoreHorizontalIcon size={16} />
+      </Button>
     );
 
     // Render a single result item. The group heading already names the type,

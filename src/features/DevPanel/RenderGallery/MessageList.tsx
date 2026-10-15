@@ -2,7 +2,6 @@
 
 import { LOADING_FLAT } from '@orvilo/const';
 import type { ChatToolPayload, UIChatMessage } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 
@@ -18,19 +17,10 @@ import { DEVTOOLS_AGENT_ID } from './fixtures';
 import { deriveFixtureProps, type LifecycleMode } from './lifecycleMode';
 import type { ApiEntry } from './useDevtoolsEntries';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  empty: css`
-    padding-block: 48px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-  `,
-  thread: css`
-    width: 100%;
-    padding-block: 8px 48px;
-    padding-inline: 12px;
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  empty: 'py-12 text-sm leading-5.5 text-foreground-tertiary text-center',
+  thread: 'w-full pt-2 pb-12 px-3 bg-card',
+};
 
 const coerceContent = (value: unknown): string => {
   if (value === null || value === undefined) return '';

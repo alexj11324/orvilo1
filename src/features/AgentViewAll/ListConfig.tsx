@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import {
   ArrowDownWideNarrow,
   ArrowUpNarrowWide,
@@ -16,7 +15,6 @@ import Form, { type FormItemProps } from '@/components/GroupForm';
 import Select from '@/components/Select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
 import type { AgentGroupBy, AgentListViewOptions, AgentOrderBy } from './listViewOptions';
@@ -31,17 +29,6 @@ interface ListConfigProps {
   showAuthor?: boolean;
   viewMode: ViewMode;
 }
-
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    form: css`
-      label {
-        font-size: 13px !important;
-        color: ${cssVar.colorTextSecondary} !important;
-      }
-    `,
-  };
-});
 
 const ListConfig = memo<ListConfigProps>(
   ({ options, setOptions, setViewMode, showAuthor, viewMode }) => {
@@ -73,9 +60,9 @@ const ListConfig = memo<ListConfigProps>(
       {
         children: (
           <Select
+            className="w-37.5 text-sm leading-5.5"
             options={groupingOptions}
-            size={'small'}
-            style={{ width: 150 }}
+            size={'compact'}
             value={options.groupBy}
             onChange={(value) => {
               if (Array.isArray(value) || value == null) return;
@@ -83,7 +70,11 @@ const ListConfig = memo<ListConfigProps>(
             }}
           />
         ),
-        label: t('agentViewAll.form.grouping'),
+        label: (
+          <span className="text-sm leading-5.5 text-muted-foreground">
+            {t('agentViewAll.form.grouping')}
+          </span>
+        ),
       },
       {
         children: (
@@ -91,7 +82,7 @@ const ListConfig = memo<ListConfigProps>(
             <ActionIcon
               aria-label={t('sort')}
               icon={options.orderDirection === 'asc' ? ArrowUpNarrowWide : ArrowDownWideNarrow}
-              size={'small'}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               onClick={() => {
                 setOptions((prev) => ({
                   ...prev,
@@ -100,9 +91,9 @@ const ListConfig = memo<ListConfigProps>(
               }}
             />
             <Select
+              className="w-28 text-sm leading-5.5"
               options={orderOptions}
-              size={'small'}
-              style={{ width: 112 }}
+              size={'compact'}
               value={options.orderBy}
               onChange={(value) => {
                 if (Array.isArray(value) || value == null) return;
@@ -111,12 +102,16 @@ const ListConfig = memo<ListConfigProps>(
             />
           </div>
         ),
-        label: t('agentViewAll.form.ordering'),
+        label: (
+          <span className="text-sm leading-5.5 text-muted-foreground">
+            {t('agentViewAll.form.ordering')}
+          </span>
+        ),
       },
     ];
 
     const panelContent = (
-      <div className="flex flex-col gap-3" style={{ width: 280 }}>
+      <div className="flex flex-col gap-3 w-70">
         {/* The list table cannot fit a mobile viewport — the page forces the
             card grid there, so the picker stays desktop-only. */}
         {!isMobile && (
@@ -126,25 +121,25 @@ const ListConfig = memo<ListConfigProps>(
               if (typeof key === 'string') setViewMode(key as ViewMode);
             }}
           >
-            <TabsList style={{ display: 'flex', width: '100%' }}>
-              <TabsTrigger style={{ flex: 1 }} value="list">
+            <TabsList className="flex w-full rounded-(--radius-button) group-data-horizontal/tabs:h-9">
+              <TabsTrigger
+                className="flex-1 rounded-(--radius-button) text-sm leading-5.5"
+                value="list"
+              >
                 <LayoutList />
                 {t('agentViewAll.view.list')}
               </TabsTrigger>
-              <TabsTrigger style={{ flex: 1 }} value="card">
+              <TabsTrigger
+                className="flex-1 rounded-(--radius-button) text-sm leading-5.5"
+                value="card"
+              >
                 <LayoutGrid />
                 {t('agentViewAll.view.card')}
               </TabsTrigger>
             </TabsList>
           </Tabs>
         )}
-        <Form
-          className={styles.form}
-          items={formItems}
-          itemsType={'flat'}
-          size={'small'}
-          variant={'borderless'}
-        />
+        <Form items={formItems} itemsType={'flat'} size={'middle'} variant={'borderless'} />
       </div>
     );
 
@@ -155,11 +150,11 @@ const ListConfig = memo<ListConfigProps>(
             <ActionIcon
               aria-label={t('settings')}
               icon={Settings2Icon}
-              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
             />
           }
         />
-        <PopoverContent align="end" side="bottom" style={{ padding: 12 }}>
+        <PopoverContent align="end" className="w-auto p-4" side="bottom">
           {panelContent}
         </PopoverContent>
       </Popover>

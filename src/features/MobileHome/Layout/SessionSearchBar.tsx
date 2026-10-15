@@ -1,7 +1,6 @@
 'use client';
 
 import { HotkeyEnum } from '@orvilo/const/hotkeys';
-import { cssVar } from 'antd-style';
 import { SearchIcon, X } from 'lucide-react';
 import { type ChangeEvent, memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -67,13 +66,14 @@ const SessionSearchBar = memo<{ mobile?: boolean }>(({ mobile }) => {
       <SearchIcon
         className="pointer-events-none absolute left-3"
         size={16}
-        style={{ color: cssVar.colorTextTertiary }}
+        style={{ color: 'var(--foreground-tertiary)' }}
       />
       <Input
         className="w-full px-9"
         placeholder={t('searchTopicPlaceholder')}
         ref={inputRef}
         value={keywords ?? ''}
+        visualSize="compact"
         onChange={handleChange}
       />
       <div className="absolute right-3 flex items-center gap-2">
@@ -89,7 +89,7 @@ const SessionSearchBar = memo<{ mobile?: boolean }>(({ mobile }) => {
             variant="ghost"
             onClick={() => updateSearchKeywords('')}
           >
-            <X size={14} style={{ color: cssVar.colorTextTertiary }} />
+            <X size={14} style={{ color: 'var(--foreground-tertiary)' }} />
           </Button>
         )}
       </div>

@@ -20,17 +20,17 @@ type Rect = AcceptanceReviewAnnotation['rect'];
 
 const styles = {
   badge:
-    'absolute -top-[9px] -start-[9px] inline-flex items-center justify-center size-[18px] rounded-[50%] text-[11px] font-semibold leading-none text-(--ant-color-text-light-solid) bg-destructive',
+    'absolute -top-2.25 -start-2.25 inline-flex items-center justify-center size-4.5 rounded-full text-xs font-semibold leading-none text-(--overlay-mask-foreground) bg-destructive',
   badgeDelete:
-    'cursor-pointer absolute -top-[9px] -end-[9px] inline-flex items-center justify-center size-[18px] border-none rounded-[50%] text-(--ant-color-text-light-solid) bg-destructive hover:brightness-[1.15] [@media(pointer:coarse)]:-top-3 [@media(pointer:coarse)]:-end-3 [@media(pointer:coarse)]:size-6',
+    'cursor-pointer absolute -top-3.5 -end-3.5 inline-flex items-center justify-center size-7 border-none rounded-full text-(--destructive-on-fill) bg-destructive hover:brightness-[1.15] [@media(pointer:coarse)]:-top-5.5 [@media(pointer:coarse)]:-end-5.5 [@media(pointer:coarse)]:size-11',
   canvas: 'cursor-crosshair select-none',
   editableRect: 'pointer-events-auto cursor-move',
   frame:
-    'relative overflow-hidden inline-block self-start w-fit max-w-full border border-sidebar-border rounded-(--ant-border-radius-lg)',
+    'relative overflow-hidden inline-block self-start w-fit max-w-full border border-sidebar-border rounded-(--radius-card)',
   image: 'block max-w-full',
-  rect: 'absolute border-2 border-destructive rounded-[4px] shadow-[0_0_0_1px] shadow-black/45 inset-shadow-[0_0_0_1px] inset-shadow-white/45',
+  rect: 'absolute border-2 border-destructive rounded-(--radius-chip) shadow-[0_0_0_1px] shadow-black/45 inset-shadow-[0_0_0_1px] inset-shadow-white/45',
   resizeHandle:
-    "cursor-nwse-resize absolute -bottom-1.5 -end-1.5 size-3 border-2 border-destructive rounded-[50%] bg-card after:content-[''] after:absolute after:-inset-4",
+    "cursor-nwse-resize absolute -bottom-1.5 -end-1.5 size-3 border-2 border-destructive rounded-full bg-card after:content-[''] after:absolute after:-inset-4",
 };
 
 const rectStyle = (rect: Rect) => ({
@@ -90,7 +90,7 @@ export const AnnotatedImage = memo<AnnotatedImageProps>(
             {annotations.map(
               (annotation, index) =>
                 annotation.comment && (
-                  <div className="text-[12px] text-muted-foreground" key={index}>
+                  <div className="text-xs text-muted-foreground" key={index}>
                     {numbered ? `${annotation.label ?? index + 1}. ` : ''}
                     {annotation.authorName ? `${annotation.authorName}: ` : ''}
                     {annotation.comment}
@@ -181,7 +181,7 @@ export const AnnotationCanvas = memo<AnnotationCanvasProps>(
                 onRemove(index);
               }}
             >
-              <Trash2 size={11} />
+              <Trash2 size={16} />
             </button>
             <span
               className={styles.resizeHandle}

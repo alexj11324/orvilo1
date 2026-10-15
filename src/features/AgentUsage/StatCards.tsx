@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -14,7 +13,7 @@ interface StatCardsProps {
   summary: AgentUsageStats['summary'];
 }
 
-const desc = (text: string) => <div className="text-[12px] text-muted-foreground">{text}</div>;
+const desc = (text: string) => <div className="text-xs text-muted-foreground">{text}</div>;
 
 const StatCards = memo<StatCardsProps>(({ summary, isLoading, rangeLabel }) => {
   const { t } = useTranslation('spend');
@@ -47,7 +46,7 @@ const StatCards = memo<StatCardsProps>(({ summary, isLoading, rangeLabel }) => {
           precision: 2,
           prefix: '$',
           value: formatNumber(summary.cacheSavings, 2),
-          valueStyle: { color: cssVar.colorSuccess },
+          valueStyle: { color: 'var(--success)' },
         }}
       />
       <StatisticCard

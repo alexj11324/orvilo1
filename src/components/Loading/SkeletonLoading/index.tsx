@@ -1,17 +1,11 @@
 'use client';
 
-import { createStaticStyles, cx, responsive } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { memo } from 'react';
 
 import { ArticleSkeleton } from '@/components/Skeleton';
 
-const styles = createStaticStyles(
-  ({ css }) => css`
-    ${responsive.sm} {
-      padding: 16px;
-    }
-  `,
-);
+const styles = '[@media(width<=575.98px)]:p-4';
 
 const SkeletonLoading = memo<{ className?: string }>(({ className }) => (
   <ArticleSkeleton className={cx(styles, className)} rows={8} />

@@ -1,4 +1,3 @@
-import { useTheme } from 'antd-style';
 import { ArrowDownToDot, ArrowUpFromDot } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,17 +26,20 @@ interface TotalTokenProps {
 
 /** `12,345 = 10,000 + 2,345` — the total, then how it splits input vs output. */
 const TotalToken = memo<TotalTokenProps>(({ totalTokens, totalInputTokens, totalOutputTokens }) => {
-  const theme = useTheme();
   const { t } = useTranslation('spend');
   return typeof totalInputTokens === 'number' && typeof totalOutputTokens === 'number' ? (
-    <div className={'flex items-center'} style={{ gap: 2, color: theme.colorTextDescription }}>
-      <Badge size="sm" variant={getVariant(totalTokens)}>
+    <div className="flex items-center gap-0.5 text-sm leading-5.5 text-foreground-description">
+      <Badge
+        className="h-auto min-h-6 py-0 text-sm leading-5.5"
+        size="sm"
+        variant={getVariant(totalTokens)}
+      >
         {formatNumber(totalTokens)}
       </Badge>
       =
       <Tooltip>
         <TooltipTrigger render={<span />}>
-          <Badge size="sm" variant="secondary">
+          <Badge className="h-auto min-h-6 py-0 text-sm leading-5.5" size="sm" variant="secondary">
             {createElement(ArrowDownToDot, { size: 16 })}
             {formatNumber(totalInputTokens)}
           </Badge>
@@ -47,7 +49,7 @@ const TotalToken = memo<TotalTokenProps>(({ totalTokens, totalInputTokens, total
       +
       <Tooltip>
         <TooltipTrigger render={<span />}>
-          <Badge size="sm" variant="secondary">
+          <Badge className="h-auto min-h-6 py-0 text-sm leading-5.5" size="sm" variant="secondary">
             {createElement(ArrowUpFromDot, { size: 16 })}
             {formatNumber(totalOutputTokens)}
           </Badge>
@@ -57,8 +59,8 @@ const TotalToken = memo<TotalTokenProps>(({ totalTokens, totalInputTokens, total
     </div>
   ) : (
     <Badge
+      className="h-auto min-h-6 py-0 text-sm leading-5.5"
       size="sm"
-      style={{ color: theme.colorTextDescription, fontSize: 14 }}
       variant={getVariant(totalTokens)}
     >
       {formatNumber(totalTokens)}

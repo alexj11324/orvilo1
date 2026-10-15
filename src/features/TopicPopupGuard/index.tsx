@@ -1,7 +1,6 @@
 'use client';
 
 import { type TopicPopupInfo } from '@orvilo/electron-client-ipc';
-import { createStaticStyles, cx } from 'antd-style';
 import { ExternalLinkIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,27 +8,11 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  description: css`
-    max-width: 360px;
-
-    font-size: 14px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-    text-align: center;
-  `,
-  title: css`
-    margin-block: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-  wrapper: css`
-    width: 100%;
-    height: 100%;
-    padding: 24px;
-  `,
-}));
+const styles = {
+  description: 'm-0 max-w-90 text-center text-sm leading-5.5 text-muted-foreground',
+  title: 'm-0 text-xl leading-7 font-semibold text-foreground',
+  wrapper: 'flex h-full w-full flex-1 flex-col items-center justify-center gap-4 p-6',
+};
 
 interface TopicInPopupGuardProps {
   popup: TopicPopupInfo;
@@ -47,16 +30,11 @@ const TopicInPopupGuard = memo<TopicInPopupGuardProps>(({ popup }) => {
   };
 
   return (
-    <div
-      className={cx(
-        styles.wrapper,
-        'flex flex-col items-center flex-1 gap-4 justify-center w-full',
-      )}
-    >
+    <div className={styles.wrapper}>
       <h2 className={styles.title}>{t('inPopup.title')}</h2>
       <p className={styles.description}>{t('inPopup.description')}</p>
-      <Button onClick={handleFocus}>
-        <ExternalLinkIcon data-icon="inline-start" />
+      <Button size="normal" onClick={handleFocus}>
+        <ExternalLinkIcon className="size-4" data-icon="inline-start" size={16} />
         {t('inPopup.focus')}
       </Button>
     </div>

@@ -10,6 +10,15 @@ import { useChatStore } from '@/store/chat';
 
 import { type TopicItemDropdownMenuProps, useTopicItemDropdownMenu } from './useDropdownMenu';
 
+const sidebarActionSize = {
+  blockSize: 24,
+  borderRadius: 'var(--radius-button)',
+  size: 16,
+} as const;
+const actionTarget =
+  "relative pointer-coarse:after:absolute pointer-coarse:after:-inset-2.5 pointer-coarse:after:content-['']";
+const actionWrapper = 'inline-flex flex-none pointer-coarse:p-2.5';
+
 const Actions = memo<TopicItemDropdownMenuProps>(({ fav, id, status, title }) => {
   const { t } = useTranslation('topic');
   const { dropdownMenu } = useTopicItemDropdownMenu({ fav, id, status, title });
@@ -37,17 +46,27 @@ const Actions = memo<TopicItemDropdownMenuProps>(({ fav, id, status, title }) =>
   return (
     <>
       {id && canEditTopic && (
-        <ActionIcon
-          aria-label={isArchived ? t('actions.unarchive') : t('actions.archive')}
-          icon={isArchived ? ArchiveRestore : Archive}
-          size={'small'}
-          title={isArchived ? t('actions.unarchive') : t('actions.archive')}
-          onClick={handleArchiveClick}
-        />
+        <span className={actionWrapper}>
+          <ActionIcon
+            aria-label={isArchived ? t('actions.unarchive') : t('actions.archive')}
+            className={actionTarget}
+            icon={isArchived ? ArchiveRestore : Archive}
+            size={sidebarActionSize}
+            title={isArchived ? t('actions.unarchive') : t('actions.archive')}
+            onClick={handleArchiveClick}
+          />
+        </span>
       )}
-      <SidebarDropdownMenu items={dropdownMenu} portalProps={dropdownPortalProps}>
-        <ActionIcon icon={MoreHorizontalIcon} size={'small'} />
-      </SidebarDropdownMenu>
+      <span className={actionWrapper}>
+        <SidebarDropdownMenu items={dropdownMenu} portalProps={dropdownPortalProps}>
+          <ActionIcon
+            aria-label={t('more', { ns: 'common' })}
+            className={actionTarget}
+            icon={MoreHorizontalIcon}
+            size={sidebarActionSize}
+          />
+        </SidebarDropdownMenu>
+      </span>
     </>
   );
 });

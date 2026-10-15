@@ -1,7 +1,7 @@
 'use client';
 
 import { agentDisplayName, type AgentGroupMember } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,18 +14,9 @@ import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
 import MemberItem from './MemberItem';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  item: css`
-    height: 40px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
-    transition: background 0.2s ease-in-out;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  item: 'min-h-10 px-2 rounded-(--radius-card) text-sm leading-5.5 transition-[background-color] duration-(--orvilo-motion-mid) ease-in-out hover:bg-accent motion-reduce:transition-none',
+};
 
 interface SortMembersModalProps {
   groupId: string;
@@ -79,7 +70,7 @@ const SortMembersModal = memo<SortMembersModalProps>(({ groupId, open, onCancel 
         >
           {list.map((item: AgentGroupMember) => (
             <SortableItem
-              className={cx(styles.item, 'flex items-center gap-2')}
+              className={cn(styles.item, 'flex items-center gap-2')}
               key={item.id}
               value={item.id}
             >

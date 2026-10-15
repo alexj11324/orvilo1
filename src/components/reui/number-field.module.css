@@ -1,0 +1,4 @@
+.cursor {
+  /* Pointer artwork needs a contour over light, dark and mixed backgrounds. */
+  --number-field-cursor-shadow: 0 1px 1px #0008;
+}

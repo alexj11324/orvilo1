@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,22 +14,10 @@ import SelectedAgentList from './SelectedAgentList';
 import { useAgentSelectionStore } from './store';
 import { useGroupMemberAddition } from './useGroupMemberAddition';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    display: flex;
-    flex-direction: row;
-
-    height: 500px;
-    padding: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius}px;
-  `,
-  rightColumn: css`
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-  `,
-}));
+const styles = {
+  container: 'flex flex-row h-125 p-3 border border-divider rounded-(--radius-card)',
+  rightColumn: 'flex flex-1 flex-col',
+};
 
 export interface AddGroupMemberModalProps {
   existingMembers?: string[];
@@ -105,7 +92,7 @@ const AddGroupMemberModal = memo<AddGroupMemberModalProps>(
             <AvailableAgentList agents={availableAgents} isLoading={isLoadingAgents} />
           )}
 
-          <Separator orientation={'vertical'} style={{ height: '100%' }} />
+          <Separator className="h-full" orientation={'vertical'} />
 
           {/* Right Column - Selected Agents */}
           <SelectedAgentList agents={allAgents} />

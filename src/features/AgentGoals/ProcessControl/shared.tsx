@@ -22,11 +22,11 @@ export const KIND_COLOR: Record<GoalGraphNodeKind, { line: string; soft: string 
   // primary-strength band sits at x9–x10, and x6/x7 resolve to near-pastel
   // tints (light-mode blue-7 is #93c8ff). x3/x10 gives the glyph a visible
   // tinted tile with a saturated line in both themes.
-  decision: { line: 'var(--ant-orange-10)', soft: 'var(--ant-orange-3)' },
-  experiment: { line: 'var(--ant-cyan-10)', soft: 'var(--ant-cyan-3)' },
-  finding: { line: 'var(--ant-green-10)', soft: 'var(--ant-green-3)' },
-  problem: { line: 'var(--ant-purple-10)', soft: 'var(--ant-purple-3)' },
-  task: { line: 'var(--ant-blue-10)', soft: 'var(--ant-blue-3)' },
+  decision: { line: 'var(--palette-orange-10)', soft: 'var(--palette-orange-3)' },
+  experiment: { line: 'var(--palette-cyan-10)', soft: 'var(--palette-cyan-3)' },
+  finding: { line: 'var(--palette-green-10)', soft: 'var(--palette-green-3)' },
+  problem: { line: 'var(--palette-purple-10)', soft: 'var(--palette-purple-3)' },
+  task: { line: 'var(--palette-blue-10)', soft: 'var(--palette-blue-3)' },
 };
 
 export const KIND_ICON: Record<GoalGraphNodeKind, LucideIcon> = {
@@ -38,11 +38,9 @@ export const KIND_ICON: Record<GoalGraphNodeKind, LucideIcon> = {
 };
 
 const styles = {
-  dot: 'inline-block flex-none size-2 rounded-[2px]',
+  dot: 'inline-block flex-none size-2 rounded-full',
   mono: 'font-mono tabular-nums',
 };
-
-export const monoClass = styles.mono;
 
 export const KindDot = memo<{ kind: GoalGraphNodeKind }>(({ kind }) => (
   <span className={styles.dot} style={{ background: KIND_COLOR[kind].line }} />
@@ -52,7 +50,7 @@ KindDot.displayName = 'GoalKindDot';
 
 export const MonoText = memo<{ children: React.ReactNode; title?: string }>(
   ({ children, title }) => (
-    <div className={cn('text-[12px] text-muted-foreground', styles.mono)} title={title}>
+    <div className={cn('text-xs text-muted-foreground', styles.mono)} title={title}>
       {children}
     </div>
   ),

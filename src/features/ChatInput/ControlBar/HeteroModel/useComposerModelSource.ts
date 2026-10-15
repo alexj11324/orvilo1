@@ -1,6 +1,6 @@
 'use client';
 
-import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
+import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents/labels';
 import type {
   HeterogeneousProviderConfig,
   ListHeterogeneousAgentModelsParams,

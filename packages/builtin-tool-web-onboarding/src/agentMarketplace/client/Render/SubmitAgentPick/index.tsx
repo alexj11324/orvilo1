@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -17,74 +17,17 @@ interface SubmitAgentPickState {
   summaries?: InstallMarketplaceAgentSummary[];
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  card: css`
-    display: flex;
-    gap: 12px;
-    align-items: center;
-
-    padding: 12px;
-    border: 1px solid ${cssVar.colorFillSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorBgElevated};
-  `,
-  cardSkipped: css`
-    opacity: 0.65;
-  `,
-  description: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    font-size: 12px;
-    line-height: 1.5;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  list: css`
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 8px;
-    width: 100%;
-  `,
-  meta: css`
-    flex-shrink: 0;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  skippedTag: css`
-    flex-shrink: 0;
-
-    margin-inline-start: 4px;
-    padding-block: 1px;
-    padding-inline: 6px;
-    border-radius: 999px;
-
-    font-size: 11px;
-    color: ${cssVar.colorTextTertiary};
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  title: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    font-size: 14px;
-    font-weight: 600;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  titleRow: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    width: 100%;
-  `,
-}));
+const styles = {
+  card: 'flex items-center gap-3 p-4 border border-divider rounded-(--radius-card) bg-card',
+  cardSkipped: 'opacity-65',
+  description: 'line-clamp-2 text-sm leading-5.5 text-muted-foreground',
+  list: 'grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2 w-full',
+  meta: 'shrink-0 text-xs leading-5 text-foreground-tertiary',
+  skippedTag:
+    'shrink-0 mis-1 py-0.25 px-1.5 rounded-(--radius-chip) text-xs leading-5 text-foreground-tertiary bg-muted',
+  title: 'flex-1 min-w-0 truncate text-sm leading-5.5 font-semibold text-foreground',
+  titleRow: 'flex items-center gap-1.5 w-full',
+};
 
 export type SubmitAgentPickRenderProps = Pick<
   BuiltinRenderProps<SubmitAgentPickArgs, SubmitAgentPickState>,
@@ -102,7 +45,7 @@ const SubmitAgentPick = memo<SubmitAgentPickRenderProps>(({ pluginState }) => {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="text-[13px] text-muted-foreground">
+      <div className="text-xs leading-5 text-muted-foreground">
         {t('agentMarketplace.inspector.pickCount', { count: installedCount })}
         {skippedCount > 0 &&
           ` · ${t('agentMarketplace.render.alreadyInLibrary', { count: skippedCount })}`}
@@ -110,11 +53,11 @@ const SubmitAgentPick = memo<SubmitAgentPickRenderProps>(({ pluginState }) => {
       <div className={styles.list}>
         {summaries.map((summary) => (
           <div
-            className={cx(styles.card, summary.skipped && styles.cardSkipped)}
+            className={cn(styles.card, summary.skipped && styles.cardSkipped)}
             key={summary.templateId}
           >
             <Avatar avatar={summary.avatar || '🤖'} shape="square" size={36} />
-            <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0 }}>
+            <div className="flex flex-col flex-1 min-w-0 gap-1">
               <div className={styles.titleRow}>
                 <span className={styles.title}>{summary.title || summary.templateId}</span>
                 {summary.skipped && (

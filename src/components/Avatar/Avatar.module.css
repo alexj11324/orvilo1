@@ -1,0 +1,4 @@
+.square {
+  /* Keep at least half of each edge straight below the card-radius ceiling. */
+  --avatar-square-radius: min(var(--radius-card), 25%);
+}

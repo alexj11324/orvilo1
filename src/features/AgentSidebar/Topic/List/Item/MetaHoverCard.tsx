@@ -1,5 +1,5 @@
 import type { ChatTopicMetadata } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import type { Clock } from 'lucide-react';
 import { GitBranchIcon, GitForkIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -16,76 +16,17 @@ import {
   PR_STATE_VISUAL,
 } from './metaCardData';
 
-const styles = createStaticStyles(({ css }) => ({
-  card: css`
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-
-    width: 300px;
-    max-width: calc(100vw - 48px);
-  `,
-  header: css`
-    display: flex;
-    gap: 12px;
-    align-items: baseline;
-    justify-content: space-between;
-  `,
-  headerTime: css`
-    flex: none;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  headerTitle: css`
-    overflow: hidden;
-
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 20px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  row: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-
-    font-size: 13px;
-    line-height: 18px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  rowIcon: css`
-    flex: none;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  rowText: css`
-    overflow: hidden;
-    min-width: 0;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  prLink: css`
-    cursor: pointer;
-
-    margin-inline: -6px;
-    padding-block: 2px;
-    padding-inline: 6px;
-    border-radius: 6px;
-
-    color: inherit;
-    text-decoration: none;
-
-    /* antd's global a:hover outranks the color:inherit above, so without this the
-       row would turn link-blue; hovering should read as emphasis instead. */
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  card: 'flex w-75 max-w-[calc(100vw-48px)] flex-col gap-2 p-1.5',
+  header: 'flex items-baseline justify-between gap-3',
+  headerTime: 'flex-none text-xs leading-5 text-foreground-tertiary',
+  headerTitle: 'truncate text-sm font-medium leading-5.5 text-foreground',
+  row: 'flex min-w-0 items-center gap-2 text-xs leading-5 text-muted-foreground',
+  rowIcon: 'flex-none text-foreground-tertiary',
+  rowText: 'min-w-0 truncate',
+  prLink:
+    'cursor-pointer -ms-1.5 -me-1.5 rounded-(--radius-button) ps-1.5 pe-1.5 py-0.5 text-inherit no-underline hover:bg-accent hover:text-foreground',
+};
 
 interface DetailRowProps {
   children: ReactNode;
@@ -98,7 +39,7 @@ const DetailRow = memo<DetailRowProps>(({ icon, iconColor, title, children }) =>
   <div className={styles.row}>
     {createElement(icon, {
       className: styles.rowIcon,
-      size: 15,
+      size: 16,
       style: iconColor ? { color: iconColor } : undefined,
     })}
     <span className={styles.rowText} title={title}>
@@ -147,7 +88,7 @@ const MetaHoverCard = memo<MetaHoverCardProps>(({ metadata, title, time, topicId
 
       {repoName && (
         <div className={styles.row}>
-          <DirIcon repoType={repoType} size={15} />
+          <DirIcon repoType={repoType} size={16} />
           <span className={styles.rowText} title={repoName}>
             {repoName}
           </span>
@@ -177,18 +118,16 @@ const MetaHoverCard = memo<MetaHoverCardProps>(({ metadata, title, time, topicId
             <>
               <prVisual.icon
                 className={styles.rowIcon}
-                size={15}
+                size={16}
                 style={{ color: prVisual.color }}
               />
               <span className={styles.rowText} title={prTitleAttr}>
-                <span style={{ color: prVisual.color, fontWeight: 500 }}>
+                <span className="font-medium" style={{ color: prVisual.color }}>
                   {t(prVisual.labelKey)}
                 </span>
                 {/* The number leads the title: it is the stable identifier, and a
                     long title would otherwise push it past the ellipsis. */}
-                <span
-                  style={{ color: cssVar.colorTextTertiary }}
-                >{` · #${pullRequest.number}`}</span>
+                <span className="text-foreground-tertiary">{` · #${pullRequest.number}`}</span>
                 {pullRequest.title ? ` ${pullRequest.title}` : ''}
               </span>
             </>
@@ -197,7 +136,7 @@ const MetaHoverCard = memo<MetaHoverCardProps>(({ metadata, title, time, topicId
           // system browser; older snapshots without a url stay a plain row.
           return pullRequest.url ? (
             <a
-              className={`${styles.row} ${styles.prLink}`}
+              className={cn(styles.row, styles.prLink)}
               href={pullRequest.url}
               rel={'noreferrer'}
               target={'_blank'}

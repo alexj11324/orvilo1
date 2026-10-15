@@ -7,18 +7,10 @@ const state = vi.hoisted(() => ({
   chat: {
     internal_dispatchTopic: vi.fn(),
   },
-  lambdaClient: {
-    topic: {
-      repairDeviceBinding: { mutate: vi.fn() },
-    },
-  },
   topicService: {
     getTopicDetail: vi.fn(),
+    repairDeviceBinding: vi.fn(),
   },
-}));
-
-vi.mock('@/libs/trpc/client', () => ({
-  lambdaClient: state.lambdaClient,
 }));
 
 vi.mock('@/store/chat', () => ({
@@ -32,7 +24,7 @@ vi.mock('@/services/topic', () => ({
 describe('useRepairDeviceBinding', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    state.lambdaClient.topic.repairDeviceBinding.mutate.mockResolvedValue({
+    state.topicService.repairDeviceBinding.mockResolvedValue({
       bindingRevision: 2,
       boundDeviceId: 'new-device',
       outcome: 'repaired',
@@ -59,7 +51,7 @@ describe('useRepairDeviceBinding', () => {
       }),
     ).resolves.toBe('repaired');
 
-    expect(state.lambdaClient.topic.repairDeviceBinding.mutate).toHaveBeenCalledWith({
+    expect(state.topicService.repairDeviceBinding).toHaveBeenCalledWith({
       deviceId: 'new-device',
       expectedBindingRevision: 1,
       expectedBoundDeviceId: 'old-device',
@@ -86,7 +78,7 @@ describe('useRepairDeviceBinding', () => {
   });
 
   it('returns binding-changed when the server CAS loses — never an overwrite', async () => {
-    state.lambdaClient.topic.repairDeviceBinding.mutate.mockResolvedValue({
+    state.topicService.repairDeviceBinding.mockResolvedValue({
       bindingRevision: 3,
       boundDeviceId: 'winner-device',
       outcome: 'binding-changed',
@@ -109,7 +101,7 @@ describe('useRepairDeviceBinding', () => {
     await expect(result.current({ deviceId: 'new-device', topicId: 'topic-1' })).resolves.toBe(
       'repaired',
     );
-    expect(state.lambdaClient.topic.repairDeviceBinding.mutate).toHaveBeenCalledWith({
+    expect(state.topicService.repairDeviceBinding).toHaveBeenCalledWith({
       deviceId: 'new-device',
       expectedBindingRevision: undefined,
       expectedBoundDeviceId: undefined,
@@ -118,7 +110,7 @@ describe('useRepairDeviceBinding', () => {
   });
 
   it('propagates server rejections (authz / validation) — never swallowed as binding-changed', async () => {
-    state.lambdaClient.topic.repairDeviceBinding.mutate.mockRejectedValue(
+    state.topicService.repairDeviceBinding.mockRejectedValue(
       new Error('The requested device is not in your authorized device registry.'),
     );
     const { result } = renderHook(() => useRepairDeviceBinding('agent'));

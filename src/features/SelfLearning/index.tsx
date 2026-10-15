@@ -150,13 +150,13 @@ const SelfLearning = memo(() => {
         right={
           activeAgentId && allDomains.length > 0 ? (
             <div className="flex gap-2">
-              <Button onClick={() => setTeachOpen((v) => !v)}>
+              <Button size="compact" onClick={() => setTeachOpen((v) => !v)}>
                 <PlusIcon data-icon="inline-start" />
                 {t('nav.teach')}
               </Button>
               {/* Starting a new direction belongs to the overview, not to one direction's page. */}
               {!domainId && (
-                <Button variant="ghost" onClick={openCreate}>
+                <Button size="compact" variant="ghost" onClick={openCreate}>
                   {t('nav.newDomain')}
                 </Button>
               )}
@@ -190,7 +190,7 @@ const SelfLearning = memo(() => {
                     <EmptyDescription style={{ fontSize: 13 }}>{t('empty.desc')}</EmptyDescription>
                   </EmptyHeader>
                   <EmptyContent>
-                    <Button variant="outline" onClick={openCreate}>
+                    <Button size="lg" variant="outline" onClick={openCreate}>
                       <PlusIcon data-icon="inline-start" />
                       {t('nav.newDomain')}
                     </Button>
@@ -211,10 +211,10 @@ const SelfLearning = memo(() => {
                 <div className="flex flex-col p-3 border border-sidebar-border bg-card">
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-                      <div className="text-[12px] text-muted-foreground">{t('teachNew.help')}</div>
+                      <div className="text-xs text-muted-foreground">{t('teachNew.help')}</div>
                       {!single && (
                         <div className="flex items-center gap-1.5">
-                          <div className="text-[12px] text-muted-foreground">
+                          <div className="text-xs text-muted-foreground">
                             {t('teachNew.domain')}
                           </div>
                           {scoped.map((d) => (

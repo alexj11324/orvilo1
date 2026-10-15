@@ -1,7 +1,7 @@
 import { DEFAULT_SETTINGS } from '@orvilo/config';
 import { act, renderHook } from '@testing-library/react';
 import type { PartialDeep } from 'type-fest';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { userService } from '@/services/user';
 import { useUserStore } from '@/store/user';
@@ -325,6 +325,170 @@ describe('SettingsAction', () => {
         },
         expect.any(AbortSignal),
       );
+    });
+  });
+
+  describe('pending settings retry transport', () => {
+    const refreshUserState = useUserStore.getState().refreshUserState;
+    const settingsUpdateResult: Awaited<ReturnType<typeof userService.updateUserSettings>> = {
+      command: 'UPDATE',
+      fields: [],
+      oid: 0,
+      rowCount: 1,
+      rows: [],
+    };
+    const deferred = () => {
+      let resolve!: () => void;
+      let reject!: (error: Error) => void;
+      const promise = new Promise<typeof settingsUpdateResult>((yes, no) => {
+        resolve = () => yes(settingsUpdateResult);
+        reject = no;
+      });
+      return { promise, reject, resolve };
+    };
+    beforeEach(() => {
+      vi.mocked(userService.updateUserSettings).mockReset().mockResolvedValue(settingsUpdateResult);
+      useUserStore.setState({
+        settings: {},
+        refreshUserState: vi.fn().mockResolvedValue(undefined),
+      });
+    });
+    afterEach(() => {
+      useUserStore.setState({ refreshUserState });
+    });
+
+    it('retains the unchanged-settings no-op when no write is pending', async () => {
+      useUserStore.setState({ settings: { general: { fontSize: 18 } } });
+      await useUserStore.getState().setSettings({ general: { fontSize: 18 } });
+      expect(userService.updateUserSettings).not.toHaveBeenCalled();
+      expect(useUserStore.getState().refreshUserState).not.toHaveBeenCalled();
+    });
+
+    it('retries the exact default model/provider payload after a real transport rejection', async () => {
+      const failure = new Error('offline');
+      vi.mocked(userService.updateUserSettings).mockRejectedValueOnce(failure);
+      const pair = { model: 'retry-default-model', provider: 'retry-provider' };
+      await expect(useUserStore.getState().updateDefaultAgent({ config: pair })).rejects.toBe(
+        failure,
+      );
+      const failedPayload = vi.mocked(userService.updateUserSettings).mock.calls[0][0];
+      expect(useUserStore.getState().settings.defaultAgent?.config).toMatchObject(pair);
+      expect(useUserStore.getState().refreshUserState).not.toHaveBeenCalled();
+      await useUserStore.getState().updateDefaultAgent({ config: pair });
+      expect(userService.updateUserSettings).toHaveBeenCalledTimes(2);
+      const retry = vi.mocked(userService.updateUserSettings).mock.calls[1];
+      expect(retry[0]).toEqual(failedPayload);
+      expect(retry[0]).toHaveProperty('defaultAgent.config', pair);
+      expect(retry[1]).not.toBe(vi.mocked(userService.updateUserSettings).mock.calls[0][1]);
+      expect(useUserStore.getState().refreshUserState).toHaveBeenCalledOnce();
+      // Once confirmed, another identical call remains an ordinary no-op.
+      await useUserStore.getState().updateDefaultAgent({ config: pair });
+      expect(userService.updateUserSettings).toHaveBeenCalledTimes(2);
+    });
+
+    it('retains explicit default model/provider resets beside a non-default sibling on retry', async () => {
+      useUserStore.setState({
+        settings: {
+          defaultAgent: {
+            config: {
+              model: 'other-model',
+              provider: 'other-provider',
+              params: { temperature: 0.123 },
+            },
+          },
+        },
+      });
+      const pair = {
+        model: DEFAULT_SETTINGS.defaultAgent.config.model,
+        provider: DEFAULT_SETTINGS.defaultAgent.config.provider,
+      };
+      vi.mocked(userService.updateUserSettings).mockRejectedValueOnce(new Error('offline'));
+      await expect(useUserStore.getState().updateDefaultAgent({ config: pair })).rejects.toThrow(
+        'offline',
+      );
+      const failedPayload = vi.mocked(userService.updateUserSettings).mock.calls[0][0];
+      expect(failedPayload).toHaveProperty('defaultAgent.config', {
+        ...pair,
+        params: { temperature: 0.123 },
+      });
+      await useUserStore.getState().updateDefaultAgent({ config: pair });
+      expect(userService.updateUserSettings).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(userService.updateUserSettings).mock.calls[1][0]).toEqual(failedPayload);
+    });
+
+    it('retries a system model without dropping sibling metadata or unrelated local columns', async () => {
+      useUserStore.setState({
+        settings: {
+          general: { fontSize: 18 },
+          systemAgent: { goal: { customPrompt: 'keep', enabled: false } },
+        },
+      });
+      const pair = { model: 'retry-goal-model', provider: 'retry-provider' };
+      vi.mocked(userService.updateUserSettings).mockRejectedValueOnce(new Error('offline'));
+      await expect(useUserStore.getState().updateSystemAgent('goal', pair)).rejects.toThrow(
+        'offline',
+      );
+      const failedPayload = vi.mocked(userService.updateUserSettings).mock.calls[0][0];
+      await useUserStore.getState().updateSystemAgent('goal', pair);
+      expect(userService.updateUserSettings).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(userService.updateUserSettings).mock.calls[1][0]).toEqual(failedPayload);
+      expect(failedPayload).toHaveProperty('systemAgent.goal', {
+        ...pair,
+        customPrompt: 'keep',
+        enabled: false,
+      });
+      expect(failedPayload).not.toHaveProperty('general');
+      expect(useUserStore.getState().settings.general?.fontSize).toBe(18);
+    });
+
+    it('does not let an aborted older success clear newer pending columns or refresh over them', async () => {
+      const older = deferred();
+      const newer = deferred();
+      vi.mocked(userService.updateUserSettings)
+        .mockImplementationOnce(() => older.promise)
+        .mockImplementationOnce(() => newer.promise);
+      const a = useUserStore.getState().updateDefaultAgent({
+        config: { model: 'pending-default', provider: 'retry-provider' },
+      });
+      const pair = { model: 'pending-goal', provider: 'retry-provider' };
+      const b = useUserStore.getState().updateSystemAgent('goal', pair);
+      const bRejected = expect(b).rejects.toThrow('newest failure');
+      const calls = vi.mocked(userService.updateUserSettings).mock.calls;
+      expect(calls[0][1]?.aborted).toBe(true);
+      older.resolve();
+      await a;
+      expect(useUserStore.getState().refreshUserState).not.toHaveBeenCalled();
+      newer.reject(new Error('newest failure'));
+      await bRejected;
+      await useUserStore.getState().updateSystemAgent('goal', pair);
+      expect(userService.updateUserSettings).toHaveBeenCalledTimes(3);
+      expect(vi.mocked(userService.updateUserSettings).mock.calls[2][0]).toEqual(calls[1][0]);
+      expect(calls[1][0]).toHaveProperty('defaultAgent.config.model', 'pending-default');
+      expect(calls[1][0]).toHaveProperty('systemAgent.goal.model', 'pending-goal');
+      expect(useUserStore.getState().refreshUserState).toHaveBeenCalledOnce();
+    });
+
+    it('keeps a newer pending edit when the older same-column write rejects', async () => {
+      const older = deferred();
+      const newer = deferred();
+      vi.mocked(userService.updateUserSettings)
+        .mockImplementationOnce(() => older.promise)
+        .mockImplementationOnce(() => newer.promise);
+      const a = useUserStore
+        .getState()
+        .updateSystemAgent('goal', { model: 'older', provider: 'retry-provider' });
+      const aRejected = expect(a).rejects.toThrow('older abort');
+      const pair = { model: 'newer', provider: 'retry-provider' };
+      const b = useUserStore.getState().updateSystemAgent('goal', pair);
+      older.reject(new Error('older abort'));
+      await aRejected;
+      expect(useUserStore.getState().settings.systemAgent?.goal).toMatchObject(pair);
+      expect(useUserStore.getState().refreshUserState).not.toHaveBeenCalled();
+      newer.resolve();
+      await b;
+      expect(useUserStore.getState().refreshUserState).toHaveBeenCalledOnce();
+      await useUserStore.getState().updateSystemAgent('goal', pair);
+      expect(userService.updateUserSettings).toHaveBeenCalledTimes(2);
     });
   });
 });

@@ -1,8 +1,8 @@
-import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Loading from '@/components/Loading/CircleLoading';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { classifySheet } from './classifySheet';
@@ -10,69 +10,14 @@ import { MAX_PREVIEW_ROWS, readWorkbook, type SheetModel } from './model';
 import SheetDocument from './SheetDocument';
 import SheetGrid from './SheetGrid';
 
-const styles = createStaticStyles(({ css }) => ({
-  container: css`
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    background: ${cssVar.colorBgContainer};
-  `,
-  footer: css`
-    display: flex;
-    flex: none;
-    gap: 8px;
-    align-items: center;
-    justify-content: flex-end;
-
-    padding-block: 6px;
-    padding-inline: 8px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  modes: css`
-    flex: none;
-    width: auto;
-  `,
-  tab: css`
-    cursor: pointer;
-
-    padding-block: 4px;
-    padding-inline: 12px;
-    border: none;
-    border-radius: 6px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &[data-active='true'] {
-      font-weight: 500;
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  tabs: css`
-    overflow-x: auto;
-    display: flex;
-    gap: 4px;
-    margin-inline-end: auto;
-  `,
-  truncatedNote: css`
-    flex: none;
-
-    padding-block: 6px;
-    padding-inline: 12px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  container: 'flex h-full flex-col bg-card',
+  footer: 'flex flex-none items-center justify-end gap-2 border-bs border-divider px-2 py-1.5',
+  modes: 'h-9 w-auto flex-none rounded-(--radius-button)',
+  tab: 'cursor-pointer border-0 bg-transparent px-3 py-1 text-muted-foreground hover:bg-accent data-[active=true]:bg-selected data-[active=true]:font-medium data-[active=true]:text-foreground',
+  tabs: 'me-auto flex gap-1 overflow-x-auto',
+  truncatedNote: 'flex-none border-bs border-divider px-3 py-1.5 text-xs text-foreground-tertiary',
+} as const;
 
 interface XlsxPaneProps {
   blob: Blob;
@@ -126,23 +71,31 @@ const XlsxPane = memo<XlsxPaneProps>(({ blob, onError }) => {
       <div className={styles.footer}>
         <div className={styles.tabs}>
           {sheets!.map((item, index) => (
-            <button
+            <Button
               className={styles.tab}
               data-active={index === activeSheet}
               key={`${index}-${item.name}`}
+              size="compact"
               type={'button'}
+              variant="ghost"
               onClick={() => setActiveSheet(index)}
             >
               {item.name}
-            </button>
+            </Button>
           ))}
         </div>
         <Tabs value={resolvedMode} onValueChange={(key) => setMode(key as 'fidelity' | 'reflow')}>
           <TabsList className={styles.modes}>
-            <TabsTrigger value="reflow">
+            <TabsTrigger
+              className="rounded-(--radius-button) transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid) motion-reduce:transition-none"
+              value="reflow"
+            >
               {t('workingPanel.localFile.document.xlsxReflow')}
             </TabsTrigger>
-            <TabsTrigger value="fidelity">
+            <TabsTrigger
+              className="rounded-(--radius-button) transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid) motion-reduce:transition-none"
+              value="fidelity"
+            >
               {t('workingPanel.localFile.document.xlsxOriginal')}
             </TabsTrigger>
           </TabsList>

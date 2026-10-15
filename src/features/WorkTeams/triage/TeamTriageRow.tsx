@@ -1,5 +1,5 @@
 'use client';
-import { createStaticStyles, cssVar } from 'antd-style';
+
 import { cn } from 'cn';
 import { ClockIcon, MoreHorizontalIcon } from 'lucide-react';
 import { createElement, memo, useCallback, useMemo } from 'react';
@@ -16,7 +16,7 @@ import SidebarDropdownMenu, {
   type SidebarDropdownMenuProps,
 } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
-import { lambdaClient } from '@/libs/trpc/client';
+import { workTeamService } from '@/services/workTeam';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import { teamTaskDetailPath } from '../teamTaskDetailPath';
@@ -31,59 +31,6 @@ import {
   type TeamTriageTask,
   triageAgeLabel,
 } from './teamTriageRowModel';
-
-const styles = createStaticStyles(({ css }) => ({
-  actions: css`
-    flex: none;
-  `,
-  age: css`
-    flex: none;
-
-    min-width: 20px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: end;
-  `,
-  creator: css`
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-  `,
-  identifier: css`
-    flex: none;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-  `,
-  link: css`
-    display: flex;
-    flex: 1;
-    gap: 8px;
-    align-items: center;
-
-    min-width: 0;
-
-    color: inherit;
-    text-decoration: none;
-  `,
-  meta: css`
-    flex: none;
-    align-items: center;
-  `,
-  row: css`
-    padding-block: 7px;
-    padding-inline: 4px 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-    color: inherit;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
 
 interface TeamTriageRowProps {
   /** Resolved creator chip — parent owns the workspace-directory lookup. */
@@ -130,7 +77,7 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
       async (teamId: string) => {
         if (!teamId || task.domainRevision === undefined) return;
         try {
-          await lambdaClient.team.moveTaskToTeam.mutate({
+          await workTeamService.moveTaskToTeam({
             expectedDomainRevision: task.domainRevision,
             taskId: task.id,
             teamId,
@@ -190,8 +137,16 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
     });
 
     return (
-      <div className={cn('flex flex-row items-center gap-2', styles.row)}>
-        <WorkspaceLink className={styles.link} to={teamTaskDetailPath(task)}>
+      <div
+        className={cn(
+          'flex flex-row items-center gap-2',
+          'min-h-11 py-2 ps-1 pe-3 rounded-(--radius-card) text-inherit hover:bg-accent',
+        )}
+      >
+        <WorkspaceLink
+          className="flex flex-1 items-center gap-2 min-w-0 text-inherit no-underline"
+          to={teamTaskDetailPath(task)}
+        >
           <PriorityIcon priority={task.priority} size={16} />
           <TooltipProvider>
             <Tooltip>
@@ -210,37 +165,51 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
             </Tooltip>
           </TooltipProvider>
           {task.identifier ? (
-            <span className={cn('text-sm', styles.identifier)}>{task.identifier}</span>
+            <span
+              className={cn(
+                'text-sm',
+                'flex-none font-mono text-xs leading-5 text-muted-foreground whitespace-nowrap',
+              )}
+            >
+              {task.identifier}
+            </span>
           ) : null}
           <span className={cn('min-w-0', 'text-sm truncate font-medium')}>
             {task.name ?? task.instruction}
           </span>
         </WorkspaceLink>
-        <div className={cn('flex flex-row items-center gap-3', styles.meta)}>
+        <div className={cn('flex flex-row items-center gap-3', 'flex-none items-center')}>
           {age ? (
-            <span className={cn('text-sm', styles.age)} title={createdDate || undefined}>
+            <span
+              title={createdDate || undefined}
+              className={cn(
+                'text-sm',
+                'flex-none min-w-5 text-xs leading-5 text-foreground-tertiary text-end',
+              )}
+            >
               {age}
             </span>
           ) : null}
           {creator ? (
-            <span className={styles.creator} title={creator.name}>
+            <span className="inline-flex flex-none items-center" title={creator.name}>
               <Avatar avatar={creator.avatar} name={creator.name} size={20} />
             </span>
           ) : null}
         </div>
-        <div className={cn('flex flex-row items-center gap-1', styles.actions)}>
-          <Button variant="outline" onClick={() => onAction('accept')}>
+        <div className={cn('flex flex-row items-center gap-1', 'flex-none')}>
+          <Button size="compact" variant="outline" onClick={() => onAction('accept')}>
             {t('teams.accept')}
           </Button>
           <Button
             disabled={!TEAM_TRIAGE_SNOOZE_ENABLED}
+            size="compact"
             title={TEAM_TRIAGE_SNOOZE_ENABLED ? undefined : t('teams.snoozeUnavailable')}
             variant="outline"
           >
             <ClockIcon aria-hidden className="size-4" />
             {t('teams.snooze')}
           </Button>
-          <Button variant="outline" onClick={() => onAction('decline')}>
+          <Button size="compact" variant="outline" onClick={() => onAction('decline')}>
             {t('teams.decline')}
           </Button>
           {overflowMenuItems.length > 0 ? (

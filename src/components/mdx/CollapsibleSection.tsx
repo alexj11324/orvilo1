@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
 import { kebabCase } from 'es-toolkit';
 import { type FC, type ReactNode } from 'react';
 
@@ -11,17 +10,10 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  collapse: css`
-    margin-block: 1em;
-  `,
-  label: css`
-    font-size: 1.25em;
-    font-weight: 600;
-    line-height: 1.4;
-    color: ${cssVar.colorText};
-  `,
-}));
+const styles = {
+  collapse: 'mbs-4 mbe-4',
+  label: 'text-xl font-semibold leading-7 text-foreground',
+};
 
 interface CollapsibleSectionProps {
   children?: ReactNode;
@@ -39,7 +31,7 @@ const CollapsibleSection: FC<CollapsibleSectionProps> = ({ children, title = '' 
   return (
     <Accordion className={styles.collapse} defaultValue={[]}>
       <AccordionItem value={id || 'section'}>
-        <AccordionTrigger>
+        <AccordionTrigger className="rounded-(--radius-button)">
           <span className={styles.label}>{title}</span>
         </AccordionTrigger>
         <AccordionContent style={{ padding: '12px 16px' }}>{children}</AccordionContent>

@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { InboxIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -23,10 +22,14 @@ const FileList = () => {
   ) : files.length === 0 ? (
     <div
       className="flex flex-col items-center justify-center gap-2 py-6"
-      style={{ border: `1px dashed ${cssVar.colorSplit}`, borderRadius: 8, marginInline: 12 }}
+      style={{
+        border: `1px dashed ${'var(--split-divider)'}`,
+        borderRadius: 8,
+        marginInline: 12,
+      }}
     >
       <Avatar
-        background={cssVar.colorFillTertiary}
+        background={'var(--muted)'}
         shape={'square'}
         size={48}
         avatar={

@@ -22,7 +22,7 @@ const Inspector = memo<InspectorUIProps>(({ query: args, messageId, response }) 
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-3 h-[100%]">
+      <div className="flex flex-col gap-3 h-full">
         <SearchBar
           aiSummary={false}
           defaultEngines={defaultEngines}
@@ -45,7 +45,7 @@ const Inspector = memo<InspectorUIProps>(({ query: args, messageId, response }) 
   }
 
   return (
-    <div className="flex flex-col gap-3 h-[100%]">
+    <div className="flex flex-col gap-3 h-full">
       <SearchBar
         aiSummary={false}
         defaultEngines={defaultEngines}
@@ -53,7 +53,7 @@ const Inspector = memo<InspectorUIProps>(({ query: args, messageId, response }) 
         messageId={messageId}
         tooltip={false}
       />
-      <div className="flex flex-col h-[100%] w-[100%]">
+      <div className="flex flex-col h-full w-full">
         <ResultList dataSources={response.results} />
       </div>
     </div>

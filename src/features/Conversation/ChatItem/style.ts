@@ -1,65 +1,9 @@
-import { createStaticStyles, keyframes } from 'antd-style';
+import { clsx } from 'cn';
 
-export const styles = createStaticStyles(({ css, cssVar }) => {
-  const locateHighlight = keyframes`
-    0%, 100% {
-      background: transparent;
-    }
+import nativeStyles from './ChatItem.module.css';
 
-    15%, 55% {
-      background: ${cssVar.colorPrimaryBg};
-    }
-  `;
-
-  return {
-    container: css`
-      position: relative;
-
-      &[data-message-locate-highlight] {
-        border-radius: ${cssVar.borderRadiusLG};
-        animation: ${locateHighlight} 1400ms ${cssVar.motionEaseOut};
-      }
-
-      time {
-        pointer-events: none;
-
-        display: inline-block;
-
-        white-space: nowrap;
-
-        opacity: 0;
-
-        transition: opacity 200ms ${cssVar.motionEaseOut};
-      }
-
-      &:hover,
-      &:focus-within {
-        time {
-          pointer-events: unset;
-          opacity: 1;
-        }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        &[data-message-locate-highlight] {
-          background: ${cssVar.colorPrimaryBg};
-          animation: none;
-        }
-      }
-    `,
-    loading: css`
-      position: absolute;
-      inset-block-end: 0;
-      inset-inline-start: -4px;
-      inset-inline-end: unset;
-
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-
-      color: ${cssVar.colorBgLayout};
-
-      background: ${cssVar.colorPrimary};
-    `,
-  };
-});
+export const styles = {
+  container: clsx('orvilo-motion-scope', nativeStyles.container),
+  loading:
+    'absolute inset-be-0 -start-1 [inset-inline-end:unset] size-4 rounded-full text-background bg-primary',
+};

@@ -12,14 +12,14 @@ import { InlineHtmlPreview, isHtmlFile } from '@/components/HtmlPreview';
 
 const styles = {
   actions:
-    'cursor-pointer text-[var(--ant-color-text-tertiary)] opacity-0 transition-opacity duration-200 ease-[var(--ant-motion-ease-in-out)] group-hover/local-file:opacity-100',
+    'cursor-pointer text-foreground-tertiary opacity-0 transition-opacity duration-200 ease-(--orvilo-motion-ease-in-out) group-hover/local-file:opacity-100',
   container: 'group/local-file justify-between',
   fileName: 'ms-2 flex-1 text-muted-foreground hover:text-foreground',
   header: 'cursor-pointer',
   imageList: 'flex-wrap',
-  path: 'mt-1 px-1 text-[12px] text-muted-foreground break-all',
-  previewBox: 'relative overflow-hidden rounded-[8px] bg-card px-2 py-0',
-  previewText: 'overflow-auto font-mono text-[12px] leading-[1.6] break-all whitespace-pre-wrap',
+  path: 'mt-1 px-1 text-xs text-muted-foreground break-all',
+  previewBox: 'relative overflow-hidden rounded-(--radius-card) bg-card px-2 py-0',
+  previewText: 'overflow-auto font-mono text-xs leading-[1.6] break-all whitespace-pre-wrap',
 };
 
 const ReadFileView = memo<ReadFileState>(
@@ -41,7 +41,7 @@ const ReadFileView = memo<ReadFileState>(
                 maxHeight={600}
                 objectFit={'contain'}
                 src={image.url}
-                style={{ borderRadius: 'var(--ant-border-radius-lg)' }}
+                style={{ borderRadius: 'var(--radius-overlay)' }}
                 variant={'outlined'}
               />
             ))}

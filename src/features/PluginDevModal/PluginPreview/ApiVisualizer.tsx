@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
@@ -10,84 +9,21 @@ import { Badge } from '@/components/reui/badge';
 import SearchBar from '@/components/SearchBar';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
-const styles = createStaticStyles(({ css }) => ({
-  apiDesc: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  apiHeader: css`
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  `,
-  apiTitle: css`
-    font-family: ${cssVar.fontFamilyCode};
-  `,
-
-  emptyState: css`
-    padding: 32px;
-    color: ${cssVar.colorTextDisabled};
-    text-align: center;
-  `,
-  header: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-block-end: 24px;
-  `,
-  paramDesc: css`
-    font-size: 12px;
-    line-height: 18px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  paramGrid: css`
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 12px;
-    align-items: center;
-
-    margin-block-end: 12px;
-  `,
-  paramName: css`
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    font-family: monospace;
-  `,
-  params: css`
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  required: css`
-    margin-inline-start: 2px;
-    color: ${cssVar.colorError};
-  `,
-  searchIcon: css`
-    position: absolute;
-    z-index: 1;
-    inset-block-start: 50%;
-    inset-inline-start: 12px;
-    transform: translateY(-50%);
-
-    color: ${cssVar.colorTextSecondary};
-  `,
-  searchWrapper: css`
-    position: relative;
-  `,
-  typeTag: css`
-    height: 20px;
-    padding-block: 0;
-    padding-inline: 6px;
-
-    font-size: 12px;
-    line-height: 20px;
-  `,
-}));
+const styles = {
+  apiDesc: 'line-clamp-2 text-xs text-foreground-tertiary',
+  apiHeader: 'flex min-h-9 cursor-pointer items-center justify-between rounded-(--radius-button)',
+  apiTitle: 'font-mono text-sm',
+  emptyState: 'p-8 text-center text-sm leading-5.5 text-muted-foreground',
+  header: 'flex items-center gap-2 mbe-6',
+  paramDesc: 'text-xs text-muted-foreground',
+  paramGrid: 'grid grid-cols-[1fr_2fr] items-center gap-3 mbe-3',
+  paramName: 'flex items-center gap-1.5 font-mono text-sm leading-5.5',
+  params: 'text-sm leading-5.5 text-muted-foreground',
+  required: 'ms-0.5 text-destructive-text',
+  searchIcon: 'absolute z-1 inset-bs-1/2 start-3 -translate-y-1/2 text-muted-foreground',
+  searchWrapper: 'relative',
+  typeTag: 'h-5 px-1.5 py-0 text-xs rounded-(--radius-chip)',
+};
 
 interface ApiItemProps {
   api: {
@@ -119,19 +55,16 @@ const ApiItem = memo<ApiItemProps>(({ api }) => {
 
         <span className="anticon" role="img">
           {createElement(expanded ? ChevronDown : ChevronRight, {
-            size: '1em',
-            width: '1em',
-            height: '1em',
+            size: 16,
+            width: 16,
+            height: 16,
             fill: 'transparent',
           })}
         </span>
       </div>
 
       {expanded && (
-        <div
-          className="flex flex-col gap-3 p-4"
-          style={{ background: cssVar.colorFillQuaternary, borderRadius: 6 }}
-        >
+        <div className="flex flex-col gap-3 rounded-(--radius-card) bg-fill-quaternary p-4">
           {params.length === 0 ? (
             <div className={styles.params}>{t('dev.preview.api.noParams')}</div>
           ) : (
@@ -177,7 +110,7 @@ const ApiVisualizer = memo<ApiVisualizerProps>(({ apis = [] }) => {
   );
 
   return (
-    <div className="flex flex-col gap-2 w-[100%]">
+    <div className="flex flex-col gap-2 w-full">
       <div className={styles.searchWrapper}>
         <SearchBar
           placeholder={t('dev.preview.api.searchPlaceholder')}

@@ -1,5 +1,4 @@
 import { SkillsIcon } from '@lobehub/ui/icons';
-import { cx } from 'antd-style';
 import { cn } from 'cn';
 import { TargetIcon, TerminalIcon, WrenchIcon } from 'lucide-react';
 import type { FC, MouseEvent } from 'react';
@@ -99,25 +98,25 @@ export const ActionMention = memo<ActionMentionProps>(
       <SimpleTooltip
         title={
           <div className="flex flex-col gap-0.5">
-            <div style={{ fontWeight: 500 }}>{label}</div>
-            <div style={{ opacity: 0.65 }}>{categoryLabel}</div>
+            <div className="font-medium">{label}</div>
+            <div className="opacity-65">{categoryLabel}</div>
             {tooltipDescription && <div>{tooltipDescription}</div>}
-            {isClickable && (
-              <div style={{ opacity: 0.65 }}>{t('actionTag.tooltip.clickToView')}</div>
-            )}
+            {isClickable && <div className="opacity-65">{t('actionTag.tooltip.clickToView')}</div>}
           </div>
         }
       >
         <span
           {...clickableProps()}
           className={cn(
-            cx(styles.actionTag, styles[styleKey], isClickable && styles.clickable),
+            styles.actionTag,
+            styles[styleKey],
+            isClickable && styles.clickable,
             CLICKABLE_FOCUS_RING,
           )}
           onClick={handleClick}
         >
           <span className="anticon" role="img">
-            <IconComponent fill={'transparent'} height={14} size={14} width={14} />
+            <IconComponent fill={'transparent'} height={16} size={16} width={16} />
           </span>
           <span className={styles.actionTagLabel}>{label}</span>
         </span>

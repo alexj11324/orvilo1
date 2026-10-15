@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import {
   ChevronRight,
   ChevronsDownUp,
@@ -11,8 +10,10 @@ import {
 } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from 'react-responsive';
 
 import ActionIcon from '@/components/ActionIcon';
+import { EXECUTION_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
@@ -40,6 +41,8 @@ import { useChatStore } from '@/store/chat';
 import { useGlobalStore } from '@/store/global';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import GoalRoundTimeline from './GoalRoundTimeline';
 import { resolveTaskAcceptanceRequirement } from './resolveTaskAcceptanceProjection';
@@ -47,27 +50,14 @@ import { TaskAcceptanceHeader } from './TaskAcceptanceHeader';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskVerifyConfig from './TaskVerifyConfig';
 
-const styles = createStaticStyles(({ css }) => ({
-  body: css`
-    padding-inline: 12px;
-  `,
-  error: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorErrorBg};
-  `,
-  group: css`
-    & + & {
-      border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    }
-  `,
-  groupHeader: css`
-    cursor: pointer;
-    padding-block: 9px;
-    padding-inline: 12px;
-  `,
-}));
+const LoadingStatusIcon = EXECUTION_STATUS_VISUALS.running.icon;
+
+const styles = {
+  body: 'px-3',
+  error: 'py-2.5 px-3 rounded-(--radius-card) bg-destructive-wash',
+  group: '[&+&]:border-bs [&+&]:border-divider',
+  groupHeader: 'cursor-pointer py-2.25 px-3 coarse:min-bs-11',
+};
 
 interface AcceptanceErrorProps {
   onRetry: () => void;
@@ -78,10 +68,10 @@ const AcceptanceError = memo<AcceptanceErrorProps>(({ onRetry }) => {
 
   return (
     <div className={`flex items-center gap-2 ${styles.error}`}>
-      <div className="text-[12px] text-destructive" style={{ flex: 1 }}>
+      <div className="flex-1 text-xs leading-5 text-destructive-text">
         {t('taskDetail.acceptance.loadError')}
       </div>
-      <Button size="sm" variant="ghost" onClick={onRetry}>
+      <Button size="compact" variant="ghost" onClick={onRetry}>
         {<RotateCcw />}
         {t('taskDetail.acceptance.retry')}
       </Button>
@@ -103,7 +93,7 @@ const CompactCheckRow = memo<CompactCheckRowProps>(({ check, onOpen }) => {
   return (
     <CriterionRow
       data-task-acceptance-check={check.id}
-      icon={<meta.icon color={meta.color} size={16} style={{ flex: 'none' }} />}
+      icon={<meta.icon className="flex-none size-4" color={meta.color} size={16} />}
       seq={check.seq}
       title={checkDisplayTitle(check.title, t('acceptance.checks.holisticTitle'))}
       onOpen={onOpen}
@@ -126,6 +116,9 @@ interface TaskAcceptanceProps {
 
 const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
   const { t } = useTranslation(['chat', 'verify']);
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+  const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+  const motionDisabled = animationMode === 'disabled' || prefersReducedMotion;
   const openAcceptance = useChatStore((state) => state.openAcceptance);
   const openAcceptanceCheck = useChatStore((state) => state.openAcceptanceCheck);
   const showTaskAgentPanel = useGlobalStore((state) => state.toggleTaskAgentPanel);
@@ -186,7 +179,17 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
   // acceptance section here would advertise a contract that never runs.
   if (automationMode) return null;
 
-  if (subjectLoading) return <NeuralNetworkLoading size={28} />;
+  if (subjectLoading)
+    return motionDisabled ? (
+      <LoadingStatusIcon
+        aria-label={t('loading', { ns: 'common' })}
+        color={EXECUTION_STATUS_VISUALS.running.color}
+        role="status"
+        size={28}
+      />
+    ) : (
+      <NeuralNetworkLoading size={28} />
+    );
   // Before the first Acceptance round exists, the configured criteria ARE the
   // delivery acceptance. Keep them in this single slot; once a round exists,
   // replace the definitions with their live/result projection below.
@@ -223,14 +226,14 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
   // follows the bundle's isOwner rather than dead-ending in FORBIDDEN.
   const reportButton = acceptanceSubject && (
     <div className="flex items-center gap-1">
-      <Button size="sm" variant="ghost" onClick={() => openReport(acceptanceSubject.id)}>
+      <Button size="compact" variant="ghost" onClick={() => openReport(acceptanceSubject.id)}>
         {<ExternalLink />}
         {t('taskDetail.acceptance.openReport')}
       </Button>
       {canEditTask && bundle?.isOwner && (
         <ActionIcon
           icon={Trash}
-          size={'small'}
+          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
           title={t('taskDetail.acceptance.remove')}
           onClick={handleRemoveAcceptance}
         />
@@ -284,14 +287,24 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
       <Collapsible open={sectionExpanded}>
         <CollapsibleContent>
           <div className={`flex flex-col gap-3.5 ${styles.body}`}>
-            {bundleLoading && <NeuralNetworkLoading size={28} />}
+            {bundleLoading &&
+              (motionDisabled ? (
+                <LoadingStatusIcon
+                  aria-label={t('loading', { ns: 'common' })}
+                  color={EXECUTION_STATUS_VISUALS.running.color}
+                  role="status"
+                  size={28}
+                />
+              ) : (
+                <NeuralNetworkLoading size={28} />
+              ))}
             {bundleError && <AcceptanceError onRetry={() => void mutateBundle()} />}
             {bundle && (
               <>
                 <GoalRoundTimeline rounds={bundle.rounds} />
                 {requirement && (
                   <div className="flex flex-col gap-1.5">
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {t('taskDetail.acceptance.goal')}
                     </div>
                     {/* The contract, not the result. A goal-dispatched task carries
@@ -299,8 +312,7 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
                       the checks — the thing the reader came for — below the
                       fold. Two lines, and the rest on demand. */}
                     <div
-                      className={requirementExpanded ? undefined : 'line-clamp-2'}
-                      style={{ cursor: 'pointer' }}
+                      className={`cursor-pointer ${requirementExpanded ? '' : 'line-clamp-2'}`}
                       title={requirement}
                       onClick={() => setRequirementExpanded((open) => !open)}
                     >
@@ -308,16 +320,16 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
                     </div>
                   </div>
                 )}
-                <div className="flex flex-col gap-[7px]">
+                <div className="flex flex-col gap-1.75">
                   <div className="flex items-center gap-2">
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {t('taskDetail.acceptance.checklist')}
                     </div>
                     <div className="flex-1" />
                     {grouped && groupKeys.length > 0 && (
                       <ActionIcon
                         icon={allGroupsCollapsed ? ChevronsUpDown : ChevronsDownUp}
-                        size={'small'}
+                        size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                         title={
                           allGroupsCollapsed
                             ? t('taskDetail.acceptance.expandAll')
@@ -347,17 +359,16 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
                                   })
                                 }
                               >
-                                <div className="text-[12px]">{group.label}</div>
-                                <div className="text-[11px] text-muted-foreground">
+                                <div className="text-xs">{group.label}</div>
+                                <div className="text-xs text-muted-foreground">
                                   {group.checks.length}
                                 </div>
                                 <div className="flex-1" />
                                 <ChevronRight
-                                  size={13}
+                                  className="size-3.5 text-foreground-description transition-transform duration-(--orvilo-motion-mid) motion-reduce:transition-none"
+                                  size={14}
                                   style={{
-                                    color: cssVar.colorTextDescription,
                                     transform: collapsed ? 'none' : 'rotate(90deg)',
-                                    transition: 'transform 0.2s',
                                   }}
                                 />
                               </div>

@@ -1,4 +1,4 @@
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { FileText, FolderIcon, LockIcon } from 'lucide-react';
 
 import FileIcon from '@/components/FileIcon';
@@ -53,7 +53,7 @@ const FileListItemName = ({
     >
       {isPrivate ? (
         <SimpleTooltip title={privateTooltip}>
-          <div className="flex flex-col items-center justify-center h-[24px] w-[24px]">
+          <div className="flex flex-col items-center justify-center h-6 w-6">
             <span className="anticon" role="img">
               <LockIcon fill={'transparent'} height={24} size={24} width={24} />
             </span>
@@ -67,7 +67,7 @@ const FileListItemName = ({
         emoji ? (
           <span style={{ fontSize: 24 }}>{emoji}</span>
         ) : (
-          <div className="flex flex-col items-center justify-center h-[24px] w-[24px]">
+          <div className="flex flex-col items-center justify-center h-6 w-6">
             <span className="anticon" role="img">
               <FileText fill={'transparent'} height={24} size={24} width={24} />
             </span>
@@ -82,6 +82,7 @@ const FileListItemName = ({
         ref={inputRef}
         style={{ flex: 1, maxWidth: 400 }}
         value={renamingValue}
+        visualSize="small"
         onBlur={onRenameConfirm}
         onChange={(e) => onRenamingValueChange(e.target.value)}
         onClick={(event) => event.stopPropagation()}

@@ -4,9 +4,9 @@ import { ArrowRight } from 'lucide-react';
 import { memo } from 'react';
 
 const styles = {
-  icon: 'text-[var(--ant-color-text-quaternary)]',
-  item: 'rounded-[var(--ant-border-radius)] px-3 py-1 transition-[background-color] duration-200 ease-[ease] hover:bg-[var(--ant-color-fill-quaternary)]',
-  path: 'font-mono text-[12px] break-all',
+  icon: 'text-foreground-quaternary',
+  item: 'rounded-(--radius-card) px-3 py-1 transition-[background-color] duration-200 ease-[ease] hover:bg-fill-quaternary',
+  path: 'font-mono text-xs break-all',
 };
 
 interface MoveFileItemProps {
@@ -20,7 +20,7 @@ const MoveFileItem = memo<MoveFileItemProps>(({ oldPath, newPath }) => {
   const displayNewPath = displayRelativePath ? displayRelativePath(newPath) : newPath;
 
   return (
-    <div className={cn('flex flex-row items-center gap-2 w-[100%]', styles.item)}>
+    <div className={cn('flex flex-row items-center gap-2 w-full', styles.item)}>
       <div className="flex flex-col flex-1">
         <div className={cn('text-muted-foreground', styles.path)}>{displayOldPath}</div>
       </div>

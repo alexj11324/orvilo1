@@ -11,7 +11,7 @@ import type { ActivateDeviceParams, ActivateDeviceState } from '../../../types';
 
 const styles = {
   device:
-    'truncate max-w-60 py-0.5 ps-2 pe-2 rounded-[var(--ant-border-radius-sm)] font-medium text-foreground bg-accent',
+    'truncate max-w-60 py-0.5 ps-2 pe-2 rounded-(--radius-input) font-medium text-foreground bg-accent',
 };
 
 export const ActivateDeviceInspector = memo<

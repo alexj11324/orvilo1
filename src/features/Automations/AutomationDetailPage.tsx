@@ -154,10 +154,10 @@ const AgentChip = memo(() => {
         }}
       >
         <AssigneeAvatar agentId={agentId ?? undefined} size={20} />
-        <div className="text-[13px]">
+        <div className="text-(length:--text-dense)">
           {agentId && meta ? agentDisplayName(meta) : t('instructions.unassigned')}
         </div>
-        <ChevronRightIcon color={'var(--ant-color-text-tertiary)'} size={14} />
+        <ChevronRightIcon color={'var(--foreground-tertiary)'} size={14} />
       </div>
     </AssigneeAgentSelector>
   );
@@ -171,7 +171,7 @@ const CreatedByLabel = memo(() => {
   const meta = useUserDisplayMeta(createdByUserId);
   if (!createdByUserId) return null;
   return (
-    <div className="text-[12px] text-muted-foreground">
+    <div className="text-xs text-muted-foreground">
       {t('detail.created_by', { name: meta?.title ?? '' })}
     </div>
   );
@@ -208,6 +208,7 @@ const DetailHeaderActions = memo(() => {
     <div className="flex items-center gap-1.5">
       {automationMode === 'event' ? (
         <Button
+          size="compact"
           variant="outline"
           onClick={() => taskId && navigate(`/automations/${taskId}?tab=settings`)}
         >

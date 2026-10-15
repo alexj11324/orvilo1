@@ -21,7 +21,7 @@ const PREVIEW_BATCH_LIMIT = 20;
 
 const styles = {
   facts:
-    'm-0 grid grid-cols-[auto_1fr] gap-x-3.5 gap-y-1 rounded-(--ant-border-radius-lg) bg-(--ant-color-fill-quaternary) px-3 py-2.5 text-[13px] tabular-nums [&_dt]:m-0 [&_dt]:text-(--ant-color-text-tertiary) [&_dd]:m-0 [&_dd]:text-foreground',
+    'm-0 grid grid-cols-[auto_1fr] gap-x-3.5 gap-y-1 rounded-(--radius-overlay) bg-fill-quaternary px-3 py-2.5 text-(length:--text-dense) tabular-nums [&_dt]:m-0 [&_dt]:text-foreground-tertiary [&_dd]:m-0 [&_dd]:text-foreground',
 };
 
 interface DeleteConfirmProps {
@@ -70,7 +70,12 @@ const DeleteConfirmContent = memo<DeleteConfirmProps>(({ description, ids, onDel
 
   return (
     <div className="flex flex-col gap-3">
-      <div className={cn('text-[13px]', purge ? 'text-destructive' : 'text-muted-foreground')}>
+      <div
+        className={cn(
+          'text-(length:--text-dense)',
+          purge ? 'text-destructive' : 'text-muted-foreground',
+        )}
+      >
         {purge
           ? translate('acceptance.workspace.deleteConfirm.purgeWarning')
           : batch
@@ -79,7 +84,9 @@ const DeleteConfirmContent = memo<DeleteConfirmProps>(({ description, ids, onDel
               })
             : translate('acceptance.workspace.deleteConfirmDescription', { title })}
       </div>
-      {description && <div className="text-[13px] text-muted-foreground">{description}</div>}
+      {description && (
+        <div className="text-(length:--text-dense) text-muted-foreground">{description}</div>
+      )}
       <Checkbox checked={purge} onCheckedChange={(c) => setPurge(c === true)}>
         {size
           ? translate('acceptance.workspace.deleteConfirm.purgeOption', { size })
@@ -103,10 +110,10 @@ const DeleteConfirmContent = memo<DeleteConfirmProps>(({ description, ids, onDel
         </dl>
       )}
       <div className="flex gap-2 justify-end">
-        <Button disabled={pending} onClick={close}>
+        <Button disabled={pending} size="lg" onClick={close}>
           {translate('actions.cancel')}
         </Button>
-        <Button loading={pending} variant="destructive" onClick={() => void run()}>
+        <Button loading={pending} size="lg" variant="destructive" onClick={() => void run()}>
           {okLabel}
         </Button>
       </div>

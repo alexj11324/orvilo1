@@ -20,12 +20,12 @@ import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import type { ExecuteTasksParams } from '../../../types';
 
 const styles = {
-  assignee: 'flex shrink-0 items-center gap-1.5 text-[12px] text-muted-foreground',
-  index: 'shrink-0 text-[12px] text-[var(--ant-color-text-quaternary)]',
-  instruction: 'text-[13px] leading-[1.6] text-muted-foreground',
+  assignee: 'flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground',
+  index: 'shrink-0 text-xs text-foreground-quaternary',
+  instruction: 'text-(length:--text-dense) leading-[1.6] text-muted-foreground',
   resultBox: 'overflow-hidden',
-  resultLabel: 'px-1 text-[12px] text-[var(--ant-color-text-tertiary)]',
-  taskTitle: 'truncate text-[14px]',
+  resultLabel: 'px-1 text-xs text-foreground-tertiary',
+  taskTitle: 'truncate text-sm',
 };
 
 /**
@@ -87,7 +87,7 @@ const ExecuteTasksRender = memo<BuiltinRenderProps<ExecuteTasksParams, unknown, 
                       style={{
                         marginTop: 8,
                         background: 'var(--accent)',
-                        borderRadius: 'var(--ant-border-radius)',
+                        borderRadius: 'var(--radius-card)',
                       }}
                     >
                       <div className={cn(styles.instruction)}>{task.instruction}</div>
@@ -106,7 +106,7 @@ const ExecuteTasksRender = memo<BuiltinRenderProps<ExecuteTasksParams, unknown, 
             </div>
             <div
               className={cn('p-3', styles.resultBox)}
-              style={{ background: 'var(--accent)', borderRadius: 'var(--ant-border-radius)' }}
+              style={{ background: 'var(--accent)', borderRadius: 'var(--radius-card)' }}
             >
               <Markdown style={{ maxHeight: 320, overflow: 'auto' }} variant={'chat'}>
                 {resultContent}

@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { type ReactNode } from 'react';
 import { memo, useMemo } from 'react';
@@ -11,25 +11,11 @@ import Loading from '@/routes/(main)/memory/features/Loading';
 
 import { useScrollParent } from './useScrollParent';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  timelineContainer: css`
-    position: relative;
-    height: 100%;
-  `,
-  timelineLine: css`
-    position: absolute;
-    inset-block: 0;
-    inset-inline-start: 8px;
-
-    width: 1px;
-    height: 100%;
-
-    background: ${cssVar.colorFillSecondary};
-  `,
-  timelineLine_dark: css`
-    background: ${cssVar.colorFillQuaternary};
-  `,
-}));
+const styles = {
+  timelineContainer: 'relative h-full',
+  timelineLine: 'absolute inset-bs-0 inset-be-0 start-2 w-px h-full bg-selected',
+  timelineLine_dark: 'bg-fill-quaternary',
+};
 
 export type GroupBy = 'day' | 'month';
 
@@ -140,14 +126,14 @@ function TimelineViewInner<
 
   return (
     <div className={styles.timelineContainer}>
-      <div className={cx(styles.timelineLine, isDarkMode && styles.timelineLine_dark)} />
+      <div className={cn(styles.timelineLine, isDarkMode && styles.timelineLine_dark)} />
       <GroupedVirtuoso
+        className="min-h-full"
         customScrollParent={scrollParent}
         endReached={hasMore && onLoadMore ? onLoadMore : undefined}
         groupCounts={groupCounts}
         increaseViewportBy={typeof window !== 'undefined' ? window.innerHeight : 0}
         overscan={24}
-        style={{ minHeight: '100%' }}
         components={{
           Footer: isLoading ? () => <Loading viewMode={'timeline'} /> : undefined,
         }}

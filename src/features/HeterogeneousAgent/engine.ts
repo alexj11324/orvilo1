@@ -1,12 +1,10 @@
-import { isBuiltinHeterogeneousType } from '@orvilo/heterogeneous-agents';
+import { isBuiltinHeterogeneousType } from '@orvilo/heterogeneous-agents/config';
 import type {
   BuiltinHeterogeneousAgentType,
   HeterogeneousAgentType,
   HeterogeneousProviderConfig,
 } from '@orvilo/types';
 import type { PartialDeep } from 'type-fest';
-
-export const ORVILO_HETEROGENEOUS_TYPE = 'orvilo' satisfies BuiltinHeterogeneousAgentType;
 
 /**
  * The builtin Orvilo agent's harness is fixed to Prime — never a selectable

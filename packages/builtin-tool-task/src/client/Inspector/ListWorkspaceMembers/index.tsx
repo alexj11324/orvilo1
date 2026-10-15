@@ -25,7 +25,7 @@ export const ListWorkspaceMembersInspector = memo<
       <span>{t('builtins.orvilo-task.apiName.listWorkspaceMembers')}</span>
       {typeof count === 'number' && (
         <span
-          className="font-mono rounded bg-muted px-1 text-[12px]"
+          className="font-mono rounded bg-muted px-1 text-xs"
           style={{ color: 'var(--muted-foreground)' }}
         >
           {count}

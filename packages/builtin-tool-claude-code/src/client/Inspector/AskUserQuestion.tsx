@@ -19,11 +19,11 @@ import { ClaudeCodeApiName } from '../../types';
 const MAX_CHIPS = 2;
 
 const styles = {
-  chip: 'overflow-hidden min-w-0 py-0.5 px-2.5 rounded-[999px] text-[12px] text-foreground text-ellipsis whitespace-nowrap bg-accent',
+  chip: 'overflow-hidden min-w-0 py-0.5 px-2.5 rounded-(--radius-chip) text-xs text-foreground text-ellipsis whitespace-nowrap bg-accent',
   chips: 'overflow-hidden flex gap-1 items-center min-w-0 ms-1.5',
   /** Never shrinks — the chips absorb the compression and ellipsize instead. */
   label: 'shrink-0',
-  more: 'shrink-0 text-[12px] text-[var(--ant-color-text-tertiary)]',
+  more: 'shrink-0 text-xs text-foreground-tertiary',
 };
 
 export const AskUserQuestionInspector = memo<BuiltinInspectorProps<AskUserQuestionArgs>>(

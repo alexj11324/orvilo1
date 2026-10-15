@@ -1,8 +1,7 @@
 'use client';
-
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { lambdaQuery } from '@/libs/trpc/client';
+import { oauthDeviceFlowQueries } from '@/services/reactQueryBindings';
 
 type AuthState = 'idle' | 'requesting' | 'pending_user_auth' | 'polling' | 'success' | 'error';
 type PollStatus = 'pending' | 'success' | 'expired' | 'denied' | 'slow_down';
@@ -46,8 +45,8 @@ export function useOAuthDeviceFlow({
   const expiryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deviceCodeRef = useRef<string | null>(null);
 
-  const initiateDeviceCode = lambdaQuery.oauthDeviceFlow.initiateDeviceCode.useMutation();
-  const pollAuthStatus = lambdaQuery.oauthDeviceFlow.pollAuthStatus.useMutation();
+  const initiateDeviceCode = oauthDeviceFlowQueries.initiateDeviceCode.useMutation();
+  const pollAuthStatus = oauthDeviceFlowQueries.pollAuthStatus.useMutation();
 
   const clearTimers = useCallback(() => {
     if (pollingRef.current) {

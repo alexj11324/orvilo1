@@ -54,7 +54,7 @@ const SharedMessageList = memo<SharedMessageListProps>((props) => {
         footerSlot={
           <div className="flex flex-col items-center px-6" style={{ paddingBlock: '16px 80px' }}>
             <div
-              className="text-[12px] text-muted-foreground"
+              className="text-xs text-muted-foreground"
               style={{ maxWidth: 480, textAlign: 'center' }}
             >
               {t('sharePageDisclaimer')}

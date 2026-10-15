@@ -1,6 +1,6 @@
 'use client';
 import type { ProjectHealth } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs, { type Dayjs } from 'dayjs';
 import type { ReactNode } from 'react';
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -33,259 +33,46 @@ import {
   clusterTimelineMilestones,
   resolveTimelineRange,
   TIMELINE_DAY_WIDTH,
-  TIMELINE_GROUP_ROW_HEIGHT,
-  TIMELINE_LIST_WIDTH,
   TIMELINE_MONTH_ROW_HEIGHT,
-  TIMELINE_ROW_HEIGHT,
-  TIMELINE_WEEK_ROW_HEIGHT,
   timelineBarRect,
   timelinePlaceholderRect,
   type TimelineRange,
 } from './timelineGeometry';
 
-const styles = createStaticStyles(({ css }) => ({
-  axisContent: css`
-    position: relative;
-    min-width: 100%;
-  `,
-  axisScroll: css`
-    overflow-x: auto;
-    overscroll-behavior: contain;
-    flex: 1;
-    min-width: 0;
-  `,
-  bar: css`
-    position: absolute;
-    inset-block-start: 50%;
-    transform: translateY(-50%);
-
-    overflow: hidden;
-    display: block;
-
-    height: 10px;
-    border-radius: 5px;
-  `,
-  barFill: css`
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-  `,
-  cellIcons: css`
-    position: relative;
-    z-index: 1;
-
-    display: flex;
-    flex: none;
-    gap: 6px;
-    align-items: center;
-
-    color: ${cssVar.colorTextTertiary};
-  `,
-  controls: css`
-    display: flex;
-    flex: none;
-    gap: 6px;
-    align-items: center;
-  `,
-  controlsOverlay: css`
-    position: absolute;
-    z-index: 3;
-    inset-block-start: 4px;
-    inset-inline-end: 8px;
-
-    padding: 2px;
-    border-radius: 6px;
-
-    background: ${cssVar.colorBgContainer};
-    box-shadow: ${cssVar.boxShadowSecondary};
-  `,
-  groupLabel: css`
-    position: sticky;
-    inset-inline-start: 0;
-
-    display: inline-flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-inline: 12px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-    white-space: nowrap;
-  `,
-  groupRow: css`
-    display: flex;
-    align-items: center;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  listCell: css`
-    position: relative;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  listColumn: css`
-    flex: none;
-    width: ${TIMELINE_LIST_WIDTH}px;
-    border-inline-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  listHeader: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: flex-end;
-
-    padding-inline: 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  monthCell: css`
-    position: absolute;
-    inset-block: 0;
-
-    display: flex;
-    align-items: center;
-
-    padding-inline: 8px;
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 11px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-    white-space: nowrap;
-  `,
-  monthGridline: css`
-    pointer-events: none;
-
-    position: absolute;
-    inset-block: 0;
-
-    width: 1px;
-
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  monthRow: css`
-    position: relative;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  overlayMark: css`
-    position: absolute;
-    z-index: 2;
-    inset-block-start: 50%;
-    transform: translate(-50%, -50%);
-
-    display: inline-flex;
-    gap: 2px;
-    align-items: center;
-
-    font-size: 10px;
-    line-height: 1;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  placeholderBar: css`
-    position: absolute;
-    inset-block-start: 50%;
-    transform: translateY(-50%);
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    height: 16px;
-    border: 1px dashed ${cssVar.colorBorder};
-    border-radius: 8px;
-
-    font-size: 10px;
-    color: ${cssVar.colorTextQuaternary};
-    white-space: nowrap;
-  `,
-  row: css`
-    position: relative;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    &:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  rowLink: css`
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    color: inherit;
-  `,
-  timeline: css`
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    min-width: 0;
-  `,
-  todayColumn: css`
-    pointer-events: none;
-
-    position: absolute;
-    inset-block: 0;
-
-    width: ${TIMELINE_DAY_WIDTH}px;
-
-    opacity: 0.08;
-    background: ${cssVar.colorPrimary};
-  `,
-  todayLine: css`
-    pointer-events: none;
-
-    position: absolute;
-    inset-block: 0;
-
-    width: 1px;
-
-    background: ${cssVar.colorPrimary};
-  `,
-  todayPill: css`
-    pointer-events: none;
-
-    position: absolute;
-    z-index: 2;
-    inset-block-start: 3px;
-    transform: translateX(-50%);
-
-    padding-block: 1px;
-    padding-inline: 5px;
-    border-radius: 999px;
-
-    font-size: 10px;
-    font-weight: 600;
-    line-height: 1.4;
-    color: ${cssVar.colorWhite};
-    white-space: nowrap;
-
-    background: ${cssVar.colorPrimary};
-  `,
-  weekCell: css`
-    position: absolute;
-    inset-block: 0;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border-inline-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-size: 10px;
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  weekRow: css`
-    position: relative;
-    background: ${cssVar.colorFillQuaternary};
-  `,
-}));
+const styles = {
+  axisContent: 'relative min-w-full',
+  axisScroll: 'min-w-0 flex-1 overflow-x-auto overscroll-contain',
+  bar: 'absolute inset-bs-1/2 block h-2.5 -translate-y-1/2 overflow-hidden rounded-full',
+  barFill: 'block h-full rounded-full',
+  cellIcons: 'relative z-1 flex flex-none items-center gap-1.5 text-foreground-tertiary',
+  controls: 'flex flex-none items-center gap-1.5',
+  controlsOverlay:
+    'absolute inset-bs-1 end-2 z-3 rounded-(--radius-overlay) bg-card p-0.5 shadow-(--shadow-popover)',
+  groupLabel:
+    'sticky start-0 inline-flex items-center gap-2 px-3 text-xs leading-5 text-muted-foreground whitespace-nowrap',
+  groupRow: 'flex items-center border-be border-divider bg-fill-quaternary',
+  listCell: 'relative flex items-center gap-2 border-be border-divider px-3 hover:bg-accent',
+  listColumn: 'w-66 flex-none border-e border-divider',
+  listHeader: 'flex items-center justify-end gap-2 border-be border-divider px-2',
+  monthCell:
+    'absolute inset-y-0 flex items-center border-s border-divider px-2 text-xs leading-5 font-medium text-foreground-tertiary whitespace-nowrap',
+  monthGridline: 'pointer-events-none absolute inset-y-0 w-px bg-divider',
+  monthRow: 'relative border-be border-divider',
+  overlayMark:
+    'absolute inset-bs-1/2 z-2 inline-flex -translate-x-1/2 -translate-y-1/2 items-center gap-0.5 text-xs leading-5 text-muted-foreground',
+  placeholderBar:
+    'absolute inset-bs-1/2 flex min-h-6 -translate-y-1/2 items-center justify-center rounded-(--radius-chip) border border-dashed border-border text-xs leading-5 text-foreground-quaternary whitespace-nowrap',
+  row: 'relative border-be border-divider hover:bg-fill-quaternary',
+  rowLink: 'absolute inset-0 rounded-none text-inherit',
+  timeline: 'relative flex min-w-0 items-start',
+  todayColumn: 'pointer-events-none absolute inset-y-0 w-1 bg-primary opacity-8',
+  todayLine: 'pointer-events-none absolute inset-y-0 w-px bg-primary',
+  todayPill:
+    'pointer-events-none absolute inset-bs-0.75 z-2 -translate-x-1/2 rounded-full bg-primary px-1.25 py-0.25 text-xs leading-5 font-semibold text-primary-foreground whitespace-nowrap',
+  weekCell:
+    'absolute inset-y-0 flex items-center justify-center border-s border-divider text-xs leading-5 text-foreground-quaternary',
+  weekRow: 'relative bg-fill-quaternary',
+};
 
 const PROJECT_PRIORITY_KEY = {
   0: 'noPriority',
@@ -305,7 +92,7 @@ const TimelineHealthIcon = memo<{ health?: null | string }>(({ health }) => {
       <TooltipTrigger
         render={
           <span aria-label={label} role="img">
-            <ProjectHealthIcon health={valid} size={12} />
+            <ProjectHealthIcon health={valid} size={16} />
           </span>
         }
       />
@@ -377,7 +164,7 @@ const TimelineRow = memo<TimelineRowProps>(
       .join(' → ');
 
     return (
-      <div className={styles.row} style={{ height: TIMELINE_ROW_HEIGHT }}>
+      <div className={cn(styles.row, 'h-10')}>
         <WorkspaceLink
           aria-label={project.name}
           className={styles.rowLink}
@@ -470,8 +257,7 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
     const range = useMemo(() => resolveTimelineRange(allProjects, now), [allProjects, now]);
     const axis = useMemo(() => buildTimelineAxis(range, TIMELINE_DAY_WIDTH, now), [now, range]);
 
-    const headerHeight =
-      TIMELINE_MONTH_ROW_HEIGHT + (options.timeline.showWeekNumbers ? TIMELINE_WEEK_ROW_HEIGHT : 0);
+    const headerHeight = options.timeline.showWeekNumbers ? TIMELINE_MONTH_ROW_HEIGHT + 20 : 32;
     const showProjectList = options.timeline.showProjectList;
 
     const scrollToOffset = (offset: number) => {
@@ -497,7 +283,7 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
     const controls = (
       <div className={styles.controls}>
         <Button
-          size="sm"
+          size="compact"
           variant="ghost"
           onClick={() => axis.todayOffset !== null && scrollToOffset(axis.todayOffset)}
         >
@@ -512,7 +298,7 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
             scrollToOffset(january.diff(range.start, 'day') * TIMELINE_DAY_WIDTH);
           }}
         >
-          <SelectTrigger aria-label={t('list.timeline.yearJump')} size="sm" style={{ width: 84 }}>
+          <SelectTrigger aria-label={t('list.timeline.yearJump')} className="w-21" size="compact">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -537,9 +323,7 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
             </div>
             {groups.map((group) => (
               <div key={group.key}>
-                {group.key === 'all' ? null : (
-                  <div className={styles.groupRow} style={{ height: TIMELINE_GROUP_ROW_HEIGHT }} />
-                )}
+                {group.key === 'all' ? null : <div className={cn(styles.groupRow, 'h-8')} />}
                 {group.items.map((project) => {
                   const status = resolveProjectStatus(project.status);
                   const priority = resolvePriorityLevel(project.priority);
@@ -547,11 +331,7 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
                   const lead = project.leadUserId;
                   const leadDisplayName = lead ? (leadName(lead) ?? lead) : undefined;
                   return (
-                    <div
-                      className={styles.listCell}
-                      key={project.id}
-                      style={{ height: TIMELINE_ROW_HEIGHT }}
-                    >
+                    <div className={cn(styles.listCell, 'h-10')} key={project.id}>
                       <WorkspaceLink
                         aria-label={project.name}
                         className={styles.rowLink}
@@ -565,17 +345,14 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
                           size={18}
                         />
                       ) : (
-                        <ProjectIcon color={cssVar.colorTextTertiary} size={16} />
+                        <ProjectIcon color="var(--foreground-tertiary)" size={16} />
                       )}
                       {options.properties.id ? (
-                        <span className="text-sm text-muted-foreground" style={{ fontSize: 11 }}>
+                        <span className="text-muted-foreground text-xs leading-5">
                           {project.identifier}
                         </span>
                       ) : null}
-                      <span
-                        className="text-sm truncate"
-                        style={{ fontSize: 13, fontWeight: 500, flex: 1, minWidth: 0 }}
-                      >
+                      <span className="truncate text-sm leading-5.5 font-medium flex-1 min-w-0">
                         {project.name}
                       </span>
                       <span className={styles.cellIcons}>
@@ -622,8 +399,10 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
                 style={{ left: month.offset }}
               />
             ))}
-            <div style={{ height: headerHeight, position: 'relative' }}>
-              <div className={styles.monthRow} style={{ height: TIMELINE_MONTH_ROW_HEIGHT }}>
+            <div className="relative" style={{ height: headerHeight }}>
+              <div
+                className={cn(styles.monthRow, options.timeline.showWeekNumbers ? 'h-6.5' : 'h-8')}
+              >
                 {axis.months.map((month) => (
                   <div
                     className={styles.monthCell}
@@ -640,7 +419,7 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
                 )}
               </div>
               {options.timeline.showWeekNumbers ? (
-                <div className={styles.weekRow} style={{ height: TIMELINE_WEEK_ROW_HEIGHT }}>
+                <div className={cn(styles.weekRow, 'h-5')}>
                   {axis.weeks.map((week) => (
                     <div
                       className={styles.weekCell}
@@ -656,7 +435,7 @@ const ProjectTimeline = memo<ProjectTimelineProps>(
             {groups.map((group) => (
               <div key={group.key}>
                 {group.key === 'all' ? null : (
-                  <div className={styles.groupRow} style={{ height: TIMELINE_GROUP_ROW_HEIGHT }}>
+                  <div className={cn(styles.groupRow, 'h-8')}>
                     <span className={styles.groupLabel}>{groupLabel(group.key)}</span>
                   </div>
                 )}

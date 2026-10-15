@@ -1,24 +1,15 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import { useAppProcessMetrics } from './appProcessMetrics';
 
-const styles = createStaticStyles(({ css }) => ({
-  high: css`
-    color: ${cssVar.colorError};
-  `,
-  mid: css`
-    color: ${cssVar.colorWarning};
-  `,
-  text: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 11px;
-    font-feature-settings: 'tnum';
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  high: 'text-destructive-text',
+  mid: 'text-warning-text',
+  text: 'font-mono text-xs leading-5 tabular-nums text-foreground-tertiary',
+};
 
 const GpuProcessWidget = memo(() => {
   const gpu = useAppProcessMetrics()?.gpu;
@@ -27,7 +18,7 @@ const GpuProcessWidget = memo(() => {
 
   return (
     <span
-      className={cx(
+      className={cn(
         styles.text,
         gpu.cpuPercent >= 100 ? styles.high : gpu.cpuPercent >= 50 ? styles.mid : undefined,
       )}

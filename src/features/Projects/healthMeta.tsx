@@ -1,7 +1,6 @@
 'use client';
 
 import type { ProjectHealth } from '@orvilo/types';
-import { useTheme } from 'antd-style';
 import { CircleDashedIcon, CircleIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -11,9 +10,9 @@ import { memo } from 'react';
  * (green/yellow/red); a status glyph like a checkmark or alert octagon would
  * read as success/failure, so the icon is always the same filled circle and
  * only the color carries the meaning. `key` is the `project:` namespace
- * label; `color` names the antd token the dot resolves against the theme and
- * `textClass` the `*-text` role the label takes: the fill colour is not
- * text-safe on a light canvas (amber 2.2:1, green 3.5:1), the text role is.
+ * label; `color` retains the public engine token metadata. The dot and label
+ * consume the same contrast-checked `*-text` role rather than an action fill.
+ * The filled-circle shape still denotes update health, not completion.
  */
 export const PROJECT_HEALTH_META = {
   atRisk: {
@@ -37,12 +36,12 @@ export const PROJECT_HEALTH_META = {
 } as const satisfies Record<
   ProjectHealth,
   {
-    /** antd token the dot resolves against the theme (`theme[color]`). */
+    /** Retained public engine color token metadata for existing consumers. */
     color: 'colorError' | 'colorSuccess' | 'colorWarning';
     key: string;
     /** lobehub `Tag` system-preset name for the same semantic color. */
     tag: 'error' | 'success' | 'warning';
-    /** Text-safe status role for the label (the dot keeps the fill colour). */
+    /** Contrast-checked status role shared by the label and filled health glyph. */
     textClass: 'text-destructive-text' | 'text-success-text' | 'text-warning-text';
   }
 >;
@@ -54,13 +53,18 @@ export const PROJECT_HEALTH_META = {
  * composer/rows so every surface renders the same semantics.
  */
 export const ProjectHealthIcon = memo<{ health?: null | ProjectHealth; size?: number }>(
-  ({ health, size = 12 }) => {
-    const theme = useTheme();
+  ({ health, size = 16 }) => {
     if (!health || !(health in PROJECT_HEALTH_META)) {
-      return <CircleDashedIcon aria-hidden color={theme.colorTextQuaternary} size={size} />;
+      return <CircleDashedIcon aria-hidden className="text-muted-foreground" size={size} />;
     }
-    const color = theme[PROJECT_HEALTH_META[health].color];
-    return <CircleIcon aria-hidden color={color} fill={color} size={size} />;
+    return (
+      <CircleIcon
+        aria-hidden
+        className={PROJECT_HEALTH_META[health].textClass}
+        fill="currentColor"
+        size={size}
+      />
+    );
   },
 );
 

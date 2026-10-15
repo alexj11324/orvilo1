@@ -28,10 +28,10 @@ const FailedPage = () => {
     <Empty>
       <EmptyHeader>
         <EmptyMedia variant="default">{<FrownIcon size={96} />}</EmptyMedia>
-        <EmptyTitle>{<div className="text-[32px] font-bold">{t('error.title')}</div>}</EmptyTitle>
+        <EmptyTitle>{<div className="text-3xl font-semibold">{t('error.title')}</div>}</EmptyTitle>
         <EmptyDescription>
           {
-            <div className="text-[16px] text-muted-foreground">
+            <div className="text-sm leading-5.5 text-muted-foreground">
               {t(`error.explanation.${reason}`)}
             </div>
           }
@@ -40,9 +40,11 @@ const FailedPage = () => {
       <EmptyContent>
         {
           <a
-            className={cn(buttonVariants({ size: 'lg' }), 'w-full')}
             href="/"
-            style={{ minWidth: 240 }}
+            className={cn(
+              buttonVariants({ size: 'normal' }),
+              'min-h-9 h-auto w-full min-w-60 whitespace-normal text-center',
+            )}
           >
             {t('error.backToHome')}
           </a>

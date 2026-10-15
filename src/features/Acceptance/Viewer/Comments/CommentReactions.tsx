@@ -21,17 +21,16 @@ const QUICK_REACTIONS = ['👍', '👎', '😄', '🎉', '😕', '❤️', '🚀
 
 const styles = {
   bar: 'pt-2.5',
-  chip: 'inline-flex h-6 cursor-pointer items-center gap-[5px] rounded-[999px] border border-sidebar-border bg-(--ant-color-fill-quaternary) px-2 py-0 text-[13px] leading-none hover:border-border',
-  chipMine:
-    'border-(--ant-color-info-border) bg-[color-mix(in_srgb,var(--info)_10%,transparent)] text-(--ant-color-info-text)',
-  count: 'text-[12px] text-muted-foreground',
+  chip: 'inline-flex h-7 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 cursor-pointer items-center gap-1.25 rounded-full border border-sidebar-border bg-fill-quaternary px-2 py-0 text-sm leading-none hover:border-border',
+  chipMine: 'border-info-border bg-info-subtle text-info-text',
+  count: 'text-xs text-muted-foreground',
   emojiButton:
-    'flex size-[30px] cursor-pointer items-center justify-center rounded-(--ant-border-radius) text-[17px] hover:bg-selected',
+    'flex size-8 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 cursor-pointer items-center justify-center rounded-(--radius-button) text-base hover:bg-selected',
   moreButton:
-    'flex size-[30px] cursor-pointer items-center justify-center rounded-(--ant-border-radius) text-(--ant-color-text-tertiary) hover:bg-selected hover:text-foreground',
+    'flex size-8 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 cursor-pointer items-center justify-center rounded-(--radius-button) text-foreground-tertiary hover:bg-selected hover:text-foreground',
   // Always discoverable; the open picker keeps the same emphasis as hover.
   trigger:
-    'inline-flex size-6 cursor-pointer items-center justify-center rounded-[999px] border border-sidebar-border text-(--ant-color-text-tertiary) transition-[color] duration-(--ant-motion-duration-fast) ease-[ease] hover:bg-(--ant-color-fill-quaternary) hover:text-foreground data-[open]:bg-(--ant-color-fill-quaternary) data-[open]:text-foreground',
+    'inline-flex size-7 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 cursor-pointer items-center justify-center rounded-full border border-sidebar-border text-foreground-tertiary transition-[color] duration-(--orvilo-motion-fast) ease-[ease] hover:bg-fill-quaternary hover:text-foreground data-[open]:bg-fill-quaternary data-[open]:text-foreground',
 };
 
 interface CommentReactionsProps {
@@ -96,7 +95,7 @@ const CommentReactions = memo<CommentReactionsProps>(({ onReact, reactions }) =>
         className={cn(styles.moreButton, CLICKABLE_FOCUS_RING)}
         onClick={() => setFull(true)}
       >
-        <PlusIcon size={15} />
+        <PlusIcon size={16} />
       </div>
     </div>
   );
@@ -122,7 +121,7 @@ const CommentReactions = memo<CommentReactionsProps>(({ onReact, reactions }) =>
                 title={t('acceptance.comments.addReaction')}
                 {...(open ? { 'data-open': '' } : {})}
               >
-                <SmilePlus size={13} />
+                <SmilePlus size={16} />
               </span>
             }
           />

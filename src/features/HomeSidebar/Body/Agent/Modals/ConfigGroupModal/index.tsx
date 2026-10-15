@@ -13,7 +13,6 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { Plus } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
@@ -29,18 +28,10 @@ import type { SessionGroupItemBase } from '@/types/session';
 
 import GroupItem, { GroupItemDragContext } from './GroupItem';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    height: 36px;
-    padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius}px;
-    transition: background 0.2s ease-in-out;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-}));
+const styles = {
+  container:
+    'min-h-9 px-2 rounded-(--radius-button) transition-colors duration-(--orvilo-motion-mid) [transition-timing-function:ease-in-out] hover:bg-accent',
+};
 
 interface ConfigGroupModalProps {
   onCancel?: () => void;

@@ -2,6 +2,7 @@ export type HotkeyId =
   | 'commandPalette'
   | 'createTask'
   | 'editMessage'
+  | 'goToAgent'
   | 'goToDrafts'
   | 'goToInbox'
   | 'goToMyIssues'

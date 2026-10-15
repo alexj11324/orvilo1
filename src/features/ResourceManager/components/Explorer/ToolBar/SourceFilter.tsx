@@ -14,7 +14,7 @@ import { ResourceSourceFilter } from '@/types/files';
 
 const styles = {
   option:
-    'flex-none h-6 px-2.5 rounded-[999px] text-xs text-[var(--ant-color-text-description)] hover:text-[var(--ant-color-text-description)]',
+    'flex-none rounded-(--radius-button) text-sm leading-5.5 text-foreground-description hover:text-foreground-description [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11',
   optionActive: 'text-foreground hover:text-foreground bg-selected hover:bg-selected',
 };
 
@@ -44,7 +44,7 @@ const SourceFilter = memo(() => {
   if (!canFilter) return null;
 
   return (
-    <div className="flex flex-row items-center gap-0.5">
+    <div className="flex flex-row flex-wrap items-center gap-0.5">
       {OPTIONS.map((option) => {
         const isActive = activeFilter === option.key;
 
@@ -53,7 +53,7 @@ const SourceFilter = memo(() => {
             aria-pressed={isActive}
             className={cn(styles.option, isActive && styles.optionActive)}
             key={option.key}
-            size="sm"
+            size="compact"
             variant="ghost"
             onClick={() => setSourceFilter(option.key)}
           >

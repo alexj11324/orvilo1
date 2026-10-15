@@ -52,7 +52,7 @@ const ExportFile = memo<BuiltinRenderProps<ExportFileParams, ExportFileState>>(
           ) : (
             <CircleX className={styles.statusIcon} style={{ color: 'var(--destructive)' }} />
           )}
-          <span className="font-mono rounded bg-muted px-1 text-[12px]">
+          <span className="font-mono rounded bg-muted px-1 text-xs">
             {isSuccess
               ? `Exported: ${pluginState?.filename || args.path}`
               : `Failed to export ${args.path}`}

@@ -1,5 +1,4 @@
 import type { IconType } from '@lobehub/icons';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import type { ReactElement, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -18,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { usePermission } from '@/hooks/usePermission';
 
@@ -43,60 +43,16 @@ export const PRIORITY_META: Record<number, PriorityMeta> = {
   4: { icon: PRIORITY_ICONS[4], label: 'Low', labelKey: 'priority.low', level: 4 },
 };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  searchInput: css`
-    width: 100%;
-    padding-block: 4px;
-    padding-inline: 10px;
-    border: none;
-
-    font-family: inherit;
-    font-size: 13px;
-    color: ${cssVar.colorText};
-
-    background: transparent;
-    outline: none;
-
-    &::placeholder {
-      color: ${cssVar.colorTextPlaceholder};
-    }
-  `,
-  showingCaption: css`
-    padding-block: 2px;
-    padding-inline: 10px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  trigger: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    align-items: center;
-
-    color: ${cssVar.colorTextDescription};
-
-    transition: color ${cssVar.motionDurationMid};
-
-    &:hover {
-      color: ${cssVar.colorText};
-    }
-  `,
-  triggerUrgent: css`
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    color: ${cssVar.orange};
-  `,
-  triggerDisabled: css`
-    cursor: not-allowed;
-    opacity: 0.5;
-
-    &:hover {
-      color: ${cssVar.colorTextDescription};
-      filter: none;
-    }
-  `,
-}));
+const styles = {
+  searchInput:
+    'w-full rounded-(--radius-input) border-0 bg-transparent dark:bg-transparent px-2.5 py-1 text-sm leading-5.5 text-foreground outline-none placeholder:text-(--foreground-placeholder)',
+  showingCaption: 'px-2.5 py-0.5 text-xs leading-5 text-foreground-tertiary',
+  trigger:
+    'inline-flex cursor-pointer items-center text-foreground-description transition-[color] duration-(--orvilo-motion-mid) ease-[ease] motion-reduce:transition-none hover:text-foreground',
+  triggerUrgent: 'inline-flex cursor-pointer items-center text-(--palette-orange-6)',
+  triggerDisabled:
+    'cursor-not-allowed opacity-50 hover:text-foreground-description hover:filter-none',
+};
 
 interface TaskPriorityTagProps {
   children?: ReactNode;
@@ -219,10 +175,11 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
           onClick={(event) => event.stopPropagation()}
         />
         <DropdownMenuContent className="min-w-52">
-          <input
+          <Input
             autoFocus
             className={styles.searchInput}
             value={query}
+            visualSize="normal"
             aria-label={t('taskDetail.changePriorityPlaceholder', {
               defaultValue: 'Change priority…',
             })}

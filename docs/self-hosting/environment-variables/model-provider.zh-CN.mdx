@@ -245,6 +245,10 @@ Orvilo 在部署时提供了丰富的模型服务商相关的环境变量，你�
 - 默认值：-
 - 示例：`https://your-newapi-server.com`
 
+运行时会先移除 URL 末尾的 API 版本路径，例如 `/v1` 或 `/v1beta/`，再进行路由。Anthropic 和 Google 路由直接使用这个基础 URL；xAI、DeepSeek 和 OpenAI 路由会追加 `/v1`。例如，配置 `https://your-newapi-server.com/v1` 时，这三个路由的 URL 中只会保留一个 `/v1`。
+
+未配置端点时，运行时保留原有回退行为：Anthropic 和 Google 使用空的基础 URL，xAI、DeepSeek 和 OpenAI 使用相对路径 `v1`。这个回退值由运行时明确指定，避免 URL 拼接依赖更新后将其变成根相对路径 `/v1`。使用自托管 NewAPI 实例时，请配置已部署的端点。
+
 <Callout type={'info'}>
   NewAPI
   是一个多供应商模型聚合服务，支持基于供应商检测的自动模型路由。它提供成本管理功能，并为访问包括

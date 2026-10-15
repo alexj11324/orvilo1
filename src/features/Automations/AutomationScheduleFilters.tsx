@@ -68,7 +68,7 @@ export const AutomationStatusSelect = memo<AutomationStatusSelectProps>(({ onCha
       ).map(([option, label]) => ({
         icon:
           value === option ? (
-            <div className="flex flex-col items-center justify-center h-[14px] w-[14px]">
+            <div className="flex flex-col items-center justify-center h-3.5 w-3.5">
               <span
                 style={{
                   background: 'currentColor',

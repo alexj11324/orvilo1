@@ -1,7 +1,7 @@
 export const styles = {
-  caption: 'self-center text-[12px] text-(--ant-color-text-tertiary)',
+  caption: 'self-center text-xs text-foreground-tertiary',
   evidenceImage:
-    'overflow-hidden w-fit max-w-full border border-sidebar-border rounded-(--ant-border-radius-lg)',
+    'overflow-hidden w-fit max-w-full border border-sidebar-border rounded-(--radius-overlay)',
   evidenceText:
-    'overflow-auto max-h-[200px] py-2 px-3 rounded-(--ant-border-radius) font-mono text-[12px] whitespace-pre-wrap bg-(--ant-color-fill-quaternary)',
+    'overflow-auto max-h-50 py-2 px-3 rounded-(--radius-card) font-mono text-xs whitespace-pre-wrap bg-fill-quaternary',
 };

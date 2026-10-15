@@ -4,7 +4,6 @@ import { type IEditor } from '@lobehub/editor';
 import { getHotkeyById, HotkeyEnum, INSERT_HEADING_COMMAND } from '@lobehub/editor';
 import { type ChatInputActionsProps, type EditorState } from '@lobehub/editor/react';
 import { ChatInputActions, FloatActions } from '@lobehub/editor/react';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import {
   BoldIcon,
@@ -214,9 +213,9 @@ const InlineToolbar = memo<InlineToolbarProps>(
       <div
         className={cn('flex flex-col p-1 shadow-md', className)}
         style={{
-          border: `1px solid ${cssVar.colorBorder}`,
+          border: `1px solid ${'var(--border)'}`,
 
-          background: cssVar.colorBgElevated,
+          background: 'var(--popover)',
           borderRadius: 8,
           marginBottom: 16,
           marginTop: 16,

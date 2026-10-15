@@ -1,5 +1,4 @@
 import type { TaskDetailSubtask, TaskSubtaskProgress } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import type { MouseEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -199,7 +198,7 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
               cy={7}
               fill="none"
               r={5.5}
-              stroke={cssVar.colorFillSecondary}
+              stroke={'var(--selected)'}
               strokeWidth={2.5}
             />
             <circle
@@ -207,7 +206,7 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
               cy={7}
               fill="none"
               r={5.5}
-              stroke={cssVar.colorSuccess}
+              stroke={'var(--success)'}
               strokeDasharray={`${(data.percent / 100) * 2 * Math.PI * 5.5} ${2 * Math.PI * 5.5}`}
               strokeLinecap="round"
               strokeWidth={2.5}

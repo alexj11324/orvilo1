@@ -1,99 +1,31 @@
 'use client';
 
-import { createStaticStyles, keyframes } from 'antd-style';
-import { type CSSProperties } from 'react';
+import { cn } from 'cn';
 import { memo } from 'react';
+import { useMediaQuery } from 'react-responsive';
 
-const pulseAnim = keyframes`
-  0%, 100% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 1;
-  }
-`;
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
-const flowAnim = keyframes`
-  0% {
-    transform: translateX(0);
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(var(--flow-distance));
-    opacity: 0.5;
-  }
-`;
-
-const rotateAnim = keyframes`
-  100% {
-    transform: rotate(360deg);
-  }
-`;
-
-const scaleAnim = keyframes`
-  0%, 100% {
-    transform: scale(0.8);
-    opacity: 0.5;
-  }
-  50% {
-    transform: scale(1);
-    opacity: 1;
-  }
-`;
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  center: css`
-    fill: ${cssVar.colorTextSecondary};
-    animation: ${scaleAnim} 2s infinite;
-  `,
-
-  connection: css`
-    opacity: 0.3;
-    stroke: ${cssVar.colorTextSecondary};
-    stroke-width: 0.5;
-  `,
-
-  container: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  `,
-
-  node: css`
-    fill: ${cssVar.colorTextSecondary};
-    animation: ${pulseAnim} 2s infinite;
-  `,
-
-  particle: css`
-    fill: ${cssVar.colorTextSecondary};
-    animation: ${flowAnim} 2s infinite;
-  `,
-
-  ring: css`
-    transform-origin: center;
-
-    fill: none;
-    stroke: ${cssVar.colorFill};
-    stroke-dasharray: 0 8;
-    stroke-width: 1;
-
-    animation: ${rotateAnim} 20s infinite linear;
-  `,
-
-  svg: css`
-    width: 100%;
-    height: 100%;
-  `,
-}));
+const styles = {
+  center: 'fill-muted-foreground motion-reduce:animate-none',
+  connection: 'opacity-30 stroke-muted-foreground [stroke-width:0.5]',
+  container: 'flex items-center justify-center',
+  node: 'fill-muted-foreground motion-reduce:animate-none',
+  particle: 'fill-muted-foreground [--flow-distance:50px] motion-reduce:animate-none',
+  ring: 'origin-center fill-none stroke-(--loading-ring-fill) stroke-1 [stroke-dasharray:0_8] motion-reduce:animate-none',
+  svg: 'size-full',
+};
 
 interface NeuralNetworkLoadingProps {
   size?: number;
 }
 
 const NeuralNetworkLoading = memo<NeuralNetworkLoadingProps>(({ size = 16 }) => {
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
+  const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+  const shouldAnimate = animationMode !== 'disabled' && !prefersReducedMotion;
+
   const nodeCount = 3;
   const layerCount = 3;
 
@@ -106,7 +38,7 @@ const NeuralNetworkLoading = memo<NeuralNetworkLoadingProps>(({ size = 16 }) => 
       const delay = (layerIndex * nodeCount + nodeIndex) * 0.2;
       nodes.push(
         <circle
-          className={styles.node}
+          className={cn(styles.node, shouldAnimate && 'animate-neural-pulse')}
           cx={x}
           cy={y}
           key={`node-${layerIndex}-${nodeIndex}`}
@@ -143,17 +75,12 @@ const NeuralNetworkLoading = memo<NeuralNetworkLoadingProps>(({ size = 16 }) => 
   // Generate particles
   const particles = [0, 1, 2].map((index) => (
     <circle
-      className={styles.particle}
+      className={cn(styles.particle, shouldAnimate && 'animate-neural-flow')}
       cx={25}
       cy={50}
       key={`particle-${index}`}
       r="1.5"
-      style={
-        {
-          '--flow-distance': '50px',
-          'animationDelay': `${index * 0.6}s`,
-        } as CSSProperties
-      }
+      style={{ animationDelay: `${index * 0.6}s` }}
     />
   ));
 
@@ -170,10 +97,21 @@ const NeuralNetworkLoading = memo<NeuralNetworkLoadingProps>(({ size = 16 }) => 
         {particles}
 
         {/* Central processing unit */}
-        <rect className={styles.center} height="6" width="6" x="47" y="47" />
+        <rect
+          className={cn(styles.center, shouldAnimate && 'animate-neural-scale')}
+          height="6"
+          width="6"
+          x="47"
+          y="47"
+        />
 
         {/* Rotating outer ring */}
-        <circle className={styles.ring} cx="50" cy="50" r="40" />
+        <circle
+          className={cn(styles.ring, shouldAnimate && 'animate-neural-rotate')}
+          cx="50"
+          cy="50"
+          r="40"
+        />
       </svg>
     </div>
   );

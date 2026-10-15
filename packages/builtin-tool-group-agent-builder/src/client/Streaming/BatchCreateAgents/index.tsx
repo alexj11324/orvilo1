@@ -12,12 +12,11 @@ import ToolTag from '@/features/ToolTag';
 import type { BatchCreateAgentsParams } from '../../../types';
 
 const styles = {
-  description: 'line-clamp-1 text-ellipsis leading-[1.5] text-[var(--ant-color-text-description)]',
-  index: 'shrink-0 text-[12px] text-[var(--ant-color-text-quaternary)]',
+  description: 'line-clamp-1 text-ellipsis leading-[1.5] text-foreground-description',
+  index: 'shrink-0 text-xs text-foreground-quaternary',
   item: 'px-3 py-2.5 not-last:[border-block-end:1px_dashed_var(--sidebar-border)]',
-  systemRole:
-    'line-clamp-3 text-ellipsis text-[12px] leading-[1.5] text-[var(--ant-color-text-tertiary)]',
-  title: 'truncate text-[13px] font-medium',
+  systemRole: 'line-clamp-3 text-ellipsis text-xs leading-[1.5] text-foreground-tertiary',
+  title: 'truncate text-(length:--text-dense) font-medium',
 };
 
 export const BatchCreateAgentsStreaming = memo<BuiltinStreamingProps<BatchCreateAgentsParams>>(
@@ -27,7 +26,7 @@ export const BatchCreateAgentsStreaming = memo<BuiltinStreamingProps<BatchCreate
     if (!agents || agents.length === 0) return null;
 
     return (
-      <div className="w-full rounded-[var(--ant-border-radius)] border border-sidebar-border bg-card">
+      <div className="w-full rounded-(--radius-card) border border-sidebar-border bg-card">
         {agents.map((agent, index) => (
           <div className={cn('flex', 'items-start', 'gap-2', styles.item)} key={index}>
             <div className={styles.index}>{index + 1}.</div>

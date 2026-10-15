@@ -1,7 +1,7 @@
 'use client';
 
 import type { MemoryDump } from '@orvilo/electron-client-ipc';
-import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { Fragment, memo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -119,17 +119,17 @@ const Breakdown = memo(() => {
     <Fragment>
       <div className={styles.sectionTitle}>
         <span>Breakdown</span>
-        <span className={cx(styles.muted, styles.mono)}>
+        <span className={cn(styles.mono, styles.muted)}>
           {dump
             ? `captured ${new Date(dump.capturedAt).toLocaleTimeString()}`
             : 'memory-infra dump'}
         </span>
-        <span style={{ flex: 1 }} />
-        {error && <span className={cx(styles.error, styles.mono)}>{error}</span>}
-        <Button disabled={loading} size="sm" onClick={collectGarbage}>
+        <span className="flex-1" />
+        {error && <span className={cn(styles.mono, styles.error)}>{error}</span>}
+        <Button disabled={loading} size="compact" onClick={collectGarbage}>
           {'GC'}
         </Button>
-        <Button loading={loading} size="sm" onClick={capture}>
+        <Button loading={loading} size="compact" onClick={capture}>
           {dump ? 'Re-capture' : 'Capture'}
         </Button>
       </div>
@@ -153,13 +153,13 @@ const ProcessTable = memo(() => {
       {[...processes]
         .sort((a, b) => b.workingSetMB - a.workingSetMB)
         .map((process) => (
-          <div className={cx(styles.row, styles.mono)} key={process.pid}>
+          <div className={cn(styles.row, styles.mono)} key={process.pid}>
             <span>
               {process.type}
               {process.name && <span className={styles.muted}> · {process.name}</span>}
               <span className={styles.muted}> pid {process.pid}</span>
             </span>
-            <span style={{ textAlign: 'end' }}>{formatCompactSize(process.workingSetMB * MB)}</span>
+            <span className="text-end">{formatCompactSize(process.workingSetMB * MB)}</span>
             <span className={styles.muted}>cpu {process.cpuPercent.toFixed(1)}%</span>
           </div>
         ))}
@@ -176,7 +176,7 @@ const MemoryPopover = memo(() => {
   if (!samples) return null;
 
   return (
-    <div className={cx(cx(devDockPanelStyles.root, styles.popover), 'flex flex-col')}>
+    <div className={cn(cn(devDockPanelStyles.root, styles.popover), 'flex flex-col')}>
       <Overview residentMB={residentMB} sample={samples.latest} />
       <HistoryChart history={samples.history} />
       <div className={styles.scroll}>

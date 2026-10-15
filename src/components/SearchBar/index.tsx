@@ -14,13 +14,15 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input, type InputVisualSize } from '@/components/ui/input';
 import { Kbd } from '@/components/ui/kbd';
 import { Spinner } from '@/components/ui/spinner';
 
 interface SearchBarProps {
   autoFocus?: boolean;
   className?: string;
+  /** Preserve legacy model chooser Escape behavior when explicitly false. */
+  clearOnEscape?: boolean;
   defaultValue?: string;
   enableShortKey?: boolean;
   loading?: boolean;
@@ -34,12 +36,15 @@ interface SearchBarProps {
   shortKey?: string;
   style?: CSSProperties;
   value?: string;
+  /** Omission preserves the public Input role/context; native size stays independent. */
+  visualSize?: InputVisualSize;
 }
 
 const SearchBar = memo<SearchBarProps>(
   ({
     autoFocus,
     className,
+    clearOnEscape = true,
     defaultValue,
     loading,
     enableShortKey,
@@ -53,6 +58,7 @@ const SearchBar = memo<SearchBarProps>(
     shortKey = 'mod+k',
     style,
     value,
+    visualSize,
   }) => {
     const { t } = useTranslation('common');
     const [innerValue, setInnerValue] = useState(defaultValue ?? '');
@@ -85,15 +91,22 @@ const SearchBar = memo<SearchBarProps>(
     );
 
     return (
-      <div className={cn('relative flex items-center', className)} style={style}>
-        <Search className="pointer-events-none absolute left-2.5 text-muted-foreground" size={14} />
+      <div
+        className={cn('relative flex items-center pointer-coarse:py-1.5', className)}
+        style={style}
+      >
+        <Search
+          className="pointer-events-none absolute start-2 size-4 text-muted-foreground"
+          size={16}
+        />
         <Input
           aria-label={placeholder ?? 'Type keywords...'}
           autoFocus={autoFocus}
-          className="h-8 bg-secondary pr-7 pl-8"
+          className="bg-secondary pe-8 ps-8 pointer-coarse:pe-12"
           placeholder={placeholder ?? 'Type keywords...'}
           ref={inputRef}
           value={inputValue}
+          visualSize={visualSize}
           onBlur={(e) => {
             onBlur?.(e);
             setInnerValue(e.target.value);
@@ -111,7 +124,7 @@ const SearchBar = memo<SearchBarProps>(
             onKeyDown?.(e);
             // Same as the settings sidebar search: Esc clears a non-empty query and
             // stops there, so an enclosing dialog or panel does not also close.
-            if (e.key === 'Escape' && inputValue) {
+            if (clearOnEscape && e.key === 'Escape' && inputValue) {
               e.stopPropagation();
               clear();
             }
@@ -122,12 +135,12 @@ const SearchBar = memo<SearchBarProps>(
           }}
         />
         {loading ? (
-          <Spinner className="absolute right-2 text-muted-foreground size-3" />
+          <Spinner className="absolute end-2 size-4 text-muted-foreground" />
         ) : inputValue ? (
           <Button
             aria-label={t('clearSearch', { defaultValue: 'Clear search' })}
-            className="absolute right-1 text-muted-foreground"
-            size="icon-xs"
+            className="absolute end-0 pointer-coarse:end-2.5 rounded-(--radius-button) text-muted-foreground pointer-coarse:after:absolute pointer-coarse:after:-inset-1.75 pointer-coarse:after:content-['']"
+            size="icon"
             type="button"
             variant="ghost"
             onClick={() => {
@@ -135,10 +148,12 @@ const SearchBar = memo<SearchBarProps>(
               inputRef.current?.focus();
             }}
           >
-            <X size={12} />
+            <X className="size-4" size={16} />
           </Button>
         ) : enableShortKey && showTag ? (
-          <Kbd className="pointer-events-none absolute right-2">{hotkey.replace('mod', '⌘')}</Kbd>
+          <Kbd className="pointer-events-none absolute end-2 text-xs leading-5">
+            {hotkey.replace('mod', '⌘')}
+          </Kbd>
         ) : null}
       </div>
     );

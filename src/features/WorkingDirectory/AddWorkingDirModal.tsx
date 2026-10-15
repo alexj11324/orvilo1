@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -91,18 +90,20 @@ const AddWorkingDirContent = ({
           placeholder={placeholder || tPlugin('workingDirectory.placeholder')}
           ref={inputRef}
           value={value}
+          visualSize="normal"
           onKeyDown={(e) => e.key === 'Enter' && void handleSubmit(value)}
           onChange={(e) => {
             setValue(e.target.value);
             setError(undefined);
           }}
         />
-        {error ? <div style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</div> : null}
+        {error ? <div style={{ color: 'var(--destructive)', fontSize: 12 }}>{error}</div> : null}
       </div>
       <div className="flex flex-wrap justify-end gap-2">
         {deviceId && (
           <Button
             disabled={loading}
+            size="lg"
             onClick={() => {
               setError(undefined);
               setManual(false);
@@ -111,10 +112,15 @@ const AddWorkingDirContent = ({
             {tPlugin('workingDirectory.browseFolders')}
           </Button>
         )}
-        <Button disabled={loading} onClick={close}>
+        <Button disabled={loading} size="lg" onClick={close}>
           {tCommon('cancel')}
         </Button>
-        <Button disabled={!value.trim()} loading={loading} onClick={() => handleSubmit(value)}>
+        <Button
+          disabled={!value.trim()}
+          loading={loading}
+          size="lg"
+          onClick={() => handleSubmit(value)}
+        >
           {tPlugin('workingDirectory.useFolder')}
         </Button>
       </div>

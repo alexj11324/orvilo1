@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { ClockAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -20,7 +19,7 @@ const CliDetectionTimeoutState = ({
 
   return (
     <GuideShell
-      icon={<ClockAlert color={cssVar.colorWarning} size={20} />}
+      icon={<ClockAlert color={'var(--warning)'} size={20} />}
       title={t('cliDetectionTimeoutGuide.title', { name: config.title })}
       variant={variant}
       actions={

@@ -44,7 +44,7 @@ export const UpdateGroupPromptInspector = memo<
   const streamingLength = prompt?.length ?? 0;
 
   return (
-    <div className={cn('flex', 'items-center', 'gap-[6px]', styles.root)}>
+    <div className={cn('flex', 'items-center', 'gap-1.5', styles.root)}>
       <span
         className={cn(
           styles.label,
@@ -56,7 +56,7 @@ export const UpdateGroupPromptInspector = memo<
       {/* Show length diff when completed */}
       {!isLoading && !isArgumentsStreaming && lengthDiff !== null && (
         <span
-          className="font-mono rounded bg-muted px-1 text-[12px]"
+          className="font-mono rounded bg-muted px-1 text-xs"
           style={{ color: lengthDiff >= 0 ? 'var(--success)' : 'var(--destructive)' }}
         >
           {lengthDiff >= 0 ? '+' : ''}
@@ -67,8 +67,8 @@ export const UpdateGroupPromptInspector = memo<
       {/* Show streaming length */}
       {(isArgumentsStreaming || isLoading) && streamingLength > 0 && (
         <span
-          className="font-mono rounded bg-muted px-1 text-[12px]"
-          style={{ color: 'var(--ant-color-text-description)' }}
+          className="font-mono rounded bg-muted px-1 text-xs"
+          style={{ color: 'var(--foreground-description)' }}
         >
           ({streamingLength}
           {t('builtins.orvilo-agent-builder.inspector.chars')})

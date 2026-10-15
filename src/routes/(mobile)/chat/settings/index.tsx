@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { createElement, isValidElement, memo, useCallback, useState } from 'react';
 
 import MobileContentLayout from '@/components/server/MobileNavLayout';
@@ -42,7 +41,7 @@ export default memo(() => {
       <Tabs
         value={tab ?? ''}
         style={{
-          borderBottom: `1px solid ${cssVar.colorBorderSecondary}`,
+          borderBottom: `1px solid ${'var(--divider)'}`,
         }}
         onValueChange={(value) => setTab(value as ChatSettingsTabs)}
       >

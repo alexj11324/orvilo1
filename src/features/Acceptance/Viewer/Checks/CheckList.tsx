@@ -128,7 +128,7 @@ const CheckList = memo<CheckListProps>(
                 <div className="font-semibold" style={{ color: 'var(--success)', fontSize: 15 }}>
                   {t('acceptance.checks.allAccepted.title')}
                 </div>
-                <div className="text-[13px] text-muted-foreground">
+                <div className="text-(length:--text-dense) text-muted-foreground">
                   {t('acceptance.checks.allAccepted.desc')}
                 </div>
               </div>
@@ -231,7 +231,7 @@ const CheckList = memo<CheckListProps>(
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <div className="text-[12px] text-muted-foreground">
+                    <div className="text-xs text-muted-foreground">
                       {t('acceptance.group.acceptedRatio', {
                         accepted: acceptedCount,
                         total: groupChecks_.length,
@@ -248,7 +248,7 @@ const CheckList = memo<CheckListProps>(
                       </div>
                     )}
                     {ignoredCount > 0 && (
-                      <div className="text-[12px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {t('acceptance.group.ignoredCount', { count: ignoredCount })}
                       </div>
                     )}
@@ -346,7 +346,7 @@ const CheckList = memo<CheckListProps>(
                   />
                 )}
                 <ChevronRight
-                  color={'var(--ant-color-text-quaternary)'}
+                  color={'var(--foreground-quaternary)'}
                   size={14}
                   style={{
                     transform: collapsed ? 'none' : 'rotate(90deg)',
@@ -371,22 +371,18 @@ const CheckList = memo<CheckListProps>(
                       >
                         <div className="flex items-center gap-1.5">
                           <MessageSquareText
+                            color={stale ? 'var(--foreground-quaternary)' : 'var(--destructive)'}
                             size={13}
-                            color={
-                              stale ? 'var(--ant-color-text-quaternary)' : 'var(--destructive)'
-                            }
                           />
                           <div
                             style={{
-                              color: stale
-                                ? 'var(--ant-color-text-tertiary)'
-                                : 'var(--destructive)',
+                              color: stale ? 'var(--foreground-tertiary)' : 'var(--destructive)',
                               fontSize: 12,
                             }}
                           >
                             {t('acceptance.group.feedbackLabel')}
                           </div>
-                          <div className="text-[12px] text-muted-foreground">
+                          <div className="text-xs text-muted-foreground">
                             {hydrated ? formatAbsoluteDateTime(entry.createdAt) : null}
                           </div>
                         </div>

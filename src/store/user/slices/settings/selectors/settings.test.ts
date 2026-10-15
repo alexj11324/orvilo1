@@ -227,5 +227,17 @@ describe('settingsSelectors', () => {
 
       expect(result).toMatchSnapshot();
     });
+
+    it('ignores persisted overrides for non-editable bindings', () => {
+      const s = {
+        settings: {
+          hotkey: {
+            goToReviews: '',
+          },
+        },
+      } as unknown as UserStore;
+
+      expect(settingsSelectors.getHotkeyById('goToReviews' as HotkeyId)(s)).toBe('g>r');
+    });
   });
 });

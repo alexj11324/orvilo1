@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { useEffect, useState } from 'react';
 
 import { useAgentStore } from '@/store/agent';
@@ -16,31 +16,11 @@ import Sidebar from './Sidebar';
 import ToolPage from './ToolPage';
 import { useDevtoolsEntries } from './useDevtoolsEntries';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  empty: css`
-    flex: 1;
-    align-items: center;
-    justify-content: center;
-
-    font-size: 14px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  main: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-    min-height: 0;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  page: css`
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  empty: 'flex-1 items-center justify-center text-sm leading-5.5 text-foreground-tertiary',
+  main: 'overflow-hidden flex-1 min-w-0 min-h-0 bg-card',
+  page: 'overflow-hidden w-full h-full bg-card',
+};
 
 const RenderGallery = () => {
   const { defaultToolset, menuItems, toolsetMap } = useDevtoolsEntries();
@@ -75,13 +55,13 @@ const RenderGallery = () => {
   }, []);
 
   return (
-    <div className={cx(styles.page, 'flex')}>
+    <div className={cn(styles.page, 'flex')}>
       <Sidebar items={menuItems} selectedKey={identifier} onSelect={setIdentifier} />
-      <div className={cx(styles.main, 'flex flex-col')}>
+      <div className={cn(styles.main, 'flex flex-col')}>
         {toolset ? (
           <ToolPage toolset={toolset} />
         ) : (
-          <div className={cx(styles.empty, 'flex flex-col')}>
+          <div className={cn(styles.empty, 'flex flex-col')}>
             No builtin tool renders registered.
           </div>
         )}

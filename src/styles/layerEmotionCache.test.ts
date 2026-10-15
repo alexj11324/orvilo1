@@ -126,9 +126,7 @@ describe('layerEmotionCache on a real antd-style instance', () => {
 });
 
 describe('default runtime cascade', () => {
-  it('keeps styles unlayered after the default renderer initialization import', async () => {
-    await import('./antdStyleLayer');
-
+  it('keeps the default runtime cache unlayered with the dormant initializer retired', () => {
     const styles = createStaticStyles(({ css }) => ({
       rollout: css`
         padding: 13px;

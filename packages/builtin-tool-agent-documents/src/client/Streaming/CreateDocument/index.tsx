@@ -12,7 +12,7 @@ import StreamingMarkdown from '@/components/StreamingMarkdown';
 import type { CreateDocumentArgs } from '../../../types';
 
 const styles = {
-  container: 'w-full overflow-hidden rounded-[16px] border border-sidebar-border bg-card',
+  container: 'w-full overflow-hidden rounded-(--radius-card) border border-sidebar-border bg-card',
   header: 'border-b border-sidebar-border px-3 py-2.5',
   icon: 'text-primary',
   title: 'line-clamp-1 font-medium text-foreground',

@@ -18,8 +18,8 @@ import { acceptanceContentLayout } from '../layout';
 
 const styles = {
   // Keep decisions reachable above the scrolling checklist.
-  bar: 'sticky bottom-4 z-20 mx-auto flex w-full flex-wrap items-center gap-3 rounded-(--ant-border-radius-lg) border border-sidebar-border bg-popover px-4 py-3 shadow-(--ant-box-shadow-tertiary) [@media(width<=767px)]:bottom-[max(8px,env(safe-area-inset-bottom))] [@media(width<=767px)]:p-3',
-  summary: 'min-w-[160px] flex-1',
+  bar: 'sticky bottom-4 z-20 mx-auto flex w-full flex-wrap items-center gap-3 rounded-(--radius-overlay) border border-sidebar-border bg-popover px-4 py-3 shadow-(--shadow-raised) [@media(width<=767px)]:bottom-[max(8px,env(safe-area-inset-bottom))] [@media(width<=767px)]:p-3',
+  summary: 'min-w-40 flex-1',
   actions:
     'flex-none flex-wrap justify-end [&>button]:flex-none [@media(width<=480px)]:w-full [@media(width<=480px)]:[&>button]:flex-1',
   completePop:
@@ -48,7 +48,7 @@ const ProgressRing = memo<{ done: number; total: number }>(({ done, total }) => 
           cy={size / 2}
           fill={'none'}
           r={radius}
-          stroke={'var(--ant-color-text-quaternary)'}
+          stroke={'var(--foreground-quaternary)'}
           strokeDasharray={'3 5'}
           strokeLinecap={'round'}
           strokeWidth={stroke}
@@ -233,7 +233,7 @@ const DecisionBar = memo<DecisionBarProps>(
           <div className="flex flex-col gap-0.5" style={{ flex: '0 1 auto', minWidth: 0 }}>
             <div className="truncate min-w-0 text-muted-foreground">{statusText}</div>
             {subText && (
-              <div className="truncate min-w-0 text-[12px] text-muted-foreground">{subText}</div>
+              <div className="truncate min-w-0 text-xs text-muted-foreground">{subText}</div>
             )}
           </div>
 
@@ -252,7 +252,7 @@ const DecisionBar = memo<DecisionBarProps>(
             the reviewer may still hand the prompt to another agent. Embedded,
             the composer beside it already receives the draft. */}
           {state === 'live' && hasFeedback && !embedded && (
-            <Button disabled={pending} variant="secondary" onClick={onCopyReview}>
+            <Button disabled={pending} size="compact" variant="secondary" onClick={onCopyReview}>
               {t('acceptance.bar.copyReview')}
             </Button>
           )}
@@ -264,12 +264,22 @@ const DecisionBar = memo<DecisionBarProps>(
               <>
                 {/* Last words before the repair leaves — a global note the next
                   round reads, for what the queued per-check feedback missed. */}
-                <Button disabled={pending} variant="secondary" onClick={onAddComment}>
+                <Button
+                  disabled={pending}
+                  size="compact"
+                  variant="secondary"
+                  onClick={onAddComment}
+                >
                   <MessageSquarePlus />
                   {t('acceptance.bar.addComment')}
                 </Button>
                 {!embedded && (
-                  <Button disabled={pending} variant="outline" onClick={onCopyReview}>
+                  <Button
+                    disabled={pending}
+                    size="compact"
+                    variant="outline"
+                    onClick={onCopyReview}
+                  >
                     {t('acceptance.bar.copyReview')}
                   </Button>
                 )}
@@ -277,6 +287,7 @@ const DecisionBar = memo<DecisionBarProps>(
                   <Button
                     disabled={pending}
                     loading={rerunPending}
+                    size="compact"
                     variant="outline"
                     onClick={onRerun}
                   >
@@ -288,11 +299,12 @@ const DecisionBar = memo<DecisionBarProps>(
               // Clean review — accept carries primary weight only once every
               // check is signed off; before that it stays a quiet option.
               <>
-                <Button disabled={pending} variant="ghost" onClick={onRejectComment}>
+                <Button disabled={pending} size="compact" variant="ghost" onClick={onRejectComment}>
                   {t('acceptance.bar.rejectComment')}
                 </Button>
                 <Button
                   disabled={pending}
+                  size="compact"
                   variant={allConfirmed ? 'default' : 'secondary'}
                   onClick={onAccept}
                 >

@@ -2,7 +2,6 @@
 
 import { useEditor } from '@lobehub/editor/react';
 import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import { Minimize2, Paperclip, X } from 'lucide-react';
 import { type KeyboardEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -315,24 +314,35 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
           <div className="flex gap-1" style={{ flexShrink: 0 }}>
             {showInlineToggle && (
               <ActionIcon
+                className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                 icon={Minimize2}
+                size={{ blockSize: 32, size: 16 }}
                 title={t('createTask.expandToInline')}
                 onClick={handleInline}
               />
             )}
-            <ActionIcon icon={X} title={t('close', { ns: 'common' })} onClick={close} />
+            <ActionIcon
+              className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+              icon={X}
+              size={{ blockSize: 32, size: 16 }}
+              title={t('close', { ns: 'common' })}
+              onClick={close}
+            />
           </div>
         </div>
 
         <div
           className="flex items-center justify-between"
-          style={{ borderTop: `1px solid ${cssVar.colorBorderSecondary}`, padding: '8px 16px' }}
+          style={{
+            borderTop: `1px solid ${'var(--divider)'}`,
+            padding: '8px 16px',
+          }}
         >
           <div className="flex flex-wrap gap-0.5">
             <TaskPriorityTag priority={priority} onChange={setPriority}>
-              <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
-                <TaskPriorityTag disableDropdown priority={priority} size={14} />
-                <div className="text-[12px]">
+              <div className="flex min-h-7 cursor-pointer [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 items-center gap-1.5 rounded-(--radius-input) px-2 py-1 transition-colors hover:bg-muted">
+                <TaskPriorityTag disableDropdown priority={priority} size={16} />
+                <div className="text-xs">
                   {priority === 0
                     ? t('taskDetail.priority.none')
                     : t(
@@ -344,16 +354,16 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
 
             {activeWorkspaceId && (
               <AssigneeMemberSelector currentUserId={assigneeUserId} onChange={handleMemberChange}>
-                <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
+                <div className="flex min-h-7 cursor-pointer [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 items-center gap-1.5 rounded-(--radius-input) px-2 py-1 transition-colors hover:bg-muted">
                   {assigneeUserId ? (
                     <>
                       <AssigneeUserAvatar size={18} userId={assigneeUserId} />
-                      <div className="text-[12px]">{memberMeta?.title}</div>
+                      <div className="text-xs">{memberMeta?.title}</div>
                     </>
                   ) : (
                     <>
-                      <UnassignedAssigneeIcon kind={'human'} size={14} />
-                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+                      <UnassignedAssigneeIcon kind={'human'} size={16} />
+                      <div className="text-xs" style={{ color: 'var(--foreground-description)' }}>
                         {t('createTask.member')}
                       </div>
                     </>
@@ -363,22 +373,22 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
             )}
 
             {lockAssignee ? (
-              <div className="flex items-center gap-1.5 rounded-md px-2 py-1">
+              <div className="flex items-center gap-1.5 rounded-(--radius-input) px-2 py-1">
                 <AssigneeAvatar agentId={assigneeAgentId} size={18} />
-                <div className="text-[12px]">{assigneeMeta?.title}</div>
+                <div className="text-xs">{assigneeMeta?.title}</div>
               </div>
             ) : (
               <AssigneeAgentSelector currentAgentId={assigneeAgentId} onChange={handleAgentChange}>
-                <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
+                <div className="flex min-h-7 cursor-pointer [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 items-center gap-1.5 rounded-(--radius-input) px-2 py-1 transition-colors hover:bg-muted">
                   {assigneeAgentId ? (
                     <>
                       <AssigneeAvatar agentId={assigneeAgentId} size={18} />
-                      <div className="text-[12px]">{assigneeMeta?.title}</div>
+                      <div className="text-xs">{assigneeMeta?.title}</div>
                     </>
                   ) : (
                     <>
-                      <UnassignedAssigneeIcon kind={'agent'} size={14} />
-                      <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+                      <UnassignedAssigneeIcon kind={'agent'} size={16} />
+                      <div className="text-xs" style={{ color: 'var(--foreground-description)' }}>
                         {t('createTask.assignee')}
                       </div>
                     </>
@@ -399,17 +409,19 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
             )}
 
             <ActionIcon
+              className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
               icon={Paperclip}
+              size={{ blockSize: 32, size: 16 }}
               title={t('upload.action.tooltip')}
               onClick={handleAttach}
             />
           </div>
 
           <Button
-            className="rounded-full"
+            className="rounded-(--radius-button) [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
             disabled={!canCreateTask || isCreating}
             loading={isCreating}
-            size="sm"
+            size="normal"
             title={canCreateTask ? undefined : reason}
             variant="default"
             onClick={handleSubmit}

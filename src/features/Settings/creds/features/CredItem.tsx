@@ -122,17 +122,14 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
   };
 
   return (
-    <div className={`flex flex-row gap-[16px] items-center justify-between ${'py-3'}`}>
-      <div
-        className="flex flex-row gap-[16px] items-center"
-        style={{ flex: 1, overflow: 'hidden' }}
-      >
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted">
+    <div className={`flex flex-row gap-4 items-center justify-between ${'py-3'}`}>
+      <div className="flex flex-row gap-4 items-center" style={{ flex: 1, overflow: 'hidden' }}>
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-(--radius-card) bg-muted">
           {renderAvatar()}
         </div>
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-[15px] font-medium">{cred.name}</span>
+            <span className="truncate text-sm font-medium">{cred.name}</span>
             <Badge variant="outline">{t(`creds.types.${cred.type}`)}</Badge>
             {/* Only populated by workspace-scoped list responses (workspaceCreds.list) —
                 distinguishes a member's shared personal credential from one the workspace owns directly. */}
@@ -153,7 +150,7 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
           </div>
         </div>
       </div>
-      <div className="flex flex-row gap-[8px] items-center" onClick={(e) => e.stopPropagation()}>
+      <div className="flex flex-row gap-2 items-center" onClick={(e) => e.stopPropagation()}>
         {extra}
         {menuItems.length > 0 && (
           <DropdownMenu>

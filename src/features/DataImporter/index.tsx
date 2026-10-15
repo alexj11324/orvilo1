@@ -2,7 +2,6 @@
 
 import { type ErrorShape, type ImportFileUploadState } from '@orvilo/types';
 import { ImportStage } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
 import { ImportIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
 import React, { memo, useCallback, useMemo, useState } from 'react';
@@ -38,19 +37,10 @@ export interface ImportResults {
   type?: string;
 }
 
-const styles = createStaticStyles(({ css }) => ({
-  children: css`
-    &::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-color: transparent;
-    }
-  `,
-  wrapper: css`
-    font-size: inherit;
-  `,
-}));
+const styles = {
+  children: "before:content-[''] before:absolute before:inset-0 before:bg-transparent",
+  wrapper: '[font-size:inherit]',
+};
 
 interface DataImporterProps {
   children?: ReactNode;
@@ -127,7 +117,7 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
     switch (importState) {
       case ImportStage.Preparing: {
         return (
-          <div className="flex flex-col items-center justify-center gap-6 p-10">
+          <div className="flex flex-col items-center justify-center gap-6 p-4 text-sm leading-5.5">
             <DataLoading />
             <p>{t('importModal.preparing')}</p>
           </div>
@@ -136,7 +126,7 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
 
       case ImportStage.Importing: {
         return (
-          <div className="flex flex-col items-center justify-center gap-6 p-10">
+          <div className="flex flex-col items-center justify-center gap-6 p-4 text-sm leading-5.5">
             <DataLoading />
             <p>{t('importModal.loading')}</p>
           </div>
@@ -145,7 +135,7 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
 
       case ImportStage.Uploading: {
         return (
-          <div className="flex flex-col items-center justify-center gap-6 p-10">
+          <div className="flex flex-col items-center justify-center gap-6 p-4 text-sm leading-5.5">
             <FileUploading
               progress={fileUploadingState?.progress}
               restTime={fileUploadingState?.restTime}
@@ -157,14 +147,14 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
 
       case ImportStage.Success: {
         return (
-          <div className="flex flex-col items-center justify-center gap-6 px-4">
+          <div className="flex flex-col items-center justify-center gap-6 px-4 text-sm leading-5.5">
             <SuccessResult dataSource={dataSource} duration={duration} onClickFinish={closeModal} />
           </div>
         );
       }
       case ImportStage.Error: {
         return (
-          <div className="flex flex-col items-center justify-center gap-6 py-6 px-0">
+          <div className="flex flex-col items-center justify-center gap-6 py-6 px-0 text-sm leading-5.5">
             <ImportError error={importError} onClick={closeModal} />
           </div>
         );
@@ -191,14 +181,16 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
         }}
       >
         {hasConfigError ? (
-          <div className="flex flex-col items-center justify-center gap-6 p-10">
+          <div className="flex flex-col items-center justify-center gap-6 p-4 text-sm leading-5.5">
             <Upload
               accept={'application/json'}
               beforeUpload={handleBeforeUpload}
-              className={cx(styles.wrapper)}
+              className={styles.wrapper}
               maxCount={1}
             >
-              <Button>{t('importModal.error.selectAnotherFile')}</Button>
+              <Button className="leading-5.5" size="lg">
+                {t('importModal.error.selectAnotherFile')}
+              </Button>
             </Upload>
           </div>
         ) : (
@@ -208,11 +200,11 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
       <Upload
         accept={'application/json'}
         beforeUpload={handleBeforeUpload}
-        className={cx(styles.wrapper)}
+        className={styles.wrapper}
         maxCount={1}
       >
         {/* a very hackable solution: add a pseudo before to have a large hot zone */}
-        <div className={cx(styles.children)}>{children}</div>
+        <div className={styles.children}>{children}</div>
       </Upload>
       {importPgData && (
         <ImportPreviewModal

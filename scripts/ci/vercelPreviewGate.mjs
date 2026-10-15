@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { appendFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -74,6 +75,9 @@ const inspectWorkflow = (run, jobs, workflowName) => {
   if (!run) return result('pending', `waiting for exact-head ${workflowName} run`);
   if (run.status !== 'completed') {
     return result('pending', `${workflowName} is ${run.status}/${run.conclusion}`);
+  }
+  if (run.conclusion !== 'success') {
+    return result('failed', `${workflowName} concluded ${run.conclusion}`);
   }
 
   const verificationJobs =
@@ -246,7 +250,7 @@ export const loadGateSnapshot = async ({
 }) => {
   const [runsResponse, checkRunsResponse, statusesResponse] = await Promise.all([
     fetchJson(
-      `${apiBase}/repos/${repository}/actions/runs?head_sha=${encodeURIComponent(headSha)}&per_page=100`,
+      `${apiBase}/repos/${repository}/actions/runs?head_sha=${encodeURIComponent(headSha)}&event=${encodeURIComponent(requiredEvent)}&per_page=100`,
       token,
     ),
     fetchJson(`${apiBase}/repos/${repository}/commits/${headSha}/check-runs?per_page=100`, token),
@@ -347,7 +351,7 @@ export const main = async () => {
   }
   if (!/^[0-9a-f]{40}$/.test(headSha)) throw new Error('HEAD_SHA must be a full lowercase Git SHA');
 
-  await waitForGate({
+  const options = {
     apiBase: process.env.GITHUB_API_URL || 'https://api.github.com',
     repository,
     token,
@@ -362,7 +366,19 @@ export const main = async () => {
     requiredEvent: process.env.REQUIRED_EVENT || 'push',
     timeoutMs: Number(process.env.GATE_TIMEOUT_MS || DEFAULT_GATE_TIMEOUT_MS),
     intervalMs: Number(process.env.GATE_POLL_INTERVAL_MS || 15 * 1000),
-  });
+  };
+  if (process.env.GATE_SINGLE_PASS === 'true') {
+    const snapshot = await loadGateSnapshot(options);
+    const evaluation = evaluateGateSnapshot({ ...snapshot, ...options });
+    if (process.env.GITHUB_OUTPUT) {
+      appendFileSync(process.env.GITHUB_OUTPUT, `ready=${evaluation.state === 'passed'}\n`);
+    }
+    console.log(`Gate ${evaluation.state}: ${evaluation.reasons.join('; ')}`);
+    // Pending/failure never authorizes a deployment. The next completion event
+    // (including a rerun) reevaluates; no runner remains alive to poll.
+    return evaluation;
+  }
+  await waitForGate(options);
   console.log(`Vercel Preview gate passed for ${headSha}`);
 };
 

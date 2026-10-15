@@ -1,13 +1,13 @@
 import { agentDisplayName, type SidebarAgentItem } from '@orvilo/types';
-import { createStaticStyles, cx } from 'antd-style';
-import { cn } from 'cn';
 import { ChevronsUpDownIcon } from 'lucide-react';
 import { memo, Suspense, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
+import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
 import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';
 import { AgentModalProvider } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -17,25 +17,6 @@ import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 
 import AgentItem from './AgentItem';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chevron: css`
-    color: ${cssVar.colorTextQuaternary};
-  `,
-  container: css`
-    cursor: pointer;
-
-    border-radius: 12px;
-    border-start-start-radius: 8px;
-    border-end-start-radius: 8px;
-
-    background: ${cssVar.colorFillTertiary};
-
-    :hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-}));
 
 interface AgentSelectorActionProps {
   onAgentChange: (id: string) => void;
@@ -48,6 +29,7 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
 
   const allAgents = useHomeStore(homeAgentListSelectors.allAgents);
   const keep = useKeepSidebarListed();
+  const builtinOffered = useBuiltinHarnessOffered();
   const agents = useMemo(() => keep(allAgents), [allAgents, keep]);
   const isAgentListInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
   const pageAgentId = useAgentStore((s) => s.builtinAgentIdMap['page-agent']);
@@ -60,7 +42,7 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
     const availableAgents = agents.filter((agent) => agent.type === 'agent');
     const hasPageAgent = availableAgents.some((agent) => agent.id === pageAgentId);
 
-    if (pageAgentId && !hasPageAgent) {
+    if (builtinOffered && pageAgentId && !hasPageAgent) {
       return [
         {
           avatar: pageAgentData?.avatar || null,
@@ -76,7 +58,7 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
     }
 
     return availableAgents;
-  }, [agents, pageAgentId, pageAgentData, t]);
+  }, [agents, builtinOffered, pageAgentId, pageAgentData, t]);
 
   const activeAgent = useMemo(
     () => agentsWithBuiltin.find((agent) => agent.id === agentId),
@@ -91,14 +73,7 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
   );
 
   const renderAgents = (
-    <div
-      className="flex flex-col gap-1 p-2"
-      style={{
-        maxHeight: '50vh',
-        overflowY: 'auto',
-        width: '100%',
-      }}
-    >
+    <div className="flex max-h-[50vh] w-full flex-col gap-1 overflow-y-auto p-2">
       {agentsWithBuiltin.map((agent) => (
         <AgentItem
           active={agent.id === agentId}
@@ -117,21 +92,28 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
-          <div
-            className={cn('flex items-center justify-center px-1.5', cx(styles.container))}
-            style={{ height: 28 }}
+          <Button
+            className="px-1.5 text-sm leading-5.5"
+            size="compact"
+            type="button"
+            variant="secondary"
+            aria-label={
+              activeAgent
+                ? agentDisplayName(activeAgent, t('untitledAgent', { ns: 'chat' }))
+                : t('builtinCopilot')
+            }
           >
             <div className="flex items-center gap-1">
               <AgentRuntimeIcon
-                size={22}
+                size={16}
                 type={activeAgent && (activeAgent.heterogeneousType || 'orvilo')}
               />
-              <ChevronsUpDownIcon className={styles.chevron} size={14} />
+              <ChevronsUpDownIcon className="size-4 text-foreground-quaternary" size={16} />
             </div>
-          </div>
+          </Button>
         }
       />
-      <PopoverContent align="start" side="top" style={{ padding: 0, width: 240 }}>
+      <PopoverContent align="start" className="w-60 p-0" side="top">
         <Suspense fallback={<SkeletonList rows={6} />}>
           <AgentModalProvider>
             {isAgentListInit ? renderAgents : <SkeletonList rows={6} />}

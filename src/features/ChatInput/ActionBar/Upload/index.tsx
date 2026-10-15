@@ -1,5 +1,4 @@
 import { validateVideoFileSize } from '@orvilo/utils/client';
-import { css, cx } from 'antd-style';
 import { FileUp, FolderUp, ImageUp, Paperclip } from 'lucide-react';
 import { memo, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -20,16 +19,9 @@ import { SimpleTooltip } from '../../SimpleTooltip';
 import { useChatInputStore } from '../../store';
 import { type ActionDropdownMenuItems } from '../components/ActionDropdown';
 import { ChatInputAction } from '../components/ChatInputAction';
-import { MENU_ICON_SIZE, useKnowledgeMenuItems } from './useKnowledgeMenuItems';
+import { useKnowledgeMenuItems } from './useKnowledgeMenuItems';
 
-const hotArea = css`
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-color: transparent;
-  }
-`;
+const hotArea = "before:content-[''] before:absolute before:inset-0 before:bg-transparent";
 
 const FileUpload = memo(() => {
   const { t } = useTranslation('chat');
@@ -85,13 +77,8 @@ const FileUpload = memo(() => {
       closeOnClick: false,
       disabled: !canUploadImage,
       icon: (
-        <span className="anticon" role="img">
-          <ImageUp
-            fill={'transparent'}
-            height={MENU_ICON_SIZE}
-            size={MENU_ICON_SIZE}
-            width={MENU_ICON_SIZE}
-          />
+        <span className="anticon inline-flex size-5 items-center justify-center" role="img">
+          <ImageUp className="size-4" fill={'transparent'} height={16} size={16} width={16} />
         </span>
       ),
       key: 'upload-image',
@@ -108,24 +95,19 @@ const FileUpload = memo(() => {
             return false;
           }}
         >
-          <div className={cx(hotArea)}>{t('upload.action.imageUpload')}</div>
+          <div className={hotArea}>{t('upload.action.imageUpload')}</div>
         </Upload>
       ) : (
         <SimpleTooltip side={'right'} title={t('upload.action.imageDisabled')}>
-          <div className={cx(hotArea)}>{t('upload.action.imageUpload')}</div>
+          <div className={hotArea}>{t('upload.action.imageUpload')}</div>
         </SimpleTooltip>
       ),
     },
     {
       closeOnClick: false,
       icon: (
-        <span className="anticon" role="img">
-          <FileUp
-            fill={'transparent'}
-            height={MENU_ICON_SIZE}
-            size={MENU_ICON_SIZE}
-            width={MENU_ICON_SIZE}
-          />
+        <span className="anticon inline-flex size-5 items-center justify-center" role="img">
+          <FileUp className="size-4" fill={'transparent'} height={16} size={16} width={16} />
         </span>
       ),
       key: 'upload-file',
@@ -160,20 +142,15 @@ const FileUpload = memo(() => {
             return false;
           }}
         >
-          <div className={cx(hotArea)}>{t('upload.action.fileUpload')}</div>
+          <div className={hotArea}>{t('upload.action.fileUpload')}</div>
         </Upload>
       ),
     },
     {
       closeOnClick: false,
       icon: (
-        <span className="anticon" role="img">
-          <FolderUp
-            fill={'transparent'}
-            height={MENU_ICON_SIZE}
-            size={MENU_ICON_SIZE}
-            width={MENU_ICON_SIZE}
-          />
+        <span className="anticon inline-flex size-5 items-center justify-center" role="img">
+          <FolderUp className="size-4" fill={'transparent'} height={16} size={16} width={16} />
         </span>
       ),
       key: 'upload-folder',
@@ -209,7 +186,7 @@ const FileUpload = memo(() => {
             return false;
           }}
         >
-          <div className={cx(hotArea)}>{t('upload.action.folderUpload')}</div>
+          <div className={hotArea}>{t('upload.action.folderUpload')}</div>
         </Upload>
       ),
     },

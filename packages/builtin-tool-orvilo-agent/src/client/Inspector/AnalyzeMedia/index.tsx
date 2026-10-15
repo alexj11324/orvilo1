@@ -1,7 +1,7 @@
 'use client';
 
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { cssVar, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -24,7 +24,7 @@ export const AnalyzeMediaInspector = memo<
 
   if (isArgumentsStreaming && !question) {
     return (
-      <div className={inspectorTextStyles.root}>
+      <div className={cx(inspectorTextStyles.root, 'text-sm leading-5.5')}>
         <span className={shinyTextStyles.shinyText}>
           {t('builtins.orvilo-agent.apiName.analyzeMedia')}
         </span>
@@ -37,6 +37,7 @@ export const AnalyzeMediaInspector = memo<
       className={cx(
         inspectorTextStyles.root,
         (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
+        'text-sm leading-5.5',
       )}
     >
       {question ? (
@@ -50,10 +51,7 @@ export const AnalyzeMediaInspector = memo<
         <span>{t('builtins.orvilo-agent.apiName.analyzeMedia')}</span>
       )}
       {!isArgumentsStreaming && !isLoading && mediaCount > 0 && (
-        <span
-          className="text-[12px]"
-          style={{ marginInlineStart: 6, color: cssVar.colorTextDescription }}
-        >
+        <span className="ms-1.5 text-xs leading-5 text-foreground-description">
           · {t('builtins.orvilo-agent.apiName.analyzeMedia.mediaCount', { count: mediaCount })}
         </span>
       )}

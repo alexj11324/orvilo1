@@ -55,6 +55,7 @@ const GithubBadge = memo(() => {
         <Badge variant="secondary">style</Badge>
         <Select
           options={styleOptions}
+          size="small"
           value={selectedStyle}
           onChange={(v) => {
             if (typeof v === 'string') setSelectedStyle(v as BadgeStyle);
@@ -70,13 +71,14 @@ const GithubBadge = memo(() => {
       />
       <div className="flex flex-row items-center gap-2">
         <Separator className="flex-1" />
-        <span style={{ color: 'var(--ant-color-text-description)', fontSize: 12 }}>OR</span>
+        <span style={{ color: 'var(--foreground-description)', fontSize: 12 }}>OR</span>
         <Separator className="flex-1" />
       </div>
       <div className="flex items-center gap-2">
         <Badge variant="secondary">theme</Badge>
         <Select
           options={themeOptions}
+          size="small"
           value={selectedTheme}
           onChange={(v) => {
             if (typeof v === 'string') setSelectedTheme(v as BadgeTheme);

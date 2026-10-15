@@ -17,7 +17,7 @@ describe('role class forms', () => {
     expect(cn('text-foreground', 'text-(length:--text-dense)')).toBe(
       'text-foreground text-(length:--text-dense)',
     );
-    expect(cn('rounded-lg', 'rounded-(--radius-card)')).toBe('rounded-(--radius-card)');
+    expect(cn('rounded-full', 'rounded-(--radius-card)')).toBe('rounded-(--radius-card)');
     expect(cn('rounded-(--radius-card)', 'rounded-full')).toBe('rounded-full');
   });
 
@@ -25,7 +25,9 @@ describe('role class forms', () => {
   // @theme. If `cn` learns custom names, the lookup can use the short form.
   it('cannot classify an invented role utility', () => {
     expect(cn('text-foreground', 'text-dense')).toBe('text-dense');
-    expect(cn('rounded-md', 'rounded-card')).toBe('rounded-md rounded-card');
+    expect(cn('rounded-(--radius-input)', 'rounded-card')).toBe(
+      'rounded-(--radius-input) rounded-card',
+    );
   });
 
   it('declares every role variable the lookup names', () => {
@@ -39,6 +41,13 @@ describe('role class forms', () => {
     expect(names).toEqual(
       expect.arrayContaining(['--text-dense', '--radius-card', '--radius-overlay']),
     );
-    for (const name of names) expect(root).toMatch(new RegExp(`${name}:\\s*\\d+px;`));
+    for (const name of names) {
+      if (name === '--shadow-raised') {
+        // Elevation consumes the resolved engine role; it is not a pixel dimension.
+        expect(root).toContain('--shadow-raised: var(--ant-box-shadow-tertiary, none);');
+      } else {
+        expect(root).toMatch(new RegExp(`${name}:\\s*\\d+px;`));
+      }
+    }
   });
 });

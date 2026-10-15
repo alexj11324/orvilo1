@@ -20,6 +20,12 @@ import { selectors, usePageEditorStore } from '../store';
 import Breadcrumb from './Breadcrumb';
 import { useMenu } from './useMenu';
 
+const HEADER_ACTION_SIZE = {
+  ...DESKTOP_HEADER_ICON_SMALL_SIZE,
+  blockSize: 32,
+  borderRadius: 'var(--radius-button)',
+} as const;
+
 const Header = memo(() => {
   const { t } = useTranslation('file');
   const [documentId, emoji, title, parentId, onBack] = usePageEditorStore((s) => [
@@ -47,6 +53,7 @@ const Header = memo(() => {
             <ActionIcon
               aria-label={t('back', { ns: 'common' })}
               icon={ArrowLeftIcon}
+              size={HEADER_ACTION_SIZE}
               onClick={onBack}
             />
           )}
@@ -58,12 +65,12 @@ const Header = memo(() => {
               {/* Icon */}
               {emoji && <Avatar avatar={emoji} shape={'square'} size={28} />}
               {/* Title */}
-              <div className="truncate min-w-0 font-medium" style={{ marginLeft: 4 }}>
+              <div className="ms-1 min-w-0 truncate text-sm leading-5.5 font-medium">
                 {title || t('pageEditor.titlePlaceholder')}
               </div>
             </>
           )}
-          {documentId && <AutoSaveHint documentId={documentId} style={{ marginLeft: 6 }} />}
+          {documentId && <AutoSaveHint documentId={documentId} style={{ marginInlineStart: 6 }} />}
         </>
       }
       right={
@@ -75,7 +82,7 @@ const Header = memo(() => {
             <ActionIcon
               aria-label={t('more', { ns: 'common' })}
               icon={MoreHorizontal}
-              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              size={HEADER_ACTION_SIZE}
             />
           </SidebarDropdownMenu>
           {canExpandRightPanel && (
@@ -83,6 +90,7 @@ const Header = memo(() => {
               hideWhenExpanded
               expand={showPageAgentPanel}
               showActive={false}
+              size={HEADER_ACTION_SIZE}
               onToggle={() => togglePageAgentPanel()}
             />
           )}

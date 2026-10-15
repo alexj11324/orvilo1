@@ -5,7 +5,7 @@ import { memo } from 'react';
 import { Badge } from '@/components/reui/badge';
 
 const styles = {
-  tag: 'm-0 py-1 px-3 rounded-[16px] text-muted-foreground',
+  tag: 'm-0 py-1 px-3 rounded-(--radius-chip) text-muted-foreground',
 };
 
 const TagList = memo<{ tags: string[] }>(({ tags }) => {

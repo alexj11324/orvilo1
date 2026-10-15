@@ -53,7 +53,7 @@ const SearchFiles = memo<SearchFilesProps>(({ listResults = [], messageId, plugi
 
   if (listResults.length === 0) {
     return (
-      <div className="rounded-md border bg-card">
+      <div className="rounded-(--radius-card) border bg-card">
         <SimpleEmpty description={t('localFiles.listFiles.emptyDirectory')} icon={FolderOpenIcon} />
       </div>
     );

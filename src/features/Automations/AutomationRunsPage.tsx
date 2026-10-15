@@ -45,9 +45,9 @@ const SEARCH_DEBOUNCE_MS = 400;
 
 const styles = {
   headerRow:
-    'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5 text-[12px] font-medium text-(--ant-color-text-tertiary) grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
+    'grid items-center gap-3 border-b border-sidebar-border px-2 py-1.5 text-xs font-medium text-foreground-tertiary grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
   row: 'grid cursor-pointer items-center gap-3 rounded-(--radius-card) p-2 hover:bg-accent grid-cols-[minmax(0,2fr)_90px_130px_120px_70px_40px]',
-  statCard: 'min-w-[140px] flex-1',
+  statCard: 'min-w-35 flex-1',
 };
 
 interface RunRow {
@@ -75,9 +75,9 @@ const StatCard = memo<{
   >
     <div className="flex items-center gap-2">
       {createElement(icon, { color: danger ? 'var(--destructive)' : 'var(--success)', size: 16 })}
-      <div className="text-[12px] text-muted-foreground">{label}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
     </div>
-    <div className="text-[22px] font-semibold">{value}</div>
+    <div className="text-xl font-semibold">{value}</div>
   </div>
 ));
 
@@ -139,7 +139,7 @@ const AutomationRunsPage = memo(() => {
         styles={{ left: { paddingLeft: 8 } }}
         left={
           <div className="flex items-center gap-2">
-            <HistoryIcon color={'var(--ant-color-text-tertiary)'} size={16} />
+            <HistoryIcon color={'var(--foreground-tertiary)'} size={16} />
             <div className="text-sm font-medium">{t('runs.title')}</div>
           </div>
         }
@@ -249,21 +249,21 @@ const AutomationRunsPage = memo(() => {
                     </WorkspaceLink>
                   </div>
                 ) : (
-                  <div className="truncate min-w-0 text-[13px] font-medium">
+                  <div className="truncate min-w-0 text-(length:--text-dense) font-medium">
                     {run.sourceTaskName ?? run.title ?? '—'}
                   </div>
                 )}
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {t(`run_source.${runTriggerLabel(run.trigger)}`)}
                 </div>
                 <div
-                  className="truncate min-w-0 text-[12px] text-muted-foreground"
+                  className="truncate min-w-0 text-xs text-muted-foreground"
                   title={run.createdAt ? formatAbsoluteDateTime(run.createdAt) : undefined}
                 >
                   {run.createdAt ? dayjs(run.createdAt).fromNow() : '—'}
                 </div>
                 <RunStatusBadge status={run.status} />
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {runDuration(
                     run.createdAt ? String(run.createdAt) : null,
                     run.completedAt ? String(run.completedAt) : null,

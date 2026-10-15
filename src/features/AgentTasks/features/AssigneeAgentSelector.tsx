@@ -1,6 +1,5 @@
 import { DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { UserRoundX } from 'lucide-react';
 import type { KeyboardEvent, ReactNode } from 'react';
@@ -8,6 +7,7 @@ import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useTranslation } from 'react-i18next';
 
 import { confirmModal } from '@/components/Modal';
+import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { type SidebarAgentItem } from '@/database/repositories/home';
 import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
@@ -48,34 +48,11 @@ type AgentOption =
   | { key: 'unassigned'; kind: 'unassigned' }
   | { agent: SidebarAgentItem; key: string; kind: 'agent' };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  searchInput: css`
-    width: 100%;
-    padding-block: 6px;
-    padding-inline: 10px;
-    border: none;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-family: inherit;
-    font-size: 13px;
-    color: ${cssVar.colorText};
-
-    background: transparent;
-    outline: none;
-
-    &::placeholder {
-      color: ${cssVar.colorTextPlaceholder};
-    }
-  `,
-  sectionHeader: css`
-    padding-block: 4px;
-    padding-inline: 8px;
-
-    font-size: 12px;
-    line-height: 1.4;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  searchInput:
+    'w-full rounded-(--radius-input) border-0 border-be border-divider bg-transparent dark:bg-transparent px-2.5 py-1.5 text-sm leading-5.5 text-foreground outline-none placeholder:text-(--foreground-placeholder)',
+  sectionHeader: 'px-2 py-1 text-xs leading-5 text-foreground-tertiary',
+};
 
 const matchesSearch = (agent: SidebarAgentItem, query: string) =>
   [agentDisplayName(agent), agent.title].some((label) =>
@@ -332,12 +309,13 @@ const AssigneeAgentSelector = memo<AssigneeAgentSelectorProps>(
           <Suspense fallback={<SkeletonList rows={6} />}>
             {isAgentListInit ? (
               <div className="flex flex-col" onClick={(event) => event.stopPropagation()}>
-                <input
+                <Input
                   autoFocus
                   aria-label={t('taskList.assigneeSearch.agentPlaceholder', { ns: 'chat' })}
                   className={styles.searchInput}
                   placeholder={t('taskList.assigneeSearch.agentPlaceholder', { ns: 'chat' })}
                   value={search}
+                  visualSize="normal"
                   onChange={(event) => setSearch(event.target.value)}
                   onKeyDown={handleSearchKeyDown}
                 />

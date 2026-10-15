@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import * as m from 'motion/react-m';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +22,7 @@ const ErrorDetails = memo<{
         <div
           className="flex flex-col gap-2"
           style={{
-            backgroundColor: cssVar.colorFillQuaternary,
+            backgroundColor: 'var(--fill-quaternary)',
             borderRadius: 8,
             fontFamily: 'monospace',
             fontSize: '11px',

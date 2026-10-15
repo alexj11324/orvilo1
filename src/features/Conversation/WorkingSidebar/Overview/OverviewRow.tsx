@@ -1,89 +1,23 @@
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import type { LucideProps } from 'lucide-react';
 import { ChevronRightIcon, ChevronsUpDownIcon } from 'lucide-react';
 import { type ComponentType, createElement, memo, type ReactNode } from 'react';
 
-export const rowStyles = createStaticStyles(({ css, cssVar }) => ({
-  changeAdditions: css`
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorSuccess};
-  `,
-  changeDeletions: css`
-    font-variant-numeric: tabular-nums;
-    color: ${cssVar.colorError};
-  `,
-  icon: css`
-    flex-shrink: 0;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  num: css`
-    margin-inline-end: 5px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  row: css`
-    cursor: pointer;
-
-    flex-shrink: 0;
-
-    min-height: 32px;
-    padding-block: 5px;
-    padding-inline: 8px;
-    border-radius: 8px;
-
-    transition: background-color 0.12s ease;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  rowAction: css`
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  rowStatic: css`
-    cursor: default;
-
-    &:hover {
-      background: transparent;
-    }
-  `,
-  rowTrailing: css`
-    display: flex;
-    flex-shrink: 0;
-    gap: 6px;
-    align-items: center;
-
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-    line-height: 18px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  rowValue: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    font-size: 13px;
-    line-height: 20px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  rowValueDanger: css`
-    color: ${cssVar.colorError};
-  `,
-  rowValueWeak: css`
-    font-size: 12.5px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+export const rowStyles = {
+  changeAdditions: 'tabular-nums text-xs leading-5 text-success-text',
+  changeDeletions: 'tabular-nums text-xs leading-5 text-destructive-text',
+  icon: 'shrink-0 text-foreground-tertiary',
+  num: 'me-1 font-mono text-xs leading-5 font-medium text-foreground-tertiary',
+  row: 'cursor-pointer shrink-0 min-h-8 py-1 px-2 rounded-(--radius-button) transition-colors duration-(--orvilo-motion-fast) hover:bg-accent',
+  rowAction: 'text-xs leading-5 font-medium text-muted-foreground',
+  rowStatic: 'cursor-default hover:bg-transparent',
+  rowTrailing:
+    'flex shrink-0 gap-1.5 items-center text-xs leading-5 tabular-nums text-foreground-tertiary',
+  rowValue:
+    'overflow-hidden flex-1 min-w-0 text-sm leading-5.5 text-foreground text-ellipsis whitespace-nowrap',
+  rowValueDanger: 'text-destructive-text',
+  rowValueWeak: 'text-muted-foreground',
+};
 
 export interface OverviewRowProps {
   danger?: boolean;
@@ -117,7 +51,7 @@ export const OverviewRow = memo<OverviewRowProps>(
       role={onClick || interactive ? 'button' : undefined}
       className={cn(
         'flex items-center gap-2.5',
-        cx(rowStyles.row, !onClick && !interactive && rowStyles.rowStatic),
+        cn(rowStyles.row, !onClick && !interactive && rowStyles.rowStatic),
       )}
       onClick={onClick}
     >
@@ -129,7 +63,7 @@ export const OverviewRow = memo<OverviewRowProps>(
         })}
       <span
         title={title}
-        className={cx(
+        className={cn(
           rowStyles.rowValue,
           danger && rowStyles.rowValueDanger,
           weak && rowStyles.rowValueWeak,
@@ -144,5 +78,5 @@ export const OverviewRow = memo<OverviewRowProps>(
 
 OverviewRow.displayName = 'OverviewRow';
 
-export const PickerGlyph = () => <ChevronsUpDownIcon size={13} style={{ opacity: 0.6 }} />;
-export const ChevronRight = () => <ChevronRightIcon size={14} style={{ opacity: 0.6 }} />;
+export const PickerGlyph = () => <ChevronsUpDownIcon className="opacity-60" size={14} />;
+export const ChevronRight = () => <ChevronRightIcon className="opacity-60" size={14} />;

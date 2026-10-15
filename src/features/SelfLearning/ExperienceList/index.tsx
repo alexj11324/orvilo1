@@ -96,7 +96,7 @@ const ExperienceList = memo(() => {
             {domain && activeAgentId && (
               <div className="flex flex-col gap-5" style={{ paddingBlock: '22px 64px' }}>
                 <div className="flex flex-col gap-1">
-                  <div className="text-[26px] font-bold">{t('experience.title')}</div>
+                  <div className="text-xl font-semibold">{t('experience.title')}</div>
                   <div className="text-muted-foreground">
                     {t('experience.subtitle', { count: habits.length, name: domain.title })}
                   </div>

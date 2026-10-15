@@ -1,5 +1,4 @@
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
-import { createStaticStyles } from 'antd-style';
 import { UserRoundX } from 'lucide-react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -9,6 +8,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { useFetchWorkspaceMembers } from '@/business/client/hooks/useFetchWorkspaceMembers';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
 import Avatar from '@/components/Avatar';
+import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -43,34 +43,11 @@ type MemberOption =
   | { key: 'unassigned'; kind: 'unassigned' }
   | { key: string; kind: 'member'; member: WorkspaceMemberRow };
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  searchInput: css`
-    width: 100%;
-    padding-block: 6px;
-    padding-inline: 10px;
-    border: none;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    font-family: inherit;
-    font-size: 13px;
-    color: ${cssVar.colorText};
-
-    background: transparent;
-    outline: none;
-
-    &::placeholder {
-      color: ${cssVar.colorTextPlaceholder};
-    }
-  `,
-  sectionHeader: css`
-    padding-block: 4px;
-    padding-inline: 8px;
-
-    font-size: 12px;
-    line-height: 1.4;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  searchInput:
+    'w-full rounded-(--radius-input) border-0 border-be border-divider bg-transparent dark:bg-transparent px-2.5 py-1.5 text-sm leading-5.5 text-foreground outline-none placeholder:text-(--foreground-placeholder)',
+  sectionHeader: 'px-2 py-1 text-xs leading-5 text-foreground-tertiary',
+};
 
 const memberName = (member: WorkspaceMemberRow) =>
   member.user?.fullName?.trim() ||
@@ -285,12 +262,13 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
           onClick={(event) => event.stopPropagation()}
         >
           {activeWorkspaceId && (
-            <input
+            <Input
               autoFocus
               aria-label={t('taskList.assigneeSearch.memberPlaceholder')}
               className={styles.searchInput}
               placeholder={t('taskList.assigneeSearch.memberPlaceholder')}
               value={search}
+              visualSize="normal"
               onChange={(event) => setSearch(event.target.value)}
               onKeyDown={handleSearchKeyDown}
             />

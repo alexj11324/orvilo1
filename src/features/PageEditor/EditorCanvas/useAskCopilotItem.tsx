@@ -4,30 +4,22 @@ import { type IEditor } from '@lobehub/editor';
 import { HIDE_TOOLBAR_COMMAND } from '@lobehub/editor';
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
 import { nanoid } from '@orvilo/utils';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { cn } from 'cn';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
+import { Button } from '@/components/ui/button';
 import { useConversationStore } from '@/features/Conversation/store';
 import type { ComposerTarget } from '@/features/Conversation/types';
 import { useFileStore } from '@/store/file';
-import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 import { usePageAgentPanelControl } from '../RightPanel/OverrideContext';
 import { usePageEditorStore } from '../store';
 
-const styles = createStaticStyles(({ css }) => ({
-  askCopilot: css`
-    border-radius: 6px;
-    color: ${cssVar.colorTextDescription};
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-}));
+const styles = {
+  askCopilot:
+    'justify-start gap-2 px-3 text-sm leading-5.5 text-foreground-description hover:text-muted-foreground',
+};
 
 export const useAskCopilotItem = (
   editor: IEditor | undefined,
@@ -49,13 +41,11 @@ export const useAskCopilotItem = (
     return [
       {
         children: (
-          <div
-            {...clickableProps()}
-            style={{ cursor: 'pointer' }}
-            className={cn(
-              cn('flex items-center gap-2 py-1.5 px-3', styles.askCopilot),
-              CLICKABLE_FOCUS_RING,
-            )}
+          <Button
+            className={styles.askCopilot}
+            size="compact"
+            type="button"
+            variant="ghost"
             onClick={() => {
               const xml = (editor.getSelectionDocument?.('litexml') as string) || '';
               const plainText = (editor.getSelectionDocument?.('text') as string) || '';
@@ -105,7 +95,7 @@ export const useAskCopilotItem = (
           >
             <AgentRuntimeIcon size={16} type="orvilo" />
             <span>{label}</span>
-          </div>
+          </Button>
         ),
         key: 'ask-copilot',
         label,

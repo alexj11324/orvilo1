@@ -27,13 +27,15 @@ const QuotaLimitError = memo<QuotaLimitErrorProps>(({ id, onRetry }) => {
       title={t('response.QuotaLimitReachedCloud')}
       action={
         <Button
+          multiline
+          className="min-w-0 max-w-full break-words [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
           disabled={onRetry ? false : disabled}
           loading={loading}
-          size="sm"
+          size="compact"
           variant="default"
           onClick={() => (onRetry ? onRetry() : retryParentMessage())}
         >
-          <RotateCw /> {t('unknownError.retry')}
+          <RotateCw className="size-4" size={16} /> {t('unknownError.retry')}
         </Button>
       }
     />

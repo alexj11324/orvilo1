@@ -11,9 +11,9 @@ import { TaskResultCard } from '../shared';
 
 const styles = {
   offBadge:
-    'inline-flex shrink-0 items-center gap-1 rounded-[999px] bg-accent px-2 py-0.5 text-[12px] text-[var(--ant-color-text-tertiary)]',
+    'inline-flex shrink-0 items-center gap-1 rounded-(--radius-chip) bg-accent px-2 py-0.5 text-xs text-foreground-tertiary',
   onBadge:
-    'inline-flex shrink-0 items-center gap-1 rounded-[999px] bg-[var(--ant-color-success-bg)] px-2 py-0.5 text-[12px] text-success',
+    'inline-flex shrink-0 items-center gap-1 rounded-(--radius-chip) bg-success-wash px-2 py-0.5 text-xs text-success',
 };
 
 export const SetTaskVerifyRender = memo<
@@ -31,7 +31,7 @@ export const SetTaskVerifyRender = memo<
   // requirement rendered as markdown.
   const statusBadge = showStatus ? (
     <span className={enabled ? styles.onBadge : styles.offBadge}>
-      {createElement(enabled ? Check : X, { size: 13 })}
+      {createElement(enabled ? Check : X, { size: 16 })}
       {t(enabled ? 'builtins.orvilo-task.verify.on' : 'builtins.orvilo-task.verify.off')}
     </span>
   ) : undefined;
@@ -40,7 +40,7 @@ export const SetTaskVerifyRender = memo<
     <TaskResultCard
       headerExtra={statusBadge}
       icon={ShieldCheck}
-      iconColor={enabled === false ? 'var(--ant-color-text-tertiary)' : 'var(--success)'}
+      iconColor={enabled === false ? 'var(--foreground-tertiary)' : 'var(--success)'}
       identifier={identifier}
       title={t('builtins.orvilo-task.apiName.setTaskVerify')}
     >

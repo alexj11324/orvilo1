@@ -1,11 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { createElement } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
+import GoalRoundTimeline, {
   formatGoalDuration,
   goalRoundEnd,
   goalRoundWidth,
   shouldShowGoalRoundTimeline,
 } from './GoalRoundTimeline';
+
+vi.unmock('@/components/ui/button');
+vi.unmock('@base-ui/react/button');
+vi.unmock('@base-ui/react/preview-card');
+afterEach(cleanup);
 
 describe('formatGoalDuration', () => {
   it('uses minutes before a full hour', () => {
@@ -73,5 +81,55 @@ describe('goalRoundEnd', () => {
   it('falls back to now when the settled timestamp is missing or unusable', () => {
     expect(goalRoundEnd({ status: 'passed' }, now)).toBe(now);
     expect(goalRoundEnd({ status: 'passed', updatedAt: 'not-a-date' }, now)).toBe(now);
+  });
+});
+
+describe('goal round keyboard audit', () => {
+  it('reaches each duration through real native targets and opens its audit on focus', async () => {
+    const user = userEvent.setup();
+    render(
+      createElement(GoalRoundTimeline, {
+        rounds: [
+          {
+            report: { verdict: 'passed' },
+            run: {
+              createdAt: '2026-08-07T10:00:00Z',
+              updatedAt: '2026-08-07T10:01:00Z',
+              roundIndex: 1,
+              status: 'passed',
+            },
+            usage: { cost: 0.002, tokens: 200 },
+          },
+          {
+            report: { verdict: 'failed' },
+            run: {
+              createdAt: '2026-08-07T10:01:00Z',
+              updatedAt: '2026-08-07T10:04:00Z',
+              roundIndex: 2,
+              status: 'failed',
+            },
+            usage: { cost: 0.003, tokens: 300 },
+          },
+        ],
+      }),
+    );
+    const rounds = screen.getAllByRole('button', { name: 'taskDetail.goalTimeline.round' });
+    expect(rounds).toHaveLength(2);
+    expect(rounds.every((round) => round instanceof HTMLButtonElement)).toBe(true);
+    await user.tab();
+    expect(rounds[0]).toHaveFocus();
+    expect(
+      await screen.findByText('taskDetail.goalTimeline.hover.duration', {}, { timeout: 2000 }),
+    ).toBeVisible();
+    expect(screen.getByText('1m')).toBeVisible();
+    await user.keyboard('{Enter}');
+    expect(rounds[0]).toHaveFocus();
+    await user.tab();
+    expect(rounds[1]).toHaveFocus();
+    await user.keyboard(' ');
+    expect(rounds[1]).toHaveFocus();
+    expect(
+      await screen.findByText('taskDetail.goalTimeline.hover.duration', {}, { timeout: 2000 }),
+    ).toBeVisible();
   });
 });

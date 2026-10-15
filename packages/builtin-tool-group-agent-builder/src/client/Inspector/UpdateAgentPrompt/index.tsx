@@ -13,7 +13,7 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 import type { UpdateAgentPromptParams, UpdateAgentPromptState } from '../../../types';
 
 const styles = {
-  agentName: 'max-w-[120px] truncate font-medium',
+  agentName: 'max-w-30 truncate font-medium',
   label: 'shrink-0 whitespace-nowrap text-muted-foreground',
   root: 'flex items-center gap-1.5 overflow-hidden min-w-0',
 };
@@ -62,7 +62,7 @@ export const UpdateAgentPromptInspector = memo<
     : 'builtins.orvilo-group-agent-builder.apiName.updateAgentPrompt';
 
   return (
-    <div className={cn('flex', 'items-center', 'gap-[6px]', styles.root)}>
+    <div className={cn('flex', 'items-center', 'gap-1.5', styles.root)}>
       <span
         className={cn(
           styles.label,
@@ -86,7 +86,7 @@ export const UpdateAgentPromptInspector = memo<
       {/* Show length diff when completed */}
       {!isLoading && !isArgumentsStreaming && lengthDiff !== null && (
         <span
-          className="font-mono rounded bg-muted px-1 whitespace-nowrap text-[12px]"
+          className="font-mono rounded bg-muted px-1 whitespace-nowrap text-xs"
           style={{ color: lengthDiff >= 0 ? 'var(--success)' : 'var(--destructive)' }}
         >
           {lengthDiff >= 0 ? '+' : ''}
@@ -97,8 +97,8 @@ export const UpdateAgentPromptInspector = memo<
       {/* Show streaming length */}
       {(isArgumentsStreaming || isLoading) && streamingLength > 0 && (
         <span
-          className="font-mono rounded bg-muted px-1 text-[12px]"
-          style={{ color: 'var(--ant-color-text-description)' }}
+          className="font-mono rounded bg-muted px-1 text-xs"
+          style={{ color: 'var(--foreground-description)' }}
         >
           ({streamingLength}
           {t('builtins.orvilo-agent-builder.inspector.chars')})

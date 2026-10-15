@@ -21,11 +21,11 @@ const styles = {
   stageRow: 'flex flex-1 gap-4 min-h-0',
   notes: 'overflow-y-auto flex flex-none flex-col gap-3 w-80 min-w-0',
   thumb:
-    'cursor-pointer overflow-hidden w-18 h-12 border-2 border-transparent rounded-(--ant-border-radius) [&_img]:block [&_img]:w-full [&_img]:h-full [&_img]:object-cover',
+    'cursor-pointer overflow-hidden w-18 h-12 border-2 border-transparent rounded-(--radius-card) [&_img]:block [&_img]:w-full [&_img]:h-full [&_img]:object-cover',
   thumbActive: 'border-primary',
   zoomBar:
-    'absolute z-5 bottom-4 start-1/2 -translate-x-1/2 flex gap-1 items-center py-1 px-2 border border-sidebar-border rounded-[99px] bg-popover shadow-(--shadow-popover)',
-  zoomLabel: 'min-w-11 text-[12px] tabular-nums text-muted-foreground text-center',
+    'absolute z-5 bottom-4 start-1/2 -translate-x-1/2 flex gap-1 items-center py-1 px-2 border border-sidebar-border rounded-full bg-popover shadow-(--shadow-popover)',
+  zoomLabel: 'min-w-11 text-xs tabular-nums text-muted-foreground text-center',
 };
 
 interface DesktopEvidenceReviewProps {
@@ -97,32 +97,34 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
               />
               <div className={styles.zoomBar}>
                 <ActionIcon
+                  className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                   disabled={zoom <= ZOOM_STEPS[0]}
                   icon={ZoomOut}
-                  size={'small'}
+                  size={{ blockSize: 32, size: 16 }}
                   title={t('acceptance.review.zoomOut')}
                   onClick={() => model.stepZoom(-1)}
                 />
                 <span className={styles.zoomLabel}>{Math.round(zoom * 100)}%</span>
                 <ActionIcon
+                  className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                   disabled={zoom >= ZOOM_STEPS.at(-1)!}
                   icon={ZoomIn}
-                  size={'small'}
+                  size={{ blockSize: 32, size: 16 }}
                   title={t('acceptance.review.zoomIn')}
                   onClick={() => model.stepZoom(1)}
                 />
               </div>
               <div className={styles.notes}>
                 <div className="flex flex-col gap-0.5">
-                  <div className="font-semibold text-[13px]">
+                  <div className="font-semibold text-(length:--text-dense)">
                     {t('acceptance.review.regionComments')}
                   </div>
-                  <div className="text-[12px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {t('acceptance.review.annotateHint')}
                   </div>
                 </div>
                 {activeAnnotations.length === 0 && (
-                  <div className="text-[12px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {t('acceptance.review.regionCommentsEmpty')}
                   </div>
                 )}
@@ -138,12 +140,12 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
       )}
       <div className={styles.footer}>
         {failed && (
-          <div className="text-destructive" role={'alert'}>
+          <div className="text-destructive-text" role={'alert'}>
             {t('acceptance.review.submitFailed')}
           </div>
         )}
         <div className="flex flex-col gap-2.5" style={{ width: '100%' }}>
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {hasEvidence
               ? t('acceptance.review.supplement')
               : t('acceptance.review.rejectDescription', { title: checkTitle })}
@@ -166,12 +168,19 @@ export const DesktopEvidenceReview = memo<DesktopEvidenceReviewProps>(({ checkTi
                 onRemove={model.removeAttachment}
               />
             </div>
-            <Button disabled={loading} onClick={close}>
+            <Button
+              className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
+              disabled={loading}
+              size="lg"
+              onClick={close}
+            >
               {t('acceptance.actions.cancel')}
             </Button>
             <Button
+              className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
               disabled={!canSubmit}
               loading={loading}
+              size="lg"
               variant="outline"
               onClick={model.submitReject}
             >

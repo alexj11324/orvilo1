@@ -40,7 +40,7 @@ const PHASE_META = {
   accepted: { color: 'var(--success)', icon: CheckCheck, settled: true },
   awaitingDecision: { color: 'var(--destructive)', icon: AlertTriangle, settled: true },
   awaitingReview: { color: 'var(--warning)', icon: Stamp, settled: true },
-  closed: { color: 'var(--ant-color-text-tertiary)', icon: CircleSlash, settled: true },
+  closed: { color: 'var(--foreground-tertiary)', icon: CircleSlash, settled: true },
   errored: { color: 'var(--destructive)', icon: CircleX, settled: true },
   rejected: { color: 'var(--destructive)', icon: RotateCcw, settled: false },
   repairing: { color: 'var(--warning)', icon: RefreshCw, settled: false },
@@ -169,16 +169,16 @@ const CreateGoalRender = memo<BuiltinRenderProps<CreateGoalParams, CreateGoalSta
             size: 15,
             style: { color: meta.color },
           })}
-          <div className="flex flex-col flex-1 gap-[2px]">
+          <div className="flex flex-col flex-1 gap-0.5">
             <div className="flex items-center justify-between">
-              <div className="text-[13px]">{phaseLabel(t, phase)}</div>
+              <div className="text-(length:--text-dense)">{phaseLabel(t, phase)}</div>
               {!meta.settled && (
-                <div className="font-mono rounded bg-muted px-1 text-[12px] text-muted-foreground">
+                <div className="font-mono rounded bg-muted px-1 text-xs text-muted-foreground">
                   {formatElapsed(now - new Date(pluginState.startedAt ?? Date.now()).getTime())}
                 </div>
               )}
             </div>
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {meta.settled
                 ? t('builtins.orvilo-task.goal.settledHint')
                 : t('builtins.orvilo-task.goal.runningHint', {

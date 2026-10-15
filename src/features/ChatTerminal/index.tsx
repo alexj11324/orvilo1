@@ -2,7 +2,6 @@
 
 import { DraggablePanel } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
-import { cssVar } from 'antd-style';
 import { lazy, memo, Suspense, useEffect, useState } from 'react';
 
 import { useToggleTerminalPanelHotkey } from '@/hooks/useHotkeys';
@@ -49,7 +48,7 @@ const ChatTerminalPanel = memo(() => {
 
   return (
     <DraggablePanel
-      backgroundColor={cssVar.colorBgContainer}
+      backgroundColor={'var(--card)'}
       expand={show}
       expandable={false}
       maxHeight={720}

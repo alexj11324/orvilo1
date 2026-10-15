@@ -1,11 +1,12 @@
 'use client';
 
 import { Freeze } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { AnimatePresence, useIsPresent } from 'motion/react';
 import * as m from 'motion/react-m';
 import { type ReactNode } from 'react';
 import { memo, useMemo, useRef } from 'react';
+import { useMediaQuery } from 'react-responsive';
 
 import RightPanel from '@/features/RightPanel';
 import { usePermission } from '@/hooks/usePermission';
@@ -24,33 +25,10 @@ import HistoryPanel from '../History';
 import { selectors, usePageEditorStore } from '../store';
 import { usePageAgentPanelControl } from './OverrideContext';
 
-const styles = createStaticStyles(({ css }) => ({
-  inner: css`
-    position: relative;
-
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-
-    width: 100%;
-    height: 100%;
-    min-height: 0;
-  `,
-  layer: css`
-    will-change: opacity, transform;
-
-    position: absolute;
-    inset: 0;
-
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-
-    min-height: 100%;
-    max-height: 100%;
-  `,
-}));
+const styles = {
+  inner: 'relative flex h-full w-full min-h-0 flex-1 flex-col overflow-hidden',
+  layer: 'absolute inset-0 flex min-h-full max-h-full flex-col overflow-hidden',
+};
 
 const ExitingFrozenContent = memo<{ children: ReactNode }>(({ children }) => {
   const isPresent = useIsPresent();
@@ -63,7 +41,8 @@ ExitingFrozenContent.displayName = 'PageEditorExitingFrozenContent';
 const PageEditorRightPanelContent = memo(() => {
   const rightPanelMode = usePageEditorStore(selectors.rightPanelMode);
   const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
-  const shouldUseMotion = !isPanelLayerMotionDisabled(animationMode);
+  const prefersReducedMotion = useMediaQuery({ query: '(prefers-reduced-motion: reduce)' });
+  const shouldUseMotion = !isPanelLayerMotionDisabled(animationMode) && !prefersReducedMotion;
 
   const previousModeRef = useRef(rightPanelMode);
   const directionRef = useRef<PanelSlideMotionDirection>(0);
@@ -89,13 +68,16 @@ const PageEditorRightPanelContent = memo(() => {
     <AnimatePresence custom={directionRef.current} initial={false} mode="sync">
       <m.div
         animate="animate"
-        className={styles.layer}
+        className={cn(styles.layer, 'will-change-[opacity,transform]')}
         custom={directionRef.current}
         exit="exit"
         initial="initial"
         key={activeContent.key}
-        transition={panelSlideMotionVariantsLeft.transition}
         variants={panelSlideMotionVariantsLeft}
+        transition={{
+          ...panelSlideMotionVariantsLeft.transition,
+          duration: 0.2,
+        }}
       >
         <ExitingFrozenContent>{activeContent.node}</ExitingFrozenContent>
       </m.div>

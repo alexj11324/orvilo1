@@ -8,10 +8,10 @@ import { createElement, memo } from 'react';
 import type { ModifyNodesState } from '../../../types';
 
 const styles = {
-  content: 'min-w-0 flex-1 truncate font-mono text-[12px] text-foreground',
-  index: 'w-[18px] shrink-0 text-end text-[12px] text-[var(--ant-color-text-quaternary)]',
+  content: 'min-w-0 flex-1 truncate font-mono text-xs text-foreground',
+  index: 'w-4.5 shrink-0 text-end text-xs text-foreground-quaternary',
   position:
-    'shrink-0 rounded-[4px] bg-accent px-1.5 py-px font-mono text-[11px] text-muted-foreground',
+    'shrink-0 rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-xs text-muted-foreground',
   row: 'flex items-center gap-2 px-3 py-2 not-last:[border-block-end:1px_dashed_var(--sidebar-border)]',
 };
 
@@ -45,7 +45,7 @@ export const ModifyNodesRender = memo<BuiltinRenderProps<ModifyNodesArgs, Modify
     const results = pluginState?.results ?? [];
 
     return (
-      <div className="w-full rounded-[var(--ant-border-radius)] border border-sidebar-border bg-card">
+      <div className="w-full rounded-(--radius-card) border border-sidebar-border bg-card">
         {operations.map((op, index) => {
           const meta = actionMeta[op.action];
           const details = getOperationDetails(op);
@@ -67,7 +67,7 @@ export const ModifyNodesRender = memo<BuiltinRenderProps<ModifyNodesArgs, Modify
                 <>
                   <X size={14} style={{ color: 'var(--destructive)', flexShrink: 0 }} />
                   {result?.error && (
-                    <span className="text-[11px] text-destructive">{result.error}</span>
+                    <span className="text-xs text-destructive">{result.error}</span>
                   )}
                 </>
               )}

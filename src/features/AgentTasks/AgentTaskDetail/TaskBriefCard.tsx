@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { Check, ChevronDownIcon, ChevronUpIcon, MoreHorizontal, Trash } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -77,8 +76,8 @@ const TaskBriefCard = memo<TaskBriefCardProps>(
       <div
         className={`flex flex-col gap-3 px-2 py-3 ${briefStyles.card}`}
         style={{
-          border: `1px solid ${cssVar.colorBorder}`,
-          borderRadius: cssVar.borderRadiusLG,
+          border: `1px solid ${'var(--border)'}`,
+          borderRadius: 'var(--radius-overlay)',
         }}
       >
         <div className="flex items-center gap-2" style={{ overflow: 'hidden' }}>
@@ -88,7 +87,7 @@ const TaskBriefCard = memo<TaskBriefCardProps>(
           </div>
           {isResolved && !expanded && (
             <div className="flex items-center gap-1">
-              <Check color={cssVar.colorTextQuaternary} size={14} />
+              <Check color={'var(--foreground-quaternary)'} size={14} />
               <div className={cn(briefStyles.resolvedTag)}>{t('brief.resolved')}</div>
             </div>
           )}

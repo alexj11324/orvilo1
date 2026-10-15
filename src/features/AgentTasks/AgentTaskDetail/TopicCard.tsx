@@ -1,6 +1,5 @@
 import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import {
   ChevronDown,
   ChevronRight,
@@ -323,15 +322,14 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
       className={
         primary
           ? 'flex flex-col gap-3'
-          : `relative flex flex-col gap-2 overflow-hidden rounded-md border px-2 py-2 transition-shadow ${runHighlighted ? 'ring-2 ring-ring' : ''}`
+          : `relative flex flex-col gap-2 overflow-hidden rounded-(--radius-card) border px-2 py-2 transition-[box-shadow] duration-(--orvilo-motion-mid) motion-reduce:transition-none transition-orvilo-task-run-highlight ${runHighlighted ? 'ring-2 ring-ring' : ''}`
       }
       style={
         primary
           ? undefined
           : {
-              borderColor: cssVar.colorBorderSecondary,
-              borderRadius: cssVar.borderRadiusLG,
-              background: cssVar.colorBgContainer,
+              borderColor: 'var(--divider)',
+              background: 'var(--card)',
             }
       }
     >
@@ -370,7 +368,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
             {activity.title}
           </div>
           {activity.seq != null && (
-            <div className="text-[12px] text-muted-foreground" style={{ flexShrink: 0 }}>
+            <div className="text-xs text-muted-foreground" style={{ flexShrink: 0 }}>
               #{activity.seq}
             </div>
           )}
@@ -386,7 +384,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
             </Tag>
           )}
           {durationText && (
-            <div className="text-[12px] text-muted-foreground" style={{ flexShrink: 0 }}>
+            <div className="text-xs text-muted-foreground" style={{ flexShrink: 0 }}>
               · {durationText}
             </div>
           )}
@@ -404,7 +402,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
 
         <div className="flex shrink-0 items-center gap-2">
           {startedAt && (
-            <div className="text-[12px] text-muted-foreground" title={startedAtTitle}>
+            <div className="text-xs text-muted-foreground" title={startedAtTitle}>
               {startedAt}
             </div>
           )}
@@ -412,7 +410,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
             <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
               <ActionIcon
                 icon={bodyExpanded ? ChevronDown : ChevronRight}
-                size={'small'}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                 title={t(bodyExpanded ? 'taskDetail.runCollapse' : 'taskDetail.runExpand')}
                 onClick={() => setBodyExpanded((open) => !open)}
               />
@@ -425,7 +423,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
                   <ActionIcon
                     aria-label={t('more', { ns: 'common' })}
                     icon={MoreHorizontal}
-                    size={'small'}
+                    size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                   />
                 }
               />
@@ -457,7 +455,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
           {activity.summary && !(primary && activity.content) && (
             <div
               className="text-sm"
-              style={{ color: cssVar.colorTextDescription, whiteSpace: 'pre-wrap' }}
+              style={{ color: 'var(--foreground-description)', whiteSpace: 'pre-wrap' }}
             >
               {activity.summary}
             </div>
@@ -492,13 +490,13 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
                     delivery, so it gets a real affordance. */}
                 <ActionIcon
                   icon={MessagesSquare}
-                  size={'small'}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                   title={t('taskDetail.openRunChat')}
                   onClick={handleOpen}
                 />
                 <ActionIcon
                   icon={MessageCircle}
-                  size={'small'}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                   title={t('taskDetail.runFollowUp')}
                   onClick={() => setCommenting(true)}
                 />

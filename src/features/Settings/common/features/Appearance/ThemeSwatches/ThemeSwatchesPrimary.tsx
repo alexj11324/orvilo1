@@ -1,7 +1,9 @@
 import { type PrimaryColors } from '@lobehub/ui';
-import { ColorSwatches, findCustomThemeName, primaryColors } from '@lobehub/ui';
+import { findCustomThemeName, primaryColors } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { ColorSwatches } from '@/components/ColorSwatches';
 
 interface IProps {
   onChange?: (v: PrimaryColors) => void;

@@ -5,8 +5,8 @@ import type { AutomationStatus } from './shared';
 
 const STATUS_COLOR: Record<AutomationStatus, string> = {
   active: 'var(--success)',
-  inactive: 'var(--ant-color-text-quaternary)',
-  paused: 'var(--ant-color-text-description)',
+  inactive: 'var(--foreground-quaternary)',
+  paused: 'var(--foreground-description)',
 };
 
 interface AutomationStatusBadgeProps {
@@ -28,7 +28,7 @@ const AutomationStatusBadge = memo<AutomationStatusBadgeProps>(({ status }) => {
           width: 8,
         }}
       />
-      <div className="text-[12px] text-muted-foreground">{t(`status.${status}`)}</div>
+      <div className="text-xs text-muted-foreground">{t(`status.${status}`)}</div>
     </div>
   );
 });

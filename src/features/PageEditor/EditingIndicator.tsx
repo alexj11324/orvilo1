@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { PencilIcon } from 'lucide-react';
 import { type CSSProperties, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -50,7 +49,7 @@ const EditingIndicator = memo(() => {
     if (!isLockPending) return null;
 
     return (
-      <div className="flex items-center gap-1" style={{ color: cssVar.colorTextTertiary }}>
+      <div className="flex items-center gap-1" style={{ color: 'var(--foreground-tertiary)' }}>
         <Spinner className="size-3.5" />
         <div className="truncate min-w-0" style={labelStyle}>
           {t('pageEditor.editMode.checking')}
@@ -73,7 +72,10 @@ const EditingIndicator = memo(() => {
         <TooltipTrigger
           render={
             <span style={{ display: 'inline-flex' }}>
-              <div className="flex items-center gap-1" style={{ color: cssVar.colorTextTertiary }}>
+              <div
+                className="flex items-center gap-1"
+                style={{ color: 'var(--foreground-tertiary)' }}
+              >
                 <PencilIcon size={14} />
                 <div className="truncate min-w-0" style={labelStyle}>
                   {label}

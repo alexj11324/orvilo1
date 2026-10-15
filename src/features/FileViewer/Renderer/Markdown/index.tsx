@@ -1,7 +1,6 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { CodeIcon, EyeIcon } from 'lucide-react';
 import { memo, useState } from 'react';
@@ -13,37 +12,11 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { useTextFileLoader } from '../../hooks/useTextFileLoader';
 
-const styles = createStaticStyles(({ css }) => ({
-  // Same floating-controls treatment as the LocalFile portal's text preview, so
-  // the render/raw toggle reads identically across both file-preview surfaces.
-  controls: css`
-    position: absolute;
-    z-index: 2;
-    inset-block-start: 8px;
-    inset-inline-end: 12px;
-
-    padding: 4px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-
-    opacity: 0.55;
-    background: ${cssVar.colorBgElevated};
-    backdrop-filter: blur(8px);
-    box-shadow: ${cssVar.boxShadowTertiary};
-
-    transition: opacity 150ms ease;
-
-    &:hover {
-      opacity: 1;
-    }
-  `,
-  page: css`
-    position: relative;
-    overflow: hidden auto;
-    width: 100%;
-    height: 100%;
-  `,
-}));
+const styles = {
+  controls:
+    'absolute z-2 inset-bs-2 inset-e-3 p-1 border border-divider rounded-(--radius-overlay) opacity-55 bg-popover backdrop-blur-[8px] shadow-(--shadow-raised) transition-opacity duration-(--orvilo-motion-mid) ease-[ease] hover:opacity-100 focus-within:opacity-100',
+  page: 'relative [overflow:hidden_auto] w-full h-full',
+};
 
 type PreviewMode = 'render' | 'raw';
 
@@ -64,7 +37,7 @@ const MarkdownViewer = memo<MarkdownViewerProps>(({ url }) => {
 
   if (loading || fileData === null)
     return (
-      <div className="flex items-center justify-center" style={{ height: '100%', width: '100%' }}>
+      <div className="flex items-center justify-center h-full w-full">
         <NeuralNetworkLoading size={36} />
       </div>
     );
@@ -78,12 +51,12 @@ const MarkdownViewer = memo<MarkdownViewerProps>(({ url }) => {
             if (typeof key === 'string') setMode(key as PreviewMode);
           }}
         >
-          <TabsList>
-            <TabsTrigger value="render">
+          <TabsList className="rounded-(--radius-button)">
+            <TabsTrigger className="rounded-(--radius-input)" value="render">
               <EyeIcon />
               {t('preview.render')}
             </TabsTrigger>
-            <TabsTrigger value="raw">
+            <TabsTrigger className="rounded-(--radius-input)" value="raw">
               <CodeIcon />
               {t('preview.raw')}
             </TabsTrigger>

@@ -10,6 +10,8 @@ import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { useGlobalStore } from '@/store/global';
+import { useUserStore } from '@/store/user';
+import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
 import { useCommandMenuAnalytics } from './analytics';
 import AskAgentCommands from './AskAgentCommands';
@@ -42,6 +44,7 @@ interface VisibleSearchResults {
  */
 const CommandMenuContent = memo<CommandMenuContentProps>(({ isClosing, onClose }) => {
   const { t } = useTranslation('common');
+  const animationMode = useUserStore(userGeneralSettingsSelectors.animationMode);
   const {
     handleBack,
     handleSendToSelectedAgent,
@@ -128,7 +131,12 @@ const CommandMenuContent = memo<CommandMenuContentProps>(({ isClosing, onClose }
   );
 
   return (
-    <div className={styles.overlay} data-closing={isClosing} onClick={onClose}>
+    <div
+      className={styles.overlay}
+      data-closing={isClosing}
+      data-motion-disabled={animationMode === 'disabled' || undefined}
+      onClick={onClose}
+    >
       <div onClick={(e) => e.stopPropagation()}>
         <Command
           className={styles.commandRoot}

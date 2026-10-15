@@ -240,8 +240,8 @@ describe('TopicItem active state', () => {
 
       const { container } = render(<TopicItem id="tpc_test" status={status} title="Topic" />);
       const statusIcon = container.querySelector('svg');
-      expect(statusIcon).toHaveAttribute('width', '14');
-      expect(statusIcon).toHaveAttribute('height', '14');
+      expect(statusIcon).toHaveAttribute('width', '16');
+      expect(statusIcon).toHaveAttribute('height', '16');
       expect(screen.getByText('Topic')).toBeInTheDocument();
     },
   );

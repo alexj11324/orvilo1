@@ -1,8 +1,7 @@
 'use client';
 
 import { type ChatInputProps } from '@lobehub/editor/react';
-import { createStaticStyles, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { type ReactNode, use } from 'react';
 import { memo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -40,33 +39,12 @@ import TypoBar from '../TypoBar';
 import ComposerBeam from './ComposerBeam';
 import ContextContainer from './ContextContainer';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    .show-on-hover {
-      opacity: 0;
-    }
-
-    &:hover {
-      .show-on-hover {
-        opacity: 1;
-      }
-    }
-  `,
-  footnote: css`
-    font-size: 10px;
-  `,
-  fullscreen: css`
-    position: absolute;
-    z-index: 100;
-    inset: 0;
-
-    width: 100%;
-    height: 100%;
-    margin-block-start: 0;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  container:
+    '[&_.show-on-hover]:opacity-0 hover:[&_.show-on-hover]:opacity-100 focus-within:[&_.show-on-hover]:opacity-100',
+  footnote: 'text-xs leading-5',
+  fullscreen: 'absolute z-100 inset-0 w-full h-full mbs-0 bg-card',
+};
 
 interface DesktopChatInputProps extends ActionToolbarProps {
   actionBarStyle?: React.CSSProperties;
@@ -198,12 +176,12 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
 
     const loadingLeftSlot = isConfigLoading ? (
       <div className="flex flex-row items-center gap-1.5 px-1">
-        <Skeleton style={{ height: 28, borderRadius: '50%', width: 28 }} />
-        <Skeleton style={{ height: 28, borderRadius: '50%', width: 28 }} />
+        <Skeleton className="size-7 rounded-full" />
+        <Skeleton className="size-7 rounded-full" />
       </div>
     ) : null;
     const loadingRightSlot = isConfigLoading ? (
-      <Skeleton style={{ height: 32, minWidth: 64, width: 64, borderRadius: 999 }} />
+      <Skeleton className="h-8 min-w-16 w-16 rounded-full" />
     ) : null;
     const noticeNode = !isConfigLoading && <ChatInputNotice />;
     const leftSlot = (
@@ -229,18 +207,20 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
 
     const content = (
       <div
-        className={cx('flex flex-col gap-2', cx(styles.container, expand && styles.fullscreen))}
         ref={slashMenuRef}
-        style={{
-          display: hidden ? 'none' : undefined,
-          paddingBlock: expand ? 0 : showFootnote ? '0 12px' : '0 8px',
-        }}
+        className={cn(
+          'flex flex-col gap-2',
+          styles.container,
+          expand && styles.fullscreen,
+          hidden && 'hidden',
+          !expand && (showFootnote ? 'pb-3' : 'pb-2'),
+        )}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
         <ComposerBeam active={beamActive} fullscreen={expand}>
           <PromptInput
-            className={cx(expand && 'flex h-full min-h-0 flex-1 flex-col')}
+            className={cn(expand && 'flex h-full min-h-0 flex-1 flex-col')}
             data-testid="chat-input"
             style={inputContainerProps?.style}
             externalEditor={{
@@ -252,7 +232,7 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
             // An empty draft disables Send, not the entire editable surface.
             // Override InputGroup's descendant-disabled wash for this composite control.
             groupClassName={cx(
-              'h-auto flex-col overflow-visible rounded-[12px] border-border bg-card text-card-foreground shadow-sm has-disabled:bg-card has-disabled:opacity-100 dark:bg-card dark:has-disabled:bg-card',
+              'h-auto flex-col overflow-visible rounded-(--radius-card) border-border bg-card text-card-foreground shadow-sm has-disabled:bg-card has-disabled:opacity-100 dark:bg-card dark:has-disabled:bg-card',
               expand && 'min-h-0 flex-1 rounded-none',
               inputContainerProps?.className,
             )}
@@ -267,15 +247,18 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
               </PromptInputHeader>
             )}
             <PromptInputBody
-              className={cx('block w-full overflow-y-auto px-3 py-2', expand && 'min-h-0 flex-1')}
+              className={cn(
+                'block w-full overflow-y-auto px-3 py-2 [&_[contenteditable]]:text-sm [&_[contenteditable]]:leading-5.5 [&_[contenteditable]]:[--lobe-markdown-font-size:var(--text-sm)] [&_[contenteditable]]:[--lobe-markdown-line-height:calc(22/14)] [&_[contenteditable]+div>span]:text-sm [&_[contenteditable]+div>span]:leading-5.5',
+                expand ? 'min-h-0 flex-1' : 'min-h-9 max-h-80',
+                !expand && inputContainerProps?.resize !== false && 'resize-y',
+              )}
               style={
                 expand
                   ? undefined
                   : {
                       height: chatInputHeight || undefined,
-                      maxHeight: inputContainerProps?.maxHeight ?? 320,
-                      minHeight: inputContainerProps?.minHeight ?? 36,
-                      resize: inputContainerProps?.resize === false ? undefined : 'vertical',
+                      maxHeight: inputContainerProps?.maxHeight,
+                      minHeight: inputContainerProps?.minHeight,
                     }
               }
               onPointerUp={(event) => {
@@ -315,10 +298,7 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
         </ComposerBeam>
         {controlBarInsideCard ? null : controlBarNode}
         {showFootnote && !expand && (
-          <div
-            className="flex flex-col items-center justify-center"
-            style={{ pointerEvents: 'none', zIndex: 100 }}
-          >
+          <div className="pointer-events-none z-100 flex flex-col items-center justify-center">
             <div className={cn('text-muted-foreground', styles.footnote)}>
               {t('input.disclaimer')}
             </div>

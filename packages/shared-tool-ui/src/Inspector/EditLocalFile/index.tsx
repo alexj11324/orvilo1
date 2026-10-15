@@ -12,7 +12,7 @@ import { FilePathDisplay } from '../../components/FilePathDisplay';
 import { inspectorTextStyles, shinyTextStyles } from '../../styles';
 
 const styles = {
-  separator: 'mx-0.5 text-[var(--ant-color-text-quaternary)]',
+  separator: 'mx-0.5 text-foreground-quaternary',
 };
 
 interface EditFileArgs {
@@ -62,7 +62,7 @@ export const EditLocalFileInspector = memo<EditLocalFileInspectorProps>(
     if (linesAdded > 0) {
       statsParts.push(
         <span
-          className="font-mono rounded bg-muted px-1 text-[12px]"
+          className="font-mono rounded-(--radius-chip) bg-muted px-1 text-xs"
           key="added"
           style={{ color: 'var(--success)' }}
         >
@@ -74,7 +74,7 @@ export const EditLocalFileInspector = memo<EditLocalFileInspectorProps>(
     if (linesDeleted > 0) {
       statsParts.push(
         <span
-          className="font-mono rounded bg-muted px-1 text-[12px]"
+          className="font-mono rounded-(--radius-chip) bg-muted px-1 text-xs"
           key="deleted"
           style={{ color: 'var(--destructive)' }}
         >

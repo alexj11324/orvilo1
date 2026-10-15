@@ -1,6 +1,5 @@
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { agentDisplayName } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { Bot, Lock, MessageSquareText, Users, Wrench } from 'lucide-react';
 import { useMemo } from 'react';
@@ -75,7 +74,7 @@ export const useMentionCategories = (): MentionCategory[] => {
             <span style={{ flex: 'none' }}>{displayName}</span>
             <span
               style={{
-                color: cssVar.colorTextDescription,
+                color: 'var(--foreground-description)',
                 fontSize: 12,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',

@@ -59,30 +59,18 @@ Dialect applies only entries with `folderMillis > max(created_at)`, so a marker 
 ## Auth & surfaces
 
 - **Clerk-era web session (post `feat/remove-better-auth`)**: sign-in lives on the accounts portal (`AUTH_ACCOUNTS_URL || https://accounts.aspectlylabs.com`). `/signin`/`/signup`/`/verify-email`/`/reset-password` are public bounce routes — the auth SPA `window.location.replace`s to `<portal>/login?return_url=<origin+callbackUrl>` (forwards `sign_out`/`reason`/`hl`). Local sign-in via the portal's email+password cannot finish locally because `POST /api/auth/clerk` needs `CLERK_SECRET_KEY`; without it the exchange 500s at the Clerk Backend API check (`assertClerkSessionActive`/`fetchClerkUser`), while signature failures correctly 401.
-- **Seeding a web session locally**: insert a `users` row (`id`, `email`, `normalized_email`, `username`, `full_name`, `email_verified=true`, `onboarding={"finishedAt":...,"version":1}` jsonb, `created_at`/`updated_at`/`last_active_at`) then `INSERT INTO auth_sessions (id, token, user_id, expires_at, created_at, updated_at)` with a random token and future `expires_at` — mirror `e2e/src/support/seedTestUser.ts createTestSession()`. Set cookie `orvilo_auth=<token>` (CDP `Network.setCookie` or `document.cookie`; `Secure` not needed on localhost). `GET /api/auth/session` returns 200 `{"user":{...}}` when valid, 401 `{"error":"unauthorized"` otherwise; legacy `<prefix>.session_token` (default `better-auth.session_token`) is dual-read from the same `auth_sessions` rows. `POST /api/auth/signout` deletes the row and clears both cookies; expired tokens are 401 + row-deleted on read.
-- `setup-auth.sh web-seed` seeds a session for `SEED_EMAIL` through `seed-session.mjs` (hashed token plus the Clerk account binding) and injects the `orvilo_auth` cookie. It needs `DATABASE_URL`, the seed user (`init-dev-env.sh seed-user`) and a dev server behind the Clerk stub (`ORVILO_CLERK_STUB=1 dev-up.sh restart`); a hand-inserted plain-token row is rejected with 401. On pre-migration branches it POSTed the removed `/api/auth/sign-in/email` and harvested `better-auth.*` cookies — use the auth_sessions insert above there.
+- **Seeding a web session locally**: use `.agents/acceptance/scripts/setup-auth.sh web-seed`, which delegates to `seed-session.mjs`. It creates a SHA-256 token digest and Clerk user/session binding, then injects the bearer token in `orvilo_auth`. It requires `DATABASE_URL`, the seed user (`init-dev-env.sh seed-user`), and the local Clerk stub (`ORVILO_CLERK_STUB=1 dev-up.sh restart`). Never insert a plain-token session row: current session resolution rejects it, unbound sessions and legacy `<prefix>.session_token` cookies. The stub is for isolated local verification only.
+- `GET /api/auth/session` returns the user only after app-session and upstream Clerk checks; `POST /api/auth/signout` deletes the app session and clears the current app cookie. Session storage and expiry are owned by `packages/database/src/models/authSession.ts` and `apps/server/src/services/auth/session.ts`.
 - Electron: `.agents/acceptance/scripts/electron-dev.sh start` (CDP :9222). `login-status` reports snapshot/golden-profile state; `stop` snapshots login into `~/.orvilo/agent-testing/electron-login`.
 - `/signin`+`/signup` are a separate auth bundle (`entry.auth.tsx`) — no SPAGlobalProvider, no session-auth listener. For non-`(main)` route probes use e.g. `/verify-im` (stays mounted signed-out).
 
-## Scripted Electron OIDC sign-in
+## Scripted Electron sign-in
 
-The dev Electron instance CAN be signed in fully scripted — no manual step needed. The OAuth browser hop is authorized on this machine (opens in Safari, the VM default browser).
+The default scripted sign-in is the seed session in `docs/development/local-setup.md`: `bun run dev:desktop:skip-login` or `bun run dev:desktop:login-local`, with the live CDP port. A hand-inserted plain token is rejected. There is still no IPC that accepts raw tokens.
 
-1. Boot signed-out: `electron-dev.sh start` → renderer lands on `/onboarding` LoginStep.
-2. LoginStep → "Connect to your own Orvilo server instance" → enter `http://localhost:26730` → Connect.
-   - Calls `connectRemoteServer({remoteServerUrl, storageMode:'selfHost'})` → `requestAuthorization`.
-3. `requestAuthorization` builds `{server}/oidc/auth?client_id=orvilo-desktop&redirect_uri={server}/oidc/callback/desktop&prompt=consent&scope=profile email offline_access&state&code_challenge` and `shell.openExternal` opens it in **Safari**.
-4. In Safari: better-auth login form → sign in (test account) → consent screen → authorize.
-   - First login pops a "Terms and Privacy Policy" modal → click **"Agree and continue"**.
-   - Then a "Save Password?" prompt → **"Not Now"**.
-5. Server `/oidc/callback/desktop` writes an `OAuthHandoff` record keyed by `state`; Safari lands on `/oauth/callback/success` ("Authorization Successful").
-6. Desktop polls `GET /oidc/handoff?id=<state>&client=desktop` → gets `code` → `POST /oidc/token` (PKCE) → `saveTokens` → `setRemoteServerConfig({active:true})` → broadcasts `authorizationSuccessful` → renderer routes to the post-onboarding target (`/tasks?onboarding=task`).
+**Leftover.** The old Safari consent click-through (better-auth form, Terms modal, Save Password) belonged to the removed better-auth OIDC handoff and must not be driven unless the task is specifically to test that retired screen and the code for it is still on the branch.
 
-### Persistence
-
-- `electron-dev.sh login-status` reads the golden profile `~/Library/Application Support/orvilo-desktop-dev`.
-- `save-login <id>` is **only for pool instances**, not the golden profile — the golden profile persists the refresh token itself (access token \~167 h). A future `electron-dev.sh start` boots signed in.
-- There is **no** `@IpcMethod`-decorated IPC that accepts raw tokens (`saveTokens` is not registered) — you cannot inject a session via `electronAPI.invoke`; the OIDC drive is the only scripted path.
+`electron-dev.sh login-status` reads the golden profile `~/Library/Application Support/orvilo-desktop-dev`. `save-login <id>` is only for pool instances, not the golden profile. The golden profile persists its own refresh token (access token about 167 hours), so a later `electron-dev.sh start` boots signed in.
 
 ## Logged-in reference browser (Brave profile copy + CDP)
 

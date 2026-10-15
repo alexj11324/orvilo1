@@ -43,10 +43,11 @@ const LibrarySearchBar = memo(() => {
   return (
     <SearchBar
       enableShortKey
+      className="min-w-0 flex-1"
       placeholder={t('library.hierarchy.search.placeholder')}
       shortKey={hotkey}
-      style={{ flex: 1, minWidth: 0 }}
       value={query}
+      visualSize="compact"
       onChange={handleChange}
       onKeyDown={handleKeyDown}
     />

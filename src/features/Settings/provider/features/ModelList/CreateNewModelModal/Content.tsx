@@ -1,13 +1,12 @@
 'use client';
 
-import type { FormInstance } from 'antd';
 import { memo } from 'react';
 
-import ModelConfigForm from './Form';
+import ModelConfigForm, { type ModelConfigFormHandle } from './Form';
 
 interface CreateNewModelContentProps {
   existingModelIds?: string[];
-  onFormReady: (instance: FormInstance) => void;
+  onFormReady: (instance: ModelConfigFormHandle | undefined) => void;
   showDeployName?: boolean;
 }
 

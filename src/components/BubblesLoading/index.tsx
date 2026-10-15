@@ -1,5 +1,3 @@
-import { cssVar } from 'antd-style';
-
 const BubblesLoading = () => {
   return (
     <div className={'flex items-center justify-center gap-1'} style={{ height: 24, width: 32 }}>
@@ -9,7 +7,7 @@ const BubblesLoading = () => {
           key={i}
           style={{
             animationDelay: `${i * 160}ms`,
-            background: cssVar.colorTextSecondary,
+            background: 'var(--muted-foreground)',
             height: 12,
             width: 12,
           }}

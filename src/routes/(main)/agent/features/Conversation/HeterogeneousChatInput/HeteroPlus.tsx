@@ -1,7 +1,6 @@
 'use client';
 
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import { CalendarClockIcon, CheckIcon, ChevronRight, PlusIcon, TypeIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -59,9 +58,9 @@ const HeteroPlus = memo(() => {
         children: OFFSETS_IN_HOURS.map((hours) => ({
           extra:
             armedHours === hours ? (
-              <CheckIcon size={16} style={{ color: cssVar.colorSuccess }} />
+              <CheckIcon size={16} style={{ color: 'var(--success)' }} />
             ) : (
-              <span style={{ color: cssVar.colorTextTertiary, fontSize: 12 }}>
+              <span style={{ color: 'var(--foreground-tertiary)', fontSize: 12 }}>
                 {formatAbsoluteDateTime(resolveScheduleTime(hours))}
               </span>
             ),

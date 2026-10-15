@@ -1,32 +1,11 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
-import { cn } from 'cn';
 import { useTranslation } from 'react-i18next';
 
 import { ProductLogo } from '@/components/Branding';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { copyToClipboard } from '@/utils/clipboard';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  header: css`
-    flex-shrink: 0;
-
-    height: 48px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  logo: css`
-    display: flex;
-    color: inherit;
-  `,
-  title: css`
-    min-width: 0;
-  `,
-}));
 
 interface ArtifactShareChromeProps {
   title?: string | null;
@@ -41,25 +20,20 @@ export const ArtifactShareChrome = ({ title }: ArtifactShareChromeProps) => {
   };
 
   return (
-    <div className={cn('flex items-center gap-3 justify-between', styles.header)}>
-      <div className="flex items-center flex-1" style={{ minWidth: 0 }}>
-        <a className={styles.logo} href={'/'}>
+    <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-be border-solid border-divider bg-card px-3 text-foreground">
+      <div className="flex min-w-0 flex-1 items-center">
+        <a className="flex text-inherit" href={'/'}>
           <ProductLogo size={28} />
         </a>
       </div>
-      <div className="flex flex-col" style={{ flex: 2, minWidth: 0 }}>
-        <div
-          className={cn('truncate min-w-0 font-semibold text-center text-[14px]', styles.title)}
-          style={{ margin: 0 }}
-        >
-          {title}
-        </div>
+      <div className="flex min-w-0 flex-2 flex-col">
+        <div className="m-0 min-w-0 truncate text-center text-sm font-semibold">{title}</div>
       </div>
       <div className="flex items-center flex-1 gap-2 justify-end">
-        <Button size={'small'} onClick={handleShare}>
+        <Button size={'normal'} variant={'outline'} onClick={handleShare}>
           {t('sharePage.artifact.share')}
         </Button>
-        <Button href={'/'} size={'small'} type={'primary'}>
+        <Button nativeButton={false} render={<a href={'/'} />} role={'link'} size={'normal'}>
           {t('sharePage.menu.goToOrvilo')}
         </Button>
       </div>

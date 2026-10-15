@@ -41,14 +41,14 @@ import { useElapsed } from './useElapsed';
 const styles = {
   attempt: 'py-1.5 [&+&]:[border-block-start:1px_dashed_var(--sidebar-border)]',
   blockedHead:
-    'cursor-pointer select-none flex gap-1.5 items-center py-2 px-3 text-[12px] text-[var(--ant-color-text-tertiary)] hover:text-muted-foreground',
+    'cursor-pointer select-none flex gap-1.5 items-center py-2 px-3 text-xs text-foreground-tertiary hover:text-muted-foreground',
   body: 'pt-2 pb-3.5 ps-6.5 pe-3',
-  deps: 'font-mono text-[12px] text-[var(--ant-color-text-quaternary)]',
+  deps: 'font-mono text-xs text-foreground-quaternary',
   dim: 'opacity-55 transition-opacity duration-150 ease-[ease] hover:opacity-100',
-  label: 'text-[12px] text-muted-foreground',
-  list: 'overflow-hidden border border-sidebar-border rounded-(--ant-border-radius) bg-card',
+  label: 'text-xs text-muted-foreground',
+  list: 'overflow-hidden border border-sidebar-border rounded-(--radius-card) bg-card',
   mono: 'font-mono tabular-nums',
-  num: 'flex-none min-w-5.5 font-mono text-[12px] text-[var(--ant-color-text-quaternary)]',
+  num: 'flex-none min-w-5.5 font-mono text-xs text-foreground-quaternary',
   option: 'grid grid-cols-[128px_1fr] gap-2 items-baseline',
 };
 
@@ -122,7 +122,7 @@ const AttemptReason = memo<{ reason?: string | null }>(({ reason }) => {
   const copy = coordinatorReasonCopy(reason);
   return (
     <div
-      className="truncate min-w-0 text-[12px] text-muted-foreground"
+      className="truncate min-w-0 text-xs text-muted-foreground"
       style={{ flex: 1, minWidth: 0 }}
     >
       {copy ? t(copy.key as any, copy.params) : (reason ?? '')}
@@ -142,7 +142,7 @@ const AttemptLedger = memo<{ view: GoalNodeView }>(({ view }) => {
       {view.attempts.map((attempt) => (
         <div className={cn('flex items-baseline gap-2.5', styles.attempt)} key={attempt.index}>
           <div
-            className={cn('text-[12px] text-muted-foreground', styles.mono)}
+            className={cn('text-xs text-muted-foreground', styles.mono)}
             style={{ flex: 'none', width: 60 }}
           >
             {t('goalProcess.attempts.nth', { index: attempt.index })}
@@ -150,7 +150,7 @@ const AttemptLedger = memo<{ view: GoalNodeView }>(({ view }) => {
           <div
             style={{ flex: 'none' }}
             className={cn(
-              'text-[12px]',
+              'text-xs',
               attempt.outcome === 'passed'
                 ? 'text-success'
                 : attempt.outcome === 'failed'
@@ -173,7 +173,7 @@ AttemptLedger.displayName = 'GoalAttemptLedger';
 const RunningClock = memo<{ startedAt?: Date }>(({ startedAt }) => {
   const elapsed = useElapsed(startedAt);
   if (!elapsed) return null;
-  return <div className={cn('text-[12px] text-muted-foreground', styles.mono)}>{elapsed}</div>;
+  return <div className={cn('text-xs text-muted-foreground', styles.mono)}>{elapsed}</div>;
 });
 
 RunningClock.displayName = 'GoalRunningClock';
@@ -181,7 +181,7 @@ RunningClock.displayName = 'GoalRunningClock';
 const DoneTime = memo<{ view: GoalNodeView }>(({ view }) => {
   const { text, title } = useActivityTime(view.node.resolvedAt ?? view.node.updatedAt);
   return (
-    <div className={cn('text-[12px] text-muted-foreground', styles.mono)} title={title}>
+    <div className={cn('text-xs text-muted-foreground', styles.mono)} title={title}>
       {text || '—'}
     </div>
   );
@@ -193,7 +193,7 @@ const StaleBody = memo<{ view: GoalNodeView }>(({ view }) => {
   const { t } = useTranslation('chat');
   const { text } = useActivityTime(view.heartbeatAt);
   return (
-    <div className="text-[13px] text-muted-foreground">
+    <div className="text-(length:--text-dense) text-muted-foreground">
       {t('goalProcess.stale.description', { duration: text })}
     </div>
   );
@@ -362,7 +362,7 @@ const FrontierRow = memo<{
             // State the problem itself, in the user's language when the
             // coordinator's vocabulary is recognized — the buttons below
             // already carry the choices, so no extra framing sentence.
-            <div className="text-[13px] font-medium">
+            <div className="text-(length:--text-dense) font-medium">
               {gateReasonText ?? view.decision.question}
             </div>
           )}
@@ -390,6 +390,7 @@ const FrontierRow = memo<{
                         render={
                           <span style={{ display: 'inline-flex' }}>
                             <Button
+                              size="compact"
                               variant={
                                 option.id === view.decision?.recommendedOptionId
                                   ? 'default'
@@ -450,9 +451,9 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, notice, onSelec
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between">
         <div className="flex items-baseline gap-2">
-          <div className="text-[16px] font-semibold">{t('goalProcess.frontier.title')}</div>
+          <div className="text-base font-semibold">{t('goalProcess.frontier.title')}</div>
           {graph.frontier.length > 0 && (
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {graph.needsYou > 0
                 ? `${t('goalProcess.frontier.needsYou', { count: graph.needsYou })} · `
                 : ''}
@@ -476,7 +477,7 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, notice, onSelec
                 <RunningGlyph size={16} />
                 <div className="flex flex-col gap-0.5">
                   <div className="font-medium">{t('goalProcess.planning.title')}</div>
-                  <div className="text-[12px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {t('goalProcess.planning.description')}
                   </div>
                 </div>
@@ -488,7 +489,7 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, notice, onSelec
                     ? t('goalProcess.frontier.achievedTitle')
                     : t('goalProcess.frontier.emptyTitle')}
                 </div>
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {achieved
                     ? t('goalProcess.frontier.achievedDescription')
                     : t('goalProcess.frontier.emptyDescription')}

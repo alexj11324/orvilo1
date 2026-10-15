@@ -9,21 +9,21 @@ import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { UpdateTaskStatusParams, UpdateTaskStatusState } from '../../../types';
 
-const STATUS_TONE: Partial<Record<TaskStatus, { bg: string; fg: string }>> = {
-  backlog: { bg: 'var(--accent)', fg: 'var(--muted-foreground)' },
-  canceled: { bg: 'var(--accent)', fg: 'var(--muted-foreground)' },
-  completed: { bg: 'var(--ant-color-success-bg)', fg: 'var(--success)' },
-  failed: { bg: 'var(--ant-color-error-bg)', fg: 'var(--destructive)' },
-  paused: { bg: 'var(--accent)', fg: 'var(--muted-foreground)' },
-  running: { bg: 'var(--ant-color-warning-bg)', fg: 'var(--warning)' },
-  scheduled: { bg: 'var(--ant-color-info-bg)', fg: 'var(--info)' },
+const STATUS_TONE: Partial<Record<TaskStatus, string>> = {
+  backlog: 'bg-accent text-muted-foreground',
+  canceled: 'bg-accent text-muted-foreground',
+  completed: 'bg-success-wash text-success-text',
+  failed: 'bg-destructive-wash text-destructive-text',
+  paused: 'bg-accent text-muted-foreground',
+  running: 'bg-warning-wash text-warning-text',
+  scheduled: 'bg-info-wash text-info-text',
 };
 
 const styles = {
   identifierChip:
-    'shrink-0 rounded-[999px] bg-accent px-2 py-0.5 font-mono text-[12px] text-muted-foreground',
-  separator: 'shrink-0 text-[var(--ant-color-text-quaternary)]',
-  statusChip: 'shrink-0 rounded-[999px] px-2 py-0.5 text-[12px]',
+    'shrink-0 rounded-(--radius-chip) bg-accent px-2 py-0.5 font-mono text-xs text-muted-foreground',
+  separator: 'shrink-0 text-foreground-quaternary',
+  statusChip: 'shrink-0 rounded-(--radius-chip) px-2 py-0.5 text-xs',
 };
 
 export const UpdateTaskStatusInspector = memo<
@@ -36,7 +36,7 @@ export const UpdateTaskStatusInspector = memo<
   const tone = status ? STATUS_TONE[status] : undefined;
 
   return (
-    <div className={inspectorTextStyles.root} style={{ flexWrap: 'wrap', gap: 4 }}>
+    <div className={cn(inspectorTextStyles.root, 'flex-wrap gap-1')}>
       <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-task.apiName.updateTaskStatus')}
       </span>
@@ -44,13 +44,7 @@ export const UpdateTaskStatusInspector = memo<
       {status && (
         <>
           <span className={styles.separator}>·</span>
-          <span
-            className={styles.statusChip}
-            style={{
-              background: tone?.bg ?? 'var(--accent)',
-              color: tone?.fg ?? 'var(--muted-foreground)',
-            }}
-          >
+          <span className={cn(styles.statusChip, tone ?? 'bg-accent text-muted-foreground')}>
             {status}
           </span>
         </>

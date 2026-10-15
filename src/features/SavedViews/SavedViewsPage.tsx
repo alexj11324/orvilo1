@@ -2,7 +2,7 @@
 
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import dayjs from 'dayjs';
 import { ListTodoIcon, PlusIcon, SearchXIcon, Settings2Icon } from 'lucide-react';
 import { createElement, memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -42,130 +42,30 @@ import {
   viewEntityFromSearch,
   writeSavedViewDirectoryPrefs,
 } from './savedViewDirectory';
+import nativeStyles from './SavedViews.module.css';
 import { savedViewTitle } from './savedViewTitle';
 
-const styles = createStaticStyles(({ css }) => ({
-  directoryTable: css`
-    /* Linear: a bare 12/450 column header, 60px rows, and group bars that
-       sit on the panel as rounded fills. */
-    thead th {
-      font-size: 12px;
-      font-weight: 450;
-      color: ${cssVar.colorTextDescription};
-      background: transparent;
-    }
-
-    tbody tr:not([data-list-section]) td {
-      padding-block: 20px;
-    }
-
-    tbody tr[data-list-section] td {
-      padding-block: 4px;
-      padding-inline: 8px;
-    }
-  `,
-  displayPopover: css`
-    width: 240px;
-    padding: 12px;
-  `,
-  emptyBlock: css`
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    align-items: flex-start;
-
-    width: 340px;
-  `,
-  entityTab: css`
-    display: inline-flex;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 10px;
-    border-radius: 9999px;
-
-    font-size: 12px;
-    font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-    text-decoration: none;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  entityTabActive: css`
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-  `,
-  groupBar: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    height: 36px;
-    padding-inline: 16px 8px;
-    border-radius: 8px;
-
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  groupDesc: css`
-    color: ${cssVar.colorTextDescription};
-  `,
-  groupTitle: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  nameCell: css`
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    min-width: 0;
-  `,
-  name: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  nameLink: css`
-    overflow: hidden;
-    min-width: 0;
-    color: inherit;
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  `,
-  ownerCell: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    min-width: 0;
-  `,
-}));
+const styles = {
+  directoryTable: nativeStyles.directoryTable,
+  displayPopover: nativeStyles.displayPopover,
+  emptyBlock: nativeStyles.emptyBlock,
+  entityTab: nativeStyles.entityTab,
+  entityTabActive: nativeStyles.entityTabActive,
+  groupBar: nativeStyles.groupBar,
+  groupDesc: nativeStyles.groupDesc,
+  groupTitle: nativeStyles.groupTitle,
+  nameCell: nativeStyles.nameCell,
+  name: nativeStyles.name,
+  nameLink: nativeStyles.nameLink,
+  ownerCell: nativeStyles.ownerCell,
+};
 
 const viewIcon = (view: SavedViewItem) =>
   view.entityType === 'project' ? PROJECT_ENTITY_ICON : ListTodoIcon;
 
 const renderDateCell = (value: Date | string | null | undefined) =>
   value ? (
-    <div
-      className="text-[13px] text-muted-foreground" // linear-token-override: retain the existing dense date-cell typography.
-      title={formatAbsoluteDateTime(value)}
-    >
+    <div className="text-xs leading-5 text-muted-foreground" title={formatAbsoluteDateTime(value)}>
       {dayjs(value).fromNow()}
     </div>
   ) : (
@@ -276,8 +176,9 @@ const SavedViewsPage = memo(() => {
             </span>
             <ActionIcon
               aria-label={createLabel}
+              className={nativeStyles.compactAction}
               icon={PlusIcon}
-              size={'small'}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               title={createLabel}
               onClick={() => setCreating(true)}
             />
@@ -317,7 +218,7 @@ const SavedViewsPage = memo(() => {
                 size: 16,
                 width: 16,
                 height: 16,
-                color: cssVar.colorTextSecondary,
+                color: 'var(--muted-foreground)',
                 fill: 'transparent',
               })}
             </span>
@@ -345,7 +246,7 @@ const SavedViewsPage = memo(() => {
           return (
             <div className={styles.ownerCell}>
               <Avatar avatar={owner.avatar} name={owner.name} size={20} />
-              <div className="truncate block text-[13px]">{owner.name}</div>
+              <div className="block min-w-0 truncate text-sm leading-5.5">{owner.name}</div>
             </div>
           );
         },
@@ -376,12 +277,13 @@ const SavedViewsPage = memo(() => {
     <Popover>
       <PopoverContent align="end" side="bottom">
         <div className={cx('flex flex-col gap-2.5', styles.displayPopover)}>
-          <div className="text-[12px] text-muted-foreground font-medium">
+          <div className="text-xs text-muted-foreground font-medium">
             {t('savedViews.ordering')}
           </div>
           <Select
             aria-label={t('savedViews.ordering')}
-            style={{ width: '100%' }}
+            className="w-full"
+            size="small"
             value={prefs.ordering}
             options={(['name', 'owner', 'updated', 'created'] as const).map((value) => ({
               label: t(`savedViews.column.${value}` as never),
@@ -399,7 +301,8 @@ const SavedViewsPage = memo(() => {
           />
           <Select
             aria-label={t('savedViews.direction')}
-            style={{ width: '100%' }}
+            className="w-full"
+            size="small"
             value={prefs.direction}
             options={(['asc', 'desc'] as const).map((value) => ({
               label: t(`savedViews.direction.${value}` as never),
@@ -409,7 +312,7 @@ const SavedViewsPage = memo(() => {
               if (value === 'asc' || value === 'desc') updatePrefs({ direction: value });
             }}
           />
-          <div className="text-[12px] text-muted-foreground font-medium">
+          <div className="text-xs text-muted-foreground font-medium">
             {t('savedViews.displayProperties')}
           </div>
           {(
@@ -420,7 +323,7 @@ const SavedViewsPage = memo(() => {
             ] as const
           ).map(([key, labelKey]) => (
             <div className="flex flex-row items-center justify-between" key={key}>
-              <div className="text-[13px]">{t(labelKey)}</div>
+              <div className="text-sm leading-5.5">{t(labelKey)}</div>
               <Switch
                 checked={prefs[key]}
                 onCheckedChange={(checked) => updatePrefs({ [key]: checked })}
@@ -433,8 +336,9 @@ const SavedViewsPage = memo(() => {
         render={
           <ActionIcon
             aria-label={t('savedViews.displayOptions')}
+            className={nativeStyles.compactAction}
             icon={Settings2Icon}
-            size="small"
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
             title={t('savedViews.displayOptions')}
           />
         }
@@ -445,13 +349,9 @@ const SavedViewsPage = memo(() => {
   return (
     <WorkSurface>
       <NavHeader
-        left={
-          <div className="font-medium" style={{ paddingInlineStart: 4 }}>
-            {t('tab.views')}
-          </div>
-        }
+        left={<div className="ps-1 font-medium">{t('tab.views')}</div>}
         right={
-          <Button size="sm" variant="default" onClick={() => setCreating(true)}>
+          <Button size="normal" variant="default" onClick={() => setCreating(true)}>
             {
               <span className="anticon" role="img">
                 <PlusIcon fill={'transparent'} height={16} size={16} width={16} />
@@ -481,8 +381,8 @@ const SavedViewsPage = memo(() => {
               </WorkspaceLink>
             </div>
             <SearchBar
+              className="ms-auto max-w-70"
               placeholder={t('savedViews.searchPlaceholder')}
-              style={{ marginInlineStart: 'auto', maxWidth: 280 }}
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
             />
@@ -508,15 +408,15 @@ const SavedViewsPage = memo(() => {
               <div className={styles.emptyBlock}>
                 <span className="anticon" role="img">
                   <ListTodoIcon
-                    color={cssVar.colorTextTertiary}
+                    className="text-foreground-tertiary"
                     fill={'transparent'}
                     height={56}
                     size={56}
                     width={56}
                   />
                 </span>
-                <div className="text-[15px] font-semibold">{t('tab.views')}</div>
-                <div className="text-[13px] text-muted-foreground">
+                <div className="text-sm font-semibold">{t('tab.views')}</div>
+                <div className="text-sm leading-5.5 text-muted-foreground">
                   {t(
                     entityType === 'project'
                       ? 'teams.viewDirectoryDescriptionProjects'
@@ -524,15 +424,16 @@ const SavedViewsPage = memo(() => {
                   )}
                 </div>
                 <div className="flex flex-row gap-2">
-                  <Button variant="default" onClick={() => setCreating(true)}>
+                  <Button size="normal" variant="default" onClick={() => setCreating(true)}>
                     {
                       <span className="anticon" role="img">
-                        <PlusIcon fill={'transparent'} height={14} size={14} width={14} />
+                        <PlusIcon fill={'transparent'} height={16} size={16} width={16} />
                       </span>
                     }
                     {t('teams.viewCreateNew')}
                   </Button>
                   <Button
+                    size="normal"
                     onClick={() => window.open(DIRECTORY_DOC_URL, '_blank', 'noopener,noreferrer')}
                   >
                     {t('teams.viewDocumentation')}

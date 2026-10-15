@@ -1,0 +1,7 @@
+/* The public FilePlugin theme.file slot targets this one native class.
+   No priority declarations or vendor DOM selectors are needed. */
+.fileWrapper.fileWrapper {
+  display: block;
+  width: 100%;
+  margin-block: calc(var(--spacing) * 2);
+}

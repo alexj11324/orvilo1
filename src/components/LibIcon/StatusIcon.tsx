@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { LockIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 
@@ -23,6 +22,7 @@ export const getLibraryIconVariant = ({
 };
 
 interface LibraryStatusIconProps {
+  color?: string;
   memberRestricted?: boolean;
   size?: number;
   visibility?: 'private' | 'public' | null;
@@ -34,15 +34,18 @@ interface LibraryStatusIconProps {
  * ordinary workspace library → folder.
  */
 const LibraryStatusIcon = memo<LibraryStatusIconProps>(
-  ({ memberRestricted, size = 20, visibility }) => {
+  ({ color, memberRestricted, size = 20, visibility }) => {
     const variant = getLibraryIconVariant({ memberRestricted, visibility });
 
     if (variant === 'private') {
-      return createElement(LockIcon, { size: 16, style: { color: cssVar.colorTextDescription } });
+      return createElement(LockIcon, {
+        size: 16,
+        style: { color: color ?? 'var(--foreground-description)' },
+      });
     }
-    if (variant === 'restricted') return <LockedLibIcon size={size} />;
+    if (variant === 'restricted') return <LockedLibIcon color={color} size={size} />;
 
-    return <LibIcon size={size} />;
+    return <LibIcon color={color} size={size} />;
   },
 );
 

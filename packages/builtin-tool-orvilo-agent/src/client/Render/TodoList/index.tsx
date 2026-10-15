@@ -22,8 +22,8 @@ export interface TodoListRenderState {
 // Styles matching TodoItemRow in SortableTodoList
 const styles = {
   itemRow: 'w-full border-b border-dashed border-sidebar-border px-3 py-2.5 last:border-b-0',
-  processingRow: 'flex items-center gap-[7px]',
-  textCompleted: 'text-(--ant-color-text-quaternary) line-through',
+  processingRow: 'flex items-center gap-1.75',
+  textCompleted: 'text-foreground-quaternary line-through',
   textProcessing: 'text-foreground',
   textTodo: 'text-muted-foreground',
 };
@@ -92,7 +92,7 @@ const TodoListUI = memo<TodoListUIProps>(({ items }) => {
       style={{
         background: 'var(--card)',
         border: `1px solid var(--sidebar-border)`,
-        borderRadius: 'var(--ant-border-radius)',
+        borderRadius: 'var(--radius-card)',
         width: '100%',
       }}
     >

@@ -18,7 +18,7 @@ export const CreateAgentStreaming = memo<BuiltinStreamingProps<CreateAgentParams
       {title && (
         <div className="flex flex-col gap-1">
           <div className="text-xs leading-[inherit] font-medium text-muted-foreground">Title</div>
-          <div className="text-[13px]">{title}</div>
+          <div className="text-(length:--text-dense)">{title}</div>
         </div>
       )}
       {description && (
@@ -26,13 +26,13 @@ export const CreateAgentStreaming = memo<BuiltinStreamingProps<CreateAgentParams
           <div className="text-xs leading-[inherit] font-medium text-muted-foreground">
             Description
           </div>
-          <div className="text-[13px]">{description}</div>
+          <div className="text-(length:--text-dense)">{description}</div>
         </div>
       )}
       {(model || provider) && (
         <div className="flex flex-col gap-1">
           <div className="text-xs leading-[inherit] font-medium text-muted-foreground">Model</div>
-          <div className="text-[13px]">
+          <div className="text-(length:--text-dense)">
             {provider && `${provider}/`}
             {model}
           </div>
@@ -54,7 +54,7 @@ export const CreateAgentStreaming = memo<BuiltinStreamingProps<CreateAgentParams
             System Prompt
           </div>
           <div
-            className="rounded-md border bg-card"
+            className="rounded-(--radius-card) border bg-card"
             style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}
           >
             <Markdown animated variant={'chat'}>

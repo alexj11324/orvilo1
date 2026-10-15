@@ -1,14 +1,13 @@
 'use client';
-
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-import { cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { Fragment, memo, useCallback, useState } from 'react';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { Document, Page, pdfjs } from '@/libs/pdfjs';
-import { lambdaQuery } from '@/libs/trpc/client';
+import { chunkQueries } from '@/services/reactQueryBindings';
 
 import HighlightLayer from './HighlightLayer';
 import { styles } from './style';
@@ -47,7 +46,7 @@ const PDFViewer = memo<PDFViewerProps>(({ url, fileId }) => {
     setIsLoaded(true);
   };
 
-  const { data } = lambdaQuery.chunk.getChunksByFileId.useInfiniteQuery(
+  const { data } = chunkQueries.getChunksByFileId.useInfiniteQuery(
     { id: fileId },
     { getNextPageParam: (lastPage) => lastPage.nextCursor },
   );

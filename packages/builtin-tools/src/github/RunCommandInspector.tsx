@@ -3,56 +3,19 @@
 import { Github } from '@lobehub/icons';
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { Check, X } from 'lucide-react';
 import { memo } from 'react';
 
 import { getGhSubcommand, type GithubRunCommandArgs, type GithubRunCommandState } from './utils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  chip: css`
-    overflow: hidden;
-    display: inline-flex;
-    flex-shrink: 1;
-    gap: 6px;
-    align-items: center;
-
-    min-width: 0;
-    padding-block: 2px;
-    padding-inline: 10px;
-    border-radius: 999px;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-  command: css`
-    overflow: hidden;
-
-    min-width: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  ghPrefix: css`
-    flex-shrink: 0;
-
-    margin-inline-end: 6px;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  icon: css`
-    flex-shrink: 0;
-    margin-inline-end: 6px;
-    color: ${cssVar.colorTextDescription};
-  `,
-  statusIcon: css`
-    margin-inline-start: 4px;
-  `,
-}));
+const styles = {
+  chip: 'inline-flex min-w-0 shrink items-center gap-1.5 overflow-hidden rounded-(--radius-chip) bg-muted px-2.5 py-0.5',
+  command: 'min-w-0 truncate font-mono text-xs leading-5 text-foreground',
+  ghPrefix: 'me-1.5 shrink-0 font-mono text-xs leading-5 text-muted-foreground',
+  icon: 'me-1.5 shrink-0 text-muted-foreground',
+  statusIcon: 'ms-1',
+};
 
 const GithubRunCommandInspector = memo<
   BuiltinInspectorProps<GithubRunCommandArgs, GithubRunCommandState>
@@ -68,7 +31,7 @@ const GithubRunCommandInspector = memo<
 
   return (
     <div className={inspectorTextStyles.root}>
-      <Github className={styles.icon} size={14} />
+      <Github className={styles.icon} size={16} />
       <span className={cx(styles.ghPrefix, pulse && shinyTextStyles.shinyText)}>gh</span>
       {label && (
         <span className={styles.chip}>
@@ -77,9 +40,9 @@ const GithubRunCommandInspector = memo<
       )}
       {hasResult ? (
         isSuccess ? (
-          <Check className={styles.statusIcon} color={cssVar.colorSuccess} size={14} />
+          <Check className={cx(styles.statusIcon, 'text-success-text')} size={16} />
         ) : (
-          <X className={styles.statusIcon} color={cssVar.colorError} size={14} />
+          <X className={cx(styles.statusIcon, 'text-destructive-text')} size={16} />
         )
       ) : null}
     </div>

@@ -12,7 +12,7 @@ import GoalStatusGlyph from './GoalStatusGlyph';
 import type { GoalItemProps } from './types';
 
 const styles = {
-  row: 'min-w-0 rounded-none [&+&]:[border-block-start:1px_solid_var(--sidebar-border)] hover:bg-(--ant-color-fill-quaternary)',
+  row: 'min-w-0 rounded-none [&+&]:[border-block-start:1px_solid_var(--sidebar-border)] hover:bg-fill-quaternary',
 };
 
 export const GoalListItem = memo<GoalItemProps>(({ goal: item }) => {
@@ -42,14 +42,12 @@ export const GoalListItem = memo<GoalItemProps>(({ goal: item }) => {
       onKeyDown={handleKeyDown}
     >
       <div className="flex flex-col gap-1" style={{ flex: 1, minWidth: 0 }}>
-        <div className="flex items-center gap-[7px]">
-          <GoalStatusGlyph size={13} status={goal.status} />
-          <div className="truncate min-w-0 text-[15px] font-semibold">{goal.title}</div>
+        <div className="flex items-center gap-1.75">
+          <GoalStatusGlyph size={16} status={goal.status} />
+          <div className="truncate min-w-0 text-sm font-semibold">{goal.title}</div>
         </div>
         {goal.requirement && goal.requirement !== goal.title && (
-          <div className="truncate min-w-0 text-[12px] text-muted-foreground">
-            {goal.requirement}
-          </div>
+          <div className="truncate min-w-0 text-xs text-muted-foreground">{goal.requirement}</div>
         )}
       </div>
       <GoalProgress
@@ -60,7 +58,7 @@ export const GoalListItem = memo<GoalItemProps>(({ goal: item }) => {
         totalRunCost={item.totalRunCost}
         totalRunDuration={item.totalRunDuration}
       />
-      <ArrowRightIcon color={'var(--ant-color-text-quaternary)'} size={16} />
+      <ArrowRightIcon color={'var(--foreground-quaternary)'} size={16} />
     </div>
   );
 });

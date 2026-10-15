@@ -6,7 +6,6 @@ import {
 import { getJinaSearchBaseUrl } from '@orvilo/utils';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
-import urlJoin from 'url-join';
 
 import { type SearchServiceImpl } from '../type';
 import { type JinaResponse, type JinaSearchParameters } from './type';
@@ -28,7 +27,7 @@ export class JinaImpl implements SearchServiceImpl {
 
   async query(query: string, params: SearchParams = {}): Promise<UniformSearchResponse> {
     log('Starting Jina query with query: "%s", params: %o', query, params);
-    const endpoint = urlJoin(this.baseUrl, '/');
+    const endpoint = new URL('/', this.baseUrl).href;
 
     const body: JinaSearchParameters = {
       q: query,

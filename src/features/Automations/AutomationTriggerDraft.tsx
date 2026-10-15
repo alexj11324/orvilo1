@@ -42,8 +42,8 @@ export interface TriggerDraft {
 }
 
 const styles = {
-  fieldLabel: 'text-[12px] text-muted-foreground',
-  preview: 'rounded-[12px] bg-(--ant-color-fill-quaternary) px-3.5 py-3',
+  fieldLabel: 'text-xs text-muted-foreground',
+  preview: 'rounded-(--radius-card) bg-fill-quaternary px-3.5 py-3',
 };
 
 interface AutomationTriggerDraftProps {
@@ -149,7 +149,7 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>((props) => {
       <div className="flex items-center gap-3">
         <div className="flex flex-col flex-1 gap-0.5">
           <div className="font-medium">{t('trigger.section', { ns: 'automation' })}</div>
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {summary ?? t('trigger.unconfigured', { ns: 'automation' })}
           </div>
         </div>
@@ -168,7 +168,7 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>((props) => {
 
       {enabled && nextRun && (
         <div className={cn(styles.preview, 'flex items-center gap-2.5')}>
-          <Clock color={'var(--ant-color-text-description)'} size={16} />
+          <Clock color={'var(--foreground-description)'} size={16} />
           <div className="text-muted-foreground">{t('taskSchedule.nextRun', { ns: 'chat' })}</div>
           <div className="font-medium" style={{ flex: 1, textAlign: 'right' }}>
             {formatAbsoluteDateTime(nextRun.toDate())}

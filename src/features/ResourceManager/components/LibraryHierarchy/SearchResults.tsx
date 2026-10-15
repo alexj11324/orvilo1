@@ -1,7 +1,6 @@
 'use client';
 
 import { useDebounce } from 'ahooks';
-import { cssVar } from 'antd-style';
 import { SearchXIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -115,7 +114,7 @@ const SearchResults = memo<SearchResultsProps>(({ libraryId, query }) => {
     >
       <span className="anticon" role="img">
         <SearchXIcon
-          color={cssVar.colorTextQuaternary}
+          color={'var(--foreground-quaternary)'}
           fill={'transparent'}
           height={32}
           size={32}

@@ -423,7 +423,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
               );
             }}
           >
-            <SelectTrigger className={settingsStyles.select}>
+            <SelectTrigger className={settingsStyles.select} size="normal">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -448,7 +448,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
               );
             }}
           >
-            <SelectTrigger className={settingsStyles.select}>
+            <SelectTrigger className={settingsStyles.select} size="normal">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -473,7 +473,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
               );
             }}
           >
-            <SelectTrigger className={settingsStyles.select}>
+            <SelectTrigger className={settingsStyles.select} size="normal">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

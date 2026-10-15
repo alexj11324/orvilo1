@@ -113,7 +113,7 @@ export function Pattern() {
         {items.map((item) => (
           <SortableItem key={item.id} value={item.id}>
             <div
-              className="bg-background border-border hover:bg-accent/50 rounded-md flex cursor-pointer items-center gap-3 border p-3 transition-colors"
+              className="bg-background border-border hover:bg-accent/50 rounded-(--radius-card) flex cursor-pointer items-center gap-3 border p-3 transition-colors"
               onClick={() => {}}
             >
               <SortableItemHandle className="text-muted-foreground hover:text-foreground">

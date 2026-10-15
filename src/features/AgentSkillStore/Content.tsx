@@ -32,7 +32,7 @@ const AgentSkillStoreContent = memo<{ agentId: string }>(({ agentId }) => {
     <div className="flex flex-col gap-2 w-full" style={{ maxHeight: '75vh' }}>
       {isComposioEnabled ? (
         <div
-          className="flex flex-col h-[496px]"
+          className="flex flex-col h-124"
           style={{ marginBlockEnd: -12, marginInline: -16, overflow: 'auto' }}
         >
           <div className={gridStyles.grid}>

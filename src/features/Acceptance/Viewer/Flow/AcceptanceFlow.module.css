@@ -1,0 +1,19 @@
+/* Fullscreen remains the actual engine popup-base tier inside the chosen
+   portal host. This public native variable is the old cssVar.zIndexPopupBase
+   value, not a new fixed z-index or a copied theme palette. */
+.fullscreen {
+  position: fixed;
+  z-index: var(--z-popup-base);
+  inset: 0;
+  background: var(--card);
+}
+@media (width <= 640px) {
+  .fullscreen { flex-direction: column; }
+}
+/* Shared acceptance reading measure: layout.ts maxWidth920 - 2*paddingInline24
+   =872px. Keep the exact absolute CSS measure rather than round/root-scale it. */
+.measure {
+  width: 100%;
+  max-width: 872px;
+  margin-inline: auto;
+}

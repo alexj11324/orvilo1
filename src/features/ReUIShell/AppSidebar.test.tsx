@@ -85,7 +85,6 @@ vi.mock('@/libs/swr', async (original) => ({
     data: [{ id: 'notice&1', title: 'Test notification', createdAt: new Date(0), isRead: false }],
   }),
 }));
-vi.mock('./Logo', () => ({ Logo: () => null }));
 vi.mock('@/business/client/hooks/useWorkspaces', () => ({ useWorkspaces: () => workspace.items }));
 vi.mock('@/business/client/hooks/useActiveWorkspace', () => ({
   useActiveWorkspace: () => workspace.items.find((item) => item.id === 'w1') ?? null,

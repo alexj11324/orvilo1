@@ -3,7 +3,7 @@
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { cn } from 'cn';
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -19,9 +19,9 @@ const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUM = 2 * Math.PI * RING_RADIUS;
 
 const styles = {
-  chip: 'overflow-hidden shrink min-w-0 ms-1 py-px px-2 rounded-[999px] text-foreground text-ellipsis whitespace-nowrap bg-selected',
+  chip: 'overflow-hidden shrink min-w-0 ms-1 py-px px-2 rounded-(--radius-chip) text-foreground text-ellipsis whitespace-nowrap bg-selected',
   countChip:
-    'shrink-0 py-px px-1.5 rounded-[999px] font-mono text-[12px] text-muted-foreground bg-accent',
+    'shrink-0 py-px px-1.5 rounded-(--radius-chip) font-mono text-xs text-muted-foreground bg-accent',
   ring: '[transform:rotate(-90deg)] shrink-0 me-1.5',
   ringProgress: 'transition-[stroke-dashoffset,stroke] duration-[240ms] ease-[ease]',
   ringTrack: 'stroke-selected',
@@ -131,7 +131,7 @@ export const TaskInspector = memo<BuiltinInspectorProps<TaskInspectorArgs, TaskP
     const { t } = useTranslation('plugin');
 
     const items = pluginState?.todos?.items ?? [];
-    const stats = useMemo(() => computeStats(items), [items]);
+    const stats = computeStats(items);
     const allDone = stats.total > 0 && stats.completed === stats.total;
 
     // TaskCreate: chip identifies the task being added, not the accumulated
@@ -160,12 +160,7 @@ export const TaskInspector = memo<BuiltinInspectorProps<TaskInspectorArgs, TaskP
               {stats.completed}/{stats.total}
             </span>
           )}
-          <span
-            className={cn(inFlight && shinyTextStyles.shinyText)}
-            style={{ marginInlineStart: 6 }}
-          >
-            {text}
-          </span>
+          <span className={cn(inFlight && shinyTextStyles.shinyText, 'ms-1.5')}>{text}</span>
         </div>
       );
     }
@@ -207,8 +202,10 @@ export const TaskInspector = memo<BuiltinInspectorProps<TaskInspectorArgs, TaskP
               </span>
             )}
             <span
-              className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}
-              style={{ marginInlineStart: stats.total > 0 ? 6 : 0 }}
+              className={cn(
+                (isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText,
+                stats.total > 0 ? 'ms-1.5' : 'ms-0',
+              )}
             >
               {subject ? `${verb}: ${subject}` : verb}
             </span>
@@ -241,8 +238,10 @@ export const TaskInspector = memo<BuiltinInspectorProps<TaskInspectorArgs, TaskP
               </span>
             )}
             <span
-              className={cn(inFlight && shinyTextStyles.shinyText)}
-              style={{ marginInlineStart: stats.total > 0 ? 6 : 0 }}
+              className={cn(
+                inFlight && shinyTextStyles.shinyText,
+                stats.total > 0 ? 'ms-1.5' : 'ms-0',
+              )}
             >
               {`${verb}: ${subject}`}
             </span>

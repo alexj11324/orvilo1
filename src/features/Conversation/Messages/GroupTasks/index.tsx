@@ -1,7 +1,6 @@
 'use client';
 import { GroupAvatar } from '@lobehub/ui';
 import { type UIChatMessage } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { ListTodo } from 'lucide-react';
 import { memo, useMemo } from 'react';
@@ -46,7 +45,7 @@ const GroupTasksAvatar = memo<{ avatars: { avatar?: string; background?: string 
           style={{
             flex: 'none',
             height: 16,
-            border: `1px solid ${cssVar.colorBorder}`,
+            border: `1px solid ${'var(--border)'}`,
 
             width: 16,
 
@@ -56,7 +55,7 @@ const GroupTasksAvatar = memo<{ avatars: { avatar?: string; background?: string 
             top: -4,
           }}
         >
-          <ListTodo color={cssVar.colorTextDescription} size={10} />
+          <ListTodo color={'var(--foreground-description)'} size={10} />
         </div>
       </div>
     );

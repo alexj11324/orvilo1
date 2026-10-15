@@ -77,7 +77,7 @@ const LibraryList = memo(() => {
       }
       onRetry={() => mutate()}
     >
-      <div className="flex flex-col gap-[1px] px-1">
+      <div className="flex flex-col gap-px px-1">
         {data?.map((item) => (
           <Item
             description={item.description}

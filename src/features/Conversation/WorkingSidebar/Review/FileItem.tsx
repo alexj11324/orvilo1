@@ -2,7 +2,6 @@
 import { PatchDiff } from '@lobehub/ui';
 import type { GitFileDiffStatus } from '@orvilo/electron-client-ipc';
 import { nanoid } from '@orvilo/utils';
-import { createStaticStyles, cssVar as themeCssVar } from 'antd-style';
 import { cn } from 'cn';
 import { CopyIcon, LocateFixedIcon, Undo2Icon } from 'lucide-react';
 import path from 'path-browserify-esm';
@@ -21,156 +20,85 @@ import type { ComposerTarget } from '../../types';
 import type { DiffSelectedLineRange } from './selection';
 import { buildCodeContextSelection } from './selection';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  additions: css`
-    color: ${cssVar.colorSuccess};
-  `,
-  // Hover-revealed row actions, anchored to the right edge with a gradient
-  // mask that fades in from transparent → row hover-bg so any path/stats
-  // text behind the icons softly disappears instead of being abruptly
-  // overlapped.
-  actions: css`
-    pointer-events: none;
-
-    position: absolute;
-    inset-block: 0;
-    inset-inline-end: -8px;
-
-    align-items: center;
-
-    padding-inline: 28px 0;
-
-    opacity: 0;
-    background:
-      linear-gradient(to right, transparent 0, ${cssVar.colorFillTertiary} 28px),
-      linear-gradient(to right, transparent 0, ${cssVar.colorBgContainer} 28px);
-
-    transition: opacity 0.15s;
-
-    [data-review-row]:hover & {
-      pointer-events: auto;
-      opacity: 1;
-    }
-  `,
-  rowAction: css`
-    flex: none;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  revertDanger: css`
-    &:hover {
-      color: ${cssVar.colorError};
-    }
-  `,
-  deletions: css`
-    color: ${cssVar.colorError};
-  `,
-  empty: css`
-    padding-block: 12px;
-    color: ${cssVar.colorTextTertiary};
-    text-align: center;
-  `,
-  dir: css`
-    direction: rtl;
-
-    /* Only the directory portion shrinks + head-truncates. Short dirs
-       sit naturally next to the filename (no awkward right-alignment);
-       long dirs collapse leading segments into "…" via the RTL trick. */
-    overflow: hidden;
-    flex: 0 1 auto;
-
-    min-width: 0;
-
-    color: ${cssVar.colorTextTertiary};
-    text-align: start;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  fileName: css`
-    flex: none;
-    color: ${cssVar.colorText};
-    white-space: nowrap;
-  `,
-  header: css`
-    position: relative;
-
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    width: 100%;
-    min-width: 0;
-
-    font-size: 12px;
-  `,
-  pathWrapper: css`
-    overflow: hidden;
-
-    /* Shrink-only (no grow): short paths stay content-sized so stats sit
-       right after the filename; long paths still shrink so the dir part
-       can head-truncate. */
-    display: flex;
-    flex: 0 1 auto;
-    min-width: 0;
-  `,
-  stats: css`
-    flex: none;
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-  `,
-}));
+const styles = {
+  additions: 'text-success-text',
+  actions:
+    'pointer-events-none absolute inset-bs-0 inset-be-0 -end-2 items-center ps-7 pe-0 opacity-0 [background:linear-gradient(to_right,transparent_0,var(--accent)_28px),linear-gradient(to_right,transparent_0,var(--card)_28px)] rtl:[background:linear-gradient(to_left,transparent_0,var(--accent)_28px),linear-gradient(to_left,transparent_0,var(--card)_28px)] transition-opacity duration-(--orvilo-motion-mid) ease-[ease] [[data-review-row]:hover_&]:pointer-events-auto [[data-review-row]:hover_&]:opacity-100 [[data-review-row]:focus-within_&]:pointer-events-auto [[data-review-row]:focus-within_&]:opacity-100',
+  rowAction: 'flex-none text-muted-foreground',
+  revertDanger: 'hover:text-destructive-text',
+  deletions: 'text-destructive-text',
+  empty: 'py-3 text-sm leading-5.5 text-muted-foreground text-center',
+  dir: '[direction:rtl] overflow-hidden [flex:0_1_auto] min-w-0 text-xs leading-5 text-muted-foreground text-start text-ellipsis whitespace-nowrap',
+  fileName: 'flex-none text-sm leading-5.5 text-foreground whitespace-nowrap',
+  header: 'relative flex gap-2 items-center w-full min-w-0 text-xs leading-5',
+  pathWrapper: 'overflow-hidden flex [flex:0_1_auto] min-w-0',
+  stats: 'flex-none font-mono text-xs leading-5 tabular-nums',
+};
 
 const reviewDiffUnsafeCSS = `
   :host {
-    --diffs-dark-bg: transparent !important;
-    --diffs-light-bg: transparent !important;
+    --diffs-dark-bg: transparent;
+    --diffs-light-bg: transparent;
     --diffs-gap-fallback: 8px;
-    --diffs-added-light: ${themeCssVar.colorSuccessHover};
-    --diffs-added-dark: ${themeCssVar.colorSuccessBorderHover};
-    --diffs-modified-light: ${themeCssVar.colorInfoHover};
-    --diffs-modified-dark: ${themeCssVar.colorInfoBorderHover};
-    --diffs-deleted-light: ${themeCssVar.colorErrorHover};
-    --diffs-deleted-dark: ${themeCssVar.colorErrorBorderHover};
+    --diffs-font-family: var(--font-mono);
+    --diffs-header-font-family: var(--font-sans);
+    --diffs-font-size: var(--text-sm);
+    --diffs-line-height: calc(var(--spacing) * 5.5);
+    --diffs-added-light: var(--success-hover);
+    --diffs-added-dark: var(--success-border-hover);
+    --diffs-modified-light: var(--info-hover);
+    --diffs-modified-dark: var(--info-border-hover);
+    --diffs-deleted-light: var(--destructive-hover);
+    --diffs-deleted-dark: var(--destructive-border-hover);
   }
 
   [data-gutter-buffer] {
-    opacity: 0.2 !important;
+    opacity: 0.2;
   }
 
   [data-code] {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
+    padding-top: 0;
+    padding-bottom: 0;
   }
 
   [data-gutter] {
-    backdrop-filter: blur(16px) !important;
+    backdrop-filter: blur(16px);
   }
 
   [data-gutter-utility-slot] [data-utility-button] {
-    width: 18px !important;
-    min-width: 18px !important;
-    height: 18px !important;
-    margin-right: calc(1ch - 8px) !important;
-    border: 1px solid #0969da !important;
-    border-radius: 4px !important;
-    background: #0969da !important;
-    background-color: #0969da !important;
-    color: #fff !important;
-    fill: currentColor !important;
-    box-shadow: 0 1px 3px ${themeCssVar.colorFillSecondary} !important;
+    width: calc(var(--spacing) * 8);
+    min-width: calc(var(--spacing) * 8);
+    height: calc(var(--spacing) * 8);
+    margin-right: calc(1ch + 1px - var(--spacing) * 4);
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-button);
+    background: var(--primary);
+    color: var(--primary-on-fill);
+    fill: currentColor;
+    box-shadow: none;
   }
 
   [data-gutter-utility-slot] [data-utility-button]:is(:hover, :focus-visible, :active) {
-    border-color: #0860ca !important;
-    background: #0860ca !important;
-    background-color: #0860ca !important;
-    color: #fff !important;
-    fill: currentColor !important;
+    border-color: var(--primary-hover);
+    background: var(--primary-hover);
+    color: var(--primary-hover-foreground);
+    fill: currentColor;
+  }
+
+  [data-gutter-utility-slot] [data-utility-button]:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
 
   [data-gutter-utility-slot] [data-utility-button] [data-icon] {
-    width: 10px !important;
-    height: 10px !important;
+    width: calc(var(--spacing) * 4);
+    height: calc(var(--spacing) * 4);
+  }
+
+  @media (pointer: coarse) {
+    [data-gutter-utility-slot] [data-utility-button]::before {
+      inset: calc(var(--spacing) * -1.5);
+    }
   }
 `;
 
@@ -275,27 +203,30 @@ export const FileItemHeader = memo<FileItemHeaderProps>(
           {additions > 0 && deletions > 0 && ' '}
           {deletions > 0 && <span className={styles.deletions}>-{deletions}</span>}
         </span>
-        <div className={cn('flex items-center gap-0.5', styles.actions)}>
+        <div className={cn('flex items-center gap-1', styles.actions)}>
           <ActionIcon
             className={styles.rowAction}
+            classNames={{ icon: 'size-4' }}
             icon={CopyIcon}
-            size={'small'}
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
             title={t('workingPanel.review.copyPath')}
             onClick={handleCopy}
           />
           <ActionIcon
             className={styles.rowAction}
+            classNames={{ icon: 'size-4' }}
             data-testid="reveal-in-tree"
             icon={LocateFixedIcon}
-            size={'small'}
+            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
             title={t('workingPanel.review.revealInTree')}
             onClick={handleReveal}
           />
           {revertContext && (
             <ActionIcon
               className={`${styles.rowAction} ${styles.revertDanger}`}
+              classNames={{ icon: 'size-4' }}
               icon={Undo2Icon}
-              size={'small'}
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               title={t('workingPanel.review.revert')}
               onClick={handleRevert}
             />

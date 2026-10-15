@@ -1,49 +1,7 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-
-const styles = createStaticStyles(({ css }) => ({
-  handle: css`
-    cursor: col-resize;
-    user-select: none;
-
-    position: absolute;
-    z-index: 1;
-    inset-block: 0;
-    inset-inline-end: 0;
-    transform: translateX(-4px);
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 16px;
-
-    &::after {
-      content: '';
-
-      width: 1.5px;
-      height: calc(100% - 16px);
-      border-radius: 1px;
-
-      background-color: ${cssVar.colorBorder};
-
-      transition: all 0.2s;
-    }
-
-    &:hover::after {
-      width: 3px;
-      background-color: ${cssVar.colorPrimary};
-    }
-  `,
-  handleDragging: css`
-    &::after {
-      width: 3px !important;
-      background-color: ${cssVar.colorPrimary} !important;
-    }
-  `,
-}));
 
 interface ColumnResizeHandleProps {
   column: 'name' | 'date' | 'size' | 'uploader';
@@ -107,7 +65,10 @@ const ColumnResizeHandle = memo<ColumnResizeHandleProps>(
 
     return (
       <div
-        className={`${styles.handle} ${isDragging ? styles.handleDragging : ''}`}
+        className={cn(
+          "cursor-col-resize select-none absolute z-1 inset-y-0 end-0 -translate-x-1 flex items-center justify-center w-4 after:content-[''] after:w-[calc(var(--spacing)*3/8)] after:h-[calc(100%_-_16px)] after:rounded-full after:bg-border after:transition-[width,background-color] after:duration-200 after:ease-[ease] hover:after:w-0.75 hover:after:bg-primary",
+          isDragging && 'after:w-0.75 after:bg-primary',
+        )}
         onMouseDown={handleMouseDown}
       />
     );

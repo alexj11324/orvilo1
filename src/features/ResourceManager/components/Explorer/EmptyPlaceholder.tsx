@@ -1,5 +1,4 @@
 import { FileTypeIcon } from '@lobehub/ui';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ArrowUpIcon, PlusIcon } from 'lucide-react';
 import { memo, type ReactNode, useRef } from 'react';
@@ -19,55 +18,12 @@ import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
 const ICON_SIZE = 80;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  actionTitle: css`
-    margin-block-start: 12px;
-    font-size: 16px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  card: css`
-    cursor: pointer;
-
-    position: relative;
-
-    overflow: hidden;
-
-    width: 200px;
-    height: 140px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    font-weight: 500;
-    text-align: center;
-
-    background: ${cssVar.colorFillTertiary};
-    box-shadow: 0 0 0 1px ${cssVar.colorFillTertiary} inset;
-
-    transition: background 0.3s ease-in-out;
-
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  glow: css`
-    position: absolute;
-    inset-block-end: -12px;
-    inset-inline-end: 0;
-
-    width: 48px;
-    height: 48px;
-
-    opacity: 0.5;
-    filter: blur(24px);
-  `,
-  icon: css`
-    position: absolute;
-    z-index: 1;
-    inset-block-end: -24px;
-    inset-inline-end: 8px;
-
-    flex: none;
-  `,
-}));
+const styles = {
+  actionTitle: 'mbs-3 text-base leading-6 text-muted-foreground',
+  card: 'relative overflow-hidden cursor-pointer w-50 h-35 border border-divider rounded-(--radius-card) text-center font-medium bg-card transition-[background-color] duration-(--orvilo-motion-fast) ease-[ease-in-out] motion-reduce:transition-none hover:bg-accent',
+  glow: 'absolute -inset-be-3 end-0 size-12 opacity-50 blur-[calc(var(--spacing)*6)]',
+  icon: 'absolute z-1 -inset-be-6 end-2 flex-none',
+};
 
 const EmptyPlaceholder = () => {
   const { t } = useTranslation('components');
@@ -91,12 +47,11 @@ const EmptyPlaceholder = () => {
   // way back instead of the onboarding prompt.
   if (sourceFilter !== ResourceSourceFilter.All) {
     return (
-      <div
-        className="flex flex-col items-center justify-center gap-3 h-[100%] w-[100%]"
-        style={{ paddingBottom: 100 }}
-      >
-        <h4>{t('FileManager.emptyStatus.filteredTitle')}</h4>
-        <Button size="sm" onClick={() => setSourceFilter(ResourceSourceFilter.All)}>
+      <div className="flex flex-col items-center justify-center gap-3 h-full w-full pbe-25">
+        <h4 className="text-xl leading-7 font-semibold">
+          {t('FileManager.emptyStatus.filteredTitle')}
+        </h4>
+        <Button size="normal" onClick={() => setSourceFilter(ResourceSourceFilter.All)}>
           {t('FileManager.emptyStatus.actions.showAllSources')}
         </Button>
       </div>
@@ -105,29 +60,25 @@ const EmptyPlaceholder = () => {
 
   if (!canCreate) {
     return (
-      <div
-        className="flex flex-col items-center justify-center h-[100%] w-[100%]"
-        style={{ paddingBottom: 100 }}
-      >
-        <h4>{t('FileManager.emptyStatus.title')}</h4>
+      <div className="flex flex-col items-center justify-center h-full w-full pbe-25">
+        <h4 className="text-xl leading-7 font-semibold">{t('FileManager.emptyStatus.title')}</h4>
       </div>
     );
   }
 
   return (
-    <div
-      className="flex flex-col items-center justify-center gap-6 h-[100%] w-[100%]"
-      style={{ paddingBottom: 100 }}
-    >
-      <div className="flex flex-col justify-center" style={{ textAlign: 'center' }}>
-        <h4>{t('FileManager.emptyStatus.title')}</h4>
-        <div className="text-muted-foreground">{t('FileManager.emptyStatus.or')}</div>
+    <div className="flex flex-col items-center justify-center gap-6 h-full w-full pbe-25">
+      <div className="flex flex-col justify-center text-center">
+        <h4 className="text-xl leading-7 font-semibold">{t('FileManager.emptyStatus.title')}</h4>
+        <div className="text-sm leading-5.5 text-muted-foreground">
+          {t('FileManager.emptyStatus.or')}
+        </div>
       </div>
       <div className="flex flex-row gap-3">
         {!libraryId && (
           <div
             {...clickableProps()}
-            className={cn(cx('flex flex-col p-4', styles.card), CLICKABLE_FOCUS_RING)}
+            className={cn('flex flex-col p-4', styles.card, CLICKABLE_FOCUS_RING)}
             onClick={() => {
               open();
             }}
@@ -135,10 +86,10 @@ const EmptyPlaceholder = () => {
             <span className={styles.actionTitle}>
               {t('FileManager.emptyStatus.actions.knowledgeBase')}
             </span>
-            <div className={styles.glow} style={{ background: cssVar.purple }} />
+            <div className={styles.glow} style={{ background: 'var(--palette-purple-6)' }} />
             <FileTypeIcon
               className={styles.icon}
-              color={cssVar.purple}
+              color={'var(--palette-purple-6)'}
               size={ICON_SIZE}
               type={'folder'}
               icon={
@@ -163,12 +114,12 @@ const EmptyPlaceholder = () => {
             return false;
           }}
         >
-          <div className={cx('flex flex-col p-4', styles.card)}>
+          <div className={cn('flex flex-col p-4', styles.card)}>
             <span className={styles.actionTitle}>{t('FileManager.emptyStatus.actions.file')}</span>
-            <div className={styles.glow} style={{ background: cssVar.gold }} />
+            <div className={styles.glow} style={{ background: 'var(--palette-gold-6)' }} />
             <FileTypeIcon
               className={styles.icon}
-              color={cssVar.gold}
+              color={'var(--palette-gold-6)'}
               size={ICON_SIZE}
               icon={
                 <span className="anticon" role="img">
@@ -194,14 +145,14 @@ const EmptyPlaceholder = () => {
             return false;
           }}
         >
-          <div className={cx('flex flex-col p-4', styles.card)}>
+          <div className={cn('flex flex-col p-4', styles.card)}>
             <span className={styles.actionTitle}>
               {t('FileManager.emptyStatus.actions.folder')}
             </span>
-            <div className={styles.glow} style={{ background: cssVar.geekblue }} />
+            <div className={styles.glow} style={{ background: 'var(--palette-geekblue-6)' }} />
             <FileTypeIcon
               className={styles.icon}
-              color={cssVar.geekblue}
+              color={'var(--palette-geekblue-6)'}
               size={ICON_SIZE}
               type={'folder'}
               icon={
@@ -232,14 +183,13 @@ const DirectoryUpload = memo<{
   return (
     <span
       {...clickableProps()}
-      className={CLICKABLE_FOCUS_RING}
-      style={{ display: 'inline-block' }}
+      className={cn(CLICKABLE_FOCUS_RING, 'inline-block')}
       onClick={() => inputRef.current?.click()}
     >
       <input
         multiple
         aria-hidden="true"
-        style={{ display: 'none' }}
+        className="hidden"
         tabIndex={-1}
         type={'file'}
         ref={(el) => {

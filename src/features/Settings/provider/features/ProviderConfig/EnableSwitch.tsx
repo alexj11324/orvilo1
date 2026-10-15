@@ -21,7 +21,7 @@ const Switch = ({ id, Component }: SwitchProps) => {
   ]);
   const { allowed: canManageProvider, reason } = usePermission('manage_provider_key');
 
-  if (isLoading) return <Skeleton className="h-[18px] w-8 rounded-full" />;
+  if (isLoading) return <Skeleton className="h-4.5 w-8 rounded-full" />;
 
   // slot for cloud
   if (Component) return <Component id={id} />;

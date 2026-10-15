@@ -26,17 +26,17 @@ const ListViewSkeleton = ({
     <div className="flex flex-col">
       {Array.from({ length: count }).map((_, index) => (
         <div
-          className="flex flex-row items-center h-[48px] px-2"
+          className="flex flex-row items-center h-12 px-2"
           key={index}
           style={{
-            background: index % 2 === 0 ? 'var(--ant-color-fill-quaternary)' : 'transparent',
+            background: index % 2 === 0 ? 'var(--fill-quaternary)' : 'transparent',
             borderBlockEnd: `1px solid var(--sidebar-border)`,
             minWidth: getListViewMinWidth(showUploader),
             opacity: getOpacity(index),
           }}
         >
           <div
-            className="flex flex-col items-center justify-center h-[40px]"
+            className="flex flex-col items-center justify-center h-10"
             style={{ paddingInline: 4 }}
           >
             <Checkbox disabled />

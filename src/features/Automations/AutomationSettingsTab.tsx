@@ -20,7 +20,7 @@ import { useCanManageAutomation } from './useCanManageAutomation';
 dayjs.extend(relativeTime);
 
 const styles = {
-  sectionTitle: 'text-[13px] font-semibold text-foreground',
+  sectionTitle: 'text-(length:--text-dense) font-semibold text-foreground',
   triggerCard: 'w-full cursor-pointer hover:bg-accent',
 };
 
@@ -45,18 +45,18 @@ const TriggerCard = memo(() => {
         className={cn(styles.triggerCard, 'flex items-center gap-3 p-3 border')}
         style={{ borderColor: 'var(--sidebar-border)', background: 'var(--card)' }}
       >
-        <TimerIcon color={'var(--ant-color-text-tertiary)'} size={18} />
+        <TimerIcon color={'var(--foreground-tertiary)'} size={18} />
         <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-          <div className="truncate min-w-0 text-[13px] font-medium">
+          <div className="truncate min-w-0 text-(length:--text-dense) font-medium">
             {summary || t('trigger.unconfigured')}
           </div>
           {nextRun ? (
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {t('trigger.next_run', { time: dayjs(nextRun.toDate()).fromNow() })}
             </div>
           ) : null}
         </div>
-        <ChevronRightIcon color={'var(--ant-color-text-tertiary)'} size={14} />
+        <ChevronRightIcon color={'var(--foreground-tertiary)'} size={14} />
       </div>
     </TaskScheduleConfig>
   );

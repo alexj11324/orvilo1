@@ -85,17 +85,28 @@ describe('createDevOrchestrator', () => {
     ]);
   });
 
-  it('wipes the stale dist before spawning the watch builds', () => {
+  it('wipes the stale main and preload bundles before spawning the watch builds', () => {
     const h = createHarness();
     h.orchestrator.start();
 
-    expect(h.options.rmSync).toHaveBeenCalledWith('/repo/apps/desktop/dist', {
-      force: true,
-      recursive: true,
-    });
-    expect(h.options.rmSync.mock.invocationCallOrder[0]).toBeLessThan(
+    for (const dir of ['/repo/apps/desktop/dist/main', '/repo/apps/desktop/dist/preload']) {
+      expect(h.options.rmSync).toHaveBeenCalledWith(dir, { force: true, recursive: true });
+    }
+    expect(h.options.rmSync.mock.invocationCallOrder.at(1)).toBeLessThan(
       h.options.spawn.mock.invocationCallOrder[0],
     );
+  });
+
+  it('keeps the prebuilt dist/renderer that dev:static serves', () => {
+    const h = createHarness();
+    h.orchestrator.start();
+
+    const removed = h.options.rmSync.mock.calls.map(([target]) => target);
+    expect(removed).not.toContain('/repo/apps/desktop/dist');
+    expect(removed.filter((target) => target.startsWith('/repo/apps/desktop/dist'))).toEqual([
+      '/repo/apps/desktop/dist/main',
+      '/repo/apps/desktop/dist/preload',
+    ]);
   });
 
   it('shuts everything down when a vite child exits early', () => {
@@ -339,18 +350,189 @@ describe('createDevOrchestrator', () => {
 
     describe('with other dev instances of the same checkout', () => {
       const lockFile = '/repo/apps/cli/node_modules/.cache/dev-cli.lock';
-      const locked = (owner, alive) => ({
-        cliBuildCommand: { ...cliBuildCommand, lockFile },
-        isProcessAlive: vi.fn(() => alive),
-        mkdirSync: vi.fn(),
-        pid: 100,
-        readFileSync: vi.fn(() => String(owner)),
-        writeFileSync: vi.fn((file, content, options) => {
-          if (owner && options?.flag === 'wx') throw new Error('EEXIST');
-        }),
+      const locked = (owner, alive) => {
+        const lockMtimeMs = Date.now() + 1;
+        return {
+          cliBuildCommand: { ...cliBuildCommand, lockFile },
+          isProcessAlive: vi.fn(() => alive),
+          mkdirSync: vi.fn(),
+          pid: 100,
+          readFileSync: vi.fn((file) =>
+            file === lockFile
+              ? String(owner)
+              : JSON.stringify({ owner, lockMtimeMs, problem: null }),
+          ),
+          writeFileSync: vi.fn((file, content, options) => {
+            if (owner && options?.flag === 'wx') throw new Error('EEXIST');
+          }),
+        };
+      };
+
+      const sharedHarness = () => {
+        // Model only the injected filesystem/process boundaries. Both real
+        // orchestrators use their original spawn/state harness and FakeChild.
+        const output = '/repo/apps/cli/dist/index.js';
+        const files = new Map();
+        const alive = new Set([100, 200]);
+        const createInstance = (pid) => {
+          let h;
+          h = createHarness({
+            cliBuildCommand: { ...cliBuildCommand, lockFile, output },
+            pid,
+            isProcessAlive: vi.fn((owner) => alive.has(owner)),
+            mkdirSync: vi.fn(),
+            readFileSync: vi.fn((file) => {
+              if (!files.has(file)) throw new Error('ENOENT');
+              return files.get(file).content;
+            }),
+            writeFileSync: vi.fn((file, content, options) => {
+              if (options?.flag === 'wx' && files.has(file)) throw new Error('EEXIST');
+              files.set(file, { content: String(content), mtimeMs: Date.now() });
+            }),
+            rmSync: vi.fn((file) => files.delete(file)),
+            existsSync: vi.fn((file) => (file === output ? files.has(file) : h.state.bundlesExist)),
+            statSync: vi.fn((file) => files.get(file) ?? { mtimeMs: h.state.mtime }),
+            killTree: vi.fn(),
+          });
+          return h;
+        };
+        return { alive, files, output, owner: createInstance(200), peer: createInstance(100) };
+      };
+
+      it('holds a second instance with ready bundles until the shared initial build actually exits', async () => {
+        const { owner, peer } = sharedHarness();
+        owner.orchestrator.start();
+        peer.orchestrator.start();
+        await peer.becomeReady();
+
+        expect(cliBuilds(owner)).toHaveLength(1);
+        expect(cliBuilds(peer)).toHaveLength(0);
+        expect(peer.electronSpawns()).toHaveLength(0);
+        expect(peer.options.watch).not.toHaveBeenCalled();
+        // A legitimate first shared CLI build can outlast the bundle deadline.
+        await owner.becomeReady();
+        await vi.advanceTimersByTimeAsync(121_000);
+        expect(peer.options.exit).not.toHaveBeenCalled();
+        expect(peer.electronSpawns()).toHaveLength(0);
+
+        cliBuilds(owner)[0].child.emit('exit', 0);
+        await vi.advanceTimersByTimeAsync(400);
+        expect(peer.electronSpawns()).toHaveLength(1);
+        expect(cliBuilds(peer)).toHaveLength(0);
       });
 
-      it('reuses the CLI of a running instance instead of rebuilding under it', async () => {
+      it('ignores old output, stale results and a partially published shared result', async () => {
+        const { owner, peer, files, output } = sharedHarness();
+        files.set(output, { content: 'old CLI', mtimeMs: Date.now() - 100 });
+        owner.orchestrator.start();
+        peer.orchestrator.start();
+        files.set(`${lockFile}.settled`, {
+          content: JSON.stringify({ owner: 200, lockMtimeMs: Date.now() - 1, problem: null }),
+        });
+        await peer.becomeReady();
+        expect(peer.electronSpawns()).toHaveLength(0);
+        files.set(`${lockFile}.settled`, { content: '{"owner":200' });
+        await vi.advanceTimersByTimeAsync(400);
+        expect(peer.electronSpawns()).toHaveLength(0);
+        cliBuilds(owner)[0].child.emit('exit', 0);
+        await vi.advanceTimersByTimeAsync(400);
+        expect(peer.electronSpawns()).toHaveLength(1);
+        expect(cliBuilds(peer)).toHaveLength(0);
+      });
+
+      it('propagates the shared build failure after output cleanup without launching a duplicate build', async () => {
+        const { owner, peer, files, output } = sharedHarness();
+        files.set(output, { content: 'old CLI', mtimeMs: Date.now() - 100 });
+        owner.orchestrator.start();
+        peer.orchestrator.start();
+        await peer.becomeReady();
+        expect(peer.electronSpawns()).toHaveLength(0);
+        cliBuilds(owner)[0].child.emit('exit', 7);
+        expect(files.has(output)).toBe(false);
+        await vi.advanceTimersByTimeAsync(400);
+        expect(peer.electronSpawns()).toHaveLength(1);
+        expect(cliBuilds(peer)).toHaveLength(0);
+        expect(peer.options.logError).toHaveBeenCalledWith(
+          expect.stringContaining('embedded CLI build failed (exit code 7)'),
+        );
+        expect(owner.options.rmSync.mock.invocationCallOrder.at(-1)).toBeLessThan(
+          owner.options.writeFileSync.mock.invocationCallOrder.at(-1),
+        );
+      });
+
+      it('publishes a shared spawn error once even if an exit follows it', async () => {
+        const { owner, peer } = sharedHarness();
+        owner.orchestrator.start();
+        peer.orchestrator.start();
+        await peer.becomeReady();
+        const child = cliBuilds(owner)[0].child;
+        child.emit('error', new Error('spawn bun ENOENT'));
+        child.emit('exit', 1);
+        await vi.advanceTimersByTimeAsync(400);
+        expect(peer.electronSpawns()).toHaveLength(1);
+        expect(peer.options.logError).toHaveBeenCalledWith(
+          expect.stringContaining('spawn bun ENOENT'),
+        );
+        expect(
+          owner.options.writeFileSync.mock.calls.filter(([file]) => file === `${lockFile}.settled`),
+        ).toHaveLength(1);
+      });
+
+      it('takes over a dead shared owner and still waits for its own real build completion', async () => {
+        const { owner, peer, alive } = sharedHarness();
+        owner.orchestrator.start();
+        peer.orchestrator.start();
+        await peer.becomeReady();
+        alive.delete(200);
+        await vi.advanceTimersByTimeAsync(400);
+        expect(cliBuilds(peer)).toHaveLength(1);
+        expect(peer.electronSpawns()).toHaveLength(0);
+        cliBuilds(peer)[0].child.emit('exit', 0);
+        await vi.advanceTimersByTimeAsync(400);
+        expect(peer.electronSpawns()).toHaveLength(1);
+        expect(peer.options.killTree).not.toHaveBeenCalled();
+      });
+
+      it('reuses the original claim path when an owner stops and releases its lock', async () => {
+        const { owner, peer, files } = sharedHarness();
+        owner.orchestrator.start();
+        peer.orchestrator.start();
+        await peer.becomeReady();
+        owner.orchestrator.shutdown(0);
+        expect(owner.options.killTree).toHaveBeenCalledWith(cliBuilds(owner)[0].child);
+        expect(files.has(lockFile)).toBe(false);
+        // The killed child can emit its exit later, after lock cleanup.
+        cliBuilds(owner)[0].child.emit('exit', null);
+        expect(files.has(`${lockFile}.settled`)).toBe(false);
+        await vi.advanceTimersByTimeAsync(400);
+        expect(cliBuilds(peer)).toHaveLength(1);
+        expect(peer.electronSpawns()).toHaveLength(0);
+        cliBuilds(peer)[0].child.emit('exit', 0);
+        await vi.advanceTimersByTimeAsync(400);
+        expect(peer.electronSpawns()).toHaveLength(1);
+      });
+
+      it('leaves the owner lock, completion record and build alone when a waiting peer stops', async () => {
+        const { owner, peer, files } = sharedHarness();
+        owner.orchestrator.start();
+        peer.orchestrator.start();
+        await peer.becomeReady();
+        peer.orchestrator.shutdown(0);
+        expect(peer.options.killTree).not.toHaveBeenCalled();
+        expect(peer.options.rmSync).not.toHaveBeenCalledWith(lockFile, { force: true });
+        expect(peer.options.rmSync).not.toHaveBeenCalledWith(`${lockFile}.settled`, {
+          force: true,
+        });
+        expect(files.get(lockFile).content).toBe('200');
+        cliBuilds(owner)[0].child.emit('exit', 0);
+        await vi.advanceTimersByTimeAsync(400);
+        expect(peer.electronSpawns()).toHaveLength(0);
+        expect(files.has(`${lockFile}.settled`)).toBe(true);
+        owner.orchestrator.shutdown(0);
+        expect(files.has(`${lockFile}.settled`)).toBe(false);
+      });
+
+      it('reuses the settled CLI of a running instance instead of rebuilding under it', async () => {
         const h = createHarness(locked(200, true));
         h.orchestrator.start();
         await h.becomeReady();

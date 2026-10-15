@@ -1,7 +1,6 @@
 'use client';
 
 import { agentSecondaryDisplayName } from '@orvilo/types';
-import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { PencilIcon, SparklesIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -62,7 +61,7 @@ const AgentHeader = memo(() => {
         <div
           style={{
             background: meta.backgroundColor || 'transparent',
-            borderRadius: cssVar.borderRadiusLG,
+            borderRadius: 'var(--radius-overlay)',
             height: meta.backgroundColor ? 160 : 80,
             marginInline: isMobile ? 0 : -16,
             width: isMobile ? '100%' : 'calc(100% + 32px)',
@@ -70,9 +69,9 @@ const AgentHeader = memo(() => {
         />
         <div
           style={{
-            background: cssVar.colorBgContainer,
-            border: `4px solid ${cssVar.colorBgContainer}`,
-            borderRadius: `calc(${cssVar.borderRadiusLG} + 4px)`,
+            background: 'var(--card)',
+            border: `4px solid ${'var(--card)'}`,
+            borderRadius: `calc(${'var(--radius-overlay)'} + 4px)`,
             bottom: 0,
             left: 24,
             position: 'absolute',
@@ -97,7 +96,7 @@ const AgentHeader = memo(() => {
             attention between two ways to do the same thing. */}
         {showNamePrompt ? (
           <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
-            <div className="truncate" style={{ color: cssVar.colorTextTertiary, fontSize: 20 }}>
+            <div className="truncate" style={{ color: 'var(--foreground-tertiary)', fontSize: 20 }}>
               {t('settingAgent.personalName.unnamed', { ns: 'setting' })}
             </div>
             <Button
@@ -137,13 +136,15 @@ const AgentHeader = memo(() => {
           {!suppressDuplicateRole ? (
             <div
               className="truncate"
-              style={{ color: role ? cssVar.colorTextSecondary : cssVar.colorTextTertiary }}
+              style={{
+                color: role ? 'var(--muted-foreground)' : 'var(--foreground-tertiary)',
+              }}
             >
               {role || t('settingAgent.role.unset', { ns: 'setting' })}
             </div>
           ) : null}
           {slug && !suppressDuplicateRole ? (
-            <div style={{ color: cssVar.colorTextTertiary }}>·</div>
+            <div style={{ color: 'var(--foreground-tertiary)' }}>·</div>
           ) : null}
           {/* The tooltip only renders when a slug exists, so it can always name
               the real url rather than a `<slug>` the reader has to substitute. */}
@@ -155,9 +156,9 @@ const AgentHeader = memo(() => {
                     <span style={{ display: 'inline-flex' }}>
                       <code
                         className="font-mono rounded bg-muted px-1"
-                        style={{ color: cssVar.colorTextSecondary, flex: 'none' }}
+                        style={{ color: 'var(--muted-foreground)', flex: 'none' }}
                       >
-                        <span style={{ color: cssVar.colorTextTertiary }}>@</span>
+                        <span style={{ color: 'var(--foreground-tertiary)' }}>@</span>
                         {slug}
                       </code>
                     </span>

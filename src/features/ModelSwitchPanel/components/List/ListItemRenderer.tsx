@@ -9,14 +9,14 @@ import {
   Icon,
   menuSharedStyles,
 } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
-import { cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { LucideArrowRight, LucideBolt } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import ActionIcon from '@/components/ActionIcon';
 import { ModelItemRender, ProviderItemRender } from '@/components/ModelSelect';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
@@ -79,10 +79,9 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
           <Block
             clickable
             horizontal
-            className={styles.menuItem}
+            className={cn(styles.menuItem, styles.tertiaryText)}
             gap={8}
             key="no-provider"
-            style={{ color: cssVar.colorTextTertiary }}
             variant={'borderless'}
             onClick={() => {
               onClose();
@@ -90,7 +89,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
             }}
           >
             {t('ModelSwitchPanel.emptyProvider')}
-            <Icon icon={LucideArrowRight} />
+            <Icon icon={LucideArrowRight} size={16} />
           </Block>
         );
       }
@@ -112,9 +111,9 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
               source={item.provider.source}
             />
             <ActionIcon
-              className="settings-icon"
+              className={cn('settings-icon', styles.settingsAction)}
               icon={LucideBolt}
-              size="small"
+              size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
               title={t('ModelSwitchPanel.goToSettings')}
               onClick={(e) => {
                 e.preventDefault();
@@ -136,17 +135,16 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
         return (
           <Flexbox
             horizontal
-            className={styles.menuItem}
+            className={cn(styles.menuItem, styles.tertiaryText)}
             gap={8}
             key={`empty-${item.provider.id}`}
-            style={{ color: cssVar.colorTextTertiary }}
             onClick={() => {
               onClose();
               navigate(`/settings/provider/${item.provider.id}`);
             }}
           >
             {t('ModelSwitchPanel.emptyModel')}
-            <Icon icon={LucideArrowRight} />
+            <Icon icon={LucideArrowRight} size={16} />
           </Flexbox>
         );
       }
@@ -157,11 +155,14 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
         const restricted = isModelRestricted?.(item.model.id, item.provider.id);
 
         return (
-          <Flexbox style={{ marginBlock: 1, marginInline: 4 }}>
+          <Flexbox className="my-px mx-1">
             <DropdownMenuSubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
               <DropdownMenuSubmenuTrigger
-                className={cx(menuSharedStyles.item, isActive && styles.menuItemActive)}
-                style={{ paddingBlock: 8, paddingInline: 8 }}
+                className={cn(
+                  menuSharedStyles.item,
+                  styles.menuRow,
+                  isActive && styles.menuItemActive,
+                )}
                 onClick={(e) => {
                   e.preventDefault();
                   setDetailOpen(false);
@@ -200,11 +201,14 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
         const restricted = isModelRestricted?.(item.data.model.id, singleProvider.id);
 
         return (
-          <Flexbox style={{ marginBlock: 1, marginInline: 4 }}>
+          <Flexbox className="my-px mx-1">
             <DropdownMenuSubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
               <DropdownMenuSubmenuTrigger
-                className={cx(menuSharedStyles.item, isActive && styles.menuItemActive)}
-                style={{ paddingBlock: 8, paddingInline: 8 }}
+                className={cn(
+                  menuSharedStyles.item,
+                  styles.menuRow,
+                  isActive && styles.menuItemActive,
+                )}
                 onClick={(e) => {
                   e.preventDefault();
                   setDetailOpen(false);
@@ -237,7 +241,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
 
       case 'model-item-multiple': {
         return (
-          <Flexbox key={item.data.displayName} style={{ marginBlock: 1, marginInline: 4 }}>
+          <Flexbox className="my-px mx-1" key={item.data.displayName}>
             <MultipleProvidersModelItem
               activeKey={activeKey}
               data={item.data}

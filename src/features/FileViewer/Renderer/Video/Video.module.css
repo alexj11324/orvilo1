@@ -1,0 +1,18 @@
+@reference "../../../../app/globals.css";
+
+/* Native media controls and focus are browser-owned. Keep the original single
+   class specificity and author-layer priority at this public CSS boundary. */
+.video {
+  @apply max-w-full max-h-full rounded-(--radius-card) object-contain shadow-(--shadow-raised);
+
+  &::-webkit-media-controls-panel {
+    /* Moving image controls consume the existing image-scrim semantic pair. */
+    background: linear-gradient(to bottom, transparent 0%, var(--overlay-mask) 100%);
+    color: var(--overlay-mask-foreground);
+  }
+
+  &:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+}

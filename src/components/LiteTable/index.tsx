@@ -1,169 +1,20 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { clsx as cx } from 'cn';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
 
-const LIST_BREAKPOINT = 600;
-
 /** Placeholder rows shown before the first load settles. */
 const SKELETON_ROWS = 4;
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  body: css`
-    overflow-x: auto;
-  `,
-  clickableRow: css`
-    cursor: pointer;
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-      outline-offset: -2px;
-    }
-  `,
-  container: css`
-    container-type: inline-size;
-  `,
-  table: css`
-    border-collapse: collapse;
-    width: 100%;
-    min-width: max-content;
-    font-size: 13px;
-
-    th,
-    td {
-      padding-block: 8px;
-      padding-inline: 8px;
-      text-align: start;
-      vertical-align: middle;
-    }
-
-    thead th {
-      font-weight: 500;
-      color: ${cssVar.colorTextSecondary};
-      white-space: nowrap;
-      background: ${cssVar.colorFillQuaternary};
-    }
-
-    tr {
-      th:first-child,
-      td:first-child {
-        padding-inline-start: 24px;
-      }
-
-      th:last-child,
-      td:last-child {
-        padding-inline-end: 24px;
-      }
-    }
-
-    tbody tr:hover {
-      background: ${cssVar.colorFillQuaternary};
-    }
-
-    /* Section header/footer rows span the full width and never highlight. */
-    tbody tr[data-list-section]:hover {
-      background: transparent;
-    }
-
-    @container (max-width: ${LIST_BREAKPOINT}px) {
-      display: block;
-      min-width: 0;
-
-      thead {
-        display: none;
-      }
-
-      tbody {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        padding-inline: 16px;
-      }
-
-      tbody tr {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        align-items: center;
-
-        padding-block: 4px 8px;
-        padding-inline: 16px;
-        border: 1px solid ${cssVar.colorBorderSecondary};
-        border-radius: ${cssVar.borderRadiusLG};
-
-        &:hover {
-          background: transparent;
-        }
-      }
-
-      td {
-        display: flex;
-        grid-column: 1 / -1;
-        gap: 16px;
-        align-items: center;
-        justify-content: space-between;
-
-        padding-block: 6px;
-        padding-inline: 0 !important;
-      }
-
-      td[data-label]::before {
-        content: attr(data-label);
-        flex-shrink: 0;
-        color: ${cssVar.colorTextSecondary};
-      }
-
-      td:not([data-label], [data-list-slot]) {
-        justify-content: flex-end;
-      }
-
-      td[data-list-slot='title'] {
-        grid-column: 1;
-        grid-row: 1;
-        justify-content: flex-start;
-
-        padding-block: 8px;
-        border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-        font-size: 14px;
-        font-weight: 600;
-      }
-
-      td[data-list-slot='extra'] {
-        grid-column: 2;
-        grid-row: 1;
-        justify-content: flex-end;
-
-        padding-block: 8px;
-        border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-      }
-
-      td[data-list-slot='actions'] {
-        justify-content: flex-end;
-      }
-
-      /* Section header/footer rows stay plain full-width rows — they never
-         become cards. */
-      tbody tr[data-list-section] {
-        display: block;
-        padding: 0;
-        border: none;
-        border-radius: 0;
-
-        &:hover {
-          background: transparent;
-        }
-      }
-
-      tbody tr[data-list-section] td {
-        display: block;
-        padding-block: 0;
-        padding-inline: 16px !important;
-        border-block-end: none;
-      }
-    }
-  `,
-}));
+const styles = {
+  body: 'overflow-x-auto',
+  clickableRow:
+    'cursor-pointer focus-visible:outline-2 focus-visible:outline-primary-text focus-visible:-outline-offset-2',
+  container: '@container',
+  table:
+    "w-full min-w-max border-collapse text-sm leading-5.5 [&_:is(th,td)]:px-2 [&_:is(th,td)]:py-2 [&_:is(th,td)]:text-start [&_:is(th,td)]:align-middle [&_thead_th]:font-medium [&_thead_th]:text-muted-foreground [&_thead_th]:whitespace-nowrap [&_thead_th]:bg-fill-quaternary [@container(width>600px)]:[&_tr>:is(th,td):first-child]:ps-6 [@container(width>600px)]:[&_tr>:is(th,td):last-child]:pe-6 [&_tbody_tr:hover]:bg-fill-quaternary [&_tbody_tr[data-list-section]:hover]:bg-transparent [@container(width<=600px)]:block [@container(width<=600px)]:min-w-0 [@container(width<=600px)]:[&_thead]:hidden [@container(width<=600px)]:[&_tbody]:flex [@container(width<=600px)]:[&_tbody]:flex-col [@container(width<=600px)]:[&_tbody]:gap-3 [@container(width<=600px)]:[&_tbody]:px-4 [@container(width<=600px)]:[&_tbody_tr]:grid [@container(width<=600px)]:[&_tbody_tr]:grid-cols-[1fr_auto] [@container(width<=600px)]:[&_tbody_tr]:items-center [@container(width<=600px)]:[&_tbody_tr]:pt-1 [@container(width<=600px)]:[&_tbody_tr]:pb-2 [@container(width<=600px)]:[&_tbody_tr]:px-4 [@container(width<=600px)]:[&_tbody_tr]:border [@container(width<=600px)]:[&_tbody_tr]:border-divider [@container(width<=600px)]:[&_tbody_tr]:rounded-(--radius-card) [@container(width<=600px)]:[&_tbody_tr:hover]:bg-transparent [@container(width<=600px)]:[&_td]:flex [@container(width<=600px)]:[&_td]:col-span-full [@container(width<=600px)]:[&_td]:items-center [@container(width<=600px)]:[&_td]:justify-between [@container(width<=600px)]:[&_td]:gap-4 [@container(width<=600px)]:[&_td]:px-0 [@container(width<=600px)]:[&_td]:py-1.5 [@container(width<=600px)]:[&_td[data-label]::before]:content-[attr(data-label)] [@container(width<=600px)]:[&_td[data-label]::before]:shrink-0 [@container(width<=600px)]:[&_td[data-label]::before]:text-muted-foreground [@container(width<=600px)]:[&_td:not([data-label],[data-list-slot])]:justify-end [@container(width<=600px)]:[&_td[data-list-slot='title']]:col-start-1 [@container(width<=600px)]:[&_td[data-list-slot='title']]:col-end-2 [@container(width<=600px)]:[&_td[data-list-slot='title']]:row-start-1 [@container(width<=600px)]:[&_td[data-list-slot='title']]:justify-start [@container(width<=600px)]:[&_td[data-list-slot='title']]:py-2 [@container(width<=600px)]:[&_td[data-list-slot='title']]:border-b [@container(width<=600px)]:[&_td[data-list-slot='title']]:border-divider [@container(width<=600px)]:[&_td[data-list-slot='title']]:font-semibold [@container(width<=600px)]:[&_td[data-list-slot='extra']]:col-start-2 [@container(width<=600px)]:[&_td[data-list-slot='extra']]:col-end-3 [@container(width<=600px)]:[&_td[data-list-slot='extra']]:row-start-1 [@container(width<=600px)]:[&_td[data-list-slot='extra']]:justify-end [@container(width<=600px)]:[&_td[data-list-slot='extra']]:py-2 [@container(width<=600px)]:[&_td[data-list-slot='extra']]:border-b [@container(width<=600px)]:[&_td[data-list-slot='extra']]:border-divider [@container(width<=600px)]:[&_td[data-list-slot='actions']]:justify-end [@container(width<=600px)]:[&_tbody_tr[data-list-section]]:block [@container(width<=600px)]:[&_tbody_tr[data-list-section]]:p-0 [@container(width<=600px)]:[&_tbody_tr[data-list-section]]:border-0 [@container(width<=600px)]:[&_tbody_tr[data-list-section]]:rounded-none [@container(width<=600px)]:[&_tbody_tr[data-list-section]:hover]:bg-transparent [@container(width<=600px)]:[&_tbody_tr[data-list-section]>td]:block [@container(width<=600px)]:[&_tbody_tr[data-list-section]>td]:py-0 [@container(width<=600px)]:[&_tbody_tr[data-list-section]>td]:px-4 [@container(width<=600px)]:[&_tbody_tr[data-list-section]>td]:border-b-0",
+};
 
 export interface LiteTableColumn<RecordType> {
   key: string;

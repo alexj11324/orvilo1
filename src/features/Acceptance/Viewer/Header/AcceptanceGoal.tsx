@@ -16,8 +16,8 @@ const GOAL_COLLAPSED_STORAGE_KEY = 'orvilo-acceptance-goal-collapsed';
 const styles = {
   card: '[&:hover_[data-goal-toggle=true]]:pointer-events-auto [&:hover_[data-goal-toggle=true]]:opacity-100',
   goalToggle:
-    'pointer-events-none opacity-0 transition-opacity duration-(--ant-motion-duration-mid) ease-[ease] focus-visible:pointer-events-auto focus-visible:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100',
-  scopeChip: 'text-[12px] text-muted-foreground',
+    'pointer-events-none opacity-0 transition-opacity duration-(--orvilo-motion-mid) ease-[ease] focus-visible:pointer-events-auto focus-visible:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100',
+  scopeChip: 'text-xs text-muted-foreground',
 };
 
 interface AcceptanceGoalProps {

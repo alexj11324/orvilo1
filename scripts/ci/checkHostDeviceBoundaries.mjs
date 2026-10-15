@@ -827,9 +827,19 @@ const extractSpecifiers = (rel, source) => {
       if (ts.isLiteralTypeNode(arg) && ts.isStringLiteral(arg.literal))
         push(arg.literal.text, 'type-import', true);
     }
-    ts.forEachChild(node, visit);
   };
-  visit(sf);
+  // Iterative walk: a long `a + b + …` chain nests one BinaryExpression per
+  // operand, so recursing per node overflows the stack on generated sources.
+  const stack = [sf];
+  while (stack.length) {
+    const node = stack.pop();
+    visit(node);
+    const children = [];
+    ts.forEachChild(node, (child) => {
+      children.push(child);
+    });
+    for (let i = children.length - 1; i >= 0; i -= 1) stack.push(children[i]);
+  }
   return specs;
 };
 

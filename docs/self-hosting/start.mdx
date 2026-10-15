@@ -26,7 +26,7 @@ Orvilo consists of several key components:
 
 - **Next.js application** — Hybrid SSR/SPA frontend with API routes
 - **PostgreSQL database** — Stores conversations, agents, files, and user data
-- **Redis** (optional) — Session storage and caching
+- **Redis** (optional) — Caching and coordination; app sessions live in PostgreSQL
 - **S3-compatible storage** — File uploads and knowledge base documents
 
 ### Optional Services
@@ -111,7 +111,7 @@ See [AI Provider Configuration](/docs/self-hosting/environment-variables/model-p
 
 ### Optional but Recommended
 
-**Redis** — Improves performance for session storage, rate limiting, and caching. Use Upstash, Redis Cloud, or self-hosted Redis.
+**Redis** — Supports rate limiting, caching and coordination; app sessions live in PostgreSQL. Use Upstash, Redis Cloud, or self-hosted Redis.
 
 **S3-compatible storage** — Required for file uploads and knowledge bases:
 
@@ -139,9 +139,8 @@ Essential security measures:
 
 Authentication options:
 
-- **Open access** — No authentication (single-user deployments only)
 - **Clerk accounts portal** — Email/password, OAuth, magic links and MFA, configured in Clerk
-- **Reverse proxy** — Use Authelia, Authentik, or similar
+- **Reverse proxy** — May add an outer access-control layer; it does not replace Clerk or mint an Orvilo app session.
 
 ## Next Steps
 

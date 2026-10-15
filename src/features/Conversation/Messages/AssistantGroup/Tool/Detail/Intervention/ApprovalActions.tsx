@@ -313,6 +313,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
               placeholder={t('tool.intervention.rejectReasonPlaceholder')}
               ref={rejectInputRef}
               value={reason}
+              visualSize="normal"
               onChange={(e) => setReason(e.target.value)}
               onFocus={() => setChoice('reject')}
               onKeyDown={handleRejectInputKeyDown}
@@ -323,7 +324,7 @@ const ApprovalActions = memo<ApprovalActionsProps>(
               </ConfirmationAction>
               {isAllowListMode && (
                 <ConfirmationAction
-                  className="h-auto min-h-8 whitespace-normal text-left"
+                  className="h-auto min-h-9 whitespace-normal text-left"
                   data-approval-choice="approve-remember"
                   disabled={busy}
                   variant="outline"

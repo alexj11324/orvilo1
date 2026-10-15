@@ -25,7 +25,7 @@ export const ExecuteTaskStreaming = memo<BuiltinStreamingProps<ExecuteTaskParams
   if (!instruction) return null;
 
   return (
-    <div className="rounded-[var(--radius-card)] bg-[var(--ant-color-fill-quaternary)] p-3">
+    <div className="rounded-(--radius-card) bg-fill-quaternary p-3">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <Avatar
@@ -38,7 +38,7 @@ export const ExecuteTaskStreaming = memo<BuiltinStreamingProps<ExecuteTaskParams
             {agent?.title || 'Agent'}
           </span>
         </div>
-        <div className="text-[13px] text-muted-foreground">
+        <div className="text-(length:--text-dense) text-muted-foreground">
           <Markdown animated variant={'chat'}>
             {instruction}
           </Markdown>

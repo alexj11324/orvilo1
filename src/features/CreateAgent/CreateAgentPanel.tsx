@@ -131,7 +131,7 @@ const CreateAgentPanel = ({
       <RuntimeFields disabled={locked} form={form} />
       <Collapsible className="rounded-(--radius-card) border p-3 text-sm">
         <CollapsibleTrigger
-          className="group/more flex w-full cursor-pointer items-center justify-between gap-2 rounded-sm text-left text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="group/more flex w-full cursor-pointer items-center justify-between gap-2 rounded-(--radius-button) text-left text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           type="button"
         >
           <span>

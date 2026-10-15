@@ -5,7 +5,7 @@ import {
   type AgentStreamSessionCompletion,
   type ConnectionStatus,
 } from '@orvilo/agent-gateway-client';
-import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
+import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents/config';
 import type {
   ChatTopicMetadata,
   ChatTopicStatus,

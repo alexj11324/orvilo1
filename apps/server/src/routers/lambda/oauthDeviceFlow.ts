@@ -28,16 +28,21 @@ const oauthProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =>
   // OAuth device-flow writes are personal-only (the model above has no
   // workspace scope) — they persist through the binding plane when the
   // provider is binding-managed.
-  const providerBindings = new ProviderBindingPlane(ctx.serverDB, ctx.userId, {
-    verifyBindings: (rows) =>
-      checkProviderBindings(
-        new ProviderBindingModel(ctx.serverDB, ctx.userId),
-        ctx.userId,
-        rows,
-        createProviderBindingComposition(ctx.serverDB, { reuseProviderVerification: true }),
-      ),
-    workspaceId: ctx.workspaceId ?? undefined,
-  });
+  const providerBindings = new ProviderBindingPlane(
+    ctx.serverDB,
+    KeyVaultsGateKeeper.initWithEnvKey,
+    ctx.userId,
+    {
+      verifyBindings: (rows) =>
+        checkProviderBindings(
+          new ProviderBindingModel(ctx.serverDB, ctx.userId),
+          ctx.userId,
+          rows,
+          createProviderBindingComposition(ctx.serverDB, { reuseProviderVerification: true }),
+        ),
+      workspaceId: ctx.workspaceId ?? undefined,
+    },
+  );
 
   return opts.next({
     ctx: {

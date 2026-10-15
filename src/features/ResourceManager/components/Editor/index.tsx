@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar, useTheme } from 'antd-style';
 import { t as i18nT } from 'i18next';
 import { ArrowLeftIcon, DownloadIcon, InfoIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -47,7 +46,7 @@ const FileDetailModalContent = memo(() => {
   const { data: fromQuery } = useFetchKnowledgeItem(!fromStore ? currentViewItemId : undefined);
   const fileDetail = fromStore ?? fromQuery;
   return (
-    <div className="flex flex-col" style={{ minHeight: 260 }}>
+    <div className="flex min-h-65 flex-col">
       {fileDetail ? (
         <FileDetailComponent {...fileDetail} showDownloadButton={false} showTitle={false} />
       ) : (
@@ -70,7 +69,6 @@ const openFileDetailModal = () =>
 
 const FileEditorCanvas = memo<FileEditorProps>(({ onBack }) => {
   const { t } = useTranslation(['common', 'file']);
-  const theme = useTheme();
 
   const currentViewItemId = useResourceManagerStore((s) => s.currentViewItemId);
 
@@ -80,25 +78,22 @@ const FileEditorCanvas = memo<FileEditorProps>(({ onBack }) => {
   const fileDetail = fromStore ?? fromFetch;
 
   return (
-    <div className="flex flex-row h-[100%] w-[100%]" style={{ minHeight: 0 }}>
-      <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0 }}>
+    <div className="flex min-h-0 flex-row h-full w-full">
+      <div className="flex min-h-0 flex-col flex-1 h-full">
         <NavHeader
+          className="flex h-11 flex-none items-center justify-between gap-1 p-2 border-be border-divider"
+          slotClassNames={{ left: 'flex-1 min-w-0 overflow-hidden p-0' }}
           left={
-            <div
-              className="flex flex-row items-center gap-3"
-              style={{ minHeight: 32, minWidth: 0, overflow: 'hidden' }}
-            >
-              <ActionIcon icon={ArrowLeftIcon} title={t('back')} onClick={onBack} />
+            <div className="flex min-h-8 min-w-0 flex-row items-center gap-3 overflow-hidden">
+              <ActionIcon
+                icon={ArrowLeftIcon}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                title={t('back')}
+                onClick={onBack}
+              />
               <span
+                className="truncate text-sm leading-5.5 font-medium text-foreground"
                 title={fileDetail?.name}
-                style={{
-                  color: theme.colorText,
-                  fontSize: 14,
-                  fontWeight: 500,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
               >
                 {fileDetail?.name}
               </span>
@@ -109,6 +104,7 @@ const FileEditorCanvas = memo<FileEditorProps>(({ onBack }) => {
               {fileDetail?.url && (
                 <ActionIcon
                   icon={DownloadIcon}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
                   title={t('download', { ns: 'common' })}
                   onClick={() => {
                     if (fileDetail?.url && fileDetail?.name) {
@@ -117,17 +113,16 @@ const FileEditorCanvas = memo<FileEditorProps>(({ onBack }) => {
                   }}
                 />
               )}
-              <ActionIcon aria-label={t('details')} icon={InfoIcon} onClick={openFileDetailModal} />
+              <ActionIcon
+                aria-label={t('details')}
+                icon={InfoIcon}
+                size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                onClick={openFileDetailModal}
+              />
             </div>
           }
-          style={{
-            borderBottom: `1px solid ${cssVar.colorBorderSecondary}`,
-          }}
-          styles={{
-            left: { flex: 1, minWidth: 0, overflow: 'hidden', padding: 0 },
-          }}
         />
-        <div className="flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
+        <div className="flex min-h-0 flex-col flex-1 overflow-hidden">
           <FileContent fileId={currentViewItemId} />
         </div>
       </div>

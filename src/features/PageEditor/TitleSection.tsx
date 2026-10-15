@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { SmilePlus } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -97,7 +96,7 @@ const TitleSection = memo(() => {
           variant="ghost"
           style={{
             opacity: isHoveringTitle ? 1 : 0,
-            transition: `opacity ${cssVar.motionDurationMid} ${cssVar.motionEaseInOut}`,
+            transition: `opacity ${'var(--orvilo-motion-mid)'} ${'var(--orvilo-motion-ease-in-out)'}`,
             width: 'fit-content',
           }}
           onClick={() => {

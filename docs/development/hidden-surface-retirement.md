@@ -1,5 +1,9 @@
 # 隐藏产品面退役
 
+> 历史实施记录：文中的 “当前”、路径和保留清单对应各段记录的提交，不能作为现阶段实现约定。
+> 当前认证、队列和技能入口及本轮校正见 [仓库差异审计](./repository-audit/README.md)。
+> 不要根据本记录恢复已删除实现；现行代码与 `AGENTS.md` 的归属规则优先。
+
 > 本文件是「隐藏产品面退役」战役的**入口清点表与处置记录**。
 > 产品边界与判据见 [product-scope.md](./product-scope.md)；更早一轮的收敛记录见 [task-first-rollout.md](./task-first-rollout.md)。
 

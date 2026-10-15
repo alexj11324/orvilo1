@@ -42,7 +42,7 @@ export interface DatePickerProps {
   'prefix'?: ReactNode;
   'renderExtraFooter'?: () => ReactNode;
   'showNow'?: boolean;
-  'size'?: 'default' | 'small';
+  'size'?: 'default' | 'small' | 'compact' | 'normal' | 'large';
   'style'?: CSSProperties;
   'suffixIcon'?: ReactNode;
   /** Hover hint for the trigger; suppressed while the popover is open. */
@@ -55,7 +55,7 @@ export interface DatePickerProps {
   'variant'?: 'field' | 'ghost';
 }
 
-const cellButtonClass = 'w-full rounded-lg hover:bg-accent';
+const cellButtonClass = 'w-full rounded-(--radius-button) hover:bg-accent';
 const cellVariant = (selected: boolean) => (selected ? 'default' : 'ghost');
 
 const PeriodGrid = ({
@@ -87,7 +87,7 @@ const PeriodGrid = ({
         variant="ghost"
         onClick={() => setYear((y) => y - (picker === 'year' ? 12 : 1))}
       >
-        <ChevronLeft size={14} />
+        <ChevronLeft size={16} />
       </Button>
       <span className="text-sm font-medium">
         {picker === 'year' ? `${year - 5} - ${year + 6}` : year}
@@ -99,7 +99,7 @@ const PeriodGrid = ({
         variant="ghost"
         onClick={() => setYear((y) => y + (picker === 'year' ? 12 : 1))}
       >
-        <ChevronRight size={14} />
+        <ChevronRight size={16} />
       </Button>
     </div>
   );
@@ -267,7 +267,7 @@ const DatePicker = memo<DatePickerProps>(
 
     const triggerContent = (
       <>
-        {prefix ?? <CalendarIcon className="text-muted-foreground" size={13} />}
+        {prefix ?? <CalendarIcon className="text-muted-foreground" size={16} />}
         <span
           className={cn(
             'truncate text-left',
@@ -282,7 +282,7 @@ const DatePicker = memo<DatePickerProps>(
             {...clickableProps()}
             aria-label={t('datePicker.clear')}
             className={cn(
-              'flex items-center rounded-sm text-muted-foreground hover:text-foreground',
+              'flex items-center rounded-(--radius-input) text-muted-foreground hover:text-foreground',
               CLICKABLE_FOCUS_RING,
             )}
             onClick={clearValue}
@@ -294,13 +294,22 @@ const DatePicker = memo<DatePickerProps>(
               clearValue(e);
             }}
           >
-            <X size={13} />
+            <X size={16} />
           </span>
         ) : suffixIcon === null ? null : (
           (suffixIcon ?? null)
         )}
       </>
     );
+
+    const triggerSize =
+      size === 'small'
+        ? 'sm'
+        : size === 'compact'
+          ? 'compact'
+          : size === 'large'
+            ? 'large'
+            : 'normal';
 
     const triggerProps = {
       'aria-label': ariaLabel,
@@ -312,18 +321,20 @@ const DatePicker = memo<DatePickerProps>(
       variant === 'ghost' ? (
         <Button
           className={cn(!display && 'text-muted-foreground', className)}
+          size={triggerSize}
           type="button"
           variant="ghost"
           {...triggerProps}
         />
       ) : (
         <Button
+          size={triggerSize}
           type="button"
           variant="outline"
           {...triggerProps}
           className={cn(
-            'w-full justify-start gap-1.5 rounded-lg border-input bg-transparent font-normal hover:bg-accent',
-            size === 'small' && 'h-7 text-[13px]',
+            'w-full justify-start gap-1.5 rounded-(--radius-input) border-input bg-transparent font-normal hover:bg-accent',
+            triggerSize === 'large' ? 'text-base' : 'text-sm',
             className,
           )}
         />

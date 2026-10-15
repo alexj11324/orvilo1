@@ -35,8 +35,7 @@ const EmailRow = () => {
       label={t('profile.email')}
       action={
         <Button
-          className="text-sm"
-          style={{ cursor: 'pointer', fontSize: 13 }}
+          className="cursor-pointer text-sm leading-5.5"
           type="button"
           variant="link"
           onClick={openAccountsPortal}

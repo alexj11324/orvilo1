@@ -1,5 +1,4 @@
 import { formatAbsoluteDate } from '@orvilo/utils/time';
-import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import { Clock3Icon, PlusIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
@@ -12,27 +11,22 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import NavHeader from '@/features/NavHeader';
 import { useFetchAgentChatTopics } from '@/hooks/useFetchChatTopics';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/slices/topic/selectors';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  time: css`
-    margin-inline-start: 6px;
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  title: css`
-    overflow: hidden;
+const styles = {
+  time: 'ms-1.5 text-xs leading-5 text-foreground-tertiary',
+  title: 'truncate text-sm leading-5.5 font-medium',
+};
 
-    font-size: 14px;
-    font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+// Topic creation and history share the builder's compact work header.
+const topicActionSize = {
+  blockSize: 32,
+  borderRadius: 'var(--radius-button)',
+  size: 16,
+};
 
 interface TopicSelectorProps {
   agentId: string;
@@ -76,21 +70,21 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
               }
             }}
           >
-            <div className="flex items-center gap-1 justify-between" style={{ width: '100%' }}>
+            <div className="flex w-full items-center gap-1 justify-between">
               <span className={styles.title}>{topic.title}</span>
               <span className={styles.time}>{displayTime}</span>
             </div>
           </DropdownMenuCheckboxItem>
         );
       }),
-    [topics, switchTopic, styles, activeTopicId, disabled],
+    [topics, switchTopic, activeTopicId, disabled],
   );
   const isEmpty = !topics || topics.length === 0;
 
   return (
     <NavHeader
       showTogglePanelButton={false}
-      styles={{ right: { flex: 'none' } }}
+      slotClassNames={{ right: 'flex-none' }}
       left={
         activeTopic?.title ? (
           <span className={styles.title} title={activeTopic.title}>
@@ -103,7 +97,7 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
           <ActionIcon
             disabled={disabled}
             icon={PlusIcon}
-            size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            size={topicActionSize}
             title={t('actions.addNewTopic')}
             onClick={() => {
               if (disabled) return;
@@ -115,20 +109,20 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
             <DropdownMenuTrigger
               disabled={disabled || isEmpty}
               render={
-                <span style={{ display: 'inline-flex' }}>
+                <span className="inline-flex">
                   <ActionIcon
                     aria-label={t('history', { ns: 'common' })}
                     disabled={disabled || isEmpty}
                     icon={Clock3Icon}
-                    size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                    size={topicActionSize}
                   />
                 </span>
               }
             />
             <DropdownMenuContent
               align="end"
+              className="max-h-100 min-w-70 overflow-y-auto"
               side="bottom"
-              style={{ maxHeight: 400, minWidth: 280, overflowY: 'auto' }}
             >
               {items}
             </DropdownMenuContent>

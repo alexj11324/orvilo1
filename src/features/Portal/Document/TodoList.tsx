@@ -1,7 +1,6 @@
 'use client';
 
 import { AGENT_PLAN_FILE_TYPE } from '@orvilo/const';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, ChevronUp, ListTodo } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
@@ -25,98 +24,24 @@ interface TodoState {
   updatedAt: string;
 }
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  collapsed: css`
-    overflow-y: hidden;
-    max-height: 0;
-    padding-block: 0 !important;
-    opacity: 0;
-  `,
-  container: css`
-    cursor: pointer;
-    user-select: none;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 8px;
-
-    background: ${cssVar.colorBgElevated};
-
-    transition: all 0.2s ${cssVar.motionEaseInOut};
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  count: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  expanded: css`
-    overflow-y: auto;
-    max-height: 300px;
-    opacity: 1;
-  `,
-  header: css`
-    overflow: hidden;
-
-    font-size: 13px;
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  itemRow: css`
-    padding-block: 6px;
-    padding-inline: 4px;
-    border-block-end: 1px dashed ${cssVar.colorBorderSecondary};
-    font-size: 13px;
-
-    &:last-child {
-      border-block-end: none;
-    }
-  `,
-  listContainer: css`
-    overflow-x: hidden;
-
-    /* Blockify the inline-flex Base UI Checkbox labels — without this the todo
-       rows flow inline and wrap several per line. */
-    display: flex;
-    flex-direction: column;
-
-    margin-block-start: 8px;
-    padding-block: 4px;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-
-    transition:
-      max-height 0.25s ${cssVar.motionEaseInOut},
-      opacity 0.2s ${cssVar.motionEaseInOut},
-      padding 0.2s ${cssVar.motionEaseInOut};
-  `,
-  progress: css`
-    flex: 1;
-    height: 4px;
-    border-radius: 2px;
-    background: ${cssVar.colorFillSecondary};
-  `,
-  progressFill: css`
-    height: 100%;
-    border-radius: 2px;
-    background: ${cssVar.colorSuccess};
-    transition: width 0.3s ${cssVar.motionEaseInOut};
-  `,
-  root: css`
-    flex-shrink: 0;
-    padding-block-end: 12px;
-    padding-inline: 12px;
-  `,
-  textChecked: css`
-    color: ${cssVar.colorTextQuaternary};
-    text-decoration: line-through;
-  `,
-}));
+const styles = {
+  // Merged after listContainer: py-0 removes its py-1 without priority CSS.
+  collapsed: 'max-h-0 overflow-y-hidden py-0 opacity-0',
+  container:
+    'cursor-pointer select-none rounded-(--radius-card) border border-divider bg-popover p-4 transition-[color,background-color,border-color,box-shadow] duration-(--orvilo-motion-mid) ease-[var(--orvilo-motion-ease-in-out)] hover:bg-accent motion-reduce:transition-none',
+  count: 'font-mono text-xs leading-5 text-muted-foreground',
+  expanded: 'max-h-75 overflow-y-auto opacity-100',
+  header: 'truncate text-sm leading-5.5 font-medium text-foreground',
+  itemRow:
+    'border-be border-dashed border-divider px-1 py-1.5 text-sm leading-5.5 last:border-be-0',
+  listContainer:
+    'mbs-2 flex flex-col overflow-x-hidden border-bs border-divider py-1 transition-[max-height,opacity,padding-block-start,padding-block-end] duration-(--orvilo-motion-mid) ease-[var(--orvilo-motion-ease-in-out)] motion-reduce:transition-none',
+  progress: 'h-1 flex-1 rounded-full bg-selected',
+  progressFill:
+    'h-full rounded-full bg-success transition-[width] duration-(--orvilo-motion-mid) ease-[var(--orvilo-motion-ease-in-out)] motion-reduce:transition-none',
+  root: 'shrink-0 px-4 pbe-4',
+  textChecked: 'text-foreground-quaternary line-through',
+} as const;
 
 const TodoList = memo(() => {
   const { t } = useTranslation('portal');
@@ -152,30 +77,25 @@ const TodoList = memo(() => {
         {/* Header */}
         <div
           {...clickableProps()}
-          className={cn('flex flex-row items-center gap-2 justify-between', CLICKABLE_FOCUS_RING)}
+          className={cn(
+            'flex min-h-8 flex-row items-center gap-2 justify-between',
+            CLICKABLE_FOCUS_RING,
+          )}
         >
-          <div className="flex flex-row items-center gap-2" style={{ flex: 1, minWidth: 0 }}>
-            <span
-              className="anticon"
-              role="img"
-              style={{ color: cssVar.colorPrimary, flexShrink: 0 }}
-            >
+          <div className="flex flex-row flex-1 min-w-0 items-center gap-2">
+            <span className="anticon shrink-0 text-muted-foreground" role="img">
               <ListTodo fill={'transparent'} height={16} size={16} width={16} />
             </span>
             <span className={styles.header}>
               {currentPendingTask?.text || t('document.todos.allCompleted')}
             </span>
-            <Badge size="sm" style={{ flexShrink: 0 }} variant="secondary">
+            <Badge className="shrink-0" size="sm" variant="secondary">
               <span className={styles.count}>
                 {completed}/{total}
               </span>
             </Badge>
           </div>
-          <span
-            className="anticon"
-            role="img"
-            style={{ color: cssVar.colorTextTertiary, flexShrink: 0 }}
-          >
+          <span className="anticon shrink-0 text-foreground-tertiary" role="img">
             {createElement(expanded ? ChevronUp : ChevronDown, {
               size: 16,
               width: 16,
@@ -186,29 +106,26 @@ const TodoList = memo(() => {
         </div>
 
         {/* Progress Bar */}
-        <div className="flex flex-row gap-2" style={{ marginTop: 8 }}>
+        <div className="flex flex-row gap-2 mbs-2">
           <div className={styles.progress}>
             <div className={styles.progressFill} style={{ width: `${progressPercent}%` }} />
           </div>
         </div>
 
         {/* Expandable Todo List */}
-        <div className={cx(styles.listContainer, expanded ? styles.expanded : styles.collapsed)}>
+        <div className={cn(styles.listContainer, expanded ? styles.expanded : styles.collapsed)}>
           {items.map((item, index) => (
-            <div className={cx('flex items-center gap-2', styles.itemRow)} key={index}>
+            <div className={cn('flex items-center gap-2', styles.itemRow)} key={index}>
               <Checkbox
                 checked={item.completed}
-                className="rounded-full"
+                className="cursor-default pointer-events-none rounded-full data-checked:border-success data-checked:text-success-on-fill"
                 style={{
-                  backgroundColor: item.completed ? cssVar.colorSuccess : undefined,
-                  borderWidth: 1.5,
-                  cursor: 'default',
-                  pointerEvents: 'none',
+                  backgroundColor: item.completed ? 'var(--success)' : undefined,
                 }}
               />
               <div
                 className={
-                  item.completed ? cx('text-muted-foreground', styles.textChecked) : undefined
+                  item.completed ? cn('text-muted-foreground', styles.textChecked) : undefined
                 }
               >
                 {item.text}

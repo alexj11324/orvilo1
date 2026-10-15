@@ -37,32 +37,31 @@ const styles = {
     '[--klm-blue-6:color-mix(in_srgb,var(--info)_42%,var(--foreground))]',
   ].join(' '),
   interactionCostHeader: 'flex flex-wrap items-center justify-end gap-x-3 gap-y-2',
-  interactionCostModel: 'font-mono text-[12px] text-(--ant-color-text-tertiary)',
-  interactionMetric:
-    'min-w-0 rounded-(--ant-border-radius-sm) border border-sidebar-border px-2.5 py-[9px]',
-  interactionMetricLabel: 'mb-1 block text-[12px] text-(--ant-color-text-tertiary)',
-  interactionMetricValue: 'text-[18px] leading-[1.2] font-[650] text-foreground tabular-nums',
+  interactionCostModel: 'font-mono text-xs text-foreground-tertiary',
+  interactionMetric: 'min-w-0 rounded-(--radius-card) border border-sidebar-border px-2.5 py-2.25',
+  interactionMetricLabel: 'mb-1 block text-xs text-foreground-tertiary',
+  interactionMetricValue: 'text-base leading-normal font-semibold text-foreground tabular-nums',
   interactionMetrics: 'grid grid-cols-3 gap-2 [@media(width<=520px)]:grid-cols-[1fr]',
   operatorChip: [
     operatorColors,
-    'inline-flex items-baseline gap-[5px] font-mono text-[12px] text-[color:color-mix(in_srgb,var(--operator-color)_72%,var(--muted-foreground))]',
+    'inline-flex items-baseline gap-1.25 font-mono text-xs text-muted-foreground',
     "before:mt-[0.5em] before:size-1.5 before:flex-none before:rounded-full before:bg-(--operator-color) before:content-['']",
-    '[&_b]:font-[650] [&_b]:text-(--operator-color)',
+    '[&_b]:font-semibold [&_b]:text-foreground',
   ].join(' '),
   operatorList: 'flex flex-wrap gap-x-3.5 gap-y-2',
   // The check title gives way before the phase name in a crowded row.
-  phaseCheck: 'min-w-0 flex-auto truncate text-[11px] text-(--ant-color-text-quaternary)',
+  phaseCheck: 'min-w-0 flex-auto truncate text-xs text-foreground-quaternary',
   phaseList: 'flex flex-col gap-2',
   phaseName:
-    'flex min-w-0 items-baseline gap-1.5 overflow-hidden text-[12px] whitespace-nowrap text-muted-foreground',
+    'flex min-w-0 items-baseline gap-1.5 overflow-hidden text-xs whitespace-nowrap text-muted-foreground',
   // Keep the phase visible even when its check title is long.
   phaseSlug: 'max-w-[60%] flex-none overflow-hidden text-ellipsis',
   phaseRow:
-    'grid grid-cols-[minmax(120px,1fr)_minmax(140px,1.6fr)_auto] items-center gap-2.5 [@media(width<=640px)]:grid-cols-[1fr] [@media(width<=640px)]:gap-[5px]',
-  phaseSegment: `${operatorColors} h-full min-w-[2px] flex-none bg-(--operator-color)`,
+    'grid grid-cols-[minmax(120px,1fr)_minmax(140px,1.6fr)_auto] items-center gap-2.5 [@media(width<=640px)]:grid-cols-[1fr] [@media(width<=640px)]:gap-1.25',
+  phaseSegment: `${operatorColors} h-full min-w-0.5 flex-none bg-(--operator-color)`,
   phaseTrack:
-    'flex h-2 overflow-hidden rounded-[999px] bg-transparent shadow-[inset_0_0_0_1px_var(--sidebar-border)]',
-  phaseValue: 'text-[12px] text-(--ant-color-text-tertiary) tabular-nums',
+    'flex h-2 overflow-hidden rounded-full bg-transparent shadow-[inset_0_0_0_1px_var(--sidebar-border)]',
+  phaseValue: 'text-xs text-foreground-tertiary tabular-nums',
 };
 
 export interface InteractionCostPanelProps {

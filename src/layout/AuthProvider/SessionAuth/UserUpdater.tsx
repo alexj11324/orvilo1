@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { CircleAlert } from 'lucide-react';
 import { memo, type PropsWithChildren, useEffect, useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -124,7 +123,7 @@ const UserUpdater = memo(({ children }: PropsWithChildren) => {
         <div
           className="flex flex-col items-center justify-center gap-4"
           style={{
-            background: cssVar.colorBgLayout,
+            background: 'var(--background)',
             inset: 0,
             padding: 24,
             position: 'fixed',

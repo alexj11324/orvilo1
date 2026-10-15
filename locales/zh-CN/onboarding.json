@@ -297,7 +297,6 @@
   "setup.orchestrator.finish": "完成设置",
   "setup.orchestrator.title": "选择协调 Agent",
   "setup.provider": "提供商设置",
-  "setup.skip": "暂时跳过",
   "setup.stepName.agent": "Agent",
   "setup.stepName.orchestrator": "协调 Agent",
   "setup.stepName.workspace": "工作区",

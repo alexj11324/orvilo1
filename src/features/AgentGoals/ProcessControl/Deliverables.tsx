@@ -36,9 +36,9 @@ import { KindDot } from './shared';
 const styles = {
   producer: 'flex-none justify-end max-w-[40%]',
   time: 'flex-none min-w-15 text-end',
-  row: 'w-full p-2 border-none rounded-(--ant-border-radius-sm) text-start bg-transparent bg-none',
+  row: 'w-full p-2 border-none rounded-(--radius-input) text-start bg-transparent bg-none',
   rowOpenable:
-    'cursor-pointer hover:bg-[var(--ant-color-fill-quaternary)] focus-visible:[outline:2px_solid_var(--primary)] focus-visible:-outline-offset-2',
+    'cursor-pointer hover:bg-fill-quaternary focus-visible:[outline:2px_solid_var(--primary)] focus-visible:-outline-offset-2',
 };
 
 /**
@@ -78,7 +78,7 @@ const DeliverableRow = memo<{
       className={cn(styles.row, openable && styles.rowOpenable)}
       {...(openable ? { onClick: () => onOpen(artifact), type: 'button' as const } : {})}
     >
-      {createElement(icon, { color: 'var(--ant-color-text-quaternary)', size: 14 })}
+      {createElement(icon, { color: 'var(--foreground-quaternary)', size: 14 })}
       {/* The title takes the slack so the attribution and the timestamp form
           right-aligned columns; letting the title size itself left every row's
           attribution starting at a different x. */}
@@ -88,12 +88,12 @@ const DeliverableRow = memo<{
       {!!producerTitle && (
         <div className={`flex items-center gap-1.5 ${styles.producer}`}>
           <KindDot kind={'task'} />
-          <div className="truncate min-w-0 text-[12px] text-muted-foreground">
+          <div className="truncate min-w-0 text-xs text-muted-foreground">
             {t('goalProcess.deliverables.from', { title: producerTitle })}
           </div>
         </div>
       )}
-      <div className={cn('text-[12px] text-muted-foreground', styles.time)} title={title}>
+      <div className={cn('text-xs text-muted-foreground', styles.time)} title={title}>
         {text}
       </div>
     </RowTag>
@@ -124,8 +124,8 @@ const Deliverables = memo<{ graph: GoalGraphView }>(({ graph }) => {
   if (graph.artifacts.length === 0)
     return (
       <div className="flex items-center gap-1.5">
-        <Link2 color={'var(--ant-color-text-quaternary)'} size={14} />
-        <div className="text-[13px] text-muted-foreground">
+        <Link2 color={'var(--foreground-quaternary)'} size={14} />
+        <div className="text-(length:--text-dense) text-muted-foreground">
           {t('goalProcess.deliverables.empty')}
         </div>
       </div>

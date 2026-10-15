@@ -145,7 +145,7 @@ export const useSlashItems = (): SlashOptions['items'] => {
       return {
         ...item,
         extra: (
-          <div className="font-mono rounded bg-muted px-1 text-[12px] text-muted-foreground">
+          <div className="font-mono rounded bg-muted px-1 text-xs text-muted-foreground">
             {item.key}
           </div>
         ),

@@ -1,6 +1,5 @@
 'use client';
 import type { DecisionVerb, NotificationFeedCard } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
@@ -120,120 +119,6 @@ const LazyIssuePeekActions = lazy(() =>
  * applied-filters strip — and a detail pane on the right.
  * (docs/research/plane/inbox/PAGE_TOPOLOGY.md)
  */
-const styles = createStaticStyles(({ css }) => ({
-  stage: css`
-    position: relative;
-    display: flex;
-    flex: 1;
-    min-height: 0;
-  `,
-  listColumn: css`
-    display: flex;
-    flex-direction: column;
-    min-height: 100%;
-  `,
-  columnHeader: css`
-    display: flex;
-    flex: none;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-
-    height: 48px;
-    padding-inline: 16px 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  tabsRow: css`
-    display: flex;
-    flex: none;
-    align-items: center;
-
-    height: 44px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  appliedFilters: css`
-    display: flex;
-    flex: none;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  filterPill: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 3px;
-    padding-inline: 8px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    appearance: none;
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillQuaternary};
-    }
-  `,
-  detail: css`
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: 24px;
-  `,
-  detailPlaceholder: css`
-    min-height: 100%;
-  `,
-  /**
-   * Task-linked cards get the detail chrome: a sticky header row carrying the
-   * issue identifier plus pin/open actions, while the issue body scrolls
-   * beneath it — the same peek-header contract `MyWorkIssuePane` uses.
-   */
-  paneHeader: css`
-    position: sticky;
-    z-index: 2;
-    inset-block-start: 0;
-
-    display: flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 8px;
-    padding-inline: 16px 8px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  paneMeta: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  divider: css`
-    height: 1px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  /* Mobile detail surface: the split keeps the list mounted underneath so its
-     scroll/selection return; the overlay is the detail's single scroll owner. */
-  detailOverlay: css`
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-
-    overflow-y: auto;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
 
 const WorkInboxPage = memo(() => {
   const { t } = useTranslation('notification');
@@ -897,8 +782,8 @@ const WorkInboxPage = memo(() => {
     which === 'mentions' ? (summary?.unreadMentionCount ?? 0) : (summary?.unreadBadgeCount ?? 0);
 
   const listPane = (
-    <div className={styles.listColumn}>
-      <div className={styles.columnHeader}>
+    <div className="flex flex-col min-h-full">
+      <div className="flex flex-none h-12 items-center justify-between gap-2 ps-4 pe-2 border-be border-solid border-divider">
         <div className="flex min-w-0 items-center gap-2">
           {createElement(InboxIcon, {
             'aria-hidden': true,
@@ -1006,16 +891,16 @@ const WorkInboxPage = memo(() => {
           </DropdownMenu>
         </div>
       </div>
-      <div className={styles.tabsRow}>
+      <div className="flex flex-none h-11 items-center px-3 border-be border-solid border-divider">
         <Tabs value={tab} onValueChange={(value) => writeInboxParams({ tab: value as InboxTab })}>
-          <TabsList>
+          <TabsList className="rounded-(--radius-button)">
             {INBOX_TABS.map((which) => {
               const count = tabCount(which);
               return (
-                <TabsTrigger key={which} value={which}>
+                <TabsTrigger className="rounded-(--radius-input)" key={which} value={which}>
                   {t(`inbox.tab.${which}`)}
                   {count > 0 ? (
-                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs leading-none text-muted-foreground">
+                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs leading-5 text-muted-foreground">
                       {count}
                     </span>
                   ) : null}
@@ -1026,31 +911,35 @@ const WorkInboxPage = memo(() => {
         </Tabs>
       </div>
       {typeFilters.length > 0 ? (
-        <div className={styles.appliedFilters}>
+        <div className="flex flex-none flex-wrap items-center gap-1.5 py-2 px-3 border-be border-solid border-divider">
           {typeFilters.map((filter) => (
-            <button
-              className={styles.filterPill}
+            <Button
+              className="cursor-pointer gap-1 py-1 px-2 border-divider rounded-full text-xs font-normal leading-5 text-muted-foreground bg-transparent hover:text-foreground hover:bg-fill-quaternary"
               key={filter}
+              size="compact"
               type="button"
+              variant="ghost"
               onClick={() => toggleTypeFilter(filter)}
             >
               {t(`inbox.filterType.${filter}`)}
               <XIcon aria-hidden className="size-3" />
-            </button>
+            </Button>
           ))}
-          <button
-            className={styles.filterPill}
+          <Button
+            className="cursor-pointer gap-1 py-1 px-2 border-divider rounded-full text-xs font-normal leading-5 text-muted-foreground bg-transparent hover:text-foreground hover:bg-fill-quaternary"
+            size="compact"
             type="button"
+            variant="ghost"
             onClick={() => writeInboxParams({ types: null })}
           >
             <XIcon aria-hidden className="size-3" />
             {t('inbox.clearFilters')}
-          </button>
+          </Button>
         </div>
       ) : null}
       {partial ? (
         <div
-          className="m-2 flex items-center gap-2 rounded-lg border border-border bg-muted p-3 text-sm"
+          className="m-2 flex items-center gap-2 rounded-(--radius-card) border border-border bg-muted p-3 text-sm"
           role="status"
         >
           <TriangleAlertIcon aria-hidden className="size-4 shrink-0" />
@@ -1059,12 +948,12 @@ const WorkInboxPage = memo(() => {
       ) : null}
       {error ? (
         <div
-          className="m-2 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+          className="m-2 flex items-center gap-2 rounded-(--radius-card) border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive-text"
           role="alert"
         >
           <TriangleAlertIcon aria-hidden className="size-4 shrink-0" />
           <span className="flex-1">{t('inbox.loadFailed')}</span>
-          <Button variant="ghost" onClick={() => void refresh()}>
+          <Button size="compact" variant="ghost" onClick={() => void refresh()}>
             {tCommon('retry')}
           </Button>
         </div>
@@ -1072,11 +961,11 @@ const WorkInboxPage = memo(() => {
       {listMode === 'loading' ? (
         <InboxListRowSkeleton />
       ) : error && cards.length === 0 ? (
-        <div className="flex flex-col items-center justify-center" style={{ flex: 1, padding: 24 }}>
+        <div className="flex flex-col items-center justify-center flex-1 p-6">
           <AsyncError error={error} variant={'block'} onRetry={() => void refresh()} />
         </div>
       ) : listMode === 'empty' || listMode === 'partial-empty' ? (
-        <div className="flex flex-col items-center justify-center" style={{ flex: 1, padding: 48 }}>
+        <div className="flex flex-col items-center justify-center flex-1 p-12">
           <div className="flex flex-col items-center gap-3 text-center text-sm text-muted-foreground">
             {createElement(InboxIcon, { 'className': 'size-8 shrink-0', 'aria-hidden': true })}
             <p>
@@ -1106,15 +995,17 @@ const WorkInboxPage = memo(() => {
             />
           ))}
           {hasMore || loadMoreError ? (
-            <div
-              className="flex flex-col items-center justify-center"
-              style={{ padding: 12, flexDirection: 'column', gap: 8 }}
-            >
+            <div className="flex flex-col items-center justify-center p-3 flex-col gap-2">
               {loadMoreError ? (
-                <span className="text-sm text-destructive">{t('inbox.loadFailed')}</span>
+                <span className="text-sm text-destructive-text">{t('inbox.loadFailed')}</span>
               ) : null}
               {hasMore ? (
-                <Button disabled={loadingMore} variant="outline" onClick={() => void loadMore()}>
+                <Button
+                  disabled={loadingMore}
+                  size="compact"
+                  variant="outline"
+                  onClick={() => void loadMore()}
+                >
                   {loadingMore ? <Spinner /> : <></>}
                   {t('inbox.loadMore')}
                 </Button>
@@ -1135,7 +1026,7 @@ const WorkInboxPage = memo(() => {
       // first-class for approval-type cards. IssueContent mounts directly in
       // the pane's scroll owner — no nested scroll host, no page chrome.
       <>
-        <div className={styles.paneHeader}>
+        <div className="sticky z-2 inset-bs-0 flex items-center gap-1 py-2 ps-4 pe-2 border-be border-solid border-divider bg-card">
           {surface === 'detail' ? (
             <Button
               aria-label={tCommon('back')}
@@ -1147,13 +1038,10 @@ const WorkInboxPage = memo(() => {
               {createElement(ChevronLeftIcon, { className: 'size-4 shrink-0' })}
             </Button>
           ) : null}
-          <span className="truncate text-sm font-medium" style={{ minWidth: 0 }}>
+          <span className="truncate text-sm font-medium min-w-0">
             {selectedIssueIdentifier ?? titleFor(selected)}
           </span>
-          <div
-            className="flex flex-row"
-            style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 4, flex: 1 }}
-          >
+          <div className="flex flex-row items-center justify-end gap-1 flex-1">
             <Suspense fallback={null}>
               <LazyIssuePeekActions
                 taskId={selectedIssueTaskId}
@@ -1173,16 +1061,16 @@ const WorkInboxPage = memo(() => {
             ) : null}
           </div>
         </div>
-        <div className={styles.detail}>
-          <div className="flex flex-col" style={{ gap: 4 }}>
+        <div className="flex flex-col gap-4 p-6">
+          <div className="flex flex-col gap-1">
             <span className="text-base font-semibold">{titleFor(selected)}</span>
-            <span className={cn('text-sm', styles.paneMeta)}>
+            <span className={cn('text-sm', 'text-xs leading-5 text-foreground-tertiary')}>
               {dayjs(selected.lastActivityAt).fromNow()}
               {!selected.read ? ` · ${t('inbox.unread')}` : ''}
             </span>
           </div>
           <span className="text-sm text-muted-foreground">{selected.content}</span>
-          <div className={styles.divider} />
+          <div className="h-px bg-divider" />
           {selected.nativeIntervention ? (
             <InboxNativeIntervention
               agent={selected.agent}
@@ -1192,19 +1080,21 @@ const WorkInboxPage = memo(() => {
             />
           ) : null}
           {decisionVerbs.length > 0 ? (
-            <div className="flex flex-col" style={{ gap: 8 }}>
+            <div className="flex flex-col gap-2">
               {decisionVerbs.includes('submit_input') ? (
                 <Input
                   aria-label={t('inbox.inputPlaceholder')}
                   placeholder={t('inbox.inputPlaceholder')}
                   value={inputDraft}
+                  visualSize="normal"
                   onChange={(event) => setInputDraft(event.target.value)}
                 />
               ) : null}
-              <div className="flex flex-row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              <div className="flex flex-row gap-2 flex-wrap">
                 {decisionVerbs.includes('approve') ? (
                   <Button
                     disabled={pendingDecisions.has(`${selected.notificationId}:approve`)}
+                    size="lg"
                     variant="default"
                     onClick={() => void decide(selected, 'approve')}
                   >
@@ -1219,6 +1109,7 @@ const WorkInboxPage = memo(() => {
                 {decisionVerbs.includes('decline') ? (
                   <Button
                     disabled={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                    size="lg"
                     variant="outline"
                     onClick={() => void decide(selected, 'decline')}
                   >
@@ -1233,6 +1124,7 @@ const WorkInboxPage = memo(() => {
                 {decisionVerbs.includes('cancel') ? (
                   <Button
                     disabled={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                    size="lg"
                     variant="outline"
                     onClick={() => void decide(selected, 'cancel')}
                   >
@@ -1246,6 +1138,7 @@ const WorkInboxPage = memo(() => {
                 ) : null}
                 {decisionVerbs.includes('submit_input') ? (
                   <Button
+                    size="lg"
                     variant="default"
                     disabled={
                       pendingDecisions.has(`${selected.notificationId}:submit_input`) ||
@@ -1293,7 +1186,11 @@ const WorkInboxPage = memo(() => {
                   {displayOption !== 'archived' &&
                   (selected.availableActions.includes('dismiss') ||
                     selected.availableActions.includes('archive')) ? (
-                    <Button variant="outline" onClick={() => void toggleArchiveCard(selected)}>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={() => void toggleArchiveCard(selected)}
+                    >
                       {t('inbox.dismiss')}
                     </Button>
                   ) : null}
@@ -1304,10 +1201,11 @@ const WorkInboxPage = memo(() => {
         </div>
       </>
     ) : (
-      <div className={styles.detail}>
+      <div className="flex flex-col gap-4 p-6">
         {surface === 'detail' ? (
           <div className="flex flex-row">
             <Button
+              size="compact"
               variant="outline"
               onClick={() => writeInboxParams({ detail: null, item: null })}
             >
@@ -1316,28 +1214,30 @@ const WorkInboxPage = memo(() => {
             </Button>
           </div>
         ) : null}
-        <div className="flex flex-col" style={{ gap: 4 }}>
+        <div className="flex flex-col gap-1">
           <span className="text-base font-semibold">{titleFor(selected)}</span>
-          <span className={cn('text-sm', styles.paneMeta)}>
+          <span className={cn('text-sm', 'text-xs leading-5 text-foreground-tertiary')}>
             {dayjs(selected.lastActivityAt).fromNow()}
             {!selected.read ? ` · ${t('inbox.unread')}` : ''}
           </span>
         </div>
         <span className="text-sm text-muted-foreground">{selected.content}</span>
-        <div className={styles.divider} />
-        <div className="flex flex-col" style={{ gap: 8 }}>
+        <div className="h-px bg-divider" />
+        <div className="flex flex-col gap-2">
           {decisionVerbs.includes('submit_input') ? (
             <Input
               aria-label={t('inbox.inputPlaceholder')}
               placeholder={t('inbox.inputPlaceholder')}
               value={inputDraft}
+              visualSize="normal"
               onChange={(event) => setInputDraft(event.target.value)}
             />
           ) : null}
-          <div className="flex flex-row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <div className="flex flex-row gap-2 flex-wrap">
             {decisionVerbs.includes('approve') ? (
               <Button
                 disabled={pendingDecisions.has(`${selected.notificationId}:approve`)}
+                size="lg"
                 variant="default"
                 onClick={() => void decide(selected, 'approve')}
               >
@@ -1348,6 +1248,7 @@ const WorkInboxPage = memo(() => {
             {decisionVerbs.includes('decline') ? (
               <Button
                 disabled={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                size="lg"
                 variant="outline"
                 onClick={() => void decide(selected, 'decline')}
               >
@@ -1358,6 +1259,7 @@ const WorkInboxPage = memo(() => {
             {decisionVerbs.includes('cancel') ? (
               <Button
                 disabled={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                size="lg"
                 variant="outline"
                 onClick={() => void decide(selected, 'cancel')}
               >
@@ -1367,6 +1269,7 @@ const WorkInboxPage = memo(() => {
             ) : null}
             {decisionVerbs.includes('submit_input') ? (
               <Button
+                size="lg"
                 variant="default"
                 disabled={
                   pendingDecisions.has(`${selected.notificationId}:submit_input`) ||
@@ -1383,7 +1286,7 @@ const WorkInboxPage = memo(() => {
               </Button>
             ) : null}
             {selectedOpenTarget ? (
-              <Button variant="outline" onClick={() => openTarget(selected)}>
+              <Button size="lg" variant="outline" onClick={() => openTarget(selected)}>
                 {createElement(ExternalLinkIcon, { className: 'size-4 shrink-0' })}
                 {t('inbox.open')}
               </Button>
@@ -1400,16 +1303,20 @@ const WorkInboxPage = memo(() => {
   ) : deepLink === 'failed' ? (
     // The id stays in the URL — it may still resolve — so the pane owns an
     // honest failure with retry instead of silently dropping the selection.
-    <div className={styles.detail}>
+    <div className="flex flex-col gap-4 p-6">
       {surface === 'detail' ? (
         <div className="flex flex-row">
-          <Button variant="outline" onClick={() => writeInboxParams({ detail: null, item: null })}>
+          <Button
+            size="compact"
+            variant="outline"
+            onClick={() => writeInboxParams({ detail: null, item: null })}
+          >
             {createElement(ChevronLeftIcon, { className: 'size-4 shrink-0' })}
             {tCommon('back')}
           </Button>
         </div>
       ) : null}
-      <div className="flex flex-col items-center justify-center" style={{ flex: 1, padding: 24 }}>
+      <div className="flex flex-col items-center justify-center flex-1 p-6">
         <AsyncError
           error={fetchCardError}
           retrying={validatingCard}
@@ -1421,7 +1328,7 @@ const WorkInboxPage = memo(() => {
   ) : deepLink === 'loading' ? (
     // Deep link still resolving — a skeleton reads truer than "Select an
     // item", and it keeps the pane from flashing a wrong empty state.
-    <div className={styles.detail}>
+    <div className="flex flex-col gap-4 p-6">
       <div aria-busy className="flex flex-col gap-2 p-3" role="status">
         {Array.from({ length: 6 }, (_, index) => (
           <Skeleton className="h-10 w-full" key={index} />
@@ -1433,10 +1340,7 @@ const WorkInboxPage = memo(() => {
   // Plane's right-pane empty state: "No notification selected — Select a
   // notification to view its details."
   const detailPlaceholder = (
-    <div
-      className={cn('flex flex-col items-center justify-center', styles.detailPlaceholder)}
-      style={{ flex: 1, padding: 48 }}
-    >
+    <div className={cn('flex flex-col items-center justify-center', 'min-h-full', 'flex-1 p-12')}>
       <div className="flex flex-col items-center gap-2 text-center">
         {createElement(InboxIcon, {
           'aria-hidden': true,
@@ -1450,7 +1354,7 @@ const WorkInboxPage = memo(() => {
 
   return (
     <TooltipProvider>
-      <div className={styles.stage}>
+      <div className="relative flex flex-1 min-h-0">
         <WorkSurfaceSplit
           detail={surface === 'split' ? (detailPane ?? detailPlaceholder) : undefined}
           list={listPane}
@@ -1469,7 +1373,7 @@ const WorkInboxPage = memo(() => {
         {surface === 'detail' && detailPane ? (
           <div
             aria-label={selected ? titleFor(selected) : t('inbox.detailEmptyTitle')}
-            className={styles.detailOverlay}
+            className="absolute z-1 inset-0 overflow-y-auto bg-card"
           >
             {detailPane}
           </div>

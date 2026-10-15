@@ -1,6 +1,5 @@
 import { Markdown } from '@lobehub/ui';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx, cn } from 'cn';
 // GitHub check status is separate from Orvilo task and issue workflow status.
 /* eslint-disable @typescript-eslint/no-restricted-imports */
 import {
@@ -17,141 +16,50 @@ import { createElement, memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
 
 import { checkSummaryVisual } from './ReviewChecksPanel';
 import { reviewBranchState } from './reviewsSurface';
 import type { PullRequestDetail, ReviewFile } from './types';
 
-const styles = createStaticStyles(({ css }) => ({
-  author: css`
-    min-width: 0;
-    margin-block-start: 8px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  authorName: css`
-    flex: none;
-    white-space: nowrap;
-  `,
-  body: css`
-    min-width: 0;
-    padding-block-end: 48px;
-  `,
-  branch: css`
-    overflow: hidden;
-    flex: 1;
-
-    min-width: 0;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  description: css`
-    margin-block-start: 32px;
-  `,
-  fileButton: css`
-    cursor: pointer;
-
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    width: 100%;
-    min-height: 28px;
-    padding: 4px;
-    border: 0;
-    border-radius: ${cssVar.borderRadiusXS};
-
-    color: ${cssVar.colorTextSecondary};
-    text-align: start;
-
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-
-    &:focus-visible {
-      outline: 2px solid ${cssVar.colorPrimary};
-    }
-  `,
-  fileName: css`
-    overflow: hidden;
-    flex: 1;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-  layout: css`
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(200px, 24%);
-    gap: 32px;
-
-    width: 100%;
-    max-width: 1500px;
-    margin-inline: auto;
-    padding-block: 24px;
-    padding-inline: 32px;
-
-    @media (width <= 768px) {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 24px;
-      padding-inline: 16px;
-    }
-  `,
-  rail: css`
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    min-width: 0;
-  `,
-  railLabel: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  railValue: css`
-    margin-block-start: 8px;
-    font-size: 13px;
-  `,
-  sectionLabel: css`
-    margin-block-end: 8px;
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  title: css`
-    margin: 0;
-
-    font-size: 24px;
-    font-weight: 600;
-    line-height: 1.28;
-    letter-spacing: -0.02em;
-    overflow-wrap: anywhere;
-  `,
-}));
+const styles = {
+  author: 'mt-2 min-w-0 text-muted-foreground',
+  authorName: 'flex-none whitespace-nowrap',
+  body: 'min-w-0 pb-12',
+  branch: 'min-w-0 flex-1 truncate font-mono text-xs leading-5',
+  description: 'mx-auto mt-8 w-full max-w-240',
+  fileButton:
+    'flex w-full cursor-pointer items-center justify-start gap-1.5 border-0 bg-transparent p-1 text-start font-normal text-muted-foreground hover:bg-accent',
+  fileName: 'flex-1 truncate font-mono text-sm leading-5.5',
+  layout:
+    'mx-auto grid w-full max-w-375 grid-cols-[minmax(0,1fr)_minmax(200px,24%)] gap-8 px-8 py-6 [@media(width<=768px)]:grid-cols-[minmax(0,1fr)] [@media(width<=768px)]:gap-6 [@media(width<=768px)]:px-4',
+  rail: 'flex min-w-0 flex-col gap-6',
+  railLabel: 'text-xs leading-5 text-muted-foreground',
+  railValue: 'mt-2 text-sm leading-5.5',
+  sectionLabel: 'mb-2 text-xs leading-5 text-muted-foreground',
+  title: 'm-0 text-2xl font-semibold leading-8 [overflow-wrap:anywhere]',
+} as const;
 
 const stateVisual = (pullRequest: PullRequestDetail) => {
   if (pullRequest.state === 'MERGED')
     return {
       icon: GitPullRequestArrowIcon,
-      color: cssVar.colorPrimary,
+      color: 'var(--primary-text)',
       key: 'reviews.state.merged',
     };
   if (pullRequest.state === 'CLOSED')
     return {
       icon: GitPullRequestClosedIcon,
-      color: cssVar.colorError,
+      color: 'var(--destructive-text)',
       key: 'reviews.state.closed',
     };
   if (pullRequest.isDraft)
     return {
       icon: GitPullRequestIcon,
-      color: cssVar.colorTextSecondary,
+      color: 'var(--muted-foreground)',
       key: 'reviews.state.draft',
     };
-  return { icon: GitPullRequestIcon, color: cssVar.colorSuccess, key: 'reviews.state.open' };
+  return { icon: GitPullRequestIcon, color: 'var(--success-text)', key: 'reviews.state.open' };
 };
 
 /** Description and real GitHub metadata for the Review Overview tab. */
@@ -178,14 +86,14 @@ const ReviewOverview = memo<{
     <div className={styles.layout}>
       <div className={styles.body}>
         <h1 className={styles.title}>{pullRequest.title}</h1>
-        <div className={cx('flex flex-row items-center gap-2', styles.author)}>
+        <div className={clsx('flex flex-row items-center gap-2', styles.author)}>
           <Avatar
             avatar={pullRequest.authorAvatar ?? undefined}
             name={pullRequest.author ?? '?'}
             size={20}
           />
-          <div className={cn('text-[12px]', styles.authorName)}>{pullRequest.author}</div>
-          <div className="text-[12px] text-muted-foreground">·</div>
+          <div className={cn('text-xs', styles.authorName)}>{pullRequest.author}</div>
+          <div className="text-xs text-muted-foreground">·</div>
           <span className={styles.branch} title={branchLabel}>
             {pullRequest.baseRef} ← {pullRequest.headRef}
           </span>
@@ -193,7 +101,7 @@ const ReviewOverview = memo<{
         <section className={styles.description}>
           <div className={styles.sectionLabel}>{t('reviews.description')}</div>
           {pullRequest.body ? (
-            <Markdown fontSize={14} variant={'chat'}>
+            <Markdown fontSize={14} lineHeight={22 / 14} variant={'chat'}>
               {pullRequest.body}
             </Markdown>
           ) : null}
@@ -203,22 +111,22 @@ const ReviewOverview = memo<{
       <aside className={styles.rail}>
         <section>
           <div className={styles.railLabel}>{t('reviews.status')}</div>
-          <div className={cx('flex flex-row items-center gap-2', styles.railValue)}>
+          <div className={clsx('flex flex-row items-center gap-2', styles.railValue)}>
             <span className="anticon" role="img">
               <state.icon
                 color={state.color}
                 fill={'transparent'}
-                height={14}
-                size={14}
-                width={14}
+                height={16}
+                size={16}
+                width={16}
               />
             </span>
-            <div className="text-[13px]">{t(state.key as never)}</div>
+            <div className="text-sm leading-5.5">{t(state.key as never)}</div>
           </div>
         </section>
         <section>
           <div className={styles.railLabel}>{t('reviews.checks')}</div>
-          <div className={cx('flex flex-row items-center gap-2', styles.railValue)}>
+          <div className={clsx('flex flex-row items-center gap-2', styles.railValue)}>
             <span className="anticon" role="img">
               {createElement(
                 pullRequest.checks.summary.state === 'passed'
@@ -226,44 +134,58 @@ const ReviewOverview = memo<{
                   : pullRequest.checks.summary.state === 'failing'
                     ? XCircleIcon
                     : CircleDashedIcon,
-                { size: 14, width: 14, height: 14, color: checks.color, fill: 'transparent' },
+                { size: 16, width: 16, height: 16, color: checks.color, fill: 'transparent' },
               )}
             </span>
-            <div className="text-[13px]">
+            <div className="text-sm leading-5.5">
               {t(checks.labelKey as never, { count: pullRequest.checks.summary.failing })}
             </div>
           </div>
         </section>
         <section>
           <div className={styles.railLabel}>{t('reviews.branch')}</div>
-          <div className={cn('text-[13px]', styles.railValue)}>{branchLabel}</div>
+          <div className={cn('text-sm leading-5.5', styles.railValue)}>{branchLabel}</div>
         </section>
         <section>
           <div className={styles.railLabel}>
             {t('reviews.filesChangedTitle', { count: pullRequest.changedFiles })}
           </div>
-          <div className="flex flex-col gap-0.5" style={{ marginBlockStart: 8 }}>
+          <div className="flex flex-col gap-0.5 [margin-block-start:calc(var(--spacing)*2)]">
             {files.map((file) => (
-              <button
+              <Button
                 className={styles.fileButton}
                 key={file.filename}
+                size="compact"
                 title={file.filename}
                 type={'button'}
+                variant="ghost"
                 onClick={() => onFileSelect(file.filename)}
               >
                 <span className="anticon" role="img">
-                  <FileTextIcon fill={'transparent'} height={14} size={14} width={14} />
+                  <FileTextIcon
+                    className="size-4"
+                    fill={'transparent'}
+                    height={16}
+                    size={16}
+                    width={16}
+                  />
                 </span>
                 <span className={styles.fileName}>{file.filename}</span>
-                <span>
+                <span className="text-xs leading-5 tabular-nums">
                   +{file.additions} −{file.deletions}
                 </span>
-              </button>
+              </Button>
             ))}
             {hasMoreFiles ? (
-              <button className={styles.fileButton} type={'button'} onClick={onViewMoreFiles}>
+              <Button
+                className={styles.fileButton}
+                size="compact"
+                type={'button'}
+                variant="ghost"
+                onClick={onViewMoreFiles}
+              >
                 {t('reviews.moreFilesInDiff')}
-              </button>
+              </Button>
             ) : null}
           </div>
         </section>

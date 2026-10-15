@@ -36,7 +36,7 @@ const PinOnTopButton = memo(() => {
       active={pinned}
       className={electronStylish.nodrag}
       icon={pinned ? PinIcon : PinOffIcon}
-      size={{ blockSize: 28, size: 14 }}
+      size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
       tooltipProps={{ placement: 'bottom' }}
       title={t(pinned ? 'window.unpinFromTop' : 'window.pinToTop', {
         defaultValue: pinned ? 'Unpin from top' : 'Pin on top',

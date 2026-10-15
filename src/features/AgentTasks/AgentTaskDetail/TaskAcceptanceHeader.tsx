@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ShieldCheck } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
@@ -31,12 +30,12 @@ export const TaskAcceptanceHeader = memo<TaskAcceptanceHeaderProps>(
         style={{ cursor: 'pointer', width: 'fit-content' }}
         {...pressableProps(onToggle)}
       >
-        <ShieldCheck color={cssVar.colorTextDescription} size={16} />
-        <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
+        <ShieldCheck color={'var(--foreground-description)'} size={16} />
+        <div className="text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>
           {t('taskDetail.acceptance.title')}
         </div>
         {Boolean(count) && <Tag size="sm">{count}</Tag>}
-        <AccordionArrowIcon isOpen={isOpen} style={{ color: cssVar.colorTextDescription }} />
+        <AccordionArrowIcon isOpen={isOpen} style={{ color: 'var(--foreground-description)' }} />
       </div>
     );
 

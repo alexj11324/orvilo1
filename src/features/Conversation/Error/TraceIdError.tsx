@@ -58,13 +58,15 @@ const TraceIdError = memo<TraceIdErrorProps>(({ id, onRetry, showRetry = true, t
       action={
         showRetry ? (
           <Button
+            multiline
+            className="min-w-0 max-w-full break-words [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
             disabled={!onRetry && disabled}
             loading={!onRetry && loading}
-            size="sm"
+            size="compact"
             variant="default"
             onClick={handleRetry}
           >
-            <RotateCw /> {t('unknownError.retry')}
+            <RotateCw className="size-4" size={16} /> {t('unknownError.retry')}
           </Button>
         ) : undefined
       }
@@ -77,7 +79,8 @@ const TraceIdError = memo<TraceIdErrorProps>(({ id, onRetry, showRetry = true, t
             target="_blank"
             style={{
               alignItems: 'center',
-              color: hasDiscord ? '#5865F2' : 'var(--ant-color-link)',
+              // Discord keeps its brand hue; the other report link follows the app theme.
+              color: hasDiscord ? '#5865F2' : 'var(--link)',
               display: 'inline-flex',
               gap: 2,
               verticalAlign: 'middle',
@@ -96,7 +99,7 @@ const TraceIdError = memo<TraceIdErrorProps>(({ id, onRetry, showRetry = true, t
                   cursor: 'pointer',
                   opacity: 0.65,
                   textDecoration: 'underline dashed',
-                  textDecorationColor: 'var(--ant-color-text-quaternary)',
+                  textDecorationColor: 'var(--foreground-quaternary)',
                   textUnderlineOffset: 3,
                 }}
                 onClick={handleCopyTraceId}

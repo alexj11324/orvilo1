@@ -9,8 +9,8 @@ import { useTranslation } from 'react-i18next';
 import { inspectorTextStyles, shinyTextStyles } from '../../styles';
 
 const styles = {
-  separator: 'mx-0.5 text-[var(--ant-color-text-quaternary)]',
-  tag: 'rounded-[4px] bg-accent px-1.5 py-px font-mono text-[12px] text-foreground',
+  separator: 'mx-0.5 text-foreground-quaternary',
+  tag: 'rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-xs text-foreground',
   tagsList: 'inline-flex min-w-0 shrink items-center gap-1 whitespace-nowrap ms-1.5',
 };
 
@@ -89,8 +89,8 @@ export const createGrepContentInspector = ({
               <span style={{ marginInlineStart: 4 }}>({resultCount})</span>
             ) : (
               <span
-                className="text-[12px]"
-                style={{ marginInlineStart: 4, color: 'var(--ant-color-text-description)' }}
+                className="text-xs"
+                style={{ marginInlineStart: 4, color: 'var(--foreground-description)' }}
               >
                 ({t(noResultsKey as any)})
               </span>

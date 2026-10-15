@@ -13,8 +13,8 @@ import Markdown from '../../../Markdown';
 import { formatCost, formatDuration } from './utils';
 
 const styles = {
-  collapseContent: 'px-0 py-2 text-[13px] leading-[1.6]',
-  separator: 'size-[3px] rounded-[50%] bg-[var(--ant-color-text-quaternary)]',
+  collapseContent: 'px-0 py-2 text-(length:--text-dense) leading-[1.6]',
+  separator: 'size-0.75 rounded-[50%] bg-foreground-quaternary',
 };
 
 export type CompletedStateVariant = 'detail' | 'compact';
@@ -35,7 +35,7 @@ interface MetricItemProps {
 export const MetricItem = memo<MetricItemProps>(({ icon, label, value }) => (
   <Badge
     className="bg-transparent border-transparent"
-    style={{ color: 'var(--ant-color-text-description)', padding: 0 }}
+    style={{ color: 'var(--foreground-description)', padding: 0 }}
     variant="secondary"
   >
     {icon && createElement(icon)}

@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import {
   AlertTriangle,
   CheckCheck,
@@ -42,19 +41,28 @@ import { useOpenAcceptanceInPanel } from './useOpenAcceptanceInPanel';
  * with the subject payload) tells them apart.
  */
 const STATE_META = {
-  accepted: { color: cssVar.colorSuccess, icon: CheckCheck, labelKey: 'accepted' },
+  accepted: { color: 'var(--success)', icon: CheckCheck, labelKey: 'accepted' },
   awaitingVerification: {
-    color: cssVar.colorTextTertiary,
+    color: 'var(--foreground-tertiary)',
     icon: CircleDashed,
     labelKey: 'awaitingVerification',
   },
-  awaitingDecision: { color: cssVar.colorError, icon: AlertTriangle, labelKey: 'awaitingDecision' },
-  awaitingReview: { color: cssVar.colorWarning, icon: Stamp, labelKey: 'awaitingReview' },
-  closed: { color: cssVar.colorTextTertiary, icon: CircleSlash, labelKey: 'closed' },
-  errored: { color: cssVar.colorError, icon: CircleX, labelKey: 'errored' },
-  rejected: { color: cssVar.colorError, icon: RotateCcw, labelKey: 'rejected' },
-  repairing: { color: cssVar.colorWarning, icon: RefreshCw, labelKey: 'repairing', spin: true },
-  verifying: { color: cssVar.colorInfo, icon: Loader2, labelKey: 'verifying', spin: true },
+  awaitingDecision: {
+    color: 'var(--destructive)',
+    icon: AlertTriangle,
+    labelKey: 'awaitingDecision',
+  },
+  awaitingReview: { color: 'var(--warning)', icon: Stamp, labelKey: 'awaitingReview' },
+  closed: { color: 'var(--foreground-tertiary)', icon: CircleSlash, labelKey: 'closed' },
+  errored: { color: 'var(--destructive)', icon: CircleX, labelKey: 'errored' },
+  rejected: { color: 'var(--destructive)', icon: RotateCcw, labelKey: 'rejected' },
+  repairing: {
+    color: 'var(--warning)',
+    icon: RefreshCw,
+    labelKey: 'repairing',
+    spin: true,
+  },
+  verifying: { color: 'var(--info)', icon: Loader2, labelKey: 'verifying', spin: true },
 } as const;
 
 type StateKey = keyof typeof STATE_META;

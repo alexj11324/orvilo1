@@ -1,4 +1,3 @@
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { isNull } from 'es-toolkit/compat';
 import { FileBoxIcon } from 'lucide-react';
@@ -13,66 +12,6 @@ import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 import { isChunkingUnsupported } from '@/utils/isChunkingUnsupported';
 
 import ChunksBadge from '../../ListView/ListItem/ChunkTag';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  floatingChunkBadge: css`
-    position: absolute;
-    z-index: 3;
-    inset-block-end: 8px;
-    inset-inline-end: 8px;
-
-    border-radius: ${cssVar.borderRadius};
-
-    opacity: 0;
-    background: ${cssVar.colorBgContainer};
-    box-shadow: ${cssVar.boxShadow};
-
-    transition: opacity ${cssVar.motionDurationMid};
-  `,
-  iconWrapper: css`
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    height: 120px;
-    margin-block-end: 12px;
-    border-radius: ${cssVar.borderRadius};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  noteContent: css`
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-
-    width: 100%;
-    min-height: 120px;
-    padding: 16px;
-    border-radius: ${cssVar.borderRadiusLG};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  notePreview: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 6;
-
-    font-size: 13px;
-    line-height: 1.6;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  noteTitle: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-
-    font-size: 16px;
-    font-weight: ${cssVar.fontWeightStrong};
-    line-height: 1.4;
-    color: ${cssVar.colorText};
-  `,
-}));
 
 interface NoteFileItemProps {
   chunkCount?: number | null;
@@ -115,19 +54,19 @@ const NoteFileItem = memo<NoteFileItemProps>(
 
     return (
       <>
-        <div style={{ position: 'relative' }}>
-          <div className={styles.noteContent}>
-            <div className={styles.noteTitle}>
-              {emoji && <span style={{ fontSize: 20 }}>{emoji}</span>}
+        <div className="relative">
+          <div className="flex flex-col gap-3 w-full min-h-30 p-4 rounded-(--radius-card) bg-fill-quaternary">
+            <div className="flex items-center gap-2 text-base leading-6 font-semibold text-foreground">
+              {emoji && <span className="text-xl">{emoji}</span>}
               <span>{displayTitle}</span>
             </div>
             {contentPreview ? (
-              <div className={styles.notePreview}>{contentPreview}</div>
+              <div className="line-clamp-6 text-sm leading-5.5 text-muted-foreground">
+                {contentPreview}
+              </div>
             ) : (
-              <div className={styles.notePreview}>
-                <span style={{ color: 'var(--lobe-text-tertiary)', fontStyle: 'italic' }}>
-                  {t('common:noContent')}
-                </span>
+              <div className="line-clamp-6 text-sm leading-5.5 text-muted-foreground">
+                <span className="text-foreground-tertiary italic">{t('common:noContent')}</span>
               </div>
             )}
           </div>
@@ -135,7 +74,10 @@ const NoteFileItem = memo<NoteFileItemProps>(
         {/* Floating chunk badge or action button */}
         {!isNull(chunkingStatus) && chunkingStatus ? (
           <div
-            className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
+            className={cn(
+              'floatingChunkBadge',
+              'absolute z-3 inset-be-2 end-2 rounded-(--radius-button) opacity-0 bg-card shadow-(--shadow-raised) transition-opacity duration-(--orvilo-motion-mid) ease-[ease]',
+            )}
             onClick={(event) => event.stopPropagation()}
           >
             <ChunksBadge
@@ -153,9 +95,11 @@ const NoteFileItem = memo<NoteFileItemProps>(
             <SimpleTooltip title={t('components:FileManager.actions.chunkingTooltip')}>
               <div
                 {...clickableProps()}
-                style={{ cursor: 'pointer' }}
                 className={cn(
-                  cx('floatingChunkBadge', styles.floatingChunkBadge),
+                  cn(
+                    'floatingChunkBadge',
+                    'cursor-pointer absolute z-3 inset-be-2 end-2 rounded-(--radius-button) opacity-0 bg-card shadow-(--shadow-raised) transition-opacity duration-(--orvilo-motion-mid) ease-[ease]',
+                  ),
                   CLICKABLE_FOCUS_RING,
                 )}
                 onClick={(e) => {
@@ -168,7 +112,7 @@ const NoteFileItem = memo<NoteFileItemProps>(
                 <Button
                   aria-label={t('components:FileManager.actions.chunkingTooltip')}
                   loading={isCreatingFileParseTask}
-                  size="sm"
+                  size="compact"
                   variant="ghost"
                 >
                   <FileBoxIcon data-icon="inline-start" />

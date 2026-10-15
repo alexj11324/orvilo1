@@ -1,5 +1,4 @@
-import { createStaticStyles, cx } from 'antd-style';
-import { cn } from 'cn';
+import { clsx as cx, cn } from 'cn';
 import { BoltIcon, RotateCwIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,17 +9,9 @@ import { type FileParsingTask } from '@/types/asyncTask';
 import { AsyncTaskStatus } from '@/types/asyncTask';
 import { CLICKABLE_FOCUS_RING, clickableProps } from '@/utils/clickableProps';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  errorReason: css`
-    padding: 4px;
-    border-radius: 4px;
-
-    font-family: monospace;
-    font-size: 12px;
-
-    background: ${cssVar.colorFillTertiary};
-  `,
-}));
+const styles = {
+  errorReason: 'rounded-(--radius-chip) bg-muted p-1 font-mono text-xs leading-5',
+};
 
 interface EmbeddingStatusProps extends FileParsingTask {
   className?: string;
@@ -38,11 +29,7 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
           <div className={'flex'}>
             <Tooltip>
               <TooltipTrigger render={<span />}>
-                <Badge
-                  className={cx('chunk-tag', className)}
-                  style={{ cursor: 'pointer' }}
-                  variant="info"
-                >
+                <Badge className={cx('chunk-tag cursor-pointer', className)} variant="info">
                   {createElement(BoltIcon, { size: 16 })}
                   {chunkCount}
                 </Badge>
@@ -59,22 +46,27 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
         return (
           <Tooltip>
             <TooltipTrigger render={<span />}>
-              <Badge className={className} variant="destructive">
+              <Badge
+                className={cx('h-auto min-h-7 [@media(pointer:coarse)]:min-h-11', className)}
+                variant="destructive"
+              >
                 {t('FileParsingStatus.chunks.embeddingStatus.error')}{' '}
                 <span
                   {...clickableProps()}
-                  className={CLICKABLE_FOCUS_RING}
-                  style={{ cursor: 'pointer' }}
                   title={t('retry', { ns: 'common' })}
+                  className={cn(
+                    'inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-(--radius-input) [@media(pointer:coarse)]:size-11',
+                    CLICKABLE_FOCUS_RING,
+                  )}
                   onClick={() => {
                     onErrorClick?.('embedding');
                   }}
                 >
-                  <RotateCwIcon size={16} />
+                  <RotateCwIcon className="size-4" size={16} />
                 </span>
               </Badge>
             </TooltipTrigger>
-            <TooltipContent style={{ maxWidth: 340 }}>
+            <TooltipContent className="max-w-85">
               <div className={'flex flex-col gap-1'}>
                 {t('FileParsingStatus.chunks.embeddingStatus.errorResult')}
                 {embeddingError && (
@@ -97,8 +89,7 @@ const EmbeddingStatus = memo<EmbeddingStatusProps>(
             <Tooltip>
               <TooltipTrigger render={<span />}>
                 <Badge
-                  className={cx('chunk-tag', className)}
-                  style={{ cursor: 'pointer' }}
+                  className={cx('chunk-tag cursor-pointer', className)}
                   variant="info"
                   onClick={() => {
                     onClick?.(AsyncTaskStatus.Success);

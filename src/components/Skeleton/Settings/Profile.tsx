@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { type ReactNode } from 'react';
 
 import { FormGroup } from '@/components/GroupForm';
@@ -9,47 +8,13 @@ import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
 
 import SkeletonBar from '../Bar';
 
-const styles = createStaticStyles(({ css, responsive }) => ({
-  action: css`
-    flex-shrink: 0;
-    margin-inline-start: auto;
-  `,
-  body: css`
-    display: flex;
-    flex: 1;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    min-width: 0;
-  `,
-  divider: css`
-    width: 100%;
-    height: 1px;
-    background: ${cssVar.colorBorderSecondary};
-  `,
-  label: css`
-    flex: 0 0 160px;
-
-    ${responsive.md} {
-      flex: 0 0 auto;
-    }
-  `,
-  row: css`
-    display: flex;
-    gap: 24px;
-    align-items: center;
-
-    min-height: 48px;
-    padding-block: 16px;
-
-    ${responsive.md} {
-      flex-direction: column;
-      gap: 12px;
-      align-items: stretch;
-    }
-  `,
-}));
+const styles = {
+  action: 'ms-auto shrink-0',
+  body: 'flex min-w-0 flex-1 items-center justify-between gap-3',
+  divider: 'h-px w-full bg-divider',
+  label: 'flex-[0_0_160px] [@media(width<=767.98px)]:flex-[0_0_auto]',
+  row: 'flex min-h-16 items-center gap-6 py-4 [@media(width<=767.98px)]:flex-col [@media(width<=767.98px)]:items-stretch [@media(width<=767.98px)]:gap-3',
+};
 
 interface SettingsProfileRowSkeletonProps {
   action?: boolean;
@@ -70,12 +35,14 @@ export const SettingsProfileRowSkeleton = ({
 }: SettingsProfileRowSkeletonProps) => (
   <div className={styles.row} style={height ? { minHeight: height } : undefined}>
     <div className={styles.label}>
-      <SkeletonBar height={22} width={labelWidth} />
+      <SkeletonBar height={14} width={labelWidth} />
     </div>
     <div className={styles.body}>
-      {body === undefined ? <SkeletonBar height={22} width={bodyWidth} /> : body}
+      {body === undefined ? <SkeletonBar height={14} width={bodyWidth} /> : body}
       {action && (
-        <div className={styles.action}>{actionNode ?? <SkeletonBar height={22} width={80} />}</div>
+        <div className={styles.action}>
+          {actionNode ?? <SkeletonBar height={32} radius={'var(--radius-button)'} width={80} />}
+        </div>
       )}
     </div>
   </div>
@@ -86,9 +53,9 @@ const INTEREST_WIDTHS = [
 ];
 
 const InterestsSkeleton = () => (
-  <div className="flex flex-wrap gap-2" style={{ width: '100%' }}>
+  <div className="flex w-full flex-wrap gap-2">
     {INTEREST_WIDTHS.map((width, index) => (
-      <SkeletonBar height={34} key={index} radius={cssVar.borderRadius} width={width} />
+      <SkeletonBar height={32} key={index} radius={'var(--radius-button)'} width={width} />
     ))}
   </div>
 );
@@ -103,12 +70,12 @@ const SettingsProfileSkeleton = () => {
       collapsible={false}
       data-testid={'settings-profile-skeleton'}
       gap={16}
-      title={<SkeletonBar height={18} width={80} />}
+      title={<SkeletonBar height={16} width={80} />}
       variant={'filled'}
     >
       <div className="flex flex-col">
         <SettingsProfileRowSkeleton
-          actionNode={<SkeletonBar height={46} radius={cssVar.borderRadius} width={46} />}
+          actionNode={<SkeletonBar height={40} radius={'var(--radius-card)'} width={40} />}
           body={null}
           height={78}
         />

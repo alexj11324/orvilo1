@@ -12,14 +12,14 @@ import type { CheckProposal } from './proposal';
 
 const styles = {
   /* Dashed and untinted: provisional suggestions stay distinct from verdicts. */
-  card: 'rounded-(--ant-border-radius-lg) border border-dashed border-border px-2.5 py-2',
+  card: 'rounded-(--radius-overlay) border border-dashed border-border px-2.5 py-2',
   head: 'cursor-pointer select-none',
   /* The collapsed line carries the claim without needing to open the card. */
-  preview: 'min-w-0 flex-1 truncate text-[12px]',
+  preview: 'min-w-0 flex-1 truncate text-xs',
   /* Provenance labels stay quieter than secondary content. */
-  muted: 'text-[11px] text-(--ant-color-text-quaternary)',
+  muted: 'text-xs text-foreground-quaternary',
   regionIndex:
-    'size-4 flex-none rounded-full bg-destructive text-center text-[10px] leading-4 font-semibold text-white',
+    'size-4 flex-none rounded-full bg-destructive text-center text-xs leading-4 font-semibold text-white',
 };
 
 interface ProposalCardProps {
@@ -73,7 +73,7 @@ const ProposalCard = memo<ProposalCardProps>(
         >
           {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           <Sparkles size={12} />
-          <div className="text-[12px] text-muted-foreground" style={{ flex: 'none' }}>
+          <div className="text-xs text-muted-foreground" style={{ flex: 'none' }}>
             {t('acceptance.proposal.title')}
           </div>
           {/* Provenance sits beside the claim it qualifies, but only once the
@@ -94,7 +94,7 @@ const ProposalCard = memo<ProposalCardProps>(
 
         {open && (
           <>
-            {proposal.comment && <div className="text-[12px]">{proposal.comment}</div>}
+            {proposal.comment && <div className="text-xs">{proposal.comment}</div>}
 
             {/* Numbers match the badges now drawn on the evidence image below. */}
             {regions.map((region, index) => (
@@ -102,7 +102,7 @@ const ProposalCard = memo<ProposalCardProps>(
                 <span className={styles.regionIndex} style={{ marginBlockStart: 2 }}>
                   {index + 1}
                 </span>
-                <div className="text-[12px] text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {region.comment || t('acceptance.proposal.regionUnnamed')}
                 </div>
               </div>

@@ -38,8 +38,6 @@ export interface OptimisticUpdateContext {
  */
 
 type Setter = StoreSetter<ChatStore>;
-export const messageOptimisticUpdate = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new MessageOptimisticUpdateActionImpl(set, get, _api);
 
 export class MessageOptimisticUpdateActionImpl {
   readonly #get: () => ChatStore;

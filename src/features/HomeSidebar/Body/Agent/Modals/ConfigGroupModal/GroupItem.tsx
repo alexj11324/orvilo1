@@ -1,5 +1,4 @@
 import type { DraggableSyntheticListeners } from '@dnd-kit/core';
-import { createStaticStyles } from 'antd-style';
 import { GripVertical, PencilLine, Trash } from 'lucide-react';
 import { createContext, memo, use, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,19 +12,7 @@ import type { SessionGroupItemBase } from '@/types/session';
 
 export const GroupItemDragContext = createContext<DraggableSyntheticListeners>(undefined);
 
-const styles = createStaticStyles(({ css }) => ({
-  content: css`
-    position: relative;
-    overflow: hidden;
-    flex: 1;
-  `,
-  title: css`
-    flex: 1;
-    height: 28px;
-    line-height: 28px;
-    text-align: start;
-  `,
-}));
+const styles = { title: 'min-w-0 flex-1 truncate text-start text-sm' };
 
 interface GroupItemProps extends SessionGroupItemBase {
   disabled?: boolean;
@@ -40,14 +27,16 @@ const GroupItem = memo<GroupItemProps>(({ id, name, disabled }) => {
   return (
     <>
       {!disabled && (
-        <button
+        <Button
           aria-label={t('sessionGroup.drag', 'Drag')}
-          className="cursor-grab text-muted-foreground"
+          className="shrink-0 cursor-grab text-muted-foreground"
+          size="icon"
           type="button"
+          variant="ghost"
           {...dragListeners}
         >
-          <GripVertical size={14} />
-        </button>
+          <GripVertical size={16} />
+        </Button>
       )}
       {!editing ? (
         <>
@@ -95,8 +84,9 @@ const GroupItem = memo<GroupItemProps>(({ id, name, disabled }) => {
       ) : (
         <Input
           autoFocus
-          className="h-7 flex-1"
+          className="flex-1"
           defaultValue={name}
+          visualSize="normal"
           onBlur={async (e) => {
             const input = e.target.value;
             setEditing(false);

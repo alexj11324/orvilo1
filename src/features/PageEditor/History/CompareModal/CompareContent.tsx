@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { RotateCcwIcon } from 'lucide-react';
@@ -18,82 +17,18 @@ import DocumentHistoryDiff from '../DocumentHistoryDiff';
 import { formatHistoryAbsoluteTime } from '../formatHistoryDate';
 import HistorySidebar from './HistorySidebar';
 
-const styles = createStaticStyles(({ css }) => ({
-  arrow: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  badgeNew: css`
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 4px;
-
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1.2;
-    color: ${cssVar.colorSuccess};
-
-    background: ${cssVar.colorSuccessBg};
-  `,
-  badgeOld: css`
-    display: inline-flex;
-    align-items: center;
-
-    padding-block: 2px;
-    padding-inline: 8px;
-    border-radius: 4px;
-
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1.2;
-    color: ${cssVar.colorError};
-
-    background: ${cssVar.colorErrorBg};
-  `,
-  cmpbar: css`
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-block: 10px;
-    padding-inline: 16px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgLayout};
-  `,
-  diffArea: css`
-    overflow: hidden;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-
-    min-width: 0;
-    min-height: 0;
-  `,
-  diffBody: css`
-    overflow: auto;
-    flex: 1;
-    min-height: 0;
-  `,
-  meta: css`
-    margin-inline-start: 8px;
-    font-size: 11px;
-    line-height: 1.2;
-  `,
-  root: css`
-    overflow: hidden;
-    display: flex;
-
-    width: 100%;
-    height: 100%;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  arrow: 'text-xs leading-5 text-foreground-tertiary',
+  badgeNew:
+    'inline-flex items-center gap-1 rounded-(--radius-chip) py-0.5 px-2 text-xs leading-5 font-semibold text-success-text bg-success-wash',
+  badgeOld:
+    'inline-flex items-center rounded-(--radius-chip) py-0.5 px-2 text-xs leading-5 font-semibold text-destructive-text bg-destructive-wash',
+  cmpbar: 'flex items-center justify-between border-be border-divider bg-background py-2.5 px-4',
+  diffArea: 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
+  diffBody: 'min-h-0 flex-1 overflow-auto',
+  meta: 'ms-2 text-xs leading-5',
+  root: 'flex h-full w-full overflow-hidden bg-card',
+};
 
 export interface CompareContentProps {
   documentId: string;
@@ -126,7 +61,7 @@ const CompareContent = memo<CompareContentProps>(
           <div className={styles.cmpbar}>
             <div className="flex items-center gap-1">
               <span className={styles.badgeNew}>{t('pageEditor.history.compareCurrentLabel')}</span>
-              <div className={cn(styles.arrow)}>→</div>
+              <div className={styles.arrow}>→</div>
               <span className={styles.badgeOld}>
                 {formatHistoryAbsoluteTime(selectedItem.savedAt)}
               </span>
@@ -144,7 +79,13 @@ const CompareContent = memo<CompareContentProps>(
               )}
             </div>
             {canRestore && (
-              <Button size="sm" variant="outline" onClick={() => onRestore(selectedItem)}>
+              <Button
+                className="text-sm leading-5.5"
+                size="compact"
+                type="button"
+                variant="outline"
+                onClick={() => onRestore(selectedItem)}
+              >
                 <RotateCcwIcon data-icon="inline-start" />
                 {t('pageEditor.history.restore')} {formatHistoryAbsoluteTime(selectedItem.savedAt)}
               </Button>

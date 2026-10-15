@@ -20,7 +20,6 @@ const analyzeIntentMock = vi.hoisted(() => vi.fn());
 const synthesizeInstructionMock = vi.hoisted(() => vi.fn());
 const navigateMock = vi.hoisted(() => vi.fn());
 const toastSuccessMock = vi.hoisted(() => vi.fn());
-const createGoalModalMock = vi.hoisted(() => vi.fn());
 const activeWorkspaceMock = vi.hoisted(() => ({
   id: 'workspace-1' as string | undefined,
 }));
@@ -118,10 +117,6 @@ vi.mock('@/services/task', () => ({
     analyzeIntent: analyzeIntentMock,
     synthesizeInstruction: synthesizeInstructionMock,
   },
-}));
-
-vi.mock('@/features/AgentGoals/CreateGoalModal', () => ({
-  createGoalModal: createGoalModalMock,
 }));
 
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
@@ -269,7 +264,6 @@ describe('CreateTaskInlineEntry', () => {
     });
     navigateMock.mockReset();
     toastSuccessMock.mockReset();
-    createGoalModalMock.mockReset();
     activeWorkspaceMock.id = 'workspace-1';
     workspaceMembersMock.isLoading = false;
     workspaceMembersMock.members = [{ role: 'member', userId: 'user-1' }];
@@ -323,13 +317,17 @@ describe('CreateTaskInlineEntry', () => {
     expect(editor).toHaveAttribute('data-padding-bottom', '12');
 
     const assigneeControl = screen.getByText('createTask.assignee').parentElement;
-    expect(assigneeControl).toHaveClass('h-6');
-    expect(assigneeControl).toHaveClass('py-[3px]');
+    expect(assigneeControl).toHaveClass(
+      'h-7',
+      '[@media(pointer:coarse)]:min-h-11',
+      '[@media(pointer:coarse)]:min-w-11',
+    );
+    expect(assigneeControl).toHaveClass('py-0.75');
 
     const attachmentAction = container
       .querySelector('svg.lucide-paperclip')
       ?.closest<HTMLElement>('button');
-    expect(attachmentAction).toHaveStyle({ height: '24px', width: '24px' });
+    expect(attachmentAction).toHaveStyle({ height: '32px', width: '32px' });
     expect(attachmentAction?.parentElement).toHaveClass('items-center');
 
     expect(screen.queryByTestId('visibility-trigger')).not.toBeInTheDocument();
@@ -787,7 +785,6 @@ describe('CreateTaskInlineEntry', () => {
 
       await screen.findByText('taskIntent.reviewStep');
       expect(screen.queryByText('taskIntent.goalCallout.action')).not.toBeInTheDocument();
-      expect(createGoalModalMock).not.toHaveBeenCalled();
       expect(createTaskMock).not.toHaveBeenCalled();
     });
 

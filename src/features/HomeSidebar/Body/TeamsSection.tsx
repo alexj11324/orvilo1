@@ -1,5 +1,4 @@
 'use client';
-
 import {
   EyeOffIcon,
   House,
@@ -11,7 +10,6 @@ import {
 } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
@@ -51,11 +49,12 @@ import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { usePathname, useSearchParams } from '@/libs/router/navigation';
-import { lambdaClient } from '@/libs/trpc/client';
+import type { workTeamService } from '@/services/workTeam';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+import { useFetchUserWorkTeams } from '@/store/workTeam/hooks';
 
 import { teamAccordionKey, useTeamSubNav } from '../hooks/useTeamSubNav';
 import { openCustomizeSidebarModal } from './CustomizeSidebarModal';
@@ -87,9 +86,7 @@ interface TeamsSectionProps {
 }
 
 /** Row of `team.teams` as consumed by the sidebar (joined flag included). */
-type SidebarTeam = NonNullable<
-  Awaited<ReturnType<typeof lambdaClient.team.teams.query>>['data']
->[number];
+type SidebarTeam = NonNullable<Awaited<ReturnType<typeof workTeamService.teams>>['data']>[number];
 
 interface TeamItemProps {
   /** Tab of the team page currently shown — `null` when the user is elsewhere. */
@@ -238,13 +235,7 @@ const TeamsSection = memo<TeamsSectionProps>(({ itemKey, open = true, onOpenChan
 
   const userId = useUserStore(userProfileSelectors.userId);
 
-  const { data, error, isLoading, isValidating, mutate } = useSWR(
-    activeWorkspaceId && userId ? ['sidebar-teams', userId, activeWorkspaceId] : null,
-    () => lambdaClient.team.teams.query(),
-    {
-      revalidateOnFocus: false,
-    },
-  );
+  const { data, error, isLoading, isValidating, mutate } = useFetchUserWorkTeams(userId);
   // "Your teams" lists JOINED teams only — readable-but-unjoined public
   // teams stay discoverable on /teams (the directory surface), not here.
   const teams = useMemo(() => (data?.data ?? []).filter((team) => team.joined === true), [data]);

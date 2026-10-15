@@ -1,5 +1,4 @@
 import { isDesktop } from '@orvilo/const';
-import { cssVar, useResponsive } from 'antd-style';
 import {
   Clock3Icon,
   CopyPlus,
@@ -20,6 +19,7 @@ import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { type SidebarDropdownMenuProps } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';
+import { useIsLargeViewport } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
 import { useDocumentStore } from '@/store/document';
 import { editorSelectors } from '@/store/document/slices/editor';
@@ -49,7 +49,7 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
   const { t } = useTranslation(['file', 'common', 'chat', 'setting']);
 
   const storeApi = useStoreApi();
-  const { lg = true } = useResponsive();
+  const lg = useIsLargeViewport();
 
   const documentId = usePageEditorStore((s) => s.documentId);
   const { allowed: canCreatePage } = usePermission('create_content');
@@ -300,7 +300,7 @@ export const useMenu = (options: UseMenuOptions = {}): { menuItems: any[] } => {
           disabled: true,
           key: 'page-info',
           label: (
-            <span style={{ color: cssVar.colorTextTertiary, fontSize: 12, lineHeight: 1.6 }}>
+            <span className="text-xs leading-5 text-foreground-tertiary">
               {authorName && lastUpdatedTime
                 ? t('pageEditor.editedAtBy', {
                     name: authorName,

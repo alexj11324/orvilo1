@@ -8,7 +8,6 @@ import {
   LineStats,
 } from '@orvilo/shared-tool-ui/components';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,50 +22,15 @@ import {
   getFileChangeStats,
 } from './utils';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  emptyState: css`
-    padding: 4px;
-    font-size: 13px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  list: css`
-    gap: 2px;
-    min-width: 0;
-    padding-block: 2px;
-    padding-inline: 4px;
-  `,
-  patch: css`
-    overflow: hidden;
-    padding-block-end: 8px;
-    padding-inline-start: 16px;
-  `,
-  rowMain: css`
-    display: flex;
-    flex: 1;
-    gap: 10px;
-    align-items: center;
-
-    min-width: 0;
-  `,
-  path: css`
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    min-width: 0;
-  `,
-  row: css`
-    gap: 8px;
-    align-items: center;
-
-    min-height: 26px;
-    padding-block: 3px;
-    padding-inline: 0;
-  `,
-  unknownPath: css`
-    font-size: 13px;
-    color: ${cssVar.colorTextTertiary};
-  `,
-}));
+const styles = {
+  emptyState: 'p-1 text-sm leading-5.5 text-muted-foreground',
+  list: 'min-w-0 gap-0.5 px-1 py-0.5',
+  patch: 'overflow-hidden pbe-2 ps-4',
+  rowMain: 'flex min-w-0 flex-1 items-center gap-2.5',
+  path: 'flex min-w-0 items-center overflow-hidden',
+  row: 'min-h-8 items-center gap-2 px-0 py-1 text-sm leading-5.5',
+  unknownPath: 'text-sm leading-5.5 text-muted-foreground',
+};
 
 const FileChangeRender = memo<BuiltinRenderProps<CodexFileChangeArgs, CodexFileChangeState>>(
   ({ args, pluginState }) => {

@@ -1,0 +1,12 @@
+.identity {
+  border-radius: var(--radius-card);
+}
+
+/* Only the square entity frame replaces the SDK's artistic corner mask.
+ * Repeating our own class outranks each public SDK root class without
+ * targeting its private selectors. Other corner shapes retain their masks.
+ */
+.square.square {
+  border-radius: var(--radius-card);
+  mask-image: none;
+}

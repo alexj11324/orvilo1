@@ -16,7 +16,7 @@ export const TaskDuplicateRelation = () => {
       <span className="shrink-0 text-muted-foreground">{t('taskDetail.menu.duplicateOf')}</span>
       {duplicate.identifier ? (
         <WorkspaceLink
-          className="min-w-0 truncate rounded-md px-2 py-1 hover:bg-accent hover:text-accent-foreground"
+          className="min-w-0 truncate rounded-(--radius-button) px-2 py-1 hover:bg-accent hover:text-accent-foreground"
           to={taskDetailPath(duplicate.identifier, undefined, duplicate.name)}
         >
           {duplicate.identifier}

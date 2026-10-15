@@ -34,6 +34,8 @@ export const listHeterogeneousAgentPermissions = async (
     params.type,
     resolved.command,
     env as NodeJS.ProcessEnv,
+    // Loaded when a settings page opens; never fetch a missing bridge for it.
+    { allowPackageRunner: false },
   );
 
   return listStandardAcpPermissions(params.type, {

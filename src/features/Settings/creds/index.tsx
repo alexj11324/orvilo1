@@ -1,4 +1,5 @@
 'use client';
+import { cn } from 'cn';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import NavHeader from '@/features/NavHeader';
 import SettingContainer from '@/features/Setting/SettingContainer';
+import { settingWidthClassNames } from '@/features/Setting/settingWidth';
 import { usePermission } from '@/hooks/usePermission';
 
 import { createCreateCredModal } from './features/CreateCredModal';
@@ -47,10 +49,10 @@ const Page = ({ mobile }: PageProps) => {
 
   if (mobile) {
     return (
-      <>
+      <div className={cn('mx-auto flex w-full flex-col', settingWidthClassNames.wide)}>
         <div className="flex justify-end p-4">{createButton}</div>
         <CredsList key={refreshKey} />
-      </>
+      </div>
     );
   }
 
@@ -59,7 +61,7 @@ const Page = ({ mobile }: PageProps) => {
       <NavHeader right={createButton} styles={{ center: { alignItems: 'center' } }}>
         <span>{t('tab.creds')}</span>
       </NavHeader>
-      <SettingContainer maxWidth={1024} paddingBlock={'24px 128px'} paddingInline={24}>
+      <SettingContainer paddingBlock={'24px 128px'} paddingInline={24} width="wide">
         <CredsList key={refreshKey} />
       </SettingContainer>
     </>

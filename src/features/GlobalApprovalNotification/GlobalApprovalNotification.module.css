@@ -1,0 +1,16 @@
+@layer utilities {
+  .headerSubtitle span {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    font-weight: 500;
+    color: var(--foreground);
+  }
+
+  .userRequestBody p:first-child {
+    margin-block-start: 0;
+  }
+
+  .userRequestBody p:last-child {
+    margin-block-end: 0;
+  }
+}

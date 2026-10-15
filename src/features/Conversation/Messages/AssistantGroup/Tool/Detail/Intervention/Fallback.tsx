@@ -5,7 +5,6 @@ import {
 } from '@orvilo/builtin-tool-activator';
 import { builtinToolIdentifiers } from '@orvilo/builtin-tools/identifiers';
 import { safeParseJSON } from '@orvilo/utils';
-import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { ChevronDown, ChevronRight, Edit3Icon } from 'lucide-react';
@@ -25,39 +24,12 @@ import Arguments from '../Arguments';
 import ApprovalActions from './ApprovalActions';
 import KeyValueEditor from './KeyValueEditor';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  collapseHeader: css`
-    cursor: pointer;
-    user-select: none;
-
-    padding-block: 6px;
-    padding-inline: 10px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-
-    &:hover {
-      color: ${cssVar.colorTextSecondary};
-    }
-  `,
-  description: css`
-    padding-block: 8px;
-    padding-inline: 16px;
-
-    font-size: ${cssVar.fontSize};
-    font-weight: 600;
-    color: ${cssVar.colorText};
-  `,
-  reason: css`
-    margin-block-start: -4px;
-    padding-block-end: 8px;
-    padding-inline: 16px;
-
-    font-size: ${cssVar.fontSizeSM};
-    line-height: 1.45;
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+const styles = {
+  collapseHeader:
+    'cursor-pointer select-none min-h-8 px-2.5 text-xs leading-5 text-foreground-tertiary hover:text-muted-foreground',
+  description: 'px-4 py-2 text-sm leading-5.5 font-semibold text-foreground',
+  reason: '-mbs-1 px-4 pbe-2 text-xs leading-5 text-muted-foreground',
+};
 
 interface FallbackInterventionProps {
   actionsPortalTarget?: HTMLDivElement | null;
@@ -190,9 +162,9 @@ const FallbackIntervention = memo<FallbackInterventionProps>(
           {pluginMeta?.avatar && (
             <Avatar
               avatar={pluginMeta.avatar}
+              className="flex-none"
               shape={'square'}
               size={16}
-              style={{ flex: 'none' }}
               title={toolTitle}
             />
           )}
@@ -208,10 +180,7 @@ const FallbackIntervention = memo<FallbackInterventionProps>(
           <>
             <div
               {...clickableProps()}
-              className={cn(
-                cn('flex items-center gap-1', styles.collapseHeader),
-                CLICKABLE_FOCUS_RING,
-              )}
+              className={cn('flex items-center gap-1', styles.collapseHeader, CLICKABLE_FOCUS_RING)}
               onClick={() => setShowArgs(!showArgs)}
             >
               {createElement(showArgs ? ChevronDown : ChevronRight, { size: 14 })}
@@ -224,7 +193,7 @@ const FallbackIntervention = memo<FallbackInterventionProps>(
               {showArgs && (
                 <ActionIcon
                   icon={Edit3Icon}
-                  size={'small'}
+                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 14 }}
                   title={t('edit', { ns: 'common' })}
                   onClick={(e) => {
                     e.stopPropagation();

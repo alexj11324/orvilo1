@@ -22,12 +22,11 @@ import { useForwardTopic } from '../useForwardTopic';
 
 const styles = {
   body: '[block-size:460px]',
-  context:
-    'flex-1 p-3 border border-sidebar-border rounded-(--ant-border-radius-lg) bg-[var(--ant-color-fill-quaternary)]',
+  context: 'flex-1 p-3 border border-sidebar-border rounded-(--radius-overlay) bg-fill-quaternary',
   divider: 'self-stretch [inline-size:1px] bg-sidebar-border',
   list: 'flex-1 overflow-y-auto',
-  row: 'cursor-pointer [min-block-size:44px] px-2 py-1.5 rounded-(--ant-border-radius-lg) hover:bg-accent',
-  selected: 'bg-[var(--ant-color-fill-quaternary)]',
+  row: 'cursor-pointer [min-block-size:44px] px-2 py-1.5 rounded-(--radius-overlay) hover:bg-accent',
+  selected: 'bg-fill-quaternary',
 };
 
 export interface TopicForwardContentProps {
@@ -80,6 +79,7 @@ export const TopicForwardContent = ({
             className="px-8"
             placeholder={t('messageForward.modal.searchPlaceholder')}
             value={keyword}
+            visualSize="compact"
             onChange={(event) => setKeyword(event.target.value)}
           />
           {keyword && (
@@ -145,8 +145,15 @@ export const TopicForwardContent = ({
           onChange={(event) => setNote(event.target.value)}
         />
         <div className="flex gap-2 justify-end">
-          <Button onClick={close}>{t('messageForward.bar.cancel')}</Button>
-          <Button disabled={selectedIds.length === 0} variant="default" onClick={handleForward}>
+          <Button size="lg" onClick={close}>
+            {t('messageForward.bar.cancel')}
+          </Button>
+          <Button
+            disabled={selectedIds.length === 0}
+            size="lg"
+            variant="default"
+            onClick={handleForward}
+          >
             {selectedIds.length > 0
               ? t('messageForward.modal.sendCount', { count: selectedIds.length })
               : t('messageForward.bar.forward')}

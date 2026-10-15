@@ -1,4 +1,3 @@
-import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { isEqual } from 'es-toolkit';
 import { memo, useCallback } from 'react';
@@ -29,99 +28,6 @@ import { useFileListItemRename } from './useFileListItemRename';
 
 export const FILE_DATE_WIDTH = 160;
 export const FILE_SIZE_WIDTH = 140;
-
-const styles = createStaticStyles(({ css }) => {
-  return {
-    container: css`
-      cursor: pointer;
-      min-width: 1040px;
-      transition: background ${cssVar.motionDurationMid} ${cssVar.motionEaseInOut};
-
-      &:hover {
-        background: ${cssVar.colorFillTertiary};
-      }
-    `,
-
-    dragOver: css`
-      outline: 1px dashed ${cssVar.colorPrimaryBorder};
-      outline-offset: -2px;
-
-      &,
-      &:hover {
-        background: ${cssVar.colorPrimaryBg};
-      }
-    `,
-
-    dragging: css`
-      will-change: transform;
-      opacity: 0.5;
-    `,
-
-    evenRow: css`
-      background: ${cssVar.colorFillQuaternary};
-
-      /* Hover effect overrides zebra striping on the hovered row only */
-      &:hover {
-        background: ${cssVar.colorFillTertiary};
-      }
-
-      /* Hide zebra striping when any row is hovered */
-      .any-row-hovered & {
-        background: transparent;
-      }
-
-      /* But keep hover effect on the actual hovered row */
-      .any-row-hovered &:hover {
-        background: ${cssVar.colorFillTertiary};
-      }
-    `,
-
-    hover: css`
-      opacity: 0;
-
-      &[data-popup-open],
-      .file-list-item-group:hover & {
-        opacity: 1;
-      }
-    `,
-    item: css`
-      padding-block: 0;
-      padding-inline: 0 24px;
-      color: ${cssVar.colorTextSecondary};
-    `,
-    name: css`
-      overflow: hidden;
-      flex: 1;
-
-      min-width: 0;
-      margin-inline-start: 12px;
-
-      color: ${cssVar.colorText};
-      white-space: nowrap;
-    `,
-    nameContainer: css`
-      overflow: hidden;
-      flex: 1;
-      min-width: 0;
-    `,
-    selected: css`
-      background: ${cssVar.colorFillTertiary};
-
-      &:hover {
-        background: ${cssVar.colorFillSecondary};
-      }
-    `,
-    uploaderName: css`
-      overflow: hidden;
-      flex: 1;
-
-      min-width: 0;
-
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    `,
-  };
-});
 
 interface FileListItemProps extends FileListItemType {
   columnWidths: {
@@ -286,23 +192,24 @@ const FileListItem = ({
         data-row-index={index}
         draggable={!!resourceManagerState.libraryId}
         className={cn(
-          cx(
-            'flex flex-row items-center h-[48px] px-2',
-            cx(
-              styles.container,
+          cn(
+            'flex flex-row items-center h-12 px-2 border-be border-solid border-divider select-none',
+            cn(
+              'cursor-pointer min-w-260 text-sm leading-5.5 transition-[background-color] duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-in-out) hover:bg-accent',
               'file-list-item-group',
-              index % 2 === 0 && styles.evenRow,
-              isSelected && styles.selected,
-              isDragging && styles.dragging,
-              isOver && styles.dragOver,
+              index % 2 === 0 &&
+                'bg-fill-quaternary hover:bg-accent [.any-row-hovered_&]:bg-transparent [.any-row-hovered_&]:hover:bg-accent',
+              isSelected &&
+                'bg-selected hover:bg-selected [.any-row-hovered_&]:bg-selected [.any-row-hovered_&]:hover:bg-selected',
+              isDragging && 'will-change-transform opacity-50',
+              isOver &&
+                'outline outline-1 outline-dashed outline-primary-border -outline-offset-2 bg-primary-wash hover:bg-primary-wash [.any-row-hovered_&]:bg-primary-wash [.any-row-hovered_&]:hover:bg-primary-wash',
             ),
           ),
           CLICKABLE_FOCUS_RING,
         )}
         style={{
-          borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}`,
           minWidth: getListViewMinWidth(showUploader),
-          userSelect: 'none',
         }}
         onClick={handleItemClick}
         onDragEnd={handleDragEnd}
@@ -312,8 +219,8 @@ const FileListItem = ({
         onDrop={handleDrop}
       >
         <div
-          className={'flex flex-col items-center justify-center h-[40px]'}
-          style={{ cursor: selectable ? 'pointer' : 'not-allowed', paddingInline: 4 }}
+          className={'flex flex-col items-center justify-center h-10 px-1'}
+          style={{ cursor: selectable ? 'pointer' : 'not-allowed' }}
           title={selectable ? undefined : t('FileManager.selection.onlyOwn')}
           onClick={handleCheckboxClick}
           onPointerDown={handleCheckboxPointerDown}
@@ -321,12 +228,10 @@ const FileListItem = ({
           <Checkbox checked={isSelected} disabled={!selectable} />
         </div>
         <div
-          className={cx('flex flex-row items-center justify-between', styles.item)}
+          className="flex flex-row items-center justify-between flex-none px-2 py-0 text-muted-foreground"
           style={{
-            flexShrink: 0,
             maxWidth: columnWidths.name,
             minWidth: columnWidths.name,
-            paddingInline: 8,
             width: columnWidths.name,
           }}
         >
@@ -367,28 +272,34 @@ const FileListItem = ({
         {!isDragging && (
           <>
             <div
-              className={cx('flex flex-row items-center gap-2', styles.item)}
-              style={{ flexShrink: 0, width: columnWidths.date }}
+              style={{ width: columnWidths.date }}
+              className={cn(
+                'flex flex-row items-center gap-2 flex-none text-xs leading-5',
+                'py-0 ps-0 pe-6 text-muted-foreground',
+              )}
             >
               <span>{displayTime}</span>
             </div>
             {showUploader && (
               <div
-                className={cx('flex flex-row items-center gap-2', styles.item)}
-                style={{ flexShrink: 0, width: columnWidths.uploader }}
+                style={{ width: columnWidths.uploader }}
+                className={cn(
+                  'flex flex-row items-center gap-2 flex-none text-xs leading-5',
+                  'py-0 ps-0 pe-6 text-muted-foreground',
+                )}
               >
                 {uploaderName ? (
                   <SimpleTooltip title={t('file:listView.uploadedBy', { name: uploaderName })}>
-                    <div className="flex flex-row items-center gap-2" style={{ minWidth: 0 }}>
+                    <div className="flex flex-row items-center gap-2 min-w-0">
                       <Avatar
                         alt={uploaderName}
                         avatar={remoteAvatarSrc(uploader?.avatar) || undefined}
+                        className="flex-none"
                         name={uploaderName}
                         shape={'circle'}
                         size={20}
-                        style={{ flexShrink: 0 }}
                       />
-                      <span className={styles.uploaderName}>{uploaderName}</span>
+                      <span className="truncate flex-1 min-w-0">{uploaderName}</span>
                     </div>
                   </SimpleTooltip>
                 ) : (
@@ -397,8 +308,11 @@ const FileListItem = ({
               </div>
             )}
             <div
-              className={cx('flex flex-col', styles.item)}
-              style={{ flexShrink: 0, width: columnWidths.size }}
+              style={{ width: columnWidths.size }}
+              className={cn(
+                'flex flex-col flex-none text-xs leading-5',
+                'py-0 ps-0 pe-6 text-muted-foreground',
+              )}
             >
               {isFolder || isPage ? '-' : formatSize(size)}
             </div>

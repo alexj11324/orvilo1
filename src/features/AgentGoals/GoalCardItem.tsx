@@ -12,7 +12,7 @@ import GoalStatusGlyph from './GoalStatusGlyph';
 import type { GoalItemProps } from './types';
 
 const styles = {
-  card: 'min-w-0 [transition:border-color_0.2s_var(--ant-motion-ease-out),background_0.2s_var(--ant-motion-ease-out),transform_0.2s_var(--ant-motion-ease-out)] hover:[transform:translateY(-1px)] hover:border-(--ant-color-primary-border) hover:bg-(--ant-color-fill-quaternary)',
+  card: 'min-w-0 [transition:border-color_0.2s_var(--orvilo-motion-ease-out),background_0.2s_var(--orvilo-motion-ease-out),transform_0.2s_var(--orvilo-motion-ease-out)] hover:[transform:translateY(-1px)] hover:border-primary-border hover:bg-fill-quaternary',
 };
 
 export const GoalCardItem = memo<GoalItemProps>(({ goal: item }) => {
@@ -34,7 +34,7 @@ export const GoalCardItem = memo<GoalItemProps>(({ goal: item }) => {
 
   return (
     <div
-      className={`flex flex-col cursor-pointer gap-3 rounded-md border border-border ${styles.card}`}
+      className={`flex flex-col cursor-pointer gap-3 rounded-(--radius-card) border border-border ${styles.card}`}
       role={'link'}
       style={{ padding: 16 }}
       tabIndex={0}
@@ -43,17 +43,15 @@ export const GoalCardItem = memo<GoalItemProps>(({ goal: item }) => {
     >
       <div className="flex items-start gap-3 justify-between">
         <div className="flex flex-col gap-1" style={{ minWidth: 0 }}>
-          <div className="flex items-center gap-[7px]">
-            <GoalStatusGlyph size={13} status={goal.status} />
-            <div className="truncate min-w-0 text-[15px] font-semibold">{goal.title}</div>
+          <div className="flex items-center gap-1.75">
+            <GoalStatusGlyph size={16} status={goal.status} />
+            <div className="truncate min-w-0 text-sm font-semibold">{goal.title}</div>
           </div>
           {goal.requirement && goal.requirement !== goal.title && (
-            <div className="truncate min-w-0 text-[12px] text-muted-foreground">
-              {goal.requirement}
-            </div>
+            <div className="truncate min-w-0 text-xs text-muted-foreground">{goal.requirement}</div>
           )}
         </div>
-        <ArrowRightIcon color={'var(--ant-color-text-quaternary)'} size={16} />
+        <ArrowRightIcon color={'var(--foreground-quaternary)'} size={16} />
       </div>
       <GoalProgress
         findingCount={item.findingCount}

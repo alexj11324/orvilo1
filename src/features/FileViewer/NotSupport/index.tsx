@@ -1,4 +1,4 @@
-import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { type ComponentType, type CSSProperties } from 'react';
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -7,17 +7,9 @@ import { Button } from '@/components/ui/button';
 import { MORE_FILE_PREVIEW_REQUEST_URL } from '@/const/url';
 import { downloadFile } from '@/utils/client/downloadFile';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  page: css`
-    width: 100%;
-    margin: 12px;
-    padding: 24px;
-    border-radius: 4px;
-
-    background: ${cssVar.colorBgContainer};
-    box-shadow: ${cssVar.boxShadowTertiary};
-  `,
-}));
+const styles = {
+  page: 'w-full m-3 p-6 rounded-(--radius-card) bg-card shadow-(--shadow-raised)',
+};
 
 interface NotSupportProps {
   fileName?: string;
@@ -30,11 +22,11 @@ const NotSupport: ComponentType<NotSupportProps> = ({ fileName, url, style }) =>
   const [loading, setLoading] = useState(false);
 
   return (
-    <div className={cx('flex flex-col', styles.page)} id="not-support-renderer" style={style}>
-      <div className="flex flex-col items-center justify-center h-[100%]">
+    <div className={cn('flex flex-col', styles.page)} id="not-support-renderer" style={style}>
+      <div className="flex flex-col items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
-          <span style={{ fontSize: 64, lineHeight: 1 }}>{'👀'}</span>
-          <div className="flex flex-col" style={{ textAlign: 'center' }}>
+          <span className="text-[4rem] leading-none">{'👀'}</span>
+          <div className="flex flex-col text-center">
             <Trans
               i18nKey="preview.unsupportedFileAndContact"
               ns={'file'}

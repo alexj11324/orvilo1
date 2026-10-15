@@ -98,7 +98,10 @@ export function createDevOrchestrator({
     clearTimeout(debounce);
     electron?.kill();
     if (cliBuild) killTree(cliBuild);
-    if (ownsCliBuild) rmSync(cliBuildCommand.lockFile, { force: true });
+    if (ownsCliBuild && cliBuildCommand.lockFile) {
+      rmSync(`${cliBuildCommand.lockFile}.settled`, { force: true });
+      rmSync(cliBuildCommand.lockFile, { force: true });
+    }
     for (const child of children) child.kill();
     exit(code);
   }
@@ -183,23 +186,38 @@ export function createDevOrchestrator({
   function buildCli() {
     if (!cliBuildCommand) return;
     if (!claimCliBuild()) {
-      cliBuildSettled = true;
-      log('[desktop-dev] another dev instance of this checkout owns the embedded CLI; reusing it');
+      log(
+        '[desktop-dev] another dev instance of this checkout owns the embedded CLI; waiting to reuse it',
+      );
       return;
     }
     ownsCliBuild = true;
+    if (cliBuildCommand.lockFile) rmSync(`${cliBuildCommand.lockFile}.settled`, { force: true });
     log('[desktop-dev] building the embedded CLI');
     const settle = (problem) => {
-      if (cliBuildSettled) return;
+      if (shuttingDown || cliBuildSettled) return;
       cliBuildSettled = true;
       cliBuild = null;
-      if (!problem) return;
-      // A build that failed before emptying the output leaves the previous CLI
-      // in place, and Agent runs would silently execute that older revision.
-      if (cliBuildCommand.output) rmSync(cliBuildCommand.output, { force: true });
-      logError(
-        `[desktop-dev] embedded CLI build failed (${problem}); local Agent runs will fail until it builds`,
-      );
+      if (problem) {
+        // A build that failed before emptying the output leaves the previous CLI
+        // in place, and Agent runs would silently execute that older revision.
+        if (cliBuildCommand.output) rmSync(cliBuildCommand.output, { force: true });
+        logError(
+          `[desktop-dev] embedded CLI build failed (${problem}); local Agent runs will fail until it builds`,
+        );
+      }
+      if (cliBuildCommand.lockFile) {
+        // Keep the PID claim until shutdown; a separate result distinguishes
+        // a live owner still building from one whose build actually settled.
+        writeFileSync(
+          `${cliBuildCommand.lockFile}.settled`,
+          JSON.stringify({
+            owner: pid,
+            lockMtimeMs: statSync(cliBuildCommand.lockFile).mtimeMs,
+            problem: problem ?? null,
+          }),
+        );
+      }
     };
     cliBuild = spawn(cliBuildCommand.bin, cliBuildCommand.args, {
       cwd: cliBuildCommand.cwd,
@@ -211,8 +229,42 @@ export function createDevOrchestrator({
     cliBuild.on('exit', (code) => settle(code === 0 ? undefined : `exit code ${code}`));
   }
 
+  function checkSharedCliBuild() {
+    if (shuttingDown || cliBuildSettled || ownsCliBuild || !cliBuildCommand?.lockFile) return;
+    const { lockFile } = cliBuildCommand;
+    let owner;
+    try {
+      owner = Number(readFileSync(lockFile, 'utf8'));
+    } catch {
+      // The owner released its claim. Reuse the same stale-claim takeover path.
+      buildCli();
+      return;
+    }
+    if (!Number.isInteger(owner) || !isProcessAlive(owner)) {
+      buildCli();
+      return;
+    }
+    try {
+      const result = JSON.parse(readFileSync(`${lockFile}.settled`, 'utf8'));
+      // A previous run's result (including a reused PID) cannot make this
+      // owner's initial build ready. A partially written result waits a poll.
+      if (result.owner !== owner || result.lockMtimeMs !== statSync(lockFile).mtimeMs) return;
+      if (result.problem !== null && typeof result.problem !== 'string') return;
+      cliBuildSettled = true;
+      if (result.problem)
+        logError(
+          `[desktop-dev] embedded CLI build failed (${result.problem}); local Agent runs will fail until it builds`,
+        );
+    } catch {
+      // No result yet, or the owner is currently publishing it: keep waiting.
+    }
+  }
+
   function start() {
-    rmSync(path.join(desktopRoot, 'dist'), { force: true, recursive: true });
+    // Only the watch builds' outputs: `dev:static` serves a prebuilt dist/renderer.
+    for (const bundle of [MAIN_BUNDLE, PRELOAD_BUNDLE]) {
+      rmSync(path.dirname(bundle), { force: true, recursive: true });
+    }
     buildCli();
     children.push(
       spawnVite(['--config', 'vite.renderer.config.ts']),
@@ -270,6 +322,7 @@ export function createDevOrchestrator({
         if (!(await checkPort(vitePort))) return;
         bundlesReady = true;
         // A failed CLI build is reported and does not hold the app back; a running one does.
+        checkSharedCliBuild();
         if (!cliBuildSettled) return;
         clearInterval(poll);
         watchBundles();

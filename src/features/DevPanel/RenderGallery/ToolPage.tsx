@@ -1,6 +1,5 @@
 'use client';
 
-import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { useEffect, useRef, useState } from 'react';
 
@@ -24,72 +23,19 @@ const isLifecycleMode = (value: string | null): value is LifecycleMode =>
 const isGalleryView = (value: string | null): value is GalleryView =>
   value === 'api' || value === 'aggregate';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  body: css`
-    width: 100%;
-  `,
-  content: css`
-    position: relative;
-    overflow: auto;
-    flex: 1;
-
-    /* keep a jumped-to card clear of the sticky lifecycle bar */
-    & [id^='api-'] {
-      scroll-margin-block-start: 80px;
-    }
-  `,
-  controlGroup: css`
-    gap: 8px;
-    align-items: center;
-    min-width: 0;
-  `,
-  /*
-   * The label sits next to a Tabs whose root is `width: 100%`, so the tabs claim the
-   * whole row and the label absorbs every pixel of shrink. With the app-wide
-   * `overflow-wrap: anywhere`, its min-content width is one character, so it breaks
-   * mid-word ("Vie / w"). Keep the guard on the label itself, not on the row.
-   */
-  controlLabel: css`
-    flex-shrink: 0;
-    white-space: nowrap;
-  `,
-  /* Let the modes wrap onto a second row instead of overflowing a narrow panel. */
-  controlTabs: css`
-    min-width: 0;
-
-    [role='tablist'] {
-      flex-wrap: wrap;
-    }
-  `,
-  empty: css`
-    flex: 1;
-    gap: 6px;
-    align-items: center;
-    justify-content: center;
-
-    color: ${cssVar.colorTextTertiary};
-  `,
-  header: css`
-    gap: 8px;
-    padding: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-  `,
-  modeBar: css`
-    position: sticky;
-    z-index: 2;
-    inset-block-start: 0;
-
-    gap: 16px;
-    align-items: center;
-
-    min-height: 44px;
-    padding-block: 6px;
-    padding-inline: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    background: ${cssVar.colorBgContainer};
-  `,
-}));
+const styles = {
+  body: 'w-full',
+  // Keep anchored previews clear of the sticky lifecycle bar.
+  content: "relative overflow-auto flex-1 [&_[id^='api-']]:scroll-mbs-20",
+  controlGroup: 'gap-2 items-center min-w-0',
+  // Tabs claim the row width; the label must not shrink into mid-word wrapping.
+  controlLabel: 'shrink-0 whitespace-nowrap',
+  controlTabs: "min-w-0 [&_[role='tablist']]:flex-wrap",
+  empty: 'flex-1 gap-1.5 items-center justify-center text-sm leading-5.5 text-foreground-tertiary',
+  header: 'gap-2 p-3 border-be border-divider',
+  modeBar:
+    'sticky z-2 inset-bs-0 gap-4 items-center min-h-11 py-1.5 px-3 border-be border-divider bg-card',
+};
 
 interface DevtoolsToolPageProps {
   toolset: ToolsetEntry;
@@ -186,30 +132,32 @@ const DevtoolsToolPage = ({ toolset }: DevtoolsToolPageProps) => {
   };
 
   return (
-    <div className="flex h-full w-full" style={{ overflow: 'hidden' }}>
+    <div className="flex h-full w-full overflow-hidden">
       {view === 'api' && (
         <ApiList activeApiName={activeApi} apis={toolset.apis} onSelect={handleSelect} />
       )}
       <div className={styles.content} ref={scrollRef}>
-        <div className={cx(styles.body, 'flex flex-col')}>
-          <div className={cx(styles.header, 'flex flex-col')}>
-            <div className="flex items-center gap-2.5" style={{ flexWrap: 'wrap' }}>
-              <div className="text-[22px] font-bold">{toolset.toolsetName}</div>
+        <div className={cn(styles.body, 'flex flex-col')}>
+          <div className={cn(styles.header, 'flex flex-col')}>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <div className="text-2xl leading-8 font-semibold">{toolset.toolsetName}</div>
               <Tag>{toolset.identifier}</Tag>
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-xs leading-5 text-muted-foreground">
                 {toolset.apis.length} API{toolset.apis.length === 1 ? '' : 's'}
               </div>
             </div>
             {toolset.toolsetDescription && (
-              <div className="text-[13px] text-muted-foreground">{toolset.toolsetDescription}</div>
+              <div className="text-sm leading-5.5 text-muted-foreground">
+                {toolset.toolsetDescription}
+              </div>
             )}
           </div>
 
-          <div className={cx(styles.modeBar, 'flex')} style={{ flexWrap: 'wrap' }}>
-            <div className={cx(styles.controlGroup, 'flex')}>
+          <div className={cn(styles.modeBar, 'flex flex-wrap')}>
+            <div className={cn(styles.controlGroup, 'flex')}>
               <div
                 className={cn(
-                  'text-[12px]',
+                  'text-xs',
                   'text-muted-foreground',
                   'font-semibold',
                   styles.controlLabel,
@@ -230,10 +178,10 @@ const DevtoolsToolPage = ({ toolset }: DevtoolsToolPageProps) => {
                 </TabsList>
               </Tabs>
             </div>
-            <div className={cx(styles.controlGroup, 'flex')}>
+            <div className={cn(styles.controlGroup, 'flex')}>
               <div
                 className={cn(
-                  'text-[12px]',
+                  'text-xs',
                   'text-muted-foreground',
                   'font-semibold',
                   styles.controlLabel,

@@ -72,17 +72,18 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
       {mode === 'manual' ? (
         <>
           <div className="flex flex-col gap-1.5">
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {tv('acceptance.tray.editModal.nameLabel')}
             </div>
             <Input
               placeholder={tv('acceptance.tray.editModal.namePlaceholder')}
               value={name}
+              visualSize="normal"
               onChange={(event) => setName(event.target.value)}
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {tv('acceptance.tray.editModal.methodLabel')}
             </div>
             <Textarea
@@ -94,7 +95,7 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
             />
           </div>
           <div className="flex items-center gap-0.5">
-            <div className="text-[12px] text-muted-foreground">{tv('or', { ns: 'common' })}</div>
+            <div className="text-xs text-muted-foreground">{tv('or', { ns: 'common' })}</div>
             <Button size="sm" variant="ghost" onClick={() => setMode('rubric')}>
               {tv('acceptance.checkCreate.rubric')}
             </Button>
@@ -119,7 +120,7 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
               setSelectedIds(new Set());
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger size="normal">
               <SelectValue placeholder={tv('acceptance.checkCreate.selectRubric')} />
             </SelectTrigger>
             <SelectContent>
@@ -158,7 +159,7 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
                         <div className="flex flex-col items-start gap-0.5">
                           <div>{criterion.title}</div>
                           {criterion.description && (
-                            <div className="text-[12px] text-muted-foreground">
+                            <div className="text-xs text-muted-foreground">
                               {criterion.description}
                             </div>
                           )}
@@ -172,10 +173,10 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
           )}
         </div>
       )}
-      <div className="flex flex-col gap-1.5 rounded-(--radius-card) border border-sidebar-border bg-(--ant-color-fill-quaternary) p-3">
+      <div className="flex flex-col gap-1.5 rounded-(--radius-card) border border-sidebar-border bg-fill-quaternary p-3">
         <div className="flex items-center gap-1.5">
           <CircleDashed size={14} />
-          <div className="text-[12px] text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             {tv('acceptance.checkCreate.previewState')}
           </div>
         </div>
@@ -185,19 +186,20 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
             : tv('acceptance.checkCreate.selectedCount', { count: selectedIds.size })}
         </div>
         {mode === 'manual' && method.trim() && (
-          <div className="text-[12px] text-muted-foreground">{method.trim()}</div>
+          <div className="text-xs text-muted-foreground">{method.trim()}</div>
         )}
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {tv('acceptance.checkCreate.previewHint')}
         </div>
       </div>
       <div className="flex gap-2 justify-end">
-        <Button disabled={saving} onClick={close}>
+        <Button disabled={saving} size="lg" onClick={close}>
           {tv('acceptance.actions.cancel')}
         </Button>
         <Button
           disabled={!canSave || saving}
           loading={saving}
+          size="lg"
           variant="outline"
           onClick={handleSave}
         >

@@ -37,13 +37,14 @@ const SignInPrompt = memo(() => {
   return (
     <div className={`flex flex-col gap-2.5 ${local.signInPrompt}`}>
       <div className="font-semibold">{t('acceptance.comments.signInTitle')}</div>
-      <div className="text-[13px] text-muted-foreground">
+      <div className="text-(length:--text-dense) text-muted-foreground">
         {t('acceptance.comments.signInDescription')}
       </div>
       <div className="flex gap-2">
         <Button
           nativeButton={false}
           render={<a href={buildAuthReturnUrl('signin', currentReturnPath())} />}
+          size="lg"
           variant="outline"
         >
           {t('acceptance.comments.signIn')}
@@ -51,6 +52,7 @@ const SignInPrompt = memo(() => {
         <Button
           nativeButton={false}
           render={<a href={buildAuthReturnUrl('signup', currentReturnPath())} />}
+          size="lg"
         >
           {t('acceptance.comments.signUp')}
         </Button>
@@ -62,9 +64,8 @@ const SignInPrompt = memo(() => {
 SignInPrompt.displayName = 'AcceptanceDiscussionSignInPrompt';
 
 const local = {
-  empty: 'py-4 text-[13px] text-(--ant-color-text-tertiary)',
-  signInPrompt:
-    'p-4 border border-sidebar-border rounded-(--ant-border-radius-lg) bg-(--ant-color-fill-quaternary)',
+  empty: 'py-4 text-(length:--text-dense) text-foreground-tertiary',
+  signInPrompt: 'p-4 border border-sidebar-border rounded-(--radius-overlay) bg-fill-quaternary',
 };
 
 /** A round landing or an approval — a dot on the rail and one line of text. */
@@ -291,11 +292,13 @@ const AcceptanceDiscussion = memo(() => {
         </div>
       ) : error ? (
         // A read that failed says nothing about permission.
-        <div className="text-[13px] text-muted-foreground">
+        <div className="text-(length:--text-dense) text-muted-foreground">
           {t('acceptance.comments.loadFailed')}
         </div>
       ) : isLoading ? null : isSignedIn ? ( // Neither line below is true yet while the answer is in flight.
-        <div className="text-[13px] text-muted-foreground">{t('acceptance.comments.readOnly')}</div>
+        <div className="text-(length:--text-dense) text-muted-foreground">
+          {t('acceptance.comments.readOnly')}
+        </div>
       ) : (
         <SignInPrompt />
       )}

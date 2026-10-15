@@ -14,6 +14,7 @@ import {
 } from '@orvilo/types';
 
 import { agentService } from '@/services/agent';
+import { createClientAgentManagerCapabilities } from '@/services/agentManagerRuntime';
 import { discoverService } from '@/services/discover';
 import { getAgentStoreState, useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -38,6 +39,9 @@ import {
 } from './types';
 
 const runtime = new AgentManagerRuntime({
+  capabilities: createClientAgentManagerCapabilities({
+    getAgentConfigById: agentService.getAgentFullConfigById,
+  }),
   agentService: {
     countAgents: agentService.countAgents,
     createAgent: agentService.createAgent,

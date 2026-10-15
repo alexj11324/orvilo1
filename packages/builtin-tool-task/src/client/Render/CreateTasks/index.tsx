@@ -8,18 +8,18 @@ import type { CreateTaskParams, CreateTasksParams, CreateTasksState } from '../.
 
 const styles = {
   failedBadge:
-    'shrink-0 rounded-[999px] bg-[var(--ant-color-error-bg)] px-2 py-px text-[12px] text-destructive',
+    'shrink-0 rounded-(--radius-chip) bg-destructive-wash px-2 py-px text-xs text-destructive',
   header: 'flex items-center gap-2 px-3 py-2 [border-block-end:1px_solid_var(--sidebar-border)]',
-  headerCount: 'text-[13px] font-medium text-foreground',
+  headerCount: 'text-(length:--text-dense) font-medium text-foreground',
   identifier:
-    'shrink-0 rounded-[4px] bg-accent px-1.5 py-px font-mono text-[12px] text-muted-foreground',
-  index: 'w-[18px] shrink-0 text-[12px] text-[var(--ant-color-text-quaternary)] text-end',
+    'shrink-0 rounded-(--radius-chip) bg-accent px-1.5 py-px font-mono text-xs text-muted-foreground',
+  index: 'w-4.5 shrink-0 text-xs text-foreground-quaternary text-end',
   row: 'flex min-w-0 items-center gap-2',
   taskBody: 'flex min-w-0 flex-1 flex-col gap-1',
   taskItem:
     'flex items-start gap-2 px-3 py-2.5 [border-block-end:1px_dashed_var(--sidebar-border)] last:[border-block-end:none]',
-  instruction: 'line-clamp-2 text-[12px] leading-[1.5] text-[var(--ant-color-text-tertiary)]',
-  title: 'text-[13px] leading-[1.4] text-foreground',
+  instruction: 'line-clamp-2 text-xs leading-[1.5] text-foreground-tertiary',
+  title: 'text-(length:--text-dense) leading-[1.4] text-foreground',
 };
 
 export const CreateTasksRender = memo<BuiltinRenderProps<CreateTasksParams, CreateTasksState>>(
@@ -39,7 +39,7 @@ export const CreateTasksRender = memo<BuiltinRenderProps<CreateTasksParams, Crea
         style={{
           background: 'var(--card)',
           border: '1px solid var(--sidebar-border)',
-          borderRadius: 'var(--ant-border-radius)',
+          borderRadius: 'var(--radius-card)',
           width: '100%',
         }}
       >
@@ -68,7 +68,7 @@ export const CreateTasksRender = memo<BuiltinRenderProps<CreateTasksParams, Crea
                 </div>
                 {task.instruction && <div className={styles.instruction}>{task.instruction}</div>}
                 {failed && (
-                  <span className="text-[11px] text-destructive">{result?.error ?? 'Failed'}</span>
+                  <span className="text-xs text-destructive">{result?.error ?? 'Failed'}</span>
                 )}
               </div>
             </div>

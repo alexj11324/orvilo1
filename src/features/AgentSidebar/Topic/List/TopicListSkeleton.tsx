@@ -1,6 +1,5 @@
 'use client';
 
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,11 +18,11 @@ const GROUPS = [
 // header, not the rows. Without this the frame flashes an indented layout
 // before snapping left.
 const RowSkeleton = memo<{ width: string }>(({ width }) => (
-  <div className="flex items-center h-[36px]" style={{ paddingInline: 4 }}>
+  <div className="flex items-center h-9" style={{ paddingInline: 4 }}>
     <div className="flex flex-col flex-1">
       <Skeleton
         style={{
-          borderRadius: cssVar.borderRadius,
+          borderRadius: 'var(--radius-card)',
           height: 14,
           margin: 0,
           maxHeight: 14,
@@ -41,15 +40,15 @@ RowSkeleton.displayName = 'TopicRowSkeleton';
 const TopicListSkeleton = memo(() => (
   <div className="flex flex-col gap-0.5">
     {GROUPS.map((group, i) => (
-      <div className="flex flex-col gap-[1px]" key={i} style={{ paddingBlock: 4 }}>
+      <div className="flex flex-col gap-px" key={i} style={{ paddingBlock: 4 }}>
         {/* The 8px inline inset belongs to the group caption alone — the real
             list puts it on the AccordionTrigger, so rows sit flush at the
             container's own inset. Keeping it on the group wrapper would push
             every skeleton row 8px right of the real one. */}
-        <div className="flex items-center h-[24px]" style={{ paddingInline: '8px 4px' }}>
+        <div className="flex items-center h-6" style={{ paddingInline: '8px 4px' }}>
           <Skeleton
             style={{
-              borderRadius: cssVar.borderRadiusSM,
+              borderRadius: 'var(--radius-input)',
               height: 12,
               maxHeight: 12,
               maxWidth: group.header,

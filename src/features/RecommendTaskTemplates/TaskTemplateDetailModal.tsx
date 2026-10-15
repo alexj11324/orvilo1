@@ -2,7 +2,6 @@
 
 import { Markdown } from '@lobehub/ui';
 import type { TaskTemplate } from '@orvilo/const';
-import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { Clock, X } from 'lucide-react';
 import { memo, useEffect, useMemo } from 'react';
@@ -59,18 +58,18 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
           <div className="flex flex-row items-center gap-3" style={{ flex: 1, minWidth: 0 }}>
             <TemplateBriefIcon spec={iconSpec} tileSize={36} />
             <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
-              <span className="truncate text-[18px] font-semibold">{title}</span>
+              <span className="truncate text-lg font-semibold">{title}</span>
               <div className="flex flex-row items-center gap-1">
                 <span className="anticon" role="img">
                   <Clock
-                    color={cssVar.colorTextSecondary}
+                    color={'var(--muted-foreground)'}
                     fill={'transparent'}
                     height={12}
                     size={12}
                     width={12}
                   />
                 </span>
-                <span className="text-[12px] text-muted-foreground">{scheduleText}</span>
+                <span className="text-xs text-muted-foreground">{scheduleText}</span>
               </div>
             </div>
           </div>

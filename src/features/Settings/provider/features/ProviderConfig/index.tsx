@@ -1,5 +1,4 @@
 'use client';
-
 import { AES_GCM_URL } from '@orvilo/const';
 import { errorMessageFrom } from '@orvilo/utils/error';
 import { useDebounceFn } from 'ahooks';
@@ -16,7 +15,7 @@ import { SkeletonInput } from '@/components/Skeleton';
 import { toast } from '@/components/toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePermission } from '@/hooks/usePermission';
-import { lambdaQuery } from '@/libs/trpc/client';
+import { oauthDeviceFlowQueries } from '@/services/reactQueryBindings';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import {
@@ -41,7 +40,7 @@ import {
   resolveProviderStatus,
 } from './providerStatus';
 
-const SwitchSkeleton = () => <Skeleton className="h-[18px] w-8 rounded-full" />;
+const SwitchSkeleton = () => <Skeleton className="h-4.5 w-8 rounded-full" />;
 
 export interface ProviderConfigProps extends Omit<AiProviderDetailItem, 'enabled' | 'source'> {
   apiKeyItems?: FormItemProps[];
@@ -100,7 +99,7 @@ const ProviderConfig = memo<ProviderConfigProps>(
     const isOAuthProvider = authType === 'oauthDeviceFlow';
 
     // Query OAuth authentication status (only for OAuth providers)
-    const { data: oauthStatus } = lambdaQuery.oauthDeviceFlow.getAuthStatus.useQuery(
+    const { data: oauthStatus } = oauthDeviceFlowQueries.getAuthStatus.useQuery(
       { providerId: id },
       { enabled: isOAuthProvider, refetchOnWindowFocus: true },
     );
@@ -465,7 +464,7 @@ const ProviderConfig = memo<ProviderConfigProps>(
                     components={[
                       <span key="0" />,
                       <a
-                        className="mx-1 rounded-sm underline underline-offset-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                        className="mx-1 rounded-(--radius-button) underline underline-offset-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                         href={AES_GCM_URL}
                         key="1"
                         rel="noreferrer"

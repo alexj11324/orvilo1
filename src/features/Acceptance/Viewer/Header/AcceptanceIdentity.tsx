@@ -13,7 +13,7 @@ import AcceptanceStatusPill from './AcceptanceStatusPill';
 
 const styles = {
   titleRow: '[@media(width<=767px)]:pe-12',
-  metaRow: 'text-[13px] text-muted-foreground',
+  metaRow: 'text-(length:--text-dense) text-muted-foreground',
   scopeLink: 'cursor-pointer text-muted-foreground hover:text-foreground hover:underline',
 };
 

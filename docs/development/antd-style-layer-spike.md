@@ -1,5 +1,12 @@
 # Spike: put all antd-style output in `@layer antd-style`
 
+Current source update: the disabled renderer `antdStyleLayer` initializer has
+been retired. `ANTD_STYLE_LAYER_ENABLED` stays false, so runtime and precompiled
+CSS keep their existing unlayered precedence. Explicit helper experiments and
+their real tests remain; enabling a future global layer requires new runtime
+and build integration/acceptance. The mechanism and receipts below describe
+the historical experiment, not an active renderer startup contract.
+
 Status: opt-in infrastructure. The shared switch remains **off** for runtime and
 production precompilation. The [batch-1 ledger](antd-style-rollout-batch-1.md) tracks
 the local ChatInput conversion with that unlayered default; its earlier global-ON
@@ -209,6 +216,14 @@ single symlinked instance and `antd-style` is in `sharedOptimizeDeps.include`, b
 `sharedRendererDedupe`, so a second copy through a different peer-variant path is possible); that no entry
 evaluates an antd-style module before `src/initialize.ts`; the production precompile output in a real
 build; visual parity of any flipped site; the apps/\* SSR path.
+
+**Update, 2026/10/13.** The second `@lobehub/ui` copy did appear. An install resolved
+`@lobehub/ui@5.56.0` under two peer-dependency snapshots; the repository root linked one and nine
+workspace packages (among them `apps/desktop`, `builtin-tool-task` and `shared-tool-ui`) linked the
+other. Vite's dev pre-bundle then built `@lobehub/ui/es/ConfigProvider/index`, which `AppTheme` mounts,
+from one copy and `@lobehub/ui/base-ui` from the other, and every page with a `DraggablePanel` failed
+with "Please wrap your app with `<ConfigProvider>`". `@lobehub/ui` is now in `sharedRendererDedupe`, so
+every renderer build resolves it from one place. The antd-style instance question above is still open.
 
 Tests run: `src/styles/layerEmotionCache.test.ts` (wrapper against a real antd-style instance) and
 `plugins/vite/staticStylesPrecompile.test.ts` (including a Vite build and the new layered-precompile case).

@@ -2,7 +2,7 @@
 
 import { Github } from '@lobehub/icons';
 import type { WorkSummaryItem } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CheckCircle2Icon, GitPullRequestIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,147 +11,24 @@ import { Badge } from '@/components/reui/badge';
 import { getWorkTypeDescriptor } from '@/features/Work/descriptors';
 import LinearIcon from '@/features/Work/icons/LinearIcon';
 
-const styles = createStaticStyles(({ css }) => ({
-  cover: css`
-    position: relative;
-
-    overflow: hidden;
-
-    height: clamp(160px, 15vw, 220px);
-    margin: 7px;
-    border-radius: 11px;
-
-    /* A white top spotlight keeps the flat fill from reading dull. Light and
-       dark need different intensities: on the light grey fill the highlight
-       must be near-opaque white to register at all, while in dark mode a few
-       percent of white already lifts the surface. */
-    background:
-      radial-gradient(
-        140% 110% at 50% 0%,
-        color-mix(in srgb, #fff 85%, transparent) 0%,
-        color-mix(in srgb, #fff 30%, transparent) 45%,
-        transparent 75%
-      ),
-      ${cssVar.colorFillTertiary};
-    box-shadow: inset 0 1px 0 #fff;
-
-    [data-theme='dark'] & {
-      background:
-        radial-gradient(
-          140% 110% at 50% 0%,
-          color-mix(in srgb, #fff 10%, transparent) 0%,
-          transparent 65%
-        ),
-        ${cssVar.colorFillQuaternary};
-      box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 12%, transparent);
-    }
-  `,
-  coverBadge: css`
-    position: absolute;
-    z-index: 2;
-    inset-block-start: 9px;
-    inset-inline-start: 9px;
-
-    display: grid;
-    place-items: center;
-
-    width: 34px;
-    height: 34px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 10px;
-
-    color: ${cssVar.colorText};
-
-    background: color-mix(in srgb, ${cssVar.colorBgElevated} 88%, transparent);
-    backdrop-filter: blur(12px);
-  `,
-  grid: css`
-    position: absolute;
-    inset: 0;
-
-    opacity: 0.22;
-    background-image:
-      linear-gradient(${cssVar.colorBorderSecondary} 1px, transparent 1px),
-      linear-gradient(90deg, ${cssVar.colorBorderSecondary} 1px, transparent 1px);
-    background-size: 20px 20px;
-  `,
-  linearBody: css`
-    padding: 20px;
-  `,
-  linearId: css`
-    font-size: 10px;
-    font-weight: 650;
-    color: ${cssVar.colorTextTertiary};
-    letter-spacing: 0.04em;
-  `,
-  linearTitle: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    margin-block-start: 7px;
-
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.4;
-  `,
-  mockWindow: css`
-    position: absolute;
-    inset: 26px;
-
-    overflow: hidden;
-
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 9px;
-
-    background: ${cssVar.colorBgContainer};
-  `,
-  previewDescription: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    margin-block-start: 8px;
-
-    font-size: 9px;
-    line-height: 1.55;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  previewBody: css`
-    box-sizing: border-box;
-    height: 100%;
-    padding-block: 20px 28px;
-    padding-inline: 20px;
-  `,
-  previewIdentifier: css`
-    font-size: 9px;
-    font-weight: 650;
-    color: ${cssVar.colorTextTertiary};
-  `,
-  previewTitle: css`
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-
-    margin-block-start: 7px;
-
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1.45;
-  `,
-  status: css`
-    position: absolute;
-    z-index: 2;
-    inset-block-start: 12px;
-    inset-inline-end: 12px;
-  `,
-  taskBody: css`
-    padding: 20px;
-  `,
-}));
+const styles = {
+  cover:
+    'relative overflow-hidden h-[clamp(calc(var(--spacing)*40),15vw,calc(var(--spacing)*55))] m-2 rounded-(--radius-card) bg-muted bg-[radial-gradient(140%_110%_at_50%_0%,color-mix(in_srgb,var(--color-white)_85%,transparent)_0%,color-mix(in_srgb,var(--color-white)_30%,transparent)_45%,transparent_75%)] shadow-[inset_0_1px_0_var(--color-white)] [[data-theme=dark]_&]:bg-fill-quaternary [[data-theme=dark]_&]:bg-[radial-gradient(140%_110%_at_50%_0%,color-mix(in_srgb,var(--color-white)_10%,transparent)_0%,transparent_65%)] [[data-theme=dark]_&]:shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-white)_12%,transparent)]',
+  coverBadge:
+    'absolute z-2 inset-bs-2 inset-s-2 grid size-8 place-items-center rounded-(--radius-chip) border border-divider bg-[color-mix(in_srgb,var(--popover)_88%,transparent)] text-foreground backdrop-blur-[calc(var(--spacing)*3)]',
+  grid: 'absolute inset-0 opacity-[0.22] bg-[linear-gradient(var(--divider)_1px,transparent_1px),linear-gradient(90deg,var(--divider)_1px,transparent_1px)] bg-size-[calc(var(--spacing)*5)_calc(var(--spacing)*5)]',
+  linearBody: 'p-5',
+  linearId: 'text-xs leading-5 font-semibold text-foreground-tertiary tracking-[0.04em]',
+  linearTitle: 'mbs-2 line-clamp-2 text-sm leading-5.5 font-semibold',
+  mockWindow:
+    'absolute inset-6 overflow-hidden rounded-(--radius-card) border border-divider bg-card',
+  previewDescription: 'mbs-2 line-clamp-2 text-sm leading-5.5 text-muted-foreground',
+  previewBody: 'box-border h-full px-5 pbs-5 pbe-7',
+  previewIdentifier: 'text-xs leading-5 font-semibold text-foreground-tertiary',
+  previewTitle: 'mbs-2 line-clamp-2 text-sm leading-5.5 font-semibold',
+  status: 'absolute z-2 inset-bs-3 inset-e-3 py-0 text-xs leading-5',
+  taskBody: 'p-5',
+};
 
 const getStatusVariant = (status?: string | null) => {
   const normalized = status?.toLowerCase();
@@ -198,10 +75,10 @@ const WorkPreview = memo<WorkPreviewProps>(({ item, title }) => {
             <div className={styles.previewDescription}>{description}</div>
           </div>
         ) : item.resourceType === 'task' ? (
-          <div className={cx('flex flex-col gap-2.5', styles.taskBody)}>
+          <div className={cn('flex flex-col gap-2.5', styles.taskBody)}>
             <div className="flex items-center gap-2">
-              <CheckCircle2Icon color={cssVar.colorSuccess} size={22} />
-              <div className="font-semibold">{title}</div>
+              <CheckCircle2Icon className="size-4 text-foreground" size={16} />
+              <div className="text-sm leading-5.5 font-semibold">{title}</div>
             </div>
             <div className={styles.previewDescription}>{description}</div>
           </div>
@@ -209,7 +86,7 @@ const WorkPreview = memo<WorkPreviewProps>(({ item, title }) => {
           <div className={styles.previewBody}>
             <div className="flex items-center gap-1.5">
               {item.resourceType === 'github_pull_request' && (
-                <GitPullRequestIcon color={cssVar.colorTextTertiary} size={11} />
+                <GitPullRequestIcon className="size-3 text-foreground-tertiary" size={12} />
               )}
               <span className={styles.previewIdentifier}>
                 {previewIdentifier || item.resourceType}
@@ -222,18 +99,18 @@ const WorkPreview = memo<WorkPreviewProps>(({ item, title }) => {
       </div>
       <div className={styles.coverBadge}>
         {isGithub ? (
-          <Github size={18} />
+          <Github size={16} />
         ) : isLinear ? (
-          <LinearIcon size={18} />
+          <LinearIcon size={16} />
         ) : (
-          <DescriptorIcon size={17} />
+          <DescriptorIcon size={16} />
         )}
       </div>
       {/* An orphan's status is the last snapshot of a resource that no longer
           exists, and the badge shares the top-right corner with the card's
           hover Remove action, so drop it once the resource is gone. */}
       {!isLinear && !isGithub && status && !item.resourceDeleted && (
-        <Badge className={styles.status} size="sm" variant={getStatusVariant(status)}>
+        <Badge className={styles.status} size="xl" variant={getStatusVariant(status)}>
           {status}
         </Badge>
       )}

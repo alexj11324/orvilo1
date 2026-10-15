@@ -1,4 +1,3 @@
-import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -50,7 +49,7 @@ const TitleTags = memo(() => {
           <ChatHistoryTitleMenu title={fallbackTopicTitle} />
           <span
             style={{
-              color: cssVar.colorTextQuaternary,
+              color: 'var(--foreground-quaternary)',
               flexShrink: 0,
               fontSize: 14,
             }}

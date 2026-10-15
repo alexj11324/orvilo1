@@ -1,5 +1,4 @@
 import { addClassNamesToElement } from '@lexical/utils';
-import { getKernelFromEditor } from '@lobehub/editor';
 import type { HeadlessRenderableNode, HeadlessRenderContext } from '@lobehub/editor/renderer';
 import {
   $applyNodeReplacement,
@@ -15,6 +14,8 @@ import {
 import { createElement } from 'react';
 
 import { LocalFile } from '@/features/LocalFile';
+
+import { createNativeDecoratorRegistry } from '../nativeDecoratorRegistry';
 
 export type SerializedLocalFileTagNode = Spread<
   {
@@ -112,13 +113,7 @@ export class LocalFileTagNode extends DecoratorNode<any> implements HeadlessRend
   }
 
   decorate(editor: LexicalEditor): any {
-    const decorator = getKernelFromEditor(editor)?.getDecorator(LocalFileTagNode.getType());
-    if (!decorator) return null;
-    if (typeof decorator === 'function') return decorator(this, editor);
-    return {
-      queryDOM: decorator.queryDOM,
-      render: decorator.render(this, editor),
-    };
+    return nativeDecorator.render(editor, this);
   }
 
   renderHeadless({ key }: HeadlessRenderContext) {
@@ -144,3 +139,6 @@ export function $isLocalFileTagNode(
 ): node is LocalFileTagNode {
   return node instanceof LocalFileTagNode;
 }
+
+const nativeDecorator = createNativeDecoratorRegistry<LocalFileTagNode>();
+export const registerLocalFileTagDecorator = nativeDecorator.register;

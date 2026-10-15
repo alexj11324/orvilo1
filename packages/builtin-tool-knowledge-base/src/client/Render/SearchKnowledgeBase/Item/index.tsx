@@ -1,11 +1,11 @@
 'use client';
 
-import { MaterialFileTypeIcon } from '@lobehub/ui';
 import type { FileSearchResult } from '@orvilo/types';
 import { cn } from 'cn';
 import { useTheme } from 'next-themes';
 import { memo } from 'react';
 
+import MaterialFileTypeIcon from '@/components/MaterialFileTypeIcon';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 
 import { styles } from './style';

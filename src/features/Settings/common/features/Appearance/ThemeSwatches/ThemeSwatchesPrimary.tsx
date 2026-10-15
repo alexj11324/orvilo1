@@ -1,9 +1,12 @@
-import type { UserPrimaryColor } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ColorSwatches, type ColorSwatchesProps } from '@/components/ColorSwatches';
-import { findPrimaryThemeName, primaryColors } from '@/styles/nativeThemeSwatches';
+import {
+  findPrimaryThemeName,
+  primaryColors,
+  type UserPrimaryColor,
+} from '@/styles/nativeThemeSwatches';
 
 interface IProps {
   onChange?: (v: UserPrimaryColor | '') => void;

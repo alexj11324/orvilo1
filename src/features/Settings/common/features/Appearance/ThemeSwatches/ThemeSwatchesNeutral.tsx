@@ -1,9 +1,12 @@
-import type { UserNeutralColor } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ColorSwatches, type ColorSwatchesProps } from '@/components/ColorSwatches';
-import { findNeutralThemeName, neutralColors } from '@/styles/nativeThemeSwatches';
+import {
+  findNeutralThemeName,
+  neutralColors,
+  type UserNeutralColor,
+} from '@/styles/nativeThemeSwatches';
 
 interface IProps {
   onChange?: (v: UserNeutralColor | '') => void;

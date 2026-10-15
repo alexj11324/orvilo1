@@ -1,5 +1,4 @@
 import { addClassNamesToElement } from '@lexical/utils';
-import { getKernelFromEditor } from '@lobehub/editor';
 import type { HeadlessRenderableNode, HeadlessRenderContext } from '@lobehub/editor/renderer';
 import {
   $applyNodeReplacement,
@@ -14,6 +13,7 @@ import {
 } from 'lexical';
 import { createElement } from 'react';
 
+import { createNativeDecoratorRegistry } from '../nativeDecoratorRegistry';
 import { ReferTopicView } from './ReferTopicView';
 
 export type SerializedReferTopicNode = Spread<
@@ -95,13 +95,7 @@ export class ReferTopicNode extends DecoratorNode<any> implements HeadlessRender
   }
 
   decorate(editor: LexicalEditor): any {
-    const decorator = getKernelFromEditor(editor)?.getDecorator(ReferTopicNode.getType());
-    if (!decorator) return null;
-    if (typeof decorator === 'function') return decorator(this, editor);
-    return {
-      queryDOM: decorator.queryDOM,
-      render: decorator.render(this, editor),
-    };
+    return nativeDecorator.render(editor, this);
   }
 
   renderHeadless({ key }: HeadlessRenderContext) {
@@ -120,3 +114,6 @@ export function $createReferTopicNode(topicId: string, topicTitle: string): Refe
 export function $isReferTopicNode(node: LexicalNode): node is ReferTopicNode {
   return node.getType() === ReferTopicNode.getType();
 }
+
+const nativeDecorator = createNativeDecoratorRegistry<ReferTopicNode>();
+export const registerReferTopicDecorator = nativeDecorator.register;

@@ -15,6 +15,7 @@ import {
   type LexicalEditor,
 } from 'lexical';
 
+import { registerLocalFileTagDecorator } from './LocalFileTagNode';
 import {
   $createLocalFileTagNode,
   $isLocalFileTagNode,
@@ -53,6 +54,7 @@ export class LocalFileTagPlugin {
 
   config?: LocalFileTagPluginOptions;
   private kernel: IEditorKernel;
+  private unregisterNativeDecorator?: () => void;
 
   constructor(kernel: IEditorKernel, config?: LocalFileTagPluginOptions) {
     this.kernel = kernel;
@@ -70,6 +72,11 @@ export class LocalFileTagPlugin {
   }
 
   onInit(editor: LexicalEditor): void {
+    this.unregisterNativeDecorator?.();
+    this.unregisterNativeDecorator = registerLocalFileTagDecorator(
+      editor,
+      (node, lexicalEditor) => this.config?.decorator?.(node, lexicalEditor) ?? null,
+    );
     this.registerMarkdown();
     this.registerLiteXml();
     this.registerCommand(editor);
@@ -137,6 +144,8 @@ export class LocalFileTagPlugin {
   }
 
   destroy(): void {
+    this.unregisterNativeDecorator?.();
+    this.unregisterNativeDecorator = undefined;
     this.kernel.unregisterDecorator?.(LocalFileTagNode.getType());
   }
 }

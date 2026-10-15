@@ -1,6 +1,5 @@
 'use client';
 
-import { MaterialFileTypeIcon } from '@lobehub/ui';
 import type { RenameLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { cn } from 'cn';
@@ -8,6 +7,7 @@ import path from 'path-browserify-esm';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import MaterialFileTypeIcon from '@/components/MaterialFileTypeIcon';
 import { highlightTextStyles, inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { LocalRenameFileState } from '../../..';

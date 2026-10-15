@@ -14,6 +14,7 @@ import {
   type LexicalEditor,
 } from 'lexical';
 
+import { registerReferTopicDecorator } from './ReferTopicNode';
 import {
   $createReferTopicNode,
   $isReferTopicNode,
@@ -37,6 +38,7 @@ export class ReferTopicPlugin {
 
   config?: ReferTopicPluginOptions;
   private kernel: IEditorKernel;
+  private unregisterNativeDecorator?: () => void;
 
   constructor(kernel: IEditorKernel, config?: ReferTopicPluginOptions) {
     this.kernel = kernel;
@@ -54,6 +56,11 @@ export class ReferTopicPlugin {
   }
 
   onInit(editor: LexicalEditor): void {
+    this.unregisterNativeDecorator?.();
+    this.unregisterNativeDecorator = registerReferTopicDecorator(
+      editor,
+      (node, lexicalEditor) => this.config?.decorator?.(node, lexicalEditor) ?? null,
+    );
     this.registerMarkdown();
     this.registerLiteXml();
     this.registerCommand(editor);
@@ -110,6 +117,8 @@ export class ReferTopicPlugin {
   }
 
   destroy(): void {
+    this.unregisterNativeDecorator?.();
+    this.unregisterNativeDecorator = undefined;
     this.kernel.unregisterDecorator?.(ReferTopicNode.getType());
   }
 }

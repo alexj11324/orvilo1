@@ -1,4 +1,7 @@
-import type { UserNeutralColor, UserPrimaryColor } from '@orvilo/types';
+import type { UserGeneralConfig } from '@orvilo/types';
+
+export type UserPrimaryColor = NonNullable<UserGeneralConfig['primaryColor']>;
+export type UserNeutralColor = NonNullable<UserGeneralConfig['neutralColor']>;
 
 // Persisted theme swatch identities, independently owned MIT data.
 // Exact installed SDK dark[9] entries; these are selection values, not a new theme authority.

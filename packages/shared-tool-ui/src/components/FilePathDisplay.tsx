@@ -1,8 +1,9 @@
 'use client';
-import { MaterialFileTypeIcon } from '@lobehub/ui';
 import { ImageIcon } from 'lucide-react';
 import path from 'path-browserify-esm';
 import { memo, useMemo } from 'react';
+
+import MaterialFileTypeIcon from '@/components/MaterialFileTypeIcon';
 
 const IMAGE_EXTENSIONS = new Set([
   '.apng',

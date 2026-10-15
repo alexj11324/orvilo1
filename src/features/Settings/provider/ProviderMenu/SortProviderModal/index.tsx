@@ -1,8 +1,10 @@
-import { SortableList } from '@lobehub/ui';
+import { restrictToVerticalAxis, restrictToWindowEdges } from '@dnd-kit/modifiers';
+import { cn } from 'cn';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { Sortable, SortableItem } from '@/components/reui/sortable';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/usePermission';
@@ -10,6 +12,9 @@ import { useAiInfraStore } from '@/store/aiInfra';
 import { type AiProviderListItem } from '@/types/aiProvider';
 
 import GroupItem from './GroupItem';
+
+const SORT_MODIFIERS = [restrictToVerticalAxis, restrictToWindowEdges];
+const getItemId = (item: { id: string }) => item.id;
 
 const styles = {
   container:
@@ -38,26 +43,27 @@ const ConfigGroupModal = memo<ConfigGroupModalProps>(({ open, onCancel, defaultI
       onCancel={onCancel}
     >
       <div className="flex flex-col gap-4">
-        <SortableList
-          items={items}
-          renderItem={(item: AiProviderListItem) => (
-            <SortableList.Item
-              horizontal
-              align={'center'}
-              className={styles.container}
-              gap={4}
-              id={item.id}
-              justify={'space-between'}
-            >
-              <GroupItem {...item} disabled={!canManageProvider} />
-            </SortableList.Item>
-          )}
-          onChange={async (items: AiProviderListItem[]) => {
+        <Sortable
+          className="flex flex-col gap-2"
+          getItemValue={getItemId}
+          modifiers={SORT_MODIFIERS}
+          value={items}
+          onValueChange={(items: AiProviderListItem[]) => {
             if (!canManageProvider) return;
 
             setItems(items);
           }}
-        />
+        >
+          {items.map((item) => (
+            <SortableItem
+              className={cn(styles.container, 'flex items-center justify-between gap-1')}
+              key={item.id}
+              value={item.id}
+            >
+              <GroupItem {...item} disabled={!canManageProvider} />
+            </SortableItem>
+          ))}
+        </Sortable>
         <Button
           className="sticky inset-be-0 w-full leading-5.5"
           disabled={!canManageProvider}

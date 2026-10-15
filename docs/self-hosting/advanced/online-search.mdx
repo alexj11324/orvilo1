@@ -64,6 +64,8 @@ When enabled, Orvilo replaces the Jina endpoints as follows:
 - `https://r.jina.ai` → `https://r.jinaai.cn`
 - `https://s.jina.ai` → `https://s.jinaai.cn`
 
+Jina Search sends POST requests to the origin root: `https://s.jina.ai/` by default, or `https://s.jinaai.cn/` when `JINA_USE_CN_DOMAINS=true`. The endpoint always includes the root path `/`; selecting the regional domain changes only the origin. The runtime builds this URL with the standard URL API so URL-joining dependency updates do not change the request endpoint.
+
 > 📌 Useful when `jina.ai` is unreachable from mainland China. Authentication and API behavior stay the same.
 
 ---

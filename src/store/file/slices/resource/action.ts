@@ -31,9 +31,6 @@ interface ResourceStoreState extends Pick<
 
 type Setter = StoreSetter<FileStore>;
 
-export const createResourceSlice = (set: Setter, get: () => FileStore, api?: unknown) =>
-  new ResourceActionImpl(set, get, api);
-
 const toError = (error: unknown) => (error instanceof Error ? error : new Error(String(error)));
 
 export class ResourceActionImpl {

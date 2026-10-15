@@ -6,7 +6,7 @@
  * - Delete
  *
  * The per-group sidebar pin/show-hide scenarios were removed with the fixed
- * sidebar IA (sidebarContract.ts) — see the matching feature file comment.
+ * sidebar IA (DEFAULT_SIDEBAR_ITEMS) — see the matching feature file comment.
  */
 import { randomBytes } from 'node:crypto';
 

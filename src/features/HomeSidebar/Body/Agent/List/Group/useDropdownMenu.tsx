@@ -9,7 +9,7 @@ import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
-import { lambdaClient } from '@/libs/trpc/client';
+import { sessionService } from '@/services/session';
 import { useHomeStore } from '@/store/home';
 
 import { useSessionGroupMenuItems } from '../../../../hooks';
@@ -81,7 +81,7 @@ export const useGroupDropdownMenu = ({
               }),
               onOk: async () => {
                 try {
-                  await lambdaClient.sessionGroup.publishSessionGroupToWorkspace.mutate({ id });
+                  await sessionService.publishSessionGroupToWorkspace({ id });
                   await refreshAgentList();
                   toast.success(
                     t('sessionGroup.publishToWorkspaceSuccess', {

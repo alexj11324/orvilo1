@@ -245,6 +245,15 @@ export interface UpdateClientTaskThreadStatusParams {
 }
 
 class AiAgentService {
+  submitHeteroIntervention = (...args: Parameters<typeof lambdaClient.aiAgent.submitHeteroIntervention.mutate>) =>
+    lambdaClient.aiAgent.submitHeteroIntervention.mutate(...args);
+
+  execGroupAgent = (...args: Parameters<typeof lambdaClient.aiAgent.execGroupAgent.mutate>) =>
+    lambdaClient.aiAgent.execGroupAgent.mutate(...args);
+
+  processHumanIntervention = (...args: Parameters<typeof lambdaClient.aiAgent.processHumanIntervention.mutate>) =>
+    lambdaClient.aiAgent.processHumanIntervention.mutate(...args);
+
   async getServerDefaultHeterogeneousCapability() {
     return await lambdaClient.aiAgent.getServerDefaultHeterogeneousCapability.query();
   }

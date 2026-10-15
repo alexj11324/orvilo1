@@ -24,8 +24,6 @@ export const fileSchema = z.object({
   Size: z.number(),
 });
 
-export const listFileSchema = z.array(fileSchema);
-
 export type FileType = z.infer<typeof fileSchema>;
 
 const DEFAULT_S3_REGION = 'us-east-1';

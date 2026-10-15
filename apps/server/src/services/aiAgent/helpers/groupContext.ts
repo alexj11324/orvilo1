@@ -72,29 +72,6 @@ export const buildGroupAgentContext = (
   };
 };
 
-/**
- * Bot-conversation fallback: a single bot agent has no real group, so build a
- * degenerate one-member context purely to give it its `<group_context>`
- * identity block. Only used when there is no `groupId`.
- */
-export const buildBotConversationGroupContext = (
-  currentAgentId: string,
-  agentConfig: { description?: unknown; title?: unknown } | undefined,
-): AgentGroupConfig => {
-  const title = agentConfig?.title;
-  const description = agentConfig?.description;
-  const name = typeof title === 'string' && title.trim() ? title.trim() : 'Current Agent';
-
-  return {
-    agentMap: { [currentAgentId]: { name, role: 'participant' } },
-    currentAgentId,
-    currentAgentName: name,
-    currentAgentRole: 'participant',
-    members: [{ id: currentAgentId, name, role: 'participant' }],
-    systemPrompt: typeof description === 'string' ? description : undefined,
-  };
-};
-
 /** Read group authority from its scoped, enabled roster before a run or tool call. */
 export const resolveGroupRunContext = async (
   deps: { db: OrviloDatabase; userId: string; workspaceId?: string },

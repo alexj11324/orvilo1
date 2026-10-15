@@ -5,7 +5,7 @@ Guidelines for using AI coding agents in this opensource Orvilo repository.
 ## Tech Stack
 
 - Next.js 16 + React 19 + TypeScript
-- SPA inside Next.js with `react-router-dom`
+- SPA inside Next.js with `react-router`
 - Local ReUI/shadcn components and adapters, retained `@lobehub/ui` features, antd-style; see the **react** skill for component and styling choices
 - react-i18next for i18n; zustand for state management
 - SWR for data fetching; TRPC for type-safe backend
@@ -39,6 +39,10 @@ For the full repository map or help locating a code layer, read the `project-ove
 - `src/services` and `src/store`: client API services and Zustand state. Keep fetch/cache guidance in `data-fetching-architecture` and store conventions in `zustand`.
 - `apps/desktop`, `apps/cli`: Electron and CLI applications. `packages` holds shared code, including `database`, `agent-runtime`, `env`, and `locales`.
 - `e2e`: end-to-end tests using Cucumber and Playwright.
+
+Enforced dependency, request and type-check boundaries are documented in
+[Architecture boundaries](docs/development/architecture-boundaries.md). Keep the
+corresponding CI guards passing when moving code across layers.
 
 Before changing SPA routes, read the `spa-routes` skill. Register common Web/Electron paths, metadata, lazy loaders and `preloadId` values once in `src/spa/router/desktopRouter.shared.tsx`; keep `desktopRouter.config*.tsx` limited to platform differences and `desktopRouter.sync.test.tsx` passing. Do not create `features` directories inside `src/routes`.
 
@@ -142,7 +146,7 @@ Use `bun run check [changed-files...]`.
 
 - Every bug fix needs a regression test that fails before the fix and passes after it. Skip pure style/CSS fixes when the only practical assertion would match stylesheet source strings.
 - Run once with the selectors needed: no selector means lint + related tests; `--lint`, `--test`, and `--type` compose. Default scope is all staged, unstaged and untracked changes; explicit paths override it.
-- Lint autofixes files: review the emitted diff. Tests use the nearest owning Vitest config. `--type` checks the full repo — it is CI-only and fails fast outside GitHub Actions (`scripts/type-check.mjs`); the `Typecheck` job in `test.yml` runs it on every push/PR. For a scoped local check, run `pnpm type-check` inside the owning package (e.g. `apps/server`). Never run `bun run test`, which runs the full suite.
+- Lint autofixes files: review the emitted diff. Tests use the nearest owning Vitest config. `--type` checks the full repo — it is CI-only and fails fast outside GitHub Actions (`scripts/type-check.mjs`); the `Typecheck` job in `test.yml` runs it on every push/PR. For local package checks, run `node scripts/type-check-affected.mjs` or `pnpm --filter @orvilo/agent-manager-runtime type-check`; the runner reports full and partial scope. See [typecheck boundaries](docs/development/typecheck-boundaries.md). Application configs such as `apps/server` still follow imported source and are not isolated package checks. Never run `bun run test`, which runs the full suite.
 - For a manual package test, run from the owning package: `cd packages/database && bunx vitest run --silent='passed-only' '[file-path]'`.
 
 ### Verification Evidence

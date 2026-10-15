@@ -4,7 +4,7 @@ Ported from `codex/issue-ui-corrections` commit `452affd58` (approved Issue UI c
 
 ## Navigation contract
 
-The primary sidebar order is fixed by `src/features/Navigation/sidebarContract.ts` and `DEFAULT_SIDEBAR_ITEMS` in `src/store/global/selectors/systemStatus.ts`:
+The primary sidebar order is fixed by `DEFAULT_SIDEBAR_ITEMS` in `src/store/global/selectors/systemStatus.ts`:
 
 ```plaintext
 Issues · Inbox · My issues · Agent · Groups · Drafts · Workspace · Favorites · Teams

@@ -64,10 +64,6 @@ export const useAgentModal = () => {
   return context;
 };
 
-export const useOptionalAgentModal = () => {
-  return use(AgentModalContext);
-};
-
 interface AgentModalProviderProps {
   children: ReactNode;
 }

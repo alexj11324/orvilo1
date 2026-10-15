@@ -59,6 +59,8 @@ JINA_USE_CN_DOMAINS=true
 - `https://r.jina.ai` → `https://r.jinaai.cn`
 - `https://s.jina.ai` → `https://s.jinaai.cn`
 
+Jina Search 会向域名根路径发送 POST 请求：默认使用 `https://s.jina.ai/`，启用 `JINA_USE_CN_DOMAINS=true` 后使用 `https://s.jinaai.cn/`。端点始终包含根路径 `/`；区域域名切换只会改变来源域名。运行时使用标准 URL API 构建这个地址，避免 URL 拼接依赖更新后改变请求端点。
+
 > 📌 适用于中国大陆网络无法访问 `jina.ai` 的场景。认证方式与 API 行为保持不变。
 
 ---

@@ -1,11 +1,11 @@
 'use client';
-import type { TaskWorkflowCategory, TeamWorkflowStateItem } from '@orvilo/types';
+import type { TaskWorkflowCategory } from '@orvilo/types';
 import { cn } from 'cn';
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AsyncError from '@/components/AsyncError';
 import { useModalContext } from '@/components/Modal';
-import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { lambdaClient } from '@/libs/trpc/client';
+import { useFetchWorkTeam } from '@/store/workTeam/hooks';
 
 export interface WorkflowStatePickerContentProps {
   category: TaskWorkflowCategory;
@@ -31,42 +31,20 @@ export const WorkflowStatePickerContent = ({
 }: WorkflowStatePickerContentProps) => {
   const { t } = useTranslation('common');
   const { close } = useModalContext();
-  const [states, setStates] = useState<TeamWorkflowStateItem[] | null>(null);
-  const [selected, setSelected] = useState<string>();
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    void lambdaClient.team.team
-      .query({ teamId })
-      .then((result) => {
-        if (cancelled) return;
-        const next = (result.data.workflowStates ?? []).filter(
-          (state) => state.category === category,
-        );
-        setStates(next);
-        setSelected(next[0]?.id);
-      })
-      .catch((error) => {
-        console.error('[WorkflowStatePicker] Failed to load workflow states:', error);
-        if (!cancelled) {
-          setFailed(true);
-          toast.error(t('myWork.moveFailed'));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [category, t, teamId]);
-
-  const options = useMemo(
-    () => (states ?? []).map((state) => ({ label: state.name, value: state.id })),
-    [states],
-  );
+  const { data, error, isLoading: loading, isValidating, mutate } = useFetchWorkTeam(teamId);
+  const [selection, setSelection] = useState<{
+    teamId: string;
+    category: TaskWorkflowCategory;
+    id: string;
+  }>();
+  const states = (data?.data.workflowStates ?? []).filter((state) => state.category === category);
+  const options = states.map((state) => ({ label: state.name, value: state.id }));
+  const selected =
+    selection?.teamId === teamId &&
+    selection.category === category &&
+    states.some((state) => state.id === selection.id)
+      ? selection.id
+      : states[0]?.id;
 
   const handleCancel = () => {
     onCancel();
@@ -86,11 +64,17 @@ export const WorkflowStatePickerContent = ({
         <span className="text-sm text-muted-foreground">
           {t('myWork.pickWorkflowStateDescription')}
         </span>
+        {error && (
+          <AsyncError
+            error={error}
+            retrying={isValidating}
+            variant="inline"
+            onRetry={() => void mutate().catch(() => undefined)}
+          />
+        )}
         {loading ? (
           <span className="text-sm text-muted-foreground">{t('myWork.loading')}</span>
-        ) : failed ? (
-          <span className="text-sm text-muted-foreground">{t('myWork.moveFailed')}</span>
-        ) : options.length === 0 ? (
+        ) : error && !data ? null : options.length === 0 ? (
           <span className="text-sm text-muted-foreground">
             {t('myWork.pickWorkflowStateEmpty')}
           </span>
@@ -99,7 +83,7 @@ export const WorkflowStatePickerContent = ({
             items={options}
             value={selected}
             onValueChange={(next) => {
-              if (typeof next === 'string') setSelected(next);
+              if (typeof next === 'string') setSelection({ teamId, category, id: next });
             }}
           >
             <SelectTrigger aria-label={t('myWork.pickWorkflowState')}>

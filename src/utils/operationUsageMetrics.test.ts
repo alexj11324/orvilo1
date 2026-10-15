@@ -4,7 +4,6 @@ import {
   addUsageToOperationMetrics,
   calculateOperationUsageMetrics,
   EMPTY_OPERATION_USAGE_METRICS,
-  hasOperationUsageMetrics,
 } from './operationUsageMetrics';
 
 describe('operationUsageMetrics', () => {
@@ -186,7 +185,6 @@ describe('operationUsageMetrics', () => {
         totalOutputTokens: 130,
         totalTokens: 530,
       });
-      expect(hasOperationUsageMetrics(metrics)).toBe(true);
     });
   });
 });

@@ -1,5 +1,4 @@
 'use client';
-
 import type {
   SavedViewVisibility,
   WorkQueryEntityType,
@@ -16,9 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import Select from '@/components/Select';
 import { Input } from '@/components/ui/input';
-import { useClientDataSWR } from '@/libs/swr';
-import { workAttentionKeys } from '@/libs/swr/keys';
-import { lambdaClient } from '@/libs/trpc/client';
+import { useFetchWorkTeams } from '@/store/workTeam/hooks';
 
 import { savedViewGroupByForLayout, savedViewGroupByOptions } from './savedViewDisplay';
 import type { BuilderState } from './workQueryBuilder';
@@ -84,10 +81,7 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
   }) => {
     const { t } = useTranslation('common');
     const workspaceId = useActiveWorkspaceId();
-    const { data: teamsData } = useClientDataSWR(
-      workspaceId && showShare ? workAttentionKeys.teams(workspaceId) : null,
-      () => lambdaClient.team.teams.query(),
-    );
+    const { data: teamsData } = useFetchWorkTeams(showShare);
 
     const teamOptions = useMemo(
       () => (teamsData?.data ?? []).map((team) => ({ label: team.name, value: team.id })),

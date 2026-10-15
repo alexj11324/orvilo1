@@ -32,7 +32,7 @@ the browser.
 
 `src/store/user/displaySnapshot.ts` is the domain adapter for the user's avatar URL
 and preference. It reuses `LocalStorageQueryProjectionStorage`; it is not a second
-cache engine. `src/layout/AuthProvider/BetterAuth/UserUpdater.tsx` reads it after the
+cache engine. `src/layout/AuthProvider/SessionAuth/UserUpdater.tsx` reads it after the
 session identifies the exact user, before painting that user's initialized shell.
 The authoritative user-state response still refreshes the values afterward.
 

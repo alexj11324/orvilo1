@@ -38,8 +38,6 @@ export interface GroupOrchestrationParams {
 }
 
 type Setter = StoreSetter<ChatStore>;
-export const groupOrchestrationSlice = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new GroupOrchestrationActionImpl(set, get, _api);
 
 export class GroupOrchestrationActionImpl {
   readonly #get: () => ChatStore;

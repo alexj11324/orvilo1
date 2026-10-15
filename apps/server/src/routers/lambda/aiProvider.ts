@@ -46,6 +46,7 @@ const aiProviderProcedure = wsCompatProcedure.use(serverDatabase).use(async (opt
   const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
   const aiInfraRepos = new AiInfraRepos(
     ctx.serverDB,
+    KeyVaultsGateKeeper.initWithEnvKey,
     ctx.userId,
     aiProvider as Record<string, ProviderConfig>,
     ctx.workspaceId ?? undefined,
@@ -56,21 +57,26 @@ const aiProviderProcedure = wsCompatProcedure.use(serverDatabase).use(async (opt
   // scopes which legacy ai_providers rows the plane adopts/erases; the
   // bindings and credentials themselves are always personal (tenantId is
   // stamped at issuance).
-  const providerBindings = new ProviderBindingPlane(ctx.serverDB, ctx.userId, {
-    verifyBindings: (rows) =>
-      checkProviderBindings(
-        new ProviderBindingModel(ctx.serverDB, ctx.userId),
-        ctx.userId,
-        rows,
-        createProviderBindingComposition(ctx.serverDB, { reuseProviderVerification: true }),
-      ),
-    decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
-    resolveEnabledModelIds: async (providerId) =>
-      (await aiInfraRepos.getEnabledModels(false))
-        .filter((model) => model.providerId === providerId && model.enabled === true)
-        .map((model) => model.id),
-    workspaceId: ctx.workspaceId ?? undefined,
-  });
+  const providerBindings = new ProviderBindingPlane(
+    ctx.serverDB,
+    KeyVaultsGateKeeper.initWithEnvKey,
+    ctx.userId,
+    {
+      verifyBindings: (rows) =>
+        checkProviderBindings(
+          new ProviderBindingModel(ctx.serverDB, ctx.userId),
+          ctx.userId,
+          rows,
+          createProviderBindingComposition(ctx.serverDB, { reuseProviderVerification: true }),
+        ),
+      decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
+      resolveEnabledModelIds: async (providerId) =>
+        (await aiInfraRepos.getEnabledModels(false))
+          .filter((model) => model.providerId === providerId && model.enabled === true)
+          .map((model) => model.id),
+      workspaceId: ctx.workspaceId ?? undefined,
+    },
+  );
 
   return opts.next({
     ctx: {

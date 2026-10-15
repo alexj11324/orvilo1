@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { hashApiKey } from '@/utils/server/apiKeyHash';
 
+import { createTestSecretCipher } from '../../../tests/secretCipher';
 import { getTestDB } from '../../core/getTestDB';
 import { apiKeys, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -21,7 +22,7 @@ let originalKeyVaultsSecret: string | undefined;
 beforeEach(async () => {
   originalKeyVaultsSecret = process.env.KEY_VAULTS_SECRET;
   process.env.KEY_VAULTS_SECRET = validKeyVaultsSecret;
-  apiKeyModel = new ApiKeyModel(serverDB, userId);
+  apiKeyModel = new ApiKeyModel(serverDB, createTestSecretCipher, userId);
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: 'user2' }]);
 });
@@ -97,7 +98,7 @@ describe('ApiKeyModel', () => {
     it('should only delete API keys for the current user', async () => {
       const { id: key1 } = await apiKeyModel.create({ name: 'User 1 Key', enabled: true });
 
-      const anotherApiKeyModel = new ApiKeyModel(serverDB, 'user2');
+      const anotherApiKeyModel = new ApiKeyModel(serverDB, createTestSecretCipher, 'user2');
       const { id: key2 } = await anotherApiKeyModel.create({
         name: 'User 2 Key',
         enabled: true,
@@ -136,7 +137,7 @@ describe('ApiKeyModel', () => {
       await apiKeyModel.create({ name: 'Test Key 1', enabled: true });
       await apiKeyModel.create({ name: 'Test Key 2', enabled: true });
 
-      const anotherApiKeyModel = new ApiKeyModel(serverDB, 'user2');
+      const anotherApiKeyModel = new ApiKeyModel(serverDB, createTestSecretCipher, 'user2');
       await anotherApiKeyModel.create({ name: 'User 2 Key', enabled: true });
 
       await apiKeyModel.deleteAll();
@@ -184,7 +185,7 @@ describe('ApiKeyModel', () => {
     it('should only query API keys for the current user', async () => {
       await apiKeyModel.create({ name: 'User 1 Key', enabled: true });
 
-      const anotherApiKeyModel = new ApiKeyModel(serverDB, 'user2');
+      const anotherApiKeyModel = new ApiKeyModel(serverDB, createTestSecretCipher, 'user2');
       await anotherApiKeyModel.create({ name: 'User 2 Key', enabled: true });
 
       const keys = await apiKeyModel.query();
@@ -196,7 +197,7 @@ describe('ApiKeyModel', () => {
       const staleKey = await apiKeyModel.create({ name: 'Stale Key', enabled: true });
 
       process.env.KEY_VAULTS_SECRET = 'Q10pwdq00KXUu9R+c8A8p4PSlIRWi7KwgUophBtkHVk=';
-      const modelAfterSecretRotation = new ApiKeyModel(serverDB, userId);
+      const modelAfterSecretRotation = new ApiKeyModel(serverDB, createTestSecretCipher, userId);
       const freshKey = await modelAfterSecretRotation.create({ name: 'Fresh Key', enabled: true });
 
       const keys = await modelAfterSecretRotation.query();
@@ -219,8 +220,10 @@ describe('ApiKeyModel', () => {
         slug: workspaceId,
       });
 
-      const adminModel = new ApiKeyModel(serverDB, userId, workspaceId, { canManageAll: true });
-      const memberModel = new ApiKeyModel(serverDB, 'user2', workspaceId, {
+      const adminModel = new ApiKeyModel(serverDB, createTestSecretCipher, userId, workspaceId, {
+        canManageAll: true,
+      });
+      const memberModel = new ApiKeyModel(serverDB, createTestSecretCipher, 'user2', workspaceId, {
         canManageAll: false,
       });
       await adminModel.create({ enabled: true, name: 'Admin Key' });
@@ -246,8 +249,10 @@ describe('ApiKeyModel', () => {
         slug: workspaceId,
       });
 
-      const adminModel = new ApiKeyModel(serverDB, userId, workspaceId, { canManageAll: true });
-      const memberModel = new ApiKeyModel(serverDB, 'user2', workspaceId, {
+      const adminModel = new ApiKeyModel(serverDB, createTestSecretCipher, userId, workspaceId, {
+        canManageAll: true,
+      });
+      const memberModel = new ApiKeyModel(serverDB, createTestSecretCipher, 'user2', workspaceId, {
         canManageAll: false,
       });
       const adminKey = await adminModel.create({ enabled: true, name: 'Admin Key' });
@@ -408,7 +413,7 @@ describe('ApiKeyModel', () => {
     it('should only update API keys for the current user', async () => {
       await apiKeyModel.create({ name: 'User 1 Key', enabled: true });
 
-      const anotherApiKeyModel = new ApiKeyModel(serverDB, 'user2');
+      const anotherApiKeyModel = new ApiKeyModel(serverDB, createTestSecretCipher, 'user2');
       const { id: key2 } = await anotherApiKeyModel.create({
         name: 'User 2 Key',
         enabled: true,
@@ -444,7 +449,7 @@ describe('ApiKeyModel', () => {
     });
 
     it('should only find API keys for the current user', async () => {
-      const anotherApiKeyModel = new ApiKeyModel(serverDB, 'user2');
+      const anotherApiKeyModel = new ApiKeyModel(serverDB, createTestSecretCipher, 'user2');
       const { id: key2 } = await anotherApiKeyModel.create({
         name: 'User 2 Key',
         enabled: true,
@@ -474,7 +479,7 @@ describe('ApiKeyModel', () => {
     });
 
     it('should only update API keys for the current user', async () => {
-      const anotherApiKeyModel = new ApiKeyModel(serverDB, 'user2');
+      const anotherApiKeyModel = new ApiKeyModel(serverDB, createTestSecretCipher, 'user2');
       const { id: key2 } = await anotherApiKeyModel.create({
         name: 'User 2 Key',
         enabled: true,

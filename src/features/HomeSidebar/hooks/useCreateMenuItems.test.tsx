@@ -45,10 +45,6 @@ vi.mock('@/features/CreateGroupChat', () => ({
   openCreateGroupChatModal: mocks.openCreateGroupChatModal,
 }));
 
-vi.mock('@/features/HomeSidebar/Body/Agent/ModalProvider', () => ({
-  useOptionalAgentModal: () => undefined,
-}));
-
 vi.mock('@/hooks/usePermission', () => ({
   usePermission: () => ({ allowed: mocks.canCreate.current }),
 }));

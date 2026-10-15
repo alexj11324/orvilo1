@@ -55,29 +55,6 @@ export const getToolDisplayName = (apiName: string): string => {
   return t(key, { defaultValue, ns: 'chat' });
 };
 
-export const getToolSummaryText = (tools: ChatToolPayloadWithResult[]): string => {
-  const groups = new Map<string, number>();
-  for (const tool of tools) {
-    groups.set(tool.apiName, (groups.get(tool.apiName) || 0) + 1);
-  }
-
-  const parts: string[] = [];
-  for (const [apiName, count] of groups) {
-    const name = getToolDisplayName(apiName);
-    if (count > 1) {
-      parts.push(`${name} (${count})`);
-    } else {
-      parts.push(name);
-    }
-  }
-
-  return parts.join(', ');
-};
-
-export const hasToolError = (tools: ChatToolPayloadWithResult[]): boolean => {
-  return tools.some((t) => t.result?.error);
-};
-
 export const getWorkflowCompletionStatus = (
   tools: ChatToolPayloadWithResult[],
 ): 'success' | 'partial' | 'error' => {
@@ -152,16 +129,6 @@ export const getToolFallbackHeadlineLine = (tool: ChatToolPayloadWithResult): st
   const label = getToolActionLabel(tool);
   const keyword = getToolKeywordDetail(tool);
   return keyword ? `${label} ${keyword}` : label;
-};
-
-/**
- * One-line status for a single tool: label + optional step / first string arg.
- * Prefer explicit stepMessage when backends populate workflowHeadline / metadata.workflow.
- */
-export const getToolStepHeadlineLine = (tool: ChatToolPayloadWithResult): string => {
-  const explicit = getExplicitStepHeadlineLine(tool);
-  if (explicit) return explicit;
-  return getToolFallbackHeadlineLine(tool);
 };
 
 const truncateDisplayAtWord = (s: string, max: number): string => {

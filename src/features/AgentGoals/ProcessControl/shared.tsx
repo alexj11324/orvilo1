@@ -42,8 +42,6 @@ const styles = {
   mono: 'font-mono tabular-nums',
 };
 
-export const monoClass = styles.mono;
-
 export const KindDot = memo<{ kind: GoalGraphNodeKind }>(({ kind }) => (
   <span className={styles.dot} style={{ background: KIND_COLOR[kind].line }} />
 ));

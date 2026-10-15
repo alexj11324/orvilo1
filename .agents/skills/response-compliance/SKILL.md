@@ -11,7 +11,7 @@ Run the official OpenResponses compliance test suite against the local (or remot
 
 ```bash
 # From the openapi package directory
-cd aspectlylabs/packages/openapi
+cd packages/openapi
 
 # Run all tests (dev mode, localhost:3010)
 APP_URL=http://localhost:3010 bun run test:response-compliance -- \
@@ -41,7 +41,7 @@ APP_URL=http://localhost:3010 bun run test:response-compliance -- \
 | Mode            | Flags                                                                 |
 | --------------- | --------------------------------------------------------------------- |
 | Dev (mock user) | `--auth-header "orvilo-auth-dev-backend-api" --no-bearer --api-key 1` |
-| API Key         | `--api-key lb-xxxxxxxxxxxxxxxx`                                       |
+| API Key         | `--api-key sk-ov-xxxxxxxxxxxxxxxx`                                    |
 | Custom          | `--auth-header <name> --api-key <value>`                              |
 
 ## Test IDs
@@ -66,7 +66,7 @@ Available `--filter` values:
 
 ## How It Works
 
-The script (`aspectlylabs/packages/openapi/scripts/compliance-test.sh`) clones the official [openresponses/openresponses](https://github.com/openresponses/openresponses) repo into `scripts/openresponses-compliance/` (gitignored) and runs its CLI test runner. First run clones; subsequent runs update from upstream.
+The script (`packages/openapi/scripts/compliance-test.sh`) clones the official [openresponses/openresponses](https://github.com/openresponses/openresponses) repo into `packages/openapi/scripts/openresponses-compliance/` (gitignored) and runs its CLI test runner. First run clones; subsequent runs update from upstream.
 
 ## Debugging Failures
 
@@ -79,9 +79,9 @@ The script (`aspectlylabs/packages/openapi/scripts/compliance-test.sh`) clones t
 
 ## Key Files
 
-- **Types**: `aspectlylabs/packages/openapi/src/types/responses.type.ts`
-- **Service**: `aspectlylabs/packages/openapi/src/services/responses.service.ts`
-- **Controller**: `aspectlylabs/packages/openapi/src/controllers/responses.controller.ts`
-- **Route**: `aspectlylabs/packages/openapi/src/routes/responses.route.ts`
-- **Test script**: `aspectlylabs/packages/openapi/scripts/compliance-test.sh`
+- **Types**: `packages/openapi/src/types/responses.type.ts`
+- **Service**: `packages/openapi/src/services/responses.service.ts`
+- **Controller**: `packages/openapi/src/controllers/responses.controller.ts`
+- **Route**: `packages/openapi/src/routes/responses.route.ts`
+- **Test script**: `packages/openapi/scripts/compliance-test.sh`
 - **Cloud route**: `src/app/(backend)/api/v1/[[...route]]/route.ts`

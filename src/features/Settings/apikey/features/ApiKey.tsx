@@ -26,7 +26,7 @@ import { isFullAccessApiKey } from '@/const/apiKeyScope';
 import { usePermission } from '@/hooks/usePermission';
 import { useClientDataSWR } from '@/libs/swr';
 import { apiKeyKeys } from '@/libs/swr/keys';
-import { lambdaClient } from '@/libs/trpc/client';
+import { apiKeyService } from '@/services/apiKey';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { type ApiKeyItem, type CreateApiKeyParams, type UpdateApiKeyParams } from '@/types/apiKey';
@@ -64,7 +64,7 @@ const ApiKey: FC = () => {
     : t('apikey.list.actions.creationRestricted');
 
   const { data, isLoading, mutate } = useClientDataSWR<ApiKeyItem[]>(apiKeyKeys.list(), () =>
-    lambdaClient.apiKey.getApiKeys.query(),
+    apiKeyService.getApiKeys(),
   );
 
   // Detail drawer holds only the id; the item is re-derived from SWR data so
@@ -81,7 +81,7 @@ const ApiKey: FC = () => {
   };
 
   const createMutation = useMutation({
-    mutationFn: (params: CreateApiKeyParams) => lambdaClient.apiKey.createApiKey.mutate(params),
+    mutationFn: (params: CreateApiKeyParams) => apiKeyService.createApiKey(params),
     onError: notifyMutationError,
     onSuccess: () => {
       mutate();
@@ -90,7 +90,7 @@ const ApiKey: FC = () => {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, params }: { id: string; params: UpdateApiKeyParams }) =>
-      lambdaClient.apiKey.updateApiKey.mutate({ id, value: params }),
+      apiKeyService.updateApiKey({ id, value: params }),
     onError: notifyMutationError,
     onSuccess: () => {
       mutate();
@@ -98,7 +98,7 @@ const ApiKey: FC = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => lambdaClient.apiKey.deleteApiKey.mutate({ id }),
+    mutationFn: (id: string) => apiKeyService.deleteApiKey({ id }),
     onError: notifyMutationError,
     onSuccess: () => {
       mutate();

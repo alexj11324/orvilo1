@@ -24,5 +24,3 @@ export const useEditingPopoverStore = create<EditingPopoverState>((set) => ({
 
 export const openEditingPopover = (target: EditingTarget) =>
   useEditingPopoverStore.getState().open(target);
-
-export const closeEditingPopover = () => useEditingPopoverStore.getState().close();

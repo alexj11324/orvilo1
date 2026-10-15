@@ -34,7 +34,7 @@ yourself.
 
 ## Local Development
 
-Requires **Node.js >= 22** and **pnpm**. The repo pins `pnpm@12.4.1` via
+Requires **Node.js >= 22**, **pnpm**, and **Bun** (for repository scripts). The repo pins `pnpm@12.4.1` via
 `packageManager`.
 
 ```bash
@@ -74,8 +74,8 @@ everything staged, unstaged and untracked; passing explicit paths overrides that
 
 ## Self-Hosting
 
-Orvilo runs against PostgreSQL. See [`.env.example`](./.env.example) for the full set of
-configuration variables, and [`docker-compose/`](./docker-compose) for deployment
+Orvilo runs against PostgreSQL. See [`.env.example`](./.env.example) for common
+configuration examples, and [`docker-compose/`](./docker-compose) for deployment
 recipes.
 
 ```bash

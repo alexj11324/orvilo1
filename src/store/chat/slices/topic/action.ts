@@ -146,9 +146,6 @@ interface TopicLinkedPullRequestRefreshParams {
   topicId: string;
 }
 
-export const chatTopic = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new ChatTopicActionImpl(set, get, _api);
-
 export class ChatTopicActionImpl {
   readonly #get: () => ChatStore;
   readonly #set: Setter;

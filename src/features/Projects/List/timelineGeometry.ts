@@ -17,11 +17,7 @@ import dayjs, { type Dayjs } from 'dayjs';
  */
 
 export const TIMELINE_DAY_WIDTH = 4;
-export const TIMELINE_ROW_HEIGHT = 40;
-export const TIMELINE_GROUP_ROW_HEIGHT = 32;
-export const TIMELINE_LIST_WIDTH = 264;
 export const TIMELINE_MONTH_ROW_HEIGHT = 26;
-export const TIMELINE_WEEK_ROW_HEIGHT = 18;
 /**
  * Width of the faint "set dates" hint bar for projects without dates, and the
  * stub shown for a project that carries only a `targetDate` (~1 month).

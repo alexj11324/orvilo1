@@ -57,13 +57,13 @@ import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/featur
 import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { useSearchParams } from '@/libs/router/navigation';
 import { useClientDataSWR } from '@/libs/swr';
-import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
+import { useFetchWorkTeam } from '@/store/workTeam/hooks';
 
 import TeamIdentity from './TeamIdentity';
 import { enrichTeamProjects, summarizeTeamProjects, teamProjectsWorkQuery } from './teamProjects';
@@ -111,13 +111,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
 
   // Same SWR keys as TeamPage — mounting the surface reuses the in-flight
   // cache instead of issuing a second request.
-  const {
-    data: teamData,
-    error: teamError,
-    mutate: revalidateTeam,
-  } = useClientDataSWR(teamId && workspaceId ? ['team', workspaceId, teamId] : null, () =>
-    lambdaClient.team.team.query({ teamId }),
-  );
+  const { data: teamData, error: teamError, mutate: revalidateTeam } = useFetchWorkTeam(teamId);
   const {
     data: projectsData,
     error: projectsError,

@@ -1,10 +1,18 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
+import { AgentOperationModel } from '@/database/models/agentOperation';
+import { MessageModel } from '@/database/models/message';
+import { TopicModel } from '@/database/models/topic';
 import { WorkspaceModel } from '@/database/models/workspace';
 import { getServerDB } from '@/database/server';
 import { appEnv } from '@/envs/app';
 import { slackEnv } from '@/envs/slack';
+import {
+  extractTextFromMessage,
+  findLastAssistantMessage,
+  normalizeCompletionMessages,
+} from '@/server/services/agentExecution/CompletionLifecycle';
 
 import { createSlackIntegrationService } from '.';
 import { getSlackChatRuntime } from './chatRuntime';
@@ -41,6 +49,31 @@ export const runSlackIntegrationEvent = async (input: z.infer<typeof slackEventI
     },
     () => ({
       database,
+      resolveCompletedResponse: async ({ agentId, responseId, userId, workspaceId }) => {
+        const topic = await new TopicModel(database, userId, workspaceId).findOwnTopicById(
+          responseId,
+        );
+        if (topic?.userId !== userId || topic.agentId !== agentId || topic.trigger !== 'slack')
+          return null;
+        const [operation] = await new AgentOperationModel(
+          database,
+          userId,
+          workspaceId,
+        ).listByTopic(responseId, 1);
+        if (
+          operation?.agentId !== agentId ||
+          operation.status !== 'done' ||
+          operation.trigger !== 'slack'
+        )
+          return null;
+        const messages = await new MessageModel(database, userId, workspaceId).query({
+          topicId: responseId,
+        });
+        const text = extractTextFromMessage(
+          findLastAssistantMessage(normalizeCompletionMessages(messages)),
+        );
+        return text?.trim() ? text : null;
+      },
       issueUrl: async ({ taskId, userId, workspaceId }) => {
         const workspace = await new WorkspaceModel(database, userId).findById(workspaceId);
         if (!workspace) throw new TRPCError({ code: 'NOT_FOUND', message: 'Workspace not found' });

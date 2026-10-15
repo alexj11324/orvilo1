@@ -11,6 +11,24 @@ const mocks = vi.hoisted(() => ({
   runtime: vi.fn(),
   dispatch: vi.fn(),
   redis: null as Redis | null,
+  topic: vi.fn(),
+  operations: vi.fn(),
+  messages: vi.fn(),
+}));
+vi.mock('@/database/models/topic', () => ({
+  TopicModel: class {
+    findOwnTopicById = mocks.topic;
+  },
+}));
+vi.mock('@/database/models/agentOperation', () => ({
+  AgentOperationModel: class {
+    listByTopic = mocks.operations;
+  },
+}));
+vi.mock('@/database/models/message', () => ({
+  MessageModel: class {
+    query = mocks.messages;
+  },
 }));
 vi.mock('@orvilo/openapi/src/services/responses.service', () => ({ ResponsesService: class {} }));
 vi.mock('@/database/server', () => ({ getServerDB: async () => ({}) }));
@@ -59,6 +77,81 @@ describe('queued Slack installation ownership', () => {
     mocks.lookup.mockResolvedValue({ id: 'install', slackTeamId: 'T1', tokenRevision: 'original' });
     expect(await runSlackIntegrationEvent(input)).toEqual({ success: true });
     expect(mocks.dispatch).toHaveBeenCalledWith(input.body);
+  });
+  it.each([
+    null,
+    { userId: 'other', agentId: 'agent', trigger: 'slack' },
+    { userId: 'human', agentId: 'other', trigger: 'slack' },
+    { userId: 'human', agentId: 'agent', trigger: 'chat' },
+  ])(
+    'does not recover a response outside its original Slack owner and Agent (%s)',
+    async (topic) => {
+      mocks.lookup.mockResolvedValue({
+        id: 'install',
+        slackTeamId: 'T1',
+        tokenRevision: 'original',
+      });
+      mocks.topic.mockResolvedValue(topic);
+      await runSlackIntegrationEvent(input);
+      const deps = mocks.runtime.mock.calls[0][1]() as ChatRuntime.SlackChatDependencies;
+      expect(
+        await deps.resolveCompletedResponse!({
+          agentId: 'agent',
+          responseId: 'topic',
+          userId: 'human',
+          workspaceId: 'workspace',
+        }),
+      ).toBeNull();
+      expect(mocks.operations).not.toHaveBeenCalled();
+      expect(mocks.messages).not.toHaveBeenCalled();
+    },
+  );
+  it.each([undefined, 'running', 'error', 'waiting_for_human'])(
+    'keeps a non-completed latest operation unresolved (%s)',
+    async (status) => {
+      mocks.lookup.mockResolvedValue({
+        id: 'install',
+        slackTeamId: 'T1',
+        tokenRevision: 'original',
+      });
+      mocks.topic.mockResolvedValue({ userId: 'human', agentId: 'agent', trigger: 'slack' });
+      mocks.operations.mockResolvedValue(
+        status ? [{ agentId: 'agent', status, trigger: 'slack' }] : [],
+      );
+      await runSlackIntegrationEvent(input);
+      const deps = mocks.runtime.mock.calls[0][1]() as ChatRuntime.SlackChatDependencies;
+      expect(
+        await deps.resolveCompletedResponse!({
+          agentId: 'agent',
+          responseId: 'topic',
+          userId: 'human',
+          workspaceId: 'workspace',
+        }),
+      ).toBeNull();
+      expect(mocks.messages).not.toHaveBeenCalled();
+    },
+  );
+  it('recovers only the final actual assistant text after its latest Slack operation completed', async () => {
+    mocks.lookup.mockResolvedValue({ id: 'install', slackTeamId: 'T1', tokenRevision: 'original' });
+    mocks.topic.mockResolvedValue({ userId: 'human', agentId: 'agent', trigger: 'slack' });
+    mocks.operations.mockResolvedValue([{ agentId: 'agent', status: 'done', trigger: 'slack' }]);
+    mocks.messages.mockResolvedValue([
+      { role: 'assistant', content: 'old answer' },
+      { role: 'assistant', content: 'actual final answer' },
+    ]);
+    await runSlackIntegrationEvent(input);
+    const deps = mocks.runtime.mock.calls[0][1]() as ChatRuntime.SlackChatDependencies;
+    expect(
+      await deps.resolveCompletedResponse!({
+        agentId: 'agent',
+        responseId: 'topic',
+        userId: 'human',
+        workspaceId: 'workspace',
+      }),
+    ).toBe('actual final answer');
+    expect(mocks.topic).toHaveBeenCalledWith('topic');
+    expect(mocks.operations).toHaveBeenCalledWith('topic', 1);
+    expect(mocks.messages).toHaveBeenCalledWith({ topicId: 'topic' });
   });
   it('reuses one native Redis adapter across 25 cached queued deliveries', async () => {
     const actual = await vi.importActual<typeof ChatRuntime>('./chatRuntime');

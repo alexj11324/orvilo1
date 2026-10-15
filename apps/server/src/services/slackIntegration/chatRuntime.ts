@@ -33,6 +33,12 @@ export interface SlackChatDependencies {
     projectId?: string | null;
     repositoryId?: string | null;
   } | null>;
+  resolveCompletedResponse?: (input: {
+    agentId: string;
+    responseId: string;
+    userId: string;
+    workspaceId: string;
+  }) => Promise<string | null>;
   resolvePendingReply?: (
     scope: Omit<SlackNativeReplyScope, 'db'>,
   ) => Promise<PendingSlackNativeReply | null>;
@@ -200,6 +206,21 @@ export async function createSlackChatRuntime(
         return;
       }
       if (previous?.pending) {
+        const completedText = previous.responseId
+          ? await deps.resolveCompletedResponse?.({
+              agentId: binding.agentId,
+              responseId: previous.responseId,
+              userId: user.id,
+              workspaceId: binding.workspaceId,
+            })
+          : null;
+        if (completedText?.trim()) {
+          await thread.post({
+            markdown: `Previous Agent reply recovered. No new Agent run was started for this message.\n\n${completedText}`,
+          });
+          await deps.store.set(stateKey, { ...previous, pending: false });
+          return;
+        }
         await thread.post(
           'Your previous Agent run is unresolved. Inspect it in Orvilo before continuing.',
         );
@@ -337,6 +358,7 @@ export async function* slackResponseDeltas(
 ) {
   let responseId = input.previousResponseId;
   let settled = false;
+  let emittedText = false;
   try {
     for await (const event of service.createStreamingResponse({
       input: input.prompt,
@@ -350,8 +372,10 @@ export async function* slackResponseDeltas(
         responseId = event.response.id;
         await save({ pending: true, responseId });
       } else if (event.type === 'response.output_text.delta') {
+        if (event.delta.trim()) emittedText = true;
         yield event.delta;
       } else if (event.type === 'response.completed') {
+        if (!emittedText && event.response.output_text?.trim()) yield event.response.output_text;
         await save({ pending: false, responseId: event.response.id });
         settled = true;
       } else if (event.type === 'response.incomplete' || event.type === 'response.failed') {

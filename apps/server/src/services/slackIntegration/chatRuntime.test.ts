@@ -164,6 +164,8 @@ describe('installed public Chat SDK Slack runtime', () => {
     mocks.apiCall.mockImplementation(async (method: string, options: Record<string, unknown>) => {
       if (method === 'auth.test') return { ok: true, user_id: 'UBOT', team_id: 'T1' };
       if (method === 'chat.postMessage') {
+        if (!String(options.markdown_text ?? options.text ?? '').trim() && !options.blocks)
+          return { ok: false, error: 'no_text' };
         if (mocks.failPost) {
           mocks.failPost = false;
           return { ok: false, error: 'channel_not_found' };
@@ -439,6 +441,100 @@ describe('installed public Chat SDK Slack runtime', () => {
     expect(mocks.stream).toHaveBeenCalledTimes(1);
     expect(mocks.posts.at(-1)?.text).toContain('previous Agent run is unresolved');
   });
+
+  it.each([false, true])(
+    'delivers actual completed ACP output once when live text deltas are %s',
+    async (hasDeltas) => {
+      const deps = dependencies();
+      const text = 'Actual completed native assistant output';
+      mocks.stream.mockImplementationOnce(async function* () {
+        yield {
+          response: { id: 'native-response' },
+          type: 'response.created',
+        } as ResponseStreamEvent;
+        if (hasDeltas)
+          yield { delta: text, type: 'response.output_text.delta' } as ResponseStreamEvent;
+        yield {
+          response: { id: 'native-response', output_text: text },
+          type: 'response.completed',
+        } as ResponseStreamEvent;
+      });
+      const runtime = await createSlackChatRuntime(installation, deps);
+      active.push(runtime);
+
+      await runtime.dispatch(envelope('100.021'));
+
+      expect(mocks.posts).toHaveLength(1);
+      expect(mocks.posts[0].markdown_text).toBe(text);
+      expect(mocks.stream).toHaveBeenCalledTimes(1);
+      expect(
+        await deps.store.get('response:["I1","C1::100.001","orvilo-UA","workspace-1","agent-1"]'),
+      ).toEqual({ pending: false, responseId: 'native-response' });
+    },
+  );
+
+  it.each(['original-redelivery', 'different-new-input'])(
+    'recovers a pending completed reply without consuming %s as a new run',
+    async (text) => {
+      const deps = dependencies();
+      const key = 'response:["I1","C1::100.001","orvilo-UA","workspace-1","agent-1"]';
+      await deps.store.set(key, { pending: true, responseId: 'completed-topic' });
+      deps.resolveCompletedResponse = vi.fn(async () => 'Actual previous native answer');
+      const runtime = await createSlackChatRuntime(installation, deps);
+      active.push(runtime);
+
+      await runtime.dispatch(envelope('100.022', 'UA', { text: `<@UBOT> ${text}` }));
+
+      expect(mocks.stream).not.toHaveBeenCalled();
+      expect(deps.resolveCompletedResponse).toHaveBeenCalledWith({
+        agentId: 'agent-1',
+        responseId: 'completed-topic',
+        userId: 'orvilo-UA',
+        workspaceId: 'workspace-1',
+      });
+      expect(mocks.posts).toHaveLength(1);
+      expect(mocks.posts[0].markdown_text).toContain('Actual previous native answer');
+      expect(mocks.posts[0].markdown_text).toContain(
+        'No new Agent run was started for this message.',
+      );
+      expect(await deps.store.get(key)).toEqual({ pending: false, responseId: 'completed-topic' });
+    },
+  );
+
+  it('retains pending completion when recovered Slack delivery fails', async () => {
+    const deps = dependencies();
+    const key = 'response:["I1","C1::100.001","orvilo-UA","workspace-1","agent-1"]';
+    const previous = { pending: true, responseId: 'completed-topic' };
+    await deps.store.set(key, previous);
+    deps.resolveCompletedResponse = vi.fn(async () => 'Actual previous native answer');
+    const runtime = await createSlackChatRuntime(installation, deps);
+    active.push(runtime);
+    mocks.failPost = true;
+
+    await expect(runtime.dispatch(envelope('100.023'))).rejects.toThrow('channel_not_found');
+
+    expect(mocks.stream).not.toHaveBeenCalled();
+    expect(await deps.store.get(key)).toEqual(previous);
+  });
+
+  it.each([null, '', '   '])(
+    'keeps unresolved or unreadable prior replies pending (%s)',
+    async (text) => {
+      const deps = dependencies();
+      const key = 'response:["I1","C1::100.001","orvilo-UA","workspace-1","agent-1"]';
+      const previous = { pending: true, responseId: 'pending-topic' };
+      await deps.store.set(key, previous);
+      deps.resolveCompletedResponse = vi.fn(async () => text);
+      const runtime = await createSlackChatRuntime(installation, deps);
+      active.push(runtime);
+
+      await runtime.dispatch(envelope('100.024'));
+
+      expect(mocks.stream).not.toHaveBeenCalled();
+      expect(mocks.posts.at(-1)?.text).toContain('previous Agent run is unresolved');
+      expect(await deps.store.get(key)).toEqual(previous);
+    },
+  );
 
   it('retains files in edited Slack messages without the original delivery marker', async () => {
     const runtime = await createSlackChatRuntime(installation, dependencies());

@@ -9,6 +9,7 @@ import { getTestDB } from '@/database/core/getTestDB';
 import { CredentialModel } from '@/database/models/credential';
 import { credentials, providerBindings, users } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 
 import { issueBindingExecution, resolveOrviloProviderBinding } from './execution';
 
@@ -46,7 +47,7 @@ const insertBinding = (userId: string, cfg: ProviderBindingConfig) =>
   db.insert(providerBindings).values({ config: cfg, userId }).returning();
 
 const createCredential = (userId: string, values: Record<string, string> = { K: 'v' }) =>
-  new CredentialModel(db, userId).create({
+  new CredentialModel(db, KeyVaultsGateKeeper.initWithEnvKey, userId).create({
     key: `key_${randomBytes(4).toString('hex')}`,
     name: 'Fixture credential',
     payload: { values },

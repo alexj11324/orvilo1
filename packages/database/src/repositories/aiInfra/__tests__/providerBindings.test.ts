@@ -7,6 +7,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 
+import { createTestSecretCipher } from '../../../../tests/secretCipher';
 import { getTestDB } from '../../../core/getTestDB';
 import { CredentialModel } from '../../../models/credential';
 import { ProviderBindingModel } from '../../../models/providerBinding';
@@ -33,7 +34,7 @@ const providerId = 'fixture-provider';
 let db: OrviloDatabase;
 let originalSecret: string | undefined;
 
-const plane = () => new ProviderBindingPlane(db, owner);
+const plane = () => new ProviderBindingPlane(db, createTestSecretCipher, owner);
 const bindings = () => new ProviderBindingModel(db, owner);
 
 const anchorOf = async (id = providerId) => {
@@ -150,7 +151,7 @@ describe('ProviderBindingPlane write→read roundtrip', () => {
       { enabled: false, id: 'm-b', providerId, source: 'builtin', type: 'chat', userId: owner },
     ]);
 
-    const planeWithResolver = new ProviderBindingPlane(db, owner, {
+    const planeWithResolver = new ProviderBindingPlane(db, createTestSecretCipher, owner, {
       decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
       resolveEnabledModelIds: async (id) =>
         (
@@ -235,7 +236,9 @@ describe('ProviderBindingPlane write→read roundtrip', () => {
     const verifyBindings = vi.fn(async (rows) => {
       if (accepted) for (const row of rows) await bindings().setEnabled(row.id, true);
     });
-    const verifiedPlane = new ProviderBindingPlane(db, owner, { verifyBindings });
+    const verifiedPlane = new ProviderBindingPlane(db, createTestSecretCipher, owner, {
+      verifyBindings,
+    });
     await verifiedPlane.updateProviderConfig('openai', { keyVaults: { apiKey: 'fixture' } });
     await verifiedPlane.setProviderEnabled('openai', true);
     await verifiedPlane.setModelEnabled('openai', 'gpt-4o-mini', true);
@@ -248,7 +251,9 @@ describe('ProviderBindingPlane write→read roundtrip', () => {
 
   it('verifies once per provider for a batch and subsequent config mutations', async () => {
     const verifyBindings = vi.fn(async (_rows: { config: { model: string } }[]) => undefined);
-    const verifiedPlane = new ProviderBindingPlane(db, owner, { verifyBindings });
+    const verifiedPlane = new ProviderBindingPlane(db, createTestSecretCipher, owner, {
+      verifyBindings,
+    });
     await verifiedPlane.updateProviderConfig('openai', { keyVaults: { apiKey: 'fixture' } });
     await verifiedPlane.setProviderEnabled('openai', true);
     await verifiedPlane.setModelsEnabled('openai', ['model-a', 'model-b', 'model-c'], true);
@@ -315,7 +320,7 @@ describe('ProviderBindingPlane write→read roundtrip', () => {
     await plane().deleteProvider(providerId);
 
     expect(await bindings().list()).toEqual([]);
-    expect(await new CredentialModel(db, owner).listPersonal()).toEqual([]);
+    expect(await new CredentialModel(db, createTestSecretCipher, owner).listPersonal()).toEqual([]);
     expect(await db.query.aiProviders.findMany({ where: eq(aiProviders.userId, owner) })).toEqual(
       [],
     );
@@ -325,7 +330,7 @@ describe('ProviderBindingPlane write→read roundtrip', () => {
   it("leaves foreign users blind to the owner's bindings", async () => {
     await plane().createProvider({ id: providerId, name: 'Mine', source: 'custom' });
 
-    const otherPlane = new ProviderBindingPlane(db, foreign);
+    const otherPlane = new ProviderBindingPlane(db, createTestSecretCipher, foreign);
     expect(await otherPlane.getManaged(providerId)).toBeUndefined();
     expect(await otherPlane.listManagedProviders()).toEqual(new Map());
     expect(await new ProviderBindingModel(db, foreign).list()).toEqual([]);
@@ -389,7 +394,7 @@ describe('ProviderBindingPlane workspace scope', () => {
       workspaceId,
     });
 
-    const wsPlane = new ProviderBindingPlane(db, owner, {
+    const wsPlane = new ProviderBindingPlane(db, createTestSecretCipher, owner, {
       decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
       resolveEnabledModelIds: async (id) =>
         (
@@ -471,7 +476,7 @@ describe('ProviderBindingPlane workspace scope', () => {
       },
     ]);
 
-    const wsPlane = new ProviderBindingPlane(db, owner, {
+    const wsPlane = new ProviderBindingPlane(db, createTestSecretCipher, owner, {
       decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
       workspaceId,
     });
@@ -504,7 +509,7 @@ describe('ProviderBindingPlane workspace scope', () => {
       workspaceId,
     });
 
-    const wsPlane = new ProviderBindingPlane(db, owner, { workspaceId });
+    const wsPlane = new ProviderBindingPlane(db, createTestSecretCipher, owner, { workspaceId });
     await expect(
       wsPlane.createProvider({ id: providerId, name: 'Dup', source: 'custom' }),
     ).rejects.toThrow(ProviderBindingConflictError);
@@ -516,7 +521,7 @@ describe('ProviderBindingPlane workspace scope', () => {
   });
 
   it('erases shared + own legacy rows and bindings under workspace scope', async () => {
-    const wsPlane = new ProviderBindingPlane(db, owner, { workspaceId });
+    const wsPlane = new ProviderBindingPlane(db, createTestSecretCipher, owner, { workspaceId });
     await wsPlane.createProvider({ id: providerId, name: 'Fixture', source: 'custom' });
     await db.insert(aiProviders).values([
       {
@@ -578,13 +583,13 @@ describe('AiInfraRepos dual-read overlay', () => {
       source: 'custom',
       userId: owner,
     });
-    const repos = new AiInfraRepos(db, owner, {});
+    const repos = new AiInfraRepos(db, createTestSecretCipher, owner, {});
 
     // Legacy row still renders before migration (dual-read).
     const before = await repos.getAiProviderList();
     expect(before.find((item) => item.id === providerId)?.name).toBe('Old Name');
 
-    await new ProviderBindingPlane(db, owner, {
+    await new ProviderBindingPlane(db, createTestSecretCipher, owner, {
       decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
     }).setProviderEnabled(providerId, true); // migrate-on-write
 

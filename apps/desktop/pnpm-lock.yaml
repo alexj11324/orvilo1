@@ -285,15 +285,16 @@ importers:
 
   ../../packages/agent-manager-runtime:
     dependencies:
-      '@orvilo/const':
-        specifier: workspace:*
-        version: link:../const
       '@orvilo/prompts':
         specifier: workspace:*
         version: link:../prompts
       '@orvilo/types':
         specifier: workspace:*
         version: link:../types
+    devDependencies:
+      type-fest:
+        specifier: ^4.41.0
+        version: 4.41.0
 
   ../../packages/agent-templates: {}
 
@@ -660,6 +661,9 @@ importers:
       '@orvilo/conversation-flow':
         specifier: workspace:*
         version: link:../conversation-flow
+      '@orvilo/secret-cipher':
+        specifier: workspace:*
+        version: link:../secret-cipher
       '@orvilo/types':
         specifier: workspace:*
         version: link:../types
@@ -1009,6 +1013,15 @@ importers:
       tsx:
         specifier: ^4.22.4
         version: 4.23.0
+
+  ../../packages/secret-cipher:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.3
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
 
   ../../packages/shared-tool-ui:
     dependencies:
@@ -17147,19 +17160,15 @@ snapshots:
   pg-cloudflare@1.4.1:
     optional: true
 
-  pg-connection-string@2.14.1:
-    optional: true
+  pg-connection-string@2.14.1: {}
 
-  pg-int8@1.0.1:
-    optional: true
+  pg-int8@1.0.1: {}
 
   pg-pool@3.14.0(pg@8.23.1):
     dependencies:
       pg: 8.23.1
-    optional: true
 
-  pg-protocol@1.16.1:
-    optional: true
+  pg-protocol@1.16.1: {}
 
   pg-types@2.2.0:
     dependencies:
@@ -17168,7 +17177,6 @@ snapshots:
       postgres-bytea: 1.0.1
       postgres-date: 1.0.7
       postgres-interval: 1.2.0
-    optional: true
 
   pg@8.23.1:
     dependencies:
@@ -17179,12 +17187,10 @@ snapshots:
       pgpass: 1.0.5
     optionalDependencies:
       pg-cloudflare: 1.4.1
-    optional: true
 
   pgpass@1.0.5:
     dependencies:
       split2: 4.2.0
-    optional: true
 
   picocolors@1.1.1: {}
 
@@ -17257,19 +17263,15 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  postgres-array@2.0.0:
-    optional: true
+  postgres-array@2.0.0: {}
 
-  postgres-bytea@1.0.1:
-    optional: true
+  postgres-bytea@1.0.1: {}
 
-  postgres-date@1.0.7:
-    optional: true
+  postgres-date@1.0.7: {}
 
   postgres-interval@1.2.0:
     dependencies:
       xtend: 4.0.2
-    optional: true
 
   postject@1.0.0-alpha.6:
     dependencies:
@@ -18320,8 +18322,7 @@ snapshots:
     dependencies:
       extend-shallow: 3.0.2
 
-  split2@4.2.0:
-    optional: true
+  split2@4.2.0: {}
 
   sprintf-js@1.0.3: {}
 
@@ -19170,8 +19171,7 @@ snapshots:
 
   xmlchars@2.2.0: {}
 
-  xtend@4.0.2:
-    optional: true
+  xtend@4.0.2: {}
 
   y18n@5.0.8: {}
 

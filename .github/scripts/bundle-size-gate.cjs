@@ -157,8 +157,8 @@ const measureEntryGraph = (root, htmlFile = 'index.html') => {
   return { chunks, count: visited.size, entry, gz };
 };
 
-// pnpm-workspace.yaml sets `lockfile: false`, so the only record of what a build
-// actually resolved is the virtual store directory: `<name>@<version>[_<peer-hash>]`.
+// Record the installed dependency subset alongside bundle measurements, even when
+// the workspace lock also contains packages unused by this build.
 const readResolvedDeps = (storeDir = PNPM_STORE_DIR) => {
   if (!fs.existsSync(storeDir)) return [];
   const deps = new Set();

@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
+import { TaskDomainError } from '@/database/errors/task';
 import { TaskModel, TaskRevisionConflictError } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskDescriptionHistoryModel } from '@/database/models/taskDescriptionHistory';
@@ -83,7 +84,7 @@ const assertRecurrenceManageable = async (
 };
 
 const failure = (error: unknown, procedure: string): never => {
-  if (error instanceof TRPCError) throw error;
+  if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
   if (error instanceof TaskDependencyError)
     throw new TRPCError({ code: error.code, message: error.message, cause: error });
   if (error instanceof TaskRevisionConflictError)

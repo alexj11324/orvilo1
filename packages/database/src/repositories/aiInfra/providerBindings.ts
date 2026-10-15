@@ -19,6 +19,7 @@ import { CredentialModel } from '../../models/credential';
 import { ProviderBindingModel } from '../../models/providerBinding';
 import { aiModels, aiProviders } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
+import type { SecretCipherFactory } from '../../utils/secretCipher';
 
 /**
  * Legacy `ai_providers.keyVaults` decryptor — server callers inject
@@ -42,8 +43,7 @@ interface BoundProvider {
 export interface ProviderBindingPlaneDeps {
   /**
    * Decryptor for legacy `ai_providers.keyVaults` — that column uses
-   * `KeyVaultsGateKeeper` encryption, which is a server-module dependency, so
-   * callers inject it. Falls back to plain JSON parse (test stores).
+   * the same AES-GCM wire format; callers inject the legacy JSON adapter. Falls back to plain JSON parse (test stores).
    */
   decryptLegacyKeyVaults?: DecryptUserKeyVaults;
   /**
@@ -187,11 +187,12 @@ export class ProviderBindingPlane {
 
   constructor(
     private readonly db: OrviloDatabase,
+    createCipher: SecretCipherFactory,
     private readonly userId: string,
     private readonly deps: ProviderBindingPlaneDeps = {},
   ) {
     this.bindings = new ProviderBindingModel(db, userId);
-    this.credentials = new CredentialModel(db, userId);
+    this.credentials = new CredentialModel(db, createCipher, userId);
   }
 
   // ===== read plane =====

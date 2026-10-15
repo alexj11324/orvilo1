@@ -1,5 +1,4 @@
 'use client';
-
 import type { DeviceListItem, DeviceVisibility } from '@orvilo/types';
 import { t } from 'i18next';
 import { CircleCheck, Lock, Users } from 'lucide-react';
@@ -14,7 +13,7 @@ import { Badge as Tag } from '@/components/reui/badge';
 import Select from '@/components/Select';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
-import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
+import { workspaceDeviceService } from '@/services/workspaceDevice';
 
 import { refreshDeviceList } from './const';
 
@@ -136,9 +135,7 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
     // Lock dismissal so the mutation can't be interrupted mid-flight.
     setCanDismissByClickOutside?.(false);
     try {
-      const result = await createWorkspaceLambdaClient(
-        target.id,
-      ).device.shareDeviceToWorkspace.mutate({
+      const result = await workspaceDeviceService.share(target.id, {
         confirmOverwrite,
         deviceId: device.deviceId,
         visibility,

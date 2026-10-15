@@ -27,6 +27,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { CredentialModel } from '@/database/models/credential';
 import { credentials, providerBindings, tasks, workspaces } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { cleanupTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 
 import type { CanonicalRunBinding } from './canonicalRun';
@@ -80,12 +81,14 @@ const bindConfig = (endpoint: string, secretReference: string): ProviderBindingC
 const seed = async () => {
   const run = await createCanonicalRunFixture(db, 'registering');
   binding = run;
-  const cred = await new CredentialModel(db, run.userId).create({
-    key: `key_${randomBytes(4).toString('hex')}`,
-    name: 'Acceptance credential',
-    payload: { values: { PROVIDER_KEY: 'env-secret-7' } },
-    type: 'kv-env',
-  });
+  const cred = await new CredentialModel(db, KeyVaultsGateKeeper.initWithEnvKey, run.userId).create(
+    {
+      key: `key_${randomBytes(4).toString('hex')}`,
+      name: 'Acceptance credential',
+      payload: { values: { PROVIDER_KEY: 'env-secret-7' } },
+      type: 'kv-env',
+    },
+  );
   const [row] = await db
     .insert(providerBindings)
     .values({ config: bindConfig(provider.endpoint, `credential:${cred.id}`), userId: run.userId })

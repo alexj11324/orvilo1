@@ -14,6 +14,7 @@ import type { BuiltinToolContext, BuiltinToolResult, ToolAfterCallContext } from
 import { BaseExecutor } from '@orvilo/types';
 
 import { agentService } from '@/services/agent';
+import { createClientAgentManagerCapabilities } from '@/services/agentManagerRuntime';
 import { discoverService } from '@/services/discover';
 import { getChatGroupStoreState } from '@/store/agentGroup';
 import { useGroupProfileStore } from '@/store/groupProfile';
@@ -35,6 +36,9 @@ import type {
 import { GroupAgentBuilderApiName, GroupAgentBuilderIdentifier } from './types';
 
 const agentManagerRuntime = new AgentManagerRuntime({
+  capabilities: createClientAgentManagerCapabilities({
+    getAgentConfigById: agentService.getAgentFullConfigById,
+  }),
   agentService: {
     countAgents: agentService.countAgents,
     createAgent: agentService.createAgent,

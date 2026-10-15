@@ -1,6 +1,6 @@
+
 import { useCallback } from 'react';
 
-import { lambdaClient } from '@/libs/trpc/client';
 import { topicService } from '@/services/topic';
 import { getChatStoreState } from '@/store/chat';
 
@@ -50,7 +50,7 @@ export const useRepairDeviceBinding = (_agentId: string) =>
       expectedBoundDeviceId?: string;
       topicId: string;
     }): Promise<RepairDeviceBindingResult> => {
-      const result = await lambdaClient.topic.repairDeviceBinding.mutate({
+      const result = await topicService.repairDeviceBinding({
         deviceId,
         expectedBindingRevision,
         expectedBoundDeviceId,

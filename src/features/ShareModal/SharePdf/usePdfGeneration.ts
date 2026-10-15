@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import { lambdaQuery } from '@/libs/trpc/client/lambda';
+import { exporterQueries } from '@/services/reactQueryBindings';
 
 interface PdfGenerationParams {
   content: string;
@@ -22,7 +22,7 @@ export const usePdfGeneration = (): PdfGenerationState => {
   const [filename, setFilename] = useState<string>('chat-export.pdf');
   const [error, setError] = useState<string | null>(null);
 
-  const exportPdfMutation = lambdaQuery.exporter.exportPdf.useMutation();
+  const exportPdfMutation = exporterQueries.exportPdf.useMutation();
 
   const generatePdf = useCallback(
     async (params: PdfGenerationParams) => {

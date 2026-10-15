@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
+import { TaskDomainError } from '@/database/errors/task';
 import { GoalModel } from '@/database/models/goal';
 import { heteroAuthedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -40,7 +41,7 @@ const goalWriteProcedure = goalProcedure.use(withScopedPermission('agent:update'
 const idInput = z.object({ id: z.string() });
 
 function mapGoalError(error: unknown, operation: string): never {
-  if (error instanceof TRPCError) throw error;
+  if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
   console.error(`[goal:${operation}]`, error);
   throw new TRPCError({
     cause: error,

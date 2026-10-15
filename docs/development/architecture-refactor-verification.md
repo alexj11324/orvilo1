@@ -36,11 +36,36 @@ development requirements.
   Repeating the test with the exact Dockerfile COPY subset also passed on Linux
   x64 with Node 24.19.0.
 
+## Accepted typecheck scope
+
+There is no separate frontend compiler project. Feature and store code stay on
+the root `pnpm type-check` gate (`tsgo --noEmit` in the Typecheck job). The
+affected runner's independent units are `@orvilo/secret-cipher` (`full`),
+`@orvilo/agent-manager-runtime` (`full`), and `@orvilo/database` (`production`
+source plus a `partial` cipher adapter). Database has no `full` boundary, so
+the runner still lists it as a full-CI requirement. Unmigrated packages,
+including the application, stay on that list too.
+
+The root and `apps/server` importers both resolve
+`@hatchet-dev/typescript-sdk` to 1.38.0. The Docker supplemental project stays
+on 1.33.1, and the image copies that tree over `node_modules/@hatchet-dev`.
+That overlay matches the previous image pin; it is not the copy the full
+typecheck compiles against.
+
+## Follow-up CI
+
+On `8865dc077`, the Typecheck job, database lint (the same full typecheck),
+both server shards including the standalone `/health` deploy, app shard 2,
+package tests, desktop typecheck and tests, UI alignment, and E2E passed.
+App shard 1 passed 7,823 tests and failed
+`scripts/dockerWorkspaceManifests.test.ts`, which still looked for the old
+`pnpm i &&` line. That assertion now expects `pnpm i --frozen-lockfile`.
+
 ## Coverage limits
 
-The full Docker image was not built. CLI/Desktop frozen-install checks used
-`--ignore-scripts`; they do not validate Electron native installation or desktop
-execution. Full application typechecking and the complete test suite remain CI
-gates under repository policy. No production deployment or browser acceptance
-was performed. Package-level checks must not be represented as full application
-verification.
+The full Docker image was not built on a CI runner. Desktop and Docker PR
+builds stay behind `trigger:build-desktop` and `trigger:build-docker`, and CLI
+release checks still install with `--ignore-scripts`. Those runs do not
+validate Electron native installation. No production deployment or browser
+acceptance was performed. Package-level checks must not be represented as full
+application verification.

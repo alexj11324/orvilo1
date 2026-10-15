@@ -163,6 +163,43 @@ describe('defineConfig backend subtree pass-through', () => {
   });
 });
 
+describe('OAuth provider callback routing', () => {
+  afterEach(() => {
+    vi.mocked(resolveAuthSessionFromHeaders).mockReset();
+    vi.mocked(resolveAuthSessionFromHeaders).mockResolvedValue({ userId: 'user-1' });
+  });
+
+  it.each(['slack', 'github', 'linear'])(
+    'passes the %s callback and its unchanged query to the handler without a proxy session gate',
+    async (provider) => {
+      vi.mocked(resolveAuthSessionFromHeaders).mockReset();
+      vi.mocked(resolveAuthSessionFromHeaders).mockResolvedValue(null);
+      const url = `http://localhost:3010/oauth/${provider}/callback?code=opaque%2Bcode&state=opaque_state`;
+      const request = new NextRequest(url);
+      const response = await middleware(request);
+
+      expect(response?.headers.get('x-middleware-next')).toBe('1');
+      expect(response?.headers.get('x-middleware-rewrite')).toBeNull();
+      expect(response?.headers.get('location')).toBeNull();
+      expect(request.url).toBe(url);
+      expect(resolveAuthSessionFromHeaders).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    '/oauth/slack',
+    '/oauth/slack/callback/neighbor',
+    '/oauth/slack/callbacks',
+    '/oauth/callback/success',
+  ])('keeps %s session-protected', async (pathname) => {
+    vi.mocked(resolveAuthSessionFromHeaders).mockResolvedValueOnce(null);
+    const response = await middleware(new NextRequest(`http://localhost:3010${pathname}`));
+
+    expect(new URL(response!.headers.get('location')!).pathname).toBe('/signin');
+    expect(resolveAuthSessionFromHeaders).toHaveBeenCalled();
+  });
+});
+
 describe('retired acceptance installation guide', () => {
   it('no longer bypasses the proxy for the withdrawn asset', async () => {
     const response = await middleware(new NextRequest('http://localhost:3010/acceptance/skill.md'));

@@ -59,6 +59,7 @@ export function defineConfig() {
     '/oidc',
     '/oauth/github',
     '/oauth/linear',
+    '/oauth/slack',
     // The whole `(backend)/market` subtree is Bearer-token API, not SPA. The
     // matcher's
     // workspace-slug lookahead already keeps `/market/*` unmatched; this is
@@ -251,6 +252,8 @@ export function defineConfig() {
     // verifier, so the provider can redirect here before a browser session is
     // re-established.
     '/oauth/linear/callback',
+    // Slack verifies its one-use state and initiating Orvilo session in the handler.
+    '/oauth/slack/callback',
     // The handler validates the interaction cookie before recovering an expired web session.
     '/oidc/consent',
     '/oidc/handoff',

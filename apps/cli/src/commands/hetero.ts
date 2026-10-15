@@ -389,6 +389,20 @@ class RawStreamDump {
     }
   }
 
+  openMcpMetadata(): {
+    close: () => Promise<void>;
+    write: (metadata: Record<string, unknown>) => void;
+  } {
+    const stream = createWriteStream(path.join(this.dir, 'mcp-metadata.jsonl'));
+    stream.on('error', () => {});
+    return {
+      close: () => new Promise<void>((resolve) => stream.end(() => resolve())),
+      write: (metadata) => {
+        stream.write(`${JSON.stringify(metadata)}\n`);
+      },
+    };
+  }
+
   openAttempt(label: string): RawStreamDumpAttempt {
     const stdout = createWriteStream(path.join(this.dir, `${label}.stdout.jsonl`));
     const stderr = createWriteStream(path.join(this.dir, `${label}.stderr.log`));
@@ -469,6 +483,8 @@ const exec = async (options: ExecOptions): Promise<void> => {
       topicId: options.topic ?? null,
     });
   }
+
+  const mcpMetadata = rawDump?.openMcpMetadata();
 
   // Local execution trace. Recorded for EVERY run, not just server-ingest ones:
   // a standalone `orvilo hetero exec` is exactly the case where nothing else keeps
@@ -703,6 +719,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
     } else {
       askServer = new OrviloBuiltinMcpServer({
         extraTools: builtinExtras,
+        onMcpMetadata: mcpMetadata?.write,
         // Standard-ACP runtimes that never had the AskUser bridge (amp, codex,
         // kimi-code, opencode, pi, codebuddy) mount `orvilo_cc` for builtin
         // tools only — no `ask_user_question` on their tool surface.
@@ -873,7 +890,11 @@ const exec = async (options: ExecOptions): Promise<void> => {
     // failures, missing local --image paths, decode errors.
     let handle: Awaited<ReturnType<typeof spawnAgent>>;
     try {
-      handle = await spawnAgent({ ...spawnOpts, onRawStdout: dumpAttempt?.writeStdout });
+      handle = await spawnAgent({
+        ...spawnOpts,
+        onMcpMetadata: mcpMetadata?.write,
+        onRawStdout: dumpAttempt?.writeStdout,
+      });
     } catch (err) {
       await dumpAttempt?.close();
       const message = err instanceof Error ? err.message : String(err);
@@ -1243,6 +1264,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
     askServer.unregisterOperation(operationId);
     await askServer.stop().catch(() => {});
   } else askBridge?.cancelAll('session_ended');
+  await mcpMetadata?.close();
 
   if (code !== null) {
     const hasRunError =

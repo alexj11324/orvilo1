@@ -117,6 +117,8 @@ export interface StandardAcpSessionOptions extends AcpAgentSessionOptions {
   mcpServers?: Record<string, unknown>[];
   /** Automation requires the session to advertise a native full-access option. */
   nativeFullAccess?: boolean;
+  /** Safe MCP boundary metadata; supplied only by opted-in diagnostic hosts. */
+  onMcpMetadata?: (metadata: Record<string, unknown>) => void;
   onModel?: (model: string) => void;
   /**
    * Localized strings for the interactive permission card. English defaults
@@ -371,19 +373,28 @@ export class StandardAcpSession extends AcpAgentSession<
       throw new Error(`${spec.label} agent does not support loading sessions`);
     }
 
-    const sessionResult = await this.client.request<StandardAcpSessionResult>(
-      this.options.resumeSessionId ? 'session/load' : 'session/new',
-      {
-        cwd: this.options.cwd,
-        mcpServers: (this.options.mcpServers ?? []).map((server) =>
-          (server.type === 'http' || server.type === 'sse') && server.headers === undefined
-            ? { ...server, headers: [] }
-            : server,
-        ),
-        ...(this.options.resumeSessionId ? { sessionId: this.options.resumeSessionId } : {}),
-        ...(this.sessionConfig.sessionMeta ? { _meta: this.sessionConfig.sessionMeta } : {}),
-      },
-    );
+    const method = this.options.resumeSessionId ? 'session/load' : 'session/new';
+    // Prepared RPC metadata only; the native response proves it crossed the wire.
+    this.options.onMcpMetadata?.({
+      method,
+      operationId: this.options.operationId,
+      resume: !!this.options.resumeSessionId,
+      servers: (this.options.mcpServers ?? []).map(({ name, type }) => ({
+        name: typeof name === 'string' ? name : undefined,
+        type: typeof type === 'string' ? type : 'stdio',
+      })),
+      type: 'acp_session_request_attempt',
+    });
+    const sessionResult = await this.client.request<StandardAcpSessionResult>(method, {
+      cwd: this.options.cwd,
+      mcpServers: (this.options.mcpServers ?? []).map((server) =>
+        (server.type === 'http' || server.type === 'sse') && server.headers === undefined
+          ? { ...server, headers: [] }
+          : server,
+      ),
+      ...(this.options.resumeSessionId ? { sessionId: this.options.resumeSessionId } : {}),
+      ...(this.sessionConfig.sessionMeta ? { _meta: this.sessionConfig.sessionMeta } : {}),
+    });
     const sessionId = sessionResult?.sessionId ?? this.options.resumeSessionId;
     if (!sessionId) throw new Error(`${spec.label} returned no session id`);
     this.options.onSessionId(sessionId);

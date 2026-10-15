@@ -71,6 +71,7 @@ export interface SpawnAgentOptions {
    */
   mcpServers?: Record<string, unknown>[];
   nativeFullAccess?: boolean;
+  onMcpMetadata?: (metadata: Record<string, unknown>) => void;
   /**
    * Optional tee for the ACP wire traffic — every raw JSON-RPC line the agent
    * writes, BEFORE the adapter sees it. `orvilo hetero exec --raw-dump` wires it
@@ -457,6 +458,7 @@ const spawnStandardAcpAgent = async (
     nativeFullAccess: options.nativeFullAccess,
     inputOptions: options.inputOptions,
     mcpServers: options.mcpServers,
+    onMcpMetadata: options.onMcpMetadata,
     onEvents: bridge.onEvents,
     onSessionTitle: bridge.onSessionTitle,
     onRawMessage: teeAcpRawStdout(options.onRawStdout),

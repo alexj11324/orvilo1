@@ -106,6 +106,11 @@ export class AcpStdioClient {
     return this.child?.pid;
   }
 
+  /** True while the child is running and the connection has not failed or been closed. */
+  get alive(): boolean {
+    return !this.closed && !this.fatalError && this.child !== undefined;
+  }
+
   async start(): Promise<void> {
     if (this.child) return;
     if (this.closed) throw new Error('ACP stdio client is closed');

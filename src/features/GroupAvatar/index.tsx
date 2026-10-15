@@ -1,10 +1,9 @@
 'use client';
 
-import { type GroupAvatarProps } from '@lobehub/ui';
-import { GroupAvatar } from '@lobehub/ui';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 
+import GroupAvatar, { type GroupAvatarProps } from '@/components/Avatar/GroupAvatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import { useUserStore } from '@/store/user';
@@ -64,7 +63,7 @@ const GroupAvatarComponent = memo<GroupAvatarComponentProps>(
     return (
       <GroupAvatar
         avatarShape={avatarShape}
-        className={cn(cornerShape === 'square' && styles.square, className)}
+        className={className}
         cornerShape={cornerShape}
         size={size}
         style={style ?? (background && background !== 'rgba(0,0,0,0)' ? { background } : undefined)}

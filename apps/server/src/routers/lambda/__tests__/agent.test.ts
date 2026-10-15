@@ -617,6 +617,30 @@ describe('agentRouter', () => {
     });
   });
 
+  describe('transferAgent', () => {
+    it('forwards targetDeviceId so a device-bound Agent can be rebound in the destination scope', async () => {
+      agentModelMock.getAgentConfigById = vi.fn().mockResolvedValue({ id: 'agent-1', userId });
+      agentModelMock.transferAgent = vi
+        .fn()
+        .mockResolvedValue({ agentId: 'agent-1', slug: null, transferJobId: null });
+
+      const caller = agentRouter.createCaller(mockCtx);
+      await caller.transferAgent({
+        agentId: 'agent-1',
+        targetDeviceId: 'device-2',
+        targetWorkspaceId: null,
+      });
+
+      expect(agentModelMock.transferAgent).toHaveBeenCalledWith(
+        'agent-1',
+        null,
+        userId,
+        undefined,
+        expect.objectContaining({ targetDeviceId: 'device-2' }),
+      );
+    });
+  });
+
   describe('publishAgentToWorkspace', () => {
     const wsCtx = () => ({ ...mockCtx, workspaceId: 'ws-1' });
 

@@ -957,6 +957,11 @@ export const agentRouter = router({
          * request the recipient must accept instead of moving anything now.
          */
         targetMemberId: z.string().min(1).optional(),
+        /**
+         * Scope move only: atomically rebinds the agent to this device in the
+         * destination scope, for agents whose current device is unavailable there.
+         */
+        targetDeviceId: z.string().min(1).optional(),
         targetVisibility: z.enum(['private', 'public']).optional(),
         targetWorkspaceId: z.string().nullable(),
       }),
@@ -1106,7 +1111,10 @@ export const agentRouter = router({
           input.targetWorkspaceId,
           ctx.userId,
           input.targetVisibility,
-          { rejectForeignTopicCommentAuthors: isWorkspaceNonOwner(ctx) },
+          {
+            rejectForeignTopicCommentAuthors: isWorkspaceNonOwner(ctx),
+            targetDeviceId: input.targetDeviceId,
+          },
         );
       } catch (error) {
         if (

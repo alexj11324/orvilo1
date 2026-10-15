@@ -111,6 +111,8 @@ export const OrchestrationWorkflowManifest: BuiltinToolManifest = {
       },
     },
   ],
+  // Conversation-bound prepare/post/start transactions exist only on the server.
+  executors: ['server'],
   identifier: OrchestrationWorkflowIdentifier,
   meta: {
     avatar: '🎯',

@@ -400,9 +400,11 @@ class AgentService {
     agentId: string,
     targetWorkspaceId: string | null,
     targetVisibility?: 'private' | 'public',
+    targetDeviceId?: string,
   ): Promise<{ agentId: string; slug: string | null; transferJobId: string | null }> => {
     const result = await lambdaClient.agent.transferAgent.mutate({
       agentId,
+      targetDeviceId,
       targetVisibility,
       targetWorkspaceId,
     });
@@ -434,9 +436,11 @@ class AgentService {
     agentIds: string[],
     targetWorkspaceId: string | null,
     targetVisibility?: 'private' | 'public',
+    targetDeviceId?: string,
   ): Promise<{ agentId: string; slug: string | null; transferJobId: string | null }[]> => {
     return lambdaClient.agent.transferAgents.mutate({
       agentIds,
+      targetDeviceId,
       targetVisibility,
       targetWorkspaceId,
     });

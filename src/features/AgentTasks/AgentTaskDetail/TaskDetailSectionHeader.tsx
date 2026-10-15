@@ -1,5 +1,4 @@
 import { cn } from 'cn';
-import type { LucideIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,6 @@ interface TaskDetailSectionHeaderProps {
   actions?: ReactNode;
   /** Muted count after the title. Omitted while unknown. */
   count?: number;
-  icon: LucideIcon;
   onToggle: () => void;
   open: boolean;
   title: string;
@@ -27,34 +25,47 @@ interface TaskDetailSectionHeaderProps {
 
 /**
  * One header for every body section of an issue (Sub-issues, Artifacts,
- * Attachments, Activity): icon, title, muted count and a collapse toggle that
- * is a real button, then optional status and trailing actions.
+ * Attachments, Activity): a flat row like Linear's — the collapse button is
+ * a 24px transparent label led by the folding chevron, the muted count reads
+ * inline, and section actions close the row on the right. 'heading' lifts
+ * the band to the 15px/600 tier inside a 32px container (Linear's Activity
+ * header); the compact sections stay 12px/500 at 24px.
  */
 const TaskDetailSectionHeader = memo<TaskDetailSectionHeaderProps>(
-  ({ actions, count, icon: Icon, onToggle, open, title, trailing, variant = 'default' }) => (
-    <div className="flex min-h-7 items-center justify-between gap-2">
+  ({ actions, count, onToggle, open, title, trailing, variant = 'default' }) => (
+    <div
+      className={cn(
+        'flex items-center justify-between gap-2',
+        variant === 'heading' ? 'min-h-8' : 'min-h-6',
+      )}
+    >
       <div className="flex min-w-0 items-center gap-2">
         <Button
           aria-expanded={open}
-          size="sm"
+          size="xs"
           type="button"
           variant="ghost"
           className={cn(
-            'gap-2 text-xs font-medium text-muted-foreground',
-            variant === 'heading' && taskDetailLayoutStyles.sectionHeading,
+            // Linear's collapse header is flat — the ghost button keeps no
+            // padding, border or fill, and the label stays secondary-ink in
+            // every state; the hover reveal belongs to the row's right side.
+            'gap-1.5 px-0 border-0 bg-transparent text-xs font-medium text-muted-foreground',
+            'hover:bg-transparent hover:text-muted-foreground',
+            'aria-expanded:bg-transparent aria-expanded:text-muted-foreground',
+            'active:not-aria-[haspopup]:translate-y-0',
+            variant === 'heading' && `h-8 ${taskDetailLayoutStyles.sectionHeading}`,
           )}
           onClick={onToggle}
         >
-          <Icon aria-hidden color={'var(--ant-color-text-description)'} size={16} />
-          <span>{title}</span>
-          {typeof count === 'number' && (
-            <span className="text-xs font-normal text-muted-foreground tabular-nums">{count}</span>
-          )}
           <AccordionArrowIcon
             aria-hidden
             isOpen={open}
             style={{ color: 'var(--ant-color-text-description)' }}
           />
+          <span>{title}</span>
+          {typeof count === 'number' && (
+            <span className="text-xs font-normal text-muted-foreground tabular-nums">{count}</span>
+          )}
         </Button>
         {trailing}
       </div>

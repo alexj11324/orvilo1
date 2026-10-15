@@ -1,7 +1,7 @@
 import { type TreeDataNode } from '@lobehub/ui/base-ui';
 import { Tree } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask } from '@orvilo/types';
-import { ArrowDownWideNarrow, ListTodoIcon, MoreHorizontal, PlayCircle, Plus } from 'lucide-react';
+import { ArrowDownWideNarrow, MoreHorizontal, PlayCircle, Plus } from 'lucide-react';
 import type { MouseEvent } from 'react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -379,7 +379,6 @@ const TaskSubtasks = memo(() => {
   return (
     <div className="flex flex-col gap-2">
       <TaskDetailSectionHeader
-        icon={ListTodoIcon}
         open={isExpanded}
         title={t('taskDetail.subtasks')}
         actions={
@@ -432,6 +431,7 @@ const TaskSubtasks = memo(() => {
         trailing={
           hasSubtasks ? (
             <TaskSubtaskProgressTag
+              borderless
               currentIdentifier={taskId}
               subtasks={orderedSubtasks}
               onSubtaskClick={handleNavigate}

@@ -79,6 +79,36 @@ describe('issue rail type scale', () => {
 });
 
 /**
+ * The body section headers are Linear's flat rows, not pill chips: a 24px
+ * transparent collapse button led by the folding chevron (the Activity band
+ * lifts to a 32px container), the done/total progress reads inline without
+ * chip chrome, and section actions stay inside the same row.
+ */
+describe('issue section header chrome', () => {
+  const header = readSource('TaskDetailSectionHeader.tsx');
+
+  it('keeps the collapse toggle flat at the measured 24px/32px tiers', () => {
+    expect(header).toContain('min-h-6');
+    expect(header).toContain('min-h-8');
+    expect(header).toContain('bg-transparent');
+    // No pill chrome: the ghost button keeps no padding or border.
+    expect(header).toContain('px-0');
+    expect(header).toContain('border-0');
+  });
+
+  it('leads the label with the folding chevron, not a section icon', () => {
+    const chevron = header.indexOf('<AccordionArrowIcon');
+    expect(chevron).toBeGreaterThanOrEqual(0);
+    expect(chevron).toBeLessThan(header.indexOf('{title}'));
+    expect(header).not.toContain('LucideIcon');
+  });
+
+  it('reads the sub-issue progress inline without chip chrome', () => {
+    expect(readSource('TaskSubtasks.tsx')).toContain('borderless');
+  });
+});
+
+/**
  * The rail's milestone row used to print the raw ISO string (` · 2026-10-15`)
  * and the `name · date` label ran under `white-space: nowrap`, so a long name
  * clipped the date off the row. The row now formats through the same helper

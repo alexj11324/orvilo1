@@ -618,7 +618,6 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
     <div className="flex flex-col gap-2">
       <TaskDetailSectionHeader
         actions={<IssueSubscribeToggle />}
-        icon={BotMessageSquare}
         open={isExpanded}
         title={t('taskDetail.activities')}
         trailing={<LinearTaskSyncStatus taskId={activeTaskDatabaseId} />}

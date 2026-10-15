@@ -13,8 +13,9 @@ export const taskDetailLayoutStyles = {
   body: 'col-start-1 min-w-0 pbe-30 [@container_task-detail_(width>=720px)]:row-start-3',
   side: 'flex flex-col gap-4 min-w-0 [@container_task-detail_(width>=720px)]:sticky [@container_task-detail_(width>=720px)]:top-4 [@container_task-detail_(width>=720px)]:col-start-2 [@container_task-detail_(width>=720px)]:row-span-3 [@container_task-detail_(width>=720px)]:row-start-1 [@container_task-detail_(width>=720px)]:self-start [@container_task-detail_(width>=720px)]:pbs-0',
   // Linear splits its section chrome into two tiers: the top-level "Activity"
-  // band reads as a 15px/600 heading while the collapsible sections
-  // (Sub-issues, …) keep the compact 12px/500 label on the default variant.
+  // band reads as a 15px/600 heading inside a 32px container while the
+  // collapsible sections (Sub-issues, …) keep the compact 12px/500 label on a
+  // 24px flat row — both chrome shapes live in `TaskDetailSectionHeader`.
   sectionHeading: 'text-[15px] leading-5 font-semibold', // linear-token-override: Linear-measured 15px Activity band — no scale class between text-sm(14) and text-base(16).
   propertyGroups:
     'flex flex-wrap gap-2 items-center min-w-0 [&>div]:contents [@container_task-detail_(width>=720px)]:flex-col [@container_task-detail_(width>=720px)]:flex-nowrap [@container_task-detail_(width>=720px)]:gap-6 [@container_task-detail_(width>=720px)]:items-stretch [@container_task-detail_(width>=720px)]:[&>div]:flex',

@@ -64,6 +64,11 @@ const flattenSubtasks = (nodes: TaskDetailSubtask[]) => {
 };
 
 interface TaskSubtaskProgressTagProps {
+  /**
+   * Flat inline form (ring + `done/total` text, no pill border/fill) for
+   * Linear's flat section-header row; list rows keep the chip.
+   */
+  borderless?: boolean;
   currentIdentifier?: string;
   onRequestSubtasks?: () => Promise<TaskDetailSubtask[]>;
   onSubtaskClick?: (identifier: string, assigneeAgentId?: string, name?: string) => void;
@@ -72,7 +77,7 @@ interface TaskSubtaskProgressTagProps {
 }
 
 const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
-  ({ subtasks, currentIdentifier, onRequestSubtasks, onSubtaskClick, progress }) => {
+  ({ borderless, subtasks, currentIdentifier, onRequestSubtasks, onSubtaskClick, progress }) => {
     const { t } = useTranslation('chat');
     const [open, setOpen] = useState(false);
     const [refreshedResult, setRefreshedResult] = useState<{
@@ -185,35 +190,52 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
     if (!data) return null;
 
     const interactive = hasDropdown || Boolean(onRequestSubtasks);
+    const ringIcon = (
+      <svg aria-hidden height={14} viewBox="0 0 14 14" width={14}>
+        <circle
+          cx={7}
+          cy={7}
+          fill="none"
+          r={5.5}
+          stroke={'var(--ant-color-fill-secondary)'}
+          strokeWidth={2.5}
+        />
+        <circle
+          cx={7}
+          cy={7}
+          fill="none"
+          r={5.5}
+          stroke={'var(--ant-color-success)'}
+          strokeDasharray={`${(data.percent / 100) * 2 * Math.PI * 5.5} ${2 * Math.PI * 5.5}`}
+          strokeLinecap="round"
+          strokeWidth={2.5}
+          transform="rotate(-90 7 7)"
+        />
+      </svg>
+    );
+
     // Rows with a peek-capture click handler (My issues detail pane) treat
     // this as interactive chrome — otherwise the first click would be
     // swallowed by row selection instead of lazy-loading subtasks.
-    const tag = (
+    const tag = borderless ? (
+      <span
+        data-row-interactive={interactive || undefined}
+        className={cn(
+          'inline-flex items-center gap-1 text-xs leading-5 font-normal whitespace-nowrap text-muted-foreground tabular-nums',
+          interactive && 'cursor-pointer hover:text-foreground',
+        )}
+        onClick={interactive ? handleTagClick : undefined}
+        onContextMenu={onRequestSubtasks ? handleTagClick : undefined}
+      >
+        <span className="inline-flex size-3.5 flex-none items-center justify-center">
+          {ringIcon}
+        </span>
+        {data.text}
+      </span>
+    ) : (
       <IssueRowChip
         data-row-interactive={interactive || undefined}
-        icon={
-          <svg aria-hidden height={14} viewBox="0 0 14 14" width={14}>
-            <circle
-              cx={7}
-              cy={7}
-              fill="none"
-              r={5.5}
-              stroke={'var(--ant-color-fill-secondary)'}
-              strokeWidth={2.5}
-            />
-            <circle
-              cx={7}
-              cy={7}
-              fill="none"
-              r={5.5}
-              stroke={'var(--ant-color-success)'}
-              strokeDasharray={`${(data.percent / 100) * 2 * Math.PI * 5.5} ${2 * Math.PI * 5.5}`}
-              strokeLinecap="round"
-              strokeWidth={2.5}
-              transform="rotate(-90 7 7)"
-            />
-          </svg>
-        }
+        icon={ringIcon}
         onClick={interactive ? handleTagClick : undefined}
         onContextMenu={onRequestSubtasks ? handleTagClick : undefined}
       >

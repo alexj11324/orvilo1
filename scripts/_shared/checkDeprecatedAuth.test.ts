@@ -126,6 +126,22 @@ describe('checkDeprecatedAuth', () => {
       expect(output).toContain('Clerk');
       expect(output).not.toContain('migrate to Better Auth');
     });
+
+    it('does not tell SMTP setups to enable AUTH_EMAIL_VERIFICATION', async () => {
+      delete process.env.AUTH_EMAIL_VERIFICATION;
+      process.env.SMTP_HOST = 'smtp.example.com';
+      process.env.EMAIL_SERVICE_PROVIDER = 'resend';
+
+      const { checkDeprecatedAuth } = await import('./checkDeprecatedAuth.js');
+      checkDeprecatedAuth();
+
+      const output = [...mockConsoleWarn.mock.calls, ...mockConsoleError.mock.calls]
+        .flat()
+        .join(' ');
+      expect(mockExit).not.toHaveBeenCalled();
+      expect(output).not.toContain('AUTH_EMAIL_VERIFICATION');
+      expect(output).not.toContain('verify user email ownership');
+    });
   });
 
   describe('mixed errors and warnings', () => {

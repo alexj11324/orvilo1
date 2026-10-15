@@ -58,9 +58,9 @@ const HeteroPlus = memo(() => {
         children: OFFSETS_IN_HOURS.map((hours) => ({
           extra:
             armedHours === hours ? (
-              <CheckIcon size={16} style={{ color: 'var(--ant-color-success)' }} />
+              <CheckIcon size={16} style={{ color: 'var(--success)' }} />
             ) : (
-              <span style={{ color: 'var(--ant-color-text-tertiary)', fontSize: 12 }}>
+              <span style={{ color: 'var(--foreground-tertiary)', fontSize: 12 }}>
                 {formatAbsoluteDateTime(resolveScheduleTime(hours))}
               </span>
             ),

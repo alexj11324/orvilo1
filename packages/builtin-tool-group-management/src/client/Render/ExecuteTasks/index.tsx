@@ -87,7 +87,7 @@ const ExecuteTasksRender = memo<BuiltinRenderProps<ExecuteTasksParams, unknown, 
                       style={{
                         marginTop: 8,
                         background: 'var(--accent)',
-                        borderRadius: 'var(--ant-border-radius)',
+                        borderRadius: 'var(--radius-card)',
                       }}
                     >
                       <div className={cn(styles.instruction)}>{task.instruction}</div>
@@ -106,7 +106,7 @@ const ExecuteTasksRender = memo<BuiltinRenderProps<ExecuteTasksParams, unknown, 
             </div>
             <div
               className={cn('p-3', styles.resultBox)}
-              style={{ background: 'var(--accent)', borderRadius: 'var(--ant-border-radius)' }}
+              style={{ background: 'var(--accent)', borderRadius: 'var(--radius-card)' }}
             >
               <Markdown style={{ maxHeight: 320, overflow: 'auto' }} variant={'chat'}>
                 {resultContent}

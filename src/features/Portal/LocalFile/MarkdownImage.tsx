@@ -67,7 +67,7 @@ const MarkdownImage = memo<MarkdownImageProps>(
           role={alt ? 'img' : undefined}
           title={markdownSrc}
           style={{
-            background: 'var(--ant-color-fill-quaternary)',
+            background: 'var(--fill-quaternary)',
             borderRadius: 6,
             display: 'inline-block',
             minHeight: 120,

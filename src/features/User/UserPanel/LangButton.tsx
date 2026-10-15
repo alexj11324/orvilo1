@@ -121,15 +121,15 @@ const LangButton = memo<{ compact?: boolean; placement?: LangPlacement }>(
             paddingInline: 12,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--ant-color-fill-tertiary)' as string;
+            e.currentTarget.style.background = 'var(--muted)' as string;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
           }}
         >
           <div className="flex flex-col flex-1">{currentLabel}</div>
-          <GlobeIcon size={'small'} style={{ color: 'var(--ant-color-text-secondary)' }} />
-          <ChevronRight size={'small'} style={{ color: 'var(--ant-color-text-secondary)' }} />
+          <GlobeIcon size={'small'} style={{ color: 'var(--muted-foreground)' }} />
+          <ChevronRight size={'small'} style={{ color: 'var(--muted-foreground)' }} />
         </div>
       );
     }

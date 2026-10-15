@@ -100,7 +100,7 @@ const ToolStatusDisplay = memo<ToolStatusDisplayProps>(({ status, isDetecting })
         className={'flex min-w-0'}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
       >
-        {createElement(XCircle, { color: 'var(--ant-color-text-quaternary)', size: 16 })}
+        {createElement(XCircle, { color: 'var(--foreground-quaternary)', size: 16 })}
         <span className={'text-muted-foreground'}>
           {t('settingSystemTools.status.notDetected')}
         </span>
@@ -114,7 +114,7 @@ const ToolStatusDisplay = memo<ToolStatusDisplayProps>(({ status, isDetecting })
         className={'flex min-w-0'}
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
       >
-        {createElement(XCircle, { color: 'var(--ant-color-error)', size: 16 })}
+        {createElement(XCircle, { color: 'var(--destructive)', size: 16 })}
         <span className={'text-muted-foreground'}>
           {t('settingSystemTools.status.unavailable')}
         </span>
@@ -131,7 +131,7 @@ const ToolStatusDisplay = memo<ToolStatusDisplayProps>(({ status, isDetecting })
         className={'flex min-w-0'}
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}
       >
-        {createElement(CheckCircle2, { color: 'var(--ant-color-success)', size: 16 })}
+        {createElement(CheckCircle2, { color: 'var(--success)', size: 16 })}
         <span className={'text-success'}>{t('settingSystemTools.status.available')}</span>
       </div>
       {status.path && (

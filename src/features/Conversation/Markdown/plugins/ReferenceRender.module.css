@@ -27,13 +27,13 @@
 
 /* Link is an existing engine semantic paint role; it is not the status info text role. */
 :root a.linkChip[data-slot='markdown-link'] {
-  color: var(--ant-color-link);
+  color: var(--link);
   text-decoration: none;
   transition: color var(--orvilo-motion-mid);
 }
 
 :root a.linkChip[data-slot='markdown-link']:hover {
-  color: var(--ant-color-link-hover);
+  color: var(--link-hover);
 }
 
 :root a.localFileLink[data-slot='markdown-local-file-link'] {
@@ -53,7 +53,7 @@
 }
 
 :root a.localFileLink[data-slot='markdown-local-file-link']:hover {
-  color: var(--ant-color-link-hover);
+  color: var(--link-hover);
   text-decoration: underline;
   text-underline-offset: 2px;
   background: var(--selected);
@@ -61,8 +61,8 @@
 }
 
 :root a.localFileLink[data-slot='markdown-local-file-link']:active {
-  color: var(--ant-color-link-active);
-  background: var(--ant-color-fill);
+  color: var(--link-active);
+  background: var(--fill);
 }
 
 :root a.localFileLink[data-slot='markdown-local-file-link']:focus-visible {

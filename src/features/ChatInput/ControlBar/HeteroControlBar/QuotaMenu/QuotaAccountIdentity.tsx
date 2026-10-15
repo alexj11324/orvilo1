@@ -10,8 +10,8 @@ import ActionIcon from '@/components/ActionIcon';
 import { openQuotaCalendarModal } from '@/features/AgentQuotaCalendar';
 
 const styles = {
-  bottom: 'pbs-2 [border-block-start:1px_solid_var(--ant-color-border-secondary)]',
-  top: 'pbe-2 [border-block-end:1px_solid_var(--ant-color-border-secondary)]',
+  bottom: 'pbs-2 [border-block-start:1px_solid_var(--divider)]',
+  top: 'pbe-2 [border-block-end:1px_solid_var(--divider)]',
 };
 
 /**

@@ -16,9 +16,9 @@ const Screenshot = memo<BuiltinRenderProps<unknown, BrowserScreenshotState, stri
         style={{
           overflow: 'hidden',
           padding: 4,
-          background: 'var(--ant-color-bg-container)',
-          border: `1px solid ${'var(--ant-color-border-secondary)'}`,
-          borderRadius: 'var(--ant-border-radius)',
+          background: 'var(--card)',
+          border: `1px solid ${'var(--divider)'}`,
+          borderRadius: 'var(--radius-card)',
         }}
       >
         <Image alt={'Browser screenshot'} src={src} style={{ borderRadius: 4, width: '100%' }} />

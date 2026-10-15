@@ -31,9 +31,9 @@ const Item = memo<ItemProps>(({ title, description, disabled, prompt }) => {
         CLICKABLE_FOCUS_RING,
       )}
       style={{
-        borderColor: 'var(--ant-color-border-secondary)',
-        background: 'var(--ant-color-bg-container)',
-        borderRadius: 'var(--ant-border-radius-lg)',
+        borderColor: 'var(--divider)',
+        background: 'var(--card)',
+        borderRadius: 'var(--radius-overlay)',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.65 : undefined,
       }}
@@ -43,7 +43,7 @@ const Item = memo<ItemProps>(({ title, description, disabled, prompt }) => {
         <div className="truncate min-w-0 text-sm" style={{ fontWeight: 500 }}>
           {title}
         </div>
-        <div className="line-clamp-2 text-xs" style={{ color: 'var(--ant-color-text-tertiary)' }}>
+        <div className="line-clamp-2 text-xs" style={{ color: 'var(--foreground-tertiary)' }}>
           {description}
         </div>
       </div>

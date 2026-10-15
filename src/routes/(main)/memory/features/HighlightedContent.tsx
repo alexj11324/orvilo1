@@ -13,7 +13,7 @@ const HighlightedContent = memo<HighlightedContentProps>(({ title, children }) =
       fontSize={14}
       variant={'chat'}
       style={{
-        color: 'var(--ant-color-text)',
+        color: 'var(--foreground)',
         overflow: 'visible',
       }}
     >

@@ -19,7 +19,7 @@ const styles = {
   itemRow:
     'w-full border-b border-dashed border-sidebar-border py-2.5 ps-1 pe-3 hover:[&_.drag-handle]:opacity-100 hover:[&_.delete-icon]:opacity-100',
   textCompleted: 'text-foreground-quaternary line-through',
-  textProcessing: 'text-(--ant-color-warning-text)',
+  textProcessing: 'text-(--warning-text)',
 };
 
 interface TodoItemRowProps {

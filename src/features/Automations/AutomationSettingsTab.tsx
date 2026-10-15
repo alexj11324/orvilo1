@@ -45,7 +45,7 @@ const TriggerCard = memo(() => {
         className={cn(styles.triggerCard, 'flex items-center gap-3 p-3 border')}
         style={{ borderColor: 'var(--sidebar-border)', background: 'var(--card)' }}
       >
-        <TimerIcon color={'var(--ant-color-text-tertiary)'} size={18} />
+        <TimerIcon color={'var(--foreground-tertiary)'} size={18} />
         <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
           <div className="truncate min-w-0 text-(length:--text-dense) font-medium">
             {summary || t('trigger.unconfigured')}
@@ -56,7 +56,7 @@ const TriggerCard = memo(() => {
             </div>
           ) : null}
         </div>
-        <ChevronRightIcon color={'var(--ant-color-text-tertiary)'} size={14} />
+        <ChevronRightIcon color={'var(--foreground-tertiary)'} size={14} />
       </div>
     </TaskScheduleConfig>
   );

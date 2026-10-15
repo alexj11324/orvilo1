@@ -30,7 +30,7 @@ const styles = {
     'flex size-8 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 cursor-pointer items-center justify-center rounded-(--radius-button) text-foreground-tertiary hover:bg-selected hover:text-foreground',
   // Always discoverable; the open picker keeps the same emphasis as hover.
   trigger:
-    'inline-flex size-7 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 cursor-pointer items-center justify-center rounded-full border border-sidebar-border text-foreground-tertiary transition-[color] duration-(--ant-motion-duration-fast) ease-[ease] hover:bg-fill-quaternary hover:text-foreground data-[open]:bg-fill-quaternary data-[open]:text-foreground',
+    'inline-flex size-7 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 cursor-pointer items-center justify-center rounded-full border border-sidebar-border text-foreground-tertiary transition-[color] duration-(--orvilo-motion-fast) ease-[ease] hover:bg-fill-quaternary hover:text-foreground data-[open]:bg-fill-quaternary data-[open]:text-foreground',
 };
 
 interface CommentReactionsProps {

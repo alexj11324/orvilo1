@@ -9,7 +9,7 @@ const BriefCardSkeleton = memo(() => {
     <div
       className="flex flex-col gap-3 p-3 rounded-(--radius-card)"
       style={{
-        border: `1px solid ${'var(--ant-color-border)'}`,
+        border: `1px solid ${'var(--border)'}`,
       }}
     >
       <div className="flex items-center gap-4 justify-between">

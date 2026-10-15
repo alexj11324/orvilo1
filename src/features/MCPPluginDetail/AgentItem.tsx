@@ -26,7 +26,7 @@ const AgentItem = memo<AgentItemProps>(
         className={cn('flex items-center gap-3 py-3 px-3', styles.container)}
         style={{
           border: `1px solid var(--border)`,
-          borderRadius: 'var(--ant-border-radius-lg)',
+          borderRadius: 'var(--radius-overlay)',
           height: '100%',
         }}
       >

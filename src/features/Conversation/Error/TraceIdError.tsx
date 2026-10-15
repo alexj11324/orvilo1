@@ -80,7 +80,7 @@ const TraceIdError = memo<TraceIdErrorProps>(({ id, onRetry, showRetry = true, t
             style={{
               alignItems: 'center',
               // Discord keeps its brand hue; the other report link follows the app theme.
-              color: hasDiscord ? '#5865F2' : 'var(--ant-color-link)',
+              color: hasDiscord ? '#5865F2' : 'var(--link)',
               display: 'inline-flex',
               gap: 2,
               verticalAlign: 'middle',
@@ -99,7 +99,7 @@ const TraceIdError = memo<TraceIdErrorProps>(({ id, onRetry, showRetry = true, t
                   cursor: 'pointer',
                   opacity: 0.65,
                   textDecoration: 'underline dashed',
-                  textDecorationColor: 'var(--ant-color-text-quaternary)',
+                  textDecorationColor: 'var(--foreground-quaternary)',
                   textUnderlineOffset: 3,
                 }}
                 onClick={handleCopyTraceId}

@@ -13,7 +13,7 @@ import SelectCircle from './SelectCircle';
 
 const styles = {
   contentAssistant: '[&_.message-wrapper]:items-start [&_.message-wrapper]:ps-0',
-  band: 'cursor-pointer select-none w-full transition-[background-color] duration-(--orvilo-motion-fast) ease-(--ant-motion-ease-in-out) hover:bg-accent motion-reduce:transition-none',
+  band: 'cursor-pointer select-none w-full transition-[background-color] duration-(--orvilo-motion-fast) ease-(--orvilo-motion-ease-in-out) hover:bg-accent motion-reduce:transition-none',
   bandSelected: 'bg-selected hover:bg-selected',
   checkbox: 'flex-none ps-4',
   content:

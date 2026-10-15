@@ -77,7 +77,7 @@ const Score = memo(() => {
             className="flex flex-col"
             style={{
               border: `1px solid var(--border)`,
-              borderRadius: 'var(--ant-border-radius-lg)',
+              borderRadius: 'var(--radius-overlay)',
             }}
           >
             <ScoreList items={sortedScoreListItems} />
@@ -89,7 +89,7 @@ const Score = memo(() => {
             className="flex flex-col gap-4 p-4"
             style={{
               border: `1px solid var(--border)`,
-              borderRadius: 'var(--ant-border-radius-lg)',
+              borderRadius: 'var(--radius-overlay)',
             }}
           >
             <GithubBadge />

@@ -111,7 +111,7 @@ export const RemoteDirectoryBrowser = ({
                 role={'button'}
                 tabIndex={loading || !entry.readable ? -1 : 0}
                 title={entry.name}
-                titleColor={'var(--ant-color-text)'}
+                titleColor={'var(--foreground)'}
                 description={
                   entry.readable ? undefined : (
                     <div className="text-muted-foreground">

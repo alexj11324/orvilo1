@@ -77,7 +77,7 @@ const getErrorDetails = (error?: ChatMessageError | null) => {
 };
 
 const loading = () => (
-  <div className="relative flex w-full flex-col items-center overflow-hidden rounded-(--ant-border-radius-lg) border border-border p-4">
+  <div className="relative flex w-full flex-col items-center overflow-hidden rounded-(--radius-overlay) border border-border p-4">
     <Skeleton style={{ height: 36 }} />
   </div>
 );

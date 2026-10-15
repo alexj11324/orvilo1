@@ -16,7 +16,7 @@ const InfoTooltip = memo<InfoTooltipProps>(({ size, iconStyle, title }) => {
       <TooltipTrigger render={<span />}>
         <CircleHelp
           size={size ?? 16}
-          style={{ color: 'var(--ant-color-text-tertiary)', ...iconStyle }}
+          style={{ color: 'var(--foreground-tertiary)', ...iconStyle }}
         />
       </TooltipTrigger>
       <TooltipContent>{title}</TooltipContent>

@@ -17,7 +17,7 @@ const GuideVideo = memo<GuideVideoProps>(({ height, width, src }) => {
       src={src}
       width={width}
       style={{
-        background: 'var(--ant-color-fill-secondary)',
+        background: 'var(--selected)',
         height: 'auto',
         width: '100%',
       }}

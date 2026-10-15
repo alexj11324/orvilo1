@@ -7,7 +7,7 @@ const BubblesLoading = () => {
           key={i}
           style={{
             animationDelay: `${i * 160}ms`,
-            background: 'var(--ant-color-text-secondary)',
+            background: 'var(--muted-foreground)',
             height: 12,
             width: 12,
           }}

@@ -186,32 +186,32 @@ const OsPermissionsPanel = memo(() => {
           style={{
             paddingBlock: 8,
             paddingInline: '12px 12px',
-            background: permission.granted ? 'var(--ant-color-fill-secondary)' : undefined,
-            borderColor: permission.granted ? 'var(--ant-color-success)' : undefined,
+            background: permission.granted ? 'var(--selected)' : undefined,
+            borderColor: permission.granted ? 'var(--success)' : undefined,
           }}
           onClick={() => !permission.granted && handlePermissionRequest(permission.id)}
         >
           <div className="flex flex-col items-center h-10 justify-center rounded-(--radius-card) border border-border w-10">
             {createElement(permission.icon, {
-              color: 'var(--ant-color-text-description)',
+              color: 'var(--foreground-description)',
               size: 20,
             })}
           </div>
           <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 2, flex: 1 }}>
             <span style={{ fontWeight: 500 }}>{t(permission.titleKey as any)}</span>
-            <span style={{ color: 'var(--ant-color-text-secondary)', fontSize: 12 }}>
+            <span style={{ color: 'var(--muted-foreground)', fontSize: 12 }}>
               {t(permission.descriptionKey as any)}
             </span>
           </div>
           {permission.granted ? (
-            createElement(Check, { color: 'var(--ant-color-success)', size: 20 })
+            createElement(Check, { color: 'var(--success)', size: 20 })
           ) : (
             <Button
               className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
               size="normal"
               variant="ghost"
               style={{
-                color: 'var(--ant-color-text-secondary)',
+                color: 'var(--muted-foreground)',
               }}
               onClick={(e) => {
                 e.stopPropagation();

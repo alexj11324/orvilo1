@@ -9,9 +9,9 @@ import type { ListOnlineDevicesState } from '../../../types';
 import DeviceCard from '../DeviceCard';
 
 const styles = {
-  card: 'overflow-hidden w-full border border-sidebar-border rounded-(--ant-border-radius) bg-card',
+  card: 'overflow-hidden w-full border border-sidebar-border rounded-(--radius-card) bg-card',
   empty:
-    'py-3 ps-3 pe-3 border border-sidebar-border rounded-(--ant-border-radius) text-sm leading-[inherit] text-foreground-description bg-card',
+    'py-3 ps-3 pe-3 border border-sidebar-border rounded-(--radius-card) text-sm leading-[inherit] text-foreground-description bg-card',
 };
 
 const ListDevices = memo<BuiltinRenderProps<undefined, ListOnlineDevicesState>>(

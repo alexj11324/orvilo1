@@ -47,8 +47,8 @@ export const ConnectorAuthRow = memo<ConnectorAuthRowProps>(({ disabled, spec, o
         ) : (
           <span className="anticon" role="img">
             <meta.icon
-              color={'var(--ant-color-text)'}
-              fill={'var(--ant-color-text)'}
+              color={'var(--foreground)'}
+              fill={'var(--foreground)'}
               height={16}
               size={16}
               width={16}

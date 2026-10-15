@@ -44,7 +44,7 @@ const AuthErrorPage = memo(() => {
               rel="noopener noreferrer"
               target="_blank"
             >
-              <SiDiscord fill={'var(--ant-color-text)'} /> {t('actions.discord')}
+              <SiDiscord fill={'var(--foreground)'} /> {t('actions.discord')}
             </a>
           )}
         </div>

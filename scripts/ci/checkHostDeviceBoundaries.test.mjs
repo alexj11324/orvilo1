@@ -71,6 +71,17 @@ test('clean fixture tree passes', () => {
   assert.match(out, /PASS/);
 });
 
+test('a deeply nested expression chain does not overflow the AST walk', () => {
+  const chain = Array.from({ length: 20_000 }, (_, i) => `'s${i}'`).join(' + ');
+  const dir = mk({
+    'src/features/generated.ts': `import { y } from './y';\nexport const big = ${chain};\nexport const x = y;`,
+    'src/features/y.ts': 'export const y = 1;',
+  });
+  const { code, out } = run(dir);
+  assert.equal(code, 0, out);
+  assert.match(out, /PASS/);
+});
+
 test('ordinary deps, safe builtins, tsconfig aliases and workspace deps pass', () => {
   const dir = mk({
     'pnpm-workspace.yaml': "packages:\n  - 'packages/*'\n",

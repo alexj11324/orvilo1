@@ -33,9 +33,9 @@ const ExampleItem = memo<ExampleItemProps>(({ title, description, onClick, promp
     <div
       className="flex cursor-pointer flex-col border hover:bg-muted"
       style={{
-        borderColor: 'var(--ant-color-border-secondary)',
-        background: 'var(--ant-color-bg-container)',
-        borderRadius: 'var(--ant-border-radius-lg)',
+        borderColor: 'var(--divider)',
+        background: 'var(--card)',
+        borderRadius: 'var(--radius-overlay)',
       }}
       onClick={() => onClick(prompt)}
     >
@@ -43,7 +43,7 @@ const ExampleItem = memo<ExampleItemProps>(({ title, description, onClick, promp
         <div className="truncate text-sm" style={{ fontWeight: 500 }}>
           {title}
         </div>
-        <div className="line-clamp-2 text-xs" style={{ color: 'var(--ant-color-text-tertiary)' }}>
+        <div className="line-clamp-2 text-xs" style={{ color: 'var(--foreground-tertiary)' }}>
           {description}
         </div>
       </div>
@@ -67,14 +67,12 @@ const Examples = memo<ExamplesProps>(({ suggestMode, onExampleClick }) => {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Lightbulb color={'var(--ant-color-text-description)'} size={18} />
-          <div style={{ color: 'var(--ant-color-text-secondary)' }}>
-            {tCommon('home.suggestQuestions')}
-          </div>
+          <Lightbulb color={'var(--foreground-description)'} size={18} />
+          <div style={{ color: 'var(--muted-foreground)' }}>{tCommon('home.suggestQuestions')}</div>
         </div>
         <div className="flex items-center gap-1" style={{ cursor: 'pointer' }} onClick={refresh}>
           <ActionIcon icon={RefreshCw} size={'small'} />
-          <div className="text-xs" style={{ color: 'var(--ant-color-text-secondary)' }}>
+          <div className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
             {tCommon('switch')}
           </div>
         </div>

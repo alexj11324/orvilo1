@@ -253,6 +253,60 @@ describe('OrviloBuiltinMcpServer', () => {
   });
 });
 
+describe('OrviloBuiltinMcpServer routes', () => {
+  it('keeps one MCP session across turns and resolves tool calls to the bound operation', async () => {
+    const seen: string[] = [];
+    server = new OrviloBuiltinMcpServer({
+      extraTools: [
+        {
+          description: 'echo the operation',
+          handler: async (operationId) => {
+            seen.push(operationId);
+            return { content: [{ text: operationId, type: 'text' }] };
+          },
+          inputSchema: {},
+          name: 'whoami',
+        },
+      ],
+      includeAskUserTool: false,
+    });
+    await server.start();
+    server.registerRoute('route-1');
+    // The agent connects once, with the route URL it got at session/new.
+    const client = await connectClient(server.urlForOperation('route-1'));
+    try {
+      server.bindRoute('route-1', 'op-turn-1');
+      await client.callTool({ arguments: {}, name: 'whoami' });
+      server.releaseRoute('route-1');
+
+      const released = (await client.callTool({ arguments: {}, name: 'whoami' })) as {
+        isError?: boolean;
+      };
+      expect(released.isError).toBe(true);
+
+      server.bindRoute('route-1', 'op-turn-2');
+      await client.callTool({ arguments: {}, name: 'whoami' });
+    } finally {
+      await client.close();
+    }
+
+    expect(seen).toEqual(['op-turn-1', 'op-turn-2']);
+  });
+
+  it('releaseRoute cancels the turn bridge but keeps the route', async () => {
+    server = new OrviloBuiltinMcpServer();
+    await server.start();
+    server.registerRoute('route-2');
+    const bridge = server.bindRoute('route-2', 'op-a');
+    const pending = bridge.pending({ arguments: {}, toolCallId: 't1' });
+
+    server.releaseRoute('route-2');
+
+    await expect(pending).resolves.toMatchObject({ cancelReason: 'session_ended', cancelled: true });
+    expect(server.hasOperation('route-2')).toBe(true);
+  });
+});
+
 const connectClient = async (url: string): Promise<Client> => {
   const transport = new StreamableHTTPClientTransport(new URL(url));
   const client = new Client({ name: 'unit-test', version: '0' }, { capabilities: {} });

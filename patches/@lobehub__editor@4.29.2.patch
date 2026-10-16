@@ -1,0 +1,76 @@
+diff --git a/es/editor-kernel/kernel.d.ts b/es/editor-kernel/kernel.d.ts
+index d8b0641..4988ca7 100644
+--- a/es/editor-kernel/kernel.d.ts
++++ b/es/editor-kernel/kernel.d.ts
+@@ -113,7 +113,7 @@ declare class Kernel extends EventEmitter implements IEditorKernel {
+    * @param serviceId Service ID
+    */
+   requireService<T>(serviceId: IServiceID<T>): T | null;
+-  dispatchCommand<TCommand extends LexicalCommand<unknown>>(type: TCommand, payload: CommandPayloadType<TCommand>): boolean;
++  dispatchCommand<TCommand extends LexicalCommand<any>>(type: TCommand, payload: CommandPayloadType<TCommand>): boolean;
+   getTheme(): Record<string, any>;
+   updateTheme(key: string, value: string | Record<string, string>): void;
+   registerLocale(locale: Partial<Record<keyof ILocaleKeys, string>>): void;
+diff --git a/es/i-node-identity-service-BBC_bg97.d.ts b/es/i-node-identity-service-BBC_bg97.d.ts
+index 0a52164..f2325bd 100644
+--- a/es/i-node-identity-service-BBC_bg97.d.ts
++++ b/es/i-node-identity-service-BBC_bg97.d.ts
+@@ -219,7 +219,7 @@ interface IEditor {
+    * @param type
+    * @param payload
+    */
+-  dispatchCommand<TCommand extends LexicalCommand<unknown>>(type: TCommand, payload: CommandPayloadType<TCommand>): boolean;
++  dispatchCommand<TCommand extends LexicalCommand<any>>(type: TCommand, payload: CommandPayloadType<TCommand>): boolean;
+   /**
+    * Focus editor
+    */
+diff --git a/es/plugins/codemirror-block/command/index.d.ts b/es/plugins/codemirror-block/command/index.d.ts
+index f4bfc87..9aea507 100644
+--- a/es/plugins/codemirror-block/command/index.d.ts
++++ b/es/plugins/codemirror-block/command/index.d.ts
+@@ -1,6 +1,6 @@
+ import { LexicalEditor } from "lexical";
+ //#region src/plugins/codemirror-block/command/index.d.ts
+-declare const INSERT_CODEMIRROR_COMMAND: import("lexical").LexicalCommand<unknown>;
++declare const INSERT_CODEMIRROR_COMMAND: import("lexical").LexicalCommand<any>;
+ declare const SELECT_BEFORE_CODEMIRROR_COMMAND: import("lexical").LexicalCommand<{
+   key: string;
+ }>;
+diff --git a/es/plugins/common/command/index.d.ts b/es/plugins/common/command/index.d.ts
+index 7116fc1..217ee45 100644
+--- a/es/plugins/common/command/index.d.ts
++++ b/es/plugins/common/command/index.d.ts
+@@ -1,7 +1,7 @@
+ import { LexicalEditor } from "lexical";
+ import { HeadingTagType } from "@lexical/rich-text";
+ //#region src/plugins/common/command/index.d.ts
+-declare const INSERT_QUOTE_COMMAND: import("lexical").LexicalCommand<unknown>;
++declare const INSERT_QUOTE_COMMAND: import("lexical").LexicalCommand<any>;
+ declare const INSERT_HEADING_COMMAND: import("lexical").LexicalCommand<{
+   tag: HeadingTagType;
+ }>;
+diff --git a/es/plugins/hr/command/index.d.ts b/es/plugins/hr/command/index.d.ts
+index b109f6b..e4e3215 100644
+--- a/es/plugins/hr/command/index.d.ts
++++ b/es/plugins/hr/command/index.d.ts
+@@ -1,5 +1,5 @@
+ import { LexicalEditor } from "lexical";
+ //#region src/plugins/hr/command/index.d.ts
+-declare const INSERT_HORIZONTAL_RULE_COMMAND: import("lexical").LexicalCommand<unknown>;
++declare const INSERT_HORIZONTAL_RULE_COMMAND: import("lexical").LexicalCommand<any>;
+ //#endregion
+ export { INSERT_HORIZONTAL_RULE_COMMAND };
+\ No newline at end of file
+diff --git a/es/types/kernel.d.ts b/es/types/kernel.d.ts
+index fc56fd4..a598ede 100644
+--- a/es/types/kernel.d.ts
++++ b/es/types/kernel.d.ts
+@@ -87,7 +87,7 @@ interface IEditor {
+    * @param type
+    * @param payload
+    */
+-  dispatchCommand<TCommand extends LexicalCommand<unknown>>(type: TCommand, payload: CommandPayloadType<TCommand>): boolean;
++  dispatchCommand<TCommand extends LexicalCommand<any>>(type: TCommand, payload: CommandPayloadType<TCommand>): boolean;
+   /**
+    * Focus editor
+    */

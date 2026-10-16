@@ -6,7 +6,7 @@ import {
   type PageAgentRuntimeService,
 } from '@orvilo/builtin-tool-page-agent/executionRuntime';
 import { EditorRuntime } from '@orvilo/editor-runtime';
-import type { SerializedEditorState, SerializedLexicalNode } from 'lexical';
+import type { SerializedEditorState } from 'lexical';
 
 import { DocumentModel } from '@/database/models/document';
 import { type OrviloDatabase } from '@/database/type';
@@ -15,7 +15,7 @@ import { DocumentService } from '@/server/services/document';
 
 import type { ServerRuntimeRegistration } from './types';
 
-type SerializedEditor = SerializedEditorState<SerializedLexicalNode>;
+type SerializedEditor = SerializedEditorState;
 
 type EditorRuntimeEditorParam = Parameters<EditorRuntime['setEditor']>[0];
 

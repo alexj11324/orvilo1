@@ -6,6 +6,10 @@ enablePrePostScripts: true
 
 patchedDependencies:
   '@copilotkit/channels-slack@0.11.0': patches/@copilotkit__channels-slack@0.11.0.patch
+  # Type-only, for Lexical 0.52 coexistence: LexicalCommand became invariant, so
+  # dispatchCommand bounds widen from LexicalCommand<unknown> to <any>. Remove with
+  # @lobehub/editor in P7.
+  '@lobehub/editor@4.29.2': patches/@lobehub__editor@4.29.2.patch
 
 publicHoistPattern:
   - '*@umijs/lint*'
@@ -35,17 +39,19 @@ packages:
 minimumReleaseAgeExclude:
   - '@lobehub/*'
 
-# Build scripts run one at a time. Several peer-variant copies of
-# @lobehub/editor resolve in this workspace and every copy's postinstall
-# patches the SAME hoisted `lexical` files; run in parallel they race on those
-# writes and CI fails with "Patch context mismatch" (ORVILO-13963). Only the
-# handful of packages allowed below build, so serializing costs seconds.
+# Build scripts run one at a time. This was added because every peer-variant
+# copy of @lobehub/editor patched the SAME hoisted `lexical` files and raced
+# (ORVILO-13963); that postinstall is now disabled below. Only the handful of
+# packages allowed below build, so serializing still costs seconds.
 childConcurrency: 1
 
 allowBuilds:
   '@google/genai': true
   '@hatchet-dev/typescript-sdk': false
-  '@lobehub/editor': true
+  # Its postinstall only backports facebook/lexical#8347 into @lexical/yjs 0.42.
+  # Lexical 0.52 ships that fix, and the script cannot locate the 0.52 package
+  # root (entry moved to dist/), so it would fail the install.
+  '@lobehub/editor': false
   '@sentry/cli': true
   '@vercel/speed-insights': true
   core-js: false
@@ -60,6 +66,20 @@ allowBuilds:
 overrides:
   '@ant-design/icons': 6.3.2
   '@codemirror/language': 6.12.4
+  '@lexical/clipboard': 0.52.0
+  '@lexical/code-core': 0.52.0
+  '@lexical/dragon': 0.52.0
+  '@lexical/extension': 0.52.0
+  '@lexical/headless': 0.52.0
+  '@lexical/history': 0.52.0
+  '@lexical/html': 0.52.0
+  '@lexical/link': 0.52.0
+  '@lexical/list': 0.52.0
+  '@lexical/rich-text': 0.52.0
+  '@lexical/selection': 0.52.0
+  '@lexical/table': 0.52.0
+  '@lexical/utils': 0.52.0
+  '@lexical/yjs': 0.52.0
   '@react-pdf/image': 3.0.4
   '@types/react': 19.2.13
   '@vitest/coverage-v8': 5.0.0
@@ -67,7 +87,7 @@ overrides:
   baseline-browser-mapping: 2.10.31
   drizzle-orm: ^0.45.2
   fast-xml-parser: 5.4.2
-  lexical: 0.42.0
+  lexical: 0.52.0
   node-gyp: ^12.4.0
   pdfjs-dist: 5.4.530
   react: 19.2.7

@@ -1,6 +1,6 @@
 import type { HeadlessLiteXMLOperation } from '@lobehub/editor/headless';
 import { createHeadlessEditor } from '@lobehub/editor/headless';
-import type { SerializedEditorState, SerializedLexicalNode } from 'lexical';
+import type { SerializedEditorState } from 'lexical';
 
 import { EMPTY_EDITOR_STATE } from '@/libs/editor/constants';
 import { isValidEditorData } from '@/libs/editor/isValidEditorData';
@@ -132,7 +132,7 @@ const exportSnapshot = (
 
   return {
     content: snapshot.markdown,
-    editorData: snapshot.editorData as SerializedEditorState<SerializedLexicalNode>,
+    editorData: snapshot.editorData as SerializedEditorState,
     litexml: snapshot.litexml,
   };
 };
@@ -144,7 +144,7 @@ const hydrateMarkdownOrEmptyState = (
 ) => {
   if (content.trim().length === 0) {
     editor.hydrateEditorData(
-      EMPTY_EDITOR_STATE as unknown as SerializedEditorState<SerializedLexicalNode>,
+      EMPTY_EDITOR_STATE as unknown as SerializedEditorState,
       options,
     );
     return;
@@ -162,7 +162,7 @@ const createEditorWithState = (
   if (isValidEditorData(editorData)) {
     try {
       editor.hydrateEditorData(
-        editorData as unknown as SerializedEditorState<SerializedLexicalNode>,
+        editorData as unknown as SerializedEditorState,
         {
           keepId: true,
         },

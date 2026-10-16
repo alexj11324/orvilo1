@@ -35,18 +35,14 @@ vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
 vi.mock('@/hooks/useInitAgentConfig', () => ({ useInitAgentConfig: vi.fn() }));
 vi.mock('@/features/ProtocolUrlHandler', () => ({ default: () => null }));
 vi.mock('./RegisterHotkeys', () => ({ default: () => null }));
-vi.mock('@/features/AgentSidebar', () => ({
-  default: () => <div data-testid="agent-layout-sidebar" />,
-}));
 vi.mock('@/routes/(main)/agent/_layout/AgentIdSync', () => ({
   default: () => <div data-testid="agent-layout-agent-id-sync" />,
 }));
 
 describe('Agent layout', () => {
-  it('renders sidebar and outlet', () => {
+  it('renders the outlet without a route-owned navigation panel', () => {
     render(<Layout />);
 
-    expect(screen.getByTestId('agent-layout-sidebar')).toBeInTheDocument();
     expect(screen.getByTestId('agent-layout-outlet')).toBeInTheDocument();
   });
 

@@ -189,21 +189,7 @@ describe('human-readable model labels', () => {
   });
 });
 
-describe('sidebar + topic-row chrome stays de-attributed', () => {
-  it('keeps a workspace-aware Issues destination without restoring an agent breadcrumb', () => {
-    const header = read('src/features/AgentSidebar/Header/index.tsx');
-    const nav = read('src/features/AgentSidebar/Header/Nav.tsx');
-
-    expect(header).toContain('<Nav />');
-    expect(nav).toContain("buildWorkspaceAwarePath('/tasks', activeSlug)");
-    expect(nav).toContain('href={issuesHref}');
-    expect(nav).toContain('icon={ListTodoIcon}');
-    expect(nav).toContain("title={t('common:tab.issues')}");
-    expect(`${header}\n${nav}`).not.toContain('AgentBreadcrumb');
-    expect(`${header}\n${nav}`).not.toContain('agentSelectors');
-    expect(`${header}\n${nav}`).not.toContain('HomeIcon');
-  });
-
+describe('topic-row chrome stays de-attributed', () => {
   it('carries no bound-agent node on topic list rows', () => {
     for (const file of [
       'src/features/AgentSidebar/Topic/List/Item/index.tsx',

@@ -11,6 +11,7 @@ import { sessionSelectors } from '@/store/session/selectors';
 import ChatHistoryTitleMenu from '../../ChatHistory/TitleMenu';
 import MemberCountTag from './MemberCountTag';
 import ThreadSwitcher from './ThreadSwitcher';
+import { useStaleRunningTopicCleanup } from './useStaleRunningTopicCleanup';
 
 const TitleTags = memo(() => {
   const { t } = useTranslation(['topic', 'chat']);
@@ -28,6 +29,8 @@ const TitleTags = memo(() => {
   // Archived topics fall out of the sidebar list fetch — pull their detail by
   // id so the title doesn't degrade to the "new topic" placeholder.
   useFetchActiveTopicDetail();
+
+  useStaleRunningTopicCleanup();
 
   if (isGroupSession) {
     return (

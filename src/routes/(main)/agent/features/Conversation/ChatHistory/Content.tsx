@@ -2,7 +2,7 @@
 
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
-import { CheckIcon, SearchIcon } from 'lucide-react';
+import { CheckIcon, PlusIcon, SearchIcon } from 'lucide-react';
 import { type KeyboardEvent, memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { useTopicNavigation } from '@/features/AgentSidebar/Topic/hooks/useTopicNavigation';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceConversationFeed } from '@/hooks/useFetchChatTopics';
+import { usePermission } from '@/hooks/usePermission';
 import { topicService } from '@/services/topic';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
@@ -21,6 +22,8 @@ import { type ChatTopic } from '@/types/topic';
 const styles = {
   empty: 'px-3 py-6 text-center text-xs leading-5 text-foreground-description',
   item: 'w-full flex-none cursor-pointer justify-between overflow-hidden border-0 bg-transparent px-2 py-1 text-start text-sm leading-5.5 font-normal text-foreground whitespace-nowrap hover:bg-accent aria-[current=true]:bg-selected aria-[current=true]:font-semibold aria-[current=true]:hover:bg-selected',
+  newTopic:
+    'w-full flex-none cursor-pointer justify-start gap-2 border-0 bg-transparent px-2 py-1 text-start text-sm leading-5.5 font-medium text-foreground hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50',
   root: 'min-h-0 [max-height:min(calc(var(--spacing)*100),var(--available-height,calc(var(--spacing)*100)))] w-full',
 } as const;
 
@@ -66,6 +69,11 @@ const ChatHistoryContent = memo<ChatHistoryContentProps>(({ onNavigate }) => {
 
   const { navigateToTopic } = useTopicNavigation();
 
+  // Same entry and same disabled conditions as the command menu's new topic.
+  const { allowed: canCreate } = usePermission('create_content');
+  const openNewTopicOrSaveTopic = useChatStore((s) => s.openNewTopicOrSaveTopic);
+  const isNewTopicSendInFlight = useChatStore(topicSelectors.isNewTopicSendInFlight);
+
   const rows = isSearching ? searchResults : topics;
   const showLoading = isSearching ? isSearchLoading && !searchResults : isTopicsLoading;
 
@@ -103,6 +111,22 @@ const ChatHistoryContent = memo<ChatHistoryContentProps>(({ onNavigate }) => {
           onChange={(e) => setKeyword(e.target.value)}
           onKeyDown={(event) => focusRow(event, true)}
         />
+      </div>
+      <div className="shrink-0 px-1">
+        <Button
+          className={styles.newTopic}
+          disabled={!canCreate || isNewTopicSendInFlight}
+          size="compact"
+          type={'button'}
+          variant="ghost"
+          onClick={() => {
+            void openNewTopicOrSaveTopic();
+            onNavigate?.();
+          }}
+        >
+          <PlusIcon className="size-4 shrink-0" />
+          <span className="min-w-0 truncate">{t('newTopic', { ns: 'topic' })}</span>
+        </Button>
       </div>
       <div
         className="flex flex-col gap-0.5 p-1 max-h-80 min-h-0 overflow-y-auto"

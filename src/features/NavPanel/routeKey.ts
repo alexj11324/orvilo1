@@ -13,13 +13,16 @@ export const resolveNavPanelKey = (
 
   switch (rootSegment) {
     case 'agent': {
-      return grandchildSegment === 'docs' ? 'agent-docs' : 'agent';
+      // A conversation keeps the global navigation: its topic history lives in
+      // the header title menu, not in a panel that replaces the nav. Only the
+      // agent's docs have their own route panel.
+      return grandchildSegment === 'docs' ? 'agent-docs' : 'home';
     }
 
     case 'chat': {
-      // `/chat/:topicId` is the canonical conversation surface — it owns the
-      // same topics panel as the legacy `/agent/:aid` route it redirects from.
-      return 'agent';
+      // `/chat/:topicId` is the canonical conversation surface and shares the
+      // legacy `/agent/:aid` route's navigation.
+      return 'home';
     }
 
     case 'community': {

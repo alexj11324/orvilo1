@@ -87,7 +87,6 @@ describe('ReUI sidebar panel selection', () => {
   });
 
   it.each([
-    ['/orvilo-team/agent/assistant', 'agent'],
     ['/orvilo-team/agent/assistant/docs', 'agent-docs'],
     ['/orvilo-team/memory', 'memory'],
   ])('swaps the registered %s panel into the column on %s', (route, key) => {
@@ -102,11 +101,13 @@ describe('ReUI sidebar panel selection', () => {
     expect(screen.queryByText('Global workspace navigation')).not.toBeInTheDocument();
   });
 
-  it.each(['/orvilo-team/tasks', '/'])(
-    'preserves global navigation on %s when no panel is registered',
+  it.each(['/orvilo-team/tasks', '/', '/orvilo-team/agent/assistant', '/orvilo-team/chat/topic-1'])(
+    'preserves global navigation on %s when no route panel applies',
     (route) => {
       pathname = route;
-      registerNavPanelContent('agent', Symbol('agent'), <div>Agent navigation</div>);
+      // A conversation keeps the global navigation: a panel registered for the
+      // agent's docs must not replace it.
+      registerNavPanelContent('agent-docs', Symbol('agent-docs'), <div>Agent navigation</div>);
       render(
         <SidebarProvider>
           <NavMain />
@@ -117,19 +118,20 @@ describe('ReUI sidebar panel selection', () => {
     },
   );
 
-  it.each(['/orvilo-team/agent/assistant', '/orvilo-team/memory', '/orvilo-team/settings/general'])(
-    'shows the loading skeleton on %s while its panel has not registered yet',
-    (route) => {
-      pathname = route;
-      render(
-        <SidebarProvider>
-          <NavMain />
-        </SidebarProvider>,
-      );
-      expect(screen.queryByText('Global workspace navigation')).not.toBeInTheDocument();
-      expect(screen.getByTestId('nav-sidebar-skeleton')).toBeInTheDocument();
-    },
-  );
+  it.each([
+    '/orvilo-team/agent/assistant/docs',
+    '/orvilo-team/memory',
+    '/orvilo-team/settings/general',
+  ])('shows the loading skeleton on %s while its panel has not registered yet', (route) => {
+    pathname = route;
+    render(
+      <SidebarProvider>
+        <NavMain />
+      </SidebarProvider>,
+    );
+    expect(screen.queryByText('Global workspace navigation')).not.toBeInTheDocument();
+    expect(screen.getByTestId('nav-sidebar-skeleton')).toBeInTheDocument();
+  });
 });
 
 describe('NavPanel', () => {

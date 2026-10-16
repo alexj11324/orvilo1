@@ -9,7 +9,7 @@ import { registerNavPanelContent, unregisterNavPanelContent } from './registry';
 interface NavPanelPortalProps extends PropsWithChildren {
   /**
    * Stable route-owned key used by NavPanelHost to select the active content.
-   * @example <NavPanelPortal navKey="agent">...</NavPanelPortal>
+   * @example <NavPanelPortal navKey="agent-docs">...</NavPanelPortal>
    */
   navKey?: string;
 }

@@ -1,7 +1,5 @@
 'use client';
 
-import { ConfigProvider, ThemeProvider } from '@lobehub/ui';
-import * as m from 'motion/react-m';
 import { type ComponentType, type ReactElement, type ReactNode } from 'react';
 import { lazy, memo, Suspense } from 'react';
 import type { RouteObject } from 'react-router';
@@ -10,7 +8,6 @@ import { Navigate, Outlet, useRouteError } from 'react-router';
 import BusinessGlobalProvider from '@/business/client/BusinessGlobalProvider';
 import ErrorCapture from '@/components/Error';
 import Loading from '@/components/Loading/BrandTextLoading';
-import { useIsDark } from '@/hooks/useIsDark';
 import SPAGlobalProvider from '@/layout/SPAGlobalProvider';
 import AppLayer from '@/spa/AppLayer';
 import { registerRoutePreloadLoader } from '@/spa/router/routePreloadRegistry';
@@ -144,25 +141,13 @@ export interface ErrorBoundaryProps {
 
 export const ErrorBoundary = ({ resetPath }: ErrorBoundaryProps) => {
   const error = useRouteError() as Error;
-  const isDark = useIsDark();
-  const appearance = isDark ? 'dark' : 'light';
 
   if (typeof window !== 'undefined' && isChunkLoadError(error)) {
     notifyChunkError(error);
   }
 
-  return (
-    <ConfigProvider motion={m}>
-      <ThemeProvider
-        appearance={appearance}
-        defaultAppearance={appearance}
-        defaultThemeMode={appearance}
-        theme={{ cssVar: { key: 'orvilo-vars' } }}
-      >
-        <ErrorCapture error={error} resetPath={resetPath} />
-      </ThemeProvider>
-    </ConfigProvider>
-  );
+  // Rendered outside AppTheme: globals.css supplies the document's theme roles.
+  return <ErrorCapture error={error} resetPath={resetPath} />;
 };
 
 export interface CreateAppRouterOptions {

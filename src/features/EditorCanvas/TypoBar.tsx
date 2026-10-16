@@ -18,6 +18,8 @@ import {
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
+
 interface TypoBarProps {
   editor?: IEditor;
 }
@@ -117,14 +119,16 @@ export const TypoBar = memo<TypoBarProps>(({ editor }) => {
   );
 
   return (
-    <ChatInputActionBar
-      left={<ChatInputActions items={items} />}
-      style={{
-        background: 'var(--fill-quaternary)',
-        borderTopLeftRadius: 8,
-        borderTopRightRadius: 8,
-      }}
-    />
+    <LobeThemeScope>
+      <ChatInputActionBar
+        left={<ChatInputActions items={items} />}
+        style={{
+          background: 'var(--fill-quaternary)',
+          borderTopLeftRadius: 8,
+          borderTopRightRadius: 8,
+        }}
+      />
+    </LobeThemeScope>
   );
 });
 

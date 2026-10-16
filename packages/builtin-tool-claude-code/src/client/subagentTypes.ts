@@ -1,6 +1,7 @@
-import { GroupBotIcon } from '@lobehub/ui/icons';
 import { Compass, type LucideIcon, Search, Settings } from 'lucide-react';
 import type { FC } from 'react';
+
+import { GroupBotIcon } from '@/components/icons';
 
 type IconComponent = LucideIcon | FC<{ className?: string; size?: number }>;
 

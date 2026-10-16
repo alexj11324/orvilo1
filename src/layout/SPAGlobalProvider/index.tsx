@@ -1,14 +1,13 @@
 'use client';
 
-import { ContextMenuHost } from '@lobehub/ui';
-import { ModalHost as BaseModalHost, ToastHost } from '@lobehub/ui/base-ui';
 import { domMax, LazyMotion } from 'motion/react';
 import { Component, type CSSProperties, lazy, memo, type PropsWithChildren, Suspense } from 'react';
 
 import { OrviloAnalyticsProviderWrapper } from '@/components/Analytics/OrviloAnalyticsProviderWrapper';
+import { ContextMenuHost } from '@/components/ContextMenu';
 import { DragUploadProvider } from '@/components/DragUploadZone/DragUploadProvider';
-import { ModalHost as ReUIModalHost } from '@/components/Modal';
-import { ToastHost as ReUIToastHost } from '@/components/toast';
+import { ModalHost } from '@/components/Modal';
+import { ToastHost } from '@/components/toast';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { isDesktop } from '@/const/version';
 import AuthRequiredModal from '@/features/Electron/AuthRequiredModal';
@@ -25,14 +24,12 @@ import ServerVersionOutdatedAlert from '@/layout/GlobalProvider/ServerVersionOut
 import StoreInitialization, {
   BuiltinAgentInitialization,
 } from '@/layout/GlobalProvider/StoreInitialization';
-import { registerNativeContextMenuInterceptor } from '@/libs/contextMenu';
 import { usePostRenderReady } from '@/spa/atoms/app';
 import { ServerConfigStoreProvider } from '@/store/serverConfig/Provider';
 import type { SPAServerConfig } from '@/types/spaServerConfig';
 
 import Locale from './Locale';
 
-registerNativeContextMenuInterceptor();
 const DevDock = lazy(() => import('@/features/DevDock'));
 const ImperativeMountHost = lazy(() => import('@/components/ImperativeMount'));
 const DynamicFavicon = lazy(() => import('@/layout/GlobalProvider/DynamicFavicon'));
@@ -114,10 +111,8 @@ const SPAGlobalProvider = memo<PropsWithChildren>(({ children }) => {
                     </CacheHydrationGate>
                   </OrviloAnalyticsProviderWrapper>
                 </TooltipProvider>
-                <BaseModalHost />
+                <ModalHost />
                 <ToastHost />
-                <ReUIModalHost />
-                <ReUIToastHost />
                 <ContextMenuHost />
                 <Suspense>
                   <TaskDock />

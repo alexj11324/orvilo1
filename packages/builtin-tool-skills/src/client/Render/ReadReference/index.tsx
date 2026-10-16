@@ -1,9 +1,9 @@
 'use client';
-import { Markdown } from '@lobehub/ui';
 import { type BuiltinRenderProps } from '@orvilo/types';
 import { cn } from 'cn';
 import { memo } from 'react';
 
+import { Markdown } from '@/components/Markdown';
 import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import type { ReadReferenceParams, ReadReferenceState } from '../../../types';

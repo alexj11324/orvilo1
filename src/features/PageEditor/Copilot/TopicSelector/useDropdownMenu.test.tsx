@@ -17,17 +17,6 @@ vi.mock('@/features/DeleteTopicConfirm', () => ({
   confirmRemoveTopic: confirmRemoveTopicMock,
 }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: {
-    useApp: () => ({
-      message: {
-        success: vi.fn(),
-      },
-    }),
-  },
-}));
-
 vi.mock('@/components/RenameModal', () => ({
   openRenameModal: vi.fn(),
 }));

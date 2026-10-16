@@ -1,6 +1,5 @@
-/* This private class reaches the existing public Lobe ThemeProvider's Antd App.
-   Keep these rules unlayered: the former Emotion host rules were unlayered too.
-   No wrapper, selector widening, !important or global layer flag is introduced. */
+/* The application root rendered by AppTheme. Keep these rules unlayered: the
+   former Emotion host rules were unlayered too. */
 .app {
   position: relative;
 
@@ -12,8 +11,7 @@
   min-height: 100dvh;
   max-height: 100dvh;
 
-  /* Standard Chromium scrollbar API; resolved html ThemeRoles owns the color.
-     The globals bootstrap is consume-only and may lack scoped --ant-* values. */
+  /* Standard Chromium scrollbar API; resolved html ThemeRoles owns the color. */
   scrollbar-color: var(--scrollbar-fill) transparent;
   scrollbar-width: thin;
 }

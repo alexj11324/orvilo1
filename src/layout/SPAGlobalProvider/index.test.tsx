@@ -22,23 +22,12 @@ const { cacheGateReleased, canAccessDevDock, devDockRenderError, initializeBuilt
   }),
 );
 
-vi.mock('@lobehub/ui', async (importOriginal) => {
+vi.mock('@/components/ContextMenu', async (importOriginal) => {
   const React = await import('react');
 
   return {
     ...(await importOriginal<object>()),
     ContextMenuHost: () => React.createElement('div', { 'data-testid': 'context-menu-host' }),
-    setContextMenuInterceptor: vi.fn(),
-  };
-});
-
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
-  const React = await import('react');
-
-  return {
-    ...(await importOriginal<object>()),
-    ModalHost: () => React.createElement('div', { 'data-testid': 'base-modal-host' }),
-    ToastHost: () => React.createElement('div', { 'data-testid': 'toast-host' }),
   };
 });
 
@@ -374,8 +363,6 @@ describe('SPAGlobalProvider', () => {
       </SPAGlobalProvider>,
     );
 
-    expect(screen.getByTestId('base-modal-host')).toBeInTheDocument();
-    expect(screen.getByTestId('toast-host')).toBeInTheDocument();
     expect(screen.getByTestId('reui-modal-host')).toBeInTheDocument();
     expect(screen.getByTestId('reui-toast-host')).toBeInTheDocument();
     expect(screen.getByTestId('context-menu-host')).toBeInTheDocument();

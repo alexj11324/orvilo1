@@ -12,18 +12,18 @@ This skill owns component selection, imports, styling, and React implementation 
 
 ## Styling
 
-Apply the semantic role in DESIGN.md before choosing a CSS expression. `cssVar.*` / antd-style and Tailwind utilities must consume the same approved semantic contract; they are implementation paths, not separate palettes or scales. Component styling references semantic or component tokens rather than inventing raw visual values. Document scoped measured exceptions in DESIGN.md and the affected evidence inventory.
+Apply the semantic role in DESIGN.md before choosing a CSS expression. Tailwind role utilities, CSS modules and component-owned CSS variables must consume the same approved semantic contract; they are implementation paths, not separate palettes or scales. Component styling references semantic or component tokens rather than inventing raw visual values. Document scoped measured exceptions in DESIGN.md and the affected evidence inventory.
 
 Use the application's existing theme mechanism and `[data-theme]` mappings. Do not copy an upstream `.dark`-only override or add a parallel theme toggle. Adapt design-system generation and Tailwind examples to the project's installed toolchain; do not initialize a second theme/configuration or replace existing fonts from an example.
 
-| Scenario                                                   | Approach                                                                    |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------- |
-| New component, new file, or a file already on Tailwind     | Local primitives + the Tailwind role classes in [Role lookup](#role-lookup) |
-| Editing a file that already uses `createStaticStyles`      | Stay in it with `cssVar.*`; do not style one element through both systems   |
-| Value computed at render time (measured width, user color) | Inline `style`, for that value only                                         |
-| Truly dynamic (JS color fns like `readableColor`/`chroma`) | `createStyles` + `token` — **last resort**                                  |
+| Scenario                                                      | Approach                                                                    |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| New component, new file, or a file already on Tailwind        | Local primitives + the Tailwind role classes in [Role lookup](#role-lookup) |
+| Styles Tailwind cannot express (complex selectors, keyframes) | A co-located CSS module reading the role variables                          |
+| Value computed at render time (measured width, user color)    | Inline `style`, for that value only                                         |
+| Truly dynamic (JS color fns like `readableColor`/`chroma`)    | Compute from `useGeneratedTheme()` and pass through `style` — last resort   |
 
-A static value never belongs in `style`. Do not start a new `createStaticStyles` block in a file that has none.
+A static value never belongs in `style`. antd-style (`createStaticStyles`, `cssVar`, `createStyles`) is retired from first-party code and lint rejects it.
 
 ### Role lookup
 
@@ -67,16 +67,16 @@ Pick the role, then write the class in this table. A literal such as `text-[13px
 
 1. **ReUI/shadcn primitives** — `@/components/ui/*` (dialog, button, tooltip, popover, dropdown-menu, select, checkbox, radio-group, switch, tabs, accordion, skeleton, alert, progress, slider, scroll-area, sheet, spinner, sonner, input, textarea, combobox) and `@/components/reui/*` (badge, stepper, sortable, code-block, autocomplete). **If the component lives here, use it.**
 2. **Local lobehub-compatible adapters** — keep the lobehub API surface so call sites stay mechanical:
-   `@/components/ActionIcon`, `@/components/Modal` (createModal/confirmModal/useModalContext/ModalHost/ModalFooter — see the **modal** skill), `@/components/toast` (toast/useToast/ToastHost), `@/components/Avatar` (+AvatarGroup), `@/components/Upload` (+UploadDragger), `@/components/ItemsMenu`, `@/components/Menu`, `@/components/GroupForm` (antd validation binding), `@/components/InputNumber`, `@/components/DatePicker`, `@/components/SimpleEmpty`, `@/components/SearchBar`, `@/components/ImperativeModal`.
-3. **`@lobehub/ui`** — kept-feature components only: Markdown, Mermaid, Image lightbox, HotkeyInput, ColorSwatches, Freeze, MaskShadow, DraggablePanel, FileTypeIcon, MaterialFileTypeIcon, CodeDiff/PatchDiff, Tree, FloatingSheet/FloatingPanel, EditableMessage, ChatHeader/TabBar mobile shells, Highlighter/Snippet, FluentEmoji, GroupAvatar, ContextMenuHost/ModalHost libs.
-4. **antd** — only as `GroupForm`'s validation layer; never import antd controls directly.
-5. **Custom implementation** — true last resort.
+   `@/components/ActionIcon`, `@/components/Modal` (createModal/confirmModal/useModalContext/ModalHost/ModalFooter — see the **modal** skill), `@/components/toast` (toast/useToast/ToastHost), `@/components/Avatar` (+AvatarGroup), `@/components/Upload` (+UploadDragger), `@/components/ItemsMenu`, `@/components/Menu`, `@/components/GroupForm`, `@/components/InputNumber`, `@/components/DatePicker`, `@/components/SimpleEmpty`, `@/components/SearchBar`, `@/components/ImperativeModal`, `@/components/HotkeyInput`, `@/components/ImageSelect`, `@/components/FloatingPanel`, `@/components/FloatingSheet`, `@/components/ContextMenu` (imperative web menu behind `@/libs/contextMenu`).
+3. **Custom implementation** — true last resort.
+
+`antd`, `antd-style`, `@ant-design/cssinjs` and `@lobehub/ui` are retired: `no-restricted-imports` rejects them everywhere except `src/components/LobeThemeScope`. Markdown, Mermaid and code blocks come from `@/components/Markdown`. `@lobehub/editor` and `@lobehub/charts` still render LobeHub components, so wrap every component that renders their output in `LobeThemeScope` (nested scopes collapse into one); it provides their theme, the `--ant-*` aliases, an in-scope portal host and the layered, scoped vendor CSS. See [antd-global-style-layer.md](../../../docs/development/antd-global-style-layer.md).
 
 Settings → Proxy is the first migrated form: use local `Field` components with `react-hook-form` and the existing `zod` validation; no resolver package is needed. Its schema only validates: submit raw values with the page's mounted-field payload contract. Unmigrated forms keep `GroupForm` until their own behavior and caller migration is reviewed; do not remove shared providers based on this one page.
 
-For Modal specifically, see the dedicated **modal** skill — use the imperative `createModal({ content: … })` pattern over `<Modal open … />`. The new `ModalHost` and sonner `ToastHost` are mounted in `SPAGlobalProvider` and every app shell; the lobehub base-ui hosts stay mounted until call-site slices finish migrating.
+For Modal specifically, see the dedicated **modal** skill — use the imperative `createModal({ content: … })` pattern over `<Modal open … />`. `ModalHost` and the sonner `ToastHost` are mounted in `SPAGlobalProvider` and every app shell. The lobehub `ToastHost` the editor toasts through lives inside `LobeThemeScope`.
 
-> Common slip: `import { createModal } from '@lobehub/ui/base-ui'` is the legacy stack — use `@/components/Modal`. Same for `toast`, `useToast`, `ModalFooter`, `ModalInstance`.
+> Common slip: `createModal`, `toast`, `useToast`, `ModalFooter` and `ModalInstance` come from `@/components/Modal` and `@/components/toast`, never from `@lobehub/ui`.
 
 ## Loader selection
 

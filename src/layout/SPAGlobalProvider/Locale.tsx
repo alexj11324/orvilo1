@@ -1,15 +1,12 @@
-import { ConfigProvider } from 'antd';
-import enUS from 'antd/locale/en_US';
 import dayjs from 'dayjs';
 import type { PropsWithChildren } from 'react';
 import { memo, useEffect, useRef, useState } from 'react';
-import { isRtlLang } from 'rtl-detect';
 
+import { useDocumentDirection } from '@/hooks/useDocumentDirection';
 import Editor from '@/layout/GlobalProvider/Editor';
 import { createI18nNext } from '@/locales/create';
 import type { DayjsLocaleGlobEntry } from '@/utils/dayjsLocale';
 import { loadDayjsLocaleModule, normalizeDayjsLocale } from '@/utils/dayjsLocale';
-import { getAntdLocale } from '@/utils/locale';
 
 const dayjsLocaleLoaders: Record<string, DayjsLocaleGlobEntry> = {
   'ar': () => import('dayjs/locale/ar'),
@@ -50,16 +47,16 @@ const updateDayjs = async (lang: string, isCurrent: () => boolean) => {
 };
 
 interface LocaleLayoutProps extends PropsWithChildren {
-  antdLocale?: any;
   defaultLang?: string;
 }
 
-const Locale = memo<LocaleLayoutProps>(({ children, defaultLang, antdLocale }) => {
+const Locale = memo<LocaleLayoutProps>(({ children, defaultLang }) => {
   const [i18n] = useState(() => createI18nNext(defaultLang));
   const [lang, setLang] = useState(defaultLang);
-  const [locale, setLocale] = useState(antdLocale);
   const localeRequest = useRef(0);
   const localeActive = useRef(true);
+
+  useDocumentDirection(lang);
 
   // Set dayjs locale immediately on mount (don't wait for i18n init) to avoid
   // "a few seconds ago" showing in English when UI is already in Chinese
@@ -71,26 +68,6 @@ const Locale = memo<LocaleLayoutProps>(({ children, defaultLang, antdLocale }) =
       active = false;
     };
   }, [defaultLang]);
-
-  // Load the antd locale for the initial language too — `languageChanged` can fire
-  // before the listener below is registered, leaving ConfigProvider without a locale
-  // (antd then falls back to en_US, and pro-components intl to zh-CN)
-  useEffect(() => {
-    if (locale || !defaultLang) return;
-    const request = localeRequest.current;
-    let canceled = false;
-    getAntdLocale(defaultLang)
-      .then((initialLocale) => {
-        if (!canceled && localeRequest.current === request)
-          setLocale((prev: any) => prev ?? initialLocale);
-      })
-      .catch((error) => {
-        console.error(`antd locale for ${defaultLang} not found`, error);
-      });
-    return () => {
-      canceled = true;
-    };
-  }, [defaultLang, locale]);
 
   if (!i18n.instance.isInitialized)
     i18n.init().then(async () => {
@@ -111,9 +88,6 @@ const Locale = memo<LocaleLayoutProps>(({ children, defaultLang, antdLocale }) =
       const request = ++localeRequest.current;
       const isCurrent = () => active && localeRequest.current === request;
       setLang(lng);
-      const newLocale = await getAntdLocale(lng);
-      if (!isCurrent()) return;
-      setLocale(newLocale);
       await updateDayjs(lng, isCurrent);
     };
 
@@ -126,26 +100,7 @@ const Locale = memo<LocaleLayoutProps>(({ children, defaultLang, antdLocale }) =
     };
   }, [i18n]);
 
-  const documentDir = isRtlLang(lang!) ? 'rtl' : 'ltr';
-
-  return (
-    <ConfigProvider
-      direction={documentDir}
-      // antd only wraps children in `LocaleProvider` when `locale` is truthy. Going
-      // from undefined to a resolved locale therefore inserts a node into the tree and
-      // remounts every provider below — the whole app boots twice. Keep the shape stable.
-      locale={locale ?? enUS}
-      theme={{
-        components: {
-          Button: {
-            contentFontSizeSM: 12,
-          },
-        },
-      }}
-    >
-      <Editor>{children}</Editor>
-    </ConfigProvider>
-  );
+  return <Editor>{children}</Editor>;
 });
 
 Locale.displayName = 'Locale';

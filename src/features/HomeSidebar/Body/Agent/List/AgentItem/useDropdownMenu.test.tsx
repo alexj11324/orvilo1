@@ -37,18 +37,6 @@ vi.mock(import('@/features/HeterogeneousAgent/builtinHarness'), async (importOri
   ...(await importOriginal()),
   useBuiltinHarnessOffered: () => true,
 }));
-vi.mock('antd', async (importOriginal) => {
-  const actual = await importOriginal<Record<string, unknown>>();
-
-  return {
-    ...actual,
-    App: Object.assign(actual.App as object, {
-      useApp: () => ({
-        message: { error: vi.fn(), success: vi.fn() },
-      }),
-    }),
-  };
-});
 
 vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),

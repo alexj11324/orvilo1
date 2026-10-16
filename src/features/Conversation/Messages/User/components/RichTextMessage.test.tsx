@@ -76,9 +76,10 @@ describe('RichTextMessage', () => {
       await moment();
     });
 
-    expect(
-      (container.firstElementChild as HTMLElement).style.getPropertyValue('--common-font-size'),
-    ).toBe('16px');
+    // The renderer sits inside LobeThemeScope's box-less vendor root.
+    const renderer = container.querySelector('#lobe-ui-theme-app')
+      ?.firstElementChild as HTMLElement;
+    expect(renderer.style.getPropertyValue('--common-font-size')).toBe('16px');
   });
 
   it('should render mention nodes from editor state', async () => {

@@ -98,8 +98,7 @@ an optional open beta; local use requires Node.js >= 22. Discover commands with
 `cf cli search "<generic task description>"` before reading command help. Keep search text free of
 project names, domains, account or resource IDs, and tokens.
 
-Share and Workbench release scripts run `cf build` with the CDN base, emit static CSS into its
-output, upload those assets, then run `cf deploy --prebuilt`. They keep `cloudflare.config.ts` at
+Share and Workbench release scripts run `cf build` with the CDN base, upload its output assets, then run `cf deploy --prebuilt`. They keep `cloudflare.config.ts` at
 the app root, where their Vite config adds a manifest bridge for the React Router build. Auth uses the
 separate `apps/auth/cf/` Vite project to package its prerendered assets. Share and Workbench keep
 Wrangler as a required peer of Cloudflare Vite plugin v1; production releases and isolated PR

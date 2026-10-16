@@ -1,6 +1,7 @@
-import { type MarkdownProps } from '@lobehub/ui';
 import { type ReactNode } from 'react';
 import { useMemo } from 'react';
+
+import { type MarkdownProps } from '@/components/Markdown';
 
 import { markdownElements } from '../../Markdown/plugins';
 import ContentPreview from './components/ContentPreview';

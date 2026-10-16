@@ -1,6 +1,6 @@
-import { Select } from '@lobehub/ui/base-ui';
 import { memo, useMemo } from 'react';
 
+import Select from '@/components/Select';
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
 import { useUpdateAgentConfig } from '@/features/ChatInput/hooks/useUpdateAgentConfig';
 import { useAgentStore } from '@/store/agent';
@@ -51,7 +51,7 @@ const ImageAspectRatio2SelectInner = memo<{
       options={options}
       style={{ height: 32, marginRight: 10, width: 75 }}
       value={value}
-      onChange={(v: string) => onChange(v as AspectRatio2)}
+      onChange={(v) => onChange(v as AspectRatio2)}
     />
   );
 });

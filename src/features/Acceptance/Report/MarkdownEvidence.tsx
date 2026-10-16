@@ -1,12 +1,12 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { clsx } from 'cn';
 import { ChevronRight, FileText } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Loading from '@/components/Loading/BrandTextLoading';
+import { Markdown } from '@/components/Markdown';
 import { CodeBlock, CodeBlockCopyButton } from '@/components/reui/code-block/code-block';
 import { useTextFileLoader } from '@/features/FileViewer/hooks/useTextFileLoader';
 import { getLanguageFromFilename } from '@/utils/fileLanguage';

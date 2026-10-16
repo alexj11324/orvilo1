@@ -1,8 +1,8 @@
 'use client';
 
-import { ChatHeader } from '@lobehub/ui/mobile';
 import { memo, useState } from 'react';
 
+import { ChatHeader } from '@/components/MobileChatHeader';
 import TopicCommentButton from '@/features/TopicComment/TopicCommentButton';
 import { useQueryRoute } from '@/hooks/useQueryRoute';
 import ShareButton from '@/routes/(main)/agent/features/Conversation/Header/ShareButton';

@@ -1,10 +1,10 @@
 'use client';
 
-import { ChatHeader } from '@lobehub/ui/mobile';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
+import { ChatHeader } from '@/components/MobileChatHeader';
 import { mobileHeaderSticky } from '@/styles/mobileHeader';
 
 const Header = memo(() => {

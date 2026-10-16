@@ -353,14 +353,6 @@ vi.mock('@/components/ItemsMenu', async (importOriginal) => {
   };
 });
 
-vi.mock('antd-style', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...actual,
-    createStaticStyles: () => () => ({}),
-  };
-});
-
 beforeEach(() => {
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
     callback(0);

@@ -1,10 +1,10 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type * as I18nextModule from 'i18next';
 import { t } from 'i18next';
 import type { AiProviderModelListItem } from 'model-bank';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { toast } from '@/components/toast';
 import type * as SwrModule from '@/libs/swr';
 import { mutate } from '@/libs/swr';
 import { aiModelService } from '@/services/aiModel';
@@ -21,7 +21,7 @@ vi.mock('i18next', async (importOriginal) => {
   };
 });
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   ...(await import('~base-ui-stubs')).baseUiStubs,
 }));

@@ -1,14 +1,6 @@
 'use client';
 
-import {
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  DropdownMenuSubmenuRoot,
-  DropdownMenuSubmenuTrigger,
-  Flexbox,
-  menuSharedStyles,
-} from '@lobehub/ui';
+import { Menu as MenuPrimitive } from '@base-ui/react/menu';
 import { cn } from 'cn';
 import { Check } from 'lucide-react';
 import type { ComponentType } from 'react';
@@ -16,8 +8,10 @@ import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ProviderItemRender } from '@/components/ModelSelect';
+import { DropdownMenuSub } from '@/components/ui/dropdown-menu';
 import type { PricingMode } from '@/features/ModelSwitchPanel/components/ModelDetailPanel';
 import ModelDetailPanel from '@/features/ModelSwitchPanel/components/ModelDetailPanel';
+import { menuItemClassName, MenuPanelPopup } from '@/features/ModelSwitchPanel/menu';
 import { styles as modelSwitchPanelStyles } from '@/features/ModelSwitchPanel/styles';
 import type { ListItem } from '@/features/ModelSwitchPanel/types';
 import { menuKey } from '@/features/ModelSwitchPanel/utils';
@@ -43,11 +37,11 @@ const GenerationMultipleProvidersItem = memo<GenerationMultipleProvidersItemProp
     const isActive = !!activeProvider;
 
     return (
-      <Flexbox className="my-px mx-1">
-        <DropdownMenuSubmenuRoot open={subOpen} onOpenChange={setSubOpen}>
-          <DropdownMenuSubmenuTrigger
+      <div className="flex flex-col my-px mx-1">
+        <DropdownMenuSub open={subOpen} onOpenChange={setSubOpen}>
+          <MenuPrimitive.SubmenuTrigger
             className={cn(
-              menuSharedStyles.item,
+              menuItemClassName,
               modelSwitchPanelStyles.menuRow,
               isActive && modelSwitchPanelStyles.menuItemActive,
             )}
@@ -62,54 +56,48 @@ const GenerationMultipleProvidersItem = memo<GenerationMultipleProvidersItemProp
               providerId={(activeProvider ?? item.data.providers[0]).id}
               showPopover={false}
             />
-          </DropdownMenuSubmenuTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuPositioner anchor={null} placement="right" sideOffset={12}>
-              <DropdownMenuPopup
-                className={cn(
-                  modelSwitchPanelStyles.detailPopup,
-                  modelSwitchPanelStyles.dropdownMenu,
-                )}
-              >
-                <ModelDetailPanel
-                  enabledList={enabledList}
-                  model={item.data.model.id}
-                  pricingMode={pricingMode}
-                  provider={(activeProvider ?? item.data.providers[0]).id}
-                />
-                <Flexbox gap={4} paddingBlock={8} paddingInline={8}>
-                  <Flexbox className={modelSwitchPanelStyles.caption}>
-                    {t('ModelSwitchPanel.useModelFrom')}
-                  </Flexbox>
-                  {item.data.providers.map((p) => {
-                    const pKey = menuKey(p.id, item.data.model.id);
-                    const isProviderActive = isActive ? activeKey === pKey : p.id === 'orvilo';
-                    return (
-                      <Flexbox
-                        horizontal
-                        className={modelSwitchPanelStyles.menuItem}
-                        key={pKey}
-                        onClick={() => {
-                          onModelChange(item.data.model.id, p.id);
-                          onClose();
-                        }}
-                      >
-                        <ProviderItemRender
-                          logo={p.logo}
-                          name={p.name}
-                          provider={p.id}
-                          source={p.source}
-                        />
-                        {isProviderActive ? <Check size={16} /> : null}
-                      </Flexbox>
-                    );
-                  })}
-                </Flexbox>
-              </DropdownMenuPopup>
-            </DropdownMenuPositioner>
-          </DropdownMenuPortal>
-        </DropdownMenuSubmenuRoot>
-      </Flexbox>
+          </MenuPrimitive.SubmenuTrigger>
+          <MenuPanelPopup
+            className={cn(modelSwitchPanelStyles.detailPopup, modelSwitchPanelStyles.dropdownMenu)}
+            placement="right"
+            sideOffset={12}
+          >
+            <ModelDetailPanel
+              enabledList={enabledList}
+              model={item.data.model.id}
+              pricingMode={pricingMode}
+              provider={(activeProvider ?? item.data.providers[0]).id}
+            />
+            <div className="flex flex-col gap-1 py-2 px-2">
+              <div className={cn('flex flex-col', modelSwitchPanelStyles.caption)}>
+                {t('ModelSwitchPanel.useModelFrom')}
+              </div>
+              {item.data.providers.map((p) => {
+                const pKey = menuKey(p.id, item.data.model.id);
+                const isProviderActive = isActive ? activeKey === pKey : p.id === 'orvilo';
+                return (
+                  <div
+                    className={cn('flex', modelSwitchPanelStyles.menuItem)}
+                    key={pKey}
+                    onClick={() => {
+                      onModelChange(item.data.model.id, p.id);
+                      onClose();
+                    }}
+                  >
+                    <ProviderItemRender
+                      logo={p.logo}
+                      name={p.name}
+                      provider={p.id}
+                      source={p.source}
+                    />
+                    {isProviderActive ? <Check size={16} /> : null}
+                  </div>
+                );
+              })}
+            </div>
+          </MenuPanelPopup>
+        </DropdownMenuSub>
+      </div>
     );
   },
 );

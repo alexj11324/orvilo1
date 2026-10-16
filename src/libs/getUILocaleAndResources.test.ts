@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { getUILocaleAndResources } from './getUILocaleAndResources';
 
@@ -20,22 +20,12 @@ describe('getUILocaleAndResources', () => {
     expect(translateFromUILocaleResources(result.resources, 'form.submit')).toBe('提交');
   });
 
-  it('should merge built-in resources with partial business ui.json resources', async () => {
-    const result = await getUILocaleAndResources('zh-CN');
-
-    expect(translateFromUILocaleResources(result.resources, 'image.copy')).toBe('复制');
-    expect(translateFromUILocaleResources(result.resources, 'hotkey.clear')).toBe('清除绑定');
-    expect(translateFromUILocaleResources(result.resources, 'form.submit')).toBe('提交');
-  });
-
-  it('should merge en built-in fallback resources for non-en/zh partial business ui.json resources', async () => {
+  it('should return only business resources; lobehub built-ins are merged by LobeThemeScope', async () => {
     const result = await getUILocaleAndResources('de-DE');
 
     expect(result.locale).toBe('de-DE');
-    expect(translateFromUILocaleResources(result.resources, 'image.copy')).toBe('Copy');
-    expect(translateFromUILocaleResources(result.resources, 'hotkey.clear')).toBe('Clear binding');
-    expect(translateFromUILocaleResources(result.resources, 'common.empty')).toBe('(empty)');
     expect(translateFromUILocaleResources(result.resources, 'form.submit')).toBe('Absenden');
+    expect(translateFromUILocaleResources(result.resources, 'image.copy')).toBeUndefined();
   });
 
   it('should return zh-CN locale and zhCn resources for zh-TW', async () => {
@@ -88,13 +78,9 @@ describe('getUILocaleAndResources', () => {
     expect(result.resources).toBeDefined();
   });
 
-  it('should fallback to @lobehub/ui builtin resources if business ui.json is missing', async () => {
-    vi.resetModules();
-    vi.doMock('@/../locales/en-US/ui.json', () => ({ default: null }));
-
-    const { getUILocaleAndResources: getWithFallback } = await import('./getUILocaleAndResources');
-    const result = await getWithFallback('unknown-locale');
+  it('should fallback to en-US business resources for an unknown locale', async () => {
+    const result = await getUILocaleAndResources('unknown-locale');
     expect(result.locale).toBe('en-US');
-    expect(result.resources).toBeDefined();
+    expect(translateFromUILocaleResources(result.resources, 'form.submit')).toBe('Submit');
   });
 });

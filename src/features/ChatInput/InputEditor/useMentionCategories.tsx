@@ -1,10 +1,10 @@
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { agentDisplayName } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { Bot, Lock, MessageSquareText, Users, Wrench } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SkillsIcon } from '@/components/icons';
 import type { SidebarAgentItem } from '@/database/repositories/home';
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
 import { useKeepSidebarListed } from '@/features/HomeSidebar/Body/Agent/List/useAgentList';

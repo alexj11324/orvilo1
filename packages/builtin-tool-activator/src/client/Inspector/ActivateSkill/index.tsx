@@ -1,12 +1,12 @@
 'use client';
 
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { type BuiltinInspectorProps } from '@orvilo/types';
 import { cn } from 'cn';
 import { type TFunction } from 'i18next';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SkillsIcon } from '@/components/icons';
 import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { ActivateSkillParams, ActivateSkillSource, ActivateSkillState } from '../../../types';

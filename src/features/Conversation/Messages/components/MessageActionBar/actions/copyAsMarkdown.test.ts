@@ -22,11 +22,6 @@ vi.mock('@/components/toast', async (importOriginal) => ({
   toast: { success: mocks.messageSuccess },
 }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: { useApp: () => ({ message: { success: mocks.messageSuccess } }) },
-}));
-
 const build = (
   data: Partial<UIChatMessage> = {},
   role: MessageActionContext['role'] = 'assistant',

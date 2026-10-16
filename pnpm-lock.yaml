@@ -778,6 +778,9 @@ importers:
       jsonl-parse-stringify:
         specifier: ^1.0.3
         version: 1.0.3
+      katex:
+        specifier: ^0.16.27
+        version: 0.16.47
       keygrip:
         specifier: ^1.1.0
         version: 1.1.0
@@ -1356,9 +1359,6 @@ importers:
         specifier: ^3.6.27
         version: 3.6.33(react-dom@19.2.7(react@19.2.7))(react-router@8.4.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
     devDependencies:
-      '@ant-design/cssinjs':
-        specifier: ^2.1.2
-        version: 2.1.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@react-router/dev':
         specifier: ^8.3.0
         version: 8.4.0(babel-plugin-macros@3.1.0)(react-router@8.4.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(supports-color@10.2.2)(typescript@6.0.3)(vite@8.0.16)(wrangler@4.151.0(@types/node@24.19.2))
@@ -1933,9 +1933,6 @@ importers:
 
   apps/share:
     devDependencies:
-      '@ant-design/cssinjs':
-        specifier: ^2.1.2
-        version: 2.1.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@cloudflare/vite-plugin':
         specifier: ^1.52.1
         version: 1.64.0(@types/node@24.19.2)(vite@8.0.16)(wrangler@4.151.0(@types/node@24.19.2))
@@ -1957,9 +1954,6 @@ importers:
 
   apps/workbench:
     devDependencies:
-      '@ant-design/cssinjs':
-        specifier: ^2.1.2
-        version: 2.1.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@cloudflare/vite-plugin':
         specifier: ^1.52.1
         version: 1.64.0(@types/node@24.19.2)(vite@8.0.16)(wrangler@4.151.0(@types/node@24.19.2))
@@ -2249,9 +2243,6 @@ importers:
 
   packages/builtin-tool-agent-builder:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/agent-manager-runtime':
         specifier: workspace:*
         version: link:../agent-manager-runtime
@@ -2264,9 +2255,6 @@ importers:
       '@orvilo/utils':
         specifier: workspace:*
         version: link:../utils
-      antd:
-        specifier: 6.3.5
-        version: 6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       lucide-react:
         specifier: '*'
         version: 1.57.0(@types/react@19.2.13)(react@19.2.7)
@@ -2289,18 +2277,9 @@ importers:
 
   packages/builtin-tool-agent-documents:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/prompts':
         specifier: workspace:*
         version: link:../prompts
-      antd:
-        specifier: 6.3.5
-        version: 6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       lucide-react:
         specifier: '*'
         version: 1.57.0(@types/react@19.2.13)(react@19.2.7)
@@ -2370,18 +2349,12 @@ importers:
 
   packages/builtin-tool-calculator:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/prompts':
         specifier: workspace:*
         version: link:../prompts
       '@thi.ng/base-n':
         specifier: ^2.7.71
         version: 2.7.73
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       lucide-react:
         specifier: '*'
         version: 1.57.0(@types/react@19.2.13)(react@19.2.7)
@@ -2404,15 +2377,9 @@ importers:
 
   packages/builtin-tool-claude-code:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/shared-tool-ui':
         specifier: workspace:*
         version: link:../shared-tool-ui
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       diff:
         specifier: '*'
         version: 8.0.4
@@ -2432,9 +2399,6 @@ importers:
 
   packages/builtin-tool-cloud-sandbox:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/builtin-tool-local-system':
         specifier: workspace:*
         version: link:../builtin-tool-local-system
@@ -2447,12 +2411,6 @@ importers:
       '@orvilo/tool-runtime':
         specifier: workspace:*
         version: link:../tool-runtime
-      antd:
-        specifier: 6.3.5
-        version: 6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       lucide-react:
         specifier: '*'
         version: 1.57.0(@types/react@19.2.13)(react@19.2.7)
@@ -2491,18 +2449,12 @@ importers:
 
   packages/builtin-tool-group-agent-builder:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/agent-manager-runtime':
         specifier: workspace:*
         version: link:../agent-manager-runtime
       '@orvilo/builtin-tool-agent-builder':
         specifier: workspace:*
         version: link:../builtin-tool-agent-builder
-      antd:
-        specifier: 6.3.5
-        version: 6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       lucide-react:
         specifier: '*'
         version: 1.57.0(@types/react@19.2.13)(react@19.2.7)
@@ -2529,18 +2481,9 @@ importers:
 
   packages/builtin-tool-knowledge-base:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/prompts':
         specifier: workspace:*
         version: link:../prompts
-      antd:
-        specifier: 6.3.5
-        version: 6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       polished:
         specifier: '*'
         version: 4.3.1
@@ -2557,9 +2500,6 @@ importers:
 
   packages/builtin-tool-local-system:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/electron-client-ipc':
         specifier: workspace:*
         version: link:../electron-client-ipc
@@ -2569,12 +2509,6 @@ importers:
       '@orvilo/tool-runtime':
         specifier: workspace:*
         version: link:../tool-runtime
-      antd:
-        specifier: 6.3.5
-        version: 6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       diff:
         specifier: '*'
         version: 8.0.4
@@ -2597,18 +2531,12 @@ importers:
 
   packages/builtin-tool-memory:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/memory-user-memory':
         specifier: workspace:*
         version: link:../memory-user-memory
       '@orvilo/prompts':
         specifier: workspace:*
         version: link:../prompts
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       lucide-react:
         specifier: '*'
         version: 1.57.0(@types/react@19.2.13)(react@19.2.7)
@@ -2641,9 +2569,6 @@ importers:
       '@lobehub/editor':
         specifier: ^4
         version: 4.29.2(@lobehub/ui@5.56.0)(@types/mdast@4.0.4)(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(unified@11.0.5)
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/builtin-tool-user-interaction':
         specifier: workspace:*
         version: link:../builtin-tool-user-interaction
@@ -2659,12 +2584,6 @@ importers:
       '@orvilo/utils':
         specifier: workspace:*
         version: link:../utils
-      antd:
-        specifier: 6.3.5
-        version: 6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       lucide-react:
         specifier: '*'
         version: 1.57.0(@types/react@19.2.13)(react@19.2.7)
@@ -2678,15 +2597,9 @@ importers:
 
   packages/builtin-tool-page-agent:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/editor-runtime':
         specifier: workspace:*
         version: link:../editor-runtime
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       debug:
         specifier: '*'
         version: 4.4.3(supports-color@10.2.2)
@@ -2719,12 +2632,6 @@ importers:
 
   packages/builtin-tool-self-iteration:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       lucide-react:
         specifier: '*'
         version: 1.57.0(@types/react@19.2.13)(react@19.2.7)
@@ -2750,9 +2657,6 @@ importers:
 
   packages/builtin-tool-skills:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/const':
         specifier: workspace:*
         version: link:../const
@@ -2762,9 +2666,6 @@ importers:
       '@orvilo/shared-tool-ui':
         specifier: workspace:*
         version: link:../shared-tool-ui
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       react:
         specifier: 19.2.7
         version: 19.2.7
@@ -2778,18 +2679,12 @@ importers:
 
   packages/builtin-tool-task:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/const':
         specifier: workspace:*
         version: link:../const
       '@orvilo/prompts':
         specifier: workspace:*
         version: link:../prompts
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       lucide-react:
         specifier: '*'
         version: 1.57.0(@types/react@19.2.13)(react@19.2.7)
@@ -2812,15 +2707,9 @@ importers:
 
   packages/builtin-tool-user-interaction:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/shared-tool-ui':
         specifier: workspace:*
         version: link:../shared-tool-ui
-      antd:
-        specifier: 6.3.5
-        version: 6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       lucide-react:
         specifier: '*'
         version: 1.57.0(@types/react@19.2.13)(react@19.2.7)
@@ -2840,21 +2729,12 @@ importers:
 
   packages/builtin-tool-web-browsing:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/desktop-bridge':
         specifier: workspace:*
         version: link:../desktop-bridge
       '@orvilo/prompts':
         specifier: workspace:*
         version: link:../prompts
-      antd:
-        specifier: 6.3.5
-        version: 6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       lucide-react:
         specifier: '*'
         version: 1.57.0(@types/react@19.2.13)(react@19.2.7)
@@ -2871,9 +2751,6 @@ importers:
 
   packages/builtin-tool-web-onboarding:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/const':
         specifier: workspace:*
         version: link:../const
@@ -2883,12 +2760,6 @@ importers:
       '@orvilo/prompts':
         specifier: workspace:*
         version: link:../prompts
-      antd:
-        specifier: 6.3.5
-        version: 6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       react:
         specifier: 19.2.7
         version: 19.2.7
@@ -2914,9 +2785,6 @@ importers:
       '@lobehub/icons':
         specifier: ^5.11.0
         version: 5.23.1(@lobehub/ui@5.56.0)(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/builtin-tool-acceptance-evidence':
         specifier: workspace:*
         version: link:../builtin-tool-acceptance-evidence
@@ -3010,9 +2878,6 @@ importers:
       '@orvilo/const':
         specifier: workspace:*
         version: link:../const
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       lucide-react:
         specifier: '*'
         version: 1.57.0(@types/react@19.2.13)(react@19.2.7)
@@ -3133,9 +2998,6 @@ importers:
       '@icons-pack/react-simple-icons':
         specifier: ^13.8.0
         version: 13.15.1(react@19.2.7)
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/business-const':
         specifier: workspace:*
         version: link:../business/const
@@ -4010,9 +3872,6 @@ importers:
 
   packages/shared-tool-ui:
     dependencies:
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@orvilo/tool-runtime':
         specifier: workspace:*
         version: link:../tool-runtime
@@ -4022,9 +3881,6 @@ importers:
       anser:
         specifier: ^2.3.5
         version: 2.3.5
-      antd-style:
-        specifier: '*'
-        version: 4.1.0(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       lucide-react:
         specifier: '*'
         version: 1.57.0(@types/react@19.2.13)(react@19.2.7)
@@ -4137,9 +3993,6 @@ importers:
       '@lobehub/market-types':
         specifier: ^1.17.1
         version: 1.18.0
-      '@lobehub/ui':
-        specifier: ^5
-        version: 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       ajv:
         specifier: ^8.20.0
         version: 8.20.0

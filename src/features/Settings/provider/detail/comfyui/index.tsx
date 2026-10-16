@@ -1,11 +1,11 @@
 'use client';
 
-import { Select } from '@lobehub/ui/base-ui';
 import { ComfyUIProviderCard } from 'model-bank/modelProviders';
 import { useTranslation } from 'react-i18next';
 
 import { FormInput, FormPassword } from '@/components/FormInput';
 import KeyValueEditor from '@/components/KeyValueEditor';
+import Select from '@/components/Select';
 import { SkeletonInput } from '@/components/Skeleton';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { type GlobalLLMProviderKey } from '@/types/user/settings';
@@ -51,7 +51,7 @@ const useComfyUICard = (): ProviderItem => {
         <SkeletonInput />
       ) : (
         <Select
-          allowClear={false}
+          className="w-full"
           options={authTypeOptions}
           placeholder={t('comfyui.authType.placeholder')}
         />

@@ -120,6 +120,29 @@ const importedNames = (parsed, module, exported) =>
 
 // These two native roles are resolved by the real document publisher. Never
 // treat an arbitrary custom property, local generator or font stack as a role.
+const THEME_ROLES_MODULE = '@/styles/themeRoles';
+const NATIVE_ROLE_PROPS = { '--font-mono': 'fontFamilyCode', '--font-sans': 'fontFamily' };
+
+// `const x = gen(...)` or `const x = useMemo(() => gen(...), deps)`, where gen is imported.
+const generatorCall = (declaration, generators, memoizers) => {
+  if (!declaration.initializer || !(declaration.parent.flags & ts.NodeFlags.Const)) return;
+  let call = declaration.initializer;
+  if (
+    ts.isCallExpression(call) &&
+    ts.isIdentifier(call.expression) &&
+    memoizers.has(call.expression.text)
+  ) {
+    const callback = call.arguments[0];
+    call = callback && ts.isArrowFunction(callback) ? callback.body : undefined;
+  }
+  return call &&
+    ts.isCallExpression(call) &&
+    ts.isIdentifier(call.expression) &&
+    generators.has(call.expression.text)
+    ? call
+    : undefined;
+};
+
 function verifyNativeFontProducer() {
   const roles = ts.createSourceFile(
     'themeRoles.ts',
@@ -133,29 +156,37 @@ function verifyNativeFontProducer() {
     .find(
       (declaration) => declaration.name.getText(roles) === 'createThemeRoleStyles',
     )?.initializer;
-  if (
-    !producer ||
-    !ts.isArrowFunction(producer) ||
-    producer.parameters[0]?.name.getText(roles) !== 'theme' ||
-    !ts.isBlock(producer.body)
-  )
-    return false;
-  const template = producer.body.statements.find(ts.isReturnStatement)?.expression;
-  if (!template || !ts.isTemplateExpression(template)) return false;
-  if ([...template.getText(roles).matchAll(/--font-(?:sans|mono)\s*:/g)].length !== 2) return false;
+  const input = producer && ts.isArrowFunction(producer) ? producer.parameters[0]?.name : undefined;
+  if (!input || !ts.isObjectBindingPattern(input) || !ts.isBlock(producer.body)) return false;
+  const bound = new Set(
+    input.elements
+      .filter((element) => !element.propertyName && ts.isIdentifier(element.name))
+      .map((element) => element.name.text),
+  );
+  if (!Object.values(NATIVE_ROLE_PROPS).every((name) => bound.has(name))) return false;
+
+  // Each role is declared exactly once in the whole module, as `--font-x: ${prop};`.
+  if ([...roles.text.matchAll(/--font-(?:sans|mono)\s*:/g)].length !== 2) return false;
   const mappings = new Map();
-  let literal = template.head.text;
-  for (const span of template.templateSpans) {
-    const key = literal.match(/(--font-(?:sans|mono)):\s*$/)?.[1];
-    if (key) {
-      if (mappings.has(key) || !span.literal.text.startsWith(';')) return false;
-      mappings.set(key, span.expression.getText(roles));
+  let malformed = false;
+  const collect = (node) => {
+    if (ts.isTemplateExpression(node)) {
+      let literal = node.head.text;
+      for (const span of node.templateSpans) {
+        const key = literal.match(/(--font-(?:sans|mono)):\s*$/)?.[1];
+        if (key) {
+          if (mappings.has(key) || !span.literal.text.startsWith(';')) malformed = true;
+          mappings.set(key, span.expression.getText(roles));
+        }
+        literal = span.literal.text;
+      }
     }
-    literal = span.literal.text;
-  }
+    ts.forEachChild(node, collect);
+  };
+  collect(producer.body);
   if (
-    mappings.get('--font-sans') !== 'theme.fontFamily' ||
-    mappings.get('--font-mono') !== 'theme.fontFamilyCode'
+    malformed ||
+    Object.entries(NATIVE_ROLE_PROPS).some(([role, prop]) => mappings.get(role) !== prop)
   )
     return false;
 
@@ -166,95 +197,64 @@ function verifyNativeFontProducer() {
     true,
     ts.ScriptKind.TSX,
   );
-  const providers = new Set([
-    ...importedNames(app, '@lobehub/ui/es/ThemeProvider/ThemeProvider', 'default'),
-    ...importedNames(app, '@lobehub/ui', 'ThemeProvider'),
-  ]);
+  const publishers = importedNames(app, THEME_ROLES_MODULE, 'ThemeRoles');
   const memoizers = importedNames(app, 'react', 'useMemo');
   const generators = new Map([
     ['fontFamily', importedNames(app, '@/const/font', 'genFontFamily')],
     ['fontFamilyCode', importedNames(app, '@/const/font', 'genFontFamilyCode')],
   ]);
+  const expectedParams = {
+    fontFamily: {
+      customFontFamily: 'customFontFamily',
+      locale: 'resolveUILocale(language).normalizedLocale',
+      userFontFamily: 'userFontFamily',
+    },
+    fontFamilyCode: {
+      locale: 'resolveUILocale(language).normalizedLocale',
+      userFontFamily: 'userFontFamilyCode',
+    },
+  };
   const verifiedValues = new Set();
   let boundary = false;
   const walk = (node) => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      generators.has(node.name.getText(app)) &&
-      node.parent.flags & ts.NodeFlags.Const
-    ) {
-      const value = node.initializer;
-      const callback =
-        value &&
-        ts.isCallExpression(value) &&
-        ts.isIdentifier(value.expression) &&
-        memoizers.has(value.expression.text)
-          ? value.arguments[0]
-          : undefined;
-      const call = callback && ts.isArrowFunction(callback) ? callback.body : undefined;
+    if (ts.isVariableDeclaration(node) && generators.has(node.name.getText(app))) {
+      const name = node.name.getText(app);
+      const call = generatorCall(node, generators.get(name), memoizers);
+      const params = call?.arguments[0];
+      const expected = expectedParams[name];
       if (
-        call &&
-        ts.isCallExpression(call) &&
-        ts.isIdentifier(call.expression) &&
-        generators.get(node.name.getText(app)).has(call.expression.text)
-      ) {
-        const params = call.arguments[0];
-        const name = node.name.getText(app);
-        const expected =
-          name === 'fontFamily'
-            ? {
-                customFontFamily: 'customFontFamily',
-                locale: 'resolveUILocale(language).normalizedLocale',
-                userFontFamily: 'userFontFamily',
-              }
-            : {
-                locale: 'resolveUILocale(language).normalizedLocale',
-                userFontFamily: 'userFontFamilyCode',
-              };
-        if (
-          params &&
-          ts.isObjectLiteralExpression(params) &&
-          params.properties.length === Object.keys(expected).length &&
-          Object.entries(expected).every(([key, value]) =>
-            params.properties.some(
-              (property) =>
-                (ts.isShorthandPropertyAssignment(property) &&
-                  property.name.text === key &&
-                  key === value) ||
-                (ts.isPropertyAssignment(property) &&
-                  property.name.getText(app) === key &&
-                  property.initializer.getText(app) === value),
-            ),
-          )
+        params &&
+        ts.isObjectLiteralExpression(params) &&
+        params.properties.length === Object.keys(expected).length &&
+        Object.entries(expected).every(([key, value]) =>
+          params.properties.some(
+            (property) =>
+              (ts.isShorthandPropertyAssignment(property) &&
+                property.name.text === key &&
+                key === value) ||
+              (ts.isPropertyAssignment(property) &&
+                property.name.getText(app) === key &&
+                property.initializer.getText(app) === value),
+          ),
         )
-          verifiedValues.add(name);
-      }
+      )
+        verifiedValues.add(name);
     }
     if (
-      ts.isJsxOpeningElement(node) &&
+      (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
       ts.isIdentifier(node.tagName) &&
-      providers.has(node.tagName.text)
+      publishers.has(node.tagName.text)
     ) {
-      const attribute = node.attributes.properties.find(
-        (property) => ts.isJsxAttribute(property) && property.name.text === 'theme',
+      boundary = [...generators.keys()].every((name) =>
+        node.attributes.properties.some(
+          (property) =>
+            ts.isJsxAttribute(property) &&
+            property.name.text === name &&
+            property.initializer &&
+            ts.isJsxExpression(property.initializer) &&
+            property.initializer.expression?.getText(app) === name,
+        ),
       );
-      const expression = attribute?.initializer;
-      const theme =
-        expression && ts.isJsxExpression(expression) ? expression.expression : undefined;
-      const token =
-        theme && ts.isObjectLiteralExpression(theme)
-          ? theme.properties.find(
-              (property) =>
-                ts.isPropertyAssignment(property) && property.name.getText(app) === 'token',
-            )?.initializer
-          : undefined;
-      if (token && ts.isObjectLiteralExpression(token)) {
-        boundary = [...generators.keys()].every((name) =>
-          token.properties.some(
-            (property) => ts.isShorthandPropertyAssignment(property) && property.name.text === name,
-          ),
-        );
-      }
     }
     ts.forEachChild(node, walk);
   };
@@ -398,27 +398,34 @@ function visitFile(directory) {
       continue;
     }
     const parsed = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-    const themeProviders = importedNames(parsed, '@lobehub/ui', 'ThemeProvider');
+    const publishers = importedNames(parsed, THEME_ROLES_MODULE, 'ThemeRoles');
     const fontGenerators = importedNames(parsed, '@/const/font', 'genFontFamily');
-    const isThemeFontToken = (node) => {
+    const memoizers = importedNames(parsed, 'react', 'useMemo');
+    const generatedFonts = new Set();
+    const collectGenerated = (node) => {
       if (
-        node.name.getText(parsed).replaceAll(/["']/g, '') !== 'fontFamily' ||
-        !ts.isCallExpression(node.initializer) ||
-        !ts.isIdentifier(node.initializer.expression) ||
-        !fontGenerators.has(node.initializer.expression.text)
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        generatorCall(node, fontGenerators, memoizers)
       )
-        return false;
-      const token = node.parent.parent;
-      if (!ts.isPropertyAssignment(token) || token.name.getText(parsed) !== 'token') return false;
-      const expression = token.parent.parent;
-      if (!ts.isJsxExpression(expression)) return false;
-      const attribute = expression.parent;
-      if (!ts.isJsxAttribute(attribute) || attribute.name.text !== 'theme') return false;
-      const provider = attribute.parent.parent;
+        generatedFonts.add(node.name.text);
+      ts.forEachChild(node, collectGenerated);
+    };
+    collectGenerated(parsed);
+    // `<ThemeRoles fontFamily={x}>` where x comes from the canonical generator.
+    const isPublishedFont = (attribute) => {
+      const element = attribute.parent.parent;
+      const value = attribute.initializer;
       return (
-        (ts.isJsxOpeningElement(provider) || ts.isJsxSelfClosingElement(provider)) &&
-        ts.isIdentifier(provider.tagName) &&
-        themeProviders.has(provider.tagName.text)
+        attribute.name.text === 'fontFamily' &&
+        (ts.isJsxOpeningElement(element) || ts.isJsxSelfClosingElement(element)) &&
+        ts.isIdentifier(element.tagName) &&
+        publishers.has(element.tagName.text) &&
+        !!value &&
+        ts.isJsxExpression(value) &&
+        !!value.expression &&
+        ts.isIdentifier(value.expression) &&
+        generatedFonts.has(value.expression.text)
       );
     };
     const walk = (node) => {
@@ -432,8 +439,7 @@ function visitFile(directory) {
       }
       if (
         ts.isPropertyAssignment(node) &&
-        ['fontFamily', 'font'].includes(node.name.getText(parsed).replaceAll(/["']/g, '')) &&
-        !isThemeFontToken(node)
+        ['fontFamily', 'font'].includes(node.name.getText(parsed).replaceAll(/["']/g, ''))
       ) {
         checkValue(file, lineAt(node.getStart(parsed)), node.initializer.getText(parsed));
       }
@@ -460,7 +466,8 @@ function visitFile(directory) {
       if (
         ts.isJsxAttribute(node) &&
         ['fontFamily', 'font'].includes(node.name.text) &&
-        node.initializer
+        node.initializer &&
+        !isPublishedFont(node)
       ) {
         checkValue(file, lineAt(node.getStart(parsed)), node.initializer.getText(parsed));
       }

@@ -9,13 +9,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { COMPARE_SERIES_COLORS } from './CompareRadar';
 import BenchmarkModalContent from './index';
 
-vi.mock('antd-style', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  createStaticStyles: () =>
-    new Proxy({}, { get: (_target, prop: string) => prop }) as Record<string, string>,
-  cssVar: new Proxy({}, { get: (_target, token) => `var(--${String(token)})` }),
-}));
-
 // recharts needs a measured container — stub the chart with its data flattened to text nodes
 vi.mock('@lobehub/charts', () => ({
   RadarChart: ({ data }: { data: Record<string, unknown>[] }) => (
@@ -31,14 +24,12 @@ vi.mock('@lobehub/charts', () => ({
   ),
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Tooltip: ({ children, title }: { children: ReactNode; title?: ReactNode }) => (
-    <span>
-      <span data-testid={'tooltip'}>{title}</span>
-      {children}
-    </span>
+vi.mock('@/components/ui/tooltip', () => ({
+  Tooltip: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+  TooltipContent: ({ children }: { children: ReactNode }) => (
+    <span data-testid={'tooltip'}>{children}</span>
   ),
+  TooltipTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 interface MockMenuItem {
@@ -47,9 +38,7 @@ interface MockMenuItem {
   onClick: () => void;
 }
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  createModal: vi.fn(),
+vi.mock('@/components/ItemsMenu', () => ({
   DropdownMenu: ({ children, items }: { children: ReactNode; items: MockMenuItem[] }) => (
     <div>
       {children}

@@ -1,6 +1,25 @@
-import type { HighlighterProps, MermaidProps, NeutralColors, PrimaryColors } from '@lobehub/ui';
-
 import type { ResponseAnimationStyle } from '../../aiProvider';
+
+/**
+ * Stored accent (primary) colour names. The OKLCH seed for each name lives in
+ * `src/styles/theme/seeds.ts`; names stay stable so saved settings keep working.
+ */
+export type PrimaryColorName =
+  | 'blue'
+  | 'cyan'
+  | 'geekblue'
+  | 'gold'
+  | 'green'
+  | 'lime'
+  | 'magenta'
+  | 'orange'
+  | 'purple'
+  | 'red'
+  | 'volcano'
+  | 'yellow';
+
+/** Stored base (neutral) colour names; unset means the default `gray` base. */
+export type NeutralColorName = 'mauve' | 'olive' | 'sage' | 'sand' | 'slate';
 
 export type AnimationMode = 'disabled' | 'agile' | 'elegant';
 
@@ -28,12 +47,14 @@ export interface UserGeneralConfig {
    */
   expandWorkflowWhileStreaming?: boolean;
   fontSize: number;
-  highlighterTheme?: HighlighterProps['theme'];
+  /** Shiki theme id, or `lobe-theme` to follow the app theme. */
+  highlighterTheme?: string;
   isDevMode: boolean;
   isLiteMode: boolean;
-  mermaidTheme?: MermaidProps['theme'];
-  neutralColor?: NeutralColors;
-  primaryColor?: PrimaryColors;
+  /** Mermaid palette id, or `lobe-theme` to follow the app theme. */
+  mermaidTheme?: string;
+  neutralColor?: NeutralColorName;
+  primaryColor?: PrimaryColorName;
   responseLanguage?: string;
   telemetry: boolean;
   timezone?: string;

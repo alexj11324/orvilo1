@@ -1,8 +1,8 @@
-import { PreviewGroup } from '@lobehub/ui';
 import { type ChatImageItem } from '@orvilo/types';
 import { memo } from 'react';
 
 import GalleyGrid from '@/components/GalleyGrid';
+import { PreviewGroup } from '@/components/Image';
 import ImageItem from '@/components/ImageItem';
 
 import { downloadPreviewImage } from '../../components/downloadPreviewImage';

@@ -1,15 +1,20 @@
-import { SortableList } from '@lobehub/ui';
+import { restrictToVerticalAxis, restrictToWindowEdges } from '@dnd-kit/modifiers';
+import { cn } from 'cn';
 import { type AiProviderModelListItem } from 'model-bank';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { Sortable, SortableItem } from '@/components/reui/sortable';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/usePermission';
 import { useAiInfraStore } from '@/store/aiInfra';
 
 import ListItem from './ListItem';
+
+const SORT_MODIFIERS = [restrictToVerticalAxis, restrictToWindowEdges];
+const getItemId = (item: { id: string }) => item.id;
 
 const styles = {
   container:
@@ -41,26 +46,27 @@ const SortModelModal = memo<SortModelModalProps>(({ open, onCancel, defaultItems
       onCancel={onCancel}
     >
       <div className="flex flex-col gap-4">
-        <SortableList
-          items={items}
-          renderItem={(item: AiProviderModelListItem) => (
-            <SortableList.Item
-              horizontal
-              align={'center'}
-              className={styles.container}
-              gap={4}
-              id={item.id}
-              justify={'space-between'}
-            >
-              <ListItem {...item} disabled={!canManageProvider} />
-            </SortableList.Item>
-          )}
-          onChange={async (items: AiProviderModelListItem[]) => {
+        <Sortable
+          className="flex flex-col gap-2"
+          getItemValue={getItemId}
+          modifiers={SORT_MODIFIERS}
+          value={items}
+          onValueChange={(items: AiProviderModelListItem[]) => {
             if (!canManageProvider) return;
 
             setItems(items);
           }}
-        />
+        >
+          {items.map((item) => (
+            <SortableItem
+              className={cn(styles.container, 'flex items-center justify-between gap-1')}
+              key={item.id}
+              value={item.id}
+            >
+              <ListItem {...item} disabled={!canManageProvider} />
+            </SortableItem>
+          ))}
+        </Sortable>
         <Button
           className="sticky inset-be-0 w-full leading-5.5"
           disabled={!canManageProvider}

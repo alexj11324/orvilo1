@@ -1,9 +1,9 @@
-import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
 import { AlertTriangle, Copy, RotateCw } from 'lucide-react';
 import { createElement, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DiscordIcon, GithubIcon } from '@/components/icons';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { GITHUB_ISSUES } from '@/const/url';

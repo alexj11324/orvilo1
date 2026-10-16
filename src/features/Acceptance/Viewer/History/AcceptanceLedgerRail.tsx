@@ -1,10 +1,10 @@
 'use client';
 
-import { DraggablePanel } from '@lobehub/ui/base-ui';
 import { PanelRightOpen } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
 
+import DraggablePanel from '@/components/DraggablePanel';
 import { Button } from '@/components/ui/button';
 import { useIsLargeViewport } from '@/hooks/useIsMobile';
 

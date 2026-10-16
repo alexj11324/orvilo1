@@ -64,11 +64,6 @@ vi.mock('@/components/ActionIcon', () => ({
   },
 }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  message: { error: vi.fn() },
-}));
-
 vi.mock('@/hooks/usePermission', () => ({
   usePermission: () => ({ allowed: mocks.permissionState.allowed, reason: 'requires member' }),
 }));

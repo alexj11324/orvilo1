@@ -1,9 +1,9 @@
-import { Flexbox } from '@lobehub/ui';
-import { Slider } from '@lobehub/ui/base-ui';
 import { cn } from 'cn';
 import type { CSSProperties, ReactNode } from 'react';
 import { memo, useMemo } from 'react';
 import useMergeState from 'use-merge-value';
+
+import { Slider } from '@/components/ui/slider';
 
 const styles = {
   label:
@@ -130,9 +130,8 @@ function LevelSlider<T extends string = string>({
   };
 
   return (
-    <Flexbox
-      className={styles.root}
-      gap={8}
+    <div
+      className={cn('flex flex-col gap-2', styles.root)}
       style={{
         ...restStyle,
         minWidth: getMinimumWidth(levels.length, customMinWidth),
@@ -146,7 +145,7 @@ function LevelSlider<T extends string = string>({
           min={0}
           step={1}
           value={sliderValue}
-          onChange={handleChange}
+          onValueChange={(next) => handleChange(Array.isArray(next) ? next[0] : (next as number))}
         />
       </div>
       <div className={styles.labels} style={{ gridTemplateColumns }}>
@@ -174,7 +173,7 @@ function LevelSlider<T extends string = string>({
           );
         })}
       </div>
-    </Flexbox>
+    </div>
   );
 }
 

@@ -1,14 +1,4 @@
-import {
-  Block,
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  DropdownMenuSubmenuRoot,
-  DropdownMenuSubmenuTrigger,
-  Flexbox,
-  Icon,
-  menuSharedStyles,
-} from '@lobehub/ui';
+import { Menu as MenuPrimitive } from '@base-ui/react/menu';
 import { cn } from 'cn';
 import { LucideArrowRight, LucideBolt } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
@@ -18,11 +8,13 @@ import urlJoin from 'url-join';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import ActionIcon from '@/components/ActionIcon';
 import { ModelItemRender, ProviderItemRender } from '@/components/ModelSelect';
+import { DropdownMenuSub } from '@/components/ui/dropdown-menu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
+import { menuItemClassName, MenuPanelPopup } from '../../menu';
 import { styles } from '../../styles';
 import { type ListItem } from '../../types';
 import { menuKey } from '../../utils';
@@ -76,33 +68,25 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
     switch (item.type) {
       case 'no-provider': {
         return (
-          <Block
-            clickable
-            horizontal
-            className={cn(styles.menuItem, styles.tertiaryText)}
-            gap={8}
+          <div
+            className={cn('flex gap-2', styles.menuItem, styles.tertiaryText)}
             key="no-provider"
-            variant={'borderless'}
             onClick={() => {
               onClose();
               navigate('/settings/provider/all');
             }}
           >
             {t('ModelSwitchPanel.emptyProvider')}
-            <Icon icon={LucideArrowRight} size={16} />
-          </Block>
+            <LucideArrowRight size={16} />
+          </div>
         );
       }
 
       case 'group-header': {
         return (
-          <Flexbox
-            horizontal
-            className={styles.groupHeader}
-            justify="space-between"
+          <div
+            className={cn('flex justify-between pt-3 pb-1 ps-3 pe-2 w-full', styles.groupHeader)}
             key={`header-${item.provider.id}`}
-            paddingBlock={'12px 4px'}
-            paddingInline={'12px 8px'}
           >
             <ProviderItemRender
               logo={item.provider.logo}
@@ -127,16 +111,14 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                 onClose();
               }}
             />
-          </Flexbox>
+          </div>
         );
       }
 
       case 'empty-model': {
         return (
-          <Flexbox
-            horizontal
-            className={cn(styles.menuItem, styles.tertiaryText)}
-            gap={8}
+          <div
+            className={cn('flex gap-2', styles.menuItem, styles.tertiaryText)}
             key={`empty-${item.provider.id}`}
             onClick={() => {
               onClose();
@@ -144,8 +126,8 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
             }}
           >
             {t('ModelSwitchPanel.emptyModel')}
-            <Icon icon={LucideArrowRight} size={16} />
-          </Flexbox>
+            <LucideArrowRight size={16} />
+          </div>
         );
       }
 
@@ -155,14 +137,10 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
         const restricted = isModelRestricted?.(item.model.id, item.provider.id);
 
         return (
-          <Flexbox className="my-px mx-1">
-            <DropdownMenuSubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
-              <DropdownMenuSubmenuTrigger
-                className={cn(
-                  menuSharedStyles.item,
-                  styles.menuRow,
-                  isActive && styles.menuItemActive,
-                )}
+          <div className="flex flex-col my-px mx-1">
+            <DropdownMenuSub open={detailOpen} onOpenChange={setDetailOpen}>
+              <MenuPrimitive.SubmenuTrigger
+                className={cn(menuItemClassName, styles.menuRow, isActive && styles.menuItemActive)}
                 onClick={(e) => {
                   e.preventDefault();
                   setDetailOpen(false);
@@ -181,16 +159,12 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                   proBadgeLabel={restricted ? proLabel : undefined}
                   showInfoTag={isDevMode}
                 />
-              </DropdownMenuSubmenuTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuPositioner anchor={null} placement="right" sideOffset={12}>
-                  <DropdownMenuPopup className={styles.detailPopup}>
-                    <ModelDetailPanel model={item.model.id} provider={item.provider.id} />
-                  </DropdownMenuPopup>
-                </DropdownMenuPositioner>
-              </DropdownMenuPortal>
-            </DropdownMenuSubmenuRoot>
-          </Flexbox>
+              </MenuPrimitive.SubmenuTrigger>
+              <MenuPanelPopup className={styles.detailPopup} placement="right" sideOffset={12}>
+                <ModelDetailPanel model={item.model.id} provider={item.provider.id} />
+              </MenuPanelPopup>
+            </DropdownMenuSub>
+          </div>
         );
       }
 
@@ -201,14 +175,10 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
         const restricted = isModelRestricted?.(item.data.model.id, singleProvider.id);
 
         return (
-          <Flexbox className="my-px mx-1">
-            <DropdownMenuSubmenuRoot open={detailOpen} onOpenChange={setDetailOpen}>
-              <DropdownMenuSubmenuTrigger
-                className={cn(
-                  menuSharedStyles.item,
-                  styles.menuRow,
-                  isActive && styles.menuItemActive,
-                )}
+          <div className="flex flex-col my-px mx-1">
+            <DropdownMenuSub open={detailOpen} onOpenChange={setDetailOpen}>
+              <MenuPrimitive.SubmenuTrigger
+                className={cn(menuItemClassName, styles.menuRow, isActive && styles.menuItemActive)}
                 onClick={(e) => {
                   e.preventDefault();
                   setDetailOpen(false);
@@ -226,22 +196,18 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
                   proBadgeLabel={restricted ? proLabel : undefined}
                   showInfoTag={isDevMode}
                 />
-              </DropdownMenuSubmenuTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuPositioner anchor={null} placement="right" sideOffset={16}>
-                  <DropdownMenuPopup className={styles.detailPopup}>
-                    <ModelDetailPanel model={item.data.model.id} provider={singleProvider.id} />
-                  </DropdownMenuPopup>
-                </DropdownMenuPositioner>
-              </DropdownMenuPortal>
-            </DropdownMenuSubmenuRoot>
-          </Flexbox>
+              </MenuPrimitive.SubmenuTrigger>
+              <MenuPanelPopup className={styles.detailPopup} placement="right" sideOffset={16}>
+                <ModelDetailPanel model={item.data.model.id} provider={singleProvider.id} />
+              </MenuPanelPopup>
+            </DropdownMenuSub>
+          </div>
         );
       }
 
       case 'model-item-multiple': {
         return (
-          <Flexbox className="my-px mx-1" key={item.data.displayName}>
+          <div className="flex flex-col my-px mx-1" key={item.data.displayName}>
             <MultipleProvidersModelItem
               activeKey={activeKey}
               data={item.data}
@@ -254,7 +220,7 @@ export const ListItemRenderer = memo<ListItemRendererProps>(
               onModelChange={onModelChange}
               onRestrictedModelClick={onRestrictedModelClick}
             />
-          </Flexbox>
+          </div>
         );
       }
 

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 import { remoteAvatarSrc } from '@/components/Avatar/fallback';
 import ImperativeModal from '@/components/ImperativeModal';
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { ModelIcon, ProviderIcon } from '@/components/OrviloIcons';
 import StatisticCard from '@/components/StatisticCard';
 import TitleWithPercentage from '@/components/StatisticCard/TitleWithPercentage';
@@ -143,7 +144,14 @@ const ActiveModels = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveU
         title={t(tableTitleI18n(groupBy ?? GroupBy.Model))}
         onCancel={() => setOpen(false)}
       >
-        <ModelTable data={data} groupBy={groupBy} isLoading={isLoading} resolveUser={resolveUser} />
+        <LobeThemeScope>
+          <ModelTable
+            data={data}
+            groupBy={groupBy}
+            isLoading={isLoading}
+            resolveUser={resolveUser}
+          />
+        </LobeThemeScope>
       </ImperativeModal>
     </>
   );

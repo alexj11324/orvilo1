@@ -3,6 +3,7 @@ import type { SerializedEditorState } from 'lexical';
 import type { CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { ActionTagNode } from '@/features/ChatInput/InputEditor/ActionTag/ActionTagNode';
 import { LocalFileTagNode } from '@/features/ChatInput/InputEditor/LocalFileTag';
 import { mentionFilledClassName } from '@/features/ChatInput/InputEditor/mentionStyle';
@@ -41,13 +42,15 @@ const RichTextMessage = memo<RichTextMessageProps>(
           } as CSSProperties);
 
     return (
-      <LexicalRenderer
-        className={mentionFilledClassName}
-        extraNodes={EXTRA_NODES}
-        style={renderedStyle}
-        value={value}
-        variant={variant}
-      />
+      <LobeThemeScope>
+        <LexicalRenderer
+          className={mentionFilledClassName}
+          extraNodes={EXTRA_NODES}
+          style={renderedStyle}
+          value={value}
+          variant={variant}
+        />
+      </LobeThemeScope>
     );
   },
 );

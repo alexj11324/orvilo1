@@ -3,6 +3,8 @@ import type { TopicCommentJson } from '@orvilo/types';
 import type { Ref } from 'react';
 import { memo, useCallback, useImperativeHandle } from 'react';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
+
 import {
   readTopicCommentEditorValue,
   resolveTopicCommentEditorContent,
@@ -69,28 +71,30 @@ const TopicCommentEditor = memo(
     const { content, type } = resolveTopicCommentEditorContent(initialContent, initialEditorData);
 
     return (
-      <Editor
-        pasteAsPlainText
-        autoFocus={autoFocus}
-        content={content}
-        debounceWait={0}
-        editable={!disabled}
-        editor={editor}
-        enablePasteMarkdown={enableMarkdown}
-        markdownOption={enableMarkdown}
-        mentionOption={mentionOption}
-        placeholder={placeholder}
-        type={type}
-        variant={'chat'}
-        style={{
-          maxHeight: compact ? 120 : 184,
-          minHeight: compact ? 24 : 44,
-          overflowY: 'auto',
-          padding: 0,
-        }}
-        onPressEnter={({ event }) => onPressEnter?.(event)}
-        onTextChange={(currentEditor) => onChange?.(readTopicCommentEditorValue(currentEditor))}
-      />
+      <LobeThemeScope>
+        <Editor
+          pasteAsPlainText
+          autoFocus={autoFocus}
+          content={content}
+          debounceWait={0}
+          editable={!disabled}
+          editor={editor}
+          enablePasteMarkdown={enableMarkdown}
+          markdownOption={enableMarkdown}
+          mentionOption={mentionOption}
+          placeholder={placeholder}
+          type={type}
+          variant={'chat'}
+          style={{
+            maxHeight: compact ? 120 : 184,
+            minHeight: compact ? 24 : 44,
+            overflowY: 'auto',
+            padding: 0,
+          }}
+          onPressEnter={({ event }) => onPressEnter?.(event)}
+          onTextChange={(currentEditor) => onChange?.(readTopicCommentEditorValue(currentEditor))}
+        />
+      </LobeThemeScope>
     );
   },
 );

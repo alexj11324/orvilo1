@@ -6,7 +6,15 @@ import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-const Highlighter = lazy(() => import('@lobehub/ui/es/Highlighter/index'));
+const StackTrace = lazy(() =>
+  import('@/components/ui/code-block').then(({ CodeBlock, CodeBlockCopyButton }) => ({
+    default: ({ code }: { code: string }) => (
+      <CodeBlock code={code} language="text" variant="ghost">
+        <CodeBlockCopyButton />
+      </CodeBlock>
+    ),
+  })),
+);
 
 interface AlertFallbackProps {
   error: Error;
@@ -23,9 +31,7 @@ const AlertFallback = memo<AlertFallbackProps>(({ error, resetErrorBoundary, tit
       <AlertDescription>{error?.message || 'An unknown error occurred'}</AlertDescription>
       {error?.stack ? (
         <Suspense fallback={null}>
-          <Highlighter actionIconSize="small" language="plaintext" padding={8} variant="borderless">
-            {error.stack}
-          </Highlighter>
+          <StackTrace code={error.stack} />
         </Suspense>
       ) : undefined}
       <button

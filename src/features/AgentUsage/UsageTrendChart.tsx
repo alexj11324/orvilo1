@@ -4,6 +4,7 @@ import { BarChart, ChartTooltipFrame, ChartTooltipRow } from '@lobehub/charts';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -53,72 +54,74 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
   );
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 justify-between">
-        <div className="text-base font-medium">{t('usageStats.chart.title')}</div>
-        <ToggleGroup
-          size="compact"
-          value={[type]}
-          onValueChange={(value) => value[0] && setType(value[0] as ShowType)}
-        >
-          <ToggleGroupItem value={ShowType.Spend}>{t('usageStats.chart.spend')}</ToggleGroupItem>
-          <ToggleGroupItem value={ShowType.Token}>{t('usageStats.chart.tokens')}</ToggleGroupItem>
-        </ToggleGroup>
+    <LobeThemeScope>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2 justify-between">
+          <div className="text-base font-medium">{t('usageStats.chart.title')}</div>
+          <ToggleGroup
+            size="compact"
+            value={[type]}
+            onValueChange={(value) => value[0] && setType(value[0] as ShowType)}
+          >
+            <ToggleGroupItem value={ShowType.Spend}>{t('usageStats.chart.spend')}</ToggleGroupItem>
+            <ToggleGroupItem value={ShowType.Token}>{t('usageStats.chart.tokens')}</ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+        {isLoading ? (
+          <Skeleton style={{ height: 320 }} />
+        ) : (
+          <BarChart
+            showLegend
+            stack
+            categories={series.map(({ key }) => key)}
+            colors={series.map(({ color }) => color)}
+            data={chartData}
+            height={320}
+            index={'label'}
+            customTooltip={({ active, label, payload }) => {
+              if (!active || !payload) return null;
+
+              const visibleItems = payload.filter(
+                ({ value }) => typeof value === 'number' && value > 0,
+              );
+
+              return (
+                <ChartTooltipFrame>
+                  <div className="flex flex-col py-2 px-4">
+                    <p style={{ margin: 0 }}>{label}</p>
+                  </div>
+                  {visibleItems.length > 0 && (
+                    <>
+                      <Separator
+                        className="bg-transparent border-t border-border"
+                        style={{ margin: 0 }}
+                      />
+                      <div className="flex flex-col gap-1 py-2 px-4">
+                        {visibleItems.map(({ color, name, value }) => (
+                          <ChartTooltipRow
+                            color={color ?? '#1668dc'}
+                            key={String(name)}
+                            name={String(name ?? '')}
+                            value={
+                              type === ShowType.Spend
+                                ? `$${formatNumber(value as number, 2)}`
+                                : formatTokenNumber(value as number)
+                            }
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </ChartTooltipFrame>
+              );
+            }}
+            valueFormatter={(num: number) =>
+              type === ShowType.Spend ? `$${formatNumber(num, 2)}` : formatTokenNumber(num)
+            }
+          />
+        )}
       </div>
-      {isLoading ? (
-        <Skeleton style={{ height: 320 }} />
-      ) : (
-        <BarChart
-          showLegend
-          stack
-          categories={series.map(({ key }) => key)}
-          colors={series.map(({ color }) => color)}
-          data={chartData}
-          height={320}
-          index={'label'}
-          customTooltip={({ active, label, payload }) => {
-            if (!active || !payload) return null;
-
-            const visibleItems = payload.filter(
-              ({ value }) => typeof value === 'number' && value > 0,
-            );
-
-            return (
-              <ChartTooltipFrame>
-                <div className="flex flex-col py-2 px-4">
-                  <p style={{ margin: 0 }}>{label}</p>
-                </div>
-                {visibleItems.length > 0 && (
-                  <>
-                    <Separator
-                      className="bg-transparent border-t border-border"
-                      style={{ margin: 0 }}
-                    />
-                    <div className="flex flex-col gap-1 py-2 px-4">
-                      {visibleItems.map(({ color, name, value }) => (
-                        <ChartTooltipRow
-                          color={color ?? '#1668dc'}
-                          key={String(name)}
-                          name={String(name ?? '')}
-                          value={
-                            type === ShowType.Spend
-                              ? `$${formatNumber(value as number, 2)}`
-                              : formatTokenNumber(value as number)
-                          }
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </ChartTooltipFrame>
-            );
-          }}
-          valueFormatter={(num: number) =>
-            type === ShowType.Spend ? `$${formatNumber(num, 2)}` : formatTokenNumber(num)
-          }
-        />
-      )}
-    </div>
+    </LobeThemeScope>
   );
 });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Freeze } from '@lobehub/ui';
 import { cn } from 'cn';
 import { AnimatePresence, useIsPresent } from 'motion/react';
 import * as m from 'motion/react-m';
@@ -8,6 +7,7 @@ import { type ReactNode } from 'react';
 import { memo, useMemo, useRef } from 'react';
 import { useMediaQuery } from 'react-responsive';
 
+import Freeze from '@/components/Freeze';
 import RightPanel from '@/features/RightPanel';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';

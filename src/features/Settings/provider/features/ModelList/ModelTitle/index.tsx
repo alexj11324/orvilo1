@@ -1,9 +1,9 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { CircleX } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { toast } from '@/components/toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePermission } from '@/hooks/usePermission';
 import { useAiInfraStore } from '@/store/aiInfra';

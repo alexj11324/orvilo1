@@ -1,6 +1,6 @@
-import { Markdown } from '@lobehub/ui';
 import { memo, useEffect, useMemo, useState } from 'react';
 
+import { Markdown } from '@/components/Markdown';
 import { type UserGeneralConfig } from '@/types/user/settings';
 
 const data = `

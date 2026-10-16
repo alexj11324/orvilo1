@@ -33,7 +33,7 @@ import VerifyMessage from './Verify';
 
 const styles = {
   loading: 'opacity-60',
-  message: 'relative [&_.ant-input]:max-h-225',
+  message: 'relative',
 };
 
 export interface MessageItemProps {

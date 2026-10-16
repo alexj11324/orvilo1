@@ -34,11 +34,6 @@ vi.mock('@/components/toast', async (importOriginal) => ({
   toast: { success: messageSuccess },
 }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: { useApp: () => ({ message: { success: messageSuccess } }) },
-}));
-
 const build = (data: Partial<UIChatMessage>, role: MessageActionContext['role'] = 'user') =>
   renderHook(() => restoreToInputAction.useBuild({ data: data as UIChatMessage, id: 'm1', role }))
     .result.current;

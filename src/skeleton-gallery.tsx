@@ -1,4 +1,5 @@
-import { ThemeProvider } from '@lobehub/ui';
+import '@/app/globals.css';
+
 import { type ReactNode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -19,7 +20,7 @@ const Case = ({ children, title }: { children: ReactNode; title: string }) => (
 );
 
 createRoot(document.querySelector('#root')!).render(
-  <ThemeProvider>
+  <>
     <div className="flex flex-col w-full" style={{ margin: '0 auto', maxWidth: 900 }}>
       <Case title="ArticleSkeleton — title + 3 rows">
         <ArticleSkeleton rows={3} />
@@ -43,5 +44,5 @@ createRoot(document.querySelector('#root')!).render(
         <ConversationListSkeleton />
       </Case>
     </div>
-  </ThemeProvider>,
+  </>,
 );

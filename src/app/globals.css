@@ -1,15 +1,48 @@
-/* Layer order. `antd` (the cssinjs layer from AntdStyleLayer) and the reserved
-   `antd-style` experiment layer must be declared before runtime style tags.
-   Emotion rules currently stay unlayered; see src/styles/layerEmotionCache.ts.
-   Keep this statement before every @import. */
-@layer theme, base, antd, components, antd-style, utilities;
+/* Layer order. Vendor CSS that @lobehub/editor and @lobehub/charts still inject
+   at runtime sits below Tailwind: `antd` is antd cssinjs (StyleProvider layer in
+   LobeThemeScope) and `antd-style` is every emotion rule, class rules scoped to
+   `.orvilo-editor-scope` (src/styles/layerEmotionCache.ts). Runtime layers must
+   be declared here, before every @import, or they would be created after
+   `utilities` and beat it. */
+@layer theme, base, antd, antd-style, components, utilities;
 
 @import 'tailwindcss' source('../..');
-@import 'antd/dist/reset.css' layer(base);
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
 @source "../../node_modules/streamdown/dist/*.js";
+
+/* `@lobehub/icons` lays out its avatars and combined marks with the lobehub
+   Flexbox (`.lobe-flex` plus inline custom properties) outside any
+   LobeThemeScope, so its layout defaults live here instead of in the vendor
+   EssentialStyle sheet. */
+@layer antd-style {
+    :where(.lobe-flex) {
+        --lobe-flex: 0 1 auto;
+        --lobe-flex-direction: column;
+        --lobe-flex-wrap: nowrap;
+        --lobe-flex-justify: flex-start;
+        --lobe-flex-align: stretch;
+        --lobe-flex-width: auto;
+        --lobe-flex-height: auto;
+        --lobe-flex-padding: 0;
+        --lobe-flex-padding-inline: var(--lobe-flex-padding);
+        --lobe-flex-padding-block: var(--lobe-flex-padding);
+        --lobe-flex-gap: 0;
+
+        display: flex;
+        flex: var(--lobe-flex);
+        flex-flow: var(--lobe-flex-direction) var(--lobe-flex-wrap);
+        gap: var(--lobe-flex-gap);
+        align-items: var(--lobe-flex-align);
+        justify-content: var(--lobe-flex-justify);
+        width: var(--lobe-flex-width);
+        height: var(--lobe-flex-height);
+        padding: var(--lobe-flex-padding);
+        padding-block: var(--lobe-flex-padding-block);
+        padding-inline: var(--lobe-flex-padding-inline);
+    }
+}
 
 @custom-variant dark (&:is(.dark *, [data-theme='dark'] *));
 
@@ -134,31 +167,126 @@
 }
 
 :root {
-    --split-divider: var(--ant-color-split);
-    --background: var(--ant-color-bg-layout, #f8f8f8);
-    --foreground: var(--ant-color-text, #080808);
-    --card: var(--ant-color-bg-container, #ffffff);
-    --card-foreground: var(--foreground);
-    --popover: var(--ant-color-bg-elevated, #ffffff);
-    --popover-foreground: var(--foreground);
-    --overlay-mask: var(--ant-color-bg-mask);
-    --overlay-mask-foreground: var(--ant-color-text-light-solid);
-    /* Exact link role; no approximation to primary in custom themes. */
-    --link: var(--ant-color-link);
-    --link-active: var(--ant-color-link-active);
-    --primary-border-hover: var(--ant-color-primary-border-hover);
-    --primary-foreground: var(--primary-on-fill);
-    --secondary: var(--ant-color-fill-tertiary, rgba(0,0,0,.03));
-    --secondary-foreground: var(--foreground);
-    --muted: var(--ant-color-fill-tertiary, rgba(0,0,0,.03));
-    --muted-foreground: var(--ant-color-text-secondary, #666666);
-    --loading-ring-fill: var(--ant-color-fill);
-    --scrollbar-fill: var(--ant-color-fill);
-    --accent: var(--ant-color-fill-tertiary, rgba(0,0,0,.03));
-    --accent-foreground: var(--foreground);
-    --border: var(--ant-color-border, #e3e3e3);
-    --input: color-mix(in srgb, var(--border), var(--foreground));
-    --ring: var(--foreground);
+    /* Colour roles: the default light output of src/styles/theme/generate.ts.
+       ThemeRoles republishes them for the user's accent/base once the theme
+       host mounts; src/styles/theme/globals.test.ts keeps both equal. */
+    --accent: rgba(16, 18, 21, 0.035);
+    --accent-foreground: #171718;
+    --background: #f6f7f9;
+    --border: #e0e2e6;
+    --card: #ffffff;
+    --card-foreground: #171718;
+    --destructive: #eb5757;
+    --destructive-active: #da4649;
+    --destructive-border: #ffc7c3;
+    --destructive-border-hover: #fdafaa;
+    --destructive-foreground: #be2b33;
+    --destructive-hover: #ff7370;
+    --destructive-hover-foreground: #0c0d0f;
+    --destructive-on-fill: #0c0d0f;
+    --destructive-subtle: #ffefee;
+    --destructive-text: #be2b33;
+    --destructive-wash: #ffe9e7;
+    --destructive-wash-hover: #ffdcd9;
+    --divider: #e8ebef;
+    --fill: rgba(16, 18, 21, 0.1);
+    --fill-content: rgba(16, 18, 21, 0.06);
+    --fill-quaternary: rgba(16, 18, 21, 0.018);
+    --foreground: #171718;
+    --foreground-description: #60646c;
+    --foreground-icon: #60646c;
+    --foreground-placeholder: #60646c;
+    --foreground-quaternary: #898d95;
+    --foreground-tertiary: #60646c;
+    --highlight-gold: #f6c880;
+    --highlight-primary: #e3e4e4;
+    --info: #4ea7fc;
+    --info-active: #3d97eb;
+    --info-border: #c5e1ff;
+    --info-border-hover: #abd4ff;
+    --info-foreground: #006bb9;
+    --info-hover: #7dbdff;
+    --info-hover-foreground: #0c0d0f;
+    --info-hover-wash: #dbecff;
+    --info-on-fill: #0c0d0f;
+    --info-subtle: #eff7ff;
+    --info-text: #006bb9;
+    --info-wash: #e8f3ff;
+    --info-wash-hover: #dbecff;
+    --input: #8a8d94;
+    --invert: #171718;
+    --invert-foreground: #ffffff;
+    --link: #171718;
+    --link-active: #2e3138;
+    --link-hover: #2e3138;
+    --loading-ring-fill: rgba(16, 18, 21, 0.1);
+    --muted: rgba(16, 18, 21, 0.035);
+    --muted-foreground: #2e3138;
+    --overlay-mask: rgba(0, 0, 0, 0.45);
+    --overlay-mask-foreground: #ffffff;
+    --popover: #ffffff;
+    --popover-foreground: #171718;
+    --primary: #212223;
+    --primary-active: #151617;
+    --primary-border: #d3d4d4;
+    --primary-border-hover: #c1c2c2;
+    --primary-foreground: #ffffff;
+    --primary-hover: #323334;
+    --primary-hover-foreground: #ffffff;
+    --primary-on-fill: #ffffff;
+    --primary-subtle: #f2f2f3;
+    --primary-text: #171718;
+    --primary-wash: #ededee;
+    --primary-wash-hover: #e3e4e4;
+    --ring: #171718;
+    --scrollbar-fill: rgba(16, 18, 21, 0.1);
+    --secondary: rgba(16, 18, 21, 0.035);
+    --secondary-foreground: #171718;
+    --selected: rgba(16, 18, 21, 0.06);
+    --server-version-warning-bg: #fefae3;
+    --server-version-warning-text: #8a6d00;
+    --shadow-dialog: 0 20px 20px -8px rgba(0, 0, 0, 0.24);
+    --shadow-elevated: 0 20px 20px -8px rgba(0, 0, 0, 0.24);
+    --shadow-popover: 0 8px 16px -4px rgba(0, 0, 0, 0.2);
+    --shadow-raised: 0 3px 1px -1px rgba(26, 26, 26, 0.06);
+    --sidebar: #f6f7f9;
+    --sidebar-accent: rgba(16, 18, 21, 0.035);
+    --sidebar-accent-foreground: #171718;
+    --sidebar-border: #e8ebef;
+    --sidebar-foreground: #171718;
+    --sidebar-group: #2e3138;
+    --sidebar-muted: #2e3138;
+    --sidebar-primary: #212223;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-ring: #171718;
+    --split-divider: rgba(16, 18, 21, 0.06);
+    --success: #27a644;
+    --success-active: #049634;
+    --success-border: #bce1be;
+    --success-border-hover: #9ed4a3;
+    --success-foreground: #007627;
+    --success-hover: #44bd5a;
+    --success-hover-foreground: #0c0d0f;
+    --success-on-fill: #0c0d0f;
+    --success-subtle: #ecf6ec;
+    --success-text: #007627;
+    --success-wash: #e4f3e5;
+    --success-wash-hover: #d5ecd6;
+    --surface-disabled: rgba(16, 18, 21, 0.035);
+    --surface-secondary: #fafbfd;
+    --topic-running-ring: rgba(242, 201, 76, 0.45);
+    --warning: #f2c94c;
+    --warning-active: #e1b938;
+    --warning-border: #fbedc7;
+    --warning-border-hover: #f9e5af;
+    --warning-foreground: #886b00;
+    --warning-hover: #ffe292;
+    --warning-hover-foreground: #0c0d0f;
+    --warning-on-fill: #0c0d0f;
+    --warning-subtle: #fefaef;
+    --warning-text: #886b00;
+    --warning-wash: #fdf8e9;
+    --warning-wash-hover: #fcf4dc;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -175,121 +303,133 @@
        no radius at all), but it merges the variable forms correctly:
        `rounded-(--radius-card)`, `text-(length:--text-dense)`. */
     --text-dense: 13px;
-    --sidebar: var(--ant-color-bg-layout, #f8f8f8);
-    --destructive-foreground: var(--destructive-text);
-    --success-foreground: var(--success-text);
-    --info-foreground: var(--info-text);
-    --warning-foreground: var(--warning-text);
-    --invert: var(--foreground);
-    --invert-foreground: var(--card);
-    --primary: var(--ant-color-primary, #222222);
-    --primary-on-fill: #ffffff;
-    --primary-subtle: color-mix(in srgb, var(--primary) 10%, var(--card));
-    --primary-text: #080808;
-    --success: var(--ant-color-success, #379d4a);
-    --success-on-fill: #080808;
-    --success-subtle: color-mix(in srgb, var(--success) 10%, var(--card));
-    --success-text: #080808;
-    --warning: var(--ant-color-warning, #ee9e0b);
-    --warning-on-fill: #080808;
-    --warning-subtle: color-mix(in srgb, var(--warning) 10%, var(--card));
-    --warning-text: #080808;
-    --info: var(--ant-color-info, #0072f5);
-    --info-on-fill: #080808;
-    --info-subtle: color-mix(in srgb, var(--info) 10%, var(--card));
-    --info-text: #080808;
-    --info-hover-wash: var(--ant-color-info-bg-hover);
-    --destructive: var(--ant-color-error, #ec5e41);
-    --destructive-on-fill: #080808;
-    --destructive-subtle: color-mix(in srgb, var(--destructive) 10%, var(--card));
-    --destructive-text: #080808;
-    --primary-hover: var(--ant-color-primary-hover, color-mix(in srgb, var(--primary) 90%, var(--card)));
-    --primary-hover-foreground: var(--primary-foreground);
-    --highlight-gold: var(--ant-gold-4);
-    --highlight-primary: var(--ant-color-primary-bg-hover);
-    --shadow-raised: var(--ant-box-shadow-tertiary, none);
-    --shadow-popover: var(--ant-box-shadow-secondary, 0 8px 16px -4px rgba(0,0,0,.2));
-    --shadow-dialog: var(--ant-box-shadow, 0 20px 20px -8px rgba(0,0,0,.24));
-    --sidebar-foreground: var(--foreground);
-    --sidebar-primary: var(--primary);
-    --sidebar-primary-foreground: var(--primary-foreground);
-    --sidebar-accent: var(--accent);
-    --sidebar-accent-foreground: var(--foreground);
-    --sidebar-muted: var(--muted-foreground);
-    --sidebar-group: var(--muted-foreground);
-    --sidebar-border: var(--ant-color-border-secondary, var(--border));
-    --divider: var(--ant-color-border-secondary, #eeeeee);
-    --sidebar-ring: var(--ring);
-    --selected: var(--ant-color-fill-secondary, rgba(0,0,0,.06));
 }
 
 .dark,
 [data-theme='dark'] {
-    --background: var(--ant-color-bg-layout, #000000);
-    --foreground: var(--ant-color-text, #ffffff);
-    --card: var(--ant-color-bg-container, #0d0d0d);
-    --card-foreground: var(--foreground);
-    --popover: var(--ant-color-bg-elevated, #1a1a1a);
-    --popover-foreground: var(--foreground);
-    --primary-foreground: var(--primary-on-fill);
-    --secondary: var(--ant-color-fill-tertiary, rgba(255,255,255,.06));
-    --secondary-foreground: var(--foreground);
-    --muted: var(--ant-color-fill-tertiary, rgba(255,255,255,.06));
-    --muted-foreground: var(--ant-color-text-secondary, #aaaaaa);
-    --loading-ring-fill: var(--ant-color-fill);
-    --scrollbar-fill: var(--ant-color-fill);
-    --accent: var(--ant-color-fill-tertiary, rgba(255,255,255,.06));
-    --accent-foreground: var(--foreground);
-    --border: var(--ant-color-border, #202020);
-    --input: color-mix(in srgb, var(--border), var(--foreground));
-    --ring: var(--foreground);
+    /* Colour roles: the default dark output of src/styles/theme/generate.ts. */
+    --accent: rgba(246, 249, 254, 0.055);
+    --accent-foreground: #f7f8f8;
+    --background: #08090a;
+    --border: #25272a;
+    --card: #0f1011;
+    --card-foreground: #f7f8f8;
+    --destructive: #eb5757;
+    --destructive-active: #fd6866;
+    --destructive-border: #542a29;
+    --destructive-border-hover: #753433;
+    --destructive-foreground: #f15c5b;
+    --destructive-hover: #d23f43;
+    --destructive-hover-foreground: #ffffff;
+    --destructive-on-fill: #0c0d0f;
+    --destructive-subtle: #221718;
+    --destructive-text: #f15c5b;
+    --destructive-wash: #2a1a1b;
+    --destructive-wash-hover: #392020;
+    --divider: #1e1f22;
+    --fill: rgba(246, 249, 254, 0.14);
+    --fill-content: rgba(246, 249, 254, 0.09);
+    --fill-quaternary: rgba(246, 249, 254, 0.025);
+    --foreground: #f7f8f8;
+    --foreground-description: #91959d;
+    --foreground-icon: #91959d;
+    --foreground-placeholder: #91959d;
+    --foreground-quaternary: #62666d;
+    --foreground-tertiary: #91959d;
+    --highlight-gold: #9b6b00;
+    --highlight-primary: #222324;
+    --info: #4ea7fc;
+    --info-active: #6fb7ff;
+    --info-border: #263f59;
+    --info-border-hover: #30567c;
+    --info-foreground: #4ea7fc;
+    --info-hover: #3691e4;
+    --info-hover-foreground: #0c0d0f;
+    --info-hover-wash: #1e2d3d;
+    --info-on-fill: #0c0d0f;
+    --info-subtle: #161d24;
+    --info-text: #4ea7fc;
+    --info-wash: #19222c;
+    --info-wash-hover: #1e2d3d;
+    --input: #80848a;
+    --invert: #f7f8f8;
+    --invert-foreground: #0f1011;
+    --link: #f7f8f8;
+    --link-active: #d1d6de;
+    --link-hover: #d1d6de;
+    --loading-ring-fill: rgba(246, 249, 254, 0.14);
+    --muted: rgba(246, 249, 254, 0.055);
+    --muted-foreground: #d1d6de;
+    --overlay-mask: rgba(0, 0, 0, 0.6);
+    --overlay-mask-foreground: #ffffff;
+    --popover: #18191a;
+    --popover-foreground: #f7f8f8;
+    --primary: #e7e8e9;
+    --primary-active: #f7f8fa;
+    --primary-border: #2e2f30;
+    --primary-border-hover: #3d3d3f;
+    --primary-foreground: #0c0d0f;
+    --primary-hover: #d0d1d3;
+    --primary-hover-foreground: #0c0d0f;
+    --primary-on-fill: #0c0d0f;
+    --primary-subtle: #17181a;
+    --primary-text: #f7f8f8;
+    --primary-wash: #1b1c1d;
+    --primary-wash-hover: #222324;
+    --ring: #f7f8f8;
+    --scrollbar-fill: rgba(246, 249, 254, 0.14);
+    --secondary: rgba(246, 249, 254, 0.055);
+    --secondary-foreground: #f7f8f8;
+    --selected: rgba(246, 249, 254, 0.09);
+    --server-version-warning-bg: #2e2c1b;
+    --server-version-warning-text: #f2c94c;
+    --shadow-dialog: none;
+    --shadow-elevated: 0 20px 20px -8px rgba(0, 0, 0, 0.6);
+    --shadow-popover: 0 8px 16px -4px rgba(0, 0, 0, 0.5);
+    --shadow-raised: 0 3px 1px -1px rgba(0, 0, 0, 0.2);
+    --sidebar: #08090a;
+    --sidebar-accent: rgba(246, 249, 254, 0.055);
+    --sidebar-accent-foreground: #f7f8f8;
+    --sidebar-border: #1e1f22;
+    --sidebar-foreground: #f7f8f8;
+    --sidebar-group: #d1d6de;
+    --sidebar-muted: #d1d6de;
+    --sidebar-primary: #e7e8e9;
+    --sidebar-primary-foreground: #0c0d0f;
+    --sidebar-ring: #f7f8f8;
+    --split-divider: rgba(246, 249, 254, 0.1);
+    --success: #27a644;
+    --success-active: #3db654;
+    --success-border: #1e3f25;
+    --success-border-hover: #23552c;
+    --success-foreground: #27a644;
+    --success-hover: #008f31;
+    --success-hover-foreground: #0c0d0f;
+    --success-on-fill: #0c0d0f;
+    --success-subtle: #141d17;
+    --success-text: #27a644;
+    --success-wash: #162219;
+    --success-wash-hover: #1a2d1e;
+    --surface-disabled: rgba(246, 249, 254, 0.055);
+    --surface-secondary: #0b0c0e;
+    --topic-running-ring: #54492a;
+    --warning: #f2c94c;
+    --warning-active: #ffda70;
+    --warning-border: #54492a;
+    --warning-border-hover: #766533;
+    --warning-foreground: #f2c94c;
+    --warning-hover: #dbb22f;
+    --warning-hover-foreground: #0c0d0f;
+    --warning-on-fill: #0c0d0f;
+    --warning-subtle: #211f19;
+    --warning-text: #f2c94c;
+    --warning-wash: #29261c;
+    --warning-wash-hover: #393321;
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --sidebar: var(--ant-color-bg-layout, #000000);
-    --invert: var(--foreground);
-    --invert-foreground: var(--card);
-    --primary: var(--ant-color-primary, #eeeeee);
-    --primary-on-fill: #080808;
-    --primary-subtle: color-mix(in srgb, var(--primary) 10%, var(--card));
-    --primary-text: #ffffff;
-    --success: var(--ant-color-success, #c4f042);
-    --success-on-fill: #080808;
-    --success-subtle: color-mix(in srgb, var(--success) 10%, var(--card));
-    --success-text: #ffffff;
-    --warning: var(--ant-color-warning, #ffb224);
-    --warning-on-fill: #080808;
-    --warning-subtle: color-mix(in srgb, var(--warning) 10%, var(--card));
-    --warning-text: #ffffff;
-    --info: var(--ant-color-info, #60b1ff);
-    --info-on-fill: #080808;
-    --info-subtle: color-mix(in srgb, var(--info) 10%, var(--card));
-    --info-text: #ffffff;
-    --info-hover-wash: var(--ant-color-info-bg-hover);
-    --destructive: var(--ant-color-error, #f4416c);
-    --destructive-on-fill: #080808;
-    --destructive-subtle: color-mix(in srgb, var(--destructive) 10%, var(--card));
-    --destructive-text: #ffffff;
-    --primary-hover: var(--ant-color-primary-hover, color-mix(in srgb, var(--primary) 90%, var(--card)));
-    --primary-hover-foreground: var(--primary-foreground);
-    --highlight-gold: var(--ant-gold-4);
-    --highlight-primary: var(--ant-color-primary-bg-hover);
-    --shadow-raised: var(--ant-box-shadow-tertiary, none);
-    --shadow-popover: var(--ant-box-shadow-secondary, 0 8px 16px -4px rgba(0,0,0,.2));
-    --shadow-dialog: none;
-    --sidebar-foreground: var(--foreground);
-    --sidebar-primary: var(--primary);
-    --sidebar-primary-foreground: var(--primary-foreground);
-    --sidebar-accent: var(--accent);
-    --sidebar-accent-foreground: var(--foreground);
-    --sidebar-muted: var(--muted-foreground);
-    --sidebar-group: var(--muted-foreground);
-    --sidebar-border: var(--ant-color-border-secondary, var(--border));
-    --divider: var(--ant-color-border-secondary, #1a1a1a);
-    --sidebar-ring: var(--ring);
-    --selected: var(--ant-color-fill-secondary, rgba(255,255,255,.1));
 }
 
 /* ReUI menu utilities shipped by the base-nova registry components.
@@ -330,6 +470,18 @@
    ReUI primary-action contrast within the login and onboarding surfaces. */
 .orvilo-entry-surface [data-slot='button'].text-primary-foreground {
     color: var(--primary-foreground);
+}
+
+/* Cloud banner gradient pan (ported from lobehub's static gradientAnimation). */
+@keyframes orvilo-gradient-pan {
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
 }
 
 /* Shimmer sweep for "generating"-style labels (ported from lobehub Text `shiny`). */

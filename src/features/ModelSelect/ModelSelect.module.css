@@ -7,7 +7,8 @@
   transition: opacity var(--orvilo-motion-mid) var(--orvilo-motion-ease-out), transform var(--orvilo-motion-mid) var(--orvilo-motion-ease-out);
 
   :global(.orvilo-model-select-stale-tag) { display: none; }
-  :global(.orvilo-model-select-stale-option) :global(.orvilo-model-select-item-indicator) { display: none; }
+  /* The stale row is the current value, but its selected check would contradict its status. */
+  :global(.orvilo-model-select-stale-option) > :not(:first-child) { display: none; }
 }
 
 .select.select {
@@ -23,17 +24,12 @@
 .property.property { min-block-size: calc(var(--spacing) * 7); }
 .large.large { min-block-size: calc(var(--spacing) * 10); }
 
-.icon.icon {
-  transition: transform var(--orvilo-motion-fast) var(--orvilo-motion-ease-out);
-  svg { inline-size: calc(var(--spacing) * 4); block-size: calc(var(--spacing) * 4); }
-}
-
 .item.item { @apply text-sm leading-5.5; border-radius: var(--radius-input); }
 .groupLabel.groupLabel { @apply text-xs leading-5; }
 .remedy.remedy { block-size: auto; min-block-size: calc(var(--spacing) * 9); white-space: normal; @apply text-sm leading-5.5; border-radius: var(--radius-button); }
 
 @media (prefers-reduced-motion: reduce) {
-  .select.select, .popup.popup, .icon.icon, .remedy.remedy { transition: none; }
+  .select.select, .popup.popup, .remedy.remedy { transition: none; }
 }
 
 .clear.clear { transition: opacity var(--orvilo-motion-fast) var(--orvilo-motion-ease-out); }

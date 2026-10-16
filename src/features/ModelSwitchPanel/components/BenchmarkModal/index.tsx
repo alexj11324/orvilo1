@@ -1,5 +1,3 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { DropdownMenu } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { ChevronDownIcon, ChevronUpIcon, InfoIcon, PlusIcon, XIcon } from 'lucide-react';
 import type { ModelRating } from 'model-bank';
@@ -8,8 +6,10 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBusinessModelRating } from '@/business/client/hooks/useBusinessModelRating';
+import { DropdownMenu } from '@/components/ItemsMenu';
 import { createModal } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEnabledChatModels } from '@/hooks/useEnabledChatModels';
 
 import type { RatingDimensionKey } from '../ModelRatingRadar';
@@ -78,8 +78,8 @@ const ScoreCell: FC<ScoreCellProps> = ({ best, color, score }) => {
     .join(' · ');
 
   return (
-    <Tooltip title={tooltip}>
-      <span className={styles.cell}>
+    <Tooltip>
+      <TooltipTrigger render={<span className={styles.cell} />}>
         {best ? (
           // series color + '26' alpha suffix ≈ 15% tint background
           <span className={styles.bestPill} style={{ background: `${color}26`, color }}>
@@ -88,7 +88,8 @@ const ScoreCell: FC<ScoreCellProps> = ({ best, color, score }) => {
         ) : (
           score.score
         )}
-      </span>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
     </Tooltip>
   );
 };
@@ -155,15 +156,17 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
       type={'button'}
       variant="ghost"
     >
-      <Icon className="size-4" icon={PlusIcon} size={16} />
+      <PlusIcon className="size-4" size={16} />
       {t('ModelSwitchPanel.detail.rating.modal.compare.add')}
     </Button>
   );
 
+  const RulesChevron = rulesOpen ? ChevronUpIcon : ChevronDownIcon;
+
   return (
-    <Flexbox gap={16} paddingBlock={'0 8px'}>
+    <div className="flex flex-col gap-4 pb-2">
       {/* selected model chips + compare picker */}
-      <Flexbox horizontal align={'center'} gap={8} style={{ flexWrap: 'wrap' }}>
+      <div className="flex flex-wrap items-center gap-2">
         {selected.map((model) => (
           <span className={styles.chip} key={model.id}>
             <span className={styles.colorDot} style={{ background: model.color }} />
@@ -177,7 +180,7 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
                 variant="ghost"
                 onClick={() => setSelectedIds((prev) => prev.filter((id) => id !== model.id))}
               >
-                <Icon className="size-4" icon={XIcon} size={16} />
+                <XIcon className="size-4" size={16} />
               </Button>
             )}
           </span>
@@ -194,15 +197,17 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
               {addButton}
             </DropdownMenu>
           ) : (
-            <Tooltip
-              title={t('ModelSwitchPanel.detail.rating.modal.compare.limit', {
-                count: MAX_COMPARE_MODELS,
-              })}
-            >
-              {addButton}
+            <Tooltip>
+              {/* The disabled button swallows pointer events, so a wrapper hosts the hint. */}
+              <TooltipTrigger render={<span className="inline-flex" />}>{addButton}</TooltipTrigger>
+              <TooltipContent>
+                {t('ModelSwitchPanel.detail.rating.modal.compare.limit', {
+                  count: MAX_COMPARE_MODELS,
+                })}
+              </TooltipContent>
             </Tooltip>
           ))}
-      </Flexbox>
+      </div>
 
       <CompareRadar dimensions={dimensions} series={series} />
 
@@ -305,7 +310,7 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
       )}
 
       {/* scoring rules & caveats — collapsed footer entry */}
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         <Button
           className={styles.rulesToggle}
           size="normal"
@@ -313,9 +318,9 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
           variant="ghost"
           onClick={() => setRulesOpen((prev) => !prev)}
         >
-          <Icon className="size-4" icon={InfoIcon} size={16} />
+          <InfoIcon className="size-4" size={16} />
           {t('ModelSwitchPanel.detail.rating.modal.rules.title')}
-          <Icon className="size-4" icon={rulesOpen ? ChevronUpIcon : ChevronDownIcon} size={16} />
+          <RulesChevron className="size-4" size={16} />
         </Button>
         {rulesOpen && (
           <ul className={styles.rulesList}>
@@ -326,8 +331,8 @@ const BenchmarkModalContent: FC<BenchmarkModalContentProps> = memo(({ modelId, p
             ))}
           </ul>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

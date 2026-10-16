@@ -1,5 +1,3 @@
-import type { MarkdownProps } from '@lobehub/ui';
-import { Image, Markdown } from '@lobehub/ui';
 import { isDesktop } from '@orvilo/const';
 import { cn } from 'cn';
 import { CodeIcon, ExternalLinkIcon, EyeIcon, RefreshCwIcon } from 'lucide-react';
@@ -8,7 +6,9 @@ import { useTranslation } from 'react-i18next';
 
 import CodeEditorPane from '@/components/CodeEditorPane';
 import { applyHtmlPreviewBaseUrl, InlineHtmlPreview, isHtmlFile } from '@/components/HtmlPreview';
+import Image from '@/components/Image';
 import Loading from '@/components/Loading/CircleLoading';
+import { Markdown, type MarkdownProps } from '@/components/Markdown';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   PublishHtmlArtifactLiveBar,

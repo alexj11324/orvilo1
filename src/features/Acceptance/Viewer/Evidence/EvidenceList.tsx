@@ -1,8 +1,8 @@
 'use client';
 
-import { Image } from '@lobehub/ui';
 import { memo } from 'react';
 
+import Image from '@/components/Image';
 import AudioPlayer from '@/features/AudioPlayer';
 import { useIsMobile } from '@/hooks/use-mobile';
 

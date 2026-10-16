@@ -1,6 +1,5 @@
 'use client';
 
-import { ModalHost as BaseModalHost, ToastHost as BaseToastHost } from '@lobehub/ui/base-ui';
 import { memo, type PropsWithChildren } from 'react';
 
 import { ModalHost } from '@/components/Modal';
@@ -41,8 +40,6 @@ const ShareAppShell = memo<ShareAppShellProps>((props) => {
           serverConfig={serverConfig?.config}
         >
           <TooltipProvider>{children}</TooltipProvider>
-          <BaseModalHost />
-          <BaseToastHost />
           <ModalHost />
           <ToastHost />
         </ServerConfigStoreProvider>

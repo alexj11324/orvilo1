@@ -1,10 +1,10 @@
-import { Markdown } from '@lobehub/ui';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cn } from 'cn';
 import { SquareArrowOutUpRight } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
 import { ExperimentDetail } from '@/features/AgentGoals/Experiments/Detail';

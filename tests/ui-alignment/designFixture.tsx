@@ -1,10 +1,8 @@
 import '@/app/globals.css';
 
-import { ThemeProvider } from '@lobehub/ui';
-import { createGlobalStyle } from 'antd-style';
 import i18next from 'i18next';
 import { domAnimation, LazyMotion } from 'motion/react';
-import { type FC, useState } from 'react';
+import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 
@@ -26,7 +24,8 @@ import MCPDependenciesGuide from '@/features/MCP/MCPInstallProgress/MCPDependenc
 import IssueFilterPopover from '@/features/Projects/Issues/IssueFilterPopover';
 import type { ProjectIssueFilter } from '@/features/Projects/Issues/issueFilters';
 import ApiKeyModalContent from '@/features/Settings/apikey/features/ApiKeyModal/Content';
-import genGlobalStyle from '@/styles/global';
+import { GlobalStyle } from '@/styles';
+import { ThemeRoles } from '@/styles/themeRoles';
 
 import enAuth from '../../locales/en-US/auth.json';
 import enChat from '../../locales/en-US/chat.json';
@@ -36,13 +35,6 @@ import zhAuth from '../../locales/zh-CN/auth.json';
 import zhChat from '../../locales/zh-CN/chat.json';
 import zhCommon from '../../locales/zh-CN/common.json';
 import zhPlugin from '../../locales/zh-CN/plugin.json';
-
-const NativeGlobalStyle = createGlobalStyle(genGlobalStyle);
-
-const themeModules = import.meta.glob<{ ThemeRoles: FC }>('../../src/styles/themeRoles.ts', {
-  eager: true,
-});
-const ThemeRoles = Object.values(themeModules)[0]?.ThemeRoles ?? (() => null);
 
 const parameters = new URLSearchParams(location.search);
 const appearance = parameters.get('theme') === 'dark' ? 'dark' : 'light';
@@ -199,29 +191,18 @@ function Fixture() {
 
 createRoot(document.getElementById('root')!).render(
   <I18nextProvider i18n={i18next}>
-    <ThemeProvider
+    <GlobalStyle />
+    <ThemeRoles
+      animationMode={disabledMotion ? 'disabled' : undefined}
       appearance={engineAppearance}
-      defaultThemeMode={engineAppearance}
-      enableCustomFonts={false}
-      customTheme={
-        custom || yellow
-          ? { primaryColor: yellow ? 'yellow' : 'blue', neutralColor: 'sand' }
-          : undefined
-      }
-      theme={{
-        cssVar: { key: 'orvilo-vars' },
-        token: {
-          motion: !disabledMotion,
-          fontFamily: genFontFamily({ locale: language }),
-          fontFamilyCode: genFontFamilyCode({ locale: language }),
-        },
-      }}
+      fontFamily={genFontFamily({ locale: language })}
+      fontFamilyCode={genFontFamilyCode({ locale: language })}
+      neutralColor={custom || yellow ? 'sand' : undefined}
+      primaryColor={custom || yellow ? (yellow ? 'yellow' : 'blue') : undefined}
     >
-      <NativeGlobalStyle />
-      <ThemeRoles />
       <TooltipProvider>
         <Fixture />
       </TooltipProvider>
-    </ThemeProvider>
+    </ThemeRoles>
   </I18nextProvider>,
 );

@@ -24,6 +24,31 @@ function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
   );
 }
 
+/**
+ * Header row for a section whose trigger shares the row with other content
+ * (a summary or an action). Compose with `AccordionHeaderTrigger`.
+ */
+function AccordionHeader({ className, ...props }: AccordionPrimitive.Header.Props) {
+  return (
+    <AccordionPrimitive.Header
+      className={cn('m-0 flex items-center', className)}
+      data-slot="accordion-header"
+      {...props}
+    />
+  );
+}
+
+/** Unstyled trigger for use inside `AccordionHeader`; the caller supplies the indicator. */
+function AccordionHeaderTrigger({ className, ...props }: AccordionPrimitive.Trigger.Props) {
+  return (
+    <AccordionPrimitive.Trigger
+      className={cn('group/accordion-trigger', className)}
+      data-slot="accordion-trigger"
+      {...props}
+    />
+  );
+}
+
 function AccordionTrigger({
   className,
   children,
@@ -79,4 +104,11 @@ function AccordionContent({ className, children, ...props }: AccordionPrimitive.
   );
 }
 
-export { Accordion, AccordionContent, AccordionItem, AccordionTrigger };
+export {
+  Accordion,
+  AccordionContent,
+  AccordionHeader,
+  AccordionHeaderTrigger,
+  AccordionItem,
+  AccordionTrigger,
+};

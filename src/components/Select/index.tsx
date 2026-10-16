@@ -1,5 +1,6 @@
 'use client';
 
+import { XIcon } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -244,6 +245,25 @@ const Select = <Value extends string | number = string>({
         }
       >
         <SelectValue placeholder={placeholder} />
+        {allowClear && !disabled && isScalarValue(value) && (
+          // The trigger is a <button>, so the clear affordance is a span that keeps
+          // its press from reaching the trigger (which would open the popup).
+          <span
+            aria-label={t('clear')}
+            className="-me-1 inline-flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
+            role="button"
+            tabIndex={-1}
+            onMouseDown={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onChange?.(null);
+            }}
+          >
+            <XIcon className="size-3.5" />
+          </span>
+        )}
       </SelectTrigger>
       <SelectContent className={popupClassName}>
         {showSearch && (

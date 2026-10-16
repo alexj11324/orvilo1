@@ -17,6 +17,8 @@ import {
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
+
 import { useProfileStore } from '../store';
 
 const TypoBar = memo(() => {
@@ -121,7 +123,11 @@ const TypoBar = memo(() => {
 
   if (!editorState) return null;
 
-  return <FloatActions items={items} />;
+  return (
+    <LobeThemeScope>
+      <FloatActions items={items} />
+    </LobeThemeScope>
+  );
 });
 
 TypoBar.displayName = 'TypoBar';

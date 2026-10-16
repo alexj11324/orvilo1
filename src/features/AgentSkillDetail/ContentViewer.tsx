@@ -1,10 +1,10 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import { type SkillItem } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { CodeBlock, CodeBlockContent } from '@/components/ui/code-block';
 
 const styles = {

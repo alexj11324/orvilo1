@@ -1,11 +1,11 @@
 'use client';
 
-import { Image } from '@lobehub/ui';
 import { cn } from 'cn';
 import { Check, MessageSquare, X } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Image from '@/components/Image';
 import { Button } from '@/components/ui/button';
 
 import type { EvidenceOverlay } from './overlay';

@@ -59,10 +59,6 @@ const mocks = vi.hoisted(() => ({
 const serializeSize = (size: unknown) =>
   size === undefined ? '' : typeof size === 'string' ? size : JSON.stringify(size);
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-}));
-
 vi.mock('@/utils/clipboard', () => ({
   copyToClipboard: vi.fn(),
 }));
@@ -114,9 +110,8 @@ vi.mock('@/components/ActionIcon', () => ({
   ),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  FloatingPanel: ({
+vi.mock('@/components/FloatingPanel', () => ({
+  default: ({
     actions,
     children,
     height,

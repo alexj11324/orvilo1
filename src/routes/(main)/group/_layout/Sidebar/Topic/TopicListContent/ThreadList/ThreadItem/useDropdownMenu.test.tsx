@@ -6,17 +6,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { useThreadItemDropdownMenu } from './useDropdownMenu';
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: {
-    useApp: () => ({
-      modal: {
-        confirm: vi.fn(),
-      },
-    }),
-  },
-}));
-
 vi.mock('@/hooks/usePermission', () => ({
   usePermission: () => ({
     allowed: false,

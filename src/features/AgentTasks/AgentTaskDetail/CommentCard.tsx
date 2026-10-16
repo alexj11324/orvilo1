@@ -1,6 +1,5 @@
 import { useEditor } from '@lobehub/editor/react';
 import { LexicalRenderer } from '@lobehub/editor/renderer';
-import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { CornerDownRight, Link2, MessageCircle, MoreHorizontal, Pencil, Trash } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -9,6 +8,8 @@ import { useLocation, useNavigate } from 'react-router';
 
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
+import LobeThemeScope from '@/components/LobeThemeScope';
+import { Markdown } from '@/components/Markdown';
 import { confirmModal } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import {
@@ -198,125 +199,127 @@ const CommentCard = memo<CommentCardProps>(({ activity }) => {
   );
 
   return (
-    <div
-      className={`relative flex flex-col gap-2 overflow-hidden rounded-(--radius-card) border px-2 py-3 transition-[box-shadow] duration-(--orvilo-motion-mid) motion-reduce:transition-none transition-orvilo-task-comment-highlight ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''}`}
-      id={commentId ? commentAnchorId(commentId) : undefined}
-      style={{
-        borderColor: 'var(--divider)',
-        background: 'var(--card)',
-      }}
-    >
-      <div className="flex items-center gap-2">
-        {activity.author?.type === 'agent' ? (
-          <AssigneeAvatar agentId={activity.author.id} size={24} />
-        ) : activity.author?.avatar ? (
-          <Avatar avatar={activity.author.avatar} size={24} />
-        ) : (
-          <div className={styles.activityAvatar}>
-            <MessageCircle size={12} />
+    <LobeThemeScope>
+      <div
+        className={`relative flex flex-col gap-2 overflow-hidden rounded-(--radius-card) border px-2 py-3 transition-[box-shadow] duration-(--orvilo-motion-mid) motion-reduce:transition-none transition-orvilo-task-comment-highlight ${styles.commentCard} ${highlighted ? 'ring-2 ring-ring' : ''}`}
+        id={commentId ? commentAnchorId(commentId) : undefined}
+        style={{
+          borderColor: 'var(--divider)',
+          background: 'var(--card)',
+        }}
+      >
+        <div className="flex items-center gap-2">
+          {activity.author?.type === 'agent' ? (
+            <AssigneeAvatar agentId={activity.author.id} size={24} />
+          ) : activity.author?.avatar ? (
+            <Avatar avatar={activity.author.avatar} size={24} />
+          ) : (
+            <div className={styles.activityAvatar}>
+              <MessageCircle size={12} />
+            </div>
+          )}
+          <div className="font-medium">
+            {activity.author?.name || t('taskDetail.activities.fallback.comment')}
           </div>
-        )}
-        <div className="font-medium">
-          {activity.author?.name || t('taskDetail.activities.fallback.comment')}
+          {relTime && (
+            <div className="text-xs text-muted-foreground" title={relTimeTitle}>
+              {relTime}
+            </div>
+          )}
+          {edited && (
+            <div
+              className="text-xs text-muted-foreground"
+              title={t('taskDetail.comment.editedAt', { time: editedTitle })}
+            >
+              {t('taskDetail.comment.edited')}
+            </div>
+          )}
         </div>
-        {relTime && (
-          <div className="text-xs text-muted-foreground" title={relTimeTitle}>
-            {relTime}
-          </div>
+        {replyToRun &&
+          (replyToRun.seq == null ? (
+            <div className="text-xs text-muted-foreground">
+              {t('taskDetail.comment.replyToRunUnnumbered')}
+            </div>
+          ) : (
+            <Button
+              className="self-start text-muted-foreground"
+              size="compact"
+              variant="ghost"
+              onClick={handleOpenRun}
+            >
+              <CornerDownRight className="size-4" data-icon="inline-start" size={16} />
+              {t('taskDetail.comment.replyToRun', { seq: replyToRun.seq })}
+            </Button>
+          ))}
+
+        {isEditing && (
+          <>
+            <div className={mentionFilledClassName}>
+              <EditorCanvas
+                editor={editor}
+                editorData={editorData}
+                entityId={commentId}
+                floatingToolbar={false}
+                mentionOption={mentionOption}
+                style={{ paddingBottom: 4 }}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <AttachmentUploadButton onFiles={handleAttach} />
+              <div className="flex gap-2">
+                <Button disabled={submitting} size="normal" onClick={handleCancel}>
+                  {t('taskDetail.comment.cancel')}
+                </Button>
+                <Button loading={submitting} size="normal" variant="default" onClick={handleSave}>
+                  {t('taskDetail.comment.save')}
+                </Button>
+              </div>
+            </div>
+          </>
         )}
-        {edited && (
-          <div
-            className="text-xs text-muted-foreground"
-            title={t('taskDetail.comment.editedAt', { time: editedTitle })}
-          >
-            {t('taskDetail.comment.edited')}
+        {!isEditing && Boolean(activity.editorData) && (
+          <LexicalRenderer
+            className={mentionFilledClassName}
+            overrides={rendererOverrides}
+            value={activity.editorData as Parameters<typeof LexicalRenderer>[0]['value']}
+            variant={'chat'}
+          />
+        )}
+        {!isEditing && !activity.editorData && (
+          <Markdown fontSize={14} variant={'chat'}>
+            {content}
+          </Markdown>
+        )}
+
+        {!isEditing && menuItems.length > 0 && commentId && !isOptimisticActivityId(commentId) && (
+          <div className={`${styles.commentActions} comment-actions`}>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <ActionIcon
+                    aria-label={t('more', { ns: 'common' })}
+                    icon={MoreHorizontal}
+                    size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                  />
+                }
+              />
+              <DropdownMenuContent align={'end'} className="min-w-40">
+                {menuItems.map((item) => (
+                  <DropdownMenuItem
+                    key={item.key}
+                    variant={item.danger ? 'destructive' : 'default'}
+                    onClick={item.onClick}
+                  >
+                    <item.icon size={16} />
+                    <span className="flex-1">{item.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
       </div>
-      {replyToRun &&
-        (replyToRun.seq == null ? (
-          <div className="text-xs text-muted-foreground">
-            {t('taskDetail.comment.replyToRunUnnumbered')}
-          </div>
-        ) : (
-          <Button
-            className="self-start text-muted-foreground"
-            size="compact"
-            variant="ghost"
-            onClick={handleOpenRun}
-          >
-            <CornerDownRight className="size-4" data-icon="inline-start" size={16} />
-            {t('taskDetail.comment.replyToRun', { seq: replyToRun.seq })}
-          </Button>
-        ))}
-
-      {isEditing && (
-        <>
-          <div className={mentionFilledClassName}>
-            <EditorCanvas
-              editor={editor}
-              editorData={editorData}
-              entityId={commentId}
-              floatingToolbar={false}
-              mentionOption={mentionOption}
-              style={{ paddingBottom: 4 }}
-            />
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <AttachmentUploadButton onFiles={handleAttach} />
-            <div className="flex gap-2">
-              <Button disabled={submitting} size="normal" onClick={handleCancel}>
-                {t('taskDetail.comment.cancel')}
-              </Button>
-              <Button loading={submitting} size="normal" variant="default" onClick={handleSave}>
-                {t('taskDetail.comment.save')}
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
-      {!isEditing && Boolean(activity.editorData) && (
-        <LexicalRenderer
-          className={mentionFilledClassName}
-          overrides={rendererOverrides}
-          value={activity.editorData as Parameters<typeof LexicalRenderer>[0]['value']}
-          variant={'chat'}
-        />
-      )}
-      {!isEditing && !activity.editorData && (
-        <Markdown fontSize={14} variant={'chat'}>
-          {content}
-        </Markdown>
-      )}
-
-      {!isEditing && menuItems.length > 0 && commentId && !isOptimisticActivityId(commentId) && (
-        <div className={`${styles.commentActions} comment-actions`}>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <ActionIcon
-                  aria-label={t('more', { ns: 'common' })}
-                  icon={MoreHorizontal}
-                  size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                />
-              }
-            />
-            <DropdownMenuContent align={'end'} className="min-w-40">
-              {menuItems.map((item) => (
-                <DropdownMenuItem
-                  key={item.key}
-                  variant={item.danger ? 'destructive' : 'default'}
-                  onClick={item.onClick}
-                >
-                  <item.icon size={16} />
-                  <span className="flex-1">{item.label}</span>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      )}
-    </div>
+    </LobeThemeScope>
   );
 });
 

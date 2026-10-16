@@ -20,8 +20,6 @@
     "@types/json-schema": "^7.0.15"
   },
   "peerDependencies": {
-    "@lobehub/ui": "^5",
-    "antd-style": "*",
     "lucide-react": "*",
     "react": "*",
     "react-i18next": "*"

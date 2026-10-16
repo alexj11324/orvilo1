@@ -109,29 +109,6 @@ vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
   ),
 }));
 
-vi.mock('antd', async (importOriginal) => {
-  const actual = (await importOriginal()) as {
-    App: Record<string, unknown>;
-    Modal: Record<string, unknown>;
-  } & Record<string, unknown>;
-
-  return {
-    ...actual,
-    App: {
-      ...actual.App,
-      useApp: () => ({
-        modal: {
-          confirm: vi.fn(),
-        },
-      }),
-    },
-    Modal: {
-      ...actual.Modal,
-      confirm: vi.fn(),
-    },
-  };
-});
-
 vi.mock('lucide-react', async (importOriginal) => ({
   ...(await importOriginal<typeof LucideReact>()),
   BotMessageSquareIcon: () => null,

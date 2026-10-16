@@ -1,4 +1,3 @@
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { AGENT_DOCUMENT_CATEGORY } from '@orvilo/const';
 import { FileTextIcon, Maximize2Icon, PenLineIcon, Trash2Icon } from 'lucide-react';
 import type { CSSProperties } from 'react';
@@ -6,6 +5,7 @@ import { memo, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { KeyedMutator } from 'swr';
 
+import { SkillsIcon } from '@/components/icons';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { buildAgentDocumentPath } from '@/features/AgentDocumentPage/navigation';
 import type {

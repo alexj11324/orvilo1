@@ -1,10 +1,10 @@
 'use client';
-import { Markdown } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { CircleAlert, CircleCheck, CircleSlash, SquareArrowOutUpRight } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Markdown } from '@/components/Markdown';
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 

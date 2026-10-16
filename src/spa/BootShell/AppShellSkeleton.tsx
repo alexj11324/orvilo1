@@ -16,12 +16,6 @@ import { electronStylish } from '@/styles/electron';
 
 import { readBootShellGeometry } from './geometry';
 
-// antd emits its design tokens as `.orvilo-vars{--ant-*: …}` — a plain global
-// class rule, not a `:root` one. The shell renders outside `AppTheme`, so it has
-// to opt into that class itself or every `var(--ant-*)` below resolves to its
-// fallback.
-const CSS_VAR_CLASS = 'orvilo-vars';
-
 export const APP_SHELL_FALLBACK_ID = 'app-shell-fallback';
 
 const HINT_DELAY = 1000;
@@ -74,7 +68,9 @@ const AppShellSkeleton = memo<AppShellSkeletonProps>(({ id }) => {
   }, []);
 
   return (
-    <div aria-hidden className={`${CSS_VAR_CLASS} ${styles.root}`} id={id}>
+    // Renders before AppTheme: every colour below is a semantic role whose
+    // default value globals.css already holds for the current appearance.
+    <div aria-hidden className={styles.root} id={id}>
       {isDesktop && (
         <div
           className={`${styles.dragRegion} ${electronStylish.draggable}`}

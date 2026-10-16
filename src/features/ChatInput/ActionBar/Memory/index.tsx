@@ -1,8 +1,8 @@
-import { BrainOffIcon } from '@lobehub/ui/icons';
 import { Brain } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { BrainOffIcon } from '@/components/icons';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';

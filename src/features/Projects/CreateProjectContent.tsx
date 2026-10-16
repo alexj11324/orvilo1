@@ -40,7 +40,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
@@ -371,7 +370,6 @@ const CreateProjectContent = memo<CreateProjectOptions>(
         <div className={cn('flex flex-col gap-3', styles.body)}>
           <EmojiPicker
             allowDelete
-            fallback={<Skeleton className="size-9" />}
             title={t('create.icon')}
             value={form.avatar || '📦'}
             customRender={(avatar) => (

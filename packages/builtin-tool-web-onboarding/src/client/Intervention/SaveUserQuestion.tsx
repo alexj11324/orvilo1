@@ -1,9 +1,10 @@
 'use client';
-import { EmojiPicker } from '@lobehub/ui';
 import type { BuiltinInterventionProps, SaveUserQuestionInput } from '@orvilo/types';
 import type { CSSProperties } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import EmojiPicker from '@/components/EmojiPicker';
 
 const detailCardStyle = {
   background: 'var(--lobe-fill-tertiary)',

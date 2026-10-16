@@ -6,8 +6,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useMenu } from './useMenu';
 
-const messageSuccessMock = vi.hoisted(() => vi.fn());
-const modalConfirmMock = vi.hoisted(() => vi.fn());
 const openTopicInNewWindowMock = vi.hoisted(() => vi.fn());
 const toggleWideScreenMock = vi.hoisted(() => vi.fn());
 const favoriteTopicMock = vi.hoisted(() => vi.fn());
@@ -32,21 +30,6 @@ vi.mock('@/const/version', () => ({
 vi.mock('@/features/Conversation/useAgentContext', () => ({
   useAgentContext: () => ({ agentId: 'agent-1', topicId: 'topic-1' }),
 }));
-
-vi.mock('antd', async (importOriginal) => {
-  const actual = await importOriginal<{ App: Record<string, unknown> } & Record<string, unknown>>();
-
-  return {
-    ...actual,
-    App: {
-      ...actual.App,
-      useApp: () => ({
-        message: { success: messageSuccessMock },
-        modal: { confirm: modalConfirmMock },
-      }),
-    },
-  };
-});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

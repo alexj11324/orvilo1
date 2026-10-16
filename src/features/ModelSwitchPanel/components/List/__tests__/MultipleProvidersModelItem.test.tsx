@@ -9,33 +9,30 @@ import type * as ModelSelectModule from '@/components/ModelSelect';
 
 import { MultipleProvidersModelItem } from '../MultipleProvidersModelItem';
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
+vi.mock('@base-ui/react/menu', () => ({
+  Menu: {
+    GroupLabel: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    Item: ({ children, onClick }: { children: ReactNode; onClick?: () => void }) => (
+      <button onClick={onClick}>{children}</button>
+    ),
+    SubmenuTrigger: ({ children, className, onClick, style }: HTMLAttributes<HTMLDivElement>) => (
+      <div className={className} style={style} onClick={onClick}>
+        {children}
+      </div>
+    ),
+  },
+}));
+
+vi.mock('@/components/ui/dropdown-menu', () => ({
   DropdownMenuGroup: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DropdownMenuGroupLabel: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DropdownMenuItem: ({ children, onClick }: { children: ReactNode; onClick?: () => void }) => (
-    <button onClick={onClick}>{children}</button>
-  ),
-  DropdownMenuItemIcon: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-  DropdownMenuItemLabel: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-  DropdownMenuPopup: ({ children, className }: { children: ReactNode; className?: string }) => (
+  DropdownMenuSub: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock('../../../menu', () => ({
+  menuGroupLabelClassName: 'menu-group-label',
+  menuItemClassName: 'menu-item',
+  MenuPanelPopup: ({ children, className }: { children: ReactNode; className?: string }) => (
     <div className={className}>{children}</div>
-  ),
-  DropdownMenuPortal: ({ children }: { children: ReactNode }) => <>{children}</>,
-  DropdownMenuPositioner: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DropdownMenuSubmenuRoot: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DropdownMenuSubmenuTrigger: ({
-    children,
-    className,
-    onClick,
-    style,
-  }: HTMLAttributes<HTMLDivElement>) => (
-    <div className={className} style={style} onClick={onClick}>
-      {children}
-    </div>
-  ),
-  Tooltip: ({ children, title }: { children: ReactNode; title: string }) => (
-    <span data-testid={`tooltip-${title}`}>{children}</span>
   ),
 }));
 
@@ -47,12 +44,6 @@ vi.mock('@/components/ui/tooltip', () => ({
   TooltipTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('@lobehub/ui/base-ui', () => ({
-  Avatar: () => <span />,
-  Tag: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-  Text: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-}));
-
 vi.mock('@lobehub/icons', () => ({
   Orvilo: { Morden: () => <span /> },
 }));
@@ -60,19 +51,6 @@ vi.mock('@lobehub/icons', () => ({
 vi.mock('@/components/OrviloIcons', () => ({
   ModelIcon: () => <span />,
   ProviderIcon: () => <span />,
-}));
-
-vi.mock('antd-style', async (importOriginal) => ({
-  ...((await importOriginal()) as Record<string, unknown>),
-  createStaticStyles: () => ({
-    container: 'container',
-    detailPopup: 'detailPopup',
-    dropdownMenu: 'dropdownMenu',
-    tag: 'tag',
-    token: 'token',
-  }),
-  cx: (...classNames: Array<string | undefined>) => classNames.filter(Boolean).join(' '),
-  useResponsive: () => ({ mobile: false }),
 }));
 
 vi.mock('@/components/ModelSelect', () => ({

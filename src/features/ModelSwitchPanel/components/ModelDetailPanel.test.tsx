@@ -10,21 +10,6 @@ import type { EnabledProviderWithModels } from '@/types/aiProvider';
 
 import ModelDetailPanel from './ModelDetailPanel';
 
-vi.mock('antd-style', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  createStaticStyles: () => ({
-    actionText: 'actionText',
-    container: 'container',
-    description: 'description',
-    originalPriceText: 'originalPriceText',
-    priceValue: 'priceValue',
-    radarClickable: 'radarClickable',
-    row: 'row',
-    titleText: 'titleText',
-  }),
-  cssVar: new Proxy({}, { get: (_, token) => `var(--${String(token)})` }),
-}));
-
 // recharts needs a measured container — stub the chart with its data flattened to text nodes
 vi.mock('@lobehub/charts', () => ({
   RadarChart: ({ data }: { data: Record<string, unknown>[] }) => (

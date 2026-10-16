@@ -1,7 +1,7 @@
-import { Markdown } from '@lobehub/ui';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import { Markdown } from '@/components/Markdown';
 import NavHeader from '@/features/NavHeader';
 import { useUserMemoryStore } from '@/store/userMemory';
 

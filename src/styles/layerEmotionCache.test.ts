@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { createInstance, createStaticStyles, styleManager } from 'antd-style';
+import { createInstance } from 'antd-style';
 import { describe, expect, it } from 'vitest';
 
 import { layerEmotionCache, toLayeredInsertArgs } from './layerEmotionCache';
@@ -24,19 +24,35 @@ describe('toLayeredInsertArgs', () => {
     );
   });
 
-  it('leaves selector-less fragments (keyframes, globals) untouched', () => {
+  it('prefixes a class rule with the zero-specificity vendor scope', () => {
+    const [, wrapped] = toLayeredInsertArgs(
+      'antd-style',
+      '.acss-abc',
+      { name: 'abc', styles: 'color:red;' },
+      '.orvilo-editor-scope',
+    );
+
+    expect(wrapped.styles).toBe(
+      '@layer antd-style{:where(.orvilo-editor-scope) .acss-abc{color:red;}}',
+    );
+  });
+
+  it('layers selector-less fragments (keyframes, global sheets) without scoping them', () => {
     const keyframes = { name: 'k', styles: '@keyframes animation-k{from{opacity:0}to{opacity:1}}' };
 
-    expect(toLayeredInsertArgs('antd-style', '', keyframes)).toEqual(['', keyframes]);
+    expect(toLayeredInsertArgs('antd-style', '', keyframes, '.orvilo-editor-scope')).toEqual([
+      '',
+      { ...keyframes, styles: `@layer antd-style{${keyframes.styles}}` },
+    ]);
   });
 });
 
 describe('layerEmotionCache on a real antd-style instance', () => {
   // antd-style keeps one cache per key, so every test needs its own key.
   let counter = 0;
-  const setup = () => {
+  const setup = (scope?: string) => {
     const instance = createInstance({ key: `lt-${'abcdefgh'[counter++]}` });
-    const result = layerEmotionCache(instance.styleManager.cache);
+    const result = layerEmotionCache(instance.styleManager.cache, { scope });
     return { ...instance, result };
   };
 
@@ -69,7 +85,7 @@ describe('layerEmotionCache on a real antd-style instance', () => {
     expect(out.match(/@layer antd-style\{/g)).toHaveLength(1);
   });
 
-  it('does not wrap @keyframes', () => {
+  it('layers @keyframes as a separate fragment', () => {
     const { createStaticStyles, keyframes, styleManager } = setup();
     const fade = keyframes`from{opacity:0}to{opacity:1}`;
 
@@ -85,9 +101,10 @@ describe('layerEmotionCache on a real antd-style instance', () => {
     const keyframeEntry = entries.find((css) => css.includes('@keyframes animation-'));
     const classEntry = entries.find((css) => /\.lt-[a-z]-/.test(css));
 
-    // The keyframes rule is emitted bare (no layer); only the class rule that uses it is layered.
     expect(keyframeEntry).toBeDefined();
-    expect(keyframeEntry).not.toContain('@layer');
+    expect(keyframeEntry).toMatch(
+      /^@layer antd-style\{(@-webkit-keyframes[^]*)?@keyframes animation-/,
+    );
     expect(classEntry).toMatch(/^@layer antd-style\{\.lt-[a-z]-\w+\{.*animation:animation-/);
   });
 
@@ -125,21 +142,53 @@ describe('layerEmotionCache on a real antd-style instance', () => {
   });
 });
 
-describe('default runtime cascade', () => {
-  it('keeps the default runtime cache unlayered with the dormant initializer retired', () => {
-    const styles = createStaticStyles(({ css }) => ({
-      rollout: css`
-        padding: 13px;
+describe('vendor scope on a real antd-style instance', () => {
+  it('keeps class, pseudo, descendant and media rules inside the layer and the scope', () => {
+    const instance = createInstance({ key: 'scoped' });
+    expect(layerEmotionCache(instance.styleManager.cache, { scope: '.orvilo-editor-scope' })).toBe(
+      'patched',
+    );
+
+    const styles = instance.createStaticStyles(({ css }) => ({
+      root: css`
+        color: red;
 
         &:hover {
-          padding: 17px;
+          color: blue;
+        }
+
+        hr {
+          display: none;
+        }
+
+        @media (width >= 600px) {
+          color: green;
         }
       `,
     }));
+    const out = insertedCss(instance.styleManager.cache);
+    const scoped = `:where(.orvilo-editor-scope) .${styles.root}`;
 
-    const output = insertedCss(styleManager.cache);
-    expect(output).toContain(`.${styles.rollout}{padding:13px;}`);
-    expect(output).not.toContain(`@layer antd-style{.${styles.rollout}{`);
-    expect(output).toContain(`.${styles.rollout}:hover{padding:17px;}`);
+    expect(out.startsWith('@layer antd-style{')).toBe(true);
+    expect(out).toContain(`${scoped}{color:red;}`);
+    expect(out).toContain(`${scoped}:hover{color:blue;}`);
+    // A nested element selector such as the Markdown `hr` rule cannot leave the scope.
+    expect(out).toContain(`${scoped} hr{display:none;}`);
+    expect(out).toMatch(
+      /@media \(width\s*>=\s*600px\)\{:where\(\.orvilo-editor-scope\) \.scoped-\w+\{color:green;\}/,
+    );
+    // No selector in the output escapes the scope.
+    const selectors = out.match(/[^{}]+(?=\{)/g)!.filter((s) => !s.startsWith('@'));
+    for (const selector of selectors) expect(selector).toContain(':where(.orvilo-editor-scope) ');
+  });
+
+  it('layers createGlobalStyle sheets so they sit below Tailwind utilities', () => {
+    const instance = createInstance({ key: 'scopedglobal' });
+    layerEmotionCache(instance.styleManager.cache, { scope: '.orvilo-editor-scope' });
+    const cache = instance.styleManager.cache;
+
+    cache.insert('', { name: 'g', styles: ':root{--lobe-ring:0 0 0 1px red;}' }, cache.sheet, true);
+
+    expect(insertedCss(cache)).toBe('@layer antd-style{:root{--lobe-ring:0 0 0 1px red;}}');
   });
 });

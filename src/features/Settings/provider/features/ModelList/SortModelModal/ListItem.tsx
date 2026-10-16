@@ -1,8 +1,9 @@
-import { Flexbox, SortableList } from '@lobehub/ui';
 import { type AiProviderModelListItem } from 'model-bank';
 import { memo } from 'react';
 
 import { ModelIcon } from '@/components/OrviloIcons';
+
+import SortDragHandle from '../../SortDragHandle';
 
 interface ListItemProps extends AiProviderModelListItem {
   disabled?: boolean;
@@ -11,11 +12,11 @@ interface ListItemProps extends AiProviderModelListItem {
 const ListItem = memo<ListItemProps>(({ id, displayName, disabled }) => {
   return (
     <>
-      <Flexbox horizontal gap={8}>
+      <div className="flex gap-2">
         <ModelIcon model={id} size={24} type={'avatar'} />
         {displayName || id}
-      </Flexbox>
-      {!disabled && <SortableList.DragHandle />}
+      </div>
+      {!disabled && <SortDragHandle />}
     </>
   );
 });

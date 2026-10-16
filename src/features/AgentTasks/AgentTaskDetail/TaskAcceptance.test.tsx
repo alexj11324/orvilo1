@@ -63,11 +63,6 @@ vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
   useWorkspaceAwareNavigate: () => mocks.navigate,
 }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: { useApp: () => ({ message: { error: vi.fn() } }) },
-}));
-
 vi.mock('@/components/NeuralNetworkLoading', () => ({ default: () => <div>loading</div> }));
 
 vi.mock('@/features/Acceptance', async () => ({

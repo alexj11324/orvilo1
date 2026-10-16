@@ -61,9 +61,8 @@ vi.mock('@/business/client/hooks/useFetchWorkspaces', () => ({
   }),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Tree: ({
+vi.mock('@/components/Tree', () => ({
+  default: ({
     onRightClick,
     onSelect,
     treeData,
@@ -89,24 +88,6 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
       ))}
     </div>
   ),
-}));
-
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: {
-    useApp: () => ({
-      message: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warning: vi.fn() },
-      modal: { confirm: vi.fn() },
-    }),
-  },
-}));
-
-vi.mock('antd-style', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  cssVar: {
-    colorTextDescription: '#999',
-    colorTextSecondary: '#666',
-  },
 }));
 
 vi.mock('react-router', () => ({

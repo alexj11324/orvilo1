@@ -1,8 +1,8 @@
-import { Segmented } from '@lobehub/ui/base-ui';
 import { MODEL_REASONING_PARAM_LEVELS } from 'model-bank/aiModel';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
 import { useUpdateAgentConfig } from '@/features/ChatInput/hooks/useUpdateAgentConfig';
 import { useAgentStore } from '@/store/agent';
@@ -28,19 +28,21 @@ const ReasoningModeSegmentedInner = memo<{
   const { t } = useTranslation('chat');
 
   return (
-    <Segmented<ReasoningMode>
-      block
+    <ToggleGroup
+      className="w-full max-w-60"
       disabled={disabled}
       id={id}
-      size={'small'}
-      style={{ maxWidth: 240 }}
-      value={value}
-      options={REASONING_MODES.map((mode) => ({
-        label: t(`reasoningEffort.mode.${mode}`),
-        value: mode,
-      }))}
-      onChange={onChange}
-    />
+      size="sm"
+      value={[value]}
+      // A segmented control only reports a *change*; re-pressing the active item is inert.
+      onValueChange={(next) => next[0] && onChange(next[0] as ReasoningMode)}
+    >
+      {REASONING_MODES.map((mode) => (
+        <ToggleGroupItem className="flex-1" key={mode} value={mode}>
+          {t(`reasoningEffort.mode.${mode}`)}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
   );
 });
 

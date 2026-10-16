@@ -15,7 +15,6 @@ export const styles = {
   toolbarTabs: nativeStyles.toolbarTabs,
   toolbarTabList: nativeStyles.toolbarTabList,
   toolbarTab: `${nativeStyles.toolbarTab} transition-[color,transform]`,
-  toolbarIndicator: `${nativeStyles.toolbarIndicator} transition-[inset-inline-start,inset-block-start,width,height,transform]`,
   menuItemActive: nativeStyles.menuItemActive,
   footer: nativeStyles.footer,
   toolbar: nativeStyles.toolbar,

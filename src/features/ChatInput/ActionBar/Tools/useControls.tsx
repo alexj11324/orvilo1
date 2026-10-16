@@ -1,4 +1,3 @@
-import { McpIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { getConnectorCatalog, RECOMMENDED_SKILLS, RecommendedSkillType } from '@orvilo/const';
 import { type AgentPluginMode, getDisabledPluginIds } from '@orvilo/types';
 import { cn } from 'cn';
@@ -21,6 +20,7 @@ import { createElement, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { McpIcon, SkillsIcon } from '@/components/icons';
 import { confirmModal } from '@/components/Modal';
 import { Badge } from '@/components/reui/badge';
 import SearchBar from '@/components/SearchBar';

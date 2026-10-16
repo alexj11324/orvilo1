@@ -1,4 +1,3 @@
-import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
 import { Command } from 'cmdk';
 import {
@@ -15,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { openFeedbackModal } from '@/components/FeedbackModal';
+import { DiscordIcon, GithubIcon } from '@/components/icons';
 import { getNavigableRoutes, getRouteById } from '@/config/routes';
 import { FEEDBACK } from '@/const/url';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';

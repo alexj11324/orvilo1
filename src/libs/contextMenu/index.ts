@@ -1,11 +1,10 @@
-import {
-  closeContextMenu as closeWebContextMenu,
-  setContextMenuInterceptor,
-  showContextMenu as showWebContextMenu,
-} from '@lobehub/ui';
 import { isHostUnsupportedResult } from '@orvilo/types';
 import debug from 'debug';
 
+import {
+  closeContextMenu as closeWebContextMenu,
+  showContextMenu as showWebContextMenu,
+} from '@/components/ContextMenu';
 import { getHostPort } from '@/platform';
 
 import { canGoNative } from './canGoNative';
@@ -86,13 +85,6 @@ export const showContextMenu = (
 
 export const closeContextMenu = (): void => {
   routeClose(closeWebContextMenu);
-};
-
-export const registerNativeContextMenuInterceptor = (): void => {
-  setContextMenuInterceptor({
-    close: routeClose,
-    show: routeShow,
-  });
 };
 
 export { routeShow as showContextMenuWithFallback };

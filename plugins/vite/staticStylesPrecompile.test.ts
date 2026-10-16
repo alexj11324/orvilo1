@@ -153,15 +153,18 @@ export const styles = createStaticStyles(({ css }) => ({ root: css\`color: red;\
     expect(precompileStaticStyles(code, evaluator)).toBeUndefined();
   });
 
-  it('bakes the cascade layer into the compiled rules when a layer is given', async () => {
-    const layered = await loadAntdStyleEvaluator('antd-style');
+  it('bakes the cascade layer and vendor scope into the compiled rules', async () => {
+    const layered = await loadAntdStyleEvaluator({
+      layer: 'antd-style',
+      scope: '.orvilo-editor-scope',
+    });
     const output = precompileStaticStyles(PURE, layered)!;
 
     // One layer block per class, hover and media query nested inside it.
     expect(output).toMatch(
-      /"root": __orviloStaticStyle\("acss-[a-z0-9]+", \["@layer antd-style\{\.acss-/,
+      /"root": __orviloStaticStyle\("acss-[a-z0-9]+", \["@layer antd-style\{:where\(\.orvilo-editor-scope\) \.acss-/,
     );
-    expect(output).toContain('@media (max-width: 479.98px){.acss-');
+    expect(output).toContain('@media (max-width: 479.98px){:where(.orvilo-editor-scope) .acss-');
     expect(output).not.toMatch(/\["\.acss-/);
     expect(parseAst(output)).toBeDefined();
   });
@@ -259,7 +262,7 @@ describe('viteStaticStylesPrecompile', () => {
     },
   };
 
-  it('bundles unlayered precompiled styles against the default antd-style runtime', async () => {
+  it('bundles layered, scoped precompiled styles against the default antd-style runtime', async () => {
     const result = await build({
       build: {
         minify: false,
@@ -284,7 +287,7 @@ describe('viteStaticStylesPrecompile', () => {
     expect(code).not.toContain('createStaticStyles');
     expect(code).toMatch(/import \{ styleManager \} from ["']antd-style["']/);
     expect(code).toContain('cache.sheet.insert(rule)');
-    expect(code).not.toContain('@layer antd-style{');
+    expect(code).toContain('@layer antd-style{:where(.orvilo-editor-scope) .acss-');
     expect(code).toContain('color:var(--ant-color-text-secondary)');
   });
 });

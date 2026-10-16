@@ -1,6 +1,5 @@
 'use client';
 
-import { lobeStaticStylish } from '@lobehub/ui';
 import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { useSize } from 'ahooks';
 import { cn } from 'cn';
@@ -20,7 +19,9 @@ import { isOnServerSide } from '@/utils/env';
 export const BANNER_HEIGHT = 40;
 
 const styles = {
-  background: `${lobeStaticStylish.gradientAnimation} absolute h-full w-[max(64%,1280px)] opacity-80 blur-[60px]`,
+  // Identity-palette sweep; `animate-*` is stopped by ThemeRoles when motion is off.
+  background:
+    'absolute h-full w-[max(64%,1280px)] rounded-[inherit] bg-[linear-gradient(-45deg,var(--palette-gold-6),var(--palette-magenta-6),var(--palette-geekblue-6),var(--palette-cyan-6))] bg-size-[400%_400%] opacity-80 blur-[60px] animate-[orvilo-gradient-pan_5s_ease_5s_infinite]',
   containerDark: 'relative overflow-hidden bg-muted',
   containerLight: 'relative overflow-hidden bg-muted',
   wrapper: 'z-1 max-w-full overflow-hidden',

@@ -8,6 +8,8 @@ import {
   ANTD_STYLE_LAYER,
   ANTD_STYLE_LAYER_ENABLED,
   layerEmotionCache,
+  type LayerOptions,
+  VENDOR_STYLE_SCOPE,
 } from '../../src/styles/layerEmotionCache';
 
 const RUNTIME_ID = 'virtual:orvilo-static-styles-runtime';
@@ -238,11 +240,14 @@ export const precompileStaticStyles = (code: string, evaluator: AntdStyleEvaluat
 };
 
 /**
- * @param layer cascade layer for the compiled class rules (see `src/styles/layerEmotionCache.ts`).
- *   Precompiled rules are inserted with `cache.sheet.insert`, which bypasses the runtime
- *   `cache.insert` patch, so the layer has to be baked into the compiled CSS here.
+ * @param layering cascade layer and scope for the compiled rules (see
+ *   `src/styles/layerEmotionCache.ts`). Precompiled rules are inserted with
+ *   `cache.sheet.insert`, which bypasses the runtime `cache.insert` patch, so the
+ *   rewrite has to be baked into the compiled CSS here.
  */
-export const loadAntdStyleEvaluator = async (layer?: string): Promise<AntdStyleEvaluator> => {
+export const loadAntdStyleEvaluator = async (
+  layering?: LayerOptions,
+): Promise<AntdStyleEvaluator> => {
   const mod = await import('antd-style');
   const api = ((mod as any).default?.createStaticStylesFactory ? (mod as any).default : mod) as any;
   const antdStyleRequire = createRequire(
@@ -254,7 +259,7 @@ export const loadAntdStyleEvaluator = async (layer?: string): Promise<AntdStyleE
     key: api.styleManager.cache.key,
     stylisPlugins: [safariPrefixer],
   });
-  if (layer) layerEmotionCache(emotion.cache, layer);
+  if (layering) layerEmotionCache(emotion.cache, layering);
   const { createStaticStyles, cssVar, responsive } = api.createStaticStylesFactory({
     cache: emotion.cache,
   });
@@ -281,7 +286,11 @@ export function viteStaticStylesPrecompile(): Plugin {
       if (!/\.[cm]?[jt]sx?$/.test(id.split('?')[0])) return;
       if (id.includes('node_modules') && !id.includes('/node_modules/@lobehub/ui/')) return;
       if (!code.includes('createStaticStyles')) return;
-      evaluator ??= loadAntdStyleEvaluator(ANTD_STYLE_LAYER_ENABLED ? ANTD_STYLE_LAYER : undefined);
+      evaluator ??= loadAntdStyleEvaluator(
+        ANTD_STYLE_LAYER_ENABLED
+          ? { layer: ANTD_STYLE_LAYER, scope: VENDOR_STYLE_SCOPE }
+          : undefined,
+      );
       const output = precompileStaticStyles(code, await evaluator);
       if (output) return { code: output, map: null };
     },

@@ -1,53 +1,33 @@
-import { type NeutralColors } from '@lobehub/ui';
-import { findCustomThemeName, neutralColors } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ColorSwatches } from '@/components/ColorSwatches';
+import {
+  findNeutralColorName,
+  NEUTRAL_COLOR_NAMES,
+  type NeutralColorName,
+  neutralSwatch,
+} from '@/styles/theme/seeds';
 
 interface IProps {
-  onChange?: (v: NeutralColors) => void;
-  value?: NeutralColors;
+  onChange?: (v: NeutralColorName | '') => void;
+  value?: NeutralColorName | '';
 }
 
 const ThemeSwatchesNeutral = memo<IProps>(({ value, onChange }) => {
   const { t } = useTranslation('color');
 
-  const handleSelect = (v: any) => {
-    const name = findCustomThemeName('neutral', v) as NeutralColors;
-    onChange?.(name || '');
-  };
-
   return (
     <ColorSwatches
-      value={value ? neutralColors[value] : undefined}
+      value={value ? neutralSwatch(value) : undefined}
       colors={[
         {
           color: 'rgba(0, 0, 0, 0)',
           title: t('default'),
         },
-        {
-          color: neutralColors.mauve,
-          title: t('mauve'),
-        },
-        {
-          color: neutralColors.olive,
-          title: t('olive'),
-        },
-        {
-          color: neutralColors.sage,
-          title: t('sage'),
-        },
-        {
-          color: neutralColors.sand,
-          title: t('sand'),
-        },
-        {
-          color: neutralColors.slate,
-          title: t('slate'),
-        },
+        ...NEUTRAL_COLOR_NAMES.map((name) => ({ color: neutralSwatch(name), title: t(name) })),
       ]}
-      onChange={handleSelect}
+      onChange={(color) => onChange?.((color && findNeutralColorName(color)) || '')}
     />
   );
 });

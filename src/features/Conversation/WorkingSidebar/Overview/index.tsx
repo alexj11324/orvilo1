@@ -1,6 +1,5 @@
 'use client';
 
-import { SkillsIcon } from '@lobehub/ui/icons';
 import { cn } from 'cn';
 import {
   ArrowDownIcon,
@@ -18,6 +17,7 @@ import {
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SkillsIcon } from '@/components/icons';
 import RingLoadingIcon from '@/components/RingLoading';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';

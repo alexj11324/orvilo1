@@ -1,6 +1,7 @@
-import { Image, Markdown } from '@lobehub/ui';
 import { memo } from 'react';
 
+import Image from '@/components/Image';
+import { Markdown } from '@/components/Markdown';
 import { type MessageContentPart } from '@/types/index';
 
 interface RichContentRendererProps {

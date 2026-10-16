@@ -1,7 +1,7 @@
-import type { MarkdownProps } from '@lobehub/ui';
 import type { FC } from 'react';
 import { useMemo } from 'react';
 
+import { type MarkdownProps } from '@/components/Markdown';
 import LinkElement from '@/features/Conversation/Markdown/plugins/Link';
 import type { MarkdownElementProps } from '@/features/Conversation/Markdown/plugins/type';
 

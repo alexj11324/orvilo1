@@ -1,7 +1,7 @@
-import { McpIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { memo } from 'react';
 
 import Avatar from '@/components/Avatar';
+import { McpIcon, SkillsIcon } from '@/components/icons';
 
 interface MentionItemIconProps {
   avatar?: string;

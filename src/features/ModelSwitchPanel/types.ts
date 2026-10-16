@@ -1,4 +1,3 @@
-import { type DropdownMenuPlacement } from '@lobehub/ui';
 import { type AiModelForSelect } from 'model-bank';
 import { type ComponentType } from 'react';
 
@@ -45,7 +44,21 @@ export type ListItem =
       type: 'no-provider';
     };
 
-export type DropdownPlacement = DropdownMenuPlacement;
+export type DropdownPlacement =
+  | 'bottom'
+  | 'bottomCenter'
+  | 'bottomLeft'
+  | 'bottomRight'
+  | 'left'
+  | 'leftBottom'
+  | 'leftTop'
+  | 'right'
+  | 'rightBottom'
+  | 'rightTop'
+  | 'top'
+  | 'topCenter'
+  | 'topLeft'
+  | 'topRight';
 
 /**
  * One row of a flat, non-model-bank model list (Prime's provider-binding routes

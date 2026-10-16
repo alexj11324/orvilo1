@@ -1,11 +1,7 @@
 import path from 'node:path';
 
-import { lobeStaticCssPlugin } from '@lobehub/ui/static-css/vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
-
-import { antdStaticCssOptions, themeVarsCssOptions } from './apps/auth/staticCssOptions.mjs';
-import { staticCssAliases } from './plugins/vite/staticCssAliases';
 
 if (process.env.NODE_ENV === 'production') {
   Reflect.set(process.env, 'NODE_ENV', 'test');
@@ -94,9 +90,6 @@ export default defineConfig({
     exclude: ['crypto', 'util', 'tty'],
   },
   plugins: [
-    // SSR entry tests consume the same real static CSS manifest as the apps.
-    staticCssAliases(),
-    lobeStaticCssPlugin({ antd: antdStaticCssOptions, themeVars: themeVarsCssOptions }),
     tsconfigPaths({ projects: ['.', 'apps/auth', 'apps/share', 'apps/workbench'] }),
     // Let `.md` imports resolve to their raw text content so Rollup/Vitest
     // doesn't try to parse Markdown as JavaScript.
@@ -263,16 +256,13 @@ export default defineConfig({
           // vite-node loads a second copy of the library whose MotionProvider /
           // modal-stack contexts don't match the chunk's
           include: [
-            // App token consumers and the SDK provider must share one context.
+            // Vendor token consumers and LobeThemeScope's provider must share one
+            // context. These are the subpaths @lobehub/editor, @lobehub/charts and
+            // @lobehub/icons import.
             '@emotion/react',
             '@lobehub/ui',
             '@lobehub/ui/base-ui',
             '@lobehub/ui/icons',
-            '@lobehub/ui/mobile',
-            '@lobehub/ui/chat',
-            '@lobehub/ui/awesome',
-            '@lobehub/ui/brand',
-            '@lobehub/ui/mdx',
             '@lobehub/fluent-emoji',
             'motion',
             'motion/react',

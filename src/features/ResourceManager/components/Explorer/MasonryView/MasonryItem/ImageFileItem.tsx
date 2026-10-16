@@ -1,4 +1,3 @@
-import { Image } from '@lobehub/ui';
 import { cn } from 'cn';
 import { isNull } from 'es-toolkit/compat';
 import { FileBoxIcon } from 'lucide-react';
@@ -6,6 +5,7 @@ import { createElement, memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMediaQuery } from 'react-responsive';
 
+import Image from '@/components/Image';
 import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { fileManagerSelectors, useFileStore } from '@/store/file';

@@ -18,6 +18,8 @@ import {
  */
 export interface InputNumberProps {
   'aria-label'?: string;
+  /** Let the mouse wheel step the value while the field is focused. */
+  'changeOnWheel'?: boolean;
   'className'?: string;
   /** Show the numeric stepper controls; enabled by default. */
   'controls'?: boolean;
@@ -77,6 +79,7 @@ function NumberFieldStepper({
 const InputNumber = memo<InputNumberProps>(
   ({
     'aria-label': ariaLabel,
+    changeOnWheel,
     className,
     controls = true,
     disabled,
@@ -91,6 +94,7 @@ const InputNumber = memo<InputNumberProps>(
     value,
   }) => (
     <NumberField
+      allowWheelScrub={changeOnWheel}
       className={className}
       disabled={disabled}
       max={max}

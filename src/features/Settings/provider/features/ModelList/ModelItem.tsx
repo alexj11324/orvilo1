@@ -1,4 +1,3 @@
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { cn } from 'cn';
 import { LucidePencil, TrashIcon } from 'lucide-react';
 import { type AiProviderModelListItem } from 'model-bank';
@@ -7,9 +6,11 @@ import { memo, use, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
 import { ModelInfoTags } from '@/components/ModelSelect';
 import NewModelBadge from '@/components/ModelSelect/NewModelBadge';
 import { ModelIcon } from '@/components/OrviloIcons';
+import { toast } from '@/components/toast';
 import { Switch } from '@/components/ui/switch';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';

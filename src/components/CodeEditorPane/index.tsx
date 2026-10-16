@@ -8,6 +8,7 @@ import {
 } from '@lobehub/editor/codemirror';
 import { type CSSProperties, memo, useEffect, useMemo, useRef, useState } from 'react';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { useIsDark } from '@/hooks/useIsDark';
 
 import { detectIndentStyle } from './indent';
@@ -214,21 +215,23 @@ const CodeEditorPane = memo<CodeEditorPaneProps>(
     }, [isDark]);
 
     return (
-      <div className={`${styles.container} ${className ?? ''}`.trim()} style={style}>
-        <div className={styles.editorArea}>
-          <textarea className={'cm-textarea'} ref={textareaRef} />
+      <LobeThemeScope>
+        <div className={`${styles.container} ${className ?? ''}`.trim()} style={style}>
+          <div className={styles.editorArea}>
+            <textarea className={'cm-textarea'} ref={textareaRef} />
+          </div>
+          {showStatusBar && (
+            <StatusBar
+              cursor={cursor}
+              indent={indent}
+              languageLabel={editorLanguage?.label ?? language ?? ''}
+              lineWrapping={lineWrapping}
+              readOnly={readOnly}
+              onLineWrappingChange={setLineWrapping}
+            />
+          )}
         </div>
-        {showStatusBar && (
-          <StatusBar
-            cursor={cursor}
-            indent={indent}
-            languageLabel={editorLanguage?.label ?? language ?? ''}
-            lineWrapping={lineWrapping}
-            readOnly={readOnly}
-            onLineWrappingChange={setLineWrapping}
-          />
-        )}
-      </div>
+      </LobeThemeScope>
     );
   },
 );

@@ -1,9 +1,8 @@
-import { Flexbox } from '@lobehub/ui';
-import { Input } from '@lobehub/ui/base-ui';
 import { memo, useMemo, useState } from 'react';
 import useMergeState from 'use-merge-value';
 
 import DiscreteSlider from '@/components/DiscreteSlider';
+import { Input } from '@/components/ui/input';
 
 // Define special value mappings
 const SPECIAL_VALUES = {
@@ -109,30 +108,31 @@ const ThinkingBudgetSlider = memo<ThinkingBudgetSliderProps>(
     );
 
     return (
-      <Flexbox horizontal align={'center'} gap={12} paddingInline={'4px 0'}>
-        <Flexbox flex={1}>
+      <div className="flex items-center gap-3 ps-1">
+        <div className="flex flex-1 flex-col">
           <DiscreteSlider
             options={options}
             value={sliderPosition}
             onChange={updateWithSliderPosition}
           />
-        </Flexbox>
+        </div>
         <div>
           <Input
+            style={{ width: 80 }}
+            value={draft ?? formatBudget(budget)}
+            onChange={(e) => setDraft(e.target.value)}
             onBlur={(e) => {
               commitDraft(e.target.value);
               setDraft(null);
             }}
-            onChange={(e) => setDraft(e.target.value)}
-            onPressEnter={(e) => {
-              commitDraft((e.target as HTMLInputElement).value);
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+              commitDraft(e.currentTarget.value);
               setDraft(null);
             }}
-            style={{ width: 80 }}
-            value={draft ?? formatBudget(budget)}
           />
         </div>
-      </Flexbox>
+      </div>
     );
   },
 );

@@ -1,9 +1,10 @@
-import { Flexbox, SortableList } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import { ProviderIcon } from '@/components/OrviloIcons';
 import { type AiProviderListItem } from '@/types/aiProvider';
+
+import SortDragHandle from '../../features/SortDragHandle';
 
 interface GroupItemProps extends AiProviderListItem {
   disabled?: boolean;
@@ -12,7 +13,7 @@ interface GroupItemProps extends AiProviderListItem {
 const GroupItem = memo<GroupItemProps>(({ id, name, source, logo, disabled }) => {
   return (
     <>
-      <Flexbox horizontal gap={8}>
+      <div className="flex gap-2">
         {source === 'custom' && logo ? (
           <Avatar
             alt={name || id}
@@ -25,8 +26,8 @@ const GroupItem = memo<GroupItemProps>(({ id, name, source, logo, disabled }) =>
           <ProviderIcon provider={id} size={24} style={{ borderRadius: 6 }} type={'avatar'} />
         )}
         {name}
-      </Flexbox>
-      {!disabled && <SortableList.DragHandle />}
+      </div>
+      {!disabled && <SortDragHandle />}
     </>
   );
 });

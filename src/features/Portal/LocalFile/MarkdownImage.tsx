@@ -1,7 +1,7 @@
-import { Image } from '@lobehub/ui';
 import type { ComponentProps } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
 
+import Image from '@/components/Image';
 import { useClientDataSWR } from '@/libs/swr';
 import { localFileKeys } from '@/libs/swr/keys';
 import { type LocalFilePreview, projectFileService } from '@/services/projectFile';

@@ -1,6 +1,5 @@
 'use client';
 
-import { Markdown } from '@lobehub/ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { MessageCircle, MessagesSquare } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
@@ -8,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
+import { Markdown } from '@/components/Markdown';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import { useTaskStore } from '@/store/task';
 

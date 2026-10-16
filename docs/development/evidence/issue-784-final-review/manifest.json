@@ -1,0 +1,152 @@
+{
+  "cleanup": "Scoped config/preferences, exact workspace QA credential, three backend overlays and own observer/token restored/removed; both Devices healthy on final V readback",
+  "credentialPatternCounts": {
+    "jwt": 0,
+    "githubCredential": 0,
+    "bearerCredential": 0,
+    "signedURL": 0,
+    "privateKey": 0
+  },
+  "currentProductSource": "acb24d0fec2af4fce5b052feab481f5d89ac39cb",
+  "currentSourceCi": "Authoritative V owning Test/E2E run links in README; final status recorded in PR 791 and Actions",
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 8127,
+      "sha256": "7b2259bc002510a9efa7f452dd8f3ef4b670cb31dd1b89c06fa3f4975d2e5b7f",
+      "sourceFilename": "issue784-final-evidence-index-DRAFT.md",
+      "sourceSha256": "f63558d46236bfa0ae3d448947fe7181a779c81d23d3a8d900531742ad69a04f",
+      "originalPublishedSha256": "d822d002ce0c19487fd212c5bd508b76df70bca7827cfc738be9b03ba785d0c7",
+      "originalPublishedBytes": 7939,
+      "sourceBytesIdentical": false,
+      "transformation": {
+        "kind": "correct-public-redaction-provenance-description"
+      }
+    },
+    {
+      "file": "issue784-U-ci-final-sanitized.txt",
+      "bytes": 2413,
+      "sha256": "791a278804186404300a2905a48e1034fed97a1fd163e2853ae905c73196d7ce",
+      "sourceFilename": "issue784-U-ci-final-sanitized.txt",
+      "sourceSha256": "791a278804186404300a2905a48e1034fed97a1fd163e2853ae905c73196d7ce"
+    },
+    {
+      "file": "issue784-U-migration-final-safe.json.txt",
+      "bytes": 8178,
+      "sha256": "99627bb63d8bf211bdb1a18bdb77137f805c47157d5533750c9471a1931f7d87",
+      "sourceFilename": "issue784-U-migration-final-safe.json",
+      "sourceSha256": "99627bb63d8bf211bdb1a18bdb77137f805c47157d5533750c9471a1931f7d87"
+    },
+    {
+      "file": "restored-safe.json.txt",
+      "bytes": 1370,
+      "sha256": "184c2591cb515cb25a7bd91fad68e0bd17f2222d5a0e3c7923c4dbb2e95cfbf9",
+      "sourceFilename": "restored-safe.json",
+      "sourceSha256": "184c2591cb515cb25a7bd91fad68e0bd17f2222d5a0e3c7923c4dbb2e95cfbf9"
+    },
+    {
+      "file": "credential-deleted-safe.json.txt",
+      "bytes": 525,
+      "sha256": "0d2c682d5c05310c565c28cc84ec2be798d5f4bd01f5f5579a217d5c41ed6649",
+      "sourceFilename": "credential-deleted-safe.json",
+      "sourceSha256": "0d2c682d5c05310c565c28cc84ec2be798d5f4bd01f5f5579a217d5c41ed6649"
+    },
+    {
+      "file": "observer-removed-safe.json.txt",
+      "bytes": 748,
+      "sha256": "f7b0f9bcce0eb0f9368f2d2b02e7731ee3862ebe0108902e291d8e6878511d1f",
+      "sourceFilename": "observer-removed-safe.json",
+      "sourceSha256": "f7b0f9bcce0eb0f9368f2d2b02e7731ee3862ebe0108902e291d8e6878511d1f"
+    },
+    {
+      "file": "final-preservation-safe.json.txt",
+      "bytes": 3305,
+      "sha256": "31d9fbc519c04b5ec90820542bd6e026a5cbd6ec701be1250ae3e8be839f6c8f",
+      "sourceFilename": "final-preservation-safe.json",
+      "sourceSha256": "31d9fbc519c04b5ec90820542bd6e026a5cbd6ec701be1250ae3e8be839f6c8f"
+    },
+    {
+      "file": "member-recovery-health-safe.json.txt",
+      "bytes": 987,
+      "sha256": "9defaeaf5a1fbf2417114301b832254f6a80724ae045ade18c724ca4ac238258",
+      "sourceFilename": "member-recovery-health-safe.json",
+      "sourceSha256": "9defaeaf5a1fbf2417114301b832254f6a80724ae045ade18c724ca4ac238258"
+    },
+    {
+      "file": "V-backend-health-safe.json.txt",
+      "bytes": 823,
+      "sha256": "a17f66d4265a7eed9d352e26d51369a3f922bdee2e148035e6fccd87ed64ae1a",
+      "sourceFilename": "V-backend-health-safe.json",
+      "sourceSha256": "a17f66d4265a7eed9d352e26d51369a3f922bdee2e148035e6fccd87ed64ae1a"
+    },
+    {
+      "file": "V-final-preservation-safe.json.txt",
+      "bytes": 3305,
+      "sha256": "a53fe849adb4690a141791bff52b92bc1dc51a6aaf272a67db0985f3fda24b9a",
+      "sourceFilename": "V-final-preservation-safe.json",
+      "sourceSha256": "a53fe849adb4690a141791bff52b92bc1dc51a6aaf272a67db0985f3fda24b9a"
+    },
+    {
+      "file": "V-restored-settings-safe.json.txt",
+      "bytes": 417,
+      "sha256": "58f730f85839410ead68efbb51a173fbb1e5deda8b63a602de34033731f61d4e",
+      "sourceFilename": "V-restored-settings-safe.json",
+      "sourceSha256": "58f730f85839410ead68efbb51a173fbb1e5deda8b63a602de34033731f61d4e"
+    },
+    {
+      "file": "U-baseline-safe.json.txt",
+      "bytes": 2186,
+      "sha256": "b6455f5ef1d1e891b65c43356616032617eb7db137466e1e3ba43d9cfc4c0410",
+      "sourceFilename": "U-baseline-safe.json",
+      "sourceSha256": "b6455f5ef1d1e891b65c43356616032617eb7db137466e1e3ba43d9cfc4c0410"
+    },
+    {
+      "file": "V-query-read-safe.json.txt",
+      "bytes": 2186,
+      "sha256": "6f2158f045a2c7d832c84fd31888ed31e1671d342dfe7fb0ba0ea23f40b3ef1d",
+      "sourceFilename": "V-query-read-safe.json",
+      "sourceSha256": "6f2158f045a2c7d832c84fd31888ed31e1671d342dfe7fb0ba0ea23f40b3ef1d"
+    },
+    {
+      "file": "U-to-V-comparison-safe.json.txt",
+      "bytes": 1076,
+      "sha256": "eff7539abdfe71bea2b718cf3df66a3862f08f2fa54ee3f5f75404c1399484d6",
+      "sourceFilename": "U-to-V-comparison-safe.json",
+      "sourceSha256": "eff7539abdfe71bea2b718cf3df66a3862f08f2fa54ee3f5f75404c1399484d6"
+    },
+    {
+      "file": "query-fix-commit-receipt.json.txt",
+      "bytes": 823,
+      "sha256": "cc92dbe540f62e51ef5834085b4d99d005413c0008d5d8e5fe2465a7368a7da5",
+      "sourceFilename": "issue784-safe-periodic-null-commit-receipt.json",
+      "sourceSha256": "cc92dbe540f62e51ef5834085b4d99d005413c0008d5d8e5fe2465a7368a7da5"
+    },
+    {
+      "file": "query-fix-review.md.txt",
+      "bytes": 2423,
+      "sha256": "81e0ed90aa24bed1f035521f916ceb9075e4fb81d20ed5e368439b34822ffa59",
+      "sourceFilename": "issue784-safe-periodic-null-review.md",
+      "sourceSha256": "81e0ed90aa24bed1f035521f916ceb9075e4fb81d20ed5e368439b34822ffa59"
+    },
+    {
+      "file": "REDACTION.md",
+      "bytes": 2486,
+      "sha256": "e6a293fb77335039d3808bf060a4fc313f90a796d16d9992eca7a2bc1fb6bb68",
+      "purpose": "Twenty-one-field scheduler-token redaction provenance and current-state limits"
+    }
+  ],
+  "pending": {
+    "SlackAppWideApprovalAndIngress": true,
+    "CodexExternalTitleWritebackMiMoOnly": true,
+    "BM25SessionSearchUnverified": true
+  },
+  "publicRedaction": {
+    "description": "Only scheduler tickToken fields become SHA-256 projections; original source hashes retain provenance and are not redacted-public byte hashes.",
+    "fieldsInThisBundle": 0,
+    "sourceOriginalsModified": false,
+    "providerHistoryPurged": false
+  },
+  "recordedSourceU": "e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b",
+  "runtimeVerdict": "U gen2 manual Stop cold UI passed; V real list queries and preservation passed; no complete Issue784 acceptance claim",
+  "scope": "Final local runtime/evidence index, immutable U CI failures, migration/query correction and scoped cleanup receipts; no raw logs, scripts or credentials included"
+}

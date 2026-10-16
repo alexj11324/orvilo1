@@ -1,0 +1,313 @@
+{
+  "at": "2026-10-15T04:44:16.425Z",
+  "checks": [
+    {
+      "taskId": "task_ZFUUxCAzbJNX",
+      "identifier": "T-3",
+      "status": "completed",
+      "workflowCategory": "done",
+      "current": {
+        "runId": "0339f756-f018-4e87-a206-f6d4bd7547d5",
+        "proof": {
+          "taskId": "task_ZFUUxCAzbJNX",
+          "deliveryOperationId": "op_1792027598069_agt_taIxMIVssPhE_tpc_EtC99mbP5BjJ_KGoDrCnL",
+          "topicId": "tpc_EtC99mbP5BjJ",
+          "executionGeneration": 1,
+          "dispatchId": "dsp_PG6wUSvwfgwa",
+          "checklistRevision": 1,
+          "deliveryKind": "artifact"
+        },
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": false
+      },
+      "history": [
+        {
+          "id": "0339f756-f018-4e87-a206-f6d4bd7547d5",
+          "status": "passed",
+          "userDecision": "accept"
+        }
+      ],
+      "resultCount": 2,
+      "evidenceCount": 2
+    },
+    {
+      "taskId": "task_knI1wX9SI6pC",
+      "identifier": "T-5",
+      "status": "completed",
+      "workflowCategory": "done",
+      "current": {
+        "runId": "93957ffa-5262-43ce-b5ae-8f4f345a8ec2",
+        "proof": {
+          "taskId": "task_knI1wX9SI6pC",
+          "deliveryOperationId": "op_1792022578240_agt_taIxMIVssPhE_tpc_xNome9pKSg0t_1W2aNi93",
+          "topicId": "tpc_xNome9pKSg0t",
+          "executionGeneration": 4,
+          "dispatchId": "dsp_6clGGkh134sM",
+          "checklistRevision": 1,
+          "deliveryKind": "artifact"
+        },
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": false
+      },
+      "history": [
+        {
+          "id": "037bb34f-a2b9-447f-aea1-9f051b69febb",
+          "status": "failed",
+          "userDecision": null
+        },
+        {
+          "id": "93957ffa-5262-43ce-b5ae-8f4f345a8ec2",
+          "status": "passed",
+          "userDecision": "accept"
+        }
+      ],
+      "resultCount": 4,
+      "evidenceCount": 9
+    },
+    {
+      "taskId": "task_bqou63oSN3Fn",
+      "identifier": "T-4",
+      "status": "completed",
+      "workflowCategory": "done",
+      "current": {
+        "runId": "63601250-78ab-4853-a541-82422e61d44d",
+        "proof": {
+          "taskId": "task_bqou63oSN3Fn",
+          "deliveryOperationId": "op_1792025762702_agt_taIxMIVssPhE_tpc_elIGxRYFoyrS_A8IfJMGz",
+          "topicId": "tpc_elIGxRYFoyrS",
+          "executionGeneration": 5,
+          "dispatchId": "dsp_0ZIvle2ziXC3",
+          "checklistRevision": 1,
+          "deliveryKind": "artifact"
+        },
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": false
+      },
+      "history": [
+        {
+          "id": "1c667d03-cd58-42d4-af51-d2a8b1a69fed",
+          "status": "verifying",
+          "userDecision": null
+        },
+        {
+          "id": "63601250-78ab-4853-a541-82422e61d44d",
+          "status": "passed",
+          "userDecision": "accept"
+        }
+      ],
+      "resultCount": 2,
+      "evidenceCount": 5
+    },
+    {
+      "taskId": "task_z8qoSoNxdlN3",
+      "identifier": "T-6",
+      "status": "completed",
+      "workflowCategory": "done",
+      "current": {
+        "runId": "245f0248-1f9d-4098-ae9d-8e5bc2435367",
+        "proof": {
+          "taskId": "task_z8qoSoNxdlN3",
+          "deliveryOperationId": "op_1792026575400_agt_taIxMIVssPhE_tpc_GxCk8tXQ8Lsq_H9qAj1xD",
+          "topicId": "tpc_GxCk8tXQ8Lsq",
+          "executionGeneration": 2,
+          "dispatchId": "dsp_HrcNWzBl4DuX",
+          "checklistRevision": 1,
+          "deliveryKind": "artifact"
+        },
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": false
+      },
+      "history": [
+        {
+          "id": "245f0248-1f9d-4098-ae9d-8e5bc2435367",
+          "status": "passed",
+          "userDecision": "accept"
+        }
+      ],
+      "resultCount": 2,
+      "evidenceCount": 4
+    },
+    {
+      "taskId": "task_mAkjRGYbByNW",
+      "identifier": "T-10",
+      "status": "completed",
+      "workflowCategory": "done",
+      "current": {
+        "runId": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+        "proof": {
+          "taskId": "task_mAkjRGYbByNW",
+          "deliveryOperationId": "op_1792036276446_agt_taIxMIVssPhE_tpc_IOE2170qBLsW_WXx2iEkN",
+          "topicId": "tpc_IOE2170qBLsW",
+          "executionGeneration": 1,
+          "dispatchId": "dsp_oXVpMhzYS1mp",
+          "checklistRevision": 1,
+          "deliveryKind": "artifact"
+        },
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": false
+      },
+      "history": [
+        {
+          "id": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+          "status": "passed",
+          "userDecision": "accept"
+        }
+      ],
+      "resultCount": 7,
+      "evidenceCount": 7
+    },
+    {
+      "taskId": "task_WSixF93YcIxP",
+      "identifier": "T-11",
+      "status": "completed",
+      "workflowCategory": "done",
+      "current": {
+        "runId": "49250169-e051-4fc8-b599-0e1eb6f83151",
+        "proof": {
+          "taskId": "task_WSixF93YcIxP",
+          "deliveryOperationId": "op_1792036061722_agt_taIxMIVssPhE_tpc_9493ZcYPCQGb_C4BxA8NZ",
+          "topicId": "tpc_9493ZcYPCQGb",
+          "executionGeneration": 4,
+          "dispatchId": "dsp_wj96eCBaC9xE",
+          "sourceSha": "8a5baea6ec515b8aabde9a6e7b1118ed109071e7",
+          "repo": "alexj11324/orvilo-issue784-qa-a-20261014",
+          "branch": "task/T-11",
+          "baseBranch": "qa-target",
+          "targetBranch": "qa-target",
+          "checklistRevision": 1,
+          "deliveryKind": "code"
+        },
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": true
+      },
+      "history": [
+        {
+          "id": "49250169-e051-4fc8-b599-0e1eb6f83151",
+          "status": "passed",
+          "userDecision": "accept"
+        }
+      ],
+      "resultCount": 9,
+      "evidenceCount": 9
+    },
+    {
+      "taskId": "task_ZRNFaxrqjdgV",
+      "identifier": "T-12",
+      "status": "completed",
+      "workflowCategory": "done",
+      "current": {
+        "runId": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+        "proof": {
+          "taskId": "task_ZRNFaxrqjdgV",
+          "deliveryOperationId": "op_1792036068608_agt_taIxMIVssPhE_tpc_KdjLo6agfX5r_XPEoQGwb",
+          "topicId": "tpc_KdjLo6agfX5r",
+          "executionGeneration": 4,
+          "dispatchId": "dsp_NaYFj2H86iVJ",
+          "sourceSha": "3b8a119d35bc32c5dc6ce5ed2f7d0c42dbffc779",
+          "repo": "alexj11324/orvilo-issue784-qa-b-20261014",
+          "branch": "task/T-12",
+          "baseBranch": "qa-target",
+          "targetBranch": "qa-target",
+          "checklistRevision": 1,
+          "deliveryKind": "code"
+        },
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": true
+      },
+      "history": [
+        {
+          "id": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+          "status": "passed",
+          "userDecision": "accept"
+        }
+      ],
+      "resultCount": 9,
+      "evidenceCount": 9
+    }
+  ],
+  "mutationsPerformed": false,
+  "nativeExecutionStarted": false,
+  "readOnlyLegacyArchive": {
+    "runCount": 12,
+    "runs": [
+      {
+        "id": "115ea62d-42b0-4978-8054-9daabcd213f7",
+        "resultCount": 2
+      },
+      {
+        "id": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+        "resultCount": 7
+      },
+      {
+        "id": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+        "resultCount": 9
+      },
+      {
+        "id": "49250169-e051-4fc8-b599-0e1eb6f83151",
+        "resultCount": 9
+      },
+      {
+        "id": "62eb3fe9-4517-48c9-90b3-5d1b71736fdb",
+        "resultCount": 2
+      },
+      {
+        "id": "0339f756-f018-4e87-a206-f6d4bd7547d5",
+        "resultCount": 2
+      },
+      {
+        "id": "4b356ef6-d5bb-41eb-b7a4-aa3b1a1373e5",
+        "resultCount": 2
+      },
+      {
+        "id": "245f0248-1f9d-4098-ae9d-8e5bc2435367",
+        "resultCount": 2
+      },
+      {
+        "id": "63601250-78ab-4853-a541-82422e61d44d",
+        "resultCount": 2
+      },
+      {
+        "id": "93957ffa-5262-43ce-b5ae-8f4f345a8ec2",
+        "resultCount": 2
+      },
+      {
+        "id": "037bb34f-a2b9-447f-aea1-9f051b69febb",
+        "resultCount": 2
+      },
+      {
+        "id": "1c667d03-cd58-42d4-af51-d2a8b1a69fed",
+        "resultCount": 0
+      }
+    ],
+    "goalListReadable": true
+  },
+  "sourceSha": "d21041e8ce54bb5c2e3e2ed1f29e6e01b4817ca4"
+}

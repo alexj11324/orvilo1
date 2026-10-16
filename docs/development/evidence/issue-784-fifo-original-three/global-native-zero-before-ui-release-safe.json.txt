@@ -1,0 +1,8 @@
+{
+  "at": "2026-10-15T05:02:20.501Z",
+  "scope": "entire_local_QA_database_all_workspaces_and_private_chats",
+  "sourceSha": "d21041e8ce54bb5c2e3e2ed1f29e6e01b4817ca4",
+  "activeCount": 0,
+  "active": [],
+  "globalNativeZero": true
+}

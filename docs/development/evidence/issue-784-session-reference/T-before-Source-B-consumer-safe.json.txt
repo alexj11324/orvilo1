@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-15T06:04:45.219Z",
+  "consumerTopicId": "tpc_Boklgc9hWotl",
+  "consumerOperationCount": 2,
+  "consumerOperations": [
+    {
+      "id": "op_1792042179925_agt_taIxMIVssPhE_tpc_Boklgc9hWotl_drGMufQp",
+      "status": "interrupted",
+      "completed_at": "2026-10-15T05:31:12.062Z"
+    },
+    {
+      "id": "op_1792044114528_agt_taIxMIVssPhE_tpc_Boklgc9hWotl_8ACg37bL",
+      "status": "done",
+      "completed_at": "2026-10-15T06:03:25.565Z"
+    }
+  ],
+  "consumerMessageCount": 21,
+  "consumerMessagesSha256": "a108ce34f9309ad4823a99773fc35bb5927c2dc7bf5977f8d715b8420e5511a3",
+  "allConsumerOpsInactive": true
+}

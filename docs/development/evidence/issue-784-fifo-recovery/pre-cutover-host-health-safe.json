@@ -1,0 +1,49 @@
+{
+  "active": [],
+  "activeCount": 0,
+  "at": "2026-10-15T04:30:16.442Z",
+  "automationPaused": true,
+  "baselineSha256": "78f4a589ce964abe4853728003a225da08dd991fda178a6a6e2edb5508ad0d41",
+  "occurrenceCount": 3,
+  "queuedCount": 2,
+  "results": [
+    {
+      "actor": "owner",
+      "method": "user.getUserState",
+      "status": 200,
+      "ms": 213
+    },
+    {
+      "actor": "owner",
+      "method": "device.listDevices",
+      "status": 200,
+      "ms": 192,
+      "devices": [
+        {
+          "id": "b26d477ac30d6080a4a038b66cb28a80",
+          "online": true,
+          "channels": 1
+        }
+      ]
+    },
+    {
+      "actor": "member",
+      "method": "user.getUserState",
+      "status": 200,
+      "ms": 78
+    },
+    {
+      "actor": "member",
+      "method": "device.listDevices",
+      "status": 200,
+      "ms": 108,
+      "devices": [
+        {
+          "id": "943ad1571ff1079323550034fd8f9123",
+          "online": true,
+          "channels": 1
+        }
+      ]
+    }
+  ]
+}

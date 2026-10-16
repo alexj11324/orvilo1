@@ -1,0 +1,14 @@
+{
+  "at": "2026-10-15T06:27:08.151Z",
+  "observerScriptSha256": "20e5d495b143047d886265654c77eaa9acb69d1a7cc95d1216d449026531c13d",
+  "observerWasReadyBeforeUiResumeAndStop": true,
+  "stoppedOnlyOwnPassiveObserverPid": 8043,
+  "matchingRpcCount": 0,
+  "outputBytes": 0,
+  "outputSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "requestIssuanceProofAvailable": false,
+  "limitation": "No matching browser request events were recorded. The actual RPC procedure and transport are not claimed from this observer. No repeat Stop or native run was attempted.",
+  "rawRequestDataWritten": false,
+  "productServicesUntouched": true,
+  "browserCloseCalled": false
+}

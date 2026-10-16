@@ -1,0 +1,77 @@
+{
+  "at": "2026-10-15T06:59:52.564Z",
+  "stage": "truthfully_ended_gen2_leaf_parent_stayed_canceled",
+  "tasks": [
+    {
+      "id": "task_x943JumvczAo",
+      "status": "canceled",
+      "workflowCategory": "canceled",
+      "executionGeneration": 0,
+      "automationMode": "heartbeat",
+      "heartbeatInterval": 600,
+      "assigneeAgentId": "agt_taIxMIVssPhE",
+      "reviewerAgentId": "agt_taIxMIVssPhE",
+      "scheduler": {
+        "automationPaused": true,
+        "tickTokenSha256": null
+      }
+    },
+    {
+      "id": "task_wqstgZSuOLUg",
+      "status": "canceled",
+      "workflowCategory": "canceled",
+      "executionGeneration": 2,
+      "automationMode": "heartbeat",
+      "heartbeatInterval": 600,
+      "assigneeAgentId": "agt_taIxMIVssPhE",
+      "reviewerAgentId": null,
+      "scheduler": {
+        "automationPaused": true,
+        "scheduledAt": "2026-10-15T06:51:24.215Z",
+        "tickRevision": 2,
+        "tickMessageId": "local-task-task_wqstgZSuOLUg-ae2d05cb76ebfdda48434a45389ccbb478832e3e34a910dd9206352d07924886",
+        "tickTokenSha256": "25cff990dd53df30efd5fa2eff73740c4076e539a4817f3e28bc428b010cbce1"
+      }
+    }
+  ],
+  "plan": {
+    "revision": 1,
+    "confirmedAt": "2026-10-15T06:18:27.128Z",
+    "scopeFingerprint": "c82abc5bec7219426703149140c17823c24225266e105c0d0c49a6e81ef65b2c"
+  },
+  "dependencies": [
+    {
+      "id": "be9b0491-04f8-48e7-a8fc-5be00049cf10",
+      "taskId": "task_x943JumvczAo",
+      "dependsOnId": "task_wqstgZSuOLUg",
+      "type": "blocks"
+    }
+  ],
+  "queue": {
+    "queued": 0
+  },
+  "topics": [
+    {
+      "id": "tpc_7AzS55z2m2Y2",
+      "status": "canceled",
+      "operationId": "op_1792047098412_agt_taIxMIVssPhE_tpc_7AzS55z2m2Y2_Ueq2gRKF",
+      "agentId": "agt_taIxMIVssPhE"
+    },
+    {
+      "id": "tpc_hWh5Nch04vD7",
+      "status": "canceled",
+      "operationId": "op_1792045223357_agt_taIxMIVssPhE_tpc_hWh5Nch04vD7_eZIBOrUi",
+      "agentId": "agt_taIxMIVssPhE"
+    }
+  ],
+  "history": [],
+  "checks": {
+    "bothCanceled": true,
+    "parentPaused": true,
+    "leafPaused": true,
+    "planPreserved": true,
+    "twoTopicsCanceledWithHistory": true,
+    "queueEmpty": true
+  },
+  "limit": "Intentional cancellation during first sleep300; arithmetic artifact and Reviewer delivery not exercised; leaf reviewer remains null."
+}

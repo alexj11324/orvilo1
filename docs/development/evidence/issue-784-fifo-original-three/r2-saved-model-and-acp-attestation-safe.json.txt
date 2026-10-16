@@ -1,0 +1,37 @@
+{
+  "at": "2026-10-15T04:43:41.358Z",
+  "op": {
+    "id": "op_1792039235201_agt_taIxMIVssPhE_tpc_GBcdQg18Kz5B_bWVQu8Lg",
+    "status": "interrupted",
+    "model": null,
+    "provider": "opencode",
+    "created_at": "2026-10-15T04:40:35.223Z",
+    "completed_at": "2026-10-15T04:43:32.113Z"
+  },
+  "facts": [
+    {
+      "path": "executionPlan.deviceId",
+      "value": "b26d477ac30d6080a4a038b66cb28a80"
+    },
+    {
+      "path": "executionPlan.modelRoute.model",
+      "value": "opencode/mimo-v2.6-flash-free"
+    },
+    {
+      "path": "heteroAgentType",
+      "value": "opencode"
+    },
+    {
+      "path": "remoteAdmission.deviceId",
+      "value": "b26d477ac30d6080a4a038b66cb28a80"
+    },
+    {
+      "path": "remoteAdmission.acpSessionId",
+      "value": "ses_ec2234407ffeCAoWBOMaVonKk1"
+    },
+    {
+      "path": "builtinToolContext.activeDeviceId",
+      "value": "b26d477ac30d6080a4a038b66cb28a80"
+    }
+  ]
+}

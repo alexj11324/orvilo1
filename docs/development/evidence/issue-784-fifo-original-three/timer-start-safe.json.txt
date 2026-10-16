@@ -1,0 +1,28 @@
+{
+  "candidateSha": "e24075992d1c0888e3ac5db80481b06efba755b3",
+  "capturedAt": "2026-10-15T01:57:15.558Z",
+  "parentId": "task_A7YBylKf7SvG",
+  "childId": "task_DAFosEUtomqE",
+  "status": "scheduled",
+  "automationMode": "heartbeat",
+  "heartbeatInterval": 600,
+  "assigneeAgentId": "agt_taIxMIVssPhE",
+  "reviewerAgentId": "agt_taIxMIVssPhE",
+  "revision": 1,
+  "confirmedAt": "2026-10-15T01:57:11.229Z",
+  "confirmedBy": "user_agent_testing_001",
+  "scopeFingerprint": "e41c62e562ebc604e9600690427fc7bc0dd9f36b2a5e1efa6d6040378ce73ff7",
+  "executionScopeIds": [
+    "task_A7YBylKf7SvG",
+    "task_DAFosEUtomqE"
+  ],
+  "scheduler": {
+    "tickTokenSha256": "cd8882a4aba5786d572188648a1196888996d352c342c6f316abad8ce0932e55",
+    "scheduledAt": "2026-10-15T01:57:15.464Z",
+    "tickRevision": 1,
+    "tickMessageId": "local-task-task_A7YBylKf7SvG-342aafe69a8ddf6b63178da602245957b5f55728234ad90d365fcbba84510f34",
+    "automationPaused": false,
+    "consecutiveFailures": 0
+  },
+  "nextDueAt": "2026-10-15T02:07:15.464Z"
+}

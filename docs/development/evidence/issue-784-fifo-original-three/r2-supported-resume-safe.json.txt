@@ -1,0 +1,435 @@
+{
+  "backendSha": "d21041e8ce54bb5c2e3e2ed1f29e6e01b4817ca4",
+  "stage": "supported Resume after R1 accepted while paused",
+  "before": {
+    "capturedAt": "2026-10-15T04:40:29.470Z",
+    "tasks": [
+      {
+        "id": "task_A7YBylKf7SvG",
+        "identifier": "T-14",
+        "status": "paused",
+        "workflowCategory": "backlog",
+        "domainRevision": 15,
+        "executionGeneration": 1,
+        "currentTopicId": "tpc_3xyaZBrsdDGT",
+        "assigneeAgentId": "agt_taIxMIVssPhE",
+        "reviewerAgentId": "agt_taIxMIVssPhE",
+        "scheduler": {
+          "tickTokenSha256": "481d32058775bfed965c795548543f68fe38a7e2fa04217d6e13ae3bc7345793",
+          "scheduledAt": "2026-10-15T04:33:12.006Z",
+          "tickRevision": 2,
+          "tickMessageId": "local-task-task_A7YBylKf7SvG-6c0d3274be877517eebdc7b82811382c7b39c674dcc9e151b17a2bc1c30ece8a",
+          "automationPaused": true,
+          "consecutiveFailures": 0
+        },
+        "plan": {
+          "revision": 1,
+          "confirmedAt": "2026-10-15T01:57:11.229Z",
+          "fingerprint": "e41c62e562ebc604e9600690427fc7bc0dd9f36b2a5e1efa6d6040378ce73ff7",
+          "checklistTaskIds": [
+            "task_A7YBylKf7SvG",
+            "task_DAFosEUtomqE"
+          ]
+        },
+        "review": {
+          "state": "submitted",
+          "cycleId": "622cffe7-800a-49b6-b641-0f8a439cafca",
+          "verdict": "pass",
+          "reviewerOperationId": "op_1792038876355_agt_taIxMIVssPhE_tpc_eNz6zO8lbGwe_wXNcYtSX",
+          "deliveryOperationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL"
+        },
+        "current": {
+          "runId": "115ea62d-42b0-4978-8054-9daabcd213f7",
+          "proof": {
+            "taskId": "task_A7YBylKf7SvG",
+            "deliveryOperationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+            "topicId": "tpc_3xyaZBrsdDGT",
+            "executionGeneration": 1,
+            "dispatchId": "dsp_rhOd6QyfuO4z",
+            "checklistRevision": 1,
+            "deliveryKind": "artifact"
+          },
+          "reviewerPassed": true,
+          "necessaryChecksPassed": true,
+          "itemsAccepted": true,
+          "deliveryAccepted": true,
+          "availableForDependents": true,
+          "merged": false
+        },
+        "history": [
+          {
+            "id": "115ea62d-42b0-4978-8054-9daabcd213f7",
+            "operationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+            "status": "passed",
+            "userDecision": "accept",
+            "roundIndex": 1,
+            "issueDelivery": {
+              "taskId": "task_A7YBylKf7SvG",
+              "topicId": "tpc_3xyaZBrsdDGT",
+              "dispatchId": "dsp_rhOd6QyfuO4z",
+              "deliveryKind": "artifact",
+              "checklistRevision": 1,
+              "deliveryOperationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+              "executionGeneration": 1
+            },
+            "issueReviewer": {
+              "cycleId": "622cffe7-800a-49b6-b641-0f8a439cafca",
+              "verdict": "pass",
+              "operationId": "op_1792038876355_agt_taIxMIVssPhE_tpc_eNz6zO8lbGwe_wXNcYtSX"
+            },
+            "createdAt": "2026-10-15T04:34:36.241Z",
+            "updatedAt": "2026-10-15T04:39:31.041Z"
+          }
+        ],
+        "currentResults": [
+          {
+            "id": "e3fe7db0-5813-4027-838c-146827cec8f5",
+            "verifyRunId": "115ea62d-42b0-4978-8054-9daabcd213f7",
+            "checkItemId": "70f8d7fc-57b3-4dcf-8334-944d3a8efc35",
+            "verdict": "passed",
+            "status": "passed",
+            "userDecision": "accepted"
+          },
+          {
+            "id": "5b3f07de-4cdd-44e8-b611-40fe854ca75a",
+            "verifyRunId": "115ea62d-42b0-4978-8054-9daabcd213f7",
+            "checkItemId": "c608a250-12ed-4236-8250-7cd117f3dfeb",
+            "verdict": "passed",
+            "status": "passed",
+            "userDecision": "accepted"
+          }
+        ],
+        "topics": [
+          {
+            "id": "tpc_3xyaZBrsdDGT",
+            "operationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+            "status": "completed",
+            "seq": 1,
+            "createdAt": "2026-10-15T02:15:03.469Z",
+            "updatedAt": "2026-10-15T04:34:26.733Z"
+          }
+        ]
+      },
+      {
+        "id": "task_DAFosEUtomqE",
+        "identifier": "T-15",
+        "status": "completed",
+        "workflowCategory": "done",
+        "domainRevision": 8,
+        "executionGeneration": 3,
+        "currentTopicId": "tpc_dRQ65DVXLeKV",
+        "assigneeAgentId": "agt_taIxMIVssPhE",
+        "reviewerAgentId": "agt_taIxMIVssPhE",
+        "plan": {
+          "revision": 1,
+          "confirmedAt": "2026-10-15T01:57:11.229Z",
+          "fingerprint": "e41c62e562ebc604e9600690427fc7bc0dd9f36b2a5e1efa6d6040378ce73ff7",
+          "checklistTaskIds": [
+            "task_A7YBylKf7SvG",
+            "task_DAFosEUtomqE"
+          ]
+        },
+        "review": {
+          "state": "submitted",
+          "cycleId": "66927962-2a81-48b5-9773-56a1bc99b8cf",
+          "verdict": "pass",
+          "reviewerOperationId": "op_1792030236362_agt_taIxMIVssPhE_tpc_WwmllWP9Yyq3_c3CQV8pu",
+          "deliveryOperationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs"
+        },
+        "current": {
+          "runId": "62eb3fe9-4517-48c9-90b3-5d1b71736fdb",
+          "proof": {
+            "taskId": "task_DAFosEUtomqE",
+            "deliveryOperationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs",
+            "topicId": "tpc_dRQ65DVXLeKV",
+            "executionGeneration": 3,
+            "dispatchId": "dsp_XhT2yzyJeNBo",
+            "checklistRevision": 1,
+            "deliveryKind": "artifact"
+          },
+          "reviewerPassed": true,
+          "necessaryChecksPassed": true,
+          "itemsAccepted": true,
+          "deliveryAccepted": true,
+          "availableForDependents": true,
+          "merged": false
+        },
+        "history": [
+          {
+            "id": "62eb3fe9-4517-48c9-90b3-5d1b71736fdb",
+            "operationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs",
+            "status": "passed",
+            "userDecision": "accept",
+            "roundIndex": 1,
+            "issueDelivery": {
+              "taskId": "task_DAFosEUtomqE",
+              "topicId": "tpc_dRQ65DVXLeKV",
+              "dispatchId": "dsp_XhT2yzyJeNBo",
+              "deliveryKind": "artifact",
+              "checklistRevision": 1,
+              "deliveryOperationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs",
+              "executionGeneration": 3
+            },
+            "issueReviewer": {
+              "cycleId": "66927962-2a81-48b5-9773-56a1bc99b8cf",
+              "verdict": "pass",
+              "operationId": "op_1792030236362_agt_taIxMIVssPhE_tpc_WwmllWP9Yyq3_c3CQV8pu"
+            },
+            "createdAt": "2026-10-15T02:10:36.240Z",
+            "updatedAt": "2026-10-15T04:39:31.075Z"
+          }
+        ],
+        "currentResults": [
+          {
+            "id": "7b47ddb9-2189-4484-9278-3c3d2b0eee6e",
+            "verifyRunId": "62eb3fe9-4517-48c9-90b3-5d1b71736fdb",
+            "checkItemId": "b8ac4e0d-d2d3-49c9-913e-82bd6d1d2e67",
+            "verdict": "passed",
+            "status": "passed",
+            "userDecision": "accepted"
+          },
+          {
+            "id": "3cf881b4-aeca-4e90-baa6-d443b7061eea",
+            "verifyRunId": "62eb3fe9-4517-48c9-90b3-5d1b71736fdb",
+            "checkItemId": "ee95811b-18bd-43f5-ae15-e753608ef652",
+            "verdict": "passed",
+            "status": "passed",
+            "userDecision": "accepted"
+          }
+        ],
+        "topics": [
+          {
+            "id": "tpc_dRQ65DVXLeKV",
+            "operationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs",
+            "status": "completed",
+            "seq": 1,
+            "createdAt": "2026-10-15T02:07:17.058Z",
+            "updatedAt": "2026-10-15T02:10:49.883Z"
+          }
+        ]
+      }
+    ],
+    "queue": {
+      "queued": 2,
+      "recent": [
+        {
+          "id": "dsp_acIuUwXJehBm",
+          "phase": "queued",
+          "createdAt": "2026-10-15T02:27:17.425Z",
+          "updatedAt": "2026-10-15T02:27:17.425Z"
+        },
+        {
+          "id": "dsp_SA3DPMPOhjx8",
+          "phase": "queued",
+          "createdAt": "2026-10-15T02:17:17.364Z",
+          "updatedAt": "2026-10-15T02:17:17.364Z"
+        },
+        {
+          "id": "dsp_rhOd6QyfuO4z",
+          "phase": "succeeded",
+          "createdAt": "2026-10-15T02:07:15.546Z",
+          "updatedAt": "2026-10-15T04:39:31.226Z"
+        }
+      ]
+    },
+    "dependencies": [
+      {
+        "id": "45614d92-1f28-4f96-829b-f40588e0e9c1",
+        "taskId": "task_A7YBylKf7SvG",
+        "dependsOnId": "task_DAFosEUtomqE",
+        "type": "blocks"
+      }
+    ]
+  },
+  "after": {
+    "capturedAt": "2026-10-15T04:40:35.801Z",
+    "tasks": [
+      {
+        "id": "task_A7YBylKf7SvG",
+        "identifier": "T-14",
+        "status": "running",
+        "workflowCategory": "backlog",
+        "domainRevision": 16,
+        "executionGeneration": 2,
+        "currentTopicId": null,
+        "assigneeAgentId": "agt_taIxMIVssPhE",
+        "reviewerAgentId": "agt_taIxMIVssPhE",
+        "scheduler": {
+          "tickTokenSha256": "b8104ac98a63d3cb5d8d41df2b16e96b22adcedc14ac53d10ccea7cd490b0e57",
+          "scheduledAt": "2026-10-15T04:40:35.400Z",
+          "tickRevision": 3,
+          "tickMessageId": "local-task-task_A7YBylKf7SvG-6ac6866dead5068bde6bfefdfe90e153ff6f660717077fc92dfb7f9aa862b47e",
+          "automationPaused": false,
+          "consecutiveFailures": 0
+        },
+        "plan": {
+          "revision": 1,
+          "confirmedAt": "2026-10-15T01:57:11.229Z",
+          "fingerprint": "e41c62e562ebc604e9600690427fc7bc0dd9f36b2a5e1efa6d6040378ce73ff7",
+          "checklistTaskIds": [
+            "task_A7YBylKf7SvG",
+            "task_DAFosEUtomqE"
+          ]
+        },
+        "review": {
+          "state": "submitted",
+          "cycleId": "3b3d0d3e-ee52-47eb-bfe4-8cfcbccbf9cf",
+          "deliveryOperationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL"
+        },
+        "current": {
+          "reviewerPassed": false,
+          "necessaryChecksPassed": false,
+          "itemsAccepted": false,
+          "deliveryAccepted": false,
+          "availableForDependents": false,
+          "merged": false
+        },
+        "history": [
+          {
+            "id": "115ea62d-42b0-4978-8054-9daabcd213f7",
+            "operationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+            "status": "passed",
+            "userDecision": "accept",
+            "roundIndex": 1,
+            "issueDelivery": {
+              "taskId": "task_A7YBylKf7SvG",
+              "topicId": "tpc_3xyaZBrsdDGT",
+              "dispatchId": "dsp_rhOd6QyfuO4z",
+              "deliveryKind": "artifact",
+              "checklistRevision": 1,
+              "deliveryOperationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+              "executionGeneration": 1
+            },
+            "issueReviewer": {
+              "cycleId": "622cffe7-800a-49b6-b641-0f8a439cafca",
+              "verdict": "pass",
+              "operationId": "op_1792038876355_agt_taIxMIVssPhE_tpc_eNz6zO8lbGwe_wXNcYtSX"
+            },
+            "createdAt": "2026-10-15T04:34:36.241Z",
+            "updatedAt": "2026-10-15T04:39:31.041Z"
+          }
+        ],
+        "currentResults": [],
+        "topics": [
+          {
+            "id": "tpc_3xyaZBrsdDGT",
+            "operationId": "op_1792030503495_agt_taIxMIVssPhE_tpc_3xyaZBrsdDGT_fCdUsNHL",
+            "status": "completed",
+            "seq": 1,
+            "createdAt": "2026-10-15T02:15:03.469Z",
+            "updatedAt": "2026-10-15T04:34:26.733Z"
+          }
+        ]
+      },
+      {
+        "id": "task_DAFosEUtomqE",
+        "identifier": "T-15",
+        "status": "running",
+        "workflowCategory": "in_progress",
+        "domainRevision": 8,
+        "executionGeneration": 5,
+        "currentTopicId": "tpc_GBcdQg18Kz5B",
+        "assigneeAgentId": "agt_taIxMIVssPhE",
+        "reviewerAgentId": "agt_taIxMIVssPhE",
+        "plan": {
+          "revision": 1,
+          "confirmedAt": "2026-10-15T01:57:11.229Z",
+          "fingerprint": "e41c62e562ebc604e9600690427fc7bc0dd9f36b2a5e1efa6d6040378ce73ff7",
+          "checklistTaskIds": [
+            "task_A7YBylKf7SvG",
+            "task_DAFosEUtomqE"
+          ]
+        },
+        "review": {
+          "state": "submitted",
+          "cycleId": "3b8be3a4-ae2c-4229-8ae1-cfde08394f7f",
+          "deliveryOperationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs"
+        },
+        "current": {
+          "reviewerPassed": false,
+          "necessaryChecksPassed": false,
+          "itemsAccepted": false,
+          "deliveryAccepted": false,
+          "availableForDependents": false,
+          "merged": false
+        },
+        "history": [
+          {
+            "id": "62eb3fe9-4517-48c9-90b3-5d1b71736fdb",
+            "operationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs",
+            "status": "passed",
+            "userDecision": "accept",
+            "roundIndex": 1,
+            "issueDelivery": {
+              "taskId": "task_DAFosEUtomqE",
+              "topicId": "tpc_dRQ65DVXLeKV",
+              "dispatchId": "dsp_XhT2yzyJeNBo",
+              "deliveryKind": "artifact",
+              "checklistRevision": 1,
+              "deliveryOperationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs",
+              "executionGeneration": 3
+            },
+            "issueReviewer": {
+              "cycleId": "66927962-2a81-48b5-9773-56a1bc99b8cf",
+              "verdict": "pass",
+              "operationId": "op_1792030236362_agt_taIxMIVssPhE_tpc_WwmllWP9Yyq3_c3CQV8pu"
+            },
+            "createdAt": "2026-10-15T02:10:36.240Z",
+            "updatedAt": "2026-10-15T04:39:31.075Z"
+          }
+        ],
+        "currentResults": [],
+        "topics": [
+          {
+            "id": "tpc_GBcdQg18Kz5B",
+            "operationId": "op_1792039235201_agt_taIxMIVssPhE_tpc_GBcdQg18Kz5B_bWVQu8Lg",
+            "status": "running",
+            "seq": 2,
+            "createdAt": "2026-10-15T04:40:35.161Z",
+            "updatedAt": "2026-10-15T04:40:35.361Z"
+          },
+          {
+            "id": "tpc_dRQ65DVXLeKV",
+            "operationId": "op_1792030037109_agt_taIxMIVssPhE_tpc_dRQ65DVXLeKV_x2tf8YXs",
+            "status": "completed",
+            "seq": 1,
+            "createdAt": "2026-10-15T02:07:17.058Z",
+            "updatedAt": "2026-10-15T02:10:49.883Z"
+          }
+        ]
+      }
+    ],
+    "queue": {
+      "queued": 1,
+      "recent": [
+        {
+          "id": "dsp_acIuUwXJehBm",
+          "phase": "queued",
+          "createdAt": "2026-10-15T02:27:17.425Z",
+          "updatedAt": "2026-10-15T02:27:17.425Z"
+        },
+        {
+          "id": "dsp_SA3DPMPOhjx8",
+          "phase": "waiting",
+          "createdAt": "2026-10-15T02:17:17.364Z",
+          "updatedAt": "2026-10-15T04:40:34.669Z"
+        },
+        {
+          "id": "dsp_rhOd6QyfuO4z",
+          "phase": "succeeded",
+          "createdAt": "2026-10-15T02:07:15.546Z",
+          "updatedAt": "2026-10-15T04:39:31.226Z"
+        }
+      ],
+      "activeDispatchId": "dsp_SA3DPMPOhjx8"
+    },
+    "dependencies": [
+      {
+        "id": "45614d92-1f28-4f96-829b-f40588e0e9c1",
+        "taskId": "task_A7YBylKf7SvG",
+        "dependsOnId": "task_DAFosEUtomqE",
+        "type": "blocks"
+      }
+    ]
+  }
+}

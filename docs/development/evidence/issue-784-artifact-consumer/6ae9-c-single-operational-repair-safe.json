@@ -1,0 +1,36 @@
+{
+  "aBDocumentsOrProofsModified": false,
+  "aBReadURLsRefreshedThroughSupportedReadOnlyAPI": true,
+  "criteriaChanged": false,
+  "expectedTotal": 20,
+  "intent": "repair",
+  "observedAt": "2026-10-15T01:09:35.596Z",
+  "operationId": "op_1792026575400_agt_taIxMIVssPhE_tpc_GxCk8tXQ8Lsq_H9qAj1xD",
+  "sourceContractId": "4fb0610e-4bf5-48ee-8242-9c684b7ce83e",
+  "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28",
+  "storedFiles": [
+    {
+      "report": "A",
+      "fileId": "file_2DvPaa1JwyxK",
+      "documentId": "docs_Lu8p6WwZCBC6qrET",
+      "documentBindingId": "0430140f-e7ce-46a5-9785-3bd2d7874bee",
+      "sha256": "ca989a0ffe5284cbaaf366c9159882d4047ff66ebea51fe6c3761a2bd378af32",
+      "byteLength": 361,
+      "readbackStatus": 200,
+      "storedBytesUnchanged": true
+    },
+    {
+      "report": "B",
+      "fileId": "file_G2kROrN2YQK2",
+      "documentId": "docs_OTnPfHBlRUQme08I",
+      "documentBindingId": "a0ecb790-b926-412d-a1d9-33fd84e6340d",
+      "sha256": "09478b497ee1a155c8c328b98382268eea164aca260ae98c8d396808ada245b6",
+      "byteLength": 234,
+      "readbackStatus": 200,
+      "storedBytesUnchanged": true
+    }
+  ],
+  "success": true,
+  "taskId": "task_z8qoSoNxdlN3",
+  "topicId": "tpc_GxCk8tXQ8Lsq"
+}

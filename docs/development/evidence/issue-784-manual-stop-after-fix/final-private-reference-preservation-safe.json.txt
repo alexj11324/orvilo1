@@ -1,0 +1,62 @@
+{
+  "at": "2026-10-15T07:02:02.796Z",
+  "readOnly": true,
+  "sourceSha": "e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b",
+  "baselineAt": "2026-10-15T06:45:26.123Z",
+  "baselineFile": "T2-cutover/preflight-safe.json",
+  "rows": [
+    {
+      "topicId": "tpc_UiZhfu72hIg7",
+      "operations": [
+        {
+          "id": "op_1792040608689_agt_taIxMIVssPhE_tpc_UiZhfu72hIg7_N5Icfgf3",
+          "status": "done",
+          "completed_at": "2026-10-15T05:03:42.079Z"
+        },
+        {
+          "id": "op_1792044331096_agt_taIxMIVssPhE_tpc_UiZhfu72hIg7_0juw2tvE",
+          "status": "done",
+          "completed_at": "2026-10-15T06:05:52.434Z"
+        }
+      ],
+      "operationCount": 2,
+      "messageCount": 4,
+      "messageRowsSha256": "b5712e28a493b820ba16395df20c52f24a88bd55ace2dc1c537acc618a37b2e8",
+      "checks": {
+        "operationsUnchanged": true,
+        "messageCountUnchanged": true,
+        "messageRowsUnchanged": true
+      }
+    },
+    {
+      "topicId": "tpc_Boklgc9hWotl",
+      "operations": [
+        {
+          "id": "op_1792042179925_agt_taIxMIVssPhE_tpc_Boklgc9hWotl_drGMufQp",
+          "status": "interrupted",
+          "completed_at": "2026-10-15T05:31:12.062Z"
+        },
+        {
+          "id": "op_1792044114528_agt_taIxMIVssPhE_tpc_Boklgc9hWotl_8ACg37bL",
+          "status": "done",
+          "completed_at": "2026-10-15T06:03:25.565Z"
+        },
+        {
+          "id": "op_1792044456546_agt_taIxMIVssPhE_tpc_Boklgc9hWotl_DSyNTI3P",
+          "status": "done",
+          "completed_at": "2026-10-15T06:09:15.290Z"
+        }
+      ],
+      "operationCount": 3,
+      "messageCount": 25,
+      "messageRowsSha256": "bd32cceb63939978bf532b09c814a862ac1bfb1f7b78d50ad211ba90463d7086",
+      "checks": {
+        "operationsUnchanged": true,
+        "messageCountUnchanged": true,
+        "messageRowsUnchanged": true
+      }
+    }
+  ],
+  "allChecksPass": true,
+  "messageContentPersisted": false
+}

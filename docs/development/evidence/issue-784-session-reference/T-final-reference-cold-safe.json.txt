@@ -1,0 +1,78 @@
+{
+  "at": "2026-10-15T06:11:05.542Z",
+  "backendSha": "3a2e2ca5e3896d8a4bfcec6a60988a082b952960",
+  "sourceClean": true,
+  "globalActive": [],
+  "scopedOperations": [
+    {
+      "id": "op_1792040608689_agt_taIxMIVssPhE_tpc_UiZhfu72hIg7_N5Icfgf3",
+      "topic_id": "tpc_UiZhfu72hIg7",
+      "status": "done",
+      "completed_at": "2026-10-15T05:03:42.079Z"
+    },
+    {
+      "id": "op_1792042179925_agt_taIxMIVssPhE_tpc_Boklgc9hWotl_drGMufQp",
+      "topic_id": "tpc_Boklgc9hWotl",
+      "status": "interrupted",
+      "completed_at": "2026-10-15T05:31:12.062Z"
+    },
+    {
+      "id": "op_1792044114528_agt_taIxMIVssPhE_tpc_Boklgc9hWotl_8ACg37bL",
+      "topic_id": "tpc_Boklgc9hWotl",
+      "status": "done",
+      "completed_at": "2026-10-15T06:03:25.565Z"
+    },
+    {
+      "id": "op_1792044331096_agt_taIxMIVssPhE_tpc_UiZhfu72hIg7_0juw2tvE",
+      "topic_id": "tpc_UiZhfu72hIg7",
+      "status": "done",
+      "completed_at": "2026-10-15T06:05:52.434Z"
+    },
+    {
+      "id": "op_1792044456546_agt_taIxMIVssPhE_tpc_Boklgc9hWotl_DSyNTI3P",
+      "topic_id": "tpc_Boklgc9hWotl",
+      "status": "done",
+      "completed_at": "2026-10-15T06:09:15.290Z"
+    }
+  ],
+  "scopedMessageCounts": [
+    {
+      "topic_id": "tpc_Boklgc9hWotl",
+      "count": 25
+    },
+    {
+      "topic_id": "tpc_UiZhfu72hIg7",
+      "count": 4
+    }
+  ],
+  "coldConsumerNoNewOperation": true,
+  "allReferenceOpsInactive": true,
+  "originalT14Dispatches": [
+    {
+      "id": "dsp_rhOd6QyfuO4z",
+      "phase": "succeeded"
+    },
+    {
+      "id": "dsp_SA3DPMPOhjx8",
+      "phase": "canceled"
+    },
+    {
+      "id": "dsp_acIuUwXJehBm",
+      "phase": "succeeded"
+    },
+    {
+      "id": "dsp_1f9nFFwv5Pak",
+      "phase": "canceled"
+    }
+  ],
+  "originalThreeAndR4Preserved": true,
+  "originalMarkerSha256": "f12c810c11c552bc0f41a9391d2ebe608479e7a239d6848bb5bfae7524806527",
+  "passiveObserver": {
+    "stopped": true,
+    "socketCount": 3,
+    "frameCount": 76,
+    "sha256": "8c84621c1e0913e0015892c314d4337d6824d29c398f9ce9822fe42bd40b391b",
+    "rawPayloadPersisted": false
+  },
+  "noConfigurationRestored": true
+}

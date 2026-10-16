@@ -1,0 +1,93 @@
+{
+  "QRecoveryOutcome": "one_original_callback_replayed_then_actual_handoff_and_fresh_native_reviewer_pass",
+  "backendSource": "d21041e8ce54bb5c2e3e2ed1f29e6e01b4817ca4",
+  "credentialValueScanPassed": true,
+  "files": [
+    {
+      "file": "Q-artifact-stored-bytes-readback-safe.json",
+      "bytes": 1267,
+      "sha256": "a8becc8c4539e63b07924221b1b926b519a6a274d5a6beabec2ae49e4e1c0c2a"
+    },
+    {
+      "file": "Q-original-archive-preservation-safe.json",
+      "bytes": 524,
+      "sha256": "2c8d7af931478c8a057253faa22f31c2c174968dd98c188a5a7071b408a1d071"
+    },
+    {
+      "file": "Q-seven-consumers-and-legacy-archive-cold-safe.json",
+      "bytes": 9199,
+      "sha256": "7c9faeace404e283415193785351cfdb4e8e0f194c2f87cd9e54ff801069b6bd"
+    },
+    {
+      "file": "README.md",
+      "bytes": 2786,
+      "sha256": "8c9d71047c6b3abc9ac2f87e197f3cac2bfd12af7f05757372cfdb3265cba67f"
+    },
+    {
+      "file": "backend-Q-health-safe.json",
+      "bytes": 933,
+      "sha256": "0ec56ae7dc1f24b3087582c0dbdb746ef32c52cfc3ff1fede1e2baa49478a4ba"
+    },
+    {
+      "file": "backend-only-stop-safe.json",
+      "bytes": 695,
+      "sha256": "be4ea98dcc88929713114051c335a2b27171d0a3751574e52067796ee711c473"
+    },
+    {
+      "file": "corrected-operator-replay-once-safe.json",
+      "bytes": 1335,
+      "sha256": "8694decef6d2bfd5e85a614d030f94fd81a3a91e4e406d50fb3fc3022ac6cdf6"
+    },
+    {
+      "file": "historical-H-NOOP-outcome-safe.json",
+      "bytes": 900,
+      "sha256": "ba31e78d29e83ff828bf4146139d03275141b24a168cb7dd0715cef61893a239"
+    },
+    {
+      "file": "historical-H-callback-ack-NOOP-safe.json",
+      "bytes": 1135,
+      "sha256": "441951cdb7d7ac23790c20b83c3577b1877a7a4e7b14b61ac157a44a2be2246a"
+    },
+    {
+      "file": "pre-cutover-baseline-safe.json",
+      "bytes": 847,
+      "sha256": "2477c11c0ccdc02e0047d7b3ca9c1d1b8accaa34db5c45e7438a38c51e53a633"
+    },
+    {
+      "file": "pre-cutover-host-health-safe.json",
+      "bytes": 1001,
+      "sha256": "d2d5590a1cb9ceeba46e4410a9497d2b1c4402f050f17dce41c1f62de0738109"
+    },
+    {
+      "file": "q-owner-r1-accepted-paused-cold.png",
+      "bytes": 301975,
+      "sha256": "0caa7010d7f3bf09d73072a3300a1cca4becebdb8f02dce7c06e62dc4afc9151"
+    },
+    {
+      "file": "r1-handoff-safe.json",
+      "bytes": 2391,
+      "sha256": "98a90e06629daa957a5137a1828dbfae3e4d3b4736f8cabf3e05d3d2dbccf3af"
+    },
+    {
+      "file": "r1-review-native-settled-safe.json",
+      "bytes": 1567,
+      "sha256": "b3e19272303f38e6bcb7ff2f42b87492e37d2870f67a3f1f3c3b97e02760d159"
+    },
+    {
+      "file": "r1-review-pass-before-human-safe.json",
+      "bytes": 2216,
+      "sha256": "6d7f76577750d23a380fbc7e31ec6c1fb3b1066e637e95d6fb41663888a27754"
+    },
+    {
+      "file": "supported-controls-once-safe.json",
+      "bytes": 2168,
+      "sha256": "68c00d4803402ee3b840ce49746063867adca512b5f3940a23d3cea86245a840"
+    }
+  ],
+  "finalFIFOStages": "separate_bundle_not_claimed_complete_here",
+  "historicalHCallbackOutcome": "ACK_NOOP_FAILURE_NOT_PASS",
+  "includedPNGsReinspected": true,
+  "preparedAt": "2026-10-15T04:46:58.068242+00:00",
+  "publicationPerformed": false,
+  "rendererSourceAtCutover": "cec4c8397ec8aa1ed0aee43a36382f3f06039b25"
+}

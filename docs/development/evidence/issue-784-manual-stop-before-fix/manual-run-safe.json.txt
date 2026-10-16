@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-15T06:20:23.666Z",
+  "parentId": "task_x943JumvczAo",
+  "leafId": "task_wqstgZSuOLUg",
+  "stage": "single_manual_run_response",
+  "topicId": "tpc_hWh5Nch04vD7",
+  "operationId": "op_1792045223357_agt_taIxMIVssPhE_tpc_hWh5Nch04vD7_eZIBOrUi",
+  "dispatchId": "dsp_YoDsbjH8Ebk6",
+  "taskId": "task_wqstgZSuOLUg",
+  "agentId": "agt_taIxMIVssPhE",
+  "scheduledAt": "2026-10-15T06:20:19.594Z",
+  "tickTokenSha256": "1bbe16ee299b022edfaf168b25a15ddbb5d61ba70abc95e561dcbdc72161fd7f",
+  "tickMessageId": "local-task-task_wqstgZSuOLUg-2e01649e16ebaa38ce88dee271b5d304d50a72005fbe20b02a4c226e39380cbf",
+  "tickRevision": 1,
+  "dueAt": "2026-10-15T06:30:19.594Z"
+}

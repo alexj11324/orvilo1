@@ -1,0 +1,38 @@
+{
+  "at": "2026-10-15T06:26:44.913Z",
+  "deadline": "2026-10-15T06:30:19.594Z",
+  "before": {
+    "id": "task_wqstgZSuOLUg",
+    "status": "paused",
+    "workflowCategory": "in_progress",
+    "executionGeneration": 1,
+    "automationMode": "heartbeat",
+    "heartbeatInterval": 600,
+    "assigneeAgentId": "agt_taIxMIVssPhE",
+    "reviewerAgentId": null,
+    "scheduler": {
+      "automationPaused": false,
+      "scheduledAt": "2026-10-15T06:20:19.594Z",
+      "tickRevision": 1,
+      "tickMessageId": "local-task-task_wqstgZSuOLUg-2e01649e16ebaa38ce88dee271b5d304d50a72005fbe20b02a4c226e39380cbf",
+      "tickTokenSha256": "1bbe16ee299b022edfaf168b25a15ddbb5d61ba70abc95e561dcbdc72161fd7f"
+    }
+  },
+  "paused": {
+    "id": "task_wqstgZSuOLUg",
+    "status": "paused",
+    "workflowCategory": "in_progress",
+    "executionGeneration": 1,
+    "automationMode": "heartbeat",
+    "heartbeatInterval": 600,
+    "assigneeAgentId": "agt_taIxMIVssPhE",
+    "reviewerAgentId": null,
+    "scheduler": {
+      "automationPaused": true,
+      "scheduledAt": "2026-10-15T06:20:19.594Z",
+      "tickRevision": 1,
+      "tickMessageId": "local-task-task_wqstgZSuOLUg-2e01649e16ebaa38ce88dee271b5d304d50a72005fbe20b02a4c226e39380cbf",
+      "tickTokenSha256": "1bbe16ee299b022edfaf168b25a15ddbb5d61ba70abc95e561dcbdc72161fd7f"
+    }
+  }
+}

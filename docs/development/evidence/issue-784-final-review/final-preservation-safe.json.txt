@@ -1,0 +1,115 @@
+{
+  "at": "2026-10-15T07:14:26.384Z",
+  "readOnly": true,
+  "sourceSha": "e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b",
+  "checks": {
+    "sourceUClean": true,
+    "globalNativeZero": true,
+    "historicalAcceptedProofsUnchanged": true,
+    "manualFamilyCanceledPaused": true,
+    "manualLeafGen2": true,
+    "twoManualCanceledTopics": true,
+    "manualNoAcceptedDelivery": true,
+    "manualPlanPreserved": true,
+    "manualQueueEmpty": true,
+    "originalT14FourDispatches": true,
+    "originalMarkerUnchanged": true,
+    "privateReferencesUnchanged": true,
+    "qaEnvUnchanged": true,
+    "qaEnvMatchesRetainedSource": true
+  },
+  "active": [],
+  "histories": [
+    {
+      "taskId": "task_A7YBylKf7SvG",
+      "count": 2,
+      "historyProofsSha256": "48ea0e4b408a4827ba52ada70d4fdde44f48a24c1a62ca5c5a1cc5b7088d1668",
+      "baselineHistoryProofsSha256": "48ea0e4b408a4827ba52ada70d4fdde44f48a24c1a62ca5c5a1cc5b7088d1668",
+      "checks": {
+        "countTwo": true,
+        "allAccepted": true,
+        "proofsAndDecisionsUnchanged": true
+      }
+    },
+    {
+      "taskId": "task_DAFosEUtomqE",
+      "count": 2,
+      "historyProofsSha256": "b7200b1454200aca5762675960722cdf54461b9644fb66aa8e6a08ead2a1c9aa",
+      "baselineHistoryProofsSha256": "b7200b1454200aca5762675960722cdf54461b9644fb66aa8e6a08ead2a1c9aa",
+      "checks": {
+        "countTwo": true,
+        "allAccepted": true,
+        "proofsAndDecisionsUnchanged": true
+      }
+    }
+  ],
+  "manualTasks": [
+    {
+      "id": "task_x943JumvczAo",
+      "status": "canceled",
+      "workflowCategory": "canceled",
+      "generation": 0,
+      "futurePaused": true
+    },
+    {
+      "id": "task_wqstgZSuOLUg",
+      "status": "canceled",
+      "workflowCategory": "canceled",
+      "generation": 2,
+      "futurePaused": true,
+      "tickRevision": 2
+    }
+  ],
+  "topics": [
+    {
+      "id": "tpc_7AzS55z2m2Y2",
+      "status": "canceled",
+      "operationId": "op_1792047098412_agt_taIxMIVssPhE_tpc_7AzS55z2m2Y2_Ueq2gRKF"
+    },
+    {
+      "id": "tpc_hWh5Nch04vD7",
+      "status": "canceled",
+      "operationId": "op_1792045223357_agt_taIxMIVssPhE_tpc_hWh5Nch04vD7_eZIBOrUi"
+    }
+  ],
+  "originalDispatches": [
+    {
+      "id": "dsp_rhOd6QyfuO4z",
+      "phase": "succeeded"
+    },
+    {
+      "id": "dsp_SA3DPMPOhjx8",
+      "phase": "canceled"
+    },
+    {
+      "id": "dsp_acIuUwXJehBm",
+      "phase": "succeeded"
+    },
+    {
+      "id": "dsp_1f9nFFwv5Pak",
+      "phase": "canceled"
+    }
+  ],
+  "references": [
+    {
+      "topicId": "tpc_UiZhfu72hIg7",
+      "operationCount": 2,
+      "messageCount": 4,
+      "messageRowsSha256": "b5712e28a493b820ba16395df20c52f24a88bd55ace2dc1c537acc618a37b2e8",
+      "unchanged": true
+    },
+    {
+      "topicId": "tpc_Boklgc9hWotl",
+      "operationCount": 3,
+      "messageCount": 25,
+      "messageRowsSha256": "bd32cceb63939978bf532b09c814a862ac1bfb1f7b78d50ad211ba90463d7086",
+      "unchanged": true
+    }
+  ],
+  "envHashes": {
+    "qa": "8498dd21fc1dd3d87dafce416178ce7a48513fcd7599481f1c94dd958a793f8f",
+    "qaBeforeRestart": "8498dd21fc1dd3d87dafce416178ce7a48513fcd7599481f1c94dd958a793f8f",
+    "retainedSource": "8498dd21fc1dd3d87dafce416178ce7a48513fcd7599481f1c94dd958a793f8f"
+  },
+  "markerSha256": "f12c810c11c552bc0f41a9391d2ebe608479e7a239d6848bb5bfae7524806527"
+}

@@ -1,0 +1,46 @@
+{
+  "at": "2026-10-15T06:59:58.416Z",
+  "backendSha": "e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b",
+  "rendererSha": "e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b",
+  "leafId": "task_wqstgZSuOLUg",
+  "topicId": "tpc_7AzS55z2m2Y2",
+  "operationId": "op_1792047098412_agt_taIxMIVssPhE_tpc_7AzS55z2m2Y2_Ueq2gRKF",
+  "resumeClickedAt": "2026-10-15T06:55:01.982Z",
+  "stopIssueClickedAt": "2026-10-15T06:55:49.176Z",
+  "cancelRequestedAt": "2026-10-15T06:55:49.847Z",
+  "cancelAcknowledgedAt": "2026-10-15T06:55:50.454Z",
+  "coldReloadAfterAckAt": "2026-10-15T06:56:12.779Z",
+  "deadline": "2026-10-15T07:01:24.215Z",
+  "checks": {
+    "activePausedRowBeforeResume": true,
+    "sameCurrentOpAndRev2TickAfterResume": true,
+    "oneStopDuringExactSleep300": true,
+    "actualDeviceCancelAcknowledged": true,
+    "globalNativeZeroAfterStop": true,
+    "futureFlagFalseAndOriginalRev2TickAfterStop": true,
+    "coldDetailFutureOnActive": true,
+    "coldCountdownMatchesOriginalDeadline": true,
+    "triggerPopoverOnAndOriginalDeadlineLocal0301": true,
+    "triggerPopoverNoRedundantStart": true,
+    "coldPausedFilterExcludesLeaf": true,
+    "activeFilterIncludesLeaf": true
+  },
+  "allListedPngsVisuallyInspected": true,
+  "pngs": [
+    "owner-gen2-active-paused-filter.png",
+    "owner-gen2-resumed-current-active.png",
+    "owner-gen2-stopped-cold-active-countdown.png",
+    "owner-gen2-run-menu-no-start.png",
+    "owner-gen2-schedule-popover-no-start.png",
+    "owner-gen2-stopped-paused-filter-excludes-cold.png",
+    "owner-gen2-stopped-active-filter-includes.png"
+  ],
+  "limits": {
+    "exactRpcNotCaptured": true,
+    "noOldZeroMatchObserverRerun": true,
+    "canceledBeforeArithmeticOrArtifactDelivery": true,
+    "reviewerNullNotExercised": true,
+    "localOnly": true
+  },
+  "releasedHarnessForExplicitPauseBeforeDeadline": true
+}

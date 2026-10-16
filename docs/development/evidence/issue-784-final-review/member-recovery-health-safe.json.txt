@@ -1,0 +1,44 @@
+{
+  "healthConfirmedAt": "2026-10-15T07:24:10.765Z",
+  "helperCompletedAt": "2026-10-15T07:23:48.038Z",
+  "users": [
+    {
+      "actor": "owner",
+      "userStateReadable": true,
+      "devices": [
+        {
+          "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+          "online": true,
+          "channelCount": 1
+        }
+      ]
+    },
+    {
+      "actor": "member",
+      "userStateReadable": true,
+      "devices": [
+        {
+          "deviceId": "943ad1571ff1079323550034fd8f9123",
+          "online": true,
+          "channelCount": 1
+        }
+      ]
+    }
+  ],
+  "prefs": [
+    {
+      "actor": "owner",
+      "sharedOrchestratorAbsent": true
+    },
+    {
+      "actor": "member",
+      "sharedOrchestratorAbsent": true
+    }
+  ],
+  "bothSavedDevicesOnlineOneChannel": true,
+  "effectiveGatewayModeFalse": true,
+  "publicAgentGatewayUrlAbsent": true,
+  "healthyOwnerNotRestarted": true,
+  "memberExistingProcessRetained": true,
+  "noNativeMessagesTasksTimers": true
+}

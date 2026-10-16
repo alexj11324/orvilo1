@@ -1,0 +1,46 @@
+{
+  "capturedAt": "2026-10-15T04:51:05.251Z",
+  "backendSha": "d21041e8ce54bb5c2e3e2ed1f29e6e01b4817ca4",
+  "heartbeatIntervalSeconds": 600,
+  "persistedScheduledAt": "2026-10-15T04:40:35.400Z",
+  "nextWouldBeCaptureAt": "2026-10-15T04:50:35.400Z",
+  "scheduler": {
+    "tickTokenSha256": "b8104ac98a63d3cb5d8d41df2b16e96b22adcedc14ac53d10ccea7cd490b0e57",
+    "scheduledAt": "2026-10-15T04:40:35.400Z",
+    "tickRevision": 3,
+    "tickMessageId": "local-task-task_A7YBylKf7SvG-6ac6866dead5068bde6bfefdfe90e153ff6f660717077fc92dfb7f9aa862b47e",
+    "automationPaused": true,
+    "consecutiveFailures": 0
+  },
+  "queue": {
+    "queued": 0,
+    "recent": [
+      {
+        "id": "dsp_acIuUwXJehBm",
+        "phase": "running",
+        "createdAt": "2026-10-15T02:27:17.425Z",
+        "updatedAt": "2026-10-15T04:47:24.548Z"
+      },
+      {
+        "id": "dsp_SA3DPMPOhjx8",
+        "phase": "canceled",
+        "createdAt": "2026-10-15T02:17:17.364Z",
+        "updatedAt": "2026-10-15T04:43:32.178Z"
+      },
+      {
+        "id": "dsp_rhOd6QyfuO4z",
+        "phase": "succeeded",
+        "createdAt": "2026-10-15T02:07:15.546Z",
+        "updatedAt": "2026-10-15T04:39:31.226Z"
+      }
+    ],
+    "activeDispatchId": "dsp_acIuUwXJehBm"
+  },
+  "checks": {
+    "afterNextWouldBeCapture": true,
+    "futurePaused": true,
+    "onlyOriginalThree": true,
+    "noExtraQueued": true,
+    "r3StillActive": true
+  }
+}

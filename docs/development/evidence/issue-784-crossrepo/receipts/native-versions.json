@@ -1,0 +1,167 @@
+{
+  "currentVersions": [
+    {
+      "task": {
+        "id": "task_mAkjRGYbByNW",
+        "identifier": "T-10",
+        "status": "completed",
+        "workflowCategory": "done",
+        "executionGeneration": 1,
+        "currentTopicId": "tpc_IOE2170qBLsW",
+        "domainRevision": 21,
+        "updatedAt": "2026-10-15T04:21:18.768Z"
+      },
+      "current": {
+        "runId": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": false,
+        "proof": {
+          "taskId": "task_mAkjRGYbByNW",
+          "deliveryOperationId": "op_1792036276446_agt_taIxMIVssPhE_tpc_IOE2170qBLsW_WXx2iEkN",
+          "topicId": "tpc_IOE2170qBLsW",
+          "executionGeneration": 1,
+          "dispatchId": "dsp_oXVpMhzYS1mp",
+          "checklistRevision": 1,
+          "deliveryKind": "artifact"
+        }
+      }
+    },
+    {
+      "task": {
+        "id": "task_WSixF93YcIxP",
+        "identifier": "T-11",
+        "status": "completed",
+        "workflowCategory": "done",
+        "executionGeneration": 4,
+        "currentTopicId": "tpc_9493ZcYPCQGb",
+        "domainRevision": 10,
+        "updatedAt": "2026-10-15T04:18:17.232Z"
+      },
+      "current": {
+        "runId": "49250169-e051-4fc8-b599-0e1eb6f83151",
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": true,
+        "proof": {
+          "taskId": "task_WSixF93YcIxP",
+          "deliveryOperationId": "op_1792036061722_agt_taIxMIVssPhE_tpc_9493ZcYPCQGb_C4BxA8NZ",
+          "topicId": "tpc_9493ZcYPCQGb",
+          "executionGeneration": 4,
+          "dispatchId": "dsp_wj96eCBaC9xE",
+          "sourceSha": "8a5baea6ec515b8aabde9a6e7b1118ed109071e7",
+          "repo": "alexj11324/orvilo-issue784-qa-a-20261014",
+          "branch": "task/T-11",
+          "baseBranch": "qa-target",
+          "targetBranch": "qa-target",
+          "checklistRevision": 1,
+          "deliveryKind": "code"
+        }
+      }
+    },
+    {
+      "task": {
+        "id": "task_ZRNFaxrqjdgV",
+        "identifier": "T-12",
+        "status": "completed",
+        "workflowCategory": "done",
+        "executionGeneration": 4,
+        "currentTopicId": "tpc_KdjLo6agfX5r",
+        "domainRevision": 10,
+        "updatedAt": "2026-10-15T04:21:18.466Z"
+      },
+      "current": {
+        "runId": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": true,
+        "proof": {
+          "taskId": "task_ZRNFaxrqjdgV",
+          "deliveryOperationId": "op_1792036068608_agt_taIxMIVssPhE_tpc_KdjLo6agfX5r_XPEoQGwb",
+          "topicId": "tpc_KdjLo6agfX5r",
+          "executionGeneration": 4,
+          "dispatchId": "dsp_NaYFj2H86iVJ",
+          "sourceSha": "3b8a119d35bc32c5dc6ce5ed2f7d0c42dbffc779",
+          "repo": "alexj11324/orvilo-issue784-qa-b-20261014",
+          "branch": "task/T-12",
+          "baseBranch": "qa-target",
+          "targetBranch": "qa-target",
+          "checklistRevision": 1,
+          "deliveryKind": "code"
+        }
+      }
+    }
+  ],
+  "savedAgentId": "agt_taIxMIVssPhE",
+  "sessions": [
+    {
+      "identifier": "T-11",
+      "role": "builder",
+      "topicId": "tpc_9493ZcYPCQGb",
+      "acpSessionId": "ses_ec2d679edffetMzHEN5fpf900i",
+      "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+      "deviceUserId": "user_agent_testing_001",
+      "models": ["opencode/mimo-v2.6-flash-free"],
+      "observedAt": "2026-10-15T03:53:31.048Z"
+    },
+    {
+      "identifier": "T-11",
+      "role": "reviewer",
+      "topicId": "tpc_gljkRqjxskmY",
+      "acpSessionId": "ses_ec252d0fdffeQM9L3UHaaL8qgU",
+      "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+      "deviceUserId": "user_agent_testing_001",
+      "models": ["opencode/mimo-v2.6-flash-free"],
+      "observedAt": "2026-10-15T03:53:31.048Z"
+    },
+    {
+      "identifier": "T-12",
+      "role": "builder",
+      "topicId": "tpc_KdjLo6agfX5r",
+      "acpSessionId": "ses_ec2d6755bffepBoISQ3rBXbUGe",
+      "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+      "deviceUserId": "user_agent_testing_001",
+      "models": ["opencode/mimo-v2.6-flash-free"],
+      "observedAt": "2026-10-15T03:53:31.048Z"
+    },
+    {
+      "identifier": "T-12",
+      "role": "reviewer",
+      "topicId": "tpc_HYOD72lKA2iR",
+      "acpSessionId": "ses_ec252b836ffeaI2Qtl6VvC8LhP",
+      "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+      "deviceUserId": "user_agent_testing_001",
+      "models": ["opencode/mimo-v2.6-flash-free"],
+      "observedAt": "2026-10-15T03:53:31.048Z"
+    },
+    {
+      "identifier": "T-10",
+      "role": "builder",
+      "topicId": "tpc_IOE2170qBLsW",
+      "acpSessionId": "ses_ec2505e2affemta8iV3uaciofm",
+      "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+      "deviceUserId": "user_agent_testing_001",
+      "models": ["opencode/mimo-v2.6-flash-free"],
+      "observedAt": "2026-10-15T04:09:26.932Z"
+    },
+    {
+      "identifier": "T-10",
+      "role": "reviewer",
+      "topicId": "tpc_91SaxAiB28V7",
+      "acpSessionId": "ses_ec2453742ffeRk1kUtxbP2D1jC",
+      "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+      "deviceUserId": "user_agent_testing_001",
+      "models": ["opencode/mimo-v2.6-flash-free"],
+      "observedAt": "2026-10-15T04:09:26.932Z"
+    }
+  ]
+}

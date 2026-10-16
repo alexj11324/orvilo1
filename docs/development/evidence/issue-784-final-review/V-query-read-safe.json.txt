@@ -1,0 +1,84 @@
+{
+  "at": "2026-10-15T07:27:04.777Z",
+  "sourceSha": "acb24d0fec2af4fce5b052feab481f5d89ac39cb",
+  "readOnly": true,
+  "actor": "owner",
+  "workspace": "existing QA workspace",
+  "scope": "all/team; no created scope argument",
+  "sourceTrace": [
+    "AutomationsPage.tsx -> useScheduledTaskPage(page1,scopeall,statusFilter)",
+    "useScheduledTaskPage.ts -> shared.automationStatusesFor / pageSize25",
+    "store/task/slices/list/action.ts useFetchScheduledTaskList -> taskService.list -> task.list"
+  ],
+  "results": [
+    {
+      "filter": "all",
+      "input": {
+        "automated": true,
+        "limit": 25,
+        "offset": 0,
+        "orderBy": "updatedAt"
+      },
+      "succeeded": true,
+      "total": 1,
+      "count": 1,
+      "rows": [
+        {
+          "id": "task_A7YBylKf7SvG",
+          "identifier": "T-14",
+          "status": "paused",
+          "workflowCategory": "backlog",
+          "automationMode": "heartbeat",
+          "futurePaused": true
+        }
+      ],
+      "rowsSha256": "615aeb62138a954e0562f7d72f2762f807e5e63698be6ea5eb0f6d1f04f2a619"
+    },
+    {
+      "filter": "active",
+      "input": {
+        "automated": true,
+        "limit": 25,
+        "offset": 0,
+        "orderBy": "updatedAt",
+        "statuses": [
+          "backlog",
+          "running",
+          "scheduled"
+        ]
+      },
+      "succeeded": true,
+      "total": 0,
+      "count": 0,
+      "rows": [],
+      "rowsSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "filter": "paused",
+      "input": {
+        "automated": true,
+        "limit": 25,
+        "offset": 0,
+        "orderBy": "updatedAt",
+        "statuses": [
+          "paused"
+        ]
+      },
+      "succeeded": true,
+      "total": 1,
+      "count": 1,
+      "rows": [
+        {
+          "id": "task_A7YBylKf7SvG",
+          "identifier": "T-14",
+          "status": "paused",
+          "workflowCategory": "backlog",
+          "automationMode": "heartbeat",
+          "futurePaused": true
+        }
+      ],
+      "rowsSha256": "615aeb62138a954e0562f7d72f2762f807e5e63698be6ea5eb0f6d1f04f2a619"
+    }
+  ],
+  "noNativeMessagesTimersOrControls": true
+}

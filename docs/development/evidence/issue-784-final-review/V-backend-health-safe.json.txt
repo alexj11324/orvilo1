@@ -1,0 +1,35 @@
+{
+  "healthConfirmedAt": "2026-10-15T07:27:05.309Z",
+  "sourceSha": "acb24d0fec2af4fce5b052feab481f5d89ac39cb",
+  "backendSession": 82610,
+  "backendChild": 99974,
+  "users": [
+    {
+      "actor": "owner",
+      "userStateReadable": true,
+      "devices": [
+        {
+          "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+          "online": true,
+          "channelCount": 1
+        }
+      ]
+    },
+    {
+      "actor": "member",
+      "userStateReadable": true,
+      "devices": [
+        {
+          "deviceId": "943ad1571ff1079323550034fd8f9123",
+          "online": true,
+          "channelCount": 1
+        }
+      ]
+    }
+  ],
+  "bothSavedDevicesOnlineOneChannel": true,
+  "effectiveGatewayModeFalse": true,
+  "publicAgentGatewayUrlAbsent": true,
+  "noQaProcessOverlays": true,
+  "noObserverRecreated": true
+}

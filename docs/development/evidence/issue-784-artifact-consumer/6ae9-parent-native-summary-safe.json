@@ -1,0 +1,15 @@
+{
+  "allThreeCurrentRuns": true,
+  "allThreeDocumentIds": true,
+  "allThreeFileIds": true,
+  "allThreeMarkers": true,
+  "containsRuntimeSHA": false,
+  "containsSignedURLs": false,
+  "containsTokenPattern": false,
+  "contentLength": 6182,
+  "contentSha256": "cfea971fac2563fc6fa015d47121afbf13fe4806c42a7d2c0be677a4b2d19d40",
+  "id": "docs_30ysNLGc5Q5m8nfD",
+  "observedAt": "2026-10-15T01:31:36.648Z",
+  "title": "Issue 784 Combined Delivery Report (Parent T-3)",
+  "valuesCorrect": true
+}

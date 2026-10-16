@@ -1,0 +1,186 @@
+{
+  "allPngVisuallyInspectedByRoot": true,
+  "backendSha": "e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b",
+  "beforeFixManifestSha256": "a26c9b53f21ce5118889fe38c0046006893c7d30c65dc4563a4b3cca0f060459",
+  "createdAt": "2026-10-15T07:02:30.835857+00:00",
+  "files": [
+    {
+      "file": "README.md",
+      "bytes": 4838,
+      "sha256": "6a566160f2ca16f9e57a51af9f92905d872922095fba6f5c5ddad697e95d207e",
+      "sourceFilename": "README.md",
+      "sourceSha256": "1fd48c24366832adc2c5366588eff6868c60f501c67282ca5f33eab6198cad88"
+    },
+    {
+      "file": "after-ui-resume-safe.json.txt",
+      "bytes": 4192,
+      "sha256": "13e12a905c0c60efb880f6d0e4d8a89c9f666f2e4f11a36f33f9eaeb3ea441a6",
+      "sourceFilename": "after-ui-resume-safe.json",
+      "sourceSha256": "13e12a905c0c60efb880f6d0e4d8a89c9f666f2e4f11a36f33f9eaeb3ea441a6"
+    },
+    {
+      "file": "after-ui-stop-derived-api-safe.json.txt",
+      "bytes": 733,
+      "sha256": "22cf30a8d93c23116678a41857cdbea96f25093c74fcbc6a07ecef630ec7a258",
+      "sourceFilename": "after-ui-stop-derived-api-safe.json",
+      "sourceSha256": "22cf30a8d93c23116678a41857cdbea96f25093c74fcbc6a07ecef630ec7a258"
+    },
+    {
+      "file": "after-ui-stop-safe.json.txt",
+      "bytes": 4257,
+      "sha256": "ff4c05a8fb113d5ac1b376096569c6fcba50f1c75bb0f74ae868f354bf7c9658",
+      "sourceFilename": "after-ui-stop-safe.json",
+      "sourceSha256": "ff4c05a8fb113d5ac1b376096569c6fcba50f1c75bb0f74ae868f354bf7c9658"
+    },
+    {
+      "file": "armed-idle-guard-safe.json.txt",
+      "bytes": 720,
+      "sha256": "a3fb9c8cb2d5d1bbe7ebc9e66962b1370cb2f108bf40b14ecfe3e81d4399b139",
+      "sourceFilename": "armed-idle-guard-safe.json",
+      "sourceSha256": "a3fb9c8cb2d5d1bbe7ebc9e66962b1370cb2f108bf40b14ecfe3e81d4399b139"
+    },
+    {
+      "file": "credential-scan-safe.json.txt",
+      "bytes": 432,
+      "sha256": "c0628e6c764dd0482f3b07f17cedcff663f82e231b098954f1fb13ab2f566e98",
+      "sourceFilename": "credential-scan-safe.json",
+      "sourceSha256": "c0628e6c764dd0482f3b07f17cedcff663f82e231b098954f1fb13ab2f566e98"
+    },
+    {
+      "file": "ended-family-safe.json.txt",
+      "bytes": 2318,
+      "sha256": "22ea1993295c25f6b3d17539fba49e587930a895f580349e4665f4e4ef3466a9",
+      "sourceFilename": "ended-family-safe.json",
+      "sourceSha256": "22ea1993295c25f6b3d17539fba49e587930a895f580349e4665f4e4ef3466a9"
+    },
+    {
+      "file": "explicit-pause-before-deadline-safe.json.txt",
+      "bytes": 1328,
+      "sha256": "b497d66f309fe9f2aa968d2bae98987ca29403f2bbafc4c2f1e4fae9164dd788",
+      "sourceFilename": "explicit-pause-before-deadline-safe.json",
+      "sourceSha256": "b497d66f309fe9f2aa968d2bae98987ca29403f2bbafc4c2f1e4fae9164dd788"
+    },
+    {
+      "file": "final-global-native-zero-and-original-t14-safe.json.txt",
+      "bytes": 978,
+      "sha256": "20b66ae58bb404516a6fdab6f72142b9b9eea854f4a74ca3822e4b9e217a9dbd",
+      "sourceFilename": "final-global-native-zero-and-original-t14-safe.json",
+      "sourceSha256": "20b66ae58bb404516a6fdab6f72142b9b9eea854f4a74ca3822e4b9e217a9dbd"
+    },
+    {
+      "file": "final-private-reference-preservation-safe.json.txt",
+      "bytes": 1936,
+      "sha256": "7dc1a74044221ed02fab29ed3fc74f0cf2abe0c10382b1fdc018ecded194888a",
+      "sourceFilename": "final-private-reference-preservation-safe.json",
+      "sourceSha256": "7dc1a74044221ed02fab29ed3fc74f0cf2abe0c10382b1fdc018ecded194888a"
+    },
+    {
+      "file": "genuine-timer-safe.json.txt",
+      "bytes": 462,
+      "sha256": "958c5e6c12c89e5f57ec2c4e8768cb2290d706d949d4211b1d1036bef168dbcd",
+      "sourceFilename": "genuine-timer-safe.json",
+      "sourceSha256": "958c5e6c12c89e5f57ec2c4e8768cb2290d706d949d4211b1d1036bef168dbcd"
+    },
+    {
+      "file": "manual-run-safe.json.txt",
+      "bytes": 678,
+      "sha256": "41dc69365eb04fbbf68c0ef90816970136bad99b2326d3c7d208917dc81962fa",
+      "sourceFilename": "manual-run-safe.json",
+      "sourceSha256": "41dc69365eb04fbbf68c0ef90816970136bad99b2326d3c7d208917dc81962fa"
+    },
+    {
+      "file": "native-sleep300-start-safe.json.txt",
+      "bytes": 4191,
+      "sha256": "fbe0b86577706e36ad6d11f95f03a526b49def31c00ad7119cc3eaebf4bc4f18",
+      "sourceFilename": "native-sleep300-start-safe.json",
+      "sourceSha256": "fbe0b86577706e36ad6d11f95f03a526b49def31c00ad7119cc3eaebf4bc4f18"
+    },
+    {
+      "file": "owner-gen2-active-paused-filter.png",
+      "bytes": 271200,
+      "sha256": "64db54dba6ae737939af84a6f319e90db4ece5462306034941c8a2ae044fae6d",
+      "sourceFilename": "owner-gen2-active-paused-filter.png",
+      "sourceSha256": "64db54dba6ae737939af84a6f319e90db4ece5462306034941c8a2ae044fae6d"
+    },
+    {
+      "file": "owner-gen2-explicit-pause-ended-inactive-off.png",
+      "bytes": 290379,
+      "sha256": "f1882fe0543bd4f5a5681ac3eb6bc9c9d5dc575203cdaa3a252ac454c7cfec2e",
+      "sourceFilename": "owner-gen2-explicit-pause-ended-inactive-off.png",
+      "sourceSha256": "f1882fe0543bd4f5a5681ac3eb6bc9c9d5dc575203cdaa3a252ac454c7cfec2e"
+    },
+    {
+      "file": "owner-gen2-resumed-current-active.png",
+      "bytes": 284613,
+      "sha256": "d673a84d95809ebc502e4c447c485811a50abed55da636df1d41a3947fa4c482",
+      "sourceFilename": "owner-gen2-resumed-current-active.png",
+      "sourceSha256": "d673a84d95809ebc502e4c447c485811a50abed55da636df1d41a3947fa4c482"
+    },
+    {
+      "file": "owner-gen2-run-menu-no-start.png",
+      "bytes": 289262,
+      "sha256": "b58c1e3807b1f6cb05f30632bac56781cef39dda1c20a7fdf312bdbe128375ce",
+      "sourceFilename": "owner-gen2-run-menu-no-start.png",
+      "sourceSha256": "b58c1e3807b1f6cb05f30632bac56781cef39dda1c20a7fdf312bdbe128375ce"
+    },
+    {
+      "file": "owner-gen2-schedule-popover-no-start.png",
+      "bytes": 317719,
+      "sha256": "7b5e82b441c96e46ee85061ae1a63acf33c262fa3b3d6fbed64418bb386c8292",
+      "sourceFilename": "owner-gen2-schedule-popover-no-start.png",
+      "sourceSha256": "7b5e82b441c96e46ee85061ae1a63acf33c262fa3b3d6fbed64418bb386c8292"
+    },
+    {
+      "file": "owner-gen2-stopped-active-filter-includes.png",
+      "bytes": 256772,
+      "sha256": "7d7112d1b5b1b5aa621287dc029ae0e1261ec7fb58db5d29355a12511575151a",
+      "sourceFilename": "owner-gen2-stopped-active-filter-includes.png",
+      "sourceSha256": "7d7112d1b5b1b5aa621287dc029ae0e1261ec7fb58db5d29355a12511575151a"
+    },
+    {
+      "file": "owner-gen2-stopped-cold-active-countdown.png",
+      "bytes": 284728,
+      "sha256": "2c036a2c65f2ee3945b9c9e15956056fcc3a2362a6b5c65b961faa8b4b6af769",
+      "sourceFilename": "owner-gen2-stopped-cold-active-countdown.png",
+      "sourceSha256": "2c036a2c65f2ee3945b9c9e15956056fcc3a2362a6b5c65b961faa8b4b6af769"
+    },
+    {
+      "file": "owner-gen2-stopped-paused-filter-excludes-cold.png",
+      "bytes": 254510,
+      "sha256": "bc574b82901386d4da6d32d5cba22ab15460d4695ea665d025d892e14374eb3a",
+      "sourceFilename": "owner-gen2-stopped-paused-filter-excludes-cold.png",
+      "sourceSha256": "bc574b82901386d4da6d32d5cba22ab15460d4695ea665d025d892e14374eb3a"
+    },
+    {
+      "file": "reopen-before-safe.json.txt",
+      "bytes": 564,
+      "sha256": "9b46f3011f46483e389eec113044fc1e0f8d381bf53d64e4115c3dfae7885917",
+      "sourceFilename": "reopen-before-safe.json",
+      "sourceSha256": "9b46f3011f46483e389eec113044fc1e0f8d381bf53d64e4115c3dfae7885917"
+    },
+    {
+      "file": "runtime-go.json.txt",
+      "bytes": 260,
+      "sha256": "6eb851eb0bbebc01ac01729130b10e67e6368c51d69b6faa67b71b6a93839a77",
+      "sourceFilename": "runtime-go.json",
+      "sourceSha256": "6eb851eb0bbebc01ac01729130b10e67e6368c51d69b6faa67b71b6a93839a77"
+    },
+    {
+      "file": "ui-after-explicit-pause-end-safe.json.txt",
+      "bytes": 586,
+      "sha256": "6e9c5325e3d40ba5c67d5acd3227a0f94f0c0a93f5210f33f5ac699e4f868d71",
+      "sourceFilename": "ui-after-explicit-pause-end-safe.json",
+      "sourceSha256": "6e9c5325e3d40ba5c67d5acd3227a0f94f0c0a93f5210f33f5ac699e4f868d71"
+    },
+    {
+      "file": "ui-controls-cold-enabled-safe.json.txt",
+      "bytes": 1829,
+      "sha256": "da7e3ed8c33211cd13930fe6542a008b0e935aefde6dc0bf9b7f60959efc6359",
+      "sourceFilename": "ui-controls-cold-enabled-safe.json",
+      "sourceSha256": "da7e3ed8c33211cd13930fe6542a008b0e935aefde6dc0bf9b7f60959efc6359"
+    }
+  ],
+  "rendererSha": "e2f4f6fb56cf7448f1fe89baa0d5f0ca6245c87b",
+  "scope": "Generation2 affected manual Stop cold UI path after bounded source fix; intentionally canceled before arithmetic/review; separate from immutable gen1 failure",
+  "sourceManifestSha256": "92d4c41bb6891d561278abb8099a1c90eabc34ee58af446e126aad850b4f0868"
+}

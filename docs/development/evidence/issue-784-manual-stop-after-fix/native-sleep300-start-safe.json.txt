@@ -1,0 +1,140 @@
+{
+  "at": "2026-10-15T06:53:35.986Z",
+  "taskId": "task_wqstgZSuOLUg",
+  "topicId": "tpc_7AzS55z2m2Y2",
+  "operation": {
+    "capturedAt": "2026-10-15T06:53:35.135Z",
+    "operationId": "op_1792047098412_agt_taIxMIVssPhE_tpc_7AzS55z2m2Y2_Ueq2gRKF",
+    "isActive": true,
+    "isCompleted": false,
+    "hasError": false,
+    "needsHumanInput": false,
+    "status": "running",
+    "lastModified": "2026-10-15T06:52:07.685Z",
+    "remote": {
+      "durableStatus": "running",
+      "admission": {
+        "state": "running",
+        "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+        "generation": 1,
+        "updatedAt": "2026-10-15T06:52:07.685Z"
+      }
+    }
+  },
+  "dispatches": [
+    {
+      "id": "dsp_YoDsbjH8Ebk6",
+      "task_id": "task_wqstgZSuOLUg",
+      "phase": "canceled",
+      "requested_by": "manual:user_agent_testing_001",
+      "has_automation_occurrence": false,
+      "generation": 1,
+      "fence": 2,
+      "operation_id": "op_1792045223357_agt_taIxMIVssPhE_tpc_hWh5Nch04vD7_eZIBOrUi"
+    },
+    {
+      "id": "dsp_c4WCxclcIuMd",
+      "task_id": "task_wqstgZSuOLUg",
+      "phase": "running",
+      "requested_by": "manual:user_agent_testing_001",
+      "has_automation_occurrence": false,
+      "generation": 2,
+      "fence": 1,
+      "operation_id": "op_1792047098412_agt_taIxMIVssPhE_tpc_7AzS55z2m2Y2_Ueq2gRKF"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task_x943JumvczAo",
+      "status": "backlog",
+      "workflowCategory": "canceled",
+      "generation": 0,
+      "automationMode": "heartbeat",
+      "heartbeatInterval": 600,
+      "scheduler": {
+        "automationPaused": true,
+        "tickTokenSha256": null
+      }
+    },
+    {
+      "id": "task_wqstgZSuOLUg",
+      "status": "backlog",
+      "workflowCategory": "in_progress",
+      "generation": 2,
+      "automationMode": "heartbeat",
+      "heartbeatInterval": 600,
+      "scheduler": {
+        "automationPaused": true,
+        "scheduledAt": "2026-10-15T06:51:24.215Z",
+        "tickRevision": 2,
+        "tickMessageId": "local-task-task_wqstgZSuOLUg-ae2d05cb76ebfdda48434a45389ccbb478832e3e34a910dd9206352d07924886",
+        "tickTokenSha256": "25cff990dd53df30efd5fa2eff73740c4076e539a4817f3e28bc428b010cbce1"
+      }
+    }
+  ],
+  "activeCount": 1,
+  "active": [
+    {
+      "id": "op_1792047098412_agt_taIxMIVssPhE_tpc_7AzS55z2m2Y2_Ueq2gRKF",
+      "status": "running",
+      "task_id": "task_wqstgZSuOLUg",
+      "model": null,
+      "provider": "opencode"
+    }
+  ],
+  "savedMiMoObserved": true,
+  "sleep300Observed": true,
+  "sleep300Message": {
+    "id": "msg_6ro2nnl4UJkeWALayQ",
+    "role": "tool",
+    "model": null,
+    "provider": null,
+    "apiName": "bash",
+    "createdAt": "2026-10-15T06:53:08.212Z",
+    "updatedAt": "2026-10-15T06:53:08.746Z",
+    "toolState": "in_progress",
+    "hasToolError": false,
+    "commandClass": "exact-native-sleep-300",
+    "commandSha256": "b6d90f5c3ccd2442d62be82755a8b2c4adfc5abcf965972f55c7e0002ba8d209"
+  },
+  "messages": [
+    {
+      "id": "msg_7MJpZI5Ngt0jAgnFxY",
+      "role": "assistant",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "provider": "opencode",
+      "createdAt": "2026-10-15T06:51:38.265Z",
+      "updatedAt": "2026-10-15T06:53:18.886Z",
+      "hasToolError": false,
+      "toolCallNames": [
+        "orvilo_cc_orvilo-agent-documents__listDocuments",
+        "bash"
+      ]
+    },
+    {
+      "id": "msg_lEzApU4JFGZvhutAi1",
+      "role": "tool",
+      "model": null,
+      "provider": null,
+      "apiName": "orvilo_cc_orvilo-agent-documents__listDocuments",
+      "createdAt": "2026-10-15T06:53:07.432Z",
+      "updatedAt": "2026-10-15T06:53:09.887Z",
+      "toolState": "in_progress",
+      "hasToolError": false
+    },
+    {
+      "id": "msg_6ro2nnl4UJkeWALayQ",
+      "role": "tool",
+      "model": null,
+      "provider": null,
+      "apiName": "bash",
+      "createdAt": "2026-10-15T06:53:08.212Z",
+      "updatedAt": "2026-10-15T06:53:08.746Z",
+      "toolState": "in_progress",
+      "hasToolError": false,
+      "commandClass": "exact-native-sleep-300",
+      "commandSha256": "b6d90f5c3ccd2442d62be82755a8b2c4adfc5abcf965972f55c7e0002ba8d209"
+    }
+  ],
+  "deadline": "2026-10-15T07:01:24.215Z"
+}

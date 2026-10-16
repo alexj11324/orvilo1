@@ -1,0 +1,51 @@
+{
+  "acceptanceCalls": [
+    {
+      "stage": "first-final",
+      "receivedAt": "2026-10-15T04:18:09.673Z",
+      "sourceSha": "cec4c8397ec8aa1ed0aee43a36382f3f06039b25",
+      "taskId": "task_mAkjRGYbByNW",
+      "success": true,
+      "data": {
+        "runId": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": false
+      }
+    },
+    {
+      "stage": "ready-restored-reconcile",
+      "receivedAt": "2026-10-15T04:21:11.651Z",
+      "sourceSha": "cec4c8397ec8aa1ed0aee43a36382f3f06039b25",
+      "taskId": "task_mAkjRGYbByNW",
+      "success": true,
+      "data": {
+        "runId": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": false
+      }
+    }
+  ],
+  "guardStop": {
+    "startedAt": "2026-10-15T04:15:49.166Z",
+    "stoppedBeforeFirstFinalRequest": true,
+    "definedProofFieldsChanged": false,
+    "diagnosedAt": "2026-10-15T04:16:49.992Z",
+    "undefinedArtifactKeys": ["sourceSha", "repo", "branch", "baseBranch", "targetBranch"],
+    "correction": "Observer JSON representation normalization only; preserved original attempt marker; separate first acceptance request."
+  },
+  "readTimeout": {
+    "durationSeconds": 60,
+    "method": "task.getPinnedDocuments",
+    "outcome": "TimeoutError, no response and no mutation; no blind retry.",
+    "diagnosis": "Root traced Clerk fetch network abort; existing cookie remained valid; no database lock or authentication configuration change.",
+    "recoveredReadAt": "2026-10-15T04:06:16.884Z"
+  }
+}

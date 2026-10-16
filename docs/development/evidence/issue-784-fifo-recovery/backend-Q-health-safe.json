@@ -1,0 +1,45 @@
+{
+  "at": "2026-10-15T04:32:09.480Z",
+  "backendSource": "d21041e8ce54bb5c2e3e2ed1f29e6e01b4817ca4",
+  "rendererSource": "cec4c8397ec8aa1ed0aee43a36382f3f06039b25",
+  "results": [
+    {
+      "actor": "owner",
+      "method": "user.getUserState",
+      "status": 200,
+      "ms": 43425
+    },
+    {
+      "actor": "owner",
+      "method": "device.listDevices",
+      "status": 200,
+      "ms": 157,
+      "devices": [
+        {
+          "id": "b26d477ac30d6080a4a038b66cb28a80",
+          "online": true,
+          "channels": 1
+        }
+      ]
+    },
+    {
+      "actor": "member",
+      "method": "user.getUserState",
+      "status": 200,
+      "ms": 47
+    },
+    {
+      "actor": "member",
+      "method": "device.listDevices",
+      "status": 200,
+      "ms": 32,
+      "devices": [
+        {
+          "id": "943ad1571ff1079323550034fd8f9123",
+          "online": true,
+          "channels": 1
+        }
+      ]
+    }
+  ]
+}

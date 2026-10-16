@@ -1,0 +1,15 @@
+# T16/T17 manual periodic Stop supplement
+
+This local cancellation smoke used backend T `3a2e2ca5e3896d8a4bfcec6a60988a082b952960`. It intentionally stopped the first real native `sleep 300` before arithmetic or review. It does not establish artifact delivery or Reviewer coverage. T17's null reviewer assignment was retained as an explicit limit.
+
+The sole existing-Issue clarification for T16 returned plan revision 1 with one leaf T17, no repository, one parent-to-leaf blocks edge, and exactly two required artifact criteria per Issue. The original failed schema-output planning history was preserved. Parent T16 was configured heartbeat600 and paused before normal Owner confirmation; no builder auto-started. T17 was configured heartbeat600, then actually Started while idle and Paused while idle before one manual run.
+
+Genuine timer: scheduled 06:20:19.594 UTC, deadline 06:30:19.594 UTC, revision 1. One actual manual Owner dispatch `dsp_YoDsbjH8Ebk6` had no automation occurrence. Its Topic `tpc_hWh5Nch04vD7` and operation `op_1792045223357_agt_taIxMIVssPhE_tpc_hWh5Nch04vD7_eZIBOrUi` used the saved MiMo Agent on Owner's saved host. The first/only native bash command was exactly `sleep 300`, observed in progress from 06:21:14.651. Actual ACP session: `ses_ec1c7e593ffe8z8xggzshNHdPi`.
+
+Runtime QA captured the real active T17 row under the Paused filter, clicked UI Resume once, then clicked UI Stop once. Independent read-only snapshots proved Resume changed futurePause to false while preserving operation, dispatch, generation and the original tick. Native cancellation was requested at 06:23:56.740 and acknowledged at 06:23:57.129 UTC; the operation became interrupted, dispatch and Topic canceled, and global native count reached zero. Stop left futurePause false and the original timer intact. QA captured a cold reload before cleanup.
+
+Evidence limits: the passive RPC observer matched zero requests, so the exact Stop RPC route is unproven. QA reported the cold UI displayed a paused/off header although persisted futurePause was false. No Stop repeat or speculative fix was performed. Stored native tool state remains in_progress after cancellation; native ACK, terminal operation and canceled dispatch independently prove cancellation.
+
+After QA released the cold proof, the operator explicitly paused T17 before the genuine deadline, then truthfully End/canceled T17 and T16. Both remain canceled with futurePause true. Plan revision/fingerprint, sole dependency and canceled Topic history remain. No delivery was accepted and no Issue marked Done or deleted. Final fresh guard confirmed backend T clean, global native zero, Owner's saved device online, and original T14 paused with its four root dispatch outcomes unchanged.
+
+Primary receipts: `native-sleep300-start-safe.json`, `after-ui-resume-safe.json`, `after-ui-stop-safe.json`, `explicit-pause-before-deadline-safe.json`, `ended-family-safe.json`, and `final-preflight.log`. Private genuine tick token is retained separately with mode 600 and excluded from this report.

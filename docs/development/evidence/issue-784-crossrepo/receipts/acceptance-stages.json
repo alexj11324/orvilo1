@@ -1,0 +1,655 @@
+{
+  "stages": [
+    {
+      "stage": "before-items",
+      "observedAt": "2026-10-15T04:10:34.229Z",
+      "sourceSha": "cec4c8397ec8aa1ed0aee43a36382f3f06039b25",
+      "rows": [
+        {
+          "task": {
+            "id": "task_mAkjRGYbByNW",
+            "identifier": "T-10",
+            "executionGeneration": 1,
+            "currentTopicId": "tpc_IOE2170qBLsW",
+            "domainRevision": 20
+          },
+          "current": {
+            "runId": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+            "reviewerPassed": true,
+            "necessaryChecksPassed": true,
+            "itemsAccepted": false,
+            "deliveryAccepted": false,
+            "availableForDependents": true,
+            "merged": false,
+            "proof": {
+              "taskId": "task_mAkjRGYbByNW",
+              "deliveryOperationId": "op_1792036276446_agt_taIxMIVssPhE_tpc_IOE2170qBLsW_WXx2iEkN",
+              "topicId": "tpc_IOE2170qBLsW",
+              "executionGeneration": 1,
+              "dispatchId": "dsp_oXVpMhzYS1mp",
+              "checklistRevision": 1,
+              "deliveryKind": "artifact"
+            }
+          },
+          "evidenceCount": 7,
+          "documentIds": ["docs_cTQIHQXLRd1RNGzF"]
+        },
+        {
+          "task": {
+            "id": "task_WSixF93YcIxP",
+            "identifier": "T-11",
+            "executionGeneration": 4,
+            "currentTopicId": "tpc_9493ZcYPCQGb",
+            "domainRevision": 9
+          },
+          "current": {
+            "runId": "49250169-e051-4fc8-b599-0e1eb6f83151",
+            "reviewerPassed": true,
+            "necessaryChecksPassed": true,
+            "itemsAccepted": false,
+            "deliveryAccepted": false,
+            "availableForDependents": true,
+            "merged": false,
+            "proof": {
+              "taskId": "task_WSixF93YcIxP",
+              "deliveryOperationId": "op_1792036061722_agt_taIxMIVssPhE_tpc_9493ZcYPCQGb_C4BxA8NZ",
+              "topicId": "tpc_9493ZcYPCQGb",
+              "executionGeneration": 4,
+              "dispatchId": "dsp_wj96eCBaC9xE",
+              "sourceSha": "8a5baea6ec515b8aabde9a6e7b1118ed109071e7",
+              "repo": "alexj11324/orvilo-issue784-qa-a-20261014",
+              "branch": "task/T-11",
+              "baseBranch": "qa-target",
+              "targetBranch": "qa-target",
+              "checklistRevision": 1,
+              "deliveryKind": "code"
+            }
+          },
+          "evidenceCount": 9,
+          "documentIds": ["docs_Q1Pb5z8V5EQdT9F1"]
+        },
+        {
+          "task": {
+            "id": "task_ZRNFaxrqjdgV",
+            "identifier": "T-12",
+            "executionGeneration": 4,
+            "currentTopicId": "tpc_KdjLo6agfX5r",
+            "domainRevision": 9
+          },
+          "current": {
+            "runId": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+            "reviewerPassed": true,
+            "necessaryChecksPassed": true,
+            "itemsAccepted": false,
+            "deliveryAccepted": false,
+            "availableForDependents": true,
+            "merged": false,
+            "proof": {
+              "taskId": "task_ZRNFaxrqjdgV",
+              "deliveryOperationId": "op_1792036068608_agt_taIxMIVssPhE_tpc_KdjLo6agfX5r_XPEoQGwb",
+              "topicId": "tpc_KdjLo6agfX5r",
+              "executionGeneration": 4,
+              "dispatchId": "dsp_NaYFj2H86iVJ",
+              "sourceSha": "3b8a119d35bc32c5dc6ce5ed2f7d0c42dbffc779",
+              "repo": "alexj11324/orvilo-issue784-qa-b-20261014",
+              "branch": "task/T-12",
+              "baseBranch": "qa-target",
+              "targetBranch": "qa-target",
+              "checklistRevision": 1,
+              "deliveryKind": "code"
+            }
+          },
+          "evidenceCount": 9,
+          "documentIds": ["docs_FSFUAk9oJmNhDF5I"]
+        }
+      ]
+    },
+    {
+      "stage": "items-accepted-before-final",
+      "observedAt": "2026-10-15T04:15:48.368Z",
+      "sourceSha": "cec4c8397ec8aa1ed0aee43a36382f3f06039b25",
+      "rows": [
+        {
+          "task": {
+            "id": "task_mAkjRGYbByNW",
+            "identifier": "T-10",
+            "executionGeneration": 1,
+            "currentTopicId": "tpc_IOE2170qBLsW",
+            "domainRevision": 20
+          },
+          "current": {
+            "runId": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+            "reviewerPassed": true,
+            "necessaryChecksPassed": true,
+            "itemsAccepted": true,
+            "deliveryAccepted": false,
+            "availableForDependents": true,
+            "merged": false,
+            "proof": {
+              "taskId": "task_mAkjRGYbByNW",
+              "deliveryOperationId": "op_1792036276446_agt_taIxMIVssPhE_tpc_IOE2170qBLsW_WXx2iEkN",
+              "topicId": "tpc_IOE2170qBLsW",
+              "executionGeneration": 1,
+              "dispatchId": "dsp_oXVpMhzYS1mp",
+              "checklistRevision": 1,
+              "deliveryKind": "artifact"
+            }
+          },
+          "evidenceCount": 7,
+          "documentIds": ["docs_cTQIHQXLRd1RNGzF"]
+        },
+        {
+          "task": {
+            "id": "task_WSixF93YcIxP",
+            "identifier": "T-11",
+            "executionGeneration": 4,
+            "currentTopicId": "tpc_9493ZcYPCQGb",
+            "domainRevision": 9
+          },
+          "current": {
+            "runId": "49250169-e051-4fc8-b599-0e1eb6f83151",
+            "reviewerPassed": true,
+            "necessaryChecksPassed": true,
+            "itemsAccepted": true,
+            "deliveryAccepted": false,
+            "availableForDependents": true,
+            "merged": false,
+            "proof": {
+              "taskId": "task_WSixF93YcIxP",
+              "deliveryOperationId": "op_1792036061722_agt_taIxMIVssPhE_tpc_9493ZcYPCQGb_C4BxA8NZ",
+              "topicId": "tpc_9493ZcYPCQGb",
+              "executionGeneration": 4,
+              "dispatchId": "dsp_wj96eCBaC9xE",
+              "sourceSha": "8a5baea6ec515b8aabde9a6e7b1118ed109071e7",
+              "repo": "alexj11324/orvilo-issue784-qa-a-20261014",
+              "branch": "task/T-11",
+              "baseBranch": "qa-target",
+              "targetBranch": "qa-target",
+              "checklistRevision": 1,
+              "deliveryKind": "code"
+            }
+          },
+          "evidenceCount": 9,
+          "documentIds": ["docs_Q1Pb5z8V5EQdT9F1"]
+        },
+        {
+          "task": {
+            "id": "task_ZRNFaxrqjdgV",
+            "identifier": "T-12",
+            "executionGeneration": 4,
+            "currentTopicId": "tpc_KdjLo6agfX5r",
+            "domainRevision": 9
+          },
+          "current": {
+            "runId": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+            "reviewerPassed": true,
+            "necessaryChecksPassed": true,
+            "itemsAccepted": true,
+            "deliveryAccepted": false,
+            "availableForDependents": true,
+            "merged": false,
+            "proof": {
+              "taskId": "task_ZRNFaxrqjdgV",
+              "deliveryOperationId": "op_1792036068608_agt_taIxMIVssPhE_tpc_KdjLo6agfX5r_XPEoQGwb",
+              "topicId": "tpc_KdjLo6agfX5r",
+              "executionGeneration": 4,
+              "dispatchId": "dsp_NaYFj2H86iVJ",
+              "sourceSha": "3b8a119d35bc32c5dc6ce5ed2f7d0c42dbffc779",
+              "repo": "alexj11324/orvilo-issue784-qa-b-20261014",
+              "branch": "task/T-12",
+              "baseBranch": "qa-target",
+              "targetBranch": "qa-target",
+              "checklistRevision": 1,
+              "deliveryKind": "code"
+            }
+          },
+          "evidenceCount": 9,
+          "documentIds": ["docs_FSFUAk9oJmNhDF5I"]
+        }
+      ]
+    },
+    {
+      "stage": "partial-after-first-final",
+      "observedAt": "2026-10-15T04:18:28.154Z",
+      "sourceSha": "cec4c8397ec8aa1ed0aee43a36382f3f06039b25",
+      "rows": [
+        {
+          "task": {
+            "id": "task_mAkjRGYbByNW",
+            "identifier": "T-10",
+            "status": "paused",
+            "workflowCategory": "in_review",
+            "executionGeneration": 1,
+            "currentTopicId": "tpc_IOE2170qBLsW",
+            "domainRevision": 20,
+            "updatedAt": "2026-10-15T04:08:51.593Z"
+          },
+          "current": {
+            "runId": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+            "reviewerPassed": true,
+            "necessaryChecksPassed": true,
+            "itemsAccepted": true,
+            "deliveryAccepted": true,
+            "availableForDependents": true,
+            "merged": false,
+            "proof": {
+              "taskId": "task_mAkjRGYbByNW",
+              "deliveryOperationId": "op_1792036276446_agt_taIxMIVssPhE_tpc_IOE2170qBLsW_WXx2iEkN",
+              "topicId": "tpc_IOE2170qBLsW",
+              "executionGeneration": 1,
+              "dispatchId": "dsp_oXVpMhzYS1mp",
+              "checklistRevision": 1,
+              "deliveryKind": "artifact"
+            }
+          },
+          "history": [
+            {
+              "id": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+              "status": "passed",
+              "roundIndex": 1,
+              "userDecision": "accept",
+              "createdAt": "2026-10-15T04:03:23.492Z"
+            }
+          ],
+          "results": [
+            {
+              "id": "65d0ae6a-17a4-4486-967f-1fd5b1c868d7",
+              "verifyRunId": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+              "checkItemId": "e52b535d-9ef2-4f76-a44b-62fbdc4b57e1",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:50.605Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "cdc4b2a8-53c4-4c57-890d-e9f7db409703",
+              "verifyRunId": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+              "checkItemId": "8ca6da41-4b4b-4e22-ac1f-fe30bd016be6",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:50.606Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "d4cc22af-16e3-4ce5-86a6-75cafb31b2bf",
+              "verifyRunId": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+              "checkItemId": "f5e51a07-f8bb-4701-94a0-7ed80e176c1d",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:50.606Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "0dff529b-64c6-474b-935e-6694d04d59f9",
+              "verifyRunId": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+              "checkItemId": "48b5b799-ca63-418e-bbec-74f1a4ff8e1d",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:50.606Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "674cfabe-604c-4944-ad50-122003aeeb3c",
+              "verifyRunId": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+              "checkItemId": "abaaac6b-f386-454d-87f4-9da90bead571",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:50.606Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "51f6ff56-6454-4c03-84b7-d7085d6b7dbb",
+              "verifyRunId": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+              "checkItemId": "70cee151-7a8e-40e8-a6b8-20c2326729af",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:50.606Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "e5ef59e6-2efe-41cf-959c-91e1c1ed24d0",
+              "verifyRunId": "d5fc9c00-6235-47fb-8e69-e2e9e28983c6",
+              "checkItemId": "99755d30-7fc0-404c-8417-42104536c2cc",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:50.606Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            }
+          ],
+          "evidenceCount": 7
+        },
+        {
+          "task": {
+            "id": "task_WSixF93YcIxP",
+            "identifier": "T-11",
+            "status": "completed",
+            "workflowCategory": "done",
+            "executionGeneration": 4,
+            "currentTopicId": "tpc_9493ZcYPCQGb",
+            "domainRevision": 10,
+            "updatedAt": "2026-10-15T04:18:17.232Z"
+          },
+          "current": {
+            "runId": "49250169-e051-4fc8-b599-0e1eb6f83151",
+            "reviewerPassed": true,
+            "necessaryChecksPassed": true,
+            "itemsAccepted": true,
+            "deliveryAccepted": true,
+            "availableForDependents": true,
+            "merged": true,
+            "proof": {
+              "taskId": "task_WSixF93YcIxP",
+              "deliveryOperationId": "op_1792036061722_agt_taIxMIVssPhE_tpc_9493ZcYPCQGb_C4BxA8NZ",
+              "topicId": "tpc_9493ZcYPCQGb",
+              "executionGeneration": 4,
+              "dispatchId": "dsp_wj96eCBaC9xE",
+              "sourceSha": "8a5baea6ec515b8aabde9a6e7b1118ed109071e7",
+              "repo": "alexj11324/orvilo-issue784-qa-a-20261014",
+              "branch": "task/T-11",
+              "baseBranch": "qa-target",
+              "targetBranch": "qa-target",
+              "checklistRevision": 1,
+              "deliveryKind": "code"
+            }
+          },
+          "history": [
+            {
+              "id": "49250169-e051-4fc8-b599-0e1eb6f83151",
+              "status": "passed",
+              "roundIndex": 1,
+              "userDecision": "accept",
+              "createdAt": "2026-10-15T03:48:34.243Z"
+            }
+          ],
+          "results": [
+            {
+              "id": "3532a593-54b0-46da-96ca-a8f47fe58d92",
+              "verifyRunId": "49250169-e051-4fc8-b599-0e1eb6f83151",
+              "checkItemId": "7d0f6bf3-1f77-49e3-bb1c-73164d12eeb1",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:58.024Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "7bb671a0-e6d9-4746-acd5-fd81e1658259",
+              "verifyRunId": "49250169-e051-4fc8-b599-0e1eb6f83151",
+              "checkItemId": "04da332e-7dbb-4e42-9920-c67ec5bf6501",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:58.025Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "c869059a-cc55-47b5-affb-f22ee53bd03b",
+              "verifyRunId": "49250169-e051-4fc8-b599-0e1eb6f83151",
+              "checkItemId": "f595e414-de20-4193-bdac-0edafcc805ab",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:58.025Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "4b062701-158f-4f0a-a4ad-431bec01bc17",
+              "verifyRunId": "49250169-e051-4fc8-b599-0e1eb6f83151",
+              "checkItemId": "f16c7bd0-7a10-4017-a1d4-d9eb3e2d60be",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:58.025Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "473b67e1-efa0-44c2-b74a-b5700e2b348a",
+              "verifyRunId": "49250169-e051-4fc8-b599-0e1eb6f83151",
+              "checkItemId": "c63af84b-69c4-4340-9b29-fab2a83602c9",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:58.026Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "75ee3506-651b-4401-a646-1201e12a1721",
+              "verifyRunId": "49250169-e051-4fc8-b599-0e1eb6f83151",
+              "checkItemId": "cf1566a3-cb88-475a-9405-6ac95ec20a8d",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:58.026Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "8bf89f53-06c0-4c4a-abe6-67c9fdaf2377",
+              "verifyRunId": "49250169-e051-4fc8-b599-0e1eb6f83151",
+              "checkItemId": "e4d0eac5-ea49-48ea-a6f4-ddf65c1c3595",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:58.026Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "2d1650c9-99c0-4646-b4ee-1a7937a7df05",
+              "verifyRunId": "49250169-e051-4fc8-b599-0e1eb6f83151",
+              "checkItemId": "d2b39226-ba4b-4d66-a8e8-5aa31f344b71",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:58.026Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "9c919c60-7fb9-4131-90b1-c0fc7f9fffd1",
+              "verifyRunId": "49250169-e051-4fc8-b599-0e1eb6f83151",
+              "checkItemId": "86040f38-7b01-460c-8a8b-0ec13caec754",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:10:58.026Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            }
+          ],
+          "evidenceCount": 9
+        },
+        {
+          "task": {
+            "id": "task_ZRNFaxrqjdgV",
+            "identifier": "T-12",
+            "status": "paused",
+            "workflowCategory": "in_review",
+            "executionGeneration": 4,
+            "currentTopicId": "tpc_KdjLo6agfX5r",
+            "domainRevision": 9,
+            "updatedAt": "2026-10-15T04:18:11.353Z"
+          },
+          "current": {
+            "runId": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+            "reviewerPassed": true,
+            "necessaryChecksPassed": true,
+            "itemsAccepted": true,
+            "deliveryAccepted": true,
+            "availableForDependents": true,
+            "merged": false,
+            "proof": {
+              "taskId": "task_ZRNFaxrqjdgV",
+              "deliveryOperationId": "op_1792036068608_agt_taIxMIVssPhE_tpc_KdjLo6agfX5r_XPEoQGwb",
+              "topicId": "tpc_KdjLo6agfX5r",
+              "executionGeneration": 4,
+              "dispatchId": "dsp_NaYFj2H86iVJ",
+              "sourceSha": "3b8a119d35bc32c5dc6ce5ed2f7d0c42dbffc779",
+              "repo": "alexj11324/orvilo-issue784-qa-b-20261014",
+              "branch": "task/T-12",
+              "baseBranch": "qa-target",
+              "targetBranch": "qa-target",
+              "checklistRevision": 1,
+              "deliveryKind": "code"
+            }
+          },
+          "history": [
+            {
+              "id": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+              "status": "passed",
+              "roundIndex": 1,
+              "userDecision": "accept",
+              "createdAt": "2026-10-15T03:48:44.128Z"
+            }
+          ],
+          "results": [
+            {
+              "id": "46345a7a-bdc8-4c0a-9933-cd08e88718de",
+              "verifyRunId": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+              "checkItemId": "839958b0-c804-4e76-a7d6-5658472c323b",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:11:04.241Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "97e1acee-97d6-4ce6-b0bd-c9a7add54480",
+              "verifyRunId": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+              "checkItemId": "1f41acfe-ec86-487c-a192-59281d1e37a0",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:11:04.241Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "5fd5de9d-0f2c-4343-9933-d0fbf1e6d219",
+              "verifyRunId": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+              "checkItemId": "d0dadcb6-6ba5-47ae-93a5-39cc4ca91434",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:11:04.241Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "46ba976e-843a-4112-8fab-fb801b8fb019",
+              "verifyRunId": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+              "checkItemId": "92caa64e-7aa1-4679-bdc3-f05dc14feb25",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:11:04.241Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "de558404-83f9-4503-adeb-62402d3a9e4c",
+              "verifyRunId": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+              "checkItemId": "1655b9a6-f5ed-44e9-b604-bb531ae69242",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:11:04.241Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "267ab38e-2de9-4942-9328-a609b9177301",
+              "verifyRunId": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+              "checkItemId": "4488115b-2c18-4af7-85c8-35a36f166386",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:11:04.241Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "ac0f2944-e3c7-401e-8c08-c32f89af5ff7",
+              "verifyRunId": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+              "checkItemId": "a2a17d08-57ef-4631-ad04-972b1fe37705",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:11:04.241Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "ac6e8eed-e7c6-4c59-8101-7e9dac91a5fe",
+              "verifyRunId": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+              "checkItemId": "fc7da1a2-060f-4034-881f-570b46a2447a",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:11:04.241Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            },
+            {
+              "id": "b82355de-9cec-49fc-9586-60cc3cc33d17",
+              "verifyRunId": "e6de6b1b-7fc3-4d77-bc6c-862d8d3c1d8a",
+              "checkItemId": "54a6e025-6846-453a-8b23-def783bbf3c6",
+              "verdict": "passed",
+              "userDecision": "accepted",
+              "userDecisionDetail": {
+                "decidedAt": "2026-10-15T04:11:04.241Z",
+                "decidedBy": "user_agent_testing_001",
+                "roundIndex": 1
+              }
+            }
+          ],
+          "evidenceCount": 9
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "at": "2026-10-15T06:26:45.944Z",
+  "stage": "truthfully_ended_canceled_smoke_family",
+  "tasks": [
+    {
+      "id": "task_x943JumvczAo",
+      "status": "canceled",
+      "workflowCategory": "canceled",
+      "executionGeneration": 0,
+      "automationMode": "heartbeat",
+      "heartbeatInterval": 600,
+      "assigneeAgentId": "agt_taIxMIVssPhE",
+      "reviewerAgentId": "agt_taIxMIVssPhE",
+      "scheduler": {
+        "automationPaused": true,
+        "tickTokenSha256": null
+      }
+    },
+    {
+      "id": "task_wqstgZSuOLUg",
+      "status": "canceled",
+      "workflowCategory": "canceled",
+      "executionGeneration": 1,
+      "automationMode": "heartbeat",
+      "heartbeatInterval": 600,
+      "assigneeAgentId": "agt_taIxMIVssPhE",
+      "reviewerAgentId": null,
+      "scheduler": {
+        "automationPaused": true,
+        "scheduledAt": "2026-10-15T06:20:19.594Z",
+        "tickRevision": 1,
+        "tickMessageId": "local-task-task_wqstgZSuOLUg-2e01649e16ebaa38ce88dee271b5d304d50a72005fbe20b02a4c226e39380cbf",
+        "tickTokenSha256": "1bbe16ee299b022edfaf168b25a15ddbb5d61ba70abc95e561dcbdc72161fd7f"
+      }
+    }
+  ],
+  "plan": {
+    "revision": 1,
+    "confirmedAt": "2026-10-15T06:18:27.128Z",
+    "scopeFingerprint": "c82abc5bec7219426703149140c17823c24225266e105c0d0c49a6e81ef65b2c"
+  },
+  "dependencies": [
+    {
+      "id": "be9b0491-04f8-48e7-a8fc-5be00049cf10",
+      "taskId": "task_x943JumvczAo",
+      "dependsOnId": "task_wqstgZSuOLUg",
+      "type": "blocks"
+    }
+  ],
+  "queue": {
+    "queued": 0
+  },
+  "topics": [
+    {
+      "id": "tpc_hWh5Nch04vD7",
+      "status": "canceled",
+      "operationId": "op_1792045223357_agt_taIxMIVssPhE_tpc_hWh5Nch04vD7_eZIBOrUi",
+      "agentId": "agt_taIxMIVssPhE"
+    }
+  ],
+  "history": [],
+  "checks": {
+    "bothCanceled": true,
+    "parentPaused": true,
+    "leafPaused": true,
+    "planPreserved": true,
+    "soleTopicCanceled": true,
+    "queueEmpty": true
+  },
+  "limit": "Intentional cancellation during first sleep300; arithmetic artifact and Reviewer delivery not exercised; leaf reviewer remains null."
+}

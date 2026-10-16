@@ -1,0 +1,29 @@
+{
+  "at": "2026-10-15T06:08:03.048Z",
+  "topicId": "tpc_UiZhfu72hIg7",
+  "checks": [
+    {
+      "actor": "owner",
+      "method": "topic.getTopicDetail",
+      "readable": true
+    },
+    {
+      "actor": "owner",
+      "method": "topic.getTopicTranscript",
+      "readable": true,
+      "hasV2": true,
+      "messageCount": 4
+    },
+    {
+      "actor": "member",
+      "method": "topic.getTopicDetail",
+      "readable": false
+    },
+    {
+      "actor": "member",
+      "method": "topic.getTopicTranscript",
+      "rejected": true,
+      "notFound": true
+    }
+  ]
+}

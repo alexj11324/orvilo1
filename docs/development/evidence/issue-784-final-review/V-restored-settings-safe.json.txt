@@ -1,0 +1,17 @@
+{
+  "at": "2026-10-15T07:27:21.449Z",
+  "originalOpenCodeContentHash": "1055ed2684701d64e737b7fbcaadb903714c925a1c58744a966763588cdc5953",
+  "originalOpenCodeHashRestored": true,
+  "originalPluginsRestored": true,
+  "prefs": [
+    {
+      "actor": "owner",
+      "sharedOrchestratorAbsent": true
+    },
+    {
+      "actor": "member",
+      "sharedOrchestratorAbsent": true
+    }
+  ],
+  "privateValuesOmitted": true
+}

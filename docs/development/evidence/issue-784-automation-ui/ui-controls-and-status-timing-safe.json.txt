@@ -1,0 +1,54 @@
+{
+  "scope": "Separate R4 actual UI controls and observed task state transitions",
+  "backendSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+  "rendererSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+  "uiOperator": "runtime_followup_qa",
+  "resumeClickAt": "2026-10-15T05:28:41.597Z",
+  "futurePauseClickAt": "2026-10-15T05:39:52.765Z",
+  "stopIssueClickAt": "2026-10-15T05:40:44.037Z",
+  "uiTimingLimitation": "Earlier pre-ACK Paused filter navigation raced reload; that does not prove native-active filter coverage or filter persistence. Proper filter screenshot must be independently captured after ACK.",
+  "transitions": [
+    {
+      "at": "2026-10-15T05:28:19.463Z",
+      "status": "paused",
+      "workflowCategory": "backlog",
+      "futurePaused": true,
+      "activeDispatchId": null
+    },
+    {
+      "at": "2026-10-15T05:28:56.139Z",
+      "status": "scheduled",
+      "workflowCategory": "backlog",
+      "futurePaused": false,
+      "activeDispatchId": null
+    },
+    {
+      "at": "2026-10-15T05:38:57.532Z",
+      "status": "running",
+      "workflowCategory": "backlog",
+      "futurePaused": false,
+      "activeDispatchId": "dsp_1f9nFFwv5Pak"
+    },
+    {
+      "at": "2026-10-15T05:40:07.178Z",
+      "status": "running",
+      "workflowCategory": "backlog",
+      "futurePaused": true,
+      "activeDispatchId": "dsp_1f9nFFwv5Pak"
+    },
+    {
+      "at": "2026-10-15T05:40:45.317Z",
+      "status": "running",
+      "workflowCategory": "backlog",
+      "futurePaused": true,
+      "activeDispatchId": null
+    },
+    {
+      "at": "2026-10-15T05:41:07.601Z",
+      "status": "paused",
+      "workflowCategory": "backlog",
+      "futurePaused": true,
+      "activeDispatchId": null
+    }
+  ]
+}

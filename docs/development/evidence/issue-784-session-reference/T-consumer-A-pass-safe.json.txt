@@ -1,0 +1,53 @@
+{
+  "at": "2026-10-15T06:04:36.206Z",
+  "backendSha": "3a2e2ca5e3896d8a4bfcec6a60988a082b952960",
+  "rendererSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+  "cliSha256": "76eb91e8712bcc9e2e4078bde976b2936ac08501e36d8e531f6bfe8aee09be30",
+  "consumerTopicId": "tpc_Boklgc9hWotl",
+  "sourceTopicId": "tpc_UiZhfu72hIg7",
+  "operationId": "op_1792044114528_agt_taIxMIVssPhE_tpc_Boklgc9hWotl_8ACg37bL",
+  "status": "done",
+  "isActive": false,
+  "actualSessionId": "ses_ec1f64bf2ffeo4yAuHgrcAZa1u",
+  "actualDeviceId": "b26d477ac30d6080a4a038b66cb28a80",
+  "plainFollowupMessageId": "msg_WphP4HE2DCY5",
+  "plainFollowupHasNoReferTag": true,
+  "plainFollowupHasNoMarker": true,
+  "actualAssistantModels": [
+    "opencode/mimo-v2.6-flash-free"
+  ],
+  "actualAssistantProviders": [
+    "opencode"
+  ],
+  "actualSourceRead": [
+    {
+      "messageId": "msg_1n7rcgjnEibXvUu8fS",
+      "apiName": "bash",
+      "commandIsExactRead": true,
+      "returnedActualSourceV1": true,
+      "resultChars": 353,
+      "authError": false
+    }
+  ],
+  "actualFinalAssistant": "REF_Q_SOURCE_V1_4817",
+  "ws": {
+    "safeRecordCount": 32,
+    "authSuccessAt": "2026-10-15T06:01:56.255Z",
+    "streamKinds": [
+      "agent_runtime_init",
+      "stream_start",
+      "stream_chunk",
+      "tool_start",
+      "step_complete",
+      "tool_result",
+      "tool_end",
+      "stream_end",
+      "visible_output_end",
+      "agent_runtime_end"
+    ],
+    "terminalAt": "2026-10-15T06:03:24.941Z",
+    "sessionCompleteAt": "2026-10-15T06:03:24.947Z"
+  },
+  "ancestralFirstReferenceUserMessageId": "msg_0kGMnxYqktZv",
+  "sourceUpdateNotStarted": true
+}

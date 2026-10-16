@@ -1,0 +1,118 @@
+{
+  "at": "2026-10-15T06:21:37.288Z",
+  "taskId": "task_wqstgZSuOLUg",
+  "topicId": "tpc_hWh5Nch04vD7",
+  "operation": {
+    "capturedAt": "2026-10-15T06:21:37.049Z",
+    "operationId": "op_1792045223357_agt_taIxMIVssPhE_tpc_hWh5Nch04vD7_eZIBOrUi",
+    "isActive": true,
+    "isCompleted": false,
+    "hasError": false,
+    "needsHumanInput": false,
+    "status": "running",
+    "lastModified": "2026-10-15T06:20:46.641Z",
+    "remote": {
+      "durableStatus": "running",
+      "admission": {
+        "state": "running",
+        "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+        "generation": 1,
+        "updatedAt": "2026-10-15T06:20:46.641Z"
+      }
+    }
+  },
+  "dispatches": [
+    {
+      "id": "dsp_YoDsbjH8Ebk6",
+      "task_id": "task_wqstgZSuOLUg",
+      "phase": "running",
+      "requested_by": "manual:user_agent_testing_001",
+      "has_automation_occurrence": false,
+      "generation": 1,
+      "fence": 1,
+      "operation_id": "op_1792045223357_agt_taIxMIVssPhE_tpc_hWh5Nch04vD7_eZIBOrUi"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task_x943JumvczAo",
+      "status": "backlog",
+      "workflowCategory": "backlog",
+      "generation": 0,
+      "automationMode": "heartbeat",
+      "heartbeatInterval": 600,
+      "scheduler": {
+        "automationPaused": true,
+        "tickTokenSha256": null
+      }
+    },
+    {
+      "id": "task_wqstgZSuOLUg",
+      "status": "backlog",
+      "workflowCategory": "in_progress",
+      "generation": 1,
+      "automationMode": "heartbeat",
+      "heartbeatInterval": 600,
+      "scheduler": {
+        "automationPaused": true,
+        "scheduledAt": "2026-10-15T06:20:19.594Z",
+        "tickRevision": 1,
+        "tickMessageId": "local-task-task_wqstgZSuOLUg-2e01649e16ebaa38ce88dee271b5d304d50a72005fbe20b02a4c226e39380cbf",
+        "tickTokenSha256": "1bbe16ee299b022edfaf168b25a15ddbb5d61ba70abc95e561dcbdc72161fd7f"
+      }
+    }
+  ],
+  "activeCount": 1,
+  "active": [
+    {
+      "id": "op_1792045223357_agt_taIxMIVssPhE_tpc_hWh5Nch04vD7_eZIBOrUi",
+      "status": "running",
+      "task_id": "task_wqstgZSuOLUg",
+      "model": null,
+      "provider": "opencode"
+    }
+  ],
+  "savedMiMoObserved": true,
+  "sleep300Observed": true,
+  "sleep300Message": {
+    "id": "msg_4F07Pxa21wGBsh9ScS",
+    "role": "tool",
+    "model": null,
+    "provider": null,
+    "apiName": "bash",
+    "createdAt": "2026-10-15T06:21:14.651Z",
+    "updatedAt": "2026-10-15T06:21:14.744Z",
+    "toolState": "in_progress",
+    "hasToolError": false,
+    "commandClass": "exact-native-sleep-300",
+    "commandSha256": "b6d90f5c3ccd2442d62be82755a8b2c4adfc5abcf965972f55c7e0002ba8d209"
+  },
+  "messages": [
+    {
+      "id": "msg_R0jwPjPdVUWeAIbAhc",
+      "role": "assistant",
+      "model": "opencode/mimo-v2.6-flash-free",
+      "provider": "opencode",
+      "createdAt": "2026-10-15T06:20:23.348Z",
+      "updatedAt": "2026-10-15T06:21:25.593Z",
+      "hasToolError": false,
+      "toolCallNames": [
+        "bash"
+      ]
+    },
+    {
+      "id": "msg_4F07Pxa21wGBsh9ScS",
+      "role": "tool",
+      "model": null,
+      "provider": null,
+      "apiName": "bash",
+      "createdAt": "2026-10-15T06:21:14.651Z",
+      "updatedAt": "2026-10-15T06:21:14.744Z",
+      "toolState": "in_progress",
+      "hasToolError": false,
+      "commandClass": "exact-native-sleep-300",
+      "commandSha256": "b6d90f5c3ccd2442d62be82755a8b2c4adfc5abcf965972f55c7e0002ba8d209"
+    }
+  ],
+  "deadline": "2026-10-15T06:30:19.594Z"
+}

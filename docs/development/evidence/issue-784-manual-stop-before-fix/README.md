@@ -1,0 +1,19 @@
+# T16/T17 historical manual Stop supplement on T
+
+The native cancellation path completed, but the historical cold UI acceptance FAILED: after actual Stop and CmdR, UI showed Off / Paused / Run without countdown while persisted future scheduling remained enabled (`automationPaused=false`) with the original pending tick. This is the observed defect motivating a bounded follow-up fix and a separate future validation run. This bundle is frozen before that fix.
+
+Backend T: `3a2e2ca5e3896d8a4bfcec6a60988a082b952960`; renderer: `68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e`. This was local Electron, not cloud acceptance. Runtime QA individually opened and visually inspected all three included PNGs.
+
+T16 parent `task_x943JumvczAo`, T17 leaf `task_wqstgZSuOLUg`; confirmed plan revision 1. Genuine heartbeat600 scheduled 06:20:19.594 UTC; due 06:30:19.594 UTC. One manual Owner dispatch `dsp_YoDsbjH8Ebk6` with no automation occurrence ran saved MiMo on Owner host. Its first/only command was exactly sleep 300, observed 06:21:14.651. UI Resume was clicked once at 06:22:44.853 and preserved the running operation plus the original tick. UI Stop was clicked once at 06:23:54.993. Host cancellation was requested 06:23:56.740 and acknowledged 06:23:57.129; operation interrupted, dispatch and Topic canceled, global native count zero. ACP session `ses_ec1c7e593ffe8z8xggzshNHdPi`.
+
+Provenance distinction: `after-ui-stop-safe.json` task fields are raw read-only SQL, sampled at 06:24:23.787: SQL legacy status backlog, workflow in_progress, heartbeat600, futurePause false. `explicit-pause-before-deadline-safe.json` BEFORE object is the supported task.find API projection sampled immediately before the cleanup Pause; its derived status is paused while scheduler.automationPaused remains false. The receipt was written 06:26:44.913 after the Pause, so do not treat that timestamp as an exact independent BEFORE sample time. No historical task.detail API receipt was recorded by this operator.
+
+Exact network RPC issuance is unproven: the reviewed passive observer matched zero requests. No repeated Stop was used to manufacture this proof. Store-side native tool state remains in_progress after cancellation; the native cancel ACK and terminal operation/dispatch establish cancellation.
+
+After cold UI capture, explicit Owner Pause persisted by 06:26:44.913, safely before the real deadline, preserving the original tick. T17 and T16 were truthfully End/canceled at 06:26:45.944. Final guard at 06:26:52.696 found global native zero and original T14 paused with all four root dispatch outcomes unchanged. Plan/edge/canceled Topic history were preserved. T17 reviewer remains null: cancellation happened before arithmetic, artifact delivery or Reviewer execution, and no such coverage or delivery success is claimed.
+
+Only selected safe receipts and PNGs are included. No executable scripts, genuine tick token, credentials, JWTs, raw messages, or native outputs are included. `manifest.json` hashes every selected file.
+
+The original native planning attempt completed but its assistant output was a JSON schema, not a plan instance (`$schema`, `type`, `properties`, `required`, `additionalProperties`), causing schema_mismatch before plan persistence. The operation-linked reply matched the latest stored assistant message; raw ACP wire was not independently inspected. One explicitly authorized normal clarification of EXISTING T16 returned the plan instance used by gen1. The original failed operation/judgment and successful clarified plan were preserved; these model-output failures are not claimed as product code defects. See selected planning diagnosis and clarification receipts.
+
+JSON and JSONL receipts use .txt suffixes to preserve the frozen source bytes under normal repository hooks. This manifest records their original names/hashes. Root also visually inspected all three PNGs.

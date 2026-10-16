@@ -1,0 +1,12 @@
+{
+  "at": "2026-10-15T05:03:28.989Z",
+  "stage": "source_initial_dispatch",
+  "result": {
+    "agentId": "agt_taIxMIVssPhE",
+    "topicId": "tpc_UiZhfu72hIg7",
+    "operationId": "op_1792040608689_agt_taIxMIVssPhE_tpc_UiZhfu72hIg7_N5Icfgf3",
+    "status": "created",
+    "success": true,
+    "autoStarted": true
+  }
+}

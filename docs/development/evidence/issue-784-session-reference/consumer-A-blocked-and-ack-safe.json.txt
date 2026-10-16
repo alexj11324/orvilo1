@@ -1,0 +1,115 @@
+{
+  "at": "2026-10-15T05:32:24.553Z",
+  "sourceSha": "68e8ccfa6d5e927d18a11aa6d91f4f7f3332391e",
+  "consumerTopicId": "tpc_Boklgc9hWotl",
+  "sourceTopicId": "tpc_UiZhfu72hIg7",
+  "persistedUserMessageId": "msg_0kGMnxYqktZv",
+  "persistedRealReferTag": true,
+  "uiSendAt": "2026-10-15T05:29:38.700Z",
+  "operation": {
+    "id": "op_1792042179925_agt_taIxMIVssPhE_tpc_Boklgc9hWotl_drGMufQp",
+    "status": "interrupted",
+    "topLevelModel": null,
+    "provider": "opencode",
+    "createdAt": "2026-10-15T05:29:39.930Z",
+    "completedAt": "2026-10-15T05:31:12.062Z",
+    "executionPlanModelRoute": {
+      "model": "opencode/mimo-v2.6-flash-free",
+      "provider": "opencode"
+    },
+    "deviceId": "b26d477ac30d6080a4a038b66cb28a80",
+    "deviceUserId": "user_agent_testing_001",
+    "executionEngine": "hetero",
+    "toolSurface": {
+      "orvilo-agent-documents": {
+        "kind": "tool",
+        "reason": "",
+        "status": "mounted"
+      }
+    },
+    "builtinContextKeys": [
+      "activeDeviceId",
+      "workingDirectory"
+    ],
+    "nativeSessionId": "ses_ec1f64bf2ffeo4yAuHgrcAZa1u",
+    "sessionProvenance": "actual saved native stdout trace"
+  },
+  "tokenClassEvidence": {
+    "rawTokenInspected": false,
+    "errorIdentifies": "hetero-operation",
+    "appContextUnavailableInPersistedOperation": true
+  },
+  "tools": [
+    {
+      "id": "msg_QphY3vNWCZtOr6m5rh",
+      "tool": "bash",
+      "commandClass": "referenced-topic-read-or-help",
+      "endpointRejectsHeteroOperationToken": true,
+      "rsaVerificationError": false
+    },
+    {
+      "id": "msg_oofYe3cKmQqbqyOZL7",
+      "tool": "bash",
+      "commandClass": "referenced-topic-read-or-help",
+      "endpointRejectsHeteroOperationToken": true,
+      "rsaVerificationError": false
+    },
+    {
+      "id": "msg_XSBbsQbX9GOX51IVpS",
+      "tool": "bash",
+      "commandClass": "referenced-topic-read-or-help",
+      "endpointRejectsHeteroOperationToken": false,
+      "rsaVerificationError": false
+    },
+    {
+      "id": "msg_JPqYVcUYWIrx88jeRq",
+      "tool": "bash",
+      "commandClass": "referenced-topic-read-or-help",
+      "endpointRejectsHeteroOperationToken": true,
+      "rsaVerificationError": false
+    },
+    {
+      "id": "msg_x23USTrXADUw7os8Lq",
+      "tool": "bash",
+      "commandClass": "topic-list-and-cli-help",
+      "endpointRejectsHeteroOperationToken": true,
+      "rsaVerificationError": false
+    },
+    {
+      "id": "msg_W2lVw003UiquEUTDxD",
+      "tool": "bash",
+      "commandClass": "native-status-auth-probe",
+      "endpointRejectsHeteroOperationToken": false,
+      "rsaVerificationError": true
+    },
+    {
+      "id": "msg_FMAR6AXpQ9nvKhjGuW",
+      "tool": "bash",
+      "commandClass": "native-status-auth-probe",
+      "endpointRejectsHeteroOperationToken": false,
+      "rsaVerificationError": false
+    },
+    {
+      "id": "msg_JD7nbWvmxaJBZCZ5Ra",
+      "tool": "bash",
+      "commandClass": "other",
+      "endpointRejectsHeteroOperationToken": false,
+      "rsaVerificationError": false
+    }
+  ],
+  "firstReadFailure": "hetero-operation tokens are not accepted on this endpoint",
+  "additionalNativeStatusFailure": "Authentication failed: crypto/rsa: verification error",
+  "sourceReadPassed": false,
+  "currentRefAnswered": false,
+  "sourceV2Started": false,
+  "uiStopAt": "2026-10-15T05:31:02.783Z",
+  "remoteCancel": {
+    "state": "confirmed",
+    "reason": "device confirmed process exit",
+    "resolvedAt": "2026-10-15T05:31:11.655Z",
+    "requestedAt": "2026-10-15T05:31:09.063Z"
+  },
+  "globalNativeCount": 0,
+  "scope": "ordinary private reference Consumer only; no T14 cancellation",
+  "noFurtherNativeProbes": true
+}

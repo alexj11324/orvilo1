@@ -1,0 +1,148 @@
+{
+  "actualAction": "Owner Electron parent Accept Delivery exactly once after every required current reviewer/check/item gate passed",
+  "observedAt": "2026-10-15T01:41:05.847Z",
+  "records": [
+    {
+      "taskId": "task_ZFUUxCAzbJNX",
+      "current": {
+        "runId": "0339f756-f018-4e87-a206-f6d4bd7547d5",
+        "proof": {
+          "taskId": "task_ZFUUxCAzbJNX",
+          "deliveryOperationId": "op_1792027598069_agt_taIxMIVssPhE_tpc_EtC99mbP5BjJ_KGoDrCnL",
+          "topicId": "tpc_EtC99mbP5BjJ",
+          "executionGeneration": 1,
+          "dispatchId": "dsp_PG6wUSvwfgwa",
+          "checklistRevision": 1,
+          "deliveryKind": "artifact"
+        },
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": false
+      },
+      "resultIds": ["4ee40cf6-0511-4022-9704-b520eccb687b", "bc6bd519-da2b-4f67-9252-f83ce83c2c45"],
+      "evidenceCount": 2,
+      "history": [
+        {
+          "id": "0339f756-f018-4e87-a206-f6d4bd7547d5",
+          "status": "passed",
+          "userDecision": "accept",
+          "planItemCount": 2
+        }
+      ]
+    },
+    {
+      "taskId": "task_bqou63oSN3Fn",
+      "current": {
+        "runId": "63601250-78ab-4853-a541-82422e61d44d",
+        "proof": {
+          "taskId": "task_bqou63oSN3Fn",
+          "deliveryOperationId": "op_1792025762702_agt_taIxMIVssPhE_tpc_elIGxRYFoyrS_A8IfJMGz",
+          "topicId": "tpc_elIGxRYFoyrS",
+          "executionGeneration": 5,
+          "dispatchId": "dsp_0ZIvle2ziXC3",
+          "checklistRevision": 1,
+          "deliveryKind": "artifact"
+        },
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": false
+      },
+      "resultIds": ["abd4c3ef-03cf-4d83-a027-d7efb1abe50b", "70eb36b2-ec95-4788-80d0-bb3fb00a2df7"],
+      "evidenceCount": 5,
+      "history": [
+        {
+          "id": "1c667d03-cd58-42d4-af51-d2a8b1a69fed",
+          "status": "verifying",
+          "userDecision": null,
+          "planItemCount": 2
+        },
+        {
+          "id": "63601250-78ab-4853-a541-82422e61d44d",
+          "status": "passed",
+          "userDecision": "accept",
+          "planItemCount": 2
+        }
+      ]
+    },
+    {
+      "taskId": "task_knI1wX9SI6pC",
+      "current": {
+        "runId": "93957ffa-5262-43ce-b5ae-8f4f345a8ec2",
+        "proof": {
+          "taskId": "task_knI1wX9SI6pC",
+          "deliveryOperationId": "op_1792022578240_agt_taIxMIVssPhE_tpc_xNome9pKSg0t_1W2aNi93",
+          "topicId": "tpc_xNome9pKSg0t",
+          "executionGeneration": 4,
+          "dispatchId": "dsp_6clGGkh134sM",
+          "checklistRevision": 1,
+          "deliveryKind": "artifact"
+        },
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": false
+      },
+      "resultIds": [
+        "d0ac7f9c-470a-4c32-b455-2ef49a890e75",
+        "a10b1cfb-ae61-49e2-871e-bdf3d95f4835",
+        "4301ff03-3752-4a6f-a129-3108b70dc9b8",
+        "13197636-31ea-4c19-84e3-d25dd53521e5"
+      ],
+      "evidenceCount": 9,
+      "history": [
+        {
+          "id": "037bb34f-a2b9-447f-aea1-9f051b69febb",
+          "status": "failed",
+          "userDecision": null,
+          "planItemCount": 2
+        },
+        {
+          "id": "93957ffa-5262-43ce-b5ae-8f4f345a8ec2",
+          "status": "passed",
+          "userDecision": "accept",
+          "planItemCount": 2
+        }
+      ]
+    },
+    {
+      "taskId": "task_z8qoSoNxdlN3",
+      "current": {
+        "runId": "245f0248-1f9d-4098-ae9d-8e5bc2435367",
+        "proof": {
+          "taskId": "task_z8qoSoNxdlN3",
+          "deliveryOperationId": "op_1792026575400_agt_taIxMIVssPhE_tpc_GxCk8tXQ8Lsq_H9qAj1xD",
+          "topicId": "tpc_GxCk8tXQ8Lsq",
+          "executionGeneration": 2,
+          "dispatchId": "dsp_HrcNWzBl4DuX",
+          "checklistRevision": 1,
+          "deliveryKind": "artifact"
+        },
+        "reviewerPassed": true,
+        "necessaryChecksPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true,
+        "availableForDependents": true,
+        "merged": false
+      },
+      "resultIds": ["cc76b350-bfa6-4787-89c4-9a533a509b14", "8e52338a-c1a7-4c12-9002-a46d6b583c33"],
+      "evidenceCount": 4,
+      "history": [
+        {
+          "id": "245f0248-1f9d-4098-ae9d-8e5bc2435367",
+          "status": "passed",
+          "userDecision": "accept",
+          "planItemCount": 2
+        }
+      ]
+    }
+  ],
+  "sourceSha": "6ae9741a75482e2267228c945c116907142e7c28"
+}

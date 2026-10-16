@@ -1,0 +1,95 @@
+{
+  "at": "2026-10-15T06:18:35.272Z",
+  "stage": "confirmed_parent_paused_leaf_configured_HOLD_BEFORE_START",
+  "backendSha": "3a2e2ca5e3896d8a4bfcec6a60988a082b952960",
+  "parent": {
+    "id": "task_x943JumvczAo",
+    "identifier": "T-16",
+    "status": "paused",
+    "workflowCategory": "backlog",
+    "domainRevision": 9,
+    "automationMode": "heartbeat",
+    "heartbeatInterval": 600,
+    "executionGeneration": 0,
+    "assigneeAgentId": "agt_taIxMIVssPhE",
+    "reviewerAgentId": "agt_taIxMIVssPhE",
+    "scheduler": {
+      "automationPaused": true,
+      "hasScheduledAt": false,
+      "hasTickToken": false,
+      "hasTickMessageId": false
+    }
+  },
+  "leaf": {
+    "id": "task_wqstgZSuOLUg",
+    "identifier": "T-17",
+    "status": "backlog",
+    "workflowCategory": "backlog",
+    "domainRevision": 3,
+    "automationMode": "heartbeat",
+    "heartbeatInterval": 600,
+    "executionGeneration": 0,
+    "assigneeAgentId": "agt_taIxMIVssPhE",
+    "reviewerAgentId": null,
+    "scheduler": {
+      "hasScheduledAt": false,
+      "hasTickToken": false,
+      "hasTickMessageId": false
+    }
+  },
+  "plan": {
+    "revision": 1,
+    "confirmedAt": "2026-10-15T06:18:27.128Z",
+    "scopeFingerprint": "c82abc5bec7219426703149140c17823c24225266e105c0d0c49a6e81ef65b2c",
+    "planningOperationId": "op_1792044813291_agt_taIxMIVssPhE_tpc_wVAlbNhDALxt_9kvDtwkS",
+    "checklists": [
+      {
+        "taskId": "task_x943JumvczAo",
+        "deliveryKind": "artifact",
+        "expectedRevision": 0,
+        "items": [
+          {
+            "id": "p1",
+            "required": true,
+            "title": "Parent links readable child artifact recording 2+3=5 with actual arithmetic evidence"
+          },
+          {
+            "id": "p2",
+            "required": true,
+            "title": "Parent records factual provenance and explicit human acceptance without premature Done"
+          }
+        ]
+      },
+      {
+        "taskId": "task_wqstgZSuOLUg",
+        "deliveryKind": "artifact",
+        "expectedRevision": 0,
+        "items": [
+          {
+            "id": "l1",
+            "required": true,
+            "title": "Leaf Agent Document report correctly records 2+3=5 with actual arithmetic evidence"
+          },
+          {
+            "id": "l2",
+            "required": true,
+            "title": "Leaf records factual saved Agent/model/native Run provenance and awaits explicit human acceptance"
+          }
+        ]
+      }
+    ]
+  },
+  "dependencies": [
+    {
+      "id": "be9b0491-04f8-48e7-a8fc-5be00049cf10",
+      "taskId": "task_x943JumvczAo",
+      "dependsOnId": "task_wqstgZSuOLUg",
+      "type": "blocks"
+    }
+  ],
+  "queue": {
+    "queued": 0
+  },
+  "reviewerCoverage": "Leaf reviewer null preserved; cancellation-only run stops before arithmetic/review; full artifact delivery/reviewer coverage excluded",
+  "noBuilderTopics": true
+}

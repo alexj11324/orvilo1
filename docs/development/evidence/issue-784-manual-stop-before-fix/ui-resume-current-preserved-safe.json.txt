@@ -1,0 +1,29 @@
+{
+  "at": "2026-10-15T06:23:00.429Z",
+  "actualUiResumeClickedAt": "2026-10-15T06:22:44.853Z",
+  "leafId": "task_wqstgZSuOLUg",
+  "futurePaused": false,
+  "scheduledAt": "2026-10-15T06:20:19.594Z",
+  "tickRevision": 1,
+  "operation": {
+    "id": "op_1792045223357_agt_taIxMIVssPhE_tpc_hWh5Nch04vD7_eZIBOrUi",
+    "status": "running",
+    "topic_id": "tpc_hWh5Nch04vD7",
+    "task_id": "task_wqstgZSuOLUg"
+  },
+  "dispatch": {
+    "id": "dsp_YoDsbjH8Ebk6",
+    "phase": "running",
+    "requested_by": "manual:user_agent_testing_001",
+    "has_automation_occurrence": false,
+    "operation_id": "op_1792045223357_agt_taIxMIVssPhE_tpc_hWh5Nch04vD7_eZIBOrUi",
+    "generation": 1,
+    "fence": 1
+  },
+  "checks": {
+    "futureEnabled": true,
+    "samePendingRealTick": true,
+    "sameManualOperationActive": true,
+    "manualStillNoOccurrence": true
+  }
+}

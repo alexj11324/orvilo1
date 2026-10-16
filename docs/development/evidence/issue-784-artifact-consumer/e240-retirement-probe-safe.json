@@ -1,0 +1,139 @@
+{
+  "checks": [
+    {
+      "method": "verify.listRuns",
+      "status": "success",
+      "itemCount": 7,
+      "ids": [
+        "0339f756-f018-4e87-a206-f6d4bd7547d5",
+        "4b356ef6-d5bb-41eb-b7a4-aa3b1a1373e5",
+        "245f0248-1f9d-4098-ae9d-8e5bc2435367",
+        "63601250-78ab-4853-a541-82422e61d44d",
+        "93957ffa-5262-43ce-b5ae-8f4f345a8ec2",
+        "037bb34f-a2b9-447f-aea1-9f051b69febb",
+        "1c667d03-cd58-42d4-af51-d2a8b1a69fed"
+      ]
+    },
+    {
+      "method": "verify.listResultsByRun",
+      "runId": "0339f756-f018-4e87-a206-f6d4bd7547d5",
+      "status": "success",
+      "resultCount": 2
+    },
+    {
+      "method": "verify.listResultsByRun",
+      "runId": "4b356ef6-d5bb-41eb-b7a4-aa3b1a1373e5",
+      "status": "success",
+      "resultCount": 2
+    },
+    {
+      "method": "verify.listResultsByRun",
+      "runId": "245f0248-1f9d-4098-ae9d-8e5bc2435367",
+      "status": "success",
+      "resultCount": 2
+    },
+    {
+      "method": "verify.listResultsByRun",
+      "runId": "63601250-78ab-4853-a541-82422e61d44d",
+      "status": "success",
+      "resultCount": 2
+    },
+    {
+      "method": "verify.listResultsByRun",
+      "runId": "93957ffa-5262-43ce-b5ae-8f4f345a8ec2",
+      "status": "success",
+      "resultCount": 2
+    },
+    {
+      "method": "verify.listResultsByRun",
+      "runId": "037bb34f-a2b9-447f-aea1-9f051b69febb",
+      "status": "success",
+      "resultCount": 2
+    },
+    {
+      "method": "verify.listResultsByRun",
+      "runId": "1c667d03-cd58-42d4-af51-d2a8b1a69fed",
+      "status": "success",
+      "resultCount": 0
+    },
+    {
+      "method": "goal.list",
+      "status": "success"
+    },
+    {
+      "method": "verify.createRun",
+      "status": "rejected",
+      "error": "verify.createRun:412:PRECONDITION_FAILED:Standalone Acceptance/Verify is retired. Use the Issue Checklist."
+    },
+    {
+      "method": "goal.pause",
+      "status": "rejected",
+      "error": "goal.pause:405:METHOD_NOT_SUPPORTED:Standalone Goal execution is unavailable; use an Issue plan and Checklist"
+    },
+    {
+      "method": "task.getChecklist",
+      "taskId": "task_ZFUUxCAzbJNX",
+      "status": "success",
+      "current": {
+        "runId": "0339f756-f018-4e87-a206-f6d4bd7547d5",
+        "reviewerPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true
+      },
+      "historyIds": ["0339f756-f018-4e87-a206-f6d4bd7547d5"],
+      "resultCount": 2,
+      "evidenceCount": 2
+    },
+    {
+      "method": "task.getChecklist",
+      "taskId": "task_knI1wX9SI6pC",
+      "status": "success",
+      "current": {
+        "runId": "93957ffa-5262-43ce-b5ae-8f4f345a8ec2",
+        "reviewerPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true
+      },
+      "historyIds": [
+        "037bb34f-a2b9-447f-aea1-9f051b69febb",
+        "93957ffa-5262-43ce-b5ae-8f4f345a8ec2"
+      ],
+      "resultCount": 4,
+      "evidenceCount": 9
+    },
+    {
+      "method": "task.getChecklist",
+      "taskId": "task_bqou63oSN3Fn",
+      "status": "success",
+      "current": {
+        "runId": "63601250-78ab-4853-a541-82422e61d44d",
+        "reviewerPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true
+      },
+      "historyIds": [
+        "1c667d03-cd58-42d4-af51-d2a8b1a69fed",
+        "63601250-78ab-4853-a541-82422e61d44d"
+      ],
+      "resultCount": 2,
+      "evidenceCount": 5
+    },
+    {
+      "method": "task.getChecklist",
+      "taskId": "task_z8qoSoNxdlN3",
+      "status": "success",
+      "current": {
+        "runId": "245f0248-1f9d-4098-ae9d-8e5bc2435367",
+        "reviewerPassed": true,
+        "itemsAccepted": true,
+        "deliveryAccepted": true
+      },
+      "historyIds": ["245f0248-1f9d-4098-ae9d-8e5bc2435367"],
+      "resultCount": 2,
+      "evidenceCount": 4
+    }
+  ],
+  "nativeExecutionStarted": false,
+  "observedAt": "2026-10-15T01:50:23.841Z",
+  "sourceSha": "e24075992d1c0888e3ac5db80481b06efba755b3"
+}

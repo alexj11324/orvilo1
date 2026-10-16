@@ -11,7 +11,7 @@ Issues · Inbox · My issues · Agent · Groups · Drafts · Workspace · Favori
 ```
 
 - **Issues** (`tasks`, `tab.issues`, `/tasks`) is the single Issues destination. The root route already lands on the Issues board, so there is no separate Home row. The Agent and Group secondary sidebars carry the same Issues row instead of Home.
-- **Reviews** and the **create** row are legacy keys. A stored or workspace-synced preference cannot bring them back, the Customize sidebar dialog does not list them, and a restored Electron tab that points at `/reviews` is dropped. The `/reviews` route and the pull request backend stay reachable by direct link.
+- **Reviews** and the **create** row are legacy keys. A stored or workspace-synced preference cannot bring them back, and the Customize sidebar dialog does not list them. The `/reviews` route and the pull request backend stay reachable by direct link, the `g r` chord, and restored Electron tabs.
 - The sidebar no longer fetches the pending review count, because nothing renders it.
 
 ## Creation belongs to the owning page
@@ -39,12 +39,13 @@ Application-owned orchestration workflow creation is hidden from every UI entry 
 
 ## Hotkeys
 
-`g r` (go to Reviews) is no longer registered or handled. The `GoToReviews` enum member stays so stored user hotkey settings keep parsing.
+`g r` (go to Reviews) is registered again: `/reviews` is still a live routed page, and a go-to chord is a deep link, not a primary sidebar entry, so Reviews stays out of the sidebar. `g j` (go to Agent) opens the same agent surface as the chat chord. All `g` chords are non-editable, so a stale persisted override (for example a binding cleared before `g r` came back) is ignored and the registered keys always apply. Restored Electron tabs and pinned pages on `/reviews` are kept.
 
 ## Regression coverage
 
 - `src/store/global/selectors/systemStatus.test.ts`, `src/hooks/useNavLayout.test.tsx`, `src/features/HomeSidebar/Body/index.test.tsx`, `src/features/HomeSidebar/Body/CustomizeSidebarModal.test.ts`: persisted `create` / `reviews` / `home` keys cannot resurface, and Issues is present.
-- `packages/const/src/hotkeys.test.ts`, `src/hooks/useHotkeys/globalScope.test.ts`, `src/hooks/useHotkeys/goToNavigation.test.ts`: no Reviews chord; Create Issue goes to the board.
+- `packages/const/src/hotkeys.test.ts`, `src/hooks/useHotkeys/globalScope.test.ts`, `src/hooks/useHotkeys/goToNavigation.test.ts`: `g r` and `g j` are registered; Create Issue goes to the board.
+- `src/store/user/slices/settings/selectors/settings.test.ts`: non-editable chords ignore persisted overrides.
 - `apps/desktop/src/main/menus/impls/*.test.ts`: no creation items in the File menu on any platform.
-- `src/features/Electron/titlebar/TabBar/storage.test.ts`: restored Reviews tabs are removed and the pruned list is saved.
+- `src/features/Electron/titlebar/TabBar/storage.test.ts`, `src/features/Electron/titlebar/retiredProductUrl.test.ts`: restored Reviews tabs are kept.
 - `e2e/src/steps/agent/conversation-mgmt.steps.ts`: the new-conversation journey goes through the command palette.

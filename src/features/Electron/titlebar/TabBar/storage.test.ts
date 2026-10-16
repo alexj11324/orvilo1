@@ -110,29 +110,12 @@ describe('TabBar storage', () => {
     it.each([
       [personalScope, '/reviews'],
       [acmeScope, '/acme/reviews/review-1?view=detail'],
-    ] as const)(
-      'removes saved Reviews entries while retaining other tabs and persisting cleanup',
-      (scope, url) => {
-        const keep = {
-          cached: { title: 'Issue in review' },
-          id: 'issue',
-          lastVisited: 1,
-          url:
-            scope.type === 'workspace' ? '/acme/tasks?status=in_review' : '/tasks?status=in_review',
-        };
-        saveTabPages(
-          scope,
-          [{ cached: { title: '待审核' }, id: 'reviews', lastVisited: 2, url }, keep],
-          'reviews',
-        );
+    ] as const)('keeps saved Reviews tabs now that the surface is live again', (scope, url) => {
+      const reviews = { cached: { title: '待审核' }, id: 'reviews', lastVisited: 2, url };
+      saveTabPages(scope, [reviews], 'reviews');
 
-        expect(getTabPages(scope)).toEqual({ activeTabId: 'issue', tabs: [keep] });
-        expect(JSON.parse(window.localStorage.getItem(tabPagesStorageKey(scope))!)).toEqual({
-          activeTabId: 'issue',
-          tabs: [keep],
-        });
-      },
-    );
+      expect(getTabPages(scope)).toEqual({ activeTabId: 'reviews', tabs: [reviews] });
+    });
 
     it('keeps tabs on retired-but-resolving prefixes like /memory and /apps', () => {
       // `/memory` no longer appears in navigation, but `/memory/preferences`

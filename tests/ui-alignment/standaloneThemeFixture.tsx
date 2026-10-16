@@ -18,7 +18,16 @@ await i18next.use(initReactI18next).init({ lng: 'en-US', resources: {} });
 
 createRoot(document.getElementById('root')!).render(
   <I18nextProvider i18n={i18next}>
-    <ThemeProvider attribute="data-theme" forcedTheme={appearance}>
+    {/* Mirror the hosts' NextThemeProvider: the attribute lands after first paint, so
+        transitions must stay off while it changes, and the resolved theme (not only the
+        forced attribute) must reach the host's ThemeRoles. */}
+    <ThemeProvider
+      disableTransitionOnChange
+      attribute="data-theme"
+      defaultTheme={appearance}
+      enableSystem={false}
+      forcedTheme={appearance}
+    >
       <StandaloneTheme>
         <main className="flex flex-col gap-4 p-4" data-testid="standalone-content">
           <Button data-testid="standalone-button">Standalone action</Button>

@@ -23,7 +23,6 @@ export default defineConfig({
         replacement: repository + '/tests/ui-alignment/designData.ts',
       },
       { find: /^@\/store\/tool$/, replacement: repository + '/tests/ui-alignment/designData.ts' },
-      { find: /^@orvilo\/types$/, replacement: repository + '/tests/ui-alignment/designTypes.ts' },
       {
         find: /^.*useAgentDisplayMeta$/,
         replacement: repository + '/tests/ui-alignment/designData.ts',

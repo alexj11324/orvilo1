@@ -121,6 +121,11 @@ const InlineCode = ({ className, node: _node, ...props }: Props<'code'>) => (
   />
 );
 
+// Streamdown renders `**text**` as a styled <span>; keep the semantic element.
+const Strong = ({ className, node: _node, ...props }: Props<'strong'>) => (
+  <strong className={cn('font-semibold', className)} {...props} />
+);
+
 const Link = ({ className, href, node: _node, children, ...props }: Props<'a'>) => {
   const { citations } = use(MarkdownElementContext);
 
@@ -190,5 +195,6 @@ export const markdownElements = {
   ol: OrderedList,
   p: Paragraph,
   section: Section,
+  strong: Strong,
   ul: UnorderedList,
 };

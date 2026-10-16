@@ -20,12 +20,12 @@ const GoalDetailContentSkeleton = () => (
         </div>
       ))}
     </div>
-    <SkeletonBar height={96} radius={'var(--ant-border-radius-lg)'} />
+    <SkeletonBar height={96} radius={'var(--radius-overlay)'} />
     <div className={'flex flex-col gap-3'}>
       <SkeletonBar height={18} width={128} />
-      <SkeletonBar height={42} radius={'var(--ant-border-radius-lg)'} />
-      <SkeletonBar height={42} radius={'var(--ant-border-radius-lg)'} />
-      <SkeletonBar height={42} radius={'var(--ant-border-radius-lg)'} />
+      <SkeletonBar height={42} radius={'var(--radius-overlay)'} />
+      <SkeletonBar height={42} radius={'var(--radius-overlay)'} />
+      <SkeletonBar height={42} radius={'var(--radius-overlay)'} />
     </div>
   </div>
 );

@@ -140,7 +140,7 @@ const setWorkspaceFileDragImage = (
   });
 
   preview.append(
-    buildIconSvg(payload.isDirectory, resolveCssVar('var(--ant-color-text-tertiary)', host)),
+    buildIconSvg(payload.isDirectory, resolveCssVar('var(--foreground-tertiary)', host)),
   );
 
   const text = document.createElement('span');

@@ -23,7 +23,7 @@ import { FilesTabs } from '@/types/files';
 import SectionTitle from './SectionTitle';
 
 const styles = {
-  card: 'cursor-pointer overflow-hidden flex flex-col p-0 border border-sidebar-border rounded-(--radius-overlay) text-start bg-card [transition:border-color_0.2s_var(--ant-motion-ease-in-out),box-shadow_0.2s_var(--ant-motion-ease-in-out)] hover:border-border hover:shadow-(--ant-box-shadow-tertiary)',
+  card: 'cursor-pointer overflow-hidden flex flex-col p-0 border border-sidebar-border rounded-(--radius-overlay) text-start bg-card [transition:border-color_0.2s_var(--orvilo-motion-ease-in-out),box-shadow_0.2s_var(--orvilo-motion-ease-in-out)] hover:border-border hover:shadow-(--shadow-raised)',
   grid: 'grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3',
   meta: 'text-xs text-foreground-quaternary',
   name: 'truncate text-(length:--text-dense) font-medium text-foreground',

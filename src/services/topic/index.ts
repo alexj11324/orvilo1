@@ -53,6 +53,13 @@ type UpdateTopicMetadataInput = Omit<Partial<ChatTopicMetadata>, 'onboardingSess
 };
 
 export class TopicService {
+  repairDeviceBinding = (
+    ...args: Parameters<typeof lambdaClient.topic.repairDeviceBinding.mutate>
+  ) => lambdaClient.topic.repairDeviceBinding.mutate(...args);
+
+  getTopicContext = (...args: Parameters<typeof lambdaClient.topic.getTopicContext.query>) =>
+    lambdaClient.topic.getTopicContext.query(...args);
+
   createTopic = (params: CreateTopicParams): Promise<string> => {
     return lambdaClient.topic.createTopic.mutate({
       ...params,

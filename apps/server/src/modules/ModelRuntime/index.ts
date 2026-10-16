@@ -490,7 +490,12 @@ export const initModelRuntimeFromDB = async (
   // Every scope prefers the provider_bindings plane: providers that migrated
   // there no longer need an ai_providers row. Bindings are a personal
   // credential surface, so `workspaceId` only scopes the legacy fallback read.
-  const providerBindings = new ProviderBindingPlane(db, userId, { workspaceId });
+  const providerBindings = new ProviderBindingPlane(
+    db,
+    KeyVaultsGateKeeper.initWithEnvKey,
+    userId,
+    { workspaceId },
+  );
   const providerConfig =
     (await resolveBindingManagedProviderDetail(providerBindings, provider)) ??
     (await aiProviderModel.getAiProviderById(provider, KeyVaultsGateKeeper.getUserKeyVaults));

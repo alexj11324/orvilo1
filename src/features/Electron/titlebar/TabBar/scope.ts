@@ -53,8 +53,6 @@ export const resolveTabScope = (url: string): TabScope => {
 export const tabScopeKey = (scope: TabScope): string =>
   scope.type === 'personal' ? 'personal' : `workspace:${encodeURIComponent(scope.slug)}`;
 
-export const resolveTabScopeKey = (url: string): string => tabScopeKey(resolveTabScope(url));
-
 export const normalizeTabScope = (scope: unknown, url: string): TabScope => {
   if (!scope || typeof scope !== 'object') return resolveTabScope(url);
 

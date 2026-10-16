@@ -13,6 +13,10 @@ bun run dev:env cdp <port> app://renderer <expr|@file> [--viewport 1440x900] [--
 
 `dev:env` lives in `.agents/scripts/dev/cli.ts`. If it is missing on your branch, its PR has not landed; attach Playwright with `connectOverCDP` to the Electron remote-debugging port instead. Before recording evidence, read back which worktree and commit the renderer serves: several worktrees can serve the same app, and evidence is only valid for the revision it came from.
 
+## Signed-out candidate
+
+`/onboarding` means the candidate is signed out. Recover it with the seed login in `docs/development/local-setup.md` before any comparison. Do not stop, do not ask the user to log in, and do not reload. That guide has the two commands and the cloud-workspace caveat. The CDP port on the command line must be the live port, not an assumed 9263. Evidence taken on `/onboarding` does not prove the issue page.
+
 ## Reference: the signed-in Linear browser
 
 The reference browser is the user's own browser session. Open your own window with `bun run dev:env ref open <url>`, and close it with `bun run dev:env ref close <targetId>` when done. Never close, navigate, or reuse the user's tabs.

@@ -36,7 +36,7 @@ const ComposioIcon = memo<Pick<ComposioAppType, 'icon' | 'label'>>(({ icon, labe
   }
 
   // Fill with theme color, automatically adapts in dark mode
-  return createElement(icon, { fill: 'var(--ant-color-text)', size: 20 });
+  return createElement(icon, { fill: 'var(--foreground)', size: 20 });
 });
 
 const toolNameResolver = new ToolNameResolver();

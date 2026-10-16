@@ -28,12 +28,9 @@ vi.mock('@/features/AgentTasks/features/ReviewerAgentSelector', () => ({
 }));
 
 vi.mock('@/services/task', () => ({
-  taskService: { find: mocks.find },
+  taskService: { contractContext: mocks.contractContext, find: mocks.find },
 }));
 
-vi.mock('@/libs/trpc/client', () => ({
-  lambdaClient: { task: { contractContext: { query: mocks.contractContext } } },
-}));
 vi.mock('@/components/Modal', () => ({ confirmModal: mocks.confirmModal }));
 
 vi.mock('@/features/MyWork/workQueryBoardMove', () => ({

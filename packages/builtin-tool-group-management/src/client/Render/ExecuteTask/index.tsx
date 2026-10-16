@@ -10,8 +10,8 @@ import type { ExecuteTaskParams, ExecuteTaskState } from '../../../types';
 
 const styles = {
   agentTitle: 'text-muted-foreground',
-  container: 'rounded-(--ant-border-radius) py-3',
-  taskContent: 'rounded-(--ant-border-radius) bg-accent px-3 py-2',
+  container: 'rounded-(--radius-card) py-3',
+  taskContent: 'rounded-(--radius-card) bg-accent px-3 py-2',
   timeout: 'text-xs text-foreground-tertiary',
 };
 

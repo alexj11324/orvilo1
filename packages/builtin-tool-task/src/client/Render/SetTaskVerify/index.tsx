@@ -40,7 +40,7 @@ export const SetTaskVerifyRender = memo<
     <TaskResultCard
       headerExtra={statusBadge}
       icon={ShieldCheck}
-      iconColor={enabled === false ? 'var(--ant-color-text-tertiary)' : 'var(--success)'}
+      iconColor={enabled === false ? 'var(--foreground-tertiary)' : 'var(--success)'}
       identifier={identifier}
       title={t('builtins.orvilo-task.apiName.setTaskVerify')}
     >

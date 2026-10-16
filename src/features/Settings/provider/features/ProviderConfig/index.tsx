@@ -1,5 +1,4 @@
 'use client';
-
 import { AES_GCM_URL } from '@orvilo/const';
 import { errorMessageFrom } from '@orvilo/utils/error';
 import { useDebounceFn } from 'ahooks';
@@ -16,7 +15,7 @@ import { SkeletonInput } from '@/components/Skeleton';
 import { toast } from '@/components/toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePermission } from '@/hooks/usePermission';
-import { lambdaQuery } from '@/libs/trpc/client';
+import { oauthDeviceFlowQueries } from '@/services/reactQueryBindings';
 import { aiProviderSelectors, useAiInfraStore } from '@/store/aiInfra';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import {
@@ -100,7 +99,7 @@ const ProviderConfig = memo<ProviderConfigProps>(
     const isOAuthProvider = authType === 'oauthDeviceFlow';
 
     // Query OAuth authentication status (only for OAuth providers)
-    const { data: oauthStatus } = lambdaQuery.oauthDeviceFlow.getAuthStatus.useQuery(
+    const { data: oauthStatus } = oauthDeviceFlowQueries.getAuthStatus.useQuery(
       { providerId: id },
       { enabled: isOAuthProvider, refetchOnWindowFocus: true },
     );

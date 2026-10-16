@@ -12,7 +12,7 @@ import { InlineHtmlPreview, isHtmlFile } from '@/components/HtmlPreview';
 
 const styles = {
   actions:
-    'cursor-pointer text-foreground-tertiary opacity-0 transition-opacity duration-200 ease-(--ant-motion-ease-in-out) group-hover/local-file:opacity-100',
+    'cursor-pointer text-foreground-tertiary opacity-0 transition-opacity duration-200 ease-(--orvilo-motion-ease-in-out) group-hover/local-file:opacity-100',
   container: 'group/local-file justify-between',
   fileName: 'ms-2 flex-1 text-muted-foreground hover:text-foreground',
   header: 'cursor-pointer',
@@ -41,7 +41,7 @@ const ReadFileView = memo<ReadFileState>(
                 maxHeight={600}
                 objectFit={'contain'}
                 src={image.url}
-                style={{ borderRadius: 'var(--ant-border-radius-lg)' }}
+                style={{ borderRadius: 'var(--radius-overlay)' }}
                 variant={'outlined'}
               />
             ))}

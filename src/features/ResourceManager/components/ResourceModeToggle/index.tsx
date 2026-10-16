@@ -66,7 +66,7 @@ const ResourceModeToggle = memo(() => {
             option.key === listVisibility ? (
               <span className="anticon" role="img">
                 <CheckIcon
-                  color={'var(--ant-color-text-secondary)'}
+                  color={'var(--muted-foreground)'}
                   fill={'transparent'}
                   height={14}
                   size={14}
@@ -77,7 +77,7 @@ const ResourceModeToggle = memo(() => {
           icon: (
             <span className="anticon" role="img">
               <OptionIcon
-                color={'var(--ant-color-text-secondary)'}
+                color={'var(--muted-foreground)'}
                 fill={'transparent'}
                 height={16}
                 size={16}

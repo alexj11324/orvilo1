@@ -45,6 +45,18 @@ class TaskService {
   acceptDelivery = async (params: { taskId: string; runId: string; proof: IssueDeliveryProof }) =>
     lambdaClient.task.acceptDelivery.mutate(params);
 
+  acquireTaskLock = (...args: Parameters<typeof lambdaClient.task.acquireTaskLock.mutate>) =>
+    lambdaClient.task.acquireTaskLock.mutate(...args);
+
+  getTaskLock = (...args: Parameters<typeof lambdaClient.task.getTaskLock.query>) =>
+    lambdaClient.task.getTaskLock.query(...args);
+
+  releaseTaskLock = (...args: Parameters<typeof lambdaClient.task.releaseTaskLock.mutate>) =>
+    lambdaClient.task.releaseTaskLock.mutate(...args);
+
+  contractContext = (...args: Parameters<typeof lambdaClient.task.contractContext.query>) =>
+    lambdaClient.task.contractContext.query(...args);
+
   // ── Queries ──
 
   find = async (id: string) => lambdaClient.task.find.query({ id });

@@ -209,35 +209,3 @@ export const assertSkillDocument = <T>(document: T | undefined, message = 'Skill
 
 export const sortSkillFolders = (documents: AgentDocument[]) =>
   [...documents].sort((left, right) => left.filename.localeCompare(right.filename));
-
-export const collectSubtreeBindings = (documents: AgentDocument[], rootDocumentId: string) => {
-  const byParent = new Map<string, AgentDocument[]>();
-
-  for (const document of documents) {
-    if (!document.parentId) continue;
-
-    const children = byParent.get(document.parentId) ?? [];
-    children.push(document);
-    byParent.set(document.parentId, children);
-  }
-
-  const collected: AgentDocument[] = [];
-  const visit = (documentId: string) => {
-    const children = byParent.get(documentId) ?? [];
-
-    for (const child of children) {
-      visit(child.documentId);
-      collected.push(child);
-    }
-  };
-
-  visit(rootDocumentId);
-
-  const root = documents.find((document) => document.documentId === rootDocumentId);
-
-  if (root) {
-    collected.push(root);
-  }
-
-  return collected;
-};

@@ -23,7 +23,7 @@ const ThreadDivider = memo<ThreadDividerProps>(({ threadType }) => {
       <Separator className="flex-1" />
       <div
         className="flex shrink-0 items-center gap-1.5"
-        style={{ color: 'var(--ant-color-text-description)', fontSize: 12 }}
+        style={{ color: 'var(--foreground-description)', fontSize: 12 }}
       >
         <span className="anticon" role="img">
           <GitBranch fill={'transparent'} height={12} size={12} width={12} />

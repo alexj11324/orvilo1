@@ -29,21 +29,21 @@ Orvilo 将登录委托给独立的**账户门户**，由 [Clerk](https://clerk.c
 | `CLERK_AUTHORIZED_PARTIES` | 可选 | 会话令牌交换的 `azp` 白名单（逗号分隔）。                                     |
 | `CLERK_JWT_KEY`            | 可选 | PEM 公钥，用于完全离线的会话 JWT 校验（跳过 JWKS 拉取）。                         |
 | `AUTH_COOKIE_DOMAIN`       | 可选 | 会话 Cookie 的父域名（例如 `.aspectlylabs.com`），使门户与应用共享登录态。          |
-| `AUTH_SESSION_TTL_SECONDS` | 可选 | 应用会话有效期（秒），默认 30 天。                                          |
+| `AUTH_SESSION_TTL_SECONDS` | 可选 | 会话空闲有效期默认 7 天，绝对有效期上限 30 天。                                  |
 
 完整参考见 [身份验证环境变量](/docs/self-hosting/environment-variables/auth)。
 
 ## 登录方式
 
-邮箱 / 密码、魔法链接、OAuth 提供商与 MFA 均在账户门户对应的 Clerk 控制台中配置 —— 不再使用 Orvilo 环境变量。转发给门户的特性开关：
+邮箱 / 密码、魔法链接、OAuth 提供商与 MFA 均在账户门户对应的 Clerk 控制台中配置 —— 不再使用 Orvilo 环境变量。暴露给门户的展示元数据（包括邮箱验证在内的实际访问策略须在 Clerk 配置）：
 
-| 环境变量                          | 说明                 |
-| ----------------------------- | ------------------ |
-| `AUTH_DISABLE_EMAIL_PASSWORD` | 在门户登录页隐藏邮箱 / 密码表单。 |
-| `AUTH_ENABLE_MAGIC_LINK`      | 在门户启用魔法链接登录。       |
-| `AUTH_EMAIL_VERIFICATION`     | 在门户要求邮箱验证。         |
+| 环境变量                          | 说明                           |
+| ----------------------------- | ---------------------------- |
+| `AUTH_DISABLE_EMAIL_PASSWORD` | 在门户登录页隐藏邮箱 / 密码表单。           |
+| `AUTH_ENABLE_MAGIC_LINK`      | 在门户启用魔法链接登录。                 |
+| `AUTH_EMAIL_VERIFICATION`     | 暴露邮箱验证展示标志；实际校验策略在 Clerk 配置。 |
 
 ## 旧版说明
 
-- Orvilo 早期版本使用 Better Auth。该库及其 `/api/auth/*` 端点已移除；Better Auth 签发的会话（`<prefix>.session_token` Cookie）在过期前仍然有效，过期后用户需通过门户重新登录。
+- Orvilo 早期版本使用 Better Auth。该库及其 `/api/auth/*` 端点已移除；Better Auth 签发的旧 Cookie（`<prefix>.session_token`）及未绑定 Clerk 的会话不再被接受，用户必须通过 Clerk 门户重新登录。
 - Better Auth 时代的数据表（`account`、`auth_sessions` 旧行等）保留用于数据留存。

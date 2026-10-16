@@ -1,5 +1,4 @@
 'use client';
-
 import { isDesktop } from '@orvilo/const';
 import type { DeviceListItem } from '@orvilo/types';
 import { cn } from 'cn';
@@ -16,9 +15,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import DirIcon from '@/features/ChatInput/ControlBar/DirIcon';
 import { openAddWorkingDirModal } from '@/features/WorkingDirectory';
-import { lambdaQuery } from '@/libs/trpc/client';
 import { getHostPort, hostResultOr } from '@/platform';
 import { deviceService } from '@/services/device';
+import { deviceQueries } from '@/services/reactQueryBindings';
 import { nextWorkingDirs } from '@/store/device';
 
 import { refreshDeviceList } from './const';
@@ -75,7 +74,7 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
     }
     toast.error(t('devices.edit.saveFailed'));
   };
-  const updatePersonal = lambdaQuery.device.updateDevice.useMutation({
+  const updatePersonal = deviceQueries.updateDevice.useMutation({
     onError: onUpdateError,
     onSuccess: onUpdateSuccess,
   });

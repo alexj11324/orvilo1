@@ -35,7 +35,7 @@ Feature: Agents 页面 Agent 管理
   # ============================================
   # 侧边栏显示/隐藏 — 场景随固定侧边栏 IA 退役而移除
   # ============================================
-  # v6 侧边栏重写为固定 Linear 式 IA（src/features/Navigation/sidebarContract.ts）：
+  # v6 侧边栏重写为固定 Linear 式 IA（DEFAULT_SIDEBAR_ITEMS）：
   # 主侧边栏不再渲染按 Agent 分组的列表，"在我的侧边栏显示/隐藏" 不再是产品行为。
   # HOME-AGENT-PIN-001/002（将 Agent 加入/移出侧边栏）断言的是该已退役行为，
   # 属于有意删除而非导航修复。/agents 页仍残留 "In Sidebar" 区块与

@@ -59,6 +59,7 @@ const aiModelProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) 
   const { aiProvider } = await getServerGlobalConfig();
   const aiInfraRepos = new AiInfraRepos(
     ctx.serverDB,
+    KeyVaultsGateKeeper.initWithEnvKey,
     ctx.userId,
     aiProvider as Record<string, ProviderConfig>,
     wsId,
@@ -67,21 +68,26 @@ const aiModelProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) 
   // Model-enable mirrors keep the provider_bindings route rows in sync for
   // binding-managed providers (every scope — see the aiProvider router for
   // why provider settings are a personal credential surface).
-  const providerBindings = new ProviderBindingPlane(ctx.serverDB, ctx.userId, {
-    verifyBindings: (rows) =>
-      checkProviderBindings(
-        new ProviderBindingModel(ctx.serverDB, ctx.userId),
-        ctx.userId,
-        rows,
-        createProviderBindingComposition(ctx.serverDB, { reuseProviderVerification: true }),
-      ),
-    decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
-    resolveEnabledModelIds: async (providerId) =>
-      (await aiInfraRepos.getEnabledModels(false))
-        .filter((model) => model.providerId === providerId && model.enabled === true)
-        .map((model) => model.id),
-    workspaceId: wsId,
-  });
+  const providerBindings = new ProviderBindingPlane(
+    ctx.serverDB,
+    KeyVaultsGateKeeper.initWithEnvKey,
+    ctx.userId,
+    {
+      verifyBindings: (rows) =>
+        checkProviderBindings(
+          new ProviderBindingModel(ctx.serverDB, ctx.userId),
+          ctx.userId,
+          rows,
+          createProviderBindingComposition(ctx.serverDB, { reuseProviderVerification: true }),
+        ),
+      decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
+      resolveEnabledModelIds: async (providerId) =>
+        (await aiInfraRepos.getEnabledModels(false))
+          .filter((model) => model.providerId === providerId && model.enabled === true)
+          .map((model) => model.id),
+      workspaceId: wsId,
+    },
+  );
 
   return opts.next({
     ctx: {

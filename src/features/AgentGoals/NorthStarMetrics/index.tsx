@@ -110,7 +110,7 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ goalId }) => {
   if (!criteria?.length)
     return (
       <div className="flex items-center gap-3" style={{ paddingBlock: 4 }}>
-        <Target color={'var(--ant-color-text-quaternary)'} size={16} />
+        <Target color={'var(--foreground-quaternary)'} size={16} />
         <div className="text-sm text-muted-foreground">{t('goalProcess.northStar.emptyHint')}</div>
       </div>
     );

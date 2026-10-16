@@ -6,6 +6,7 @@ import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { and, eq } from 'drizzle-orm';
 
+import { TaskDomainError } from '@/database/errors/task';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
 import { tasks } from '@/database/schemas';
@@ -144,11 +145,14 @@ export async function runHeartbeatTick(
       await rearmBlockedHeartbeat();
       return { ran: false, reason: 'queued' };
     }
-    if (e instanceof TRPCError && e.code === 'CONFLICT') {
+    if ((e instanceof TRPCError || e instanceof TaskDomainError) && e.code === 'CONFLICT') {
       log('skip task=%s reason=in-flight', taskId);
       return { ran: false, reason: 'in-flight' };
     }
-    if (e instanceof TRPCError && e.code === 'PRECONDITION_FAILED') {
+    if (
+      (e instanceof TRPCError || e instanceof TaskDomainError) &&
+      e.code === 'PRECONDITION_FAILED'
+    ) {
       await rearmBlockedHeartbeat();
       return { ran: false, reason: 'human-waiting' };
     }

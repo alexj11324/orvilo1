@@ -32,7 +32,7 @@ const EditingIndicator = memo<EditingIndicatorProps>(({ holderId, pending }) => 
 
     const checkingLabel = t('pageEditor.editMode.checking');
     return (
-      <div className="flex items-center gap-1" style={{ color: 'var(--ant-color-text-tertiary)' }}>
+      <div className="flex items-center gap-1" style={{ color: 'var(--foreground-tertiary)' }}>
         <Spinner className="size-3.5" />
         <div className="truncate block" style={{ color: 'inherit', fontSize: 12, maxWidth: 200 }}>
           {checkingLabel}
@@ -53,7 +53,7 @@ const EditingIndicator = memo<EditingIndicatorProps>(({ holderId, pending }) => 
             <span style={{ display: 'inline-flex' }}>
               <div
                 className="flex items-center gap-1"
-                style={{ color: 'var(--ant-color-text-tertiary)' }}
+                style={{ color: 'var(--foreground-tertiary)' }}
               >
                 <PencilIcon size={14} />
                 <div

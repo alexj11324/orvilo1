@@ -24,6 +24,10 @@ vi.mock('@orvilo/agent-manager-runtime', () => ({
   }),
 }));
 
+vi.mock('@/services/agentManagerRuntime', () => ({
+  createClientAgentManagerCapabilities: vi.fn(() => ({})),
+}));
+
 vi.mock('@/services/agent', () => ({ agentService: {} }));
 vi.mock('@/store/agent', () => ({
   getAgentStoreState: () => ({

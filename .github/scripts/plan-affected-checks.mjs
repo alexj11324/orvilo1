@@ -64,7 +64,7 @@ export const consumerScopesForApplications = (applicationDependencies, workspace
   return consumerScopes;
 };
 
-const packageGraph = (rootDir) => {
+export const packageGraph = (rootDir) => {
   const manifests = [];
   const candidates = execFileSync('git', ['ls-files', 'packages/**/package.json'], {
     cwd: rootDir,

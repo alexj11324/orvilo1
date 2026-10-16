@@ -157,7 +157,7 @@ const AgentChip = memo(() => {
         <div className="text-(length:--text-dense)">
           {agentId && meta ? agentDisplayName(meta) : t('instructions.unassigned')}
         </div>
-        <ChevronRightIcon color={'var(--ant-color-text-tertiary)'} size={14} />
+        <ChevronRightIcon color={'var(--foreground-tertiary)'} size={14} />
       </div>
     </AssigneeAgentSelector>
   );

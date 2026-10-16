@@ -17,8 +17,8 @@ const styles = {
   label: 'ps-1 text-xs text-foreground-tertiary',
   labelRow: 'mb-1',
   openThread: 'h-5.5 px-1.5 text-xs leading-(--text-xs--line-height)',
-  promptBox: 'rounded-(--ant-border-radius-lg) bg-accent px-3 py-2',
-  resultBox: 'rounded-(--ant-border-radius-lg) bg-card px-3 py-2',
+  promptBox: 'rounded-(--radius-overlay) bg-accent px-3 py-2',
+  resultBox: 'rounded-(--radius-overlay) bg-card px-3 py-2',
 };
 
 /**

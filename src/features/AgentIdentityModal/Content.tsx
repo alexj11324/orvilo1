@@ -103,9 +103,9 @@ const AgentIdentityContent = memo<AgentIdentityContentProps>(({ agentId }) => {
         <Field label={t('settingAgent.slug.label', { ns: 'setting' })}>
           <div
             className="font-mono rounded bg-muted px-1"
-            style={{ alignSelf: 'flex-start', color: 'var(--ant-color-text-secondary)' }}
+            style={{ alignSelf: 'flex-start', color: 'var(--muted-foreground)' }}
           >
-            <span style={{ color: 'var(--ant-color-text-tertiary)' }}>@</span>
+            <span style={{ color: 'var(--foreground-tertiary)' }}>@</span>
             {form.slug}
           </div>
         </Field>

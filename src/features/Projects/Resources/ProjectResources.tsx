@@ -11,7 +11,7 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import type { ProjectDetail } from '@/store/project';
 
 const styles = {
-  card: 'rounded-(--radius-card) border border-sidebar-border bg-[color-mix(in_srgb,var(--card)_82%,var(--ant-color-fill-quaternary))] p-4 hover:border-border',
+  card: 'rounded-(--radius-card) border border-sidebar-border bg-[color-mix(in_srgb,var(--card)_82%,var(--fill-quaternary))] p-4 hover:border-border',
   icon: 'flex size-9 flex-none items-center justify-center rounded-(--radius-card) bg-fill-quaternary text-primary',
   list: 'grid gap-2.5',
 };

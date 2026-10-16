@@ -195,7 +195,7 @@ const FileListItem = ({
           cn(
             'flex flex-row items-center h-12 px-2 border-be border-solid border-divider select-none',
             cn(
-              'cursor-pointer min-w-260 text-sm leading-5.5 transition-[background-color] duration-(--orvilo-motion-mid) ease-(--ant-motion-ease-in-out) hover:bg-accent',
+              'cursor-pointer min-w-260 text-sm leading-5.5 transition-[background-color] duration-(--orvilo-motion-mid) ease-(--orvilo-motion-ease-in-out) hover:bg-accent',
               'file-list-item-group',
               index % 2 === 0 &&
                 'bg-fill-quaternary hover:bg-accent [.any-row-hovered_&]:bg-transparent [.any-row-hovered_&]:hover:bg-accent',

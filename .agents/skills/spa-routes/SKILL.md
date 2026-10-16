@@ -135,25 +135,12 @@ Known variants today:
 | Is it a hook, store usage, or domain logic?              | No                                                       | Yes                          |
 | Is it only re-exporting or composing feature components? | Yes                                                      | No                           |
 
-**Examples**
-
-- **Route (thin):**\
-  `src/routes/(main)/page/_layout/index.tsx` → `export { default } from '@/features/Pages/PageLayout'`
-- **Feature (real implementation):**\
-  `src/features/Pages/PageLayout/` → Sidebar, DataSync, Body, Header, styles, etc.
-- **Route (thin):**\
-  `src/routes/(main)/page/index.tsx` → Import `PageTitle`, `PageExplorerPlaceholder` from `@/features/Pages` and `@/features/PageExplorer`; render with `<PageTitle />` and placeholder.
-- **Feature:**\
-  Page list, actions, drawers, and hooks live under `src/features/Pages/`.
-
----
+Route examples must come from the current route registry in
+`src/spa/router/desktopRouter.shared.tsx`. The former `/page` route and
+`src/features/Pages` implementation were retired; they are not a template to
+recreate. Keep active route segments thin and compose their domain features.
 
 ## 5. Progressive Migration (existing code)
-
-We are migrating existing routes to this structure step by step:
-
-- **Phase 1 (done):** `/page` route – segment files in `src/routes/(main)/page/`, implementation in `src/features/Pages/`.
-- **Later phases:** home, settings, agent/group, community/resource/memory, mobile/share/onboarding.
 
 When touching an old route that still has logic or `features/` inside `src/routes/`:
 

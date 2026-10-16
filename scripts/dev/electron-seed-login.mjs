@@ -9,6 +9,7 @@ import {
   DEFAULT_SEED_EMAIL,
   seedElectron,
 } from '../../.agents/acceptance/scripts/seed-session.mjs';
+import { assertElectronUsesLocalGateway } from './local-device-gateway.mjs';
 
 export function localServerUrl(value) {
   const url = new URL(value);
@@ -46,6 +47,7 @@ export async function seedElectronLogin({
   cdpPort = process.env.ORVILO_DESKTOP_CDP_PORT || '9263',
   email = process.env.SEED_EMAIL || DEFAULT_SEED_EMAIL,
   authUrlFile = process.env.ORVILO_DESKTOP_AUTH_URL_FILE,
+  requireLocalGateway = true,
   verifyTarget = () => true,
 } = {}) {
   if (process.env.NODE_ENV === 'production')
@@ -55,6 +57,7 @@ export async function seedElectronLogin({
   if (!Number.isInteger(port) || port < 1 || port > 65535)
     throw new Error('Invalid Electron CDP port');
   if (!verifyTarget()) throw new Error('Electron CDP target is not the launched instance');
+  if (requireLocalGateway) assertElectronUsesLocalGateway(port);
   const { mainProcess, userId } = await seedElectron({
     cdpPort: port,
     databaseUrl: databaseUrl(),

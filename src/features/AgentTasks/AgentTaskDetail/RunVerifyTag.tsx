@@ -18,11 +18,11 @@ import { useGlobalStore } from '@/store/global';
  * tag saves.
  */
 const VERDICT_META = {
-  errored: { color: 'var(--ant-color-error)', icon: TriangleAlert, labelKey: 'errored' },
-  failed: { color: 'var(--ant-color-error)', icon: CircleX, labelKey: 'failed' },
-  passed: { color: 'var(--ant-color-success)', icon: CircleCheck, labelKey: 'passed' },
-  pending: { color: 'var(--ant-color-text-tertiary)', icon: CircleDashed, labelKey: 'pending' },
-  running: { color: 'var(--ant-color-info)', icon: Loader2, labelKey: 'running', spin: true },
+  errored: { color: 'var(--destructive)', icon: TriangleAlert, labelKey: 'errored' },
+  failed: { color: 'var(--destructive)', icon: CircleX, labelKey: 'failed' },
+  passed: { color: 'var(--success)', icon: CircleCheck, labelKey: 'passed' },
+  pending: { color: 'var(--foreground-tertiary)', icon: CircleDashed, labelKey: 'pending' },
+  running: { color: 'var(--info)', icon: Loader2, labelKey: 'running', spin: true },
 } as const;
 
 type VerdictKey = keyof typeof VERDICT_META;

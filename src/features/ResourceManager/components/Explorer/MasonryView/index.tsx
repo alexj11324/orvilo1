@@ -274,7 +274,7 @@ const MasonryView = memo(function MasonryView({
           <div
             className="flex flex-col items-center justify-center"
             style={{
-              color: 'var(--ant-color-text-description)',
+              color: 'var(--foreground-description)',
               fontSize: 14,
               marginBlockStart: 16,
               minHeight: 40,

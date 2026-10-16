@@ -1,7 +1,7 @@
 import { t } from 'i18next';
 
 import { confirmModal } from '@/components/Modal';
-import { lambdaClient } from '@/libs/trpc/client';
+import { taskService } from '@/services/task';
 
 /** `canceled`: the reader declined the pending-contract-edits confirmation. */
 export type RunWithContractCheckResult = 'canceled' | 'failed' | 'started';
@@ -22,7 +22,7 @@ export const runTaskWithContractCheck = async (
   id: string,
   runTask: RunTask,
 ): Promise<RunWithContractCheckResult> => {
-  const context = await lambdaClient.task.contractContext.query({ id }).catch(() => undefined);
+  const context = await taskService.contractContext({ id }).catch(() => undefined);
   if (!context?.data?.pendingConstraintEdits) return (await runTask(id)) ? 'started' : 'failed';
 
   const revision = context.data.contract?.revision;

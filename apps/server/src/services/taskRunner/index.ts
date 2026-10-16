@@ -21,6 +21,7 @@ import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 
 import { TopicTrigger } from '@/const/topic';
+import { TaskDomainError } from '@/database/errors/task';
 import { AgentModel } from '@/database/models/agent';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { BriefModel } from '@/database/models/brief';
@@ -1457,7 +1458,10 @@ export class TaskRunnerService {
               phase: 'outcome_unknown',
               waitingReason: error instanceof Error ? error.message : 'Dispatch outcome unknown',
             });
-          } else if (error instanceof TRPCError && error.code !== 'INTERNAL_SERVER_ERROR') {
+          } else if (
+            (error instanceof TRPCError || error instanceof TaskDomainError) &&
+            error.code !== 'INTERNAL_SERVER_ERROR'
+          ) {
             // A deterministic refusal (approval rejected, bad input, contract
             // violation) can never resolve by retrying this dispatch.
             await this.taskDispatch.settle(preparedDispatch, 'failed');
@@ -1672,12 +1676,18 @@ export class TaskRunnerService {
         // Readiness can change after discovery. No execution happened: leave
         // backlog intact so the next upstream completion can discover it again.
         if (isTaskDependencyBlocked(error)) continue;
-        if (error instanceof TRPCError && error.code === 'CONFLICT') {
+        if (
+          (error instanceof TRPCError || error instanceof TaskDomainError) &&
+          error.code === 'CONFLICT'
+        ) {
           // Another cascade/manual request won the atomic run reservation.
           // Its task is live; the loser must not pause or relabel it.
           continue;
         }
-        if (error instanceof TRPCError && error.cause instanceof TaskDispatchWaitingError) {
+        if (
+          (error instanceof TRPCError || error instanceof TaskDomainError) &&
+          error.cause instanceof TaskDispatchWaitingError
+        ) {
           // The admission gate (or project/goal policy) held this dispatch —
           // the intent is persisted as `waiting`, the task stays claimable,
           // and nothing may be marked paused/failed for a policy hold.

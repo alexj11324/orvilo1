@@ -53,6 +53,7 @@ import { alias, type AnyPgColumn } from 'drizzle-orm/pg-core';
 
 import { merge } from '@/utils/merge';
 
+import { TaskDomainError } from '../errors/task';
 import { agents } from '../schemas/agent';
 import { agentOperations } from '../schemas/agentOperations';
 import { executionGrants } from '../schemas/executionGrant';
@@ -1710,7 +1711,7 @@ export class TaskModel {
       workspaceId: this.workspaceId,
     });
     if (!role || (write && role === 'viewer'))
-      throw new TRPCError({ code: 'FORBIDDEN', message: 'Workspace Issue access required' });
+      throw new TaskDomainError({ code: 'FORBIDDEN', message: 'Workspace Issue access required' });
   }
 
   private async canGovernTask(task: TaskItem): Promise<boolean> {
@@ -4945,7 +4946,7 @@ export class TaskModel {
       ? comment.authorAgentId === actor.agentId
       : !comment.authorAgentId && comment.authorUserId === (actor?.userId ?? this.userId);
     if (!isAuthor)
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'FORBIDDEN',
         message: 'Only the comment author may edit or delete it',
       });

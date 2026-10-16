@@ -18,6 +18,7 @@ import { sha256 } from 'js-sha256';
 import { CredentialModel, toOwnCredSummary } from '@/database/models/credential';
 import { FileModel } from '@/database/models/file';
 import type { CredentialItem, NewCredentialItem } from '@/database/schemas';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { FileService } from '@/server/services/file';
 import type { MarketService } from '@/server/services/market';
 import { createSandboxService } from '@/server/services/sandbox';
@@ -94,7 +95,11 @@ export class OwnCredsService {
     this.workspaceId = options.workspaceId;
     this.fileService = options.fileService;
     this.marketService = options.marketService;
-    this.model = new CredentialModel(options.serverDB, options.userId);
+    this.model = new CredentialModel(
+      options.serverDB,
+      KeyVaultsGateKeeper.initWithEnvKey,
+      options.userId,
+    );
   }
 
   private getFileService = () => {

@@ -22,9 +22,9 @@ const MEMORY_EFFORT_LEVELS: readonly UserMemoryEffort[] = ['low', 'medium', 'hig
 const styles = {
   active: 'bg-accent',
   description: 'text-xs text-foreground-description',
-  icon: 'border border-accent rounded-(--ant-border-radius) bg-popover',
+  icon: 'border border-accent rounded-(--radius-card) bg-popover',
   option:
-    'cursor-pointer w-full p-2 rounded-(--ant-border-radius) transition-[background-color] duration-200 ease-[ease] hover:bg-accent',
+    'cursor-pointer w-full p-2 rounded-(--radius-card) transition-[background-color] duration-200 ease-[ease] hover:bg-accent',
   title: 'text-sm font-medium text-foreground',
 };
 

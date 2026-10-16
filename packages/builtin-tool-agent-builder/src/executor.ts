@@ -10,6 +10,7 @@ import { BaseExecutor } from '@orvilo/types';
 import { pickNonEmptyString, toRecord } from '@orvilo/utils/object';
 
 import { agentService } from '@/services/agent';
+import { createClientAgentManagerCapabilities } from '@/services/agentManagerRuntime';
 import { getAgentStoreState } from '@/store/agent';
 
 import { normalizeUpdateConfigParams } from './normalizeUpdateConfigParams';
@@ -27,6 +28,9 @@ const WRITE_APIS = new Set<string>([
 ]);
 
 const runtime = new AgentManagerRuntime({
+  capabilities: createClientAgentManagerCapabilities({
+    getAgentConfigById: agentService.getAgentFullConfigById,
+  }),
   agentService: {
     countAgents: agentService.countAgents,
     createAgent: agentService.createAgent,

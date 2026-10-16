@@ -1,4 +1,9 @@
-import type { HeterogeneousProviderConfig, MetaData, OrviloAgentConfig } from '@orvilo/types';
+import type {
+  BuiltinToolResult,
+  HeterogeneousProviderConfig,
+  MetaData,
+  OrviloAgentConfig,
+} from '@orvilo/types';
 import type { PartialDeep } from 'type-fest';
 
 // ==================== Service Interfaces ====================
@@ -32,9 +37,35 @@ export interface IAgentService {
   removeAgent: (agentId: string) => Promise<unknown>;
 }
 
-/** Services required for workspace Agent operations. */
+/** Host-specific state, presentation and connector capabilities; no global store access. */
+export interface AgentManagerCapabilities {
+  agents: {
+    ensureLoaded: (agentId: string) => Promise<void>;
+    getConfig: (agentId: string) => OrviloAgentConfig;
+    getMeta: (agentId: string) => Partial<MetaData>;
+    updateConfig: (agentId: string, config: PartialDeep<OrviloAgentConfig>) => Promise<unknown>;
+    updateMeta: (agentId: string, meta: Partial<MetaData>) => Promise<unknown>;
+    startStreamingSystemRole: (agentId: string) => number;
+    appendStreamingSystemRole: (agentId: string, generation: number, chunk: string) => void;
+    finishStreamingSystemRole: (agentId: string, generation: number) => Promise<unknown>;
+  };
+  getAvailableModels: () => Promise<AvailableProvider[]>;
+  installPlugin: (
+    agentId: string,
+    params: InstallPluginParams,
+    enablePlugin: (pluginId: string) => Promise<void>,
+  ) => Promise<BuiltinToolResult>;
+  isPluginInstalled: (identifier: string) => boolean;
+}
+
+export interface InstallPluginParams {
+  identifier: string;
+  source: 'market' | 'official';
+}
+
 export interface AgentManagerRuntimeServices {
   agentService: IAgentService;
+  capabilities: AgentManagerCapabilities;
 }
 
 // ==================== Agent CRUD Types ====================

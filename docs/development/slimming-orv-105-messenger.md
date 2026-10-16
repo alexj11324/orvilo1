@@ -1,5 +1,9 @@
 # ORV-105 — Retire the non-core Messenger/IM adapter stack
 
+> 历史实施记录：文中的 “当前”、路径和保留清单对应各段记录的提交，不能作为现阶段实现约定。
+> 当前认证、队列和技能入口及本轮校正见 [仓库差异审计](./repository-audit/README.md)。
+> 不要根据本记录恢复已删除实现；现行代码与 `AGENTS.md` 的归属规则优先。
+
 ## Audit verdict
 
 The Messenger/IM adapter stack (Feishu/Lark, WeChat, QQ, LINE, iMessage, Discord/Slack/Telegram
@@ -62,7 +66,7 @@ end-to-end as one deletion chain.
   `export type {` in context-engine and a stale `agentBotProvider` apiKeyScope row were fixed.
 - `bun run check`: 1699 related tests pass, lint warnings-only (preexisting `agentSlug`,
   `fileId`, `size` unused-arg warnings present on HEAD).
-- Fixed test fallout: `GatewayConnectionCtr` (message\_api leg removed, 98 pass),
+- Fixed test fallout: `GatewayConnectionCtr` (message_api leg removed, 98 pass),
   `execAgent.device` (bot-context cases rewritten/deleted), `listWorkspaceMembers`
   ('neko' IM-identity query → 'chen'), `normalizeAgentState` (`channel: {}` dropped),
   `desktopRouter.sync` lazy-import floor 90→80, `scopeKey`/`sourceEvent` bot cases,

@@ -298,7 +298,6 @@
   "setup.orchestrator.finish": "Finish setup",
   "setup.orchestrator.title": "Choose your Orchestrator",
   "setup.provider": "Provider settings",
-  "setup.skip": "Skip for now",
   "setup.stepName.agent": "Agent",
   "setup.stepName.orchestrator": "Orchestrator",
   "setup.stepName.workspace": "Workspace",

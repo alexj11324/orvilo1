@@ -7,7 +7,6 @@ import { verifyKeys } from '@/libs/swr/keys';
 // tray's subscription (a raw `swr` mutate would miss the augmented key).
 import { verifyService } from '@/services/verify';
 
-import { openGoalModal } from './GoalModal';
 import type { TrayCheck } from './types';
 
 const genId = () => `chk_${Math.random().toString(36).slice(2, 10)}`;
@@ -44,32 +43,6 @@ const persistChecks = async (_topicId: string, _goal: string, _checks: TrayCheck
 };
 const persistGoal = async (_topicId: string, _goal: string, _checks: TrayCheck[]) => {
   throw new Error('Standalone Acceptance is read-only. Use the Issue Checklist.');
-};
-
-/**
- * Set the topic's Goal without a mounted tray (used by the composer "+" →
- * "Goal" entry). Reads the current state, writes the goal, and revalidates
- * the shared SWR key so the tray reflects it.
- */
-export const setTopicGoal = async (topicId: string, goal: string) => {
-  const current = await read(topicId);
-  await persistGoal(topicId, goal, current.checks);
-};
-
-/**
- * Open the "set goal" modal for a topic from outside a mounted tray (the
- * composer "+" menu), prefilled with the current goal so an existing one is
- * edited rather than silently overwritten.
- */
-export const openTopicGoalModal = async (topicId: string) => {
-  const current = await read(topicId);
-  openGoalModal({
-    initialGoal: current.goal || undefined,
-    // Only offer delete when there's an existing goal to clear. Clearing writes
-    // an empty requirement, which hides the tray (checks kept).
-    onDelete: current.goal ? () => setTopicGoal(topicId, '') : undefined,
-    onSubmit: (goal) => setTopicGoal(topicId, goal),
-  });
 };
 
 /**

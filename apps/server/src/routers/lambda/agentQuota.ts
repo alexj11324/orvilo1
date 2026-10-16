@@ -4,6 +4,7 @@ import { AgentProviderAccountModel, AgentQuotaWindowModel } from '@/database/mod
 import { DeviceModel } from '@/database/models/device';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { AgentQuotaService } from '@/server/services/agentQuota';
 
 const quotaProcedure = authedProcedure.use(serverDatabase).use(async (opts) => {
@@ -11,7 +12,12 @@ const quotaProcedure = authedProcedure.use(serverDatabase).use(async (opts) => {
   const workspaceId = ctx.workspaceId ?? undefined;
   return opts.next({
     ctx: {
-      accountModel: new AgentProviderAccountModel(ctx.serverDB, ctx.userId, workspaceId),
+      accountModel: new AgentProviderAccountModel(
+        ctx.serverDB,
+        KeyVaultsGateKeeper.initWithEnvKey,
+        ctx.userId,
+        workspaceId,
+      ),
       quotaService: new AgentQuotaService(ctx.serverDB, ctx.userId, workspaceId),
       windowModel: new AgentQuotaWindowModel(ctx.serverDB, ctx.userId, workspaceId),
     },

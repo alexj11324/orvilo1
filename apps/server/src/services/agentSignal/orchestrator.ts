@@ -226,30 +226,3 @@ export const executeAgentSignalSourceEvent = async <TSourceType extends AgentSig
 ): Promise<DedupedSourceEventResult | GeneratedAgentSignalEmissionResult | undefined> => {
   return executeAgentSignalSourceEventCore(input, context, options);
 };
-
-/**
- * Emits one source event using an injected store for eval and test coverage.
- *
- * Use when:
- * - The caller needs the exact  server orchestration path but with isolated in-memory dedupe state
- * - Eval or test code must avoid ambient Redis dependencies
- *
- * Expects:
- * - `store` implements the same contract as the Redis-backed source-event store
- *
- * Returns:
- * - The same result shape as {@link executeAgentSignalSourceEvent}
- */
-export const emitAgentSignalSourceEventWithStore = async <
-  TSourceType extends AgentSignalSourceType,
->(
-  input: AgentSignalSourceEventInput<TSourceType>,
-  context: AgentSignalExecutionContext,
-  store: AgentSignalSourceEventStore,
-  options: Pick<ExecuteAgentSignalSourceEventOptions, 'policyOptions'> = {},
-): Promise<DedupedSourceEventResult | GeneratedAgentSignalEmissionResult | undefined> => {
-  return executeAgentSignalSourceEventCore(input, context, {
-    policyOptions: options.policyOptions,
-    store,
-  });
-};

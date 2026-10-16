@@ -54,9 +54,9 @@ export const getAppConfig = () => {
       MARKET_BASE_URL: z.string().optional(),
       /**
        * Trusted Client Secret for Market API authentication
-       * 64-character hex string (32 bytes) shared with Market server
-       * Used to encrypt user payload for trusted client authentication
-       * Generate with: openssl rand -hex 32
+       * 83-character credential supplied by the target Market service.
+       * Must match the service configuration; a random 64-character hex
+       * string does not satisfy this schema.
        */
       MARKET_TRUSTED_CLIENT_SECRET: z.string().length(83).optional(),
       /**

@@ -11,7 +11,7 @@ import { resolveAcceptanceVerdictMeta } from '../verdict';
 const styles = {
   pill: 'inline-flex items-center gap-1.25 py-0.5 px-2.5 rounded-full text-xs font-medium',
   interactive:
-    'min-h-7 [@media(pointer:coarse)]:min-h-11 cursor-pointer transition-[filter] duration-(--ant-motion-duration-mid) ease-[ease] hover:brightness-[1.08]',
+    'min-h-7 [@media(pointer:coarse)]:min-h-11 cursor-pointer transition-[filter] duration-(--orvilo-motion-mid) ease-[ease] hover:brightness-[1.08]',
 };
 
 const verdictTextColors: Record<string, string> = {

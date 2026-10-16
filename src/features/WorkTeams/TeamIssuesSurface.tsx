@@ -1,4 +1,5 @@
 'use client';
+
 import type { TaskStatus, TaskWorkflowCategory, WorkQuerySortMode } from '@orvilo/types';
 import { cn } from 'cn';
 import { PlusIcon, UsersIcon, XIcon } from 'lucide-react';
@@ -50,9 +51,9 @@ import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { usePermission } from '@/hooks/usePermission';
 import { useSearchParams } from '@/libs/router/navigation';
 import { mutate, useClientDataSWR } from '@/libs/swr';
-import { lambdaClient } from '@/libs/trpc/client';
 import { workAttentionService } from '@/services/workAttention';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
+import { useFetchWorkTeam } from '@/store/workTeam/hooks';
 
 import TeamIdentity from './TeamIdentity';
 import TeamIssuesControls from './TeamIssuesControls';
@@ -74,7 +75,7 @@ import { ALL_TEAM_CYCLES, type TeamIssueScope, teamTaskQuery } from './teamWorkQ
 const styles = {
   detailLayout: 'relative overflow-hidden flex flex-1 h-0 min-h-0',
   detailPane:
-    'overflow-y-auto flex-none w-100 [padding-block-end:12px] border-s border-sidebar-border bg-background [@container_work-surface_(max-width:900px)]:absolute [@container_work-surface_(max-width:900px)]:z-10 [@container_work-surface_(max-width:900px)]:[inset-block:0] [@container_work-surface_(max-width:900px)]:end-0 [@container_work-surface_(max-width:900px)]:w-[min(400px,calc(100%-40px))] [@container_work-surface_(max-width:900px)]:shadow-(--ant-box-shadow-secondary)',
+    'overflow-y-auto flex-none w-100 [padding-block-end:12px] border-s border-sidebar-border bg-background [@container_work-surface_(max-width:900px)]:absolute [@container_work-surface_(max-width:900px)]:z-10 [@container_work-surface_(max-width:900px)]:[inset-block:0] [@container_work-surface_(max-width:900px)]:end-0 [@container_work-surface_(max-width:900px)]:w-[min(400px,calc(100%-40px))] [@container_work-surface_(max-width:900px)]:shadow-(--shadow-popover)',
   filterChips: 'p-1',
   resultsBody: 'box-border min-h-full py-2',
   resultsScroll: 'overflow-auto overscroll-contain flex-1 min-w-0',
@@ -132,13 +133,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
     [searchParams, setSearchParams],
   );
 
-  const {
-    data: teamData,
-    error: teamError,
-    mutate: revalidateTeam,
-  } = useClientDataSWR(teamId && workspaceId ? ['team', workspaceId, teamId] : null, () =>
-    lambdaClient.team.team.query({ teamId }),
-  );
+  const { data: teamData, error: teamError, mutate: revalidateTeam } = useFetchWorkTeam(teamId);
   const team = teamData?.data.team;
   // Triage is a per-team capability — a triaging team's issues feed must keep
   // `untriaged` rows out until intake resolves them.
@@ -422,7 +417,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
         <PROJECT_ENTITY_ICON
           aria-hidden
           className="size-4 shrink-0"
-          color={key === 'none' ? 'var(--ant-color-text-quaternary)' : undefined}
+          color={key === 'none' ? 'var(--foreground-quaternary)' : undefined}
         />
       );
     }

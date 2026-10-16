@@ -55,8 +55,6 @@ interface DragState {
 const CurrentDragContext = createContext<DragState | null>(null);
 const SetCurrentDragContext = createContext<((_state: DragState | null) => void) | null>(null);
 
-export const useCurrentDrag = () => use(CurrentDragContext);
-
 export const useSetCurrentDrag = () => {
   const setCurrentDrag = use(SetCurrentDragContext);
 
@@ -249,10 +247,10 @@ export const DndContextWrapper = memo<PropsWithChildren>(({ children }) => {
                   ref={overlayRef}
                   style={{
                     alignItems: 'center',
-                    background: 'var(--ant-color-bg-elevated)',
-                    border: `1px solid ${'var(--ant-color-primary-border)'}`,
-                    borderRadius: 'var(--ant-border-radius-lg)',
-                    boxShadow: 'var(--ant-box-shadow)',
+                    background: 'var(--popover)',
+                    border: `1px solid ${'var(--primary-border)'}`,
+                    borderRadius: 'var(--radius-overlay)',
+                    boxShadow: 'var(--shadow-elevated)',
                     display: 'flex',
                     gap: 12,
                     height: 44,
@@ -271,7 +269,7 @@ export const DndContextWrapper = memo<PropsWithChildren>(({ children }) => {
                   <div
                     style={{
                       alignItems: 'center',
-                      color: 'var(--ant-color-primary)',
+                      color: 'var(--primary)',
                       display: 'flex',
                       flexShrink: 0,
                       justifyContent: 'center',
@@ -297,9 +295,9 @@ export const DndContextWrapper = memo<PropsWithChildren>(({ children }) => {
                   </div>
                   <span
                     style={{
-                      color: 'var(--ant-color-text)',
+                      color: 'var(--foreground)',
                       flex: 1,
-                      fontSize: 'var(--ant-font-size)',
+                      fontSize: 'var(--font-size-base)',
                       fontWeight: 500,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -312,9 +310,9 @@ export const DndContextWrapper = memo<PropsWithChildren>(({ children }) => {
                     <div
                       style={{
                         alignItems: 'center',
-                        background: 'var(--ant-color-primary)',
-                        borderRadius: 'var(--ant-border-radius-sm)',
-                        color: 'var(--ant-color-text-light-solid)',
+                        background: 'var(--primary)',
+                        borderRadius: 'var(--radius-input)',
+                        color: 'var(--overlay-mask-foreground)',
                         display: 'flex',
                         flexShrink: 0,
                         fontSize: 12,

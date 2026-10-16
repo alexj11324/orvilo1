@@ -61,7 +61,7 @@ const styles = {
   valueText: 'flex justify-between text-xs leading-5 tabular-nums',
   barBefore: 'h-full rounded-[inherit] bg-(color:--foreground-quaternary)',
   tableBestBadge:
-    'ms-1 py-0.5 px-1 rounded-(--radius-chip) text-xs leading-5 font-semibold text-info-text bg-(color:--ant-color-info-bg-hover)',
+    'ms-1 py-0.5 px-1 rounded-(--radius-chip) text-xs leading-5 font-semibold text-info-text bg-(color:--info-hover-wash)',
 } as const;
 
 const SERIES_COLORS = [
@@ -415,9 +415,7 @@ const HeatmapRenderer = memo<{
                     style={{
                       background: `color-mix(in srgb, var(--info) ${intensity * 100}%, var(--card))`,
                       color:
-                        intensity > 0.58
-                          ? 'var(--ant-color-text-light-solid)'
-                          : 'var(--foreground)',
+                        intensity > 0.58 ? 'var(--overlay-mask-foreground)' : 'var(--foreground)',
                     }}
                   >
                     {typeof value === 'number' ? formatValue(value) : '–'}

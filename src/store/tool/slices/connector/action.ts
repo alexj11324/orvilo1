@@ -1,5 +1,5 @@
 import { getActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import { lambdaClient } from '@/libs/trpc/client';
+import { connectorService } from '@/services/connector';
 import type { StoreSetter } from '@/store/types';
 
 import type { ToolStore } from '../../store';
@@ -49,7 +49,7 @@ export class ConnectorActionImpl {
   fetchConnectors = async (): Promise<void> => {
     const scope = getActiveWorkspaceId();
     const requestId = ++this.#connectorListRequestId;
-    const data = await lambdaClient.connector.list.query();
+    const data = await connectorService.list();
     const committedRequestId = this.#connectorListCommittedRequestIds.get(scope) ?? 0;
     if (!this.#isStillInScope(scope) || requestId <= committedRequestId) return;
     this.#connectorListCommittedRequestIds.set(scope, requestId);
@@ -69,7 +69,7 @@ export class ConnectorActionImpl {
   fetchAgentBoundConnectors = async (): Promise<void> => {
     const scope = getActiveWorkspaceId();
     const requestId = ++this.#agentBoundListRequestId;
-    const data = await lambdaClient.connector.listAgentBound.query();
+    const data = await connectorService.listAgentBound();
     const committedRequestId = this.#agentBoundListCommittedRequestIds.get(scope) ?? 0;
     if (!this.#isStillInScope(scope) || requestId <= committedRequestId) return;
     this.#agentBoundListCommittedRequestIds.set(scope, requestId);
@@ -86,7 +86,7 @@ export class ConnectorActionImpl {
    */
   fetchAgentConnectors = async (agentId: string): Promise<void> => {
     const scope = getActiveWorkspaceId();
-    const data = await lambdaClient.connector.listByAgent.query({ agentId });
+    const data = await connectorService.listByAgent({ agentId });
     if (!this.#isStillInScope(scope)) return;
     this.#set(
       (s) => ({

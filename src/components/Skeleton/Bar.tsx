@@ -11,7 +11,7 @@ export interface SkeletonBarProps {
 const SkeletonBar = ({ height, width = '100%', radius }: SkeletonBarProps) => (
   <Skeleton
     style={{
-      borderRadius: radius ?? 'var(--ant-border-radius)',
+      borderRadius: radius ?? 'var(--radius-card)',
       height,
       margin: 0,
       maxHeight: height,

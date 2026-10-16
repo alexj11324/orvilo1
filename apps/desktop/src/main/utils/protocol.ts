@@ -22,22 +22,6 @@ export const getProtocolScheme = (): string => {
   return 'orvilo';
 };
 
-export const getVersionInfo = (): { channel: AppChannel; protocolScheme: string } => {
-  const protocolScheme = getProtocolScheme();
-
-  let appChannel: AppChannel = 'stable';
-  if (protocolScheme.includes('nightly')) {
-    appChannel = 'nightly';
-  } else if (protocolScheme.includes('beta')) {
-    appChannel = 'beta';
-  }
-
-  return {
-    channel: appChannel,
-    protocolScheme,
-  };
-};
-
 /**
  * Parse orvilo:// protocol URL (supports multi-version protocols)
  *

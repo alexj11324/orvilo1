@@ -9,10 +9,10 @@ import {
   TASK_INTENT_PROMPT_VERSION,
 } from '@orvilo/prompts';
 import type { TaskInstructionSynthesis, TaskIntentAnalysis } from '@orvilo/types';
-import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { z } from 'zod';
 
+import { TaskDomainError } from '@/database/errors/task';
 import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
 import { resolveLightweightJudgment } from '@/server/services/systemAgent/lightweightJudgment';
@@ -78,7 +78,10 @@ export class TaskIntentService {
       this.workspaceId,
     );
     if (!modelConfig)
-      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'TASK_INTENT_UNAVAILABLE' });
+      throw new TaskDomainError({
+        code: 'PRECONDITION_FAILED',
+        message: 'TASK_INTENT_UNAVAILABLE',
+      });
     const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
 
     const raw = await ai.generateObject(
@@ -135,7 +138,10 @@ export class TaskIntentService {
       this.workspaceId,
     );
     if (!modelConfig)
-      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'TASK_INTENT_UNAVAILABLE' });
+      throw new TaskDomainError({
+        code: 'PRECONDITION_FAILED',
+        message: 'TASK_INTENT_UNAVAILABLE',
+      });
     const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
 
     const raw = await ai.generateObject(

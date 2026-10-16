@@ -2,6 +2,7 @@
 import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { TaskDomainError } from '@/database/errors/task';
 import { BriefModel } from '@/database/models/brief';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskDispatchQueuedError } from '@/server/services/taskDispatch';
@@ -242,12 +243,15 @@ describe('runHeartbeatTick', () => {
     );
   });
 
-  it('returns in-flight when runTask raises a CONFLICT', async () => {
-    mockSelectTask.mockResolvedValue([baseTask()]);
-    mockRunner.runTask.mockRejectedValue(new TRPCError({ code: 'CONFLICT', message: 'busy' }));
+  it.each([TRPCError, TaskDomainError])(
+    'returns in-flight when runTask raises a %s CONFLICT',
+    async (ErrorType) => {
+      mockSelectTask.mockResolvedValue([baseTask()]);
+      mockRunner.runTask.mockRejectedValue(new ErrorType({ code: 'CONFLICT', message: 'busy' }));
 
-    const outcome = await runHeartbeatTick(taskId, userId, 'tick-1');
+      const outcome = await runHeartbeatTick(taskId, userId, 'tick-1');
 
-    expect(outcome).toEqual({ ran: false, reason: 'in-flight' });
-  });
+      expect(outcome).toEqual({ ran: false, reason: 'in-flight' });
+    },
+  );
 });

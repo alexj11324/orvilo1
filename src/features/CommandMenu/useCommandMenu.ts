@@ -12,8 +12,8 @@ import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinH
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
-import { lambdaClient } from '@/libs/trpc/client';
 import { getHostPort } from '@/platform';
+import { globalSearchService } from '@/services/globalSearch';
 import { omitPersonalTeamItems } from '@/services/recent';
 import { workAttentionService } from '@/services/workAttention';
 import { useAgentStore } from '@/store/agent';
@@ -88,7 +88,7 @@ export const useCommandMenu = () => {
         (Boolean(workspaceId) || typeFilter !== 'team');
       const [fts, work] = await Promise.all([
         wantsFts
-          ? lambdaClient.search.query.query({
+          ? globalSearchService.queryFts({
               agentId,
               limitPerType,
               query: searchQuery,

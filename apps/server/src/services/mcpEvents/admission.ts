@@ -7,6 +7,7 @@ import type {
 import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 
+import { TaskDomainError } from '@/database/errors/task';
 import { TaskDispatchEventEvidenceError } from '@/database/models/taskDispatch';
 import { taskDispatches } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
@@ -98,7 +99,8 @@ export class McpEventDispatchAdmissionService implements EventDispatchAdmission 
         status: 'accepted',
       };
     } catch (error) {
-      const cause = error instanceof TRPCError ? error.cause : undefined;
+      const cause =
+        error instanceof TRPCError || error instanceof TaskDomainError ? error.cause : undefined;
       if (cause instanceof TaskDispatchEventEvidenceError) {
         return { reason: cause.code, status: 'denied' };
       }
@@ -108,7 +110,10 @@ export class McpEventDispatchAdmissionService implements EventDispatchAdmission 
       if (cause instanceof TaskDispatchWaitingError) {
         return { reason: 'admission-held', retryable: true, status: 'waiting' };
       }
-      if (error instanceof TRPCError && error.code === 'CONFLICT') {
+      if (
+        (error instanceof TRPCError || error instanceof TaskDomainError) &&
+        error.code === 'CONFLICT'
+      ) {
         const [existing] = await this.db
           .select({
             id: taskDispatches.id,
@@ -135,7 +140,7 @@ export class McpEventDispatchAdmissionService implements EventDispatchAdmission 
         return { reason: 'admission-held', retryable: true, status: 'waiting' };
       }
       if (
-        error instanceof TRPCError &&
+        (error instanceof TRPCError || error instanceof TaskDomainError) &&
         (error.code === 'NOT_FOUND' || error.code === 'FORBIDDEN')
       ) {
         return denied('revoked');

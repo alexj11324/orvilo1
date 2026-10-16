@@ -376,50 +376,6 @@ export const chevron = style({
   flexShrink: 0,
 });
 
-export const nativeSelect = style({
-  appearance: 'none',
-  background: 'transparent',
-  border: 'none',
-  color: 'transparent',
-  cursor: 'pointer',
-  fontSize: 'inherit',
-  inset: 0,
-  margin: 0,
-  opacity: 0,
-  outline: 'none',
-  padding: 0,
-  position: 'absolute',
-  width: '100%',
-  selectors: {
-    '&:disabled': { cursor: 'not-allowed' },
-  },
-});
-
-export const shortcutHint = style({
-  alignItems: 'center',
-  color: v(vars.colorTextQuaternary),
-  display: 'inline-flex',
-  fontSize: 11,
-  gap: 4,
-  userSelect: 'none',
-});
-
-export const shortcutKbd = style({
-  alignItems: 'center',
-  background: v(vars.colorFillQuaternary),
-  border: `1px solid ${v(vars.colorBorderSecondary)}`,
-  borderRadius: radius.kbd,
-  color: v(vars.colorTextSecondary),
-  display: 'inline-flex',
-  fontFamily: font.mono,
-  fontSize: 10,
-  fontWeight: 500,
-  height: 16,
-  justifyContent: 'center',
-  minWidth: 16,
-  padding: '0 4px',
-});
-
 export const sendBtn = style({
   alignItems: 'center',
   background: v(vars.colorBgElevated),

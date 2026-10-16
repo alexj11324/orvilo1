@@ -1,0 +1,8 @@
+packages:
+  - .
+
+lockfile: true
+allowBuilds:
+  sharp: true
+  '@hatchet-dev/typescript-sdk': true
+  protobufjs: true

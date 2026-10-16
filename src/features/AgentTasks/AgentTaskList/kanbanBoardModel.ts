@@ -398,8 +398,8 @@ export const COLUMN_I18N_KEYS: Record<string, string> = {
 export const COLUMN_STATUS_VISUAL: Record<string, StatusVisual> = {
   // Attention buckets (Linear My issues) are not execution statuses — urgent
   // keeps the app's urgent glyph, blocking the stop-marked one.
-  'blocking': { color: 'var(--ant-color-error)', icon: OctagonAlert },
-  'urgent': { color: 'var(--ant-orange)', icon: CircleAlert },
+  'blocking': { color: 'var(--destructive)', icon: OctagonAlert },
+  'urgent': { color: 'var(--palette-orange-6)', icon: CircleAlert },
   // The Issue board's columns are the workflow categories — the header reads
   // the same canonical map the card's status mark uses.
   'backlog': WORKFLOW_CATEGORY_VISUALS.backlog,

@@ -18,11 +18,11 @@ const TitleWithPercentage = memo<TitleWithPercentageProps>(
     const percentage = calcGrowthPercentage(count || 0, prvCount || 0);
 
     const upStyle: CSSProperties = {
-      color: 'var(--ant-color-success)',
+      color: 'var(--success)',
     };
 
     const downStyle: CSSProperties = {
-      color: 'var(--ant-color-warning)',
+      color: 'var(--warning)',
     };
 
     return (

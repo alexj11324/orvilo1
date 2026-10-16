@@ -98,7 +98,7 @@ const RemoteConnectionRows = memo<{ agentId: string; platform: RemoteHeterogeneo
       if (capabilityResult.available) {
         return (
           <div className="flex items-center gap-1">
-            <CheckCircle2 color="var(--ant-color-success)" size={14} />
+            <CheckCircle2 color="var(--success)" size={14} />
             <Badge style={{ marginInlineEnd: 0 }} variant="success-light">
               {capabilityResult.version ?? t('platformAgentConfig.availability.available')}
             </Badge>
@@ -107,7 +107,7 @@ const RemoteConnectionRows = memo<{ agentId: string; platform: RemoteHeterogeneo
       }
       return (
         <div className="flex items-center gap-1">
-          <XCircle color="var(--ant-color-error)" size={14} />
+          <XCircle color="var(--destructive)" size={14} />
           <Badge style={{ marginInlineEnd: 0 }} variant="destructive-light">
             {t('platformAgentConfig.availability.notInstalled')}
           </Badge>

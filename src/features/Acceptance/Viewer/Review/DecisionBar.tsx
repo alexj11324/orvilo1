@@ -18,7 +18,7 @@ import { acceptanceContentLayout } from '../layout';
 
 const styles = {
   // Keep decisions reachable above the scrolling checklist.
-  bar: 'sticky bottom-4 z-20 mx-auto flex w-full flex-wrap items-center gap-3 rounded-(--ant-border-radius-lg) border border-sidebar-border bg-popover px-4 py-3 shadow-(--ant-box-shadow-tertiary) [@media(width<=767px)]:bottom-[max(8px,env(safe-area-inset-bottom))] [@media(width<=767px)]:p-3',
+  bar: 'sticky bottom-4 z-20 mx-auto flex w-full flex-wrap items-center gap-3 rounded-(--radius-overlay) border border-sidebar-border bg-popover px-4 py-3 shadow-(--shadow-raised) [@media(width<=767px)]:bottom-[max(8px,env(safe-area-inset-bottom))] [@media(width<=767px)]:p-3',
   summary: 'min-w-40 flex-1',
   actions:
     'flex-none flex-wrap justify-end [&>button]:flex-none [@media(width<=480px)]:w-full [@media(width<=480px)]:[&>button]:flex-1',
@@ -48,7 +48,7 @@ const ProgressRing = memo<{ done: number; total: number }>(({ done, total }) => 
           cy={size / 2}
           fill={'none'}
           r={radius}
-          stroke={'var(--ant-color-text-quaternary)'}
+          stroke={'var(--foreground-quaternary)'}
           strokeDasharray={'3 5'}
           strokeLinecap={'round'}
           strokeWidth={stroke}

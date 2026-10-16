@@ -2,6 +2,7 @@
 import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { TaskDomainError } from '@/database/errors/task';
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
@@ -315,14 +316,17 @@ describe('runScheduleTick', () => {
     expect(mockRunner.runTask).toHaveBeenCalled();
   });
 
-  it('returns in-flight when runTask raises a CONFLICT', async () => {
-    mockSelectTask.mockResolvedValue([baseTask({ config: {} })]);
-    mockRunner.runTask.mockRejectedValue(new TRPCError({ code: 'CONFLICT', message: 'busy' }));
+  it.each([TRPCError, TaskDomainError])(
+    'returns in-flight when runTask raises a %s CONFLICT',
+    async (ErrorType) => {
+      mockSelectTask.mockResolvedValue([baseTask({ config: {} })]);
+      mockRunner.runTask.mockRejectedValue(new ErrorType({ code: 'CONFLICT', message: 'busy' }));
 
-    const outcome = await runScheduleTick(taskId, userId, tickToken);
+      const outcome = await runScheduleTick(taskId, userId, tickToken);
 
-    expect(outcome).toEqual({ ran: false, reason: 'in-flight' });
-  });
+      expect(outcome).toEqual({ ran: false, reason: 'in-flight' });
+    },
+  );
 
   it('retains a trigger while the current round waits for human acceptance', async () => {
     mockSelectTask.mockResolvedValue([baseTask({ config: {} })]);

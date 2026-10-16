@@ -193,10 +193,10 @@ show_message() {
         tips_run_command)
             case $LANGUAGE in
                 zh_CN)
-                    echo "您已经完成了所有配置。请运行以下命令启动 Orvilo 尝试启动："
+                    echo "基础配置已生成。填写 Clerk 认证配置和独立 JWKS_KEY 后，运行以下命令启动 Orvilo："
                 ;;
                 *)
-                    echo "You have completed all configurations. Please run this command to start Orvilo:"
+                    echo "Base configuration is ready. Fill in the Clerk settings and a unique JWKS_KEY before starting Orvilo:"
                 ;;
             esac
         ;;
@@ -223,24 +223,21 @@ show_message() {
         tips_regen_jwks)
             case $LANGUAGE in
                 zh_CN)
-                    echo "在完成部署测试后，请前往 https://orvilo.aspectlylabs.com/docs/self-hosting/environment-variables/auth#jwks_key 生成新的 JWKS_KEY 并替换 .env 中的值，以确保安全性。"
+                    echo "启动前必须前往 https://orvilo.aspectlylabs.com/docs/self-hosting/environment-variables/auth#jwks_key 生成新的 JWKS_KEY 并替换 .env 中的值，以确保安全性。"
                 ;;
                 *)
-                    echo "After completing the deployment test, please go to https://orvilo.aspectlylabs.com/docs/self-hosting/environment-variables/auth#jwks_key to generate a new JWKS_KEY and replace the value in .env to ensure security."
+                    echo "Before starting the deployment, go to https://orvilo.aspectlylabs.com/docs/self-hosting/environment-variables/auth#jwks_key to generate a new JWKS_KEY and replace the value in .env to ensure security."
                 ;;
             esac
         ;;
         tips_disable_registration)
             case $LANGUAGE in
                 zh_CN)
-                    echo "如需限制用户注册，可在 .env 中配置："
-                    echo "  - 使用 SSO 登录时，设置 AUTH_DISABLE_EMAIL_PASSWORD=1 可禁用邮箱密码注册"
-                    echo "  - 使用邮箱密码登录时，设置 AUTH_ALLOWED_EMAILS=user1@example.com,user2@example.com 可限制允许登录的邮箱"
+                    echo "登录和注册策略由 Clerk 账户门户管理："
+                    echo "请在 Clerk 控制台配置登录方式及注册限制，并在 .env 中填写 AUTH_ACCOUNTS_URL、CLERK_SECRET_KEY、CLERK_ISSUER 和 CLERK_AUTHORIZED_PARTIES。"
                 ;;
                 *)
-                    echo "To restrict user registration, configure in .env:"
-                    echo "  - For SSO login: set AUTH_DISABLE_EMAIL_PASSWORD=1 to disable email/password registration"
-                    echo "  - For email/password login: set AUTH_ALLOWED_EMAILS=user1@example.com,user2@example.com to allow specific emails"
+                    echo "Configure sign-in and registration policies in Clerk; set AUTH_ACCOUNTS_URL, CLERK_SECRET_KEY, CLERK_ISSUER and CLERK_AUTHORIZED_PARTIES in .env."
                 ;;
             esac
         ;;
@@ -691,16 +688,7 @@ section_regenerate_secrets() {
         fi
     fi
 
-    # Generate AUTH_SECRET (base64 encoded 32 bytes)
-    AUTH_SECRET=$(openssl rand -base64 32)
-    if [ $? -ne 0 ]; then
-        echo $(show_message "security_secrect_regenerate_failed") "AUTH_SECRET"
-    else
-        sed "${SED_INPLACE_ARGS[@]}" "s#^AUTH_SECRET=.*#AUTH_SECRET=${AUTH_SECRET}#" .env
-        if [ $? -ne 0 ]; then
-            echo $(show_message "security_secrect_regenerate_failed") "AUTH_SECRET in \`.env\`"
-        fi
-    fi
+
 }
 
 show_message "ask_regenerate_secrets"

@@ -25,24 +25,24 @@ This repo is the **open-source root** (`github.com/alexj11324/orvilo1`, package 
 
 ## Complete Tech Stack
 
-| Category      | Technology                                                                          |
-| ------------- | ----------------------------------------------------------------------------------- |
-| Framework     | Next.js 16 + React 19                                                               |
-| Routing       | SPA inside Next.js with `react-router-dom`                                          |
-| Language      | TypeScript                                                                          |
-| UI Components | Local ReUI/shadcn primitives and adapters; retained `@lobehub/ui` features          |
-| Styling       | Tailwind roles and existing antd-style; choices owned by [react](../react/SKILL.md) |
-| Icons         | lucide-react, `@ant-design/icons`                                                   |
-| i18n          | react-i18next                                                                       |
-| State         | zustand                                                                             |
-| URL Params    | nuqs                                                                                |
-| Data Fetching | SWR                                                                                 |
-| React Hooks   | aHooks                                                                              |
-| Date/Time     | dayjs                                                                               |
-| Utilities     | es-toolkit                                                                          |
-| API           | TRPC (type-safe)                                                                    |
-| Database      | PostgreSQL + Drizzle ORM; environment-specific config                               |
-| Testing       | Vitest                                                                              |
+| Category      | Technology                                                                               |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| Framework     | Next.js 16 + React 19                                                                    |
+| Routing       | SPA inside Next.js with `react-router`                                                   |
+| Language      | TypeScript                                                                               |
+| UI Components | Local ReUI/shadcn primitives and adapters; retained `@lobehub/ui` features (see `react`) |
+| Styling       | Tailwind role classes; existing antd-style files (see `react` and `DESIGN.md`)           |
+| Icons         | lucide-react, `@ant-design/icons`                                                        |
+| i18n          | react-i18next                                                                            |
+| State         | zustand                                                                                  |
+| URL Params    | nuqs                                                                                     |
+| Data Fetching | SWR                                                                                      |
+| React Hooks   | aHooks                                                                                   |
+| Date/Time     | dayjs                                                                                    |
+| Utilities     | es-toolkit                                                                               |
+| API           | TRPC (type-safe)                                                                         |
+| Database      | PostgreSQL + Drizzle ORM (`neon` or `node` driver)                                       |
+| Testing       | Vitest                                                                                   |
 
 > Exact versions live in the root `package.json` — check there, not here.
 
@@ -56,13 +56,13 @@ git submodules.
 ├── apps/
 │   ├── cli/                  # Orvilo CLI
 │   ├── desktop/              # Electron desktop app
-│   └── server/               # Server runtime/business logic (`@/server/*` alias)
+│   └── server/               # Hono backend runtime (`@/server/*` alias)
 │       └── src/
 │           ├── router-hono/  # Hono endpoint routers and standalone runtime
 │           └── ...           # featureFlags, globalConfig, modules, routers, services, utils, workflows
 ├── docs/                     # changelog, development, self-hosting, usage
 ├── locales/                  # en-US, zh-CN, ...
-├── packages/                 # ~80 @orvilo/* workspace packages — `ls` for the full set. Key ones:
+├── packages/                 # @orvilo/* workspace packages — `ls` for the full set. Key ones:
 │   ├── agent-runtime/        # Agent runtime core
 │   ├── agent-signal/         # Agent Signal pipeline
 │   ├── agent-tracing/        # Tracing / snapshots
@@ -105,7 +105,7 @@ git submodules.
 | Global Providers    | `src/layout`                                                              |
 | Zustand Stores      | `src/store`                                                               |
 | Client Services     | `src/services/`                                                           |
-| REST API            | `src/app/(backend)/webapi`                                                |
+| REST API            | `apps/server/src/router-hono` (Next shells under `src/app/(backend)`)     |
 | tRPC Routers        | `apps/server/src/routers/{async\|lambda\|mobile\|tools}`                  |
 | Server Services     | `apps/server/src/services` (can access DB)                                |
 | Server Modules      | `apps/server/src/modules` (no DB access)                                  |

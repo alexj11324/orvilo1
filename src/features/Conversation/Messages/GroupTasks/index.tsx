@@ -45,7 +45,7 @@ const GroupTasksAvatar = memo<{ avatars: { avatar?: string; background?: string 
           style={{
             flex: 'none',
             height: 16,
-            border: `1px solid ${'var(--ant-color-border)'}`,
+            border: `1px solid ${'var(--border)'}`,
 
             width: 16,
 
@@ -55,7 +55,7 @@ const GroupTasksAvatar = memo<{ avatars: { avatar?: string; background?: string 
             top: -4,
           }}
         >
-          <ListTodo color={'var(--ant-color-text-description)'} size={10} />
+          <ListTodo color={'var(--foreground-description)'} size={10} />
         </div>
       </div>
     );

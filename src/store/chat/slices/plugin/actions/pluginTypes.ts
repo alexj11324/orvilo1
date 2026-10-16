@@ -25,8 +25,6 @@ const log = debug('orvilo-store:plugin-types');
  */
 
 type Setter = StoreSetter<ChatStore>;
-export const pluginTypes = (set: Setter, get: () => ChatStore, _api?: unknown) =>
-  new PluginTypesActionImpl(set, get, _api);
 
 export class PluginTypesActionImpl {
   readonly #get: () => ChatStore;

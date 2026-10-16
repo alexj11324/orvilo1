@@ -42,7 +42,7 @@ const styles = {
   deps: 'font-mono text-xs text-foreground-quaternary',
   dim: 'opacity-55 transition-opacity duration-150 ease-[ease] hover:opacity-100',
   label: 'text-xs text-muted-foreground',
-  list: 'overflow-hidden border border-sidebar-border rounded-(--ant-border-radius) bg-card',
+  list: 'overflow-hidden border border-sidebar-border rounded-(--radius-card) bg-card',
   mono: 'font-mono tabular-nums',
   num: 'flex-none min-w-5.5 font-mono text-xs text-foreground-quaternary',
   option: 'grid grid-cols-[128px_1fr] gap-2 items-baseline',

@@ -23,13 +23,13 @@ const FileList = () => {
     <div
       className="flex flex-col items-center justify-center gap-2 py-6"
       style={{
-        border: `1px dashed ${'var(--ant-color-split)'}`,
+        border: `1px dashed ${'var(--split-divider)'}`,
         borderRadius: 8,
         marginInline: 12,
       }}
     >
       <Avatar
-        background={'var(--ant-color-fill-tertiary)'}
+        background={'var(--muted)'}
         shape={'square'}
         size={48}
         avatar={

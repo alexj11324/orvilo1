@@ -48,7 +48,7 @@ const ChatTerminalPanel = memo(() => {
 
   return (
     <DraggablePanel
-      backgroundColor={'var(--ant-color-bg-container)'}
+      backgroundColor={'var(--card)'}
       expand={show}
       expandable={false}
       maxHeight={720}

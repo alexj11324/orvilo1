@@ -1,5 +1,3 @@
-export const TASK_DETAIL_SIDEBAR_MIN_WIDTH = 720;
-
 // One header, two forms, chosen by the column width rather than the viewport:
 // the same sections mount in the full page, the chat-side Portal and beside
 // the task conversation panel. One mounted property set wraps beneath the title in

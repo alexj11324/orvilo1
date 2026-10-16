@@ -5,6 +5,7 @@ import type { TaskContext } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { TaskDomainError } from '@/database/errors/task';
 import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
 import { AcceptanceModel } from '@/database/models/acceptance';
 import { IssueDeliveryModel } from '@/database/models/issueDelivery';
@@ -13,10 +14,18 @@ import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import { agentOperations, projects, taskDispatches, tasks, taskTopics } from '@/database/schemas';
+import {
+  agentOperations,
+  eventOutbox,
+  projects,
+  taskDispatches,
+  tasks,
+  taskTopics,
+} from '@/database/schemas';
 import { acceptances, verifyCheckResults, verifyRuns } from '@/database/schemas/verify';
 import { TaskService } from '@/server/services/task';
 import { IssueChecklistService } from '@/server/services/task/checklist';
+import { TaskMutationService } from '@/server/services/task/mutations';
 import { TaskDispatchService } from '@/server/services/taskDispatch';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
@@ -1263,6 +1272,65 @@ describe('Task Router Integration', () => {
       );
       return error?.cause?.data?.code;
     };
+
+    it('rejects workspace viewer writes through the application service without RPC', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const workspaceId = `task-mutation-scope-${userId}`;
+      const { workspaces, workspaceMembers } = await import('@/database/schemas');
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Mutation scope',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'viewer', userId: otherUserId, workspaceId },
+      ]);
+      const service = new TaskMutationService({ serverDB, userId: otherUserId, workspaceId });
+      await expect(service.update({ id: 'task_hidden', name: 'Changed' })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      await expect(
+        service.setParentBatch({ parentTaskId: 'task_hidden', taskIds: ['task_other'] }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    });
+
+    it('applies parent rules and rolls back through the application service without RPC', async () => {
+      const parent = await caller.create({ instruction: 'Parent' });
+      const child = await caller.create({ instruction: 'Child' });
+      const service = new TaskMutationService({ serverDB, userId });
+      const model = new TaskModel(serverDB, userId);
+      const foreign = await caller.create({
+        instruction: 'Different project',
+        projectId: await seedProject('other'),
+      });
+      const beforeActivities = await model.getActivities(child.data.id);
+      const readEvents = () =>
+        serverDB.select().from(eventOutbox).where(eq(eventOutbox.aggregateId, child.data.id));
+      const beforeEvents = await readEvents();
+      // The first child is written before the second child fails its project
+      // check: task row, revision, activity and outbox must all roll back.
+      await expect(
+        service.setParentBatch({
+          parentTaskId: parent.data.id,
+          taskIds: [child.data.id, foreign.data.id],
+        }),
+      ).rejects.toBeInstanceOf(TaskDomainError);
+      expect(await model.getActivities(child.data.id)).toEqual(beforeActivities);
+      expect(await readEvents()).toEqual(beforeEvents);
+      expect((await model.findById(child.data.id))?.domainRevision).toBe(child.data.domainRevision);
+      expect(
+        (await new TaskModel(serverDB, userId).findById(child.data.id))?.parentTaskId,
+      ).toBeNull();
+      await service.setParentBatch({ parentTaskId: parent.data.id, taskIds: [child.data.id] });
+      await expect(
+        service.update({ id: parent.data.id, parentTaskId: child.data.id }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST', cause: { data: { code: 'CYCLE' } } });
+      expect(
+        (await new TaskModel(serverDB, userId).findById(parent.data.id))?.parentTaskId,
+      ).toBeNull();
+    });
 
     it('puts several existing issues under one parent in a single write', async () => {
       const parent = await caller.create({ instruction: 'Parent', name: 'Parent' });

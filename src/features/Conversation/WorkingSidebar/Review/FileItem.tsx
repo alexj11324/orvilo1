@@ -44,12 +44,12 @@ const reviewDiffUnsafeCSS = `
     --diffs-header-font-family: var(--font-sans);
     --diffs-font-size: var(--text-sm);
     --diffs-line-height: calc(var(--spacing) * 5.5);
-    --diffs-added-light: var(--ant-color-success-hover);
-    --diffs-added-dark: var(--ant-color-success-border-hover);
-    --diffs-modified-light: var(--ant-color-info-hover);
-    --diffs-modified-dark: var(--ant-color-info-border-hover);
-    --diffs-deleted-light: var(--ant-color-error-hover);
-    --diffs-deleted-dark: var(--ant-color-error-border-hover);
+    --diffs-added-light: var(--success-hover);
+    --diffs-added-dark: var(--success-border-hover);
+    --diffs-modified-light: var(--info-hover);
+    --diffs-modified-dark: var(--info-border-hover);
+    --diffs-deleted-light: var(--destructive-hover);
+    --diffs-deleted-dark: var(--destructive-border-hover);
   }
 
   [data-gutter-buffer] {

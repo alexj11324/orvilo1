@@ -6,7 +6,7 @@
 > 基线：`release/caid-remediation-integration`（ACP/CAID integration tree 最新状态）。
 >
 > 词表映射（沿用 P00 inventory，不重造分类）：`RETIRE`→DELETE、`KEEP_SHARED`/`THIRD_PARTY`/`KEEP`→KEEP、
-> `REPLACE`/`RENAME`→REWRITE\_FOR\_ACP、`DEFER`/`NEEDS_TRACE`→INVESTIGATE。
+> `REPLACE`/`RENAME`→REWRITE_FOR_ACP、`DEFER`/`NEEDS_TRACE`→INVESTIGATE。
 
 ## 1. 冻结边界（KEEP 词表）
 
@@ -21,7 +21,7 @@
 | Collaboration / presence / shared conversations      | collaboration-gateway、share host                                                                  | `collaboration`             |
 | GitHub / Linear integration                          | connector/linearSync/repository routers 与 services、Connectors UI                                 | `github-linear-integration` |
 | Conversation / activity UI                           | Conversation/ChatInput/activity/intervention 展示面（见 §3 REWRITE）                               | `conversation-surface`      |
-| Auth / DB / storage / observability                  | better-auth/OIDC、credential vault、database/trpc/types/utils                                      | `auth-infra` / `data-infra` |
+| Auth / DB / storage / observability                  | Clerk accounts portal / app sessions / OIDC、credential vault、database/trpc/types/utils           | `auth-infra` / `data-infra` |
 | Harness-native agent tools                           | builtin-tool-\* / builtin-skills / builtin-agents、editor-runtime、web-crawler、python-interpreter | `agent-tools`               |
 | Documents / Pages                                    | AgentDocument\*、PageEditor、Portal、ResourceManager                                               | `documents-pages`           |
 | Desktop / mobile / share hosts                       | apps/desktop、apps/workbench、apps/share                                                           | `desktop-mobile-shell`      |
@@ -48,7 +48,7 @@
 （任务完成→外部 bot 通知）。该投递链路属 IM 适配语义，随本项删除；若 GitHub/Linear connector 侧也复用它，
 ORV-105 须先把那部分投递逻辑迁出。
 
-## 3. REWRITE\_FOR\_ACP（保留能力、改换地基）
+## 3. REWRITE_FOR_ACP（保留能力、改换地基）
 
 | capability             | 决策                                                                                                                                                                                                                                                                                                                                                                                  |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -59,7 +59,7 @@ ORV-105 须先把那部分投递逻辑迁出。
 
 | capability                        | 现状证据                                                                                                                                                                                                                                 | owner      | follow-up                                                                                          |
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------- |
-| `model-runtime-adjacent-packages` | `context-engine`/`prompts`/`model-bank` 共 592 files，inbound 451 个 importer；内有任务 / 评审仍消费的 prompt 文本与类型                                                                                                                 | alexj11324 | ORV-102 先按 census 的 per-file consumer 表拆 KEEP\_SHARED primitive，再删残余                     |
+| `model-runtime-adjacent-packages` | `context-engine`/`prompts`/`model-bank` 共 592 files，inbound 451 个 importer；内有任务 / 评审仍消费的 prompt 文本与类型                                                                                                                 | alexj11324 | ORV-102 先按 census 的 per-file consumer 表拆 KEEP_SHARED primitive，再删残余                      |
 | `knowledge-rag`                   | knowledge/knowledgeBase/asr routers + file-loaders + Knowledge UI 仍在；边界文档未点名 Knowledge                                                                                                                                         | alexj11324 | 产品裁决：Knowledge 是否在 ACP 产品边界内；不在则走 ORV-108 闭包                                   |
 | `misc-adjacent-packages`          | `packages/achaos`（32 files）非 workspace 成员、零入边；README 自述消费者（Goal/Evals/self-improvement）为愿景性                                                                                                                         | alexj11324 | 保留须指明活消费者（记为 dev tooling），否则随 ORV-108 删除                                        |
 | `market-service`                  | `apps/server/src/services/market`（5 files）被 aiAgent heteroDispatch、toolExecution serverRuntimes、githubRepo、connectorData、taskTemplate、marketSDK middleware 活消费 —— 它身兼 tool/skill 安装管道，不只是已退役的 skill storefront | alexj11324 | 拆出 retained tool-install/connector 路径用到的导出与退役 market 面导出；前者留、后者随 ORV-104 删 |

@@ -41,7 +41,7 @@ const CommentInput = memo<CommentInputProps>(({ onSubmit, onCancel }) => {
             size="sm"
             variant="ghost"
             style={{
-              color: 'var(--ant-color-text-description)',
+              color: 'var(--foreground-description)',
             }}
             onClick={onCancel}
           >

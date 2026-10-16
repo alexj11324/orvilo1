@@ -8,7 +8,7 @@ const NProgress = () => {
   return (
     !isDesktop && (
       <NextTopLoader
-        color={'var(--ant-color-text)'}
+        color={'var(--foreground)'}
         height={2}
         shadow={false}
         showSpinner={false}

@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { mutate } from '@/libs/swr';
 import { useUserStore } from '@/store/user';
 
-import { teammatesClient } from '../api/client';
+import { teammatesService } from '../api/client';
 import type { WorkspaceRole } from '../api/contract';
 import { acceptInviteAndResolvePath, resolveWorkspacePath } from './acceptInvite';
 
@@ -43,7 +43,7 @@ const InviteAcceptPage = memo(() => {
     error,
     isLoading,
   } = useSWR(token ? invitePreviewKey(token) : null, () =>
-    teammatesClient.invitation.preview.query({ token }),
+    teammatesService.invitation.preview({ token }),
   );
 
   const [accepting, setAccepting] = useState(false);
@@ -59,9 +59,7 @@ const InviteAcceptPage = memo(() => {
   /** Land an already-joined invitee inside the workspace. */
   const goToWorkspace = useCallback(
     async (workspaceId: string) => {
-      const path = await resolveWorkspacePath(workspaceId, () =>
-        teammatesClient.workspace.list.query(),
-      );
+      const path = await resolveWorkspacePath(workspaceId, () => teammatesService.workspace.list());
       navigate(path, { replace: true });
     },
     [navigate],
@@ -73,8 +71,8 @@ const InviteAcceptPage = memo(() => {
     setAcceptError(null);
     try {
       const path = await acceptInviteAndResolvePath(token, {
-        accept: (inviteToken) => teammatesClient.invitation.accept.mutate({ token: inviteToken }),
-        listWorkspaces: () => teammatesClient.workspace.list.query(),
+        accept: (inviteToken) => teammatesService.invitation.accept({ token: inviteToken }),
+        listWorkspaces: () => teammatesService.workspace.list(),
         // The joined workspace is new to the cached membership list as well.
         refreshUserState: async () => {
           await Promise.all([

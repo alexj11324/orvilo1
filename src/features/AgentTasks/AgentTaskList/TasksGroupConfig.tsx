@@ -298,7 +298,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
         <FieldGroup className="gap-3">
           {(viewMode === 'kanban' ? boardFormItems : formItems).map((item) => (
             <Field key={item.label} orientation={'horizontal'}>
-              <FieldLabel style={{ color: 'var(--ant-color-text-secondary)', fontSize: 14 }}>
+              <FieldLabel style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>
                 {item.label}
               </FieldLabel>
               {item.children}
@@ -307,7 +307,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
         </FieldGroup>
         <div
           className="flex justify-between"
-          style={{ borderTop: `1px solid ${'var(--ant-color-border-secondary)'}`, paddingTop: 8 }}
+          style={{ borderTop: `1px solid ${'var(--divider)'}`, paddingTop: 8 }}
         >
           <Button
             size="sm"

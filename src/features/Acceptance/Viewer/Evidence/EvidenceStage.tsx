@@ -11,7 +11,7 @@ type Rect = AcceptanceReviewAnnotation['rect'];
 
 const styles = {
   viewport:
-    'overflow-auto overscroll-contain flex flex-1 min-w-0 min-h-30 border border-sidebar-border rounded-(--ant-border-radius-lg) bg-fill-quaternary',
+    'overflow-auto overscroll-contain flex flex-1 min-w-0 min-h-30 border border-sidebar-border rounded-(--radius-overlay) bg-fill-quaternary',
   viewportInner: 'm-auto',
 };
 

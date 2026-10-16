@@ -21,15 +21,11 @@ import {
   upsertPluginMode,
 } from '@orvilo/types';
 
-import { getAgentStoreState } from '@/store/agent';
-import { agentSelectors } from '@/store/agent/selectors/selectors';
-import { getAiInfraStoreState } from '@/store/aiInfra';
-
 import { describeHeterogeneousAgent, renderHeteroRuntimeLines } from './heteroAgentDescriptor';
 import type {
+  AgentManagerCapabilities,
   AgentManagerRuntimeServices,
   AgentSearchItem,
-  AvailableModel,
   AvailableProvider,
   CreateAgentParams,
   CreateAgentState,
@@ -55,6 +51,7 @@ export class AgentManagerRuntime {
    */
   private static promptUpdateQueues = new Map<string, Promise<unknown>>();
 
+  private capabilities: AgentManagerCapabilities;
   private agentService: IAgentService;
 
   /**
@@ -62,6 +59,7 @@ export class AgentManagerRuntime {
    * @param services - Required services for runtime operations
    */
   constructor(services: AgentManagerRuntimeServices) {
+    this.capabilities = services.capabilities;
     this.agentService = services.agentService;
   }
 
@@ -137,13 +135,11 @@ export class AgentManagerRuntime {
       // Ensure agent is loaded in store before reading its config
       await this.ensureAgentLoaded(agentId);
 
-      const state = getAgentStoreState();
-      const agentStore = getAgentStoreState();
       const resultState: UpdateAgentConfigState = { success: true };
       const contentParts: string[] = [];
 
       // Get current config for merging
-      const previousConfig = agentSelectors.getAgentConfigById(agentId)(state);
+      const previousConfig = this.capabilities.agents.getConfig(agentId);
 
       // Guard against LLM double-encoding: if config/meta is a JSON string, parse it.
       // Use `as any` to bypass TS narrowing — at runtime LLMs can send strings for
@@ -211,7 +207,7 @@ export class AgentManagerRuntime {
           configNewValues[field] = (finalConfig as unknown as Record<string, unknown>)[field];
         }
 
-        await agentStore.optimisticUpdateAgentConfig(agentId, finalConfig);
+        await this.capabilities.agents.updateConfig(agentId, finalConfig);
 
         const nonPluginFields = configUpdatedFields.filter((f) => f !== 'plugins');
         if (nonPluginFields.length > 0 || !params.togglePlugin) {
@@ -230,7 +226,7 @@ export class AgentManagerRuntime {
 
       // Handle meta update
       if (rawMeta && Object.keys(rawMeta).length > 0) {
-        const previousMeta = agentSelectors.getAgentMetaById(agentId)(state);
+        const previousMeta = this.capabilities.agents.getMeta(agentId);
         const metaUpdatedFields = Object.keys(rawMeta);
         const metaPreviousValues: Record<string, unknown> = {};
 
@@ -238,7 +234,7 @@ export class AgentManagerRuntime {
           metaPreviousValues[field] = (previousMeta as unknown as Record<string, unknown>)[field];
         }
 
-        await agentStore.optimisticUpdateAgentMeta(agentId, rawMeta);
+        await this.capabilities.agents.updateMeta(agentId, rawMeta);
 
         resultState.meta = {
           newValues: rawMeta,
@@ -452,30 +448,10 @@ export class AgentManagerRuntime {
    */
   async getAvailableModels(params: GetAvailableModelsParams): Promise<BuiltinToolResult> {
     try {
-      const aiInfraState = getAiInfraStoreState();
-      const enabledList = aiInfraState.enabledChatModelList || [];
-
-      const filteredList = params.providerId
+      const enabledList = await this.capabilities.getAvailableModels();
+      const providers: AvailableProvider[] = params.providerId
         ? enabledList.filter((p) => p.id === params.providerId)
         : enabledList;
-
-      const providers: AvailableProvider[] = filteredList.map((provider) => ({
-        id: provider.id,
-        models: provider.children.map((model): AvailableModel => ({
-          abilities: model.abilities
-            ? {
-                files: model.abilities.files,
-                functionCall: model.abilities.functionCall,
-                reasoning: model.abilities.reasoning,
-                vision: model.abilities.vision,
-              }
-            : undefined,
-          description: model.description,
-          id: model.id,
-          name: model.displayName || model.id,
-        })),
-        name: provider.name,
-      }));
 
       const totalModels = providers.reduce((sum, p) => sum + p.models.length, 0);
 
@@ -501,19 +477,18 @@ export class AgentManagerRuntime {
     try {
       const previousPrompt = await this.enqueuePromptUpdate(agentId, async () => {
         await this.ensureAgentLoaded(agentId);
-        const state = getAgentStoreState();
-        const previousConfig = agentSelectors.getAgentConfigById(agentId)(state);
+        const previousPrompt = this.capabilities.agents.getConfig(agentId)?.systemRole;
 
         if (params.streaming) {
           await this.performStreamingPromptUpdate(agentId, params.prompt);
         } else {
-          await getAgentStoreState().optimisticUpdateAgentConfig(agentId, {
+          await this.capabilities.agents.updateConfig(agentId, {
             editorData: null,
             systemRole: params.prompt,
           });
         }
 
-        return previousConfig?.systemRole;
+        return previousPrompt;
       });
 
       const content = params.prompt
@@ -566,43 +541,38 @@ export class AgentManagerRuntime {
    * Stream update prompt with typewriter effect
    */
   private async performStreamingPromptUpdate(agentId: string, prompt: string): Promise<void> {
-    const generation = getAgentStoreState().startStreamingSystemRole(agentId);
+    const generation = this.capabilities.agents.startStreamingSystemRole(agentId);
 
     const chunkSize = 5;
     const delay = 10;
 
-    for (let i = 0; i < prompt.length; i += chunkSize) {
-      const chunk = prompt.slice(i, i + chunkSize);
-      getAgentStoreState().appendStreamingSystemRole(agentId, generation, chunk);
-
-      if (i + chunkSize < prompt.length) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
-
     try {
+      for (let i = 0; i < prompt.length; i += chunkSize) {
+        const chunk = prompt.slice(i, i + chunkSize);
+        this.capabilities.agents.appendStreamingSystemRole(agentId, generation, chunk);
+
+        if (i + chunkSize < prompt.length) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+
       // Persistence is invocation-scoped and independent from ownership of the
       // global visual stream. Another agent may take over the animation without
       // turning this explicit update into a successful no-op.
-      await getAgentStoreState().optimisticUpdateAgentConfig(agentId, {
+      await this.capabilities.agents.updateConfig(agentId, {
         editorData: null,
         systemRole: prompt,
       });
     } finally {
-      await getAgentStoreState().finishStreamingSystemRole(agentId, generation);
+      await this.capabilities.agents.finishStreamingSystemRole(agentId, generation);
     }
   }
 
   private async ensureAgentLoaded(agentId: string): Promise<void> {
-    const state = getAgentStoreState();
-    const existing = state.agentMap[agentId];
-    if (existing) return;
-
-    const config = await this.agentService.getAgentConfigById(agentId);
-    if (config) {
-      getAgentStoreState().internal_dispatchAgentMap(agentId, config);
-    }
+    await this.capabilities.agents.ensureLoaded(agentId);
   }
+
+  // ==================== Error Handling ====================
 
   private handleError(error: unknown, context: string): BuiltinToolResult {
     const err = error as Error;

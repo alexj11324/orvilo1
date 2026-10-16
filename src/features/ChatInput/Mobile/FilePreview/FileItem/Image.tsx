@@ -12,7 +12,7 @@ import { MIN_IMAGE_SIZE } from './style';
 const styles = {
   deleteButton:
     'text-overlay-mask-foreground bg-overlay-mask hover:bg-destructive hover:text-destructive-on-fill active:text-destructive-on-fill',
-  editableImage: 'bg-card ring-1 ring-inset ring-(color:--ant-color-fill)',
+  editableImage: 'bg-card ring-1 ring-inset ring-(color:--fill)',
   image: 'w-16 min-w-16 min-h-16 max-h-16 my-0',
 };
 

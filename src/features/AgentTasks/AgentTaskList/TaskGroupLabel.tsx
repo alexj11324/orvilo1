@@ -45,7 +45,7 @@ const TaskGroupPrefix = ({ group }: { group: TaskGroupMeta }) => {
 
   if (group.groupBy === 'automationMode') {
     return createElement(group.automationMode === 'heartbeat' ? HeartPulse : CalendarClock, {
-      color: 'var(--ant-color-text-description)',
+      color: 'var(--foreground-description)',
       size: 16,
     });
   }

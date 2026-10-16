@@ -83,10 +83,10 @@ const EmptyPlaceholder = () => {
         >
           <div className={cn('flex flex-col p-4', styles.card)}>
             <span className={styles.actionTitle}>{t('FileManager.emptyStatus.actions.file')}</span>
-            <div className={styles.glow} style={{ background: 'var(--ant-gold)' }} />
+            <div className={styles.glow} style={{ background: 'var(--palette-gold-6)' }} />
             <FileTypeIcon
               className={styles.icon}
-              color={'var(--ant-gold)'}
+              color={'var(--palette-gold-6)'}
               size={ICON_SIZE}
               icon={
                 <span className="anticon" role="img">
@@ -116,10 +116,10 @@ const EmptyPlaceholder = () => {
             <span className={styles.actionTitle}>
               {t('FileManager.emptyStatus.actions.folder')}
             </span>
-            <div className={styles.glow} style={{ background: 'var(--ant-geekblue)' }} />
+            <div className={styles.glow} style={{ background: 'var(--palette-geekblue-6)' }} />
             <FileTypeIcon
               className={styles.icon}
-              color={'var(--ant-geekblue)'}
+              color={'var(--palette-geekblue-6)'}
               size={ICON_SIZE}
               type={'folder'}
               icon={

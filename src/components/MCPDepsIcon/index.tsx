@@ -72,8 +72,8 @@ const InstallationIcon = memo<{ size?: number; type: string }>(({ type, size = 2
       <TooltipTrigger render={<span />}>
         {createElement(icons[iconType] || Terminal, {
           size,
-          style: { color: 'var(--ant-color-text-description)' },
-          fill: 'var(--ant-color-text-description)',
+          style: { color: 'var(--foreground-description)' },
+          fill: 'var(--foreground-description)',
         })}
       </TooltipTrigger>
       <TooltipContent>{iconType}</TooltipContent>

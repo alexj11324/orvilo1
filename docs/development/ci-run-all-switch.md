@@ -9,7 +9,8 @@ Test CI 的每个任务失败时会取消整轮运行。一个分支有多处互
 推送的最新提交信息里带 `[ci full]` 时，这一轮不取消：
 
 - 十处 “Fail fast — cancel sibling jobs” 步骤跳过；
-- 应用测试和服务端测试两个分片矩阵的 `fail-fast` 关闭。
+- 应用测试和服务端测试两个分片矩阵的 `fail-fast` 关闭；
+- affected planner 强制选择所有测试范围。覆盖率仍只在 `canary` / `main` push 上采集。
 
 不带标记时行为不变。汇总门禁 “Required Quality Gate” 不变，任何一项失败仍然是红。
 
@@ -25,7 +26,7 @@ git commit -m "🐛 fix: ... [ci full]"
 
 `.github/workflows/test.yml`：
 
-- 工作流级 `env.CI_RUN_ALL`，由 `github.event.head_commit.message` 计算。推送触发的运行是结论的所有者，PR 触发的运行只照抄它的结论，所以只读推送事件。
+- 工作流级 `env.CI_RUN_ALL`，由 `github.event.head_commit.message` 计算。同仓库 PR 直接使用 head SHA 上推送运行的必需检查，不再启动轮询镜像门禁；fork PR 独立运行。此开关只读推送事件。
 - `strategy` 里不能用 `env`，两个矩阵直接写同一个表达式。
 
 ## 由来

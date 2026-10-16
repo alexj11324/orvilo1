@@ -61,7 +61,7 @@ const AgentHeader = memo(() => {
         <div
           style={{
             background: meta.backgroundColor || 'transparent',
-            borderRadius: 'var(--ant-border-radius-lg)',
+            borderRadius: 'var(--radius-overlay)',
             height: meta.backgroundColor ? 160 : 80,
             marginInline: isMobile ? 0 : -16,
             width: isMobile ? '100%' : 'calc(100% + 32px)',
@@ -69,9 +69,9 @@ const AgentHeader = memo(() => {
         />
         <div
           style={{
-            background: 'var(--ant-color-bg-container)',
-            border: `4px solid ${'var(--ant-color-bg-container)'}`,
-            borderRadius: `calc(${'var(--ant-border-radius-lg)'} + 4px)`,
+            background: 'var(--card)',
+            border: `4px solid ${'var(--card)'}`,
+            borderRadius: `calc(${'var(--radius-overlay)'} + 4px)`,
             bottom: 0,
             left: 24,
             position: 'absolute',
@@ -96,10 +96,7 @@ const AgentHeader = memo(() => {
             attention between two ways to do the same thing. */}
         {showNamePrompt ? (
           <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
-            <div
-              className="truncate"
-              style={{ color: 'var(--ant-color-text-tertiary)', fontSize: 20 }}
-            >
+            <div className="truncate" style={{ color: 'var(--foreground-tertiary)', fontSize: 20 }}>
               {t('settingAgent.personalName.unnamed', { ns: 'setting' })}
             </div>
             <Button
@@ -140,14 +137,14 @@ const AgentHeader = memo(() => {
             <div
               className="truncate"
               style={{
-                color: role ? 'var(--ant-color-text-secondary)' : 'var(--ant-color-text-tertiary)',
+                color: role ? 'var(--muted-foreground)' : 'var(--foreground-tertiary)',
               }}
             >
               {role || t('settingAgent.role.unset', { ns: 'setting' })}
             </div>
           ) : null}
           {slug && !suppressDuplicateRole ? (
-            <div style={{ color: 'var(--ant-color-text-tertiary)' }}>·</div>
+            <div style={{ color: 'var(--foreground-tertiary)' }}>·</div>
           ) : null}
           {/* The tooltip only renders when a slug exists, so it can always name
               the real url rather than a `<slug>` the reader has to substitute. */}
@@ -159,9 +156,9 @@ const AgentHeader = memo(() => {
                     <span style={{ display: 'inline-flex' }}>
                       <code
                         className="font-mono rounded bg-muted px-1"
-                        style={{ color: 'var(--ant-color-text-secondary)', flex: 'none' }}
+                        style={{ color: 'var(--muted-foreground)', flex: 'none' }}
                       >
-                        <span style={{ color: 'var(--ant-color-text-tertiary)' }}>@</span>
+                        <span style={{ color: 'var(--foreground-tertiary)' }}>@</span>
                         {slug}
                       </code>
                     </span>

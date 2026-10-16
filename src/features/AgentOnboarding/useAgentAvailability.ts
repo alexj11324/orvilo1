@@ -38,13 +38,22 @@ export const useAgentAvailability = () => {
       resumed.data?.agent ? [...agentList, resumed.data.agent] : agentList,
     ),
   });
+  const ready =
+    agents.data !== undefined &&
+    providers.data !== undefined &&
+    (!needsWorkspaceAgent || resumed.data !== undefined);
   return {
     availability,
+    /**
+     * Usable on evidence already loaded: a fetched agent list with a connected CLI
+     * Agent proves it on its own, so a failing provider-binding or checkpoint probe
+     * must not wall that account off.
+     */
+    confirmedUsable:
+      (ready && availability.usable) ||
+      (agents.data !== undefined && personalAvailability.runnableCliTypes.size > 0),
     error: agents.error ?? providers.error ?? resumed.error,
-    ready:
-      agents.data !== undefined &&
-      providers.data !== undefined &&
-      (!needsWorkspaceAgent || resumed.data !== undefined),
+    ready,
     retry: async () => {
       await Promise.all([
         agents.mutate(),

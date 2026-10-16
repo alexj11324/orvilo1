@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useClientDataSWR } from '@/libs/swr';
-import { lambdaClient } from '@/libs/trpc/client';
+import { workTeamService } from '@/services/workTeam';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 
 import { MY_WORK_PRIORITY_LABEL_KEYS } from './myWorkDisplay';
@@ -29,10 +29,7 @@ export const useWorkQueryGroupTitle = (input: {
     .join('\u001F');
   const { data: cyclePages } = useClientDataSWR(
     cycleKey ? ['work-query-cycle-names', cycleKey] : null,
-    () =>
-      Promise.all(
-        cycleKey.split('\u001F').map((teamId) => lambdaClient.team.team.query({ teamId })),
-      ),
+    () => Promise.all(cycleKey.split('\u001F').map((teamId) => workTeamService.team({ teamId }))),
   );
 
   const projectName = useCallback(

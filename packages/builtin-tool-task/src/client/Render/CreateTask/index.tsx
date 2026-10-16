@@ -66,7 +66,7 @@ export const CreateTaskRender = memo<BuiltinRenderProps<CreateTaskParams, Create
         style={{
           background: 'var(--card)',
           border: '1px solid var(--sidebar-border)',
-          borderRadius: 'var(--ant-border-radius)',
+          borderRadius: 'var(--radius-card)',
           width: '100%',
         }}
         onClick={identifier ? () => openTaskDetail(identifier) : undefined}
@@ -107,7 +107,7 @@ export const CreateTaskRender = memo<BuiltinRenderProps<CreateTaskParams, Create
             </div>
           ) : null}
           {parent && (
-            <span className="text-xs" style={{ color: 'var(--ant-color-text-tertiary)' }}>
+            <span className="text-xs" style={{ color: 'var(--foreground-tertiary)' }}>
               {`Subtask of ${parent}`}
             </span>
           )}

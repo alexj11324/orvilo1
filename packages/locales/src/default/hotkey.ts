@@ -14,6 +14,8 @@ export default {
   'desktop.showApp.title': 'Show/Hide Main Window',
   'editMessage.desc': 'Enter edit mode by holding Alt and double-clicking the message',
   'editMessage.title': 'Edit Message',
+  'goToAgent.desc': 'Press G then J to open your agent',
+  'goToAgent.title': 'Go to Agent',
   'goToDrafts.desc': 'Press G then D to open your drafts',
   'goToDrafts.title': 'Go to Drafts',
   'goToInbox.desc': 'Press G then I to open the inbox',

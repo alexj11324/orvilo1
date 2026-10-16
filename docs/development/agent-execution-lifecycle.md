@@ -34,3 +34,21 @@ with typed errors. See [start-intent-contract.md](./start-intent-contract.md).
 
 New code should depend on the `services/agentExecution` services (or their
 types in `agentExecution/types.ts`) directly, not on the facade.
+
+## Skill chips sent to an external CLI
+
+The composer stores a picked skill as `<skill name="…" label="…" />`, which the
+message list renders as a chip. An external CLI reads that markup as plain text
+and loads nothing. `buildHeterogeneousPrompt`
+(`packages/heterogeneous-agents/src/protocol/promptEngine.ts`), the one prompt
+builder every heterogeneous transport goes through, rewrites each chip to
+`/name` in the text sent to the CLI. The stored message is not changed.
+Agent-document skills (`agent-skills:` names) are Orvilo's own and are left as
+they are.
+
+A CLI treats `/name` as a command only at the start of the message, so a chip
+picked first invokes the skill; a chip later in the text reads as a mention.
+
+For the same reason the `/` menu of an external CLI Agent lists only the skills
+found on its device (`resolveSlashInstalledSkills`). Orvilo's installed skills
+are not commands of that CLI.

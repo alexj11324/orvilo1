@@ -2,6 +2,7 @@ import { canUseWorkspaceApiKeys } from '@/business/server/workspaceApiKey';
 import { ApiKeyModel } from '@/database/models/apiKey';
 import type { ApiKeyItem } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 
 import { BaseService } from '../common/base.service';
 import type {
@@ -27,7 +28,7 @@ export class ApiKeyService extends BaseService {
 
   constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     super(db, userId, workspaceId);
-    this.apiKeyModel = new ApiKeyModel(db, userId, workspaceId);
+    this.apiKeyModel = new ApiKeyModel(db, KeyVaultsGateKeeper.initWithEnvKey, userId, workspaceId);
   }
 
   async createApiKey(request: CreateApiKeyRequest): Promise<CreatedApiKeyResponse> {

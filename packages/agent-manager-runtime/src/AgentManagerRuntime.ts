@@ -14,8 +14,6 @@
  * Services must be injected via constructor for runtime-agnostic usage
  * (e.g., server-side services vs client-side services).
  */
-import type { ComposioAppType, OrviloSkillProviderType } from '@orvilo/const';
-import { resolveConnectorCatalogItem } from '@orvilo/const';
 import {
   marketToolsResultsPrompt,
   modelsResultsPrompt,
@@ -29,28 +27,11 @@ import {
   upsertPluginMode,
 } from '@orvilo/types';
 
-import { getAgentStoreState } from '@/store/agent';
-import { agentSelectors } from '@/store/agent/selectors/selectors';
-import { getAiInfraStoreState } from '@/store/aiInfra';
-import { getToolStoreState } from '@/store/tool';
-import {
-  builtinToolSelectors,
-  composioStoreSelectors,
-  orviloSkillStoreSelectors,
-  pluginSelectors,
-} from '@/store/tool/selectors';
-import type { ComposioServer } from '@/store/tool/slices/composioStore/types';
-import { ComposioServerStatus } from '@/store/tool/slices/composioStore/types';
-import type { OrviloSkillServer } from '@/store/tool/slices/orviloSkillStore/types';
-import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
-import { getUserStoreState } from '@/store/user';
-import { userProfileSelectors } from '@/store/user/selectors';
-
 import { describeHeterogeneousAgent, renderHeteroRuntimeLines } from './heteroAgentDescriptor';
 import type {
+  AgentManagerCapabilities,
   AgentManagerRuntimeServices,
   AgentSearchItem,
-  AvailableModel,
   AvailableProvider,
   CreateAgentParams,
   CreateAgentState,
@@ -82,6 +63,7 @@ export class AgentManagerRuntime {
    */
   private static promptUpdateQueues = new Map<string, Promise<unknown>>();
 
+  private capabilities: AgentManagerCapabilities;
   private agentService: IAgentService;
   private discoverService: IDiscoverService;
 
@@ -90,6 +72,7 @@ export class AgentManagerRuntime {
    * @param services - Required services for runtime operations
    */
   constructor(services: AgentManagerRuntimeServices) {
+    this.capabilities = services.capabilities;
     this.agentService = services.agentService;
     this.discoverService = services.discoverService;
   }
@@ -166,13 +149,11 @@ export class AgentManagerRuntime {
       // Ensure agent is loaded in store before reading its config
       await this.ensureAgentLoaded(agentId);
 
-      const state = getAgentStoreState();
-      const agentStore = getAgentStoreState();
       const resultState: UpdateAgentConfigState = { success: true };
       const contentParts: string[] = [];
 
       // Get current config for merging
-      const previousConfig = agentSelectors.getAgentConfigById(agentId)(state);
+      const previousConfig = this.capabilities.agents.getConfig(agentId);
 
       // Guard against LLM double-encoding: if config/meta is a JSON string, parse it.
       // Use `as any` to bypass TS narrowing — at runtime LLMs can send strings for
@@ -240,7 +221,7 @@ export class AgentManagerRuntime {
           configNewValues[field] = (finalConfig as unknown as Record<string, unknown>)[field];
         }
 
-        await agentStore.optimisticUpdateAgentConfig(agentId, finalConfig);
+        await this.capabilities.agents.updateConfig(agentId, finalConfig);
 
         const nonPluginFields = configUpdatedFields.filter((f) => f !== 'plugins');
         if (nonPluginFields.length > 0 || !params.togglePlugin) {
@@ -259,7 +240,7 @@ export class AgentManagerRuntime {
 
       // Handle meta update
       if (rawMeta && Object.keys(rawMeta).length > 0) {
-        const previousMeta = agentSelectors.getAgentMetaById(agentId)(state);
+        const previousMeta = this.capabilities.agents.getMeta(agentId);
         const metaUpdatedFields = Object.keys(rawMeta);
         const metaPreviousValues: Record<string, unknown> = {};
 
@@ -267,7 +248,7 @@ export class AgentManagerRuntime {
           metaPreviousValues[field] = (previousMeta as unknown as Record<string, unknown>)[field];
         }
 
-        await agentStore.optimisticUpdateAgentMeta(agentId, rawMeta);
+        await this.capabilities.agents.updateMeta(agentId, rawMeta);
 
         resultState.meta = {
           newValues: rawMeta,
@@ -535,30 +516,10 @@ export class AgentManagerRuntime {
    */
   async getAvailableModels(params: GetAvailableModelsParams): Promise<BuiltinToolResult> {
     try {
-      const aiInfraState = getAiInfraStoreState();
-      const enabledList = aiInfraState.enabledChatModelList || [];
-
-      const filteredList = params.providerId
+      const enabledList = await this.capabilities.getAvailableModels();
+      const providers: AvailableProvider[] = params.providerId
         ? enabledList.filter((p) => p.id === params.providerId)
         : enabledList;
-
-      const providers: AvailableProvider[] = filteredList.map((provider) => ({
-        id: provider.id,
-        models: provider.children.map((model): AvailableModel => ({
-          abilities: model.abilities
-            ? {
-                files: model.abilities.files,
-                functionCall: model.abilities.functionCall,
-                reasoning: model.abilities.reasoning,
-                vision: model.abilities.vision,
-              }
-            : undefined,
-          description: model.description,
-          id: model.id,
-          name: model.displayName || model.id,
-        })),
-        name: provider.name,
-      }));
 
       const totalModels = providers.reduce((sum, p) => sum + p.models.length, 0);
 
@@ -584,19 +545,18 @@ export class AgentManagerRuntime {
     try {
       const previousPrompt = await this.enqueuePromptUpdate(agentId, async () => {
         await this.ensureAgentLoaded(agentId);
-        const state = getAgentStoreState();
-        const previousConfig = agentSelectors.getAgentConfigById(agentId)(state);
+        const previousPrompt = this.capabilities.agents.getConfig(agentId)?.systemRole;
 
         if (params.streaming) {
           await this.performStreamingPromptUpdate(agentId, params.prompt);
         } else {
-          await getAgentStoreState().optimisticUpdateAgentConfig(agentId, {
+          await this.capabilities.agents.updateConfig(agentId, {
             editorData: null,
             systemRole: params.prompt,
           });
         }
 
-        return previousConfig?.systemRole;
+        return previousPrompt;
       });
 
       const content = params.prompt
@@ -649,30 +609,30 @@ export class AgentManagerRuntime {
    * Stream update prompt with typewriter effect
    */
   private async performStreamingPromptUpdate(agentId: string, prompt: string): Promise<void> {
-    const generation = getAgentStoreState().startStreamingSystemRole(agentId);
+    const generation = this.capabilities.agents.startStreamingSystemRole(agentId);
 
     const chunkSize = 5;
     const delay = 10;
 
-    for (let i = 0; i < prompt.length; i += chunkSize) {
-      const chunk = prompt.slice(i, i + chunkSize);
-      getAgentStoreState().appendStreamingSystemRole(agentId, generation, chunk);
-
-      if (i + chunkSize < prompt.length) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
-
     try {
+      for (let i = 0; i < prompt.length; i += chunkSize) {
+        const chunk = prompt.slice(i, i + chunkSize);
+        this.capabilities.agents.appendStreamingSystemRole(agentId, generation, chunk);
+
+        if (i + chunkSize < prompt.length) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+
       // Persistence is invocation-scoped and independent from ownership of the
       // global visual stream. Another agent may take over the animation without
       // turning this explicit update into a successful no-op.
-      await getAgentStoreState().optimisticUpdateAgentConfig(agentId, {
+      await this.capabilities.agents.updateConfig(agentId, {
         editorData: null,
         systemRole: prompt,
       });
     } finally {
-      await getAgentStoreState().finishStreamingSystemRole(agentId, generation);
+      await this.capabilities.agents.finishStreamingSystemRole(agentId, generation);
     }
   }
 
@@ -683,8 +643,6 @@ export class AgentManagerRuntime {
    */
   async searchMarketTools(params: SearchMarketToolsParams): Promise<BuiltinToolResult> {
     try {
-      const toolState = getToolStoreState();
-
       const response = await this.discoverService.getMcpList({
         category: params.category,
         pageSize: params.pageSize || 10,
@@ -692,7 +650,7 @@ export class AgentManagerRuntime {
       });
 
       const tools: MarketToolItem[] = response.items.map((item) => {
-        const installed = pluginSelectors.isPluginInstalled(item.identifier)(toolState);
+        const installed = this.capabilities.isPluginInstalled(item.identifier);
         return {
           author: item.author,
           cloudEndPoint: (item as any).cloudEndPoint,
@@ -738,541 +696,27 @@ export class AgentManagerRuntime {
    * Install a plugin
    */
   async installPlugin(agentId: string, params: InstallPluginParams): Promise<BuiltinToolResult> {
-    const { identifier, source } = params;
-
     try {
-      const toolState = getToolStoreState();
-
-      if (source === 'official') {
-        const isComposioEnabled =
-          typeof window !== 'undefined' &&
-          window.global_serverConfigStore?.getState()?.serverConfig?.enableComposio;
-        const isOrviloSkillEnabled =
-          typeof window !== 'undefined' &&
-          window.global_serverConfigStore?.getState()?.serverConfig?.enableOrviloSkill;
-        const connector = resolveConnectorCatalogItem(identifier, {
-          composio: Boolean(isComposioEnabled),
-          orvilo: Boolean(isOrviloSkillEnabled),
-        });
-
-        if (connector?.type === 'composio') {
-          const composioServer = composioStoreSelectors
-            .getServers(toolState)
-            .find((s) => s.identifier === identifier);
-          return this.handleComposioInstall(
-            agentId,
-            identifier,
-            connector.serverType,
-            composioServer,
-          );
+      return await this.capabilities.installPlugin(agentId, params, async (pluginId) => {
+        await this.ensureAgentLoaded(agentId);
+        const plugins = this.capabilities.agents.getConfig(agentId)?.plugins;
+        if (getPluginMode(plugins, pluginId) !== 'pinned') {
+          await this.capabilities.agents.updateConfig(agentId, {
+            plugins: upsertPluginMode(plugins, pluginId, 'pinned'),
+          });
         }
-
-        if (connector?.type === 'orvilo') {
-          const orviloSkillServer = orviloSkillStoreSelectors
-            .getServers(toolState)
-            .find((s) => s.identifier === identifier);
-          return this.handleOrviloSkillInstall(
-            agentId,
-            identifier,
-            connector.provider,
-            orviloSkillServer,
-          );
-        }
-
-        // Check if it's a builtin tool
-        const builtinTools = builtinToolSelectors.metaList(toolState);
-        const builtinTool = builtinTools.find((t) => t.identifier === identifier);
-
-        if (builtinTool) {
-          await this.enablePluginForAgent(agentId, identifier);
-
-          return {
-            content: `Successfully enabled builtin tool: ${builtinTool.meta?.title || identifier}`,
-            state: {
-              installed: true,
-              pluginId: identifier,
-              pluginName: builtinTool.meta?.title || identifier,
-              success: true,
-            } as InstallPluginState,
-            success: true,
-          };
-        }
-
-        return {
-          content: `Official tool "${identifier}" not found.`,
-          error: { message: 'Tool not found', type: 'NotFound' },
-          state: {
-            installed: false,
-            pluginId: identifier,
-            success: false,
-          } as InstallPluginState,
-          success: false,
-        };
-      }
-
-      // Source is 'market' - MCP marketplace plugin
-      return this.handleMarketPluginInstall(agentId, identifier);
+      });
     } catch (error) {
-      const err = error as Error;
       return this.handleErrorWithState(error, 'Failed to install plugin', {
-        error: err.message,
         installed: false,
-        pluginId: identifier,
+        pluginId: params.identifier,
         success: false,
       } as InstallPluginState);
     }
   }
 
-  // ==================== Private Helper Methods ====================
-
-  /**
-   * Ensure the agent config is loaded into the Zustand store.
-   * When operating on agents that aren't currently open/active,
-   * their config won't be in the agentMap. This fetches and dispatches it.
-   */
   private async ensureAgentLoaded(agentId: string): Promise<void> {
-    const state = getAgentStoreState();
-    const existing = state.agentMap[agentId];
-    if (existing) return;
-
-    const config = await this.agentService.getAgentConfigById(agentId);
-    if (config) {
-      getAgentStoreState().internal_dispatchAgentMap(agentId, config);
-    }
-  }
-
-  private async handleComposioInstall(
-    agentId: string,
-    identifier: string,
-    composioAppInfo: ComposioAppType,
-    composioServer?: ComposioServer,
-  ): Promise<BuiltinToolResult> {
-    if (composioServer) {
-      if (composioServer.status === ComposioServerStatus.ACTIVE) {
-        await this.enablePluginForAgent(agentId, identifier);
-        return {
-          content: `Successfully enabled Composio tool: ${composioAppInfo.label}`,
-          state: {
-            installed: true,
-            isComposio: true,
-            pluginId: identifier,
-            pluginName: composioAppInfo.label,
-            serverStatus: 'connected',
-            success: true,
-          } as InstallPluginState,
-          success: true,
-        };
-      } else if (composioServer.status === ComposioServerStatus.PENDING_AUTH) {
-        if (composioServer.redirectUrl) {
-          const authResult = await this.openOAuthWindowAndWait(
-            composioServer.redirectUrl,
-            identifier,
-          );
-          if (authResult.success) {
-            await this.enablePluginForAgent(agentId, identifier);
-            return {
-              content: `Successfully connected and enabled Composio tool: ${composioAppInfo.label}`,
-              state: {
-                installed: true,
-                isComposio: true,
-                pluginId: identifier,
-                pluginName: composioAppInfo.label,
-                serverStatus: 'connected',
-                success: true,
-              } as InstallPluginState,
-              success: true,
-            };
-          }
-        }
-        return {
-          content: `OAuth authorization was cancelled or failed for Composio tool: ${composioAppInfo.label}. Please try again.`,
-          state: {
-            installed: false,
-            isComposio: true,
-            pluginId: identifier,
-            pluginName: composioAppInfo.label,
-            serverStatus: 'pending_auth',
-            success: false,
-          } as InstallPluginState,
-          success: false,
-        };
-      }
-    }
-
-    // Server doesn't exist, create it
-    const userId = userProfileSelectors.userId(getUserStoreState());
-    if (!userId) {
-      return {
-        content: `Cannot connect Composio tool: User not logged in.`,
-        error: { message: 'User not logged in', type: 'AuthRequired' },
-        state: { installed: false, pluginId: identifier, success: false } as InstallPluginState,
-        success: false,
-      };
-    }
-
-    const newServer = await getToolStoreState().createComposioConnection({
-      appSlug: composioAppInfo.appSlug,
-      identifier,
-      label: composioAppInfo.label,
-    });
-
-    if (newServer) {
-      // Enable the plugin only once the connection is actually usable. Enabling
-      // before OAuth completes would leave an enabled-but-unauthorized tool on
-      // the agent if the user cancels the authorization.
-      if (newServer.status === ComposioServerStatus.ACTIVE) {
-        await this.enablePluginForAgent(agentId, identifier);
-        await getToolStoreState().refreshComposioConnectionStatus(newServer.identifier);
-        return {
-          content: `Successfully connected and enabled Composio tool: ${composioAppInfo.label}`,
-          state: {
-            installed: true,
-            isComposio: true,
-            pluginId: identifier,
-            pluginName: composioAppInfo.label,
-            serverStatus: 'connected',
-            success: true,
-          } as InstallPluginState,
-          success: true,
-        };
-      } else if (newServer.redirectUrl) {
-        const authResult = await this.openOAuthWindowAndWait(
-          newServer.redirectUrl,
-          newServer.identifier,
-        );
-        if (authResult.success) {
-          await this.enablePluginForAgent(agentId, identifier);
-          return {
-            content: `Successfully connected and enabled Composio tool: ${composioAppInfo.label}`,
-            state: {
-              installed: true,
-              isComposio: true,
-              pluginId: identifier,
-              pluginName: composioAppInfo.label,
-              serverStatus: 'connected',
-              success: true,
-            } as InstallPluginState,
-            success: true,
-          };
-        }
-      }
-    }
-
-    return {
-      content: `Failed to connect Composio tool: ${composioAppInfo.label}`,
-      error: { message: 'Failed to create Composio connection', type: 'ComposioError' },
-      state: {
-        installed: false,
-        pluginId: identifier,
-        success: false,
-      } as InstallPluginState,
-      success: false,
-    };
-  }
-
-  private async handleOrviloSkillInstall(
-    agentId: string,
-    identifier: string,
-    providerInfo: OrviloSkillProviderType,
-    server?: OrviloSkillServer,
-  ): Promise<BuiltinToolResult> {
-    if (server?.status === OrviloSkillStatus.CONNECTED) {
-      await this.enablePluginForAgent(agentId, identifier);
-      return {
-        content: `Successfully enabled OrviloSkill provider: ${providerInfo.label}`,
-        state: {
-          installed: true,
-          isOrviloSkill: true,
-          pluginId: identifier,
-          pluginName: providerInfo.label,
-          serverStatus: 'connected',
-          success: true,
-        } as InstallPluginState,
-        success: true,
-      };
-    }
-
-    // Need OAuth authorization
-    // Skip redirectUri on desktop (app:// protocol) since the system browser can't navigate to it
-    const redirectUri =
-      typeof window !== 'undefined' && window.location.protocol.startsWith('http')
-        ? `${window.location.origin}/oauth/callback/success?provider=${encodeURIComponent(identifier)}`
-        : undefined;
-    const authInfo = await getToolStoreState().getOrviloSkillAuthorizeUrl(identifier, {
-      redirectUri,
-    });
-
-    if (!authInfo.authorizeUrl) {
-      return {
-        content: `OrviloSkill provider "${providerInfo.label}" requires OAuth authorization but no authorization URL is available.`,
-        state: {
-          installed: false,
-          isOrviloSkill: true,
-          pluginId: identifier,
-          pluginName: providerInfo.label,
-          serverStatus: 'not_connected',
-          success: false,
-        } as InstallPluginState,
-        success: false,
-      };
-    }
-
-    const authResult = await this.openOrviloSkillOAuthWindowAndWait(
-      authInfo.authorizeUrl,
-      identifier,
-    );
-
-    if (authResult.success) {
-      await this.enablePluginForAgent(agentId, identifier);
-      return {
-        content: `Successfully connected and enabled OrviloSkill provider: ${providerInfo.label}`,
-        state: {
-          installed: true,
-          isOrviloSkill: true,
-          pluginId: identifier,
-          pluginName: providerInfo.label,
-          serverStatus: 'connected',
-          success: true,
-        } as InstallPluginState,
-        success: true,
-      };
-    }
-
-    return {
-      content: `OAuth authorization was cancelled or failed for OrviloSkill provider: ${providerInfo.label}. Please try again.`,
-      state: {
-        installed: false,
-        isOrviloSkill: true,
-        pluginId: identifier,
-        pluginName: providerInfo.label,
-        serverStatus: 'not_connected',
-        success: false,
-      } as InstallPluginState,
-      success: false,
-    };
-  }
-
-  private async handleMarketPluginInstall(
-    agentId: string,
-    identifier: string,
-  ): Promise<BuiltinToolResult> {
-    const toolState = getToolStoreState();
-    const isInstalled = pluginSelectors.isPluginInstalled(identifier)(toolState);
-
-    if (isInstalled) {
-      await this.enablePluginForAgent(agentId, identifier);
-      const installedPlugin = pluginSelectors.getInstalledPluginById(identifier)(toolState);
-      return {
-        content: `Plugin "${installedPlugin?.manifest?.meta?.title || identifier}" is already installed. Enabled for current agent.`,
-        state: {
-          installed: true,
-          pluginId: identifier,
-          pluginName: installedPlugin?.manifest?.meta?.title || identifier,
-          success: true,
-        } as InstallPluginState,
-        success: true,
-      };
-    }
-
-    const installSuccess = await getToolStoreState().installMCPPlugin(identifier);
-
-    if (installSuccess) {
-      await this.enablePluginForAgent(agentId, identifier);
-      await getToolStoreState().refreshPlugins();
-      const freshToolState = getToolStoreState();
-      const installedPlugin = pluginSelectors.getInstalledPluginById(identifier)(freshToolState);
-
-      return {
-        content: `Successfully installed and enabled MCP plugin "${installedPlugin?.manifest?.meta?.title || identifier}".`,
-        state: {
-          installed: true,
-          pluginId: identifier,
-          pluginName: installedPlugin?.manifest?.meta?.title || identifier,
-          success: true,
-        } as InstallPluginState,
-        success: true,
-      };
-    }
-
-    return {
-      content: `Failed to install MCP plugin "${identifier}". Installation was cancelled or configuration is needed.`,
-      state: {
-        installed: false,
-        pluginId: identifier,
-        success: false,
-      } as InstallPluginState,
-      success: false,
-    };
-  }
-
-  private async enablePluginForAgent(agentId: string, pluginId: string): Promise<void> {
-    await this.ensureAgentLoaded(agentId);
-    const agentState = getAgentStoreState();
-    const currentPlugins = agentSelectors.getAgentConfigById(agentId)(agentState)?.plugins;
-
-    // upsertPluginMode preserves an already-matching entry as-is and flips a
-    // disabled entry back to pinned in place, instead of blindly pushing a
-    // duplicate bare-string identifier.
-    if (getPluginMode(currentPlugins, pluginId) !== 'pinned') {
-      await getAgentStoreState().optimisticUpdateAgentConfig(agentId, {
-        plugins: upsertPluginMode(currentPlugins, pluginId, 'pinned'),
-      });
-    }
-  }
-
-  private openOAuthWindowAndWait(
-    redirectUrl: string,
-    identifier: string,
-  ): Promise<{ cancelled: boolean; success: boolean }> {
-    const checkAuthStatus = async (): Promise<boolean> => {
-      try {
-        await getToolStoreState().refreshComposioConnectionStatus(identifier);
-        const freshToolStore = getToolStoreState();
-        const server = composioStoreSelectors
-          .getServers(freshToolStore)
-          .find((s) => s.identifier === identifier);
-        return server?.status === ComposioServerStatus.ACTIVE;
-      } catch {
-        return false;
-      }
-    };
-
-    return new Promise((resolve) => {
-      const WINDOW_CHECK_INTERVAL_MS = 500;
-      const POLL_INTERVAL_MS = 1000;
-      const POLL_TIMEOUT_MS = 300_000;
-
-      let pollInterval: ReturnType<typeof setInterval> | null = null;
-      let pollTimeout: ReturnType<typeof setTimeout> | null = null;
-      let windowCheckInterval: ReturnType<typeof setInterval> | null = null;
-      let resolved = false;
-
-      const cleanup = () => {
-        if (windowCheckInterval) clearInterval(windowCheckInterval);
-        if (pollInterval) clearInterval(pollInterval);
-        if (pollTimeout) clearTimeout(pollTimeout);
-      };
-
-      const resolveOnce = (result: { cancelled: boolean; success: boolean }) => {
-        if (resolved) return;
-        resolved = true;
-        cleanup();
-        resolve(result);
-      };
-
-      const startFallbackPolling = () => {
-        if (pollInterval) return;
-        pollInterval = setInterval(async () => {
-          const isConnected = await checkAuthStatus();
-          if (isConnected) resolveOnce({ cancelled: false, success: true });
-        }, POLL_INTERVAL_MS);
-        pollTimeout = setTimeout(
-          () => resolveOnce({ cancelled: true, success: false }),
-          POLL_TIMEOUT_MS,
-        );
-      };
-
-      const oauthWindow = window.open(redirectUrl, '_blank', 'width=600,height=700');
-
-      if (oauthWindow) {
-        windowCheckInterval = setInterval(async () => {
-          try {
-            if (oauthWindow.closed) {
-              if (windowCheckInterval) clearInterval(windowCheckInterval);
-              const isConnected = await checkAuthStatus();
-              resolveOnce({ cancelled: !isConnected, success: isConnected });
-            }
-          } catch {
-            if (windowCheckInterval) clearInterval(windowCheckInterval);
-            startFallbackPolling();
-          }
-        }, WINDOW_CHECK_INTERVAL_MS);
-      } else {
-        startFallbackPolling();
-      }
-    });
-  }
-
-  private openOrviloSkillOAuthWindowAndWait(
-    redirectUrl: string,
-    provider: string,
-  ): Promise<{ cancelled: boolean; success: boolean }> {
-    const checkAuthStatus = async (): Promise<boolean> => {
-      try {
-        const server = await getToolStoreState().checkOrviloSkillStatus(provider);
-        return server?.status === OrviloSkillStatus.CONNECTED;
-      } catch {
-        return false;
-      }
-    };
-
-    return new Promise((resolve) => {
-      const WINDOW_CHECK_INTERVAL_MS = 500;
-      const POLL_INTERVAL_MS = 1000;
-      const POLL_TIMEOUT_MS = 300_000;
-
-      let pollInterval: ReturnType<typeof setInterval> | null = null;
-      let pollTimeout: ReturnType<typeof setTimeout> | null = null;
-      let windowCheckInterval: ReturnType<typeof setInterval> | null = null;
-      let messageHandler: ((event: MessageEvent) => void) | null = null;
-      let resolved = false;
-
-      const cleanup = () => {
-        if (windowCheckInterval) clearInterval(windowCheckInterval);
-        if (pollInterval) clearInterval(pollInterval);
-        if (pollTimeout) clearTimeout(pollTimeout);
-        if (messageHandler) window.removeEventListener('message', messageHandler);
-      };
-
-      const resolveOnce = (result: { cancelled: boolean; success: boolean }) => {
-        if (resolved) return;
-        resolved = true;
-        cleanup();
-        resolve(result);
-      };
-
-      messageHandler = async (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return;
-        if (event.data?.type === 'ORVILO_SKILL_AUTH_SUCCESS' && event.data?.provider === provider) {
-          const server = await getToolStoreState().checkOrviloSkillStatus(provider);
-          const isConnected = server?.status === OrviloSkillStatus.CONNECTED;
-          resolveOnce({ cancelled: false, success: isConnected });
-        }
-      };
-
-      window.addEventListener('message', messageHandler);
-
-      const startFallbackPolling = () => {
-        if (pollInterval) return;
-        pollInterval = setInterval(async () => {
-          const isConnected = await checkAuthStatus();
-          if (isConnected) resolveOnce({ cancelled: false, success: true });
-        }, POLL_INTERVAL_MS);
-        pollTimeout = setTimeout(
-          () => resolveOnce({ cancelled: true, success: false }),
-          POLL_TIMEOUT_MS,
-        );
-      };
-
-      const oauthWindow = window.open(redirectUrl, '_blank', 'width=600,height=700');
-
-      if (oauthWindow) {
-        windowCheckInterval = setInterval(async () => {
-          try {
-            if (oauthWindow.closed) {
-              if (windowCheckInterval) clearInterval(windowCheckInterval);
-              const isConnected = await checkAuthStatus();
-              resolveOnce({ cancelled: !isConnected, success: isConnected });
-            }
-          } catch {
-            if (windowCheckInterval) clearInterval(windowCheckInterval);
-            startFallbackPolling();
-          }
-        }, WINDOW_CHECK_INTERVAL_MS);
-      } else {
-        startFallbackPolling();
-      }
-    });
+    await this.capabilities.agents.ensureLoaded(agentId);
   }
 
   // ==================== Error Handling ====================

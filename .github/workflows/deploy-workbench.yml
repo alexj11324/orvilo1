@@ -71,7 +71,7 @@ jobs:
 
       - name: Install deps
         if: steps.detect.outputs.should_build == 'true'
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Deploy workbench
         if: steps.detect.outputs.should_build == 'true'

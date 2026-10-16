@@ -6,7 +6,7 @@ import { WORKSPACE_LIST_KEY } from '@/business/client/hooks/useFetchWorkspaces';
 import { toast } from '@/components/toast';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 
-import { type InviteInput, teammatesClient } from './client';
+import { type InviteInput, teammatesService } from './client';
 import type { ProjectRole, WorkspaceRole } from './contract';
 import { teammatesKeys } from './keys';
 
@@ -43,7 +43,7 @@ export const useWorkspaceMembersQuery = (options?: {
     isLoading,
     mutate: revalidate,
   } = useClientDataSWR(workspaceId && enabled ? teammatesKeys.members(includeDeleted) : null, () =>
-    teammatesClient.workspaceMember.list.query({ includeDeleted }),
+    teammatesService.workspaceMember.list({ includeDeleted }),
   );
 
   return { data, error, isLoading, members: data, mutate: revalidate };
@@ -55,7 +55,7 @@ export const useWorkspaceInvitationsQuery = (options?: { enabled?: boolean }) =>
   const enabled = options?.enabled ?? true;
 
   return useClientDataSWR(workspaceId && enabled ? teammatesKeys.invitations() : null, () =>
-    teammatesClient.workspaceMember.listInvitations.query(),
+    teammatesService.workspaceMember.listInvitations(),
   );
 };
 
@@ -69,7 +69,7 @@ export const usePendingOwnershipTransferQuery = (options?: { enabled?: boolean }
 
   const query = useClientDataSWR(
     workspaceId && enabled ? teammatesKeys.ownershipTransfer() : null,
-    () => teammatesClient.workspace.pendingOwnershipTransfer.query(),
+    () => teammatesService.workspace.pendingOwnershipTransfer(),
     { refreshInterval: 30_000 },
   );
 
@@ -97,7 +97,7 @@ export const useWorkspaceAgentsQuery = (options?: { enabled?: boolean }) => {
   const enabled = options?.enabled ?? true;
 
   return useClientDataSWR(workspaceId && enabled ? teammatesKeys.agents() : null, () =>
-    teammatesClient.workspaceAgent.list.query(),
+    teammatesService.workspaceAgent.list(),
   );
 };
 
@@ -105,7 +105,7 @@ export const useWorkspaceAgentsQuery = (options?: { enabled?: boolean }) => {
 export const useProjectMembersQuery = (projectId: string | undefined, enabled = true) =>
   useClientDataSWR(
     projectId && enabled ? teammatesKeys.projectMembers(projectId) : null,
-    () => teammatesClient.projectMember.list.query({ projectId: projectId! }),
+    () => teammatesService.projectMember.list({ projectId: projectId! }),
     { revalidateOnFocus: false },
   );
 
@@ -116,7 +116,7 @@ export const useProjectMembersQuery = (projectId: string | undefined, enabled = 
 export const useRemovalPreview = (userId: string | undefined, enabled: boolean) =>
   useClientDataSWR(
     userId && enabled ? teammatesKeys.removalPreview(userId) : null,
-    () => teammatesClient.workspaceMember.removalPreview.query({ userId: userId! }),
+    () => teammatesService.workspaceMember.removalPreview({ userId: userId! }),
     { revalidateOnFocus: false },
   );
 
@@ -156,7 +156,7 @@ export const useTeammateActions = () => {
   );
 
   const invite = useCallback(
-    (input: InviteInput) => teammatesClient.workspaceMember.invite.mutate(input),
+    (input: InviteInput) => teammatesService.workspaceMember.invite(input),
     [],
   );
 
@@ -164,7 +164,7 @@ export const useTeammateActions = () => {
     (userId: string, role: WorkspaceRole, expectedAuthzVersion?: number) =>
       report(
         () =>
-          teammatesClient.workspaceMember.changeRole.mutate({ expectedAuthzVersion, role, userId }),
+          teammatesService.workspaceMember.changeRole({ expectedAuthzVersion, role, userId }),
         refreshMembers,
       ),
     [report, refreshMembers],
@@ -172,20 +172,20 @@ export const useTeammateActions = () => {
 
   const suspend = useCallback(
     (userId: string) =>
-      report(() => teammatesClient.workspaceMember.suspend.mutate({ userId }), refreshMembers),
+      report(() => teammatesService.workspaceMember.suspend({ userId }), refreshMembers),
     [report, refreshMembers],
   );
 
   const resume = useCallback(
     (userId: string) =>
-      report(() => teammatesClient.workspaceMember.resume.mutate({ userId }), refreshMembers),
+      report(() => teammatesService.workspaceMember.resume({ userId }), refreshMembers),
     [report, refreshMembers],
   );
 
   const remove = useCallback(
     (userId: string, reassignToUserId?: string) =>
       report(
-        () => teammatesClient.workspaceMember.remove.mutate({ reassignToUserId, userId }),
+        () => teammatesService.workspaceMember.remove({ reassignToUserId, userId }),
         REFRESH_MEMBERS_AND_INVITATIONS,
       ),
     [report],
@@ -198,7 +198,7 @@ export const useTeammateActions = () => {
     // the workspace list and navigate out instead.
     () =>
       report(
-        () => teammatesClient.workspaceMember.leave.mutate(),
+        () => teammatesService.workspaceMember.leave(),
         () => Promise.resolve(),
       ),
     [report],
@@ -209,7 +209,7 @@ export const useTeammateActions = () => {
   const requestOwnershipTransfer = useCallback(
     (newOwnerUserId: string) =>
       report(
-        () => teammatesClient.workspace.transferOwnership.mutate({ newOwnerUserId }),
+        () => teammatesService.workspace.transferOwnership({ newOwnerUserId }),
         refreshOwnershipTransfer,
       ),
     [report, refreshOwnershipTransfer],
@@ -218,7 +218,7 @@ export const useTeammateActions = () => {
   const respondOwnershipTransfer = useCallback(
     (accept: boolean) =>
       report(
-        () => teammatesClient.workspace.respondOwnershipTransfer.mutate({ accept }),
+        () => teammatesService.workspace.respondOwnershipTransfer({ accept }),
         // Accepting changes the caller's own role — the members roster must
         // refresh alongside the cleared pending state.
         REFRESH_MEMBERS_AND_OWNERSHIP,
@@ -229,7 +229,7 @@ export const useTeammateActions = () => {
   const cancelOwnershipTransfer = useCallback(
     () =>
       report(
-        () => teammatesClient.workspace.cancelOwnershipTransfer.mutate(),
+        () => teammatesService.workspace.cancelOwnershipTransfer(),
         refreshOwnershipTransfer,
       ),
     [report, refreshOwnershipTransfer],
@@ -237,20 +237,20 @@ export const useTeammateActions = () => {
 
   const resendInvitation = useCallback(
     (invitationId: string) =>
-      report(() => teammatesClient.invitation.resend.mutate({ invitationId }), refreshInvitations),
+      report(() => teammatesService.invitation.resend({ invitationId }), refreshInvitations),
     [report, refreshInvitations],
   );
 
   const revokeInvitation = useCallback(
     (invitationId: string) =>
-      report(() => teammatesClient.invitation.revoke.mutate({ invitationId }), refreshInvitations),
+      report(() => teammatesService.invitation.revoke({ invitationId }), refreshInvitations),
     [report, refreshInvitations],
   );
 
   const addProjectMember = useCallback(
     (projectId: string, userId: string, role: ProjectRole) =>
       report(
-        () => teammatesClient.projectMember.add.mutate({ projectId, role, userId }),
+        () => teammatesService.projectMember.add({ projectId, role, userId }),
         () => refreshProjectMembers(projectId),
       ),
     [report, refreshProjectMembers],
@@ -259,7 +259,7 @@ export const useTeammateActions = () => {
   const changeProjectMemberRole = useCallback(
     (projectId: string, userId: string, role: ProjectRole) =>
       report(
-        () => teammatesClient.projectMember.changeRole.mutate({ projectId, role, userId }),
+        () => teammatesService.projectMember.changeRole({ projectId, role, userId }),
         () => refreshProjectMembers(projectId),
       ),
     [report, refreshProjectMembers],
@@ -268,7 +268,7 @@ export const useTeammateActions = () => {
   const removeProjectMember = useCallback(
     (projectId: string, userId: string) =>
       report(
-        () => teammatesClient.projectMember.remove.mutate({ projectId, userId }),
+        () => teammatesService.projectMember.remove({ projectId, userId }),
         () => refreshProjectMembers(projectId),
       ),
     [report, refreshProjectMembers],

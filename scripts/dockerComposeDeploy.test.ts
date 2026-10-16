@@ -28,6 +28,13 @@ const compose = parse(readFileSync(path.join(deployDirectory, 'docker-compose.ym
   volumes: Record<string, unknown>;
 };
 const dockerfile = readFileSync(path.resolve(import.meta.dirname, '../Dockerfile'), 'utf8');
+const runtimeDeps = JSON.parse(
+  readFileSync(path.resolve(import.meta.dirname, '../docker/runtime-deps/package.json'), 'utf8'),
+) as { dependencies: Record<string, string> };
+const runtimeDepsWorkspace = readFileSync(
+  path.resolve(import.meta.dirname, '../docker/runtime-deps/pnpm-workspace.yaml'),
+  'utf8',
+);
 const deployWorkflow = readFileSync(
   path.resolve(import.meta.dirname, '../.github/workflows/deploy-orvilo1.yml'),
   'utf8',
@@ -157,9 +164,22 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     // The sync bundle keeps drizzle-orm external, and drizzle-orm/neon-serverless requires
     // @neondatabase/serverless at load time even though DATABASE_DRIVER=node never uses it, so the
     // image must ship that package next to pg and drizzle-orm or the container crash-loops.
-    expect(dockerfile).toContain(
-      'pnpm add --allow-build=sharp --allow-build=@hatchet-dev/typescript-sdk --allow-build=protobufjs pg drizzle-orm @neondatabase/serverless sharp@0.34.5 @hatchet-dev/typescript-sdk@1.33.1 @grpc/grpc-js@1.14.4',
-    );
+    // Versions and native build scripts live in the frozen supplemental project, not an unpinned add.
+    expect(dockerfile).toContain('COPY docker/runtime-deps /deps');
+    expect(dockerfile).toContain('pnpm --dir /deps install --frozen-lockfile --prod');
+    expect(dockerfile).not.toContain('pnpm add ');
+    expect(runtimeDeps.dependencies).toEqual({
+      '@copilotkit/channels-core': '0.11.0',
+      '@grpc/grpc-js': '1.14.4',
+      '@hatchet-dev/typescript-sdk': '1.33.1',
+      '@neondatabase/serverless': '^1.1.0',
+      'drizzle-orm': '^0.45.2',
+      pg: '^8.23.0',
+      sharp: '0.34.5',
+    });
+    expect(runtimeDepsWorkspace).toContain('sharp: true');
+    expect(runtimeDepsWorkspace).toContain("'@hatchet-dev/typescript-sdk': true");
+    expect(runtimeDepsWorkspace).toContain('protobufjs: true');
     expect(dockerfile).toContain(
       'COPY --from=builder /deps/node_modules/@neondatabase /app/node_modules/@neondatabase',
     );
@@ -219,7 +239,7 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     expect(dockerfile).toContain('--external:sharp');
     expect(dockerfile).toContain('--external:@hatchet-dev/typescript-sdk');
     expect(dockerfile).toContain('--external:@copilotkit/channels-core');
-    expect(dockerfile).toContain('@copilotkit/channels-core@0.11.0');
+    expect(runtimeDeps.dependencies['@copilotkit/channels-core']).toBe('0.11.0');
     expect(dockerfile).toContain(
       '--banner:js=\'import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);\'',
     );

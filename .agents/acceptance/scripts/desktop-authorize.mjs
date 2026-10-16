@@ -52,7 +52,9 @@ export const completeAuthorization = async ({ authUrl, fetchImpl = fetch, server
       },
       method: body ? 'POST' : 'GET',
       redirect: 'manual',
-      signal: AbortSignal.timeout(30_000),
+      // A cold Next compile of an OIDC route can exceed 30s. Aborting here stops
+      // the whole skip-login stack before the seed session can finish.
+      signal: AbortSignal.timeout(120_000),
     });
     for (const cookie of response.headers.getSetCookie()) {
       const pair = cookie.split(';', 1)[0];

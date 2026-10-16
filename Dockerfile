@@ -60,11 +60,16 @@ ENV NODE_OPTIONS="--max-old-space-size=8192"
 
 WORKDIR /app
 
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY patches ./patches
 COPY .npmrc ./
+COPY docker/runtime-deps /deps
 COPY packages ./packages
 # workspace manifests must exist before pnpm i so --filter can resolve them
+COPY apps/auth/package.json ./apps/auth/package.json
+COPY apps/auth/cf/package.json ./apps/auth/cf/package.json
+COPY apps/server/package.json ./apps/server/package.json
+COPY e2e/package.json ./e2e/package.json
 COPY apps/collaboration-gateway/package.json ./apps/collaboration-gateway/package.json
 COPY apps/desktop/src/main/package.json ./apps/desktop/src/main/package.json
 COPY apps/share/package.json ./apps/share/package.json
@@ -73,10 +78,7 @@ COPY apps/workbench/package.json ./apps/workbench/package.json
 # @neondatabase/serverless is required at load time by drizzle-orm/neon-serverless, which the
 # bundled Elasticsearch sync CLI imports through the shared server DB factory even when
 # DATABASE_DRIVER=node selects the pg driver; without it the sync container crash-loops.
-# Keep the standalone native image dependency aligned with the app's direct sharp
-# dependency. An unpinned install can resolve a newer JS wrapper while Next's
-# traced tree still points at the older virtual-store directory. The standalone
-# dependency project is new, so explicitly allow its native install scripts.
+# Supplemental standalone dependencies use their own committed lockfile and build-script policy.
 RUN set -e && \
     if [ "${USE_CN_MIRROR:-false}" = "true" ]; then \
         export SENTRYCLI_CDNURL="https://npmmirror.com/mirrors/sentry-cli"; \
@@ -86,12 +88,9 @@ RUN set -e && \
     export COREPACK_NPM_REGISTRY=$(npm config get registry | sed 's/\/$//') && \
     npm i -g corepack@latest && \
     corepack enable && \
-    corepack use $(sed -n 's/.*"packageManager": "\(.*\)".*/\1/p' package.json) && \
-    pnpm i && \
-    mkdir -p /deps && \
-    cd /deps && \
-    echo '{"name":"deps","private":true}' > package.json && \
-    pnpm add --allow-build=sharp --allow-build=@hatchet-dev/typescript-sdk --allow-build=protobufjs pg drizzle-orm @neondatabase/serverless sharp@0.34.5 @hatchet-dev/typescript-sdk@1.33.1 @grpc/grpc-js@1.14.4 @copilotkit/channels-core@0.11.0
+    corepack prepare $(sed -n 's/.*"packageManager": "\(.*\)".*/\1/p' package.json) --activate && \
+    pnpm i --frozen-lockfile && \
+    pnpm --dir /deps install --frozen-lockfile --prod
 
 COPY . .
 

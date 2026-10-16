@@ -1,3 +1,5 @@
+import type { IAgentService, IDiscoverService } from '@orvilo/agent-manager-runtime';
+import { AgentManagerRuntime } from '@orvilo/agent-manager-runtime';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getAgentStoreState } from '@/store/agent';
@@ -5,8 +7,7 @@ import { composioStoreSelectors, orviloSkillStoreSelectors } from '@/store/tool/
 import { ComposioServerStatus } from '@/store/tool/slices/composioStore/types';
 import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
 
-import { AgentManagerRuntime } from '../AgentManagerRuntime';
-import type { IAgentService, IDiscoverService } from '../types';
+import { createClientAgentManagerCapabilities } from './index';
 
 /**
  * The `@/store/agent` mock below recreates a fresh object (with fresh
@@ -153,6 +154,7 @@ describe('AgentManagerRuntime', () => {
     vi.mocked(orviloSkillStoreSelectors.getServers).mockReturnValue([]);
     Reflect.deleteProperty(window, 'global_serverConfigStore');
     runtime = new AgentManagerRuntime({
+      capabilities: createClientAgentManagerCapabilities(mockAgentService),
       agentService: mockAgentService,
       discoverService: mockDiscoverService,
     });
@@ -656,6 +658,7 @@ describe('AgentManagerRuntime', () => {
 
     it('should preserve invocation order for concurrent updates to the same agent', async () => {
       const secondRuntime = new AgentManagerRuntime({
+        capabilities: createClientAgentManagerCapabilities(mockAgentService),
         agentService: mockAgentService,
         discoverService: mockDiscoverService,
       });

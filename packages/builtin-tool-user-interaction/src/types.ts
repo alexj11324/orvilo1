@@ -1,4 +1,4 @@
-import type { AskUserQuestionArgs } from '@orvilo/shared-tool-ui/ask-user';
+import type { AskUserQuestionArgs } from '@orvilo/shared-tool-ui/ask-user/types';
 
 export const UserInteractionIdentifier = 'orvilo-user-interaction';
 
@@ -22,7 +22,7 @@ export type {
   AskUserQuestionArgs,
   AskUserQuestionItem,
   AskUserQuestionOption,
-} from '@orvilo/shared-tool-ui/ask-user';
+} from '@orvilo/shared-tool-ui/ask-user/types';
 
 export interface SubmitUserResponseArgs {
   requestId: string;

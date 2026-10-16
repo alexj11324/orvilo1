@@ -6,6 +6,7 @@ import {
   DEFAULT_MEMORY_SETTINGS,
   DEFAULT_SYSTEM_AGENT_CONFIG,
 } from '@orvilo/const';
+import { HOTKEYS_REGISTRATION } from '@orvilo/const/hotkeys';
 import {
   type GlobalLLMProviderKey,
   type HotkeyId,
@@ -40,8 +41,16 @@ const exportSettings = currentSettings;
 const currentSystemAgent = (s: UserStore) =>
   merge(DEFAULT_SYSTEM_AGENT_CONFIG, currentSettings(s).systemAgent);
 
+const NON_EDITABLE_HOTKEY_IDS = new Set(
+  HOTKEYS_REGISTRATION.filter((item) => item.nonEditable).map((item) => item.id),
+);
+
+// Non-editable bindings cannot be changed or cleared in Settings, so a stale
+// persisted override (e.g. from before a chord was reactivated) must not win.
 const getHotkeyById = (id: HotkeyId) => (s: UserStore) =>
-  merge(DEFAULT_HOTKEY_CONFIG, currentSettings(s).hotkey)[id];
+  NON_EDITABLE_HOTKEY_IDS.has(id)
+    ? DEFAULT_HOTKEY_CONFIG[id]
+    : merge(DEFAULT_HOTKEY_CONFIG, currentSettings(s).hotkey)[id];
 
 export const settingsSelectors = {
   currentMemorySettings,

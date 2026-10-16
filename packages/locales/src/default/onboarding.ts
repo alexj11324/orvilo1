@@ -354,7 +354,6 @@ export default {
   'setup.devices': 'Device settings',
   'setup.accountMenu': 'Account menu for {{name}}',
   'setup.wrongEmail': 'Wrong email? Sign out',
-  'setup.skip': 'Skip for now',
   'setup.workspace.continueWith': 'Continue with {{name}}',
   'setup.workspace.resumeDescription':
     'You already created this workspace. Continue to set up your first Agent.',

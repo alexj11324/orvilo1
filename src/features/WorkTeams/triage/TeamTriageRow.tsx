@@ -1,4 +1,5 @@
 'use client';
+
 import { cn } from 'cn';
 import { ClockIcon, MoreHorizontalIcon } from 'lucide-react';
 import { createElement, memo, useCallback, useMemo } from 'react';
@@ -15,7 +16,7 @@ import SidebarDropdownMenu, {
   type SidebarDropdownMenuProps,
 } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
-import { lambdaClient } from '@/libs/trpc/client';
+import { workTeamService } from '@/services/workTeam';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import { teamTaskDetailPath } from '../teamTaskDetailPath';
@@ -76,7 +77,7 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
       async (teamId: string) => {
         if (!teamId || task.domainRevision === undefined) return;
         try {
-          await lambdaClient.team.moveTaskToTeam.mutate({
+          await workTeamService.moveTaskToTeam({
             expectedDomainRevision: task.domainRevision,
             taskId: task.id,
             teamId,

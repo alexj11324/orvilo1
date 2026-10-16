@@ -1,13 +1,18 @@
-import type { GoalGraphSnapshot } from '@orvilo/types';
-import { experimentMembers } from '@orvilo/utils/goalGraph';
+import type { OrchestrationWorkflowGraphSnapshot } from '@orvilo/types';
+import { experimentMembers } from '@orvilo/utils/orchestrationWorkflowGraph';
 import { useMemo, useState } from 'react';
 
-type Graph = Pick<GoalGraphSnapshot, 'nodes' | 'edges'>;
+type Graph = Pick<OrchestrationWorkflowGraphSnapshot, 'nodes' | 'edges'>;
 
 /** Expansion is presentation state; entering a group explicitly changes the viewing scope. */
-export const useExplorationNavigation = (goalId: string, graph: Graph) => {
-  const [state, setState] = useState({ goalId, expanded: new Set<string>(), path: [] as string[] });
-  if (state.goalId !== goalId) setState({ goalId, expanded: new Set(), path: [] });
+export const useExplorationNavigation = (orchestrationWorkflowId: string, graph: Graph) => {
+  const [state, setState] = useState({
+    orchestrationWorkflowId,
+    expanded: new Set<string>(),
+    path: [] as string[],
+  });
+  if (state.orchestrationWorkflowId !== orchestrationWorkflowId)
+    setState({ orchestrationWorkflowId, expanded: new Set(), path: [] });
 
   const path = state.path.filter((id) => graph.nodes.some((n) => n.id === id));
   const scopeId = path.at(-1);

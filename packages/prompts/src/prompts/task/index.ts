@@ -503,11 +503,11 @@ export interface TaskRunPromptWorkspaceNode {
 }
 
 /**
- * Goal-loop context for a round spawned by the outer verify-driven loop: what
+ * OrchestrationWorkflow-loop context for a round spawned by the outer verify-driven loop: what
  * the previous round left unresolved, so the new (fresh-context) topic can pick
  * up without re-discovering everything.
  */
-export interface TaskRunPromptGoalLoop {
+export interface TaskRunPromptOrchestrationWorkflowLoop {
   /** Feedback from the automatic Acceptance review of the previous delivery. */
   automaticReviewFeedback?: string;
   /** Checks that did not pass in the previous round, with the verifier's why/suggestion. */
@@ -530,8 +530,8 @@ export interface TaskRunPromptInput {
   };
   /** --prompt flag content */
   extraPrompt?: string;
-  /** Present only for rounds spawned by the goal outer loop. */
-  goalLoop?: TaskRunPromptGoalLoop;
+  /** Present only for rounds spawned by the orchestration workflow outer loop. */
+  orchestrationWorkflowLoop?: TaskRunPromptOrchestrationWorkflowLoop;
   /** Parent task context (when current task is a subtask) */
   parentTask?: {
     identifier: string;
@@ -635,7 +635,7 @@ const briefIcon = (type: string): string => {
  * 4. Original Task (instruction + description) — the base requirement
  */
 export const buildTaskRunPrompt = (input: TaskRunPromptInput, now?: Date): string => {
-  const { task, activities, extraPrompt, goalLoop, workspace, parentTask } = input;
+  const { task, activities, extraPrompt, orchestrationWorkflowLoop, workspace, parentTask } = input;
   const sections: string[] = [];
 
   // ── 1. High Priority Instruction ──
@@ -769,17 +769,20 @@ export const buildTaskRunPrompt = (input: TaskRunPromptInput, now?: Date): strin
     );
   }
 
-  // Goal loop — context handed over from the previous round of the outer loop
-  if (goalLoop) {
+  // OrchestrationWorkflow loop — context handed over from the previous round of the outer loop
+  if (orchestrationWorkflowLoop) {
     taskLines.push('');
-    const budget = typeof goalLoop.maxRounds === 'number' ? ` of ${goalLoop.maxRounds}` : '';
+    const budget =
+      typeof orchestrationWorkflowLoop.maxRounds === 'number'
+        ? ` of ${orchestrationWorkflowLoop.maxRounds}`
+        : '';
     taskLines.push(
-      `Goal loop${goalLoop.round ? ` — round ${goalLoop.round}${budget}` : ''}: earlier rounds did not fully meet the acceptance criteria. Focus on closing the gaps below instead of redoing finished work.`,
+      `Orchestration workflow loop${orchestrationWorkflowLoop.round ? ` — round ${orchestrationWorkflowLoop.round}${budget}` : ''}: earlier rounds did not fully meet the acceptance criteria. Focus on closing the gaps below instead of redoing finished work.`,
     );
     const reviewFeedback = [
-      goalLoop.rejectComment,
-      goalLoop.automaticReviewFeedback &&
-        `Automatic Acceptance review:\n${goalLoop.automaticReviewFeedback}`,
+      orchestrationWorkflowLoop.rejectComment,
+      orchestrationWorkflowLoop.automaticReviewFeedback &&
+        `Automatic Acceptance review:\n${orchestrationWorkflowLoop.automaticReviewFeedback}`,
     ]
       .filter(Boolean)
       .join('\n\n');
@@ -787,9 +790,12 @@ export const buildTaskRunPrompt = (input: TaskRunPromptInput, now?: Date): strin
       taskLines.push('  Review feedback on the last delivery (address this first):');
       taskLines.push(`    "${reviewFeedback}"`);
     }
-    if (goalLoop.failedChecks && goalLoop.failedChecks.length > 0) {
+    if (
+      orchestrationWorkflowLoop.failedChecks &&
+      orchestrationWorkflowLoop.failedChecks.length > 0
+    ) {
       taskLines.push('  Unresolved checks from the last round:');
-      for (const [i, check] of goalLoop.failedChecks.entries()) {
+      for (const [i, check] of orchestrationWorkflowLoop.failedChecks.entries()) {
         taskLines.push(`    ${i + 1}. ${check.title}${check.why ? ` — ${check.why}` : ''}`);
       }
     }

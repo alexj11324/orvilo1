@@ -2,6 +2,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   chatGroups,
@@ -36,28 +37,30 @@ const builder = new FtsSearchDocumentBuilder(db);
 const seedFixtures = async () => {
   await db.insert(users).values({ id: userId });
 
-  await db.insert(agents).values([
-    {
-      createdAt,
-      description: 'Agent description',
-      id: 'agent-1',
-      slug: 'agent-slug',
-      systemRole: 'Agent system role',
-      tags: ['coding', 'search'],
-      title: 'Agent title',
-      updatedAt,
-      userId,
-      virtual: false,
-      visibility: 'public',
-    },
-    {
-      createdAt,
-      id: 'agent-2',
-      title: 'Second agent',
-      updatedAt,
-      userId,
-    },
-  ]);
+  await db.insert(agents).values(
+    await withTestAgentDevices(db, [
+      {
+        createdAt,
+        description: 'Agent description',
+        id: 'agent-1',
+        slug: 'agent-slug',
+        systemRole: 'Agent system role',
+        tags: ['coding', 'search'],
+        title: 'Agent title',
+        updatedAt,
+        userId,
+        virtual: false,
+        visibility: 'public',
+      },
+      {
+        createdAt,
+        id: 'agent-2',
+        title: 'Second agent',
+        updatedAt,
+        userId,
+      },
+    ]),
+  );
 
   await db.insert(chatGroups).values({
     content: 'Group content',

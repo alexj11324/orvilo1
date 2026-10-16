@@ -544,7 +544,7 @@ const mountBusy = async (path: BusyPath) => {
     await userEvent.setup().click(screen.getByText('verifyConfig.empty.title'));
     expect(fixture.generateCriteria).toHaveBeenCalledTimes(1);
     expect(fixture.generateCriteria).toHaveBeenCalledWith(
-      expect.objectContaining({ goal: 'A motion regression goal' }),
+      expect.objectContaining({ orchestrationWorkflow: 'A motion regression goal' }),
     );
     expect(screen.getByText('verifyConfig.generating')).toBeVisible();
   }

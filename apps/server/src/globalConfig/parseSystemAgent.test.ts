@@ -1,16 +1,41 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { parseSystemAgent } from './parseSystemAgent';
 
 describe('parseSystemAgent', () => {
   it('should parse a valid environment variable string correctly', () => {
-    const envValue = 'thread=openai/gpt-3.5-turbo,goal=anthropic/claude-1';
+    const envValue = 'thread=openai/gpt-3.5-turbo,orchestrationWorkflow=anthropic/claude-1';
     const expected = {
       thread: { provider: 'openai', model: 'gpt-3.5-turbo' },
-      goal: { provider: 'anthropic', model: 'claude-1' },
+      orchestrationWorkflow: { provider: 'anthropic', model: 'claude-1' },
     };
 
     expect(parseSystemAgent(envValue)).toEqual(expected);
+  });
+
+  it('should accept the legacy goal key as a deprecated orchestrationWorkflow alias', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      expect(parseSystemAgent('goal=anthropic/claude-1,thread=openai/gpt-4')).toEqual({
+        orchestrationWorkflow: { provider: 'anthropic', model: 'claude-1' },
+        thread: { provider: 'openai', model: 'gpt-4' },
+      });
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('"goal" is deprecated'));
+      // The renamed key wins over the legacy spelling regardless of order.
+      expect(
+        parseSystemAgent('orchestrationWorkflow=openai/new,goal=anthropic/old')
+          .orchestrationWorkflow,
+      ).toEqual({ provider: 'openai', model: 'new' });
+      // The legacy key also beats the `default` fallback.
+      expect(
+        parseSystemAgent('default=openai/mini,goal=anthropic/claude-1').orchestrationWorkflow,
+      ).toEqual({
+        provider: 'anthropic',
+        model: 'claude-1',
+      });
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('should handle empty environment variable string', () => {
@@ -30,8 +55,8 @@ describe('parseSystemAgent', () => {
   });
 
   it('should throw an error for missing model or provider values', () => {
-    const envValue1 = 'thread=openai,goal=/claude-1';
-    const envValue2 = 'thread=/gpt-3.5-turbo,goal=anthropic/';
+    const envValue1 = 'thread=openai,orchestrationWorkflow=/claude-1';
+    const envValue2 = 'thread=/gpt-3.5-turbo,orchestrationWorkflow=anthropic/';
 
     expect(() => parseSystemAgent(envValue1)).toThrowError(/Missing model or provider/);
     expect(() => parseSystemAgent(envValue2)).toThrowError(/Missing model or provider/);
@@ -53,30 +78,31 @@ describe('parseSystemAgent', () => {
   });
 
   it('should handle extra whitespace in environment variable string', () => {
-    const envValue = '  thread = openai/gpt-3.5-turbo , goal = anthropic/claude-1 ';
+    const envValue =
+      '  thread = openai/gpt-3.5-turbo , orchestrationWorkflow = anthropic/claude-1 ';
     const expected = {
       thread: { provider: 'openai', model: 'gpt-3.5-turbo' },
-      goal: { provider: 'anthropic', model: 'claude-1' },
+      orchestrationWorkflow: { provider: 'anthropic', model: 'claude-1' },
     };
 
     expect(parseSystemAgent(envValue)).toEqual(expected);
   });
 
   it('should handle full-width comma in environment variable string', () => {
-    const envValue = 'thread=openai/gpt-3.5-turbo，goal=anthropic/claude-1';
+    const envValue = 'thread=openai/gpt-3.5-turbo，orchestrationWorkflow=anthropic/claude-1';
     const expected = {
       thread: { provider: 'openai', model: 'gpt-3.5-turbo' },
-      goal: { provider: 'anthropic', model: 'claude-1' },
+      orchestrationWorkflow: { provider: 'anthropic', model: 'claude-1' },
     };
 
     expect(parseSystemAgent(envValue)).toEqual(expected);
   });
 
   it('should handle extra whitespace around provider and model names', () => {
-    const envValue = 'thread= openai / gpt-3.5-turbo ,goal= anthropic / claude-1 ';
+    const envValue = 'thread= openai / gpt-3.5-turbo ,orchestrationWorkflow= anthropic / claude-1 ';
     const expected = {
       thread: { provider: 'openai', model: 'gpt-3.5-turbo' },
-      goal: { provider: 'anthropic', model: 'claude-1' },
+      orchestrationWorkflow: { provider: 'anthropic', model: 'claude-1' },
     };
 
     expect(parseSystemAgent(envValue)).toEqual(expected);
@@ -99,7 +125,7 @@ describe('parseSystemAgent', () => {
     const result = parseSystemAgent(envValue);
 
     expect(result.onboardingTaskRecommender).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
-    expect(result.goal).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
+    expect(result.orchestrationWorkflow).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.onboardingUnderstanding).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.expertise).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.expertise).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
@@ -157,7 +183,7 @@ describe('parseSystemAgent', () => {
 
     expect(result.thread).toEqual({ provider: 'openai', model: 'gpt-4' });
 
-    expect(result.goal).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
+    expect(result.orchestrationWorkflow).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.onboardingUnderstanding).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.expertise).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.onboardingTaskRecommender).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
@@ -173,7 +199,7 @@ describe('parseSystemAgent', () => {
     expect(result.thread).toEqual({ provider: 'openai', model: 'gpt-4' });
 
     // 其他系统智能体应该使用默认配置
-    expect(result.goal).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
+    expect(result.orchestrationWorkflow).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.onboardingUnderstanding).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.expertise).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
     expect(result.onboardingTaskRecommender).toEqual({ provider: 'ollama', model: 'deepseek-v3' });
@@ -184,8 +210,8 @@ describe('retired system agent settings', () => {
   it('ignores obsolete assignments and keeps active model assignments', () => {
     expect(
       parseSystemAgent(
-        'topicAutoSummary=openai/old,inputCompletion=openai/old,topic=openai/old,agentMeta=openai/old,goal=openai/current',
+        'topicAutoSummary=openai/old,inputCompletion=openai/old,topic=openai/old,agentMeta=openai/old,orchestrationWorkflow=openai/current',
       ),
-    ).toEqual({ goal: { provider: 'openai', model: 'current' } });
+    ).toEqual({ orchestrationWorkflow: { provider: 'openai', model: 'current' } });
   });
 });

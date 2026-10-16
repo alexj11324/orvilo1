@@ -64,13 +64,13 @@ export const commandContextSchema = z.object({
  * does not require Linear to be installed.
  */
 export type PlanningScopeRef =
-  | { id: string; kind: 'goal' }
+  | { id: string; kind: 'orchestrationWorkflow' }
   | { id: string; kind: 'project' }
   | { id: string; kind: 'team' }
   | { id: string; kind: 'workspace' };
 
 export const planningScopeRefSchema = z.discriminatedUnion('kind', [
-  z.object({ id: z.string().min(1), kind: z.literal('goal') }),
+  z.object({ id: z.string().min(1), kind: z.literal('orchestrationWorkflow') }),
   z.object({ id: z.string().min(1), kind: z.literal('project') }),
   z.object({ id: z.string().min(1), kind: z.literal('team') }),
   z.object({ id: z.string().min(1), kind: z.literal('workspace') }),

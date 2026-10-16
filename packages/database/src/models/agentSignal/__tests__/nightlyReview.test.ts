@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import {
   agents,
   messagePlugins,
@@ -158,10 +159,12 @@ describe('AgentSignalNightlyReviewModel', () => {
         { general: { timezone: 'Asia/Shanghai' }, id: enabledUserId },
         { general: { timezone: 'America/New_York' }, id: otherUserId },
       ]);
-      await serverDB.insert(agents).values([
-        { id: 'nightly-active-agent', slug: INBOX_SESSION_ID, userId: enabledUserId },
-        { id: 'nightly-stale-agent', slug: INBOX_SESSION_ID, userId: otherUserId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: 'nightly-active-agent', slug: INBOX_SESSION_ID, userId: enabledUserId },
+          { id: 'nightly-stale-agent', slug: INBOX_SESSION_ID, userId: otherUserId },
+        ]),
+      );
       await serverDB.insert(topics).values([
         { agentId: 'nightly-active-agent', id: 'nightly-active-topic', userId: enabledUserId },
         { agentId: 'nightly-stale-agent', id: 'nightly-stale-topic', userId: otherUserId },
@@ -227,12 +230,14 @@ describe('AgentSignalNightlyReviewModel', () => {
           slug: 'nightly-review-workspace',
         })
         .returning();
-      await serverDB.insert(agents).values({
-        id: 'nightly-workspace-agent',
-        slug: INBOX_SESSION_ID,
-        userId: enabledUserId,
-        workspaceId: workspace!.id,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          id: 'nightly-workspace-agent',
+          slug: INBOX_SESSION_ID,
+          userId: enabledUserId,
+          workspaceId: workspace!.id,
+        }),
+      );
       await serverDB.insert(topics).values({
         agentId: 'nightly-workspace-agent',
         id: 'nightly-workspace-topic',
@@ -286,30 +291,32 @@ describe('AgentSignalNightlyReviewModel', () => {
 
       const [orviloAiAgent, blockedAgent, enabledAgent] = await serverDB
         .insert(agents)
-        .values([
-          {
-            chatConfig: chatConfigForSelfIteration(blockedEnabled),
-            id: `nightly-orvilo-ai-${caseName}`,
-            slug: INBOX_SESSION_ID,
-            title: 'Orvilo AI',
-            userId: enabledUserId,
-            virtual: true,
-          },
-          {
-            chatConfig: chatConfigForSelfIteration(blockedEnabled),
-            id: `nightly-custom-${caseName}`,
-            slug: `custom-${caseName}`,
-            title: 'Custom blocked',
-            userId: enabledUserId,
-          },
-          {
-            chatConfig: chatConfigForSelfIteration(true),
-            id: `nightly-custom-enabled-${caseName}`,
-            slug: `custom-enabled-${caseName}`,
-            title: 'Custom enabled',
-            userId: enabledUserId,
-          },
-        ])
+        .values(
+          await withTestAgentDevices(serverDB, [
+            {
+              chatConfig: chatConfigForSelfIteration(blockedEnabled),
+              id: `nightly-orvilo-ai-${caseName}`,
+              slug: INBOX_SESSION_ID,
+              title: 'Orvilo AI',
+              userId: enabledUserId,
+              virtual: true,
+            },
+            {
+              chatConfig: chatConfigForSelfIteration(blockedEnabled),
+              id: `nightly-custom-${caseName}`,
+              slug: `custom-${caseName}`,
+              title: 'Custom blocked',
+              userId: enabledUserId,
+            },
+            {
+              chatConfig: chatConfigForSelfIteration(true),
+              id: `nightly-custom-enabled-${caseName}`,
+              slug: `custom-enabled-${caseName}`,
+              title: 'Custom enabled',
+              userId: enabledUserId,
+            },
+          ]),
+        )
         .returning();
 
       await serverDB.insert(topics).values(
@@ -385,45 +392,47 @@ describe('AgentSignalNightlyReviewModel', () => {
       const [activeAgent, legacyAgent, inactiveAgent, disabledAgent, virtualAgent, otherUserAgent] =
         await serverDB
           .insert(agents)
-          .values([
-            {
-              chatConfig: { selfIteration: { enabled: true } },
-              id: 'nightly-active-agent',
-              title: 'Active agent',
-              userId: enabledUserId,
-            },
-            {
-              chatConfig: { selfIteration: { enabled: true } },
-              id: 'nightly-legacy-agent',
-              title: 'Legacy agent',
-              userId: enabledUserId,
-            },
-            {
-              chatConfig: { selfIteration: { enabled: true } },
-              id: 'nightly-inactive-agent',
-              title: 'Inactive agent',
-              userId: enabledUserId,
-            },
-            {
-              chatConfig: { selfIteration: { enabled: false } },
-              id: 'nightly-disabled-agent',
-              title: 'Disabled agent',
-              userId: enabledUserId,
-            },
-            {
-              chatConfig: { selfIteration: { enabled: true } },
-              id: 'nightly-virtual-agent',
-              title: 'Virtual agent',
-              userId: enabledUserId,
-              virtual: true,
-            },
-            {
-              chatConfig: { selfIteration: { enabled: true } },
-              id: 'nightly-other-user-agent',
-              title: 'Other user',
-              userId: otherUserId,
-            },
-          ])
+          .values(
+            await withTestAgentDevices(serverDB, [
+              {
+                chatConfig: { selfIteration: { enabled: true } },
+                id: 'nightly-active-agent',
+                title: 'Active agent',
+                userId: enabledUserId,
+              },
+              {
+                chatConfig: { selfIteration: { enabled: true } },
+                id: 'nightly-legacy-agent',
+                title: 'Legacy agent',
+                userId: enabledUserId,
+              },
+              {
+                chatConfig: { selfIteration: { enabled: true } },
+                id: 'nightly-inactive-agent',
+                title: 'Inactive agent',
+                userId: enabledUserId,
+              },
+              {
+                chatConfig: { selfIteration: { enabled: false } },
+                id: 'nightly-disabled-agent',
+                title: 'Disabled agent',
+                userId: enabledUserId,
+              },
+              {
+                chatConfig: { selfIteration: { enabled: true } },
+                id: 'nightly-virtual-agent',
+                title: 'Virtual agent',
+                userId: enabledUserId,
+                virtual: true,
+              },
+              {
+                chatConfig: { selfIteration: { enabled: true } },
+                id: 'nightly-other-user-agent',
+                title: 'Other user',
+                userId: otherUserId,
+              },
+            ]),
+          )
           .returning();
 
       await serverDB.insert(topics).values([
@@ -592,12 +601,14 @@ describe('AgentSignalNightlyReviewModel', () => {
       // and its messages, but a non-null topics.senderId marks the topic as
       // visitor traffic that must not feed the creator's own nightly review.
       await serverDB.insert(users).values({ id: enabledUserId });
-      await serverDB.insert(agents).values({
-        chatConfig: { selfIteration: { enabled: true } },
-        id: 'nightly-share-agent',
-        title: 'Share agent',
-        userId: enabledUserId,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          chatConfig: { selfIteration: { enabled: true } },
+          id: 'nightly-share-agent',
+          title: 'Share agent',
+          userId: enabledUserId,
+        }),
+      );
       await serverDB.insert(topics).values([
         {
           agentId: 'nightly-share-agent',

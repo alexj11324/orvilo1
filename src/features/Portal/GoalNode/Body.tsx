@@ -94,17 +94,19 @@ const AttemptLedger = memo<{ view: GoalNodeView }>(({ view }) => {
 
 AttemptLedger.displayName = 'GoalNodePortalAttempts';
 
-const NodeLinkRow = memo<{ onClick: () => void; text: string; view: GoalNodeView }>(
-  ({ onClick, text, view }) => (
-    <div
-      className={cn('flex flex-row items-center gap-1.5 py-1 px-1', styles.linkRow)}
-      onClick={onClick}
-    >
-      <KindDot kind={view.node.kind} />
-      <div className="truncate min-w-0 text-xs text-muted-foreground">{text}</div>
-    </div>
-  ),
-);
+const NodeLinkRow = memo<{
+  onClick: () => void;
+  text: string;
+  view: GoalNodeView;
+}>(({ onClick, text, view }) => (
+  <div
+    className={cn('flex flex-row items-center gap-1.5 py-1 px-1', styles.linkRow)}
+    onClick={onClick}
+  >
+    <KindDot kind={view.node.kind} />
+    <div className="truncate min-w-0 text-xs text-muted-foreground">{text}</div>
+  </div>
+));
 
 NodeLinkRow.displayName = 'GoalNodePortalLink';
 
@@ -113,11 +115,11 @@ const Body = memo(() => {
   const view = useChatStore(chatPortalSelectors.goalNodeView);
   const openTaskDetail = useChatStore((s) => s.openTaskDetail);
   const openGoalNode = useChatStore((s) => s.openGoalNode);
-  const snapshot = useGoalStore(goalSelectors.goalGraph(view?.goalId ?? ''));
+  const snapshot = useGoalStore(goalSelectors.goalGraph(view?.orchestrationWorkflowId ?? ''));
   const useFetchGoalGraph = useGoalStore((s) => s.useFetchGoalGraph);
   // Same SWR key as the goal page, so this shares its request; it only adds the
   // loading / error status the store snapshot alone cannot express.
-  const { error, isLoading, mutate } = useFetchGoalGraph(view?.goalId);
+  const { error, isLoading, mutate } = useFetchGoalGraph(view?.orchestrationWorkflowId);
 
   const graph = useMemo(() => (snapshot ? buildGoalGraphView(snapshot) : undefined), [snapshot]);
   if (!view) return null;
@@ -216,7 +218,7 @@ const Body = memo(() => {
                   key={finding.id}
                   text={finding.title}
                   view={findingView}
-                  onClick={() => openGoalNode(view.goalId, finding.id)}
+                  onClick={() => openGoalNode(view.orchestrationWorkflowId, finding.id)}
                 />
               );
             })}
@@ -229,7 +231,7 @@ const Body = memo(() => {
           <NodeLinkRow
             text={nodeView.producedBy.title}
             view={graph.byId[nodeView.producedBy.id]}
-            onClick={() => openGoalNode(view.goalId, nodeView.producedBy!.id)}
+            onClick={() => openGoalNode(view.orchestrationWorkflowId, nodeView.producedBy!.id)}
           />
         </Section>
       )}
@@ -245,7 +247,7 @@ const Body = memo(() => {
                   key={blocker.id}
                   text={blocker.title}
                   view={blockerView}
-                  onClick={() => openGoalNode(view.goalId, blocker.id)}
+                  onClick={() => openGoalNode(view.orchestrationWorkflowId, blocker.id)}
                 />
               );
             })}

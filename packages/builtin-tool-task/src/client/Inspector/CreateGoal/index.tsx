@@ -7,23 +7,26 @@ import { useTranslation } from 'react-i18next';
 
 import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
-import type { CreateGoalParams, CreateGoalState } from '../../../types';
+import type {
+  CreateOrchestrationWorkflowParams,
+  CreateOrchestrationWorkflowState,
+} from '../../../types';
 
-const CreateGoalInspector = memo<BuiltinInspectorProps<CreateGoalParams, CreateGoalState>>(
-  ({ args, partialArgs, isArgumentsStreaming, isLoading, pluginState }) => {
-    const { t } = useTranslation('plugin');
-    const name = args?.name || partialArgs?.name || pluginState?.name;
+const CreateGoalInspector = memo<
+  BuiltinInspectorProps<CreateOrchestrationWorkflowParams, CreateOrchestrationWorkflowState>
+>(({ args, partialArgs, isArgumentsStreaming, isLoading, pluginState }) => {
+  const { t } = useTranslation('plugin');
+  const name = args?.name || partialArgs?.name || pluginState?.name;
 
-    return (
-      <div className={inspectorTextStyles.root}>
-        <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
-          {t('builtins.orvilo-goal.apiName.createGoal')}
-        </span>
-        {name && <span> · {name}</span>}
-      </div>
-    );
-  },
-);
+  return (
+    <div className={inspectorTextStyles.root}>
+      <span className={cn((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
+        {t('builtins.orvilo-goal.apiName.createGoal')}
+      </span>
+      {name && <span> · {name}</span>}
+    </div>
+  );
+});
 
 CreateGoalInspector.displayName = 'CreateGoalInspector';
 

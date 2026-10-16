@@ -1,5 +1,8 @@
-import type { GoalGraphSnapshot, GoalNodeKind } from '@orvilo/types';
-import { experimentMembers } from '@orvilo/utils/goalGraph';
+import type {
+  OrchestrationWorkflowGraphSnapshot,
+  OrchestrationWorkflowNodeKind,
+} from '@orvilo/types';
+import { experimentMembers } from '@orvilo/utils/orchestrationWorkflowGraph';
 
 import type { GoalGraphView, GoalNodeView } from '../ProcessControl/goalGraphViewModel';
 
@@ -21,7 +24,7 @@ export const experimentRelations = (graph: GoalGraphView, nodeId: string) => {
   };
 };
 
-export const experimentInputs = (snapshot: GoalGraphSnapshot, nodeId: string) => {
+export const experimentInputs = (snapshot: OrchestrationWorkflowGraphSnapshot, nodeId: string) => {
   const members = experimentMembers(snapshot, nodeId);
   members.add(nodeId);
   const versions = new Map(
@@ -33,7 +36,7 @@ export const experimentInputs = (snapshot: GoalGraphSnapshot, nodeId: string) =>
 };
 
 /** Graph semantics are persisted; presentation never reclassifies a Task. */
-export type GoalGraphNodeKind = GoalNodeKind;
+export type GoalGraphNodeKind = OrchestrationWorkflowNodeKind;
 
 export const graphNodeKind = (graph: GoalGraphView, view: GoalNodeView): GoalGraphNodeKind =>
   isExperiment(graph, view) ? 'experiment' : view.node.kind;

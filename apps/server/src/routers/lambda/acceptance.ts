@@ -294,11 +294,11 @@ export const acceptanceRouter = router({
     }),
 
   /**
-   * Set (or update) a subject's acceptance goal — the one-sentence outcome the
-   * conversation is delivering. Unlike `ensure`, this overwrites: the goal is a
+   * Set (or update) a subject's acceptance orchestration workflow — the one-sentence outcome the
+   * conversation is delivering. Unlike `ensure`, this overwrites: the orchestration workflow is a
    * user-editable field, so a later edit must stick.
    */
-  saveGoal: acceptanceWriteProcedure
+  saveOrchestrationWorkflow: acceptanceWriteProcedure
     .input(
       z.object({
         requirement: z.string().max(2000),
@@ -538,10 +538,10 @@ export const acceptanceRouter = router({
       // plan that uses a distinct snapshot id: generation reports success and
       // no card ever renders.
       const predictionByResult = new Map<string, (typeof predictions)[number]>();
-      // Goal reviews may use the owner's configured model. Their persisted ids
+      // OrchestrationWorkflow reviews may use the owner's configured model. Their persisted ids
       // identify the actual automatic decision without admitting unrelated rows.
       const automaticPredictionIds = new Set(
-        runs.flatMap((run) => run.metadata?.goalReview?.predictionIds ?? []),
+        runs.flatMap((run) => run.metadata?.orchestrationWorkflowReview?.predictionIds ?? []),
       );
       // Newest-first from the model, so the first write per check item wins and
       // later (older) rows are ignored.

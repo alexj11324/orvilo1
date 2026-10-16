@@ -193,10 +193,10 @@ const createSchema = z.object({
    *  the team's mapped workflow state below when exactly one matches. */
   workflowCategory: z.enum(TASK_WORKFLOW_CATEGORIES).optional(),
   // Removed contract, kept so the server can recognise it. A task no longer
-  // carries a goal — the Goal Graph owns execution and dispatches its own Work
+  // carries a orchestration workflow — the OrchestrationWorkflow Graph owns execution and dispatches its own Work
   // Tasks — and silently dropping this field would let a released client report
-  // that a goal started when only an ordinary task exists.
-  goal: z.unknown().optional(),
+  // that a orchestration workflow started when only an ordinary task exists.
+  orchestrationWorkflow: z.unknown().optional(),
 });
 
 const updateSchema = z.object({
@@ -571,7 +571,7 @@ export const taskRouter = router({
   /**
    * Read a composer draft and report what it means — a name, the outcome as
    * understood, the questions that would change the deliverable, and whether
-   * it is really a standing goal. Returns a reading only; nothing is created.
+   * it is really a standing orchestration workflow. Returns a reading only; nothing is created.
    */
   analyzeIntent: taskProcedureWrite
     .input(
@@ -965,12 +965,12 @@ export const taskRouter = router({
     }),
 
   create: taskProcedureWrite.input(createSchema).mutation(async ({ input, ctx }) => {
-    const { goal: legacyGoal, ...createInput } = input;
-    if (legacyGoal !== undefined) {
+    const { orchestrationWorkflow: legacyOrchestrationWorkflow, ...createInput } = input;
+    if (legacyOrchestrationWorkflow !== undefined) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
         message:
-          'Creating a goal through task.create is no longer supported. Reload the app, then create the goal again.',
+          'Creating an orchestration workflow through task.create is no longer supported. Reload the app, then create the orchestration workflow again.',
       });
     }
     try {

@@ -22,9 +22,9 @@ import type { OrviloDatabase } from '@/database/type';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import {
-  createGoalTaskOwnershipAdapter,
   projectPlannerOwnershipError,
-} from '@/server/services/goal/taskOwnership';
+  startOrchestrationWorkflowTaskOwnershipAdapter,
+} from '@/server/services/orchestrationWorkflow/taskOwnership';
 import { TaskService } from '@/server/services/task';
 import { processTaskCancellation } from '@/server/services/taskCancellation';
 import { TaskRunnerService } from '@/server/services/taskRunner';
@@ -92,7 +92,7 @@ export interface TaskPlanningSnapshot {
     assigneeAgentId: string | null;
     assigneeUserId: string | null;
     changed?: boolean;
-    goalId?: string | null;
+    orchestrationWorkflowId?: string | null;
     id: string;
     instruction: string;
     name: string | null;
@@ -136,7 +136,7 @@ export class LinearPlanningWorker {
   constructor(
     db: OrviloDatabase,
     workspaceId: string,
-    private readonly ownershipAdapterFactory = createGoalTaskOwnershipAdapter,
+    private readonly ownershipAdapterFactory = startOrchestrationWorkflowTaskOwnershipAdapter,
   ) {
     this.db = db;
     this.model = new LinearSyncModel(db, workspaceId);
@@ -498,11 +498,11 @@ export class LinearPlanningWorker {
         );
       }
 
-      const goalOwners = await this.ownershipAdapterFactory(
+      const orchestrationWorkflowOwners = await this.ownershipAdapterFactory(
         tx as unknown as OrviloDatabase,
         this.workspaceId,
       ).findOwners(existingTaskIds);
-      const ownershipError = projectPlannerOwnershipError(goalOwners);
+      const ownershipError = projectPlannerOwnershipError(orchestrationWorkflowOwners);
       if (ownershipError) return supersede(ownershipError);
 
       if (
@@ -951,9 +951,10 @@ export class LinearPlanningWorker {
       omittedTaskCount > 0 ||
       omittedDependencyCount > 0 ||
       omittedEventCount > 0;
-    const goalOwners = await this.ownershipAdapterFactory(this.db, this.workspaceId).findOwners(
-      visibleTaskRows.map((task) => task.id),
-    );
+    const orchestrationWorkflowOwners = await this.ownershipAdapterFactory(
+      this.db,
+      this.workspaceId,
+    ).findOwners(visibleTaskRows.map((task) => task.id));
 
     return {
       consistency:
@@ -974,7 +975,8 @@ export class LinearPlanningWorker {
       tasks: visibleTaskRows.map((task) => ({
         ...task,
         changed: changedTaskIds.includes(task.id),
-        goalId: goalOwners.get(task.id)?.goalId ?? null,
+        orchestrationWorkflowId:
+          orchestrationWorkflowOwners.get(task.id)?.orchestrationWorkflowId ?? null,
         updatedAt: task.updatedAt.toISOString(),
       })),
       truncation: {

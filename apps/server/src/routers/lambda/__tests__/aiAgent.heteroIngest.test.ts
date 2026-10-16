@@ -13,6 +13,7 @@ import { LOCAL_HETEROGENEOUS_AGENT_TYPES } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import type * as OperationPrincipalModule from '@/server/services/heterogeneousAgent/operationPrincipal';
 import { HeteroOperationPrincipalError } from '@/server/services/heterogeneousAgent/operationPrincipal';
@@ -221,12 +222,14 @@ describe('aiAgentRouter.heteroIngest / heteroFinish', () => {
         ]);
         const [agent] = await serverDB
           .insert(agents)
-          .values({
-            userId: creatorId,
-            workspaceId: workspace.id,
-            visibility: 'public',
-            title: 'Running Agent',
-          })
+          .values(
+            await withTestAgentDevices(serverDB, {
+              userId: creatorId,
+              workspaceId: workspace.id,
+              visibility: 'public',
+              title: 'Running Agent',
+            }),
+          )
           .returning();
         await serverDB.insert(resourcePermissions).values({
           resourceType: 'agent',

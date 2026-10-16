@@ -1,4 +1,8 @@
-import { type GoalMetricComparison, type GoalMetricCriterion, toMetricScale } from '@orvilo/types';
+import {
+  type OrchestrationWorkflowMetricComparison,
+  type OrchestrationWorkflowMetricCriterion,
+  toMetricScale,
+} from '@orvilo/types';
 
 import type { MetricSeriesWithPoints } from '@/services/metric';
 
@@ -15,7 +19,7 @@ export interface NorthStarCard {
   /** When the latest observation landed; undefined when never measured. */
   latestAt?: Date;
   met: boolean;
-  op: GoalMetricComparison;
+  op: OrchestrationWorkflowMetricComparison;
   /** 0-100, baseline → target. 0 when unmeasured. */
   percent: number;
   /**
@@ -35,7 +39,11 @@ export const NORTH_STAR_STALE_AFTER_MS = 48 * 60 * 60 * 1000;
 
 const SPARKLINE_POINT_CAP = 60;
 
-const compare = (rawValue: number, op: GoalMetricComparison, rawTarget: number): boolean => {
+const compare = (
+  rawValue: number,
+  op: OrchestrationWorkflowMetricComparison,
+  rawTarget: number,
+): boolean => {
   // Both operands at the persisted numeric(20, 6) scale — the server's gate
   // compares this way, and a raw-target comparison here could disagree with
   // it at rounding boundaries (`eq 0.1234567` never holding while the goal
@@ -68,7 +76,7 @@ const compare = (rawValue: number, op: GoalMetricComparison, rawTarget: number):
  * `eq` measures closing distance from where the series started.
  */
 const progress = (
-  op: GoalMetricComparison,
+  op: OrchestrationWorkflowMetricComparison,
   baseline: number,
   current: number,
   target: number,
@@ -90,7 +98,7 @@ const progress = (
 };
 
 export const buildNorthStarCards = (
-  criteria: GoalMetricCriterion[],
+  criteria: OrchestrationWorkflowMetricCriterion[],
   series: MetricSeriesWithPoints[],
   now = Date.now(),
 ): NorthStarCard[] => {

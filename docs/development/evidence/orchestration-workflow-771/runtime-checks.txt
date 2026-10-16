@@ -1,0 +1,44 @@
+Source revision: b31e830e2b39766c3830c9ec43a068e8fcd5b30d
+Environment: real Electron + local OpenCode opencode/mimo-v2.6-flash-free
+Workspace: 1cyEyVj9Xztx4Xkh
+User: user_agent_testing_001
+Coordinator: agt_D8XfGW18Nrwz
+Ordinary Agent: agt_RMDxwvZJorZU
+Conversation: tpc_4mJYBowU2zvk
+Orchestration workflow: orchestrationWorkflow_Ik35XWX81wlB
+Parent: task_46UndUo8XXsm (T-10)
+Children: task_36GW5X3j6gAg (T-11), task_jEQXNmK0mfwR (T-12)
+
+Before confirmation, after prepare and reload:
+  postedAt: 2026-10-13T17:47:05.365Z
+  status: planning
+  planConfirmedAt: null
+  waitingReason: plan_not_confirmed
+  orchestrationAdmission: enabled
+  T-11: backlog, assignee agt_D8XfGW18Nrwz, no dependency
+  T-12: backlog, assignee agt_D8XfGW18Nrwz, no dependency
+  child dispatches: 0
+
+After a normal conversation reply:
+  planConfirmedAt: 2026-10-13T17:49:08.392Z
+  status: running
+  T-11: in_progress; actual dispatch running; initiator user_agent_testing_001; origin caid
+  T-12: in_progress; actual dispatch running; initiator user_agent_testing_001; origin caid
+  parent dispatches: 0
+  worker operations for both tasks subsequently reach done
+  proof-alpha.txt: b'Alpha', 5 bytes
+  proof-beta.txt: b'Beta', 4 bytes
+  provider_bindings: 0
+  terminal independent verification: not proven (default reviewer has no bound device)
+
+Negative cases:
+  ordinary delivery-plan conversation tpc_dz3DWnsOE59e:
+    actor agt_RMDxwvZJorZU, operation done, created orchestration workflows 0
+    ordinary-alpha.txt absent; ordinary-beta.txt absent
+  coordinator Q&A conversation tpc_WKt5bB18RZZM:
+    actor agt_D8XfGW18Nrwz, operation done, answer 30, created orchestration workflows 0
+
+Cleanup:
+  own test orchestration workflow paused through the real scoped API
+  getStatus returns status paused and waitingReason paused
+  no production data or provider credentials used

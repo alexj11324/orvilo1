@@ -14,15 +14,16 @@ import { useGoalTaskStatus } from './useGoalTaskStatus';
 
 const ACTIVE_PHASES = new Set<GoalTaskPhase>(['repairing', 'running', 'verifying']);
 
-const GoalCard = memo<{ goal: OperationGoal }>(({ goal }) => {
+const GoalCard = memo<{ orchestrationWorkflow: OperationGoal }>(({ orchestrationWorkflow }) => {
   const navigate = useWorkspaceAwareNavigate();
   const { agentId, progress, startedAt, title } = useGoalTaskStatus({
-    criteriaCount: goal.criteriaCount,
-    goalId: goal.goalId,
+    criteriaCount: orchestrationWorkflow.criteriaCount,
+    orchestrationWorkflowId: orchestrationWorkflow.orchestrationWorkflowId,
   });
   const isActive = ACTIVE_PHASES.has(progress.phase);
   const openGoal = () => {
-    if (agentId) navigate(`/agent/${agentId}/goal/${goal.goalId}`);
+    if (agentId)
+      navigate(`/agent/${agentId}/goal/${orchestrationWorkflow.orchestrationWorkflowId}`);
   };
 
   return (
@@ -45,7 +46,9 @@ const GoalCard = memo<{ goal: OperationGoal }>(({ goal }) => {
         )}
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <div className="min-w-0 truncate text-sm leading-5.5 font-medium">{title ?? goal.name}</div>
+        <div className="min-w-0 truncate text-sm leading-5.5 font-medium">
+          {title ?? orchestrationWorkflow.name}
+        </div>
         <GoalStatusLine {...progress} />
       </div>
       {isActive && <GoalElapsedTime startedAt={startedAt} />}
@@ -61,8 +64,11 @@ const GoalTaskCard = memo<{ goals: OperationGoal[] }>(({ goals }) => {
 
   return (
     <div className="flex flex-col gap-2">
-      {goals.map((goal) => (
-        <GoalCard goal={goal} key={goal.goalId} />
+      {goals.map((orchestrationWorkflow) => (
+        <GoalCard
+          key={orchestrationWorkflow.orchestrationWorkflowId}
+          orchestrationWorkflow={orchestrationWorkflow}
+        />
       ))}
     </div>
   );

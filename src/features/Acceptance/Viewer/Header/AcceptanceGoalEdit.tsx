@@ -27,10 +27,14 @@ const AcceptanceGoalEdit = () => {
     const { openGoalModal } =
       await import('@/features/Conversation/ChatInput/VerifyTray/GoalModal');
     openGoalModal({
-      initialGoal: data.acceptance.requirement ?? undefined,
-      onSubmit: async (goal) => {
+      initialOrchestrationWorkflow: data.acceptance.requirement ?? undefined,
+      onSubmit: async (orchestrationWorkflow) => {
         try {
-          await verifyService.saveAcceptanceGoal(data.subject.type, data.subject.id, goal);
+          await verifyService.saveAcceptanceGoal(
+            data.subject.type,
+            data.subject.id,
+            orchestrationWorkflow,
+          );
         } catch (cause) {
           toast.error(cause instanceof Error ? cause.message : t('acceptance.actionError'));
           throw cause;

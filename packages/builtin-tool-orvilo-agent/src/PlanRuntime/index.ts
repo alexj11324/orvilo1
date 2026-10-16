@@ -27,19 +27,19 @@ export interface PlanRuntimeService {
   createPlan: (args: {
     content: string;
     description: string;
-    goal: string;
+    orchestrationWorkflow: string;
     topicId: string;
   }) => Promise<PlanDocument>;
   findPlanById: (id: string) => Promise<PlanDocument | null>;
   findPlanByTopic: (topicId: string) => Promise<PlanDocument | null>;
   /**
-   * Update the user-facing plan fields (goal / description / context).
+   * Update the user-facing plan fields (orchestration workflow / description / context).
    * `topicId` is forwarded so client implementations can refresh their SWR cache;
    * server implementations can safely ignore it.
    */
   updatePlan: (
     id: string,
-    args: { content?: string; description?: string; goal?: string },
+    args: { content?: string; description?: string; orchestrationWorkflow?: string },
     topicId?: string,
   ) => Promise<PlanDocument>;
   /**
@@ -67,7 +67,7 @@ const toPlan = (doc: PlanDocument, completed = false): Plan => ({
   context: doc.content ?? undefined,
   createdAt: doc.createdAt.toISOString(),
   description: doc.description ?? '',
-  goal: doc.title ?? '',
+  orchestrationWorkflow: doc.title ?? '',
   id: doc.id,
   updatedAt: doc.updatedAt.toISOString(),
 });
@@ -353,12 +353,12 @@ export class PlanExecutionRuntime {
         return { content: 'Cannot create plan: no topic selected', success: false };
       }
 
-      const { goal, description, context: planContext } = params;
+      const { orchestrationWorkflow, description, context: planContext } = params;
 
       const doc = await this.service.createPlan({
         content: planContext ?? '',
         description,
-        goal,
+        orchestrationWorkflow,
         topicId: context.topicId,
       });
 
@@ -366,7 +366,7 @@ export class PlanExecutionRuntime {
       plan.context = planContext;
 
       return {
-        content: `📋 Created plan: "${plan.goal}"\n\nYou can view this plan in the Portal sidebar.`,
+        content: `📋 Created plan: "${plan.orchestrationWorkflow}"\n\nYou can view this plan in the Portal sidebar.`,
         state: { plan },
         success: true,
       };
@@ -390,7 +390,13 @@ export class PlanExecutionRuntime {
         return { content: 'Cannot update plan: no topic selected', success: false };
       }
 
-      const { planId, goal, description, context: planContext, completed } = params;
+      const {
+        planId,
+        orchestrationWorkflow,
+        description,
+        context: planContext,
+        completed,
+      } = params;
 
       const existingDoc = await this.service.findPlanById(planId);
       if (!existingDoc) {
@@ -399,7 +405,7 @@ export class PlanExecutionRuntime {
 
       const updatedDoc = await this.service.updatePlan(
         planId,
-        { content: planContext, description, goal },
+        { content: planContext, description, orchestrationWorkflow },
         context.topicId,
       );
 
@@ -407,7 +413,7 @@ export class PlanExecutionRuntime {
       plan.context = planContext ?? existingDoc.content ?? undefined;
 
       return {
-        content: `📝 Updated plan: "${plan.goal}"`,
+        content: `📝 Updated plan: "${plan.orchestrationWorkflow}"`,
         state: { plan },
         success: true,
       };

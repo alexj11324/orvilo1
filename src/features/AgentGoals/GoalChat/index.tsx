@@ -70,9 +70,9 @@ Conversation.displayName = 'GoalChatConversation';
 
 interface GoalChatProps {
   agentId: string;
-  goalId: string;
   initialTopicId?: string;
   onCollapse: () => void;
+  orchestrationWorkflowId: string;
 }
 
 /**
@@ -80,11 +80,17 @@ interface GoalChatProps {
  * provider tags the context with `viewedGoal`, so every question is answered
  * with the current goal overview injected — "how is this going?" just works.
  */
-const GoalChat = memo<GoalChatProps>(({ agentId, goalId, initialTopicId, onCollapse }) => (
-  <GoalChatProvider agentId={agentId} goalId={goalId} initialTopicId={initialTopicId}>
-    <Conversation onCollapse={onCollapse} />
-  </GoalChatProvider>
-));
+const GoalChat = memo<GoalChatProps>(
+  ({ agentId, orchestrationWorkflowId, initialTopicId, onCollapse }) => (
+    <GoalChatProvider
+      agentId={agentId}
+      initialTopicId={initialTopicId}
+      orchestrationWorkflowId={orchestrationWorkflowId}
+    >
+      <Conversation onCollapse={onCollapse} />
+    </GoalChatProvider>
+  ),
+);
 
 GoalChat.displayName = 'GoalChat';
 

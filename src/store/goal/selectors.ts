@@ -2,11 +2,11 @@ import type { GoalStore } from './action';
 
 const EMPTY_GOALS: GoalStore['goalListByAgentId'][string] = [];
 
-const goalGraph = (goalId?: string | null) => (s: GoalStore) =>
-  goalId ? s.goalGraphById[goalId] : undefined;
+const goalGraph = (orchestrationWorkflowId?: string | null) => (s: GoalStore) =>
+  orchestrationWorkflowId ? s.goalGraphById[orchestrationWorkflowId] : undefined;
 
-const goalMetricSeries = (goalId?: string | null) => (s: GoalStore) =>
-  goalId ? s.goalMetricSeriesById[goalId] : undefined;
+const goalMetricSeries = (orchestrationWorkflowId?: string | null) => (s: GoalStore) =>
+  orchestrationWorkflowId ? s.goalMetricSeriesById[orchestrationWorkflowId] : undefined;
 
 const goalList = (agentId: string) => (s: GoalStore) => s.goalListByAgentId[agentId] ?? EMPTY_GOALS;
 

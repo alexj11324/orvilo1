@@ -12,10 +12,8 @@ import type { TaskInstructionSynthesis, TaskIntentAnalysis } from '@orvilo/types
 import debug from 'debug';
 import { z } from 'zod';
 
-import { TaskDomainError } from '@/database/errors/task';
 import type { OrviloDatabase } from '@/database/type';
-import { AiGenerationService } from '@/server/services/aiGeneration';
-import { resolveLightweightJudgment } from '@/server/services/systemAgent/lightweightJudgment';
+import { generateOrchestrationWorkflowObject } from '@/server/services/orchestrationWorkflow/generation';
 
 const log = debug('orvilo-server:task-intent');
 
@@ -32,7 +30,7 @@ const analysisSchema = z.object({
     )
     .optional(),
   confidence: z.enum(['high', 'medium', 'low']).optional(),
-  kind: z.enum(['task', 'goal']).optional(),
+  kind: z.enum(['task', 'orchestrationWorkflow']).optional(),
   kindReason: z.string().optional(),
   refinedInstruction: z.string().min(1),
   summary: z.string().min(1),
@@ -53,7 +51,7 @@ const synthesisSchema = z.object({
  * result an autonomous run later. This service is the step in between: it
  * names the task, restates the outcome for the user to check, flags the
  * questions whose answers change the work, and says whether the request is
- * really a standing goal rather than a single task.
+ * really a standing orchestration workflow rather than a single task.
  *
  * It answers only — the caller decides whether to create straight through or
  * stop for confirmation, and nothing here writes to the database.
@@ -71,26 +69,15 @@ export class TaskIntentService {
     instruction: string;
   }): Promise<TaskIntentAnalysis> {
     // Intent reading is the same "structure the user's request" model role as
-    // goal criteria drafting, so it rides that assignment rather than adding a
+    // orchestration workflow criteria drafting, so it rides that assignment rather than adding a
     // configurable model slot for a feature still behind a lab toggle.
-    const modelConfig = await resolveLightweightJudgment(
+    const raw = await generateOrchestrationWorkflowObject(
       this.db,
       this.userId,
-      'goal',
-      params.agentId,
       this.workspaceId,
-    );
-    if (!modelConfig)
-      throw new TaskDomainError({
-        code: 'PRECONDITION_FAILED',
-        message: 'TASK_INTENT_UNAVAILABLE',
-      });
-    const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
-
-    const raw = await ai.generateObject(
+      params.agentId,
       {
         ...chainTaskIntent(params),
-        ...modelConfig,
         schema: TASK_INTENT_JSON_SCHEMA,
         thinking: { type: 'disabled' },
       },
@@ -98,7 +85,7 @@ export class TaskIntentService {
         judgment: {
           // Pre-creation intent reading binds to the builtin task agent; a
           // missing binding surfaces as an explicit block to the caller.
-          binding: modelConfig.binding,
+          binding: { agentId: params.agentId },
           purpose: 'task.intent',
         },
         kind: 'judgment',
@@ -134,30 +121,19 @@ export class TaskIntentService {
     context?: string;
     instruction: string;
   }): Promise<TaskInstructionSynthesis> {
-    const modelConfig = await resolveLightweightJudgment(
+    const raw = await generateOrchestrationWorkflowObject(
       this.db,
       this.userId,
-      'goal',
-      params.agentId,
       this.workspaceId,
-    );
-    if (!modelConfig)
-      throw new TaskDomainError({
-        code: 'PRECONDITION_FAILED',
-        message: 'TASK_INTENT_UNAVAILABLE',
-      });
-    const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
-
-    const raw = await ai.generateObject(
+      params.agentId,
       {
         ...chainTaskInstruction(params),
-        ...modelConfig,
         schema: TASK_INSTRUCTION_JSON_SCHEMA,
         thinking: { type: 'disabled' },
       },
       {
         judgment: {
-          binding: modelConfig.binding,
+          binding: { agentId: params.agentId },
           purpose: 'task.instruction',
         },
         kind: 'judgment',

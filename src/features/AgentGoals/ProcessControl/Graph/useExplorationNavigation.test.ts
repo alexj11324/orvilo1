@@ -1,4 +1,4 @@
-import type { GoalGraphEdge, GoalGraphNode } from '@orvilo/types';
+import type { OrchestrationWorkflowGraphEdge, OrchestrationWorkflowGraphNode } from '@orvilo/types';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
@@ -11,20 +11,20 @@ const nodes = [
   { id: 'nested', kind: 'experiment' },
   { id: 't', kind: 'task' },
   { id: 'nt', kind: 'task' },
-] as GoalGraphNode[];
+] as OrchestrationWorkflowGraphNode[];
 const edges = [
   { id: 'an', sourceNodeId: 'a', targetNodeId: 'nested', kind: 'contains' },
   { id: 'at', sourceNodeId: 'a', targetNodeId: 't', kind: 'contains' },
   { id: 'nt', sourceNodeId: 'nested', targetNodeId: 'nt', kind: 'contains' },
   { id: 'history', sourceNodeId: 'b', targetNodeId: 'a', kind: 'derived_from' },
-] as GoalGraphEdge[];
+] as OrchestrationWorkflowGraphEdge[];
 const graph = { nodes, edges };
 
 describe('experiment navigation', () => {
   it('starts collapsed even after async data arrives, and new experiments do not reset manual expansion', () => {
     const { result, rerender } = renderHook(
       (nodes) => useExplorationNavigation('g', { nodes, edges }),
-      { initialProps: [] as GoalGraphNode[] },
+      { initialProps: [] as OrchestrationWorkflowGraphNode[] },
     );
     rerender(nodes);
     expect(explorationMap(nodes, edges, result.current.collapsed).nodes.map((n) => n.id)).toEqual([
@@ -33,7 +33,7 @@ describe('experiment navigation', () => {
     ]);
     act(() => result.current.toggle('a'));
     expect(result.current.collapsed.has('nested')).toBe(true);
-    rerender([...nodes, { id: 'new', kind: 'experiment' } as GoalGraphNode]);
+    rerender([...nodes, { id: 'new', kind: 'experiment' } as OrchestrationWorkflowGraphNode]);
     expect(result.current.collapsed.has('new')).toBe(true);
     expect(result.current.collapsed.has('a')).toBe(false);
   });
@@ -77,7 +77,10 @@ describe('experiment navigation', () => {
     expect(result.current.collapsed).not.toBe(initial);
   });
   it('keeps an empty collapsed set stable for graphs without experiments', () => {
-    const plain = { nodes: [{ id: 't', kind: 'task' }] as GoalGraphNode[], edges: [] };
+    const plain = {
+      nodes: [{ id: 't', kind: 'task' }] as OrchestrationWorkflowGraphNode[],
+      edges: [],
+    };
     const { result, rerender } = renderHook((props) => useExplorationNavigation('g', props), {
       initialProps: plain,
     });

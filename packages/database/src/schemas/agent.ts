@@ -5,13 +5,24 @@ import type {
   OrviloAgentTTSConfig,
 } from '@orvilo/types';
 import { AgentChatConfigSchema } from '@orvilo/types';
-import { isNotNull, isNull } from 'drizzle-orm';
-import { boolean, index, jsonb, pgTable, text, uniqueIndex, varchar } from 'drizzle-orm/pg-core';
+import { isNotNull, isNull, sql } from 'drizzle-orm';
+import {
+  boolean,
+  check,
+  index,
+  jsonb,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
 import { idGenerator, randomSlug } from '../utils/idGenerator';
 import { softDeleteColumns, timestamps } from './_helpers';
+import { devices } from './device';
 import { sessionGroups } from './session';
 import { users } from './user';
 import { workspaces } from './workspace';
@@ -71,6 +82,9 @@ export const agents = pgTable(
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
 
     agencyConfig: jsonb('agency_config').$type<OrviloAgentAgencyConfig>(),
+    // Resolved by the database from agencyConfig.boundDeviceId and the owning
+    // scope. Referencing the registry row preserves device identity across scopes.
+    boundDeviceRowId: uuid('bound_device_row_id').references(() => devices.id),
     chatConfig: jsonb('chat_config').$type<OrviloAgentChatConfig>(),
 
     fewShots: jsonb('few_shots'),
@@ -103,6 +117,8 @@ export const agents = pgTable(
     ...timestamps,
   },
   (t) => [
+    check('agents_device_binding_required', sql`${t.boundDeviceRowId} IS NOT NULL`),
+    index('agents_bound_device_row_id_idx').on(t.boundDeviceRowId),
     uniqueIndex('client_id_user_id_unique').on(t.clientId, t.userId),
     uniqueIndex('agents_slug_user_id_unique').on(t.slug, t.userId).where(isNull(t.workspaceId)),
     index('agents_created_at_idx').on(t.createdAt),

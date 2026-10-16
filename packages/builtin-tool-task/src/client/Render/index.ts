@@ -18,7 +18,7 @@ import SetTaskVerifyRender from './SetTaskVerify';
  */
 export const TaskRenders: Record<string, BuiltinRender> = {
   [TaskApiName.createTask]: CreateTaskRender as BuiltinRender,
-  [TaskApiName.createGoal]: CreateGoalRender as BuiltinRender,
+  [TaskApiName.startOrchestrationWorkflow]: CreateGoalRender as BuiltinRender,
   [TaskApiName.createTasks]: CreateTasksRender as BuiltinRender,
   [TaskApiName.editTask]: EditTaskRender as BuiltinRender,
   [TaskApiName.runTask]: RunTaskRender as BuiltinRender,

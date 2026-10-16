@@ -46,7 +46,7 @@ export const createServerPlanRuntimeService = (
   };
 
   return {
-    createPlan: async ({ topicId, goal, description, content }) => {
+    createPlan: async ({ topicId, orchestrationWorkflow, description, content }) => {
       const doc = await documentModel.create({
         content,
         description,
@@ -55,7 +55,7 @@ export const createServerPlanRuntimeService = (
         // A plan is a machine-generated artifact; 'api' would make it
         // indistinguishable from a user-authored Page in resource listings.
         sourceType: AGENT_DOCUMENT_SOURCE_TYPE,
-        title: goal,
+        title: orchestrationWorkflow,
         totalCharCount: content.length,
         totalLineCount: content.split('\n').length,
         // Private-agent plans stay in the owner's private Pages; public
@@ -87,9 +87,9 @@ export const createServerPlanRuntimeService = (
       return first ? toPlanDocument(first) : null;
     },
 
-    updatePlan: async (id, { goal, description, content }) => {
+    updatePlan: async (id, { orchestrationWorkflow, description, content }) => {
       const updateData: Record<string, any> = {};
-      if (goal !== undefined) updateData.title = goal;
+      if (orchestrationWorkflow !== undefined) updateData.title = orchestrationWorkflow;
       if (description !== undefined) updateData.description = description;
       if (content !== undefined) {
         updateData.content = content;

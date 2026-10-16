@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ExpertiseDomainService } from '../expertise/domain';
@@ -17,6 +18,9 @@ vi.mock('@/server/services/providerBinding/execution', () => ({
 }));
 vi.mock('@/database/models/agent', () => ({
   AgentModel: class {
+    getOrchestratorSourceAgentId = async () => {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'ORCHESTRATOR_SETUP_REQUIRED' });
+    };
     getAgentConfig = mocks.agent;
     getAgentModelConfig = mocks.model;
   },
@@ -43,7 +47,7 @@ describe('optional builtin work (#623)', () => {
   it('reports a stable precondition without invoking a model for intent', async () => {
     await expect(
       new TaskIntentService({} as never, 'user').analyze({ instruction: 'Ship it' }),
-    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED', message: 'TASK_INTENT_UNAVAILABLE' });
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST', message: 'ORCHESTRATOR_SETUP_REQUIRED' });
     expect(mocks.generate).not.toHaveBeenCalled();
   });
   it('reports a stable precondition without invoking a model for self-evolution', async () => {

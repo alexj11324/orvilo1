@@ -1,15 +1,18 @@
-import type { GoalGraphEdge, GoalGraphNode } from '@orvilo/types';
+import type { OrchestrationWorkflowGraphEdge, OrchestrationWorkflowGraphNode } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import { hideKinds, layoutGraph } from './layout';
 
-const node = (id: string, kind: GoalGraphNode['kind'] = 'task'): GoalGraphNode => ({
+const node = (
+  id: string,
+  kind: OrchestrationWorkflowGraphNode['kind'] = 'task',
+): OrchestrationWorkflowGraphNode => ({
   confidence: null,
   createdAt: new Date('2026-08-01T00:00:00Z'),
   createdByAgentId: null,
   createdByUserId: null,
   description: null,
-  goalId: 'g',
+  orchestrationWorkflowId: 'g',
   id,
   kind,
   priority: 0,
@@ -23,10 +26,10 @@ const node = (id: string, kind: GoalGraphNode['kind'] = 'task'): GoalGraphNode =
 const edge = (
   sourceNodeId: string,
   targetNodeId: string,
-  kind: GoalGraphEdge['kind'],
-): GoalGraphEdge => ({
+  kind: OrchestrationWorkflowGraphEdge['kind'],
+): OrchestrationWorkflowGraphEdge => ({
   createdAt: new Date('2026-08-01T00:00:00Z'),
-  goalId: 'g',
+  orchestrationWorkflowId: 'g',
   id: `${sourceNodeId}-${targetNodeId}`,
   kind,
   sourceNodeId,

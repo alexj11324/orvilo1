@@ -8,6 +8,10 @@ const memoryServiceModelKeys = new Set([
   'userMemoryEmbedding',
   'userMemoryPersonaWriter',
 ]);
+// Deployments configured before the Goal -> Orchestration workflow rename still
+// set `goal=provider/model`. Dropping it silently would fall back to another
+// model, so the old key is a deprecated alias for the renamed one.
+const legacyKeyAliases: Record<string, string> = { goal: 'orchestrationWorkflow' };
 const defaultModelAssignmentKeys = protectedKeys.filter((key) => !memoryServiceModelKeys.has(key));
 
 export const parseSystemAgent = (envString: string = ''): Partial<UserServiceModelConfig> => {
@@ -22,6 +26,8 @@ export const parseSystemAgent = (envString: string = ''): Partial<UserServiceMod
 
   // Store default settings if there is a default=provider/model case
   let defaultSetting: { model: string; provider: string } | undefined;
+
+  const legacyAssignments: Record<string, { model: string; provider: string }> = {};
 
   for (const pair of pairs) {
     const [key, value] = pair.split('=').map((s) => s.trim());
@@ -43,6 +49,15 @@ export const parseSystemAgent = (envString: string = ''): Partial<UserServiceMod
         continue;
       }
 
+      const legacyTarget = legacyKeyAliases[key];
+      if (legacyTarget) {
+        console.warn(
+          `[SYSTEM_AGENT] "${key}" is deprecated, use "${legacyTarget}" instead. Applying it as "${legacyTarget}".`,
+        );
+        legacyAssignments[legacyTarget] = { model: model.trim(), provider: provider.trim() };
+        continue;
+      }
+
       if (protectedKeys.includes(key)) {
         config[key as keyof UserServiceModelConfig] = {
           model: model.trim(),
@@ -51,6 +66,13 @@ export const parseSystemAgent = (envString: string = ''): Partial<UserServiceMod
       }
     } else {
       throw new Error('Invalid environment variable format');
+    }
+  }
+
+  // The renamed key wins when both spellings are present.
+  for (const [key, value] of Object.entries(legacyAssignments)) {
+    if (!config[key as keyof UserServiceModelConfig]) {
+      config[key as keyof UserServiceModelConfig] = value as any;
     }
   }
 

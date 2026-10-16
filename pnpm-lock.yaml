@@ -379,9 +379,6 @@ importers:
       '@orvilo/builtin-tool-creds':
         specifier: workspace:*
         version: link:packages/builtin-tool-creds
-      '@orvilo/builtin-tool-goal':
-        specifier: workspace:*
-        version: link:packages/builtin-tool-goal
       '@orvilo/builtin-tool-group-agent-builder':
         specifier: workspace:*
         version: link:packages/builtin-tool-group-agent-builder
@@ -400,6 +397,9 @@ importers:
       '@orvilo/builtin-tool-notebook':
         specifier: workspace:*
         version: link:packages/builtin-tool-notebook
+      '@orvilo/builtin-tool-orchestration-workflow':
+        specifier: workspace:*
+        version: link:packages/builtin-tool-orchestration-workflow
       '@orvilo/builtin-tool-orvilo-agent':
         specifier: workspace:*
         version: link:packages/builtin-tool-orvilo-agent
@@ -1530,9 +1530,6 @@ importers:
       '@orvilo/builtin-tool-creds':
         specifier: workspace:*
         version: link:../../packages/builtin-tool-creds
-      '@orvilo/builtin-tool-goal':
-        specifier: workspace:*
-        version: link:../../packages/builtin-tool-goal
       '@orvilo/builtin-tool-group-agent-builder':
         specifier: workspace:*
         version: link:../../packages/builtin-tool-group-agent-builder
@@ -1551,6 +1548,9 @@ importers:
       '@orvilo/builtin-tool-notebook':
         specifier: workspace:*
         version: link:../../packages/builtin-tool-notebook
+      '@orvilo/builtin-tool-orchestration-workflow':
+        specifier: workspace:*
+        version: link:../../packages/builtin-tool-orchestration-workflow
       '@orvilo/builtin-tool-orvilo-agent':
         specifier: workspace:*
         version: link:../../packages/builtin-tool-orvilo-agent
@@ -2473,22 +2473,6 @@ importers:
         specifier: workspace:*
         version: link:../types
 
-  packages/builtin-tool-goal:
-    dependencies:
-      '@orvilo/builtin-tool-task':
-        specifier: workspace:*
-        version: link:../builtin-tool-task
-      react:
-        specifier: 19.2.7
-        version: 19.2.7
-      react-i18next:
-        specifier: '*'
-        version: 16.6.6(i18next@25.10.10(typescript@6.0.3))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@6.0.3)
-    devDependencies:
-      '@orvilo/types':
-        specifier: workspace:*
-        version: link:../types
-
   packages/builtin-tool-group-agent-builder:
     dependencies:
       '@lobehub/ui':
@@ -2631,6 +2615,22 @@ importers:
       '@orvilo/prompts':
         specifier: workspace:*
         version: link:../prompts
+    devDependencies:
+      '@orvilo/types':
+        specifier: workspace:*
+        version: link:../types
+
+  packages/builtin-tool-orchestration-workflow:
+    dependencies:
+      '@orvilo/builtin-tool-task':
+        specifier: workspace:*
+        version: link:../builtin-tool-task
+      react:
+        specifier: 19.2.7
+        version: 19.2.7
+      react-i18next:
+        specifier: '*'
+        version: 16.6.6(i18next@25.10.10(typescript@6.0.3))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@6.0.3)
     devDependencies:
       '@orvilo/types':
         specifier: workspace:*
@@ -2950,9 +2950,6 @@ importers:
       '@orvilo/builtin-tool-creds':
         specifier: workspace:*
         version: link:../builtin-tool-creds
-      '@orvilo/builtin-tool-goal':
-        specifier: workspace:*
-        version: link:../builtin-tool-goal
       '@orvilo/builtin-tool-group-agent-builder':
         specifier: workspace:*
         version: link:../builtin-tool-group-agent-builder
@@ -2971,6 +2968,9 @@ importers:
       '@orvilo/builtin-tool-notebook':
         specifier: workspace:*
         version: link:../builtin-tool-notebook
+      '@orvilo/builtin-tool-orchestration-workflow':
+        specifier: workspace:*
+        version: link:../builtin-tool-orchestration-workflow
       '@orvilo/builtin-tool-orvilo-agent':
         specifier: workspace:*
         version: link:../builtin-tool-orvilo-agent

@@ -9,6 +9,7 @@ import type {
 import { expect } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import { agents, threads, topics, users } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
 
@@ -30,10 +31,12 @@ export const agentId2 = 'work-test-agent-id-2';
 export const seedWorkTestData = async () => {
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: userId2 }]);
-  await serverDB.insert(agents).values([
-    { id: agentId, title: 'Work test agent', userId },
-    { id: agentId2, title: 'Work test agent 2', userId: userId2 },
-  ]);
+  await serverDB.insert(agents).values(
+    await withTestAgentDevices(serverDB, [
+      { id: agentId, title: 'Work test agent', userId },
+      { id: agentId2, title: 'Work test agent 2', userId: userId2 },
+    ]),
+  );
   await serverDB.insert(topics).values({ id: topicId, userId });
   await serverDB.insert(threads).values({
     id: threadId,

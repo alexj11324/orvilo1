@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import { AgentModel } from '../../../models/agent';
 import { ProjectModel } from '../../../models/project';
 import { ProviderBindingModel } from '../../../models/providerBinding';
@@ -84,7 +85,7 @@ const seedLegacyGroup = async (
 ) => {
   const [coordinator] = await db
     .insert(agents)
-    .values({ ...config, userId, virtual: true })
+    .values(await withTestAgentDevices(db, { ...config, userId, virtual: true }))
     .returning();
   const [group] = await db
     .insert(chatGroups)
@@ -113,7 +114,15 @@ describe('resource-owned runtime creation', () => {
       primaryOwnerId: userId,
     });
     await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
-    await db.update(devices).set({ workspaceId }).where(eq(devices.deviceId, 'resource-host'));
+    await db
+      .insert(devices)
+      .values({
+        deviceId: 'resource-host',
+        workspaceId,
+        userId,
+        visibility: 'public',
+        identitySource: 'installation',
+      });
     const copied = await repo.copyToWorkspace(original.group.id, workspaceId, userId, {
       targetVisibility: 'private',
     });
@@ -164,7 +173,7 @@ describe('resource-owned runtime creation', () => {
     const [group] = await db.insert(chatGroups).values({ userId, title: 'Legacy' }).returning();
     const [agent] = await db
       .insert(agents)
-      .values({ userId, virtual: true, title: 'Legacy supervisor' })
+      .values(await withTestAgentDevices(db, { userId, virtual: true, title: 'Legacy supervisor' }))
       .returning();
     await db
       .insert(chatGroupsAgents)
@@ -177,7 +186,7 @@ describe('resource-owned runtime creation', () => {
     await seedPrime();
     const [legacy] = await db
       .insert(agents)
-      .values({ userId, virtual: true, title: 'Legacy member' })
+      .values(await withTestAgentDevices(db, { userId, virtual: true, title: 'Legacy member' }))
       .returning();
     const group = await seedLegacyGroup({ title: 'Original' }, [legacy.id], runtime);
     await expect(repo.duplicate(group.group.id)).rejects.toThrow('AGENT_RUNTIME_REQUIRED');

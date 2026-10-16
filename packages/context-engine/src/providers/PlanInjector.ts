@@ -25,10 +25,10 @@ export interface Plan {
   createdAt: string;
   /** Brief summary of the plan */
   description: string;
-  /** The main goal or objective */
-  goal: string;
   /** Unique plan identifier */
   id: string;
+  /** The main orchestration workflow or objective */
+  orchestrationWorkflow: string;
   /** Last update timestamp */
   updatedAt: string;
 }
@@ -44,7 +44,10 @@ export interface PlanInjectorConfig {
  * Format Plan content for injection
  */
 function formatPlan(plan: Plan): string {
-  const lines: string[] = ['<plan>', `<goal>${plan.goal}</goal>`];
+  const lines: string[] = [
+    '<plan>',
+    `<orchestration workflow>${plan.orchestrationWorkflow}</orchestration workflow>`,
+  ];
 
   if (plan.description) {
     lines.push(`<description>${plan.description}</description>`);
@@ -63,7 +66,7 @@ function formatPlan(plan: Plan): string {
 /**
  * Plan Injector
  * Responsible for injecting the current plan into context before the first user message
- * This provides the AI with awareness of the user's current goal and plan context
+ * This provides the AI with awareness of the user's current orchestration workflow and plan context
  */
 export class PlanInjector extends BaseFirstUserContentProvider {
   readonly name = 'PlanInjector';
@@ -90,7 +93,7 @@ export class PlanInjector extends BaseFirstUserContentProvider {
 
     const formattedContent = formatPlan(plan);
 
-    log(`Plan prepared: goal="${plan.goal}"`);
+    log(`Plan prepared: orchestration workflow="${plan.orchestrationWorkflow}"`);
 
     return formattedContent;
   }

@@ -14,8 +14,6 @@ import { briefRuntime } from '../brief';
 import { calculatorRuntime } from '../calculator';
 import { cloudSandboxRuntime } from '../cloudSandbox';
 import { credsRuntime } from '../creds';
-import { goalRuntime } from '../goal';
-import { goalSupervisorRuntime } from '../goalSupervisor';
 import { groupAgentBuilderRuntime } from '../groupAgentBuilder';
 import { groupManagementRuntime } from '../groupManagement';
 import { getServerRuntimeIdentifiers, hasServerRuntime } from '../index';
@@ -23,6 +21,8 @@ import { knowledgeBaseRuntime } from '../knowledgeBase';
 import { localSystemRuntime } from '../localSystem';
 import { memoryRuntime } from '../memory';
 import { notebookRuntime } from '../notebook';
+import { orchestrationWorkflowRuntime } from '../orchestrationWorkflow';
+import { orchestrationWorkflowSupervisorRuntime } from '../orchestrationWorkflowSupervisor';
 import { orviloAgentRuntime } from '../orviloAgent';
 import { pageAgentRuntime } from '../pageAgent';
 import { remoteDeviceRuntime } from '../remoteDevice';
@@ -54,8 +54,8 @@ const ALL_REGISTRATIONS = [
   calculatorRuntime,
   cloudSandboxRuntime,
   credsRuntime,
-  goalRuntime,
-  goalSupervisorRuntime,
+  orchestrationWorkflowRuntime,
+  orchestrationWorkflowSupervisorRuntime,
   groupAgentBuilderRuntime,
   groupManagementRuntime,
   knowledgeBaseRuntime,

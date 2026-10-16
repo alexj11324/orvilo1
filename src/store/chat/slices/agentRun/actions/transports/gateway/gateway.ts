@@ -802,7 +802,7 @@ export class GatewayActionImpl {
                 // Goal-page side conversation: lets the server build the goal
                 // overview injection for gateway-run agents (mirrors the client
                 // streaming executor).
-                viewedGoal: executionContext.viewedGoal,
+                viewedOrchestrationWorkflow: executionContext.viewedOrchestrationWorkflow,
               },
               ...desktopDeviceHints,
               fileIds,

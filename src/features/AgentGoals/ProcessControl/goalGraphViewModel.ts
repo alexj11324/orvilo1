@@ -1,15 +1,15 @@
 import type {
-  GoalGraphDecision,
-  GoalGraphEdge,
-  GoalGraphEvent,
-  GoalGraphNode,
-  GoalGraphSnapshot,
-  GoalItem,
-  GoalNodeAcceptance,
-  GoalNodeIntegration,
+  OrchestrationWorkflowGraphDecision,
+  OrchestrationWorkflowGraphEdge,
+  OrchestrationWorkflowGraphEvent,
+  OrchestrationWorkflowGraphNode,
+  OrchestrationWorkflowGraphSnapshot,
+  OrchestrationWorkflowItem,
+  OrchestrationWorkflowNodeAcceptance,
+  OrchestrationWorkflowNodeIntegration,
   WorkType,
 } from '@orvilo/types';
-import { experimentMembers } from '@orvilo/utils/goalGraph';
+import { experimentMembers } from '@orvilo/utils/orchestrationWorkflowGraph';
 
 /**
  * Read model for the Goal process-control surface.
@@ -72,39 +72,39 @@ export interface GoalArtifactView {
 
 export interface GoalNodeView {
   /** This task's own verification, when it has been dispatched. */
-  acceptance?: GoalNodeAcceptance;
+  acceptance?: OrchestrationWorkflowNodeAcceptance;
   /** Problems this finding was linked to with a `supports` edge. */
-  answers: GoalGraphNode[];
+  answers: OrchestrationWorkflowGraphNode[];
   /** Deliverables this node produced, newest first. */
   artifacts: GoalArtifactView[];
   attempts: GoalAttempt[];
   /** Unresolved `depends_on` targets — why this node cannot start. */
-  blockers: GoalGraphNode[];
+  blockers: OrchestrationWorkflowGraphNode[];
   /** Pending user decision opened on this node. */
-  decision?: GoalGraphDecision;
+  decision?: OrchestrationWorkflowGraphDecision;
   dependsOn: string[];
   /** Findings produced by this Task. */
-  findings: GoalGraphNode[];
+  findings: OrchestrationWorkflowGraphNode[];
   /** Decision only: the Task this gate was opened for — its ledger is the case. */
   gateSubjectId?: string;
   /** Latest liveness signal: node row update or the run operation's lease heartbeat. */
   heartbeatAt: Date;
   /** Decisions on this node a human already resolved. */
-  humanTouches: GoalGraphDecision[];
+  humanTouches: OrchestrationWorkflowGraphDecision[];
   /**
    * The newest run's workspace-integration record — where its branch stands
    * on the way back onto the base branch. A child finishing is not its work
    * landing; this is the difference, with the evidence (branch, conflicts,
    * last error, PR) the chip's tooltip carries.
    */
-  integration?: GoalNodeIntegration;
+  integration?: OrchestrationWorkflowNodeIntegration;
   /** Active for longer than the lease window with no heartbeat — the coordinator would reclaim it. */
   isStale: boolean;
   /** Delivered and waiting for its Acceptance judgment to settle. */
   isVerifying: boolean;
-  node: GoalGraphNode;
+  node: OrchestrationWorkflowGraphNode;
   /** The Task that produced this finding. */
-  producedBy?: GoalGraphNode;
+  producedBy?: OrchestrationWorkflowGraphNode;
   /** Stable 1-based number over task nodes in graph creation order. */
   seq?: number;
   /** When the current attempt started, for the running clock. */
@@ -186,18 +186,18 @@ export interface GoalGraphView {
   artifacts: GoalArtifactView[];
   blocked: GoalNodeView[];
   byId: Record<string, GoalNodeView>;
-  decisions: GoalGraphDecision[];
-  edges: GoalGraphEdge[];
+  decisions: OrchestrationWorkflowGraphDecision[];
+  edges: OrchestrationWorkflowGraphEdge[];
   findings: GoalNodeView[];
   frontier: FrontierItem[];
-  goal: GoalItem;
   needsYou: number;
   /** Views in graph creation order. */
   nodes: GoalNodeView[];
+  orchestrationWorkflow: OrchestrationWorkflowItem;
 }
 
-const leaseTimeoutMs = (goal: GoalItem) =>
-  goal.config?.recovery?.operationLeaseTimeoutMs ?? DEFAULT_LEASE_TIMEOUT_MS;
+const leaseTimeoutMs = (orchestrationWorkflow: OrchestrationWorkflowItem) =>
+  orchestrationWorkflow.config?.recovery?.operationLeaseTimeoutMs ?? DEFAULT_LEASE_TIMEOUT_MS;
 
 /**
  * Attempt ledger from the audit trail.
@@ -213,14 +213,17 @@ const leaseTimeoutMs = (goal: GoalItem) =>
  *
  * There is no cost or duration per attempt anywhere, so neither is reported.
  */
-const buildAttempts = (node: GoalGraphNode, events: GoalGraphEvent[]): GoalAttempt[] => {
+const buildAttempts = (
+  node: OrchestrationWorkflowGraphNode,
+  events: OrchestrationWorkflowGraphEvent[],
+): GoalAttempt[] => {
   const own = events.filter((e) => e.entityType === 'node' && e.entityId === node.id);
   const attempts: GoalAttempt[] = [];
   let pendingReason: string | undefined;
 
   const close = (
     outcome: Exclude<GoalAttemptOutcome, 'running'>,
-    event: GoalGraphEvent,
+    event: OrchestrationWorkflowGraphEvent,
     reason?: string,
   ) => {
     const open = attempts.at(-1);
@@ -280,7 +283,7 @@ const buildAttempts = (node: GoalGraphNode, events: GoalGraphEvent[]): GoalAttem
 };
 
 export const buildGoalGraphView = (
-  snapshot: GoalGraphSnapshot,
+  snapshot: OrchestrationWorkflowGraphSnapshot,
   now: number = Date.now(),
 ): GoalGraphView => {
   const {
@@ -289,20 +292,20 @@ export const buildGoalGraphView = (
     deliveredAt,
     edges,
     events,
-    goal,
+    orchestrationWorkflow,
     integrations,
     nodes,
     runHeartbeats,
     workVersions,
   } = snapshot;
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
-  const lease = leaseTimeoutMs(goal);
+  const lease = leaseTimeoutMs(orchestrationWorkflow);
 
   const dependsOn = new Map<string, string[]>();
-  const producesByTask = new Map<string, GoalGraphNode[]>();
+  const producesByTask = new Map<string, OrchestrationWorkflowGraphNode[]>();
   const gateSubject = new Map<string, string>();
-  const producedByFinding = new Map<string, GoalGraphNode>();
-  const supportsByFinding = new Map<string, GoalGraphNode[]>();
+  const producedByFinding = new Map<string, OrchestrationWorkflowGraphNode>();
+  const supportsByFinding = new Map<string, OrchestrationWorkflowGraphNode[]>();
   for (const edge of edges) {
     const source = nodeById.get(edge.sourceNodeId);
     const target = nodeById.get(edge.targetNodeId);
@@ -344,7 +347,7 @@ export const buildGoalGraphView = (
   for (const list of artifactsByNode.values())
     list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-  const decisionsByNode = new Map<string, GoalGraphDecision[]>();
+  const decisionsByNode = new Map<string, OrchestrationWorkflowGraphDecision[]>();
   for (const decision of decisions)
     decisionsByNode.set(decision.nodeId, [
       ...(decisionsByNode.get(decision.nodeId) ?? []),
@@ -396,7 +399,10 @@ export const buildGoalGraphView = (
       attempts,
       blockers: (dependsOn.get(node.id) ?? [])
         .map((id) => nodeById.get(id))
-        .filter((dep): dep is GoalGraphNode => !!dep && !TERMINAL_NODE_STATUSES.has(dep.status)),
+        .filter(
+          (dep): dep is OrchestrationWorkflowGraphNode =>
+            !!dep && !TERMINAL_NODE_STATUSES.has(dep.status),
+        ),
       decision: nodeDecisions.find((d) => d.status === 'pending'),
       dependsOn: dependsOn.get(node.id) ?? [],
       findings:
@@ -473,11 +479,11 @@ export const buildGoalGraphView = (
     edges,
     findings: views.filter((view) => view.node.kind === 'finding'),
     frontier: [...done, ...frontier],
-    goal,
+    orchestrationWorkflow,
     needsYou: frontier.filter((item) => item.rank === 0).length,
     nodes: views,
   };
 };
 
-const resolvedTime = (node: GoalGraphNode) =>
+const resolvedTime = (node: OrchestrationWorkflowGraphNode) =>
   (node.resolvedAt ?? node.updatedAt ?? node.createdAt).getTime();

@@ -20,7 +20,7 @@ describe('GoalContent delete', () => {
 
   it('keeps the modal open when the delete write fails (rolled back by the caller)', async () => {
     const onDelete = vi.fn().mockRejectedValue(new Error('offline'));
-    render(<GoalContent initialGoal="g" onDelete={onDelete} onSubmit={vi.fn()} />);
+    render(<GoalContent initialOrchestrationWorkflow="g" onDelete={onDelete} onSubmit={vi.fn()} />);
 
     fireEvent.click(screen.getByText(DELETE_LABEL));
 
@@ -32,7 +32,7 @@ describe('GoalContent delete', () => {
 
   it('closes only after the delete write lands', async () => {
     const onDelete = vi.fn().mockResolvedValue(undefined);
-    render(<GoalContent initialGoal="g" onDelete={onDelete} onSubmit={vi.fn()} />);
+    render(<GoalContent initialOrchestrationWorkflow="g" onDelete={onDelete} onSubmit={vi.fn()} />);
 
     fireEvent.click(screen.getByText(DELETE_LABEL));
 

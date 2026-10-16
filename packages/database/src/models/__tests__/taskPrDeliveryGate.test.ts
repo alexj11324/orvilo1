@@ -123,7 +123,7 @@ describe('task PR delivery completion gate', () => {
 
   it('uses the nearest inherited git workspace when guarding a child task', async () => {
     const model = new TaskModel(serverDB, userId);
-    const parent = await model.create({ instruction: 'Parent code goal' });
+    const parent = await model.create({ instruction: 'Parent code orchestration workflow' });
     await bindGithubWorkspace(parent.id);
     const child = await model.create({
       instruction: 'Child code task',

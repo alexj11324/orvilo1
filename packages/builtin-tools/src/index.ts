@@ -17,12 +17,15 @@ import { BriefManifest } from '@orvilo/builtin-tool-brief';
 import { CalculatorManifest } from '@orvilo/builtin-tool-calculator/manifest';
 import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
 import { CredsManifest } from '@orvilo/builtin-tool-creds';
-import { GoalManifest, GoalSupervisorManifest } from '@orvilo/builtin-tool-goal';
 import { GroupAgentBuilderManifest } from '@orvilo/builtin-tool-group-agent-builder';
 import { GroupManagementManifest } from '@orvilo/builtin-tool-group-management';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
 import { LocalSystemManifest, resolveLocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { MemoryManifest } from '@orvilo/builtin-tool-memory';
+import {
+  OrchestrationWorkflowManifest,
+  OrchestrationWorkflowSupervisorManifest,
+} from '@orvilo/builtin-tool-orchestration-workflow';
 import { OrviloAgentManifest, resolveOrviloAgentManifest } from '@orvilo/builtin-tool-orvilo-agent';
 import { PageAgentManifest } from '@orvilo/builtin-tool-page-agent';
 import { RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
@@ -444,15 +447,15 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
   {
     discoverable: false,
     hidden: true,
-    identifier: GoalSupervisorManifest.identifier,
-    manifest: GoalSupervisorManifest,
+    identifier: OrchestrationWorkflowSupervisorManifest.identifier,
+    manifest: OrchestrationWorkflowSupervisorManifest,
     type: 'builtin',
   },
   {
     discoverable: false,
     hidden: true,
-    identifier: GoalManifest.identifier,
-    manifest: GoalManifest,
+    identifier: OrchestrationWorkflowManifest.identifier,
+    manifest: OrchestrationWorkflowManifest,
     type: 'builtin',
   },
   {

@@ -6,6 +6,8 @@ import { ThreadStatus, ThreadType } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
+
 import { aiAgentRouter } from '../../aiAgent';
 import { cleanupTestUser, createTestUser } from './setup';
 
@@ -55,26 +57,30 @@ describe('createClientGroupAgentTaskThread Integration', () => {
     // Create supervisor agent
     const [supervisorAgent] = await serverDB
       .insert(agents)
-      .values({
-        userId,
-        title: 'Supervisor Agent',
-        model: 'gpt-4o',
-        provider: 'openai',
-        systemRole: 'You are a supervisor.',
-      })
+      .values(
+        await withTestAgentDevices(serverDB, {
+          userId,
+          title: 'Supervisor Agent',
+          model: 'gpt-4o',
+          provider: 'openai',
+          systemRole: 'You are a supervisor.',
+        }),
+      )
       .returning();
     supervisorAgentId = supervisorAgent.id;
 
     // Create worker agent
     const [workerAgent] = await serverDB
       .insert(agents)
-      .values({
-        userId,
-        title: 'Worker Agent',
-        model: 'gpt-4o-mini',
-        provider: 'openai',
-        systemRole: 'You are a worker.',
-      })
+      .values(
+        await withTestAgentDevices(serverDB, {
+          userId,
+          title: 'Worker Agent',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          systemRole: 'You are a worker.',
+        }),
+      )
       .returning();
     workerAgentId = workerAgent.id;
 

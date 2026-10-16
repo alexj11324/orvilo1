@@ -55,10 +55,6 @@ exports[`settingsSelectors > currentSystemAgent > should merge DEFAULT_SYSTEM_AG
     "model": "gpt-5.6-luna",
     "provider": "openai",
   },
-  "goal": {
-    "model": "gpt-5.6-luna",
-    "provider": "openai",
-  },
   "memoryAnalysisAgentConfig": {
     "model": "gpt-5.6-luna",
     "provider": "openai",
@@ -68,6 +64,10 @@ exports[`settingsSelectors > currentSystemAgent > should merge DEFAULT_SYSTEM_AG
     "provider": "openai",
   },
   "onboardingUnderstanding": {
+    "model": "gpt-5.6-luna",
+    "provider": "openai",
+  },
+  "orchestrationWorkflow": {
     "model": "gpt-5.6-luna",
     "provider": "openai",
   },

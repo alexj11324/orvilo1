@@ -2,6 +2,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { EventConsumerReceiptModel } from '@/database/models/eventConsumerReceipt';
 import { NotificationModel } from '@/database/models/notification';
 import { TaskModel } from '@/database/models/task';
@@ -247,7 +248,9 @@ describe('real Issue notification producers and projection', () => {
   );
 
   it('does not attribute an Agent edit to its human session owner', async () => {
-    await db.insert(agents).values({ id: 'editing-agent', userId: owner });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: 'editing-agent', userId: owner }));
     await new TaskModel(db, owner, wsId).updateWithLog(
       'projection-issue',
       { workflowCategory: 'in_progress' },
@@ -376,9 +379,14 @@ describe('real Issue notification producers and projection', () => {
   });
 
   it('projects manual and scheduled Agent completion without excluding its human owner or changing Issue status', async () => {
-    await db
-      .insert(agents)
-      .values({ id: 'projection-agent', title: 'Codex', userId: owner, workspaceId: wsId });
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, {
+        id: 'projection-agent',
+        title: 'Codex',
+        userId: owner,
+        workspaceId: wsId,
+      }),
+    );
     for (const [index, trigger] of ['manual', 'schedule'].entries()) {
       const topicId = `projection-topic-${index}`;
       await db

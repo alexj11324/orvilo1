@@ -1,6 +1,6 @@
 # @orvilo/electron-client-ipc
 
-This package is a client-side toolkit for handling IPC (Inter-Process Communication) in Orvilo's Electron environment.
+This package is a client-side toolkit for handling IPC (Inter-Process Communication) in Orvilo's Electron environment..
 
 ## Introduction
 

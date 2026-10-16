@@ -7,6 +7,8 @@ import { ThreadStatus, ThreadType } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
+
 import { aiAgentRouter } from '../../aiAgent';
 import { cleanupTestUser, createTestUser } from './setup';
 
@@ -57,13 +59,15 @@ describe('createClientTaskThread Integration', () => {
     // Create test agent
     const [agent] = await serverDB
       .insert(agents)
-      .values({
-        userId,
-        title: 'Test Agent',
-        model: 'gpt-4o-mini',
-        provider: 'openai',
-        systemRole: 'You are a helpful assistant.',
-      })
+      .values(
+        await withTestAgentDevices(serverDB, {
+          userId,
+          title: 'Test Agent',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          systemRole: 'You are a helpful assistant.',
+        }),
+      )
       .returning();
     testAgentId = agent.id;
 
@@ -380,13 +384,15 @@ describe('createClientTaskThread Integration', () => {
       // Create second agent
       const [agent2] = await serverDB
         .insert(agents)
-        .values({
-          userId,
-          title: 'Second Agent',
-          model: 'gpt-4o-mini',
-          provider: 'openai',
-          systemRole: 'You are another assistant.',
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            userId,
+            title: 'Second Agent',
+            model: 'gpt-4o-mini',
+            provider: 'openai',
+            systemRole: 'You are another assistant.',
+          }),
+        )
         .returning();
 
       const caller = aiAgentRouter.createCaller(createTestContext());

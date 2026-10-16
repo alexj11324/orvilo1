@@ -15,52 +15,63 @@ const styles = {
   row: 'min-w-0 rounded-none [&+&]:[border-block-start:1px_solid_var(--sidebar-border)] hover:bg-fill-quaternary',
 };
 
-export const GoalListItem = memo<GoalItemProps>(({ goal: item }) => {
-  const navigate = useWorkspaceAwareNavigate();
-  const { aid } = useActiveRouteParams<{ aid?: string }>();
-  const { goal } = item;
-  // On the project Goals page there is no `aid` in the route, and a goal created
-  // there has no responsible agent either — so fall back the same way tasks do,
-  // to the bare detail route. Without this every card there is a dead link.
-  const agentId = aid ?? goal.agentId;
-  const handleClick = () => {
-    navigate(agentId ? `/agent/${agentId}/goal/${goal.id}` : `/goal/${goal.id}`);
-  };
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    handleClick();
-  };
+export const OrchestrationWorkflowListItem = memo<GoalItemProps>(
+  ({ orchestrationWorkflow: item }) => {
+    const navigate = useWorkspaceAwareNavigate();
+    const { aid } = useActiveRouteParams<{ aid?: string }>();
+    const { orchestrationWorkflow } = item;
+    // On the project Goals page there is no `aid` in the route, and a goal created
+    // there has no responsible agent either — so fall back the same way tasks do,
+    // to the bare detail route. Without this every card there is a dead link.
+    const agentId = aid ?? orchestrationWorkflow.agentId;
+    const handleClick = () => {
+      navigate(
+        agentId
+          ? `/agent/${agentId}/goal/${orchestrationWorkflow.id}`
+          : `/goal/${orchestrationWorkflow.id}`,
+      );
+    };
+    const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      handleClick();
+    };
 
-  return (
-    <div
-      className={`flex cursor-pointer items-center gap-3 justify-between ${styles.row}`}
-      role={'link'}
-      style={{ paddingBlock: 10, paddingInline: 0 }}
-      tabIndex={0}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-    >
-      <div className="flex flex-col gap-1" style={{ flex: 1, minWidth: 0 }}>
-        <div className="flex items-center gap-1.75">
-          <GoalStatusGlyph size={16} status={goal.status} />
-          <div className="truncate min-w-0 text-sm font-semibold">{goal.title}</div>
+    return (
+      <div
+        className={`flex cursor-pointer items-center gap-3 justify-between ${styles.row}`}
+        role={'link'}
+        style={{ paddingBlock: 10, paddingInline: 0 }}
+        tabIndex={0}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+      >
+        <div className="flex flex-col gap-1" style={{ flex: 1, minWidth: 0 }}>
+          <div className="flex items-center gap-1.75">
+            <GoalStatusGlyph size={16} status={orchestrationWorkflow.status} />
+            <div className="truncate min-w-0 text-sm font-semibold">
+              {orchestrationWorkflow.title}
+            </div>
+          </div>
+          {orchestrationWorkflow.requirement &&
+            orchestrationWorkflow.requirement !== orchestrationWorkflow.title && (
+              <div className="truncate min-w-0 text-xs text-muted-foreground">
+                {orchestrationWorkflow.requirement}
+              </div>
+            )}
         </div>
-        {goal.requirement && goal.requirement !== goal.title && (
-          <div className="truncate min-w-0 text-xs text-muted-foreground">{goal.requirement}</div>
-        )}
+        <GoalProgress
+          findingCount={item.findingCount}
+          pendingDecisions={item.pendingDecisions}
+          taskDone={item.taskDone}
+          taskTotal={item.taskTotal}
+          totalRunCost={item.totalRunCost}
+          totalRunDuration={item.totalRunDuration}
+        />
+        <ArrowRightIcon color={'var(--foreground-quaternary)'} size={16} />
       </div>
-      <GoalProgress
-        findingCount={item.findingCount}
-        pendingDecisions={item.pendingDecisions}
-        taskDone={item.taskDone}
-        taskTotal={item.taskTotal}
-        totalRunCost={item.totalRunCost}
-        totalRunDuration={item.totalRunDuration}
-      />
-      <ArrowRightIcon color={'var(--foreground-quaternary)'} size={16} />
-    </div>
-  );
-});
+    );
+  },
+);
 
-GoalListItem.displayName = 'GoalListItem';
+OrchestrationWorkflowListItem.displayName = 'GoalListItem';

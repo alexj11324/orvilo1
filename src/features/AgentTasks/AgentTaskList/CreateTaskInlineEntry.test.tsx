@@ -778,7 +778,7 @@ describe('CreateTaskInlineEntry', () => {
     });
 
     it('keeps a standing-goal reading in the task composer without creating an application goal', async () => {
-      analyzeIntentMock.mockResolvedValue({ ...clearReading, kind: 'goal' });
+      analyzeIntentMock.mockResolvedValue({ ...clearReading, kind: 'orchestrationWorkflow' });
 
       render(<CreateTaskInlineEntry />);
       fireEvent.keyDown(screen.getByTestId('task-editor'), { key: 'Enter', metaKey: true });

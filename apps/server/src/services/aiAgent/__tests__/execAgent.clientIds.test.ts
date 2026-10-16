@@ -41,6 +41,7 @@ vi.mock('@/database/models/message', () => ({
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
+      getOrchestratorSourceAgentId: vi.fn().mockResolvedValue(undefined),
       getAgentConfig: vi.fn().mockResolvedValue({
         // An external mount-capable binding keeps this agent on the ACP
         // surface the pin assertions below exercise (builtin orvilo = Prime

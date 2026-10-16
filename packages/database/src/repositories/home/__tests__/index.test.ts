@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import * as Schema from '../../../schemas';
 import { HomeRepository } from '../index';
 
@@ -39,14 +40,16 @@ describe('HomeRepository', () => {
       // Create an agent without session relationship (e.g., duplicated agent)
       const agentId = 'standalone-agent';
 
-      await clientDB.insert(Schema.agents).values({
-        id: agentId,
-        userId,
-        title: 'Standalone Agent',
-        description: 'Agent without session',
-        pinned: false,
-        virtual: false,
-      });
+      await clientDB.insert(Schema.agents).values(
+        await withTestAgentDevices(clientDB, {
+          id: agentId,
+          userId,
+          title: 'Standalone Agent',
+          description: 'Agent without session',
+          pinned: false,
+          virtual: false,
+        }),
+      );
 
       const result = await homeRepo.getSidebarAgentList();
 
@@ -60,13 +63,15 @@ describe('HomeRepository', () => {
       // Create a pinned agent without session relationship
       const agentId = 'pinned-standalone';
 
-      await clientDB.insert(Schema.agents).values({
-        id: agentId,
-        userId,
-        title: 'Pinned Standalone Agent',
-        pinned: true,
-        virtual: false,
-      });
+      await clientDB.insert(Schema.agents).values(
+        await withTestAgentDevices(clientDB, {
+          id: agentId,
+          userId,
+          title: 'Pinned Standalone Agent',
+          pinned: true,
+          virtual: false,
+        }),
+      );
 
       const result = await homeRepo.getSidebarAgentList();
 
@@ -79,13 +84,15 @@ describe('HomeRepository', () => {
     it('should return mixed agents with and without session relationships', async () => {
       // Agent with session
       await clientDB.transaction(async (tx) => {
-        await tx.insert(Schema.agents).values({
-          id: 'with-session',
-          userId,
-          title: 'Agent With Session',
-          pinned: false,
-          virtual: false,
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: 'with-session',
+            userId,
+            title: 'Agent With Session',
+            pinned: false,
+            virtual: false,
+          }),
+        );
         await tx.insert(Schema.sessions).values({
           id: 'session-1',
           slug: 'session-1',
@@ -99,13 +106,15 @@ describe('HomeRepository', () => {
       });
 
       // Agent without session (e.g., duplicated)
-      await clientDB.insert(Schema.agents).values({
-        id: 'without-session',
-        userId,
-        title: 'Agent Without Session',
-        pinned: false,
-        virtual: false,
-      });
+      await clientDB.insert(Schema.agents).values(
+        await withTestAgentDevices(clientDB, {
+          id: 'without-session',
+          userId,
+          title: 'Agent Without Session',
+          pinned: false,
+          virtual: false,
+        }),
+      );
 
       const result = await homeRepo.getSidebarAgentList();
 
@@ -121,13 +130,15 @@ describe('HomeRepository', () => {
       const sessionId = 'session-1';
 
       await clientDB.transaction(async (tx) => {
-        await tx.insert(Schema.agents).values({
-          id: agentId,
-          userId,
-          title: 'Pinned Agent',
-          pinned: true,
-          virtual: false,
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: agentId,
+            userId,
+            title: 'Pinned Agent',
+            pinned: true,
+            virtual: false,
+          }),
+        );
         await tx.insert(Schema.sessions).values({
           id: sessionId,
           slug: 'session-1',
@@ -155,13 +166,15 @@ describe('HomeRepository', () => {
       const sessionId = 'session-2';
 
       await clientDB.transaction(async (tx) => {
-        await tx.insert(Schema.agents).values({
-          id: agentId,
-          userId,
-          title: 'Unpinned Agent',
-          pinned: false,
-          virtual: false,
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: agentId,
+            userId,
+            title: 'Unpinned Agent',
+            pinned: false,
+            virtual: false,
+          }),
+        );
         await tx.insert(Schema.sessions).values({
           id: sessionId,
           slug: 'session-2',
@@ -187,13 +200,15 @@ describe('HomeRepository', () => {
       const sessionId = 'virtual-session';
 
       await clientDB.transaction(async (tx) => {
-        await tx.insert(Schema.agents).values({
-          id: agentId,
-          userId,
-          title: 'Virtual Agent',
-          pinned: false,
-          virtual: true, // virtual agent
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: agentId,
+            userId,
+            title: 'Virtual Agent',
+            pinned: false,
+            virtual: true, // virtual agent
+          }),
+        );
         await tx.insert(Schema.sessions).values({
           id: sessionId,
           slug: 'virtual-session',
@@ -216,13 +231,15 @@ describe('HomeRepository', () => {
       // Create multiple agents with different pinned status
       await clientDB.transaction(async (tx) => {
         // Pinned agent 1
-        await tx.insert(Schema.agents).values({
-          id: 'pinned-1',
-          userId,
-          title: 'Pinned 1',
-          pinned: true,
-          virtual: false,
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: 'pinned-1',
+            userId,
+            title: 'Pinned 1',
+            pinned: true,
+            virtual: false,
+          }),
+        );
         await tx.insert(Schema.sessions).values({
           id: 'session-pinned-1',
           slug: 'session-pinned-1',
@@ -235,13 +252,15 @@ describe('HomeRepository', () => {
         });
 
         // Pinned agent 2
-        await tx.insert(Schema.agents).values({
-          id: 'pinned-2',
-          userId,
-          title: 'Pinned 2',
-          pinned: true,
-          virtual: false,
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: 'pinned-2',
+            userId,
+            title: 'Pinned 2',
+            pinned: true,
+            virtual: false,
+          }),
+        );
         await tx.insert(Schema.sessions).values({
           id: 'session-pinned-2',
           slug: 'session-pinned-2',
@@ -254,13 +273,15 @@ describe('HomeRepository', () => {
         });
 
         // Unpinned agent
-        await tx.insert(Schema.agents).values({
-          id: 'unpinned-1',
-          userId,
-          title: 'Unpinned 1',
-          pinned: false,
-          virtual: false,
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: 'unpinned-1',
+            userId,
+            title: 'Unpinned 1',
+            pinned: false,
+            virtual: false,
+          }),
+        );
         await tx.insert(Schema.sessions).values({
           id: 'session-unpinned-1',
           slug: 'session-unpinned-1',
@@ -285,13 +306,15 @@ describe('HomeRepository', () => {
     it('should not return agents from other users', async () => {
       // Create agent for other user
       await clientDB.transaction(async (tx) => {
-        await tx.insert(Schema.agents).values({
-          id: 'other-agent',
-          userId: otherUserId,
-          title: 'Other User Agent',
-          pinned: true,
-          virtual: false,
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: 'other-agent',
+            userId: otherUserId,
+            title: 'Other User Agent',
+            pinned: true,
+            virtual: false,
+          }),
+        );
         await tx.insert(Schema.sessions).values({
           id: 'other-session',
           slug: 'other-session',
@@ -314,13 +337,15 @@ describe('HomeRepository', () => {
       const agentId = 'agent-with-system-unread';
 
       await clientDB.transaction(async (tx) => {
-        await tx.insert(Schema.agents).values({
-          id: agentId,
-          pinned: false,
-          title: 'Agent With System Unread',
-          userId,
-          virtual: false,
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: agentId,
+            pinned: false,
+            title: 'Agent With System Unread',
+            userId,
+            virtual: false,
+          }),
+        );
         await tx.insert(Schema.topics).values([
           {
             agentId,
@@ -354,13 +379,15 @@ describe('HomeRepository', () => {
       const agentId = 'agent-with-visitor-unread';
 
       await clientDB.transaction(async (tx) => {
-        await tx.insert(Schema.agents).values({
-          id: agentId,
-          pinned: false,
-          title: 'Agent With Visitor Unread',
-          userId,
-          virtual: false,
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: agentId,
+            pinned: false,
+            title: 'Agent With Visitor Unread',
+            userId,
+            virtual: false,
+          }),
+        );
         await tx.insert(Schema.topics).values([
           {
             agentId,
@@ -430,12 +457,14 @@ describe('HomeRepository', () => {
         const sessionId = 'legacy-session';
 
         await clientDB.transaction(async (tx) => {
-          await tx.insert(Schema.agents).values({
-            id: agentId,
-            userId,
-            title: 'Legacy Agent',
-            virtual: false,
-          });
+          await tx.insert(Schema.agents).values(
+            await withTestAgentDevices(tx, {
+              id: agentId,
+              userId,
+              title: 'Legacy Agent',
+              virtual: false,
+            }),
+          );
           await tx.insert(Schema.sessions).values({
             id: sessionId,
             slug: 'legacy-session',
@@ -465,13 +494,15 @@ describe('HomeRepository', () => {
         const sessionId = 'priority-session';
 
         await clientDB.transaction(async (tx) => {
-          await tx.insert(Schema.agents).values({
-            id: agentId,
-            userId,
-            title: 'Priority Agent',
-            pinned: false, // Agent says not pinned
-            virtual: false,
-          });
+          await tx.insert(Schema.agents).values(
+            await withTestAgentDevices(tx, {
+              id: agentId,
+              userId,
+              title: 'Priority Agent',
+              pinned: false, // Agent says not pinned
+              virtual: false,
+            }),
+          );
           await tx.insert(Schema.sessions).values({
             id: sessionId,
             slug: 'priority-session',
@@ -499,13 +530,15 @@ describe('HomeRepository', () => {
         const sessionId = 'both-null-session';
 
         await clientDB.transaction(async (tx) => {
-          await tx.insert(Schema.agents).values({
-            id: agentId,
-            userId,
-            title: 'Both Null Agent',
-            pinned: null,
-            virtual: false,
-          });
+          await tx.insert(Schema.agents).values(
+            await withTestAgentDevices(tx, {
+              id: agentId,
+              userId,
+              title: 'Both Null Agent',
+              pinned: null,
+              virtual: false,
+            }),
+          );
           await tx.insert(Schema.sessions).values({
             id: sessionId,
             slug: 'both-null-session',
@@ -536,14 +569,16 @@ describe('HomeRepository', () => {
       // Create test agents for search
       await clientDB.transaction(async (tx) => {
         // Pinned agent
-        await tx.insert(Schema.agents).values({
-          id: 'search-pinned',
-          userId,
-          title: 'Searchable Pinned Agent',
-          description: 'A pinned agent for testing',
-          pinned: true,
-          virtual: false,
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: 'search-pinned',
+            userId,
+            title: 'Searchable Pinned Agent',
+            description: 'A pinned agent for testing',
+            pinned: true,
+            virtual: false,
+          }),
+        );
         await tx.insert(Schema.sessions).values({
           id: 'session-search-pinned',
           slug: 'session-search-pinned',
@@ -556,14 +591,16 @@ describe('HomeRepository', () => {
         });
 
         // Unpinned agent
-        await tx.insert(Schema.agents).values({
-          id: 'search-unpinned',
-          userId,
-          title: 'Searchable Unpinned Agent',
-          description: 'An unpinned agent for testing',
-          pinned: false,
-          virtual: false,
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: 'search-unpinned',
+            userId,
+            title: 'Searchable Unpinned Agent',
+            description: 'An unpinned agent for testing',
+            pinned: false,
+            virtual: false,
+          }),
+        );
         await tx.insert(Schema.sessions).values({
           id: 'session-search-unpinned',
           slug: 'session-search-unpinned',
@@ -576,14 +613,16 @@ describe('HomeRepository', () => {
         });
 
         // Agent without session (e.g., duplicated agent)
-        await tx.insert(Schema.agents).values({
-          id: 'search-standalone',
-          userId,
-          title: 'Standalone Searchable Agent',
-          description: 'A standalone agent without session',
-          pinned: false,
-          virtual: false,
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: 'search-standalone',
+            userId,
+            title: 'Standalone Searchable Agent',
+            description: 'A standalone agent without session',
+            pinned: false,
+            virtual: false,
+          }),
+        );
       });
     });
 
@@ -595,13 +634,15 @@ describe('HomeRepository', () => {
     // The client withholds Agents by runtime, so a hit without its runtime
     // would be dropped along with the ones that should be.
     it('reports the runtime of each hit the way the Agent list does', async () => {
-      await clientDB.insert(Schema.agents).values({
-        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
-        id: 'search-cli',
-        title: 'Runtime Searchable CLI Agent',
-        userId,
-        virtual: false,
-      });
+      await clientDB.insert(Schema.agents).values(
+        await withTestAgentDevices(clientDB, {
+          agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+          id: 'search-cli',
+          title: 'Runtime Searchable CLI Agent',
+          userId,
+          virtual: false,
+        }),
+      );
 
       const result = await homeRepo.searchAgents('Searchable');
       const runtimes = Object.fromEntries(
@@ -676,13 +717,15 @@ describe('HomeRepository', () => {
     it('should not return virtual agents in search', async () => {
       // Add a virtual agent
       await clientDB.transaction(async (tx) => {
-        await tx.insert(Schema.agents).values({
-          id: 'virtual-search',
-          userId,
-          title: 'Searchable Virtual Agent',
-          pinned: false,
-          virtual: true,
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: 'virtual-search',
+            userId,
+            title: 'Searchable Virtual Agent',
+            pinned: false,
+            virtual: true,
+          }),
+        );
         await tx.insert(Schema.sessions).values({
           id: 'session-virtual-search',
           slug: 'session-virtual-search',
@@ -704,14 +747,16 @@ describe('HomeRepository', () => {
       it('should ignore sessions.pinned when agents.pinned is null', async () => {
         // Create legacy agent with pinned on session only
         await clientDB.transaction(async (tx) => {
-          await tx.insert(Schema.agents).values({
-            id: 'legacy-search',
-            userId,
-            title: 'Legacy Searchable Agent',
-            description: 'A legacy agent',
-            pinned: null, // No pinned on agent
-            virtual: false,
-          });
+          await tx.insert(Schema.agents).values(
+            await withTestAgentDevices(tx, {
+              id: 'legacy-search',
+              userId,
+              title: 'Legacy Searchable Agent',
+              description: 'A legacy agent',
+              pinned: null, // No pinned on agent
+              virtual: false,
+            }),
+          );
           await tx.insert(Schema.sessions).values({
             id: 'session-legacy-search',
             slug: 'session-legacy-search',
@@ -735,13 +780,15 @@ describe('HomeRepository', () => {
       it('should prioritize agents.pinned over sessions.pinned in search results', async () => {
         // Create agent where agents.pinned differs from sessions.pinned
         await clientDB.transaction(async (tx) => {
-          await tx.insert(Schema.agents).values({
-            id: 'priority-search',
-            userId,
-            title: 'Priority Searchable Agent',
-            pinned: false, // Agent says not pinned
-            virtual: false,
-          });
+          await tx.insert(Schema.agents).values(
+            await withTestAgentDevices(tx, {
+              id: 'priority-search',
+              userId,
+              title: 'Priority Searchable Agent',
+              pinned: false, // Agent says not pinned
+              virtual: false,
+            }),
+          );
           await tx.insert(Schema.sessions).values({
             id: 'session-priority-search',
             slug: 'session-priority-search',
@@ -766,11 +813,13 @@ describe('HomeRepository', () => {
 
   describe('searchAgents with external candidates', () => {
     it('hydrates only current-scope non-virtual agents and chat groups', async () => {
-      await clientDB.insert(Schema.agents).values([
-        { id: 'candidate-agent-own', title: 'Own agent', userId },
-        { id: 'candidate-agent-virtual', title: 'Virtual agent', userId, virtual: true },
-        { id: 'candidate-agent-other', title: 'Other agent', userId: otherUserId },
-      ]);
+      await clientDB.insert(Schema.agents).values(
+        await withTestAgentDevices(clientDB, [
+          { id: 'candidate-agent-own', title: 'Own agent', userId },
+          { id: 'candidate-agent-virtual', title: 'Virtual agent', userId, virtual: true },
+          { id: 'candidate-agent-other', title: 'Other agent', userId: otherUserId },
+        ]),
+      );
       await clientDB.insert(Schema.chatGroups).values([
         { id: 'candidate-group-own', title: 'Own group', userId },
         { id: 'candidate-group-other', title: 'Other group', userId: otherUserId },
@@ -816,20 +865,22 @@ describe('HomeRepository', () => {
 
   describe('getSidebarAgentList - heterogeneous type', () => {
     it('preserves a configured Prime runtime stamp without classifying unconfigured rows as Prime', async () => {
-      await clientDB.insert(Schema.agents).values([
-        {
-          id: 'configured-prime',
-          userId,
-          title: 'Prime',
-          virtual: false,
-          agencyConfig: {
-            boundDeviceId: 'saved-device',
-            executionTarget: 'device',
-            heterogeneousProvider: { type: 'orvilo', model: 'deepseek-chat' },
+      await clientDB.insert(Schema.agents).values(
+        await withTestAgentDevices(clientDB, [
+          {
+            id: 'configured-prime',
+            userId,
+            title: 'Prime',
+            virtual: false,
+            agencyConfig: {
+              boundDeviceId: 'saved-device',
+              executionTarget: 'device',
+              heterogeneousProvider: { type: 'orvilo', model: 'deepseek-chat' },
+            },
           },
-        },
-        { id: 'unconfigured-agent', userId, title: 'Unconfigured', virtual: false },
-      ]);
+          { id: 'unconfigured-agent', userId, title: 'Unconfigured', virtual: false },
+        ]),
+      );
 
       const result = await homeRepo.getSidebarAgentList();
 
@@ -842,14 +893,16 @@ describe('HomeRepository', () => {
     });
 
     it('should expose heterogeneousType from agencyConfig.heterogeneousProvider.type', async () => {
-      await clientDB.insert(Schema.agents).values({
-        id: 'hetero-agent',
-        userId,
-        title: 'Hetero Agent',
-        pinned: false,
-        virtual: false,
-        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
-      });
+      await clientDB.insert(Schema.agents).values(
+        await withTestAgentDevices(clientDB, {
+          id: 'hetero-agent',
+          userId,
+          title: 'Hetero Agent',
+          pinned: false,
+          virtual: false,
+          agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        }),
+      );
 
       const result = await homeRepo.getSidebarAgentList();
 
@@ -864,14 +917,16 @@ describe('HomeRepository', () => {
     ])(
       'projects persisted legacy Codex runtime without exposing its config: %j',
       async (legacy) => {
-        await clientDB.insert(Schema.agents).values({
-          id: 'legacy-codex',
-          userId,
-          title: 'Renamed Agent',
-          pinned: false,
-          virtual: false,
-          ...legacy,
-        } as any);
+        await clientDB.insert(Schema.agents).values(
+          await withTestAgentDevices(clientDB, {
+            id: 'legacy-codex',
+            userId,
+            title: 'Renamed Agent',
+            pinned: false,
+            virtual: false,
+            ...legacy,
+          } as any),
+        );
         const result = await homeRepo.getSidebarAgentList();
         expect(result.ungrouped[0].heterogeneousType).toBe('codex');
         expect(result.ungrouped[0]).not.toHaveProperty('model');
@@ -880,14 +935,16 @@ describe('HomeRepository', () => {
     );
 
     it('should leave heterogeneousType unset when agencyConfig has no heterogeneousProvider', async () => {
-      await clientDB.insert(Schema.agents).values({
-        id: 'no-hetero-agent',
-        userId,
-        title: 'No Hetero Agent',
-        pinned: false,
-        virtual: false,
-        agencyConfig: { executionTarget: 'none' },
-      });
+      await clientDB.insert(Schema.agents).values(
+        await withTestAgentDevices(clientDB, {
+          id: 'no-hetero-agent',
+          userId,
+          title: 'No Hetero Agent',
+          pinned: false,
+          virtual: false,
+          agencyConfig: { executionTarget: 'device' },
+        }),
+      );
 
       const result = await homeRepo.getSidebarAgentList();
 
@@ -907,14 +964,16 @@ describe('HomeRepository', () => {
           sort: 0,
           userId,
         });
-        await tx.insert(Schema.agents).values({
-          id: 'agent-direct-group',
-          userId,
-          title: 'Direct Group Agent',
-          pinned: false,
-          virtual: false,
-          sessionGroupId: 'folder-direct',
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: 'agent-direct-group',
+            userId,
+            title: 'Direct Group Agent',
+            pinned: false,
+            virtual: false,
+            sessionGroupId: 'folder-direct',
+          }),
+        );
       });
 
       const result = await homeRepo.getSidebarAgentList();
@@ -934,14 +993,16 @@ describe('HomeRepository', () => {
           { id: 'folder-a', name: 'Folder A', sort: 0, userId },
           { id: 'folder-b', name: 'Folder B', sort: 1, userId },
         ]);
-        await tx.insert(Schema.agents).values({
-          id: 'agent-priority-group',
-          userId,
-          title: 'Priority Group Agent',
-          pinned: false,
-          virtual: false,
-          sessionGroupId: 'folder-a',
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: 'agent-priority-group',
+            userId,
+            title: 'Priority Group Agent',
+            pinned: false,
+            virtual: false,
+            sessionGroupId: 'folder-a',
+          }),
+        );
         await tx.insert(Schema.sessions).values({
           id: 'session-priority-group',
           slug: 'session-priority-group',
@@ -971,14 +1032,16 @@ describe('HomeRepository', () => {
           sort: 0,
           userId,
         });
-        await tx.insert(Schema.agents).values({
-          id: 'agent-fallback-group',
-          userId,
-          title: 'Fallback Group Agent',
-          pinned: false,
-          virtual: false,
-          // sessionGroupId intentionally not set
-        });
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, {
+            id: 'agent-fallback-group',
+            userId,
+            title: 'Fallback Group Agent',
+            pinned: false,
+            virtual: false,
+            // sessionGroupId intentionally not set
+          }),
+        );
         await tx.insert(Schema.sessions).values({
           id: 'session-fallback-group',
           slug: 'session-fallback-group',
@@ -1010,24 +1073,26 @@ describe('HomeRepository', () => {
           title: 'Members Group',
           pinned: false,
         });
-        await tx.insert(Schema.agents).values([
-          {
-            id: 'cg-member-1',
-            userId,
-            title: 'Member One',
-            avatar: '🤖',
-            backgroundColor: '#101010',
-            virtual: true,
-          },
-          {
-            id: 'cg-member-2',
-            userId,
-            title: 'Member Two',
-            avatar: '👤',
-            // no backgroundColor -> exercises `?? undefined` branch
-            virtual: true,
-          },
-        ]);
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, [
+            {
+              id: 'cg-member-1',
+              userId,
+              title: 'Member One',
+              avatar: '🤖',
+              backgroundColor: '#101010',
+              virtual: true,
+            },
+            {
+              id: 'cg-member-2',
+              userId,
+              title: 'Member Two',
+              avatar: '👤',
+              // no backgroundColor -> exercises `?? undefined` branch
+              virtual: true,
+            },
+          ]),
+        );
         await tx.insert(Schema.chatGroupsAgents).values([
           { agentId: 'cg-member-1', chatGroupId: 'cg-members', order: 0, userId },
           { agentId: 'cg-member-2', chatGroupId: 'cg-members', order: 1, userId },
@@ -1055,22 +1120,24 @@ describe('HomeRepository', () => {
           title: 'No Avatar Members Group',
           pinned: false,
         });
-        await tx.insert(Schema.agents).values([
-          {
-            id: 'cg-has-avatar',
-            userId,
-            title: 'Has Avatar',
-            avatar: '🎉',
-            virtual: true,
-          },
-          {
-            id: 'cg-null-avatar',
-            userId,
-            title: 'No Avatar',
-            // avatar omitted -> should be skipped
-            virtual: true,
-          },
-        ]);
+        await tx.insert(Schema.agents).values(
+          await withTestAgentDevices(tx, [
+            {
+              id: 'cg-has-avatar',
+              userId,
+              title: 'Has Avatar',
+              avatar: '🎉',
+              virtual: true,
+            },
+            {
+              id: 'cg-null-avatar',
+              userId,
+              title: 'No Avatar',
+              // avatar omitted -> should be skipped
+              virtual: true,
+            },
+          ]),
+        );
         await tx.insert(Schema.chatGroupsAgents).values([
           { agentId: 'cg-has-avatar', chatGroupId: 'cg-noavatar', order: 0, userId },
           { agentId: 'cg-null-avatar', chatGroupId: 'cg-noavatar', order: 1, userId },

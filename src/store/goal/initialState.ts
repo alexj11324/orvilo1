@@ -1,16 +1,16 @@
-import type { GoalGraphSnapshot } from '@orvilo/types';
+import type { OrchestrationWorkflowGraphSnapshot } from '@orvilo/types';
 
-import type { GoalListItem } from '@/services/goal';
+import type { OrchestrationWorkflowListItem } from '@/services/goal';
 import type { MetricSeriesWithPoints } from '@/services/metric';
 
-export type { GoalListItem };
+export type { OrchestrationWorkflowListItem };
 export type GoalListFilter = 'active' | 'all';
 export type GoalViewMode = 'card' | 'list';
 
 export interface GoalState {
   /** Goal Graph snapshots keyed by `goals.id` — the process-control surface's read model. */
-  goalGraphById: Record<string, GoalGraphSnapshot>;
-  goalListByAgentId: Record<string, GoalListItem[]>;
+  goalGraphById: Record<string, OrchestrationWorkflowGraphSnapshot>;
+  goalListByAgentId: Record<string, OrchestrationWorkflowListItem[]>;
   goalListFilter: GoalListFilter;
   goalListInitializedAgentIds: string[];
   goalListVisibleLimit: number;
@@ -27,7 +27,7 @@ export interface GoalState {
    * slower response from the workspace you just left overwrite this one's, and
    * render titles and links that cannot resolve here.
    */
-  homeGoalsByScope: Record<string, GoalListItem[]>;
+  homeGoalsByScope: Record<string, OrchestrationWorkflowListItem[]>;
   homeGoalsInitializedScopes: string[];
 }
 

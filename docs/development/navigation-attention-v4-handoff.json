@@ -71,7 +71,7 @@
     "Do not build a second kanban: all boards reuse AgentTasks KanbanBoard — direct mount when a task-store scope expresses the query, external groups prop for work-query surfaces (Saved View / Team)",
     "Do not invent a GitHub PR-without-task store",
     "Do not add WorkQuery export",
-    "Do not mark the system goal complete without 64-AC evidence",
+    "Do not mark the system orchestrationWorkflow complete without 64-AC evidence",
     "Do not touch /Users/alexjiang/Desktop/vibe/orvilo1"
   ],
   "contractVersion": "nav-attention-v4.1",

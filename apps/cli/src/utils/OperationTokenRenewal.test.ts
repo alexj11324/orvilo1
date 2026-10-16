@@ -26,7 +26,7 @@ afterEach(() => {
 });
 
 /**
- * Regression: a Goal Task ran past the four hours its operation token was
+ * Regression: a OrchestrationWorkflow Task ran past the four hours its operation token was
  * signed for. From then on every ingest — heartbeats included — was rejected
  * with "exp claim timestamp check failed", so the run's output and its
  * completion never reached the server while the agent kept working.

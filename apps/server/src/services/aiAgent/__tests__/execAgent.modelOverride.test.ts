@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AiAgentService } from '../index';
 
+vi.mock('@/server/services/agent/builtinRuntimeCreation', () => ({
+  getExecutableBuiltinAgent: vi.fn(async () => ({ id: 'agent-1' })),
+}));
+
 const {
   mockIsResourceAuthorOrAdmin,
   mockCreateOperation,
@@ -66,6 +70,7 @@ vi.mock('@/database/models/workspaceUserSettings', () => ({
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
+      getOrchestratorSourceAgentId: vi.fn().mockResolvedValue(undefined),
       getAgentConfig: vi.fn(),
       queryAgents: vi.fn().mockResolvedValue([]),
     };

@@ -1,6 +1,6 @@
-import type { GoalListItem } from '@/store/goal/initialState';
+import type { OrchestrationWorkflowListItem } from '@/store/goal/initialState';
 
 export interface GoalItemProps {
-  goal: GoalListItem;
+  orchestrationWorkflow: OrchestrationWorkflowListItem;
   projectId?: string;
 }

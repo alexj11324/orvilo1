@@ -13,13 +13,16 @@ import { AuvManifest } from '@orvilo/builtin-tool-auv';
 import { CalculatorManifest } from '@orvilo/builtin-tool-calculator/manifest';
 import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
 import { CredsManifest } from '@orvilo/builtin-tool-creds';
-import { GoalManifest, GoalSupervisorManifest } from '@orvilo/builtin-tool-goal';
 import { GroupAgentBuilderManifest } from '@orvilo/builtin-tool-group-agent-builder';
 import { GroupManagementManifest } from '@orvilo/builtin-tool-group-management';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
 import { LocalSystemManifest } from '@orvilo/builtin-tool-local-system';
 import { MemoryManifest } from '@orvilo/builtin-tool-memory';
 import { NotebookManifest } from '@orvilo/builtin-tool-notebook';
+import {
+  OrchestrationWorkflowManifest,
+  OrchestrationWorkflowSupervisorManifest,
+} from '@orvilo/builtin-tool-orchestration-workflow';
 import { OrviloAgentManifest } from '@orvilo/builtin-tool-orvilo-agent';
 import { PageAgentManifest } from '@orvilo/builtin-tool-page-agent';
 import { selfFeedbackIntentManifest } from '@orvilo/builtin-tool-self-iteration';
@@ -41,8 +44,8 @@ export const builtinToolIdentifiers: string[] = [
   CredsManifest.identifier,
   GroupAgentBuilderManifest.identifier,
   GroupManagementManifest.identifier,
-  GoalManifest.identifier,
-  GoalSupervisorManifest.identifier,
+  OrchestrationWorkflowManifest.identifier,
+  OrchestrationWorkflowSupervisorManifest.identifier,
   KnowledgeBaseManifest.identifier,
   LocalSystemManifest.identifier,
   MemoryManifest.identifier,

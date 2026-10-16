@@ -401,17 +401,17 @@ structured generation (`llm_generation_tracing.success=t` is the confirmation pr
 **applies-to:** surface=web · runtime=gateway · phase=fixture
 
 **Situation:** A/B-forcing the goal page's 失联 (lost-heartbeat) banner by backdating
-`goal_nodes.updated_at` / `agent_operations.updated_at` with SQL.
+`orchestration_workflow_nodes.updated_at` / `agent_operations.updated_at` with SQL.
 
 **Doesn't work:** backdating by \~10 minutes because the server reclaim default
 (`resolveOperationLeaseTimeout`) is 5 minutes. The frontier still shows 运行中: the
 client view model has its own `DEFAULT_LEASE_TIMEOUT_MS = 15 min` and only honors
-`goal.config.recovery.operationLeaseTimeoutMs` when the goal sets one.
+`orchestrationWorkflow.config.recovery.operationLeaseTimeoutMs` when the goal sets one.
 
 **Works:** backdate past the client's window (25 min is comfortable), or create the
 goal with an explicit `--operation-lease-timeout-ms`. Liveness = the newer of the
 node row and `runHeartbeats` (the running operation's `updated_at` served by
-`goal.graph`), so the A/B is: node stale + op fresh → 运行中；both stale → 失联.
+`orchestrationWorkflow.graph`), so the A/B is: node stale + op fresh → 运行中；both stale → 失联.
 Restore the forced rows (node/task/task_topics/operation status + timestamps) after
 capturing.
 

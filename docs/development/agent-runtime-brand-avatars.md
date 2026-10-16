@@ -53,7 +53,7 @@ Use `AssigneeAvatar agentId={…}` wherever an Agent id is in hand.
 - Conversation: message author avatar (`ChatItem/components/Avatar`, fed by
   `useAgentMeta`, which now returns `agentId`), compressed history rows, and
   group task rows (`GroupTasks/TaskItem/TaskTitle`).
-- Home inbox: running tasks stack, topic rows, unread topics, goals rail,
+- Home inbox: running tasks stack, topic rows, unread topics, orchestration workflows rail,
   brief cards and the news list.
 - Electron tab bar: an `/agent/:aid` tab resolves `meta.agentId` from the route
   and draws the runtime mark; group and page tabs are unchanged.

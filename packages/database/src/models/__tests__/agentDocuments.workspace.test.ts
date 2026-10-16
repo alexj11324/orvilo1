@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agentDocuments, agents, documents, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AgentDocumentModel } from '../agentDocuments';
@@ -21,10 +22,12 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: workspaceId,
   });
-  await serverDB.insert(agents).values([
-    { id: 'personal-agent-document-agent', title: 'Personal Agent', userId, workspaceId: null },
-    { id: 'workspace-agent-document-agent', title: 'Workspace Agent', userId, workspaceId },
-  ]);
+  await serverDB.insert(agents).values(
+    await withTestAgentDevices(serverDB, [
+      { id: 'personal-agent-document-agent', title: 'Personal Agent', userId, workspaceId: null },
+      { id: 'workspace-agent-document-agent', title: 'Workspace Agent', userId, workspaceId },
+    ]),
+  );
 });
 
 afterEach(async () => {

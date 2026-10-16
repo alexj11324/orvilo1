@@ -2,6 +2,7 @@ import { asc, eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import {
   agents,
   messagePlugins,
@@ -240,7 +241,13 @@ describe('TopicModel - Create', () => {
     });
 
     it('should create a new topic with agentId', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-for-topic', userId, title: 'Test Agent' });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          id: 'agent-for-topic',
+          userId,
+          title: 'Test Agent',
+        }),
+      );
 
       const topicData = {
         title: 'Topic with Agent',
@@ -264,7 +271,11 @@ describe('TopicModel - Create', () => {
     });
 
     it('should create a new topic with only agentId (no sessionId)', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-only', userId, title: 'Agent Only' });
+      await serverDB
+        .insert(agents)
+        .values(
+          await withTestAgentDevices(serverDB, { id: 'agent-only', userId, title: 'Agent Only' }),
+        );
 
       const topicData = {
         title: 'Agent Only Topic',
@@ -391,10 +402,12 @@ describe('TopicModel - Create', () => {
     });
 
     it('should batch create topics with agentId', async () => {
-      await serverDB.insert(agents).values([
-        { id: 'batch-agent-1', userId, title: 'Batch Agent 1' },
-        { id: 'batch-agent-2', userId, title: 'Batch Agent 2' },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: 'batch-agent-1', userId, title: 'Batch Agent 1' },
+          { id: 'batch-agent-2', userId, title: 'Batch Agent 2' },
+        ]),
+      );
 
       const topicParams = [
         { title: 'Topic with Agent 1', favorite: true, sessionId, agentId: 'batch-agent-1' },
@@ -478,10 +491,12 @@ describe('TopicModel - Create', () => {
       const sourceAgentId = 'fork-source-agent';
       const targetAgentId = 'fork-target-agent';
 
-      await serverDB.insert(agents).values([
-        { id: sourceAgentId, title: 'Source Agent', userId },
-        { id: targetAgentId, title: 'Target Agent', userId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: sourceAgentId, title: 'Source Agent', userId },
+          { id: targetAgentId, title: 'Target Agent', userId },
+        ]),
+      );
       await serverDB.transaction(async (tx) => {
         await tx.insert(topics).values({
           agentId: sourceAgentId,

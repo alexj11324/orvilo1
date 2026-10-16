@@ -2,6 +2,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import { agents, messages, sessions, topics, users } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
 import { AgentMigrationRepo } from '../index';
@@ -28,7 +29,9 @@ describe('AgentMigrationRepo', () => {
   describe('migrateAgentId - inbox migration', () => {
     it('should migrate legacy inbox topics and their messages', async () => {
       const agentId = 'inbox-agent-id';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
 
       // Create legacy inbox topics
       const originalUpdatedAt = new Date('2024-01-01T00:00:00Z');
@@ -101,10 +104,12 @@ describe('AgentMigrationRepo', () => {
     it('should not migrate topics that already have agentId', async () => {
       const agentId = 'inbox-agent-id';
       const existingAgentId = 'existing-agent-id';
-      await serverDB.insert(agents).values([
-        { id: agentId, userId },
-        { id: existingAgentId, userId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: agentId, userId },
+          { id: existingAgentId, userId },
+        ]),
+      );
 
       // Create a topic that already has agentId
       await serverDB.insert(topics).values({
@@ -128,10 +133,12 @@ describe('AgentMigrationRepo', () => {
     it('should not migrate messages that already have agentId', async () => {
       const agentId = 'inbox-agent-id';
       const existingAgentId = 'existing-agent-id';
-      await serverDB.insert(agents).values([
-        { id: agentId, userId },
-        { id: existingAgentId, userId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: agentId, userId },
+          { id: existingAgentId, userId },
+        ]),
+      );
 
       // Create legacy inbox topic
       await serverDB.insert(topics).values({
@@ -172,7 +179,9 @@ describe('AgentMigrationRepo', () => {
 
     it('should not migrate other user topics or messages', async () => {
       const agentId = 'inbox-agent-id';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
 
       // Create legacy inbox topic for user2
       await serverDB.insert(topics).values({
@@ -212,7 +221,9 @@ describe('AgentMigrationRepo', () => {
     it('should migrate both orphan and sessionId-based legacy data when isInbox with sessionId', async () => {
       const agentId = 'inbox-combined-agent';
       const inboxSessionId = 'inbox-combined-session';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
       await serverDB.insert(sessions).values({ id: inboxSessionId, userId, slug: 'inbox' });
 
       // Create orphan legacy inbox topics (sessionId IS NULL, groupId IS NULL, agentId IS NULL)
@@ -337,7 +348,9 @@ describe('AgentMigrationRepo', () => {
 
     it('should preserve messages updatedAt during inbox migration', async () => {
       const agentId = 'inbox-agent-preserve-time';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
 
       // Create legacy inbox topic
       const originalTopicUpdatedAt = new Date('2024-01-15T10:00:00Z');
@@ -417,7 +430,9 @@ describe('AgentMigrationRepo', () => {
   describe('migrateAgentId - session migration', () => {
     it('should migrate topics and messages by sessionId', async () => {
       const agentId = 'test-agent-id';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
 
       // Create legacy topics with sessionId but no agentId
       const originalUpdatedAt = new Date('2024-06-15T12:00:00Z');
@@ -494,7 +509,9 @@ describe('AgentMigrationRepo', () => {
     it('should not migrate topics from different session', async () => {
       const agentId = 'test-agent-id';
       const otherSessionId = 'other-session-id';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
       await serverDB.insert(sessions).values({ id: otherSessionId, userId });
 
       // Create topic for different session
@@ -534,10 +551,12 @@ describe('AgentMigrationRepo', () => {
     it('should not migrate topics or messages that already have agentId', async () => {
       const agentId = 'test-agent-id';
       const existingAgentId = 'existing-agent-id';
-      await serverDB.insert(agents).values([
-        { id: agentId, userId },
-        { id: existingAgentId, userId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: agentId, userId },
+          { id: existingAgentId, userId },
+        ]),
+      );
 
       // Create topic that already has agentId
       await serverDB.insert(topics).values({
@@ -576,7 +595,9 @@ describe('AgentMigrationRepo', () => {
     it('should not migrate other user topics or messages', async () => {
       const agentId = 'test-agent-id';
       const user2SessionId = 'user2-session-id';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
       await serverDB.insert(sessions).values({ id: user2SessionId, userId: userId2 });
 
       // Create topic for user2
@@ -615,7 +636,9 @@ describe('AgentMigrationRepo', () => {
 
     it('should preserve messages updatedAt during session migration', async () => {
       const agentId = 'session-agent-preserve-time';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
 
       // Create legacy session topic
       const originalTopicUpdatedAt = new Date('2024-05-20T08:00:00Z');
@@ -694,7 +717,9 @@ describe('AgentMigrationRepo', () => {
   describe('migrateAgentId - transaction integrity', () => {
     it('should migrate topics and messages atomically', async () => {
       const agentId = 'atomic-agent-id';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
 
       // Create legacy topics and messages
       await serverDB.insert(topics).values([
@@ -728,7 +753,9 @@ describe('AgentMigrationRepo', () => {
       const agentId = 'lookup-agent-id';
       const lookupSessionId = 'lookup-session-id';
 
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
       await serverDB.insert(sessions).values({ id: lookupSessionId, userId });
 
       // Import agentsToSessions schema
@@ -746,7 +773,9 @@ describe('AgentMigrationRepo', () => {
 
     it('should return null for agent without session', async () => {
       const agentId = 'no-session-agent';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
 
       const result = await agentMigrationRepo.getSessionIdByAgentId(agentId);
 

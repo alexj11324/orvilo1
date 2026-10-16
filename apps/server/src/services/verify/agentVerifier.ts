@@ -1,11 +1,13 @@
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { VerifyToolIdentifier } from '@orvilo/builtin-tool-verify';
+import { isHeterogeneousAgentModelId } from '@orvilo/const';
 import { buildVerifierPrompt } from '@orvilo/prompts';
 import debug from 'debug';
 
 import { AgentModel } from '@/database/models/agent';
 import { DocumentModel } from '@/database/models/document';
 import type { OrviloDatabase } from '@/database/type';
+import { getExecutableBuiltinAgent } from '@/server/services/agent/builtinRuntimeCreation';
 import type { AgentHook, AgentHookEvent } from '@/server/services/agentExecution/hooks/types';
 import { AiAgentService } from '@/server/services/aiAgent';
 
@@ -20,7 +22,7 @@ const log = debug('orvilo-server:verify-agent-verifier');
  * `checkItemId` injected here — it does not write to the DB directly.
  *
  * `evidence` is what the builder self-captured during the run: the
- * verifier judges against the run goal AND this evidence — it's the verifier's
+ * verifier judges against the run orchestration workflow AND this evidence — it's the verifier's
  * primary Data, not a competing verdict.
  */
 /**
@@ -35,10 +37,9 @@ const log = debug('orvilo-server:verify-agent-verifier');
  * (`TaskVerifyConfig.verifierAgentId`) that agent runs under its OWN agency
  * config (executionTarget / device / provider) — so picking a heterogeneous
  * agent (e.g. Codex) naturally gives the verifier device + browser access. When
- * unset (or the pinned agent no longer exists) it falls back to the builtin
- * verify agent, which receives a verify-safe provider/model resolved by the
- * lifecycle layer. That resolver intentionally filters heterogeneous runtime
- * identifiers (e.g. claude-code / codex) that cannot run Orvilo LLM calls.
+ * unset it uses the builtin verify agent in the same workspace or personal
+ * scope. The builtin inherits an explicitly configured, authorized device
+ * runtime and retains its verifier role and tools.
  */
 export const createVerifierAgentRunner = (params: {
   db: OrviloDatabase;
@@ -50,7 +51,7 @@ export const createVerifierAgentRunner = (params: {
   taskId?: string | null;
   topicId?: string | null;
   userId: string;
-  /** Task-pinned verify agent. Falls back to the builtin verify agent when unset/missing. */
+  /** Task-pinned verify agent. Uses the builtin verify agent only when unset. */
   verifierAgentId?: string | null;
   workspaceId?: string;
 }): VerifierAgentRunner | undefined => {
@@ -67,7 +68,13 @@ export const createVerifierAgentRunner = (params: {
   } = params;
   if (!topicId) return undefined;
 
-  return async ({ checkItem, evidence, goal, operationId }) => {
+  return async ({
+    checkItem,
+    evidence,
+    orchestrationWorkflow,
+    operationId,
+    onOperationCreated,
+  }) => {
     // The detailed instruction is the criterion's rule body, stored in a document.
     const instruction =
       checkItem.definition || checkItem.resourceSnapshot
@@ -84,8 +91,8 @@ export const createVerifierAgentRunner = (params: {
 
     // Resolve which agent verifies. A pinned agent runs as itself (`agentId`) so
     // its own agency config drives execution target/provider — we don't override
-    // its model/provider. The builtin fallback runs by `slug` with the verify-safe
-    // model/provider selected by lifecycle.
+    // its model/provider. Resolve the builtin to an exact scoped id so a
+    // personal builtin with the same slug cannot substitute for the workspace's.
     let agentRef: { agentId: string } | { slug: string };
     let useProvidedModelConfig = false;
     // A pinned agent (selected for its runtime/device) carries only its own
@@ -99,16 +106,25 @@ export const createVerifierAgentRunner = (params: {
       extraPluginIds = [VerifyToolIdentifier];
     } else {
       if (verifierAgentId) {
-        log('pinned verify agent %s not found, falling back to builtin', verifierAgentId);
+        throw new Error(
+          `VERIFIER_AGENT_UNAVAILABLE: configured verifier ${verifierAgentId} is unavailable`,
+        );
       }
       // Materialize the builtin verify agent (idempotent) to get an id for the thread.
-      const builtin = await agentModel.getBuiltinAgent(BUILTIN_AGENT_SLUGS.verifyAgent);
+      const builtin = await getExecutableBuiltinAgent(
+        db,
+        userId,
+        BUILTIN_AGENT_SLUGS.verifyAgent,
+        workspaceId,
+      );
       if (!builtin) {
         log('verify agent unavailable, cannot run agent verifier for check %s', checkItem.id);
         return null;
       }
-      agentRef = { slug: BUILTIN_AGENT_SLUGS.verifyAgent };
-      useProvidedModelConfig = true;
+      agentRef = { agentId: builtin.id };
+      useProvidedModelConfig =
+        !builtin.agencyConfig?.heterogeneousProvider?.type &&
+        !isHeterogeneousAgentModelId(builtin.model);
     }
 
     // Attach the builder-captured file artifacts (screenshots / videos / large
@@ -153,7 +169,7 @@ export const createVerifierAgentRunner = (params: {
       checkItem,
       deliverable,
       evidence,
-      goal,
+      orchestrationWorkflow,
       instruction,
     });
 
@@ -168,6 +184,14 @@ export const createVerifierAgentRunner = (params: {
       // the verifier user turn during queued resume and leave only system
       // messages for the first LLM call.
       appContext: { taskId },
+      // Verification actively investigates and must submit a verdict. Keep this
+      // per-run; the builtin's minimal chat preset otherwise filters writeback.
+      chatConfigOverride: { enableAgentMode: true, toolMode: 'custom' },
+      afterOperationPersisted: onOperationCreated
+        ? ({ operationId: childId }) => onOperationCreated(childId)
+        : undefined,
+      requiredToolIds: [VerifyToolIdentifier],
+      skipTaskVerification: true,
       autoStart: true,
       ...(evidenceFileIds.length ? { fileIds: evidenceFileIds } : {}),
       hooks,

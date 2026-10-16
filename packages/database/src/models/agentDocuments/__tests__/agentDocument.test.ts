@@ -8,6 +8,7 @@ import { and, eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import { agentDocuments, agents, documents, users } from '../../../schemas';
 import {
   AGENT_SKILL_TEMPLATE_ID,
@@ -39,11 +40,13 @@ beforeEach(async () => {
   await serverDB.delete(users);
 
   await serverDB.insert(users).values([{ id: userId }, { id: otherUserId }]);
-  await serverDB.insert(agents).values([
-    { id: agentId, userId },
-    { id: secondAgentId, userId },
-    { id: otherAgentId, userId: otherUserId },
-  ]);
+  await serverDB.insert(agents).values(
+    await withTestAgentDevices(serverDB, [
+      { id: agentId, userId },
+      { id: secondAgentId, userId },
+      { id: otherAgentId, userId: otherUserId },
+    ]),
+  );
 
   agentDocumentModel = new AgentDocumentModel(serverDB, userId);
   otherAgentDocumentModel = new AgentDocumentModel(serverDB, otherUserId);

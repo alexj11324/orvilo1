@@ -74,11 +74,11 @@ const normalizePlanDoc = (doc: {
  * and keeps silent metadata writes (todos sync) on the raw notebookService.
  */
 const clientPlanService: PlanRuntimeService = {
-  createPlan: async ({ topicId, goal, description, content }) => {
+  createPlan: async ({ topicId, orchestrationWorkflow, description, content }) => {
     const doc = await useNotebookStore.getState().createDocument({
       content,
       description,
-      title: goal,
+      title: orchestrationWorkflow,
       topicId,
       type: PLAN_DOC_TYPE,
     });
@@ -96,10 +96,10 @@ const clientPlanService: PlanRuntimeService = {
     return first ? normalizePlanDoc(first) : null;
   },
 
-  updatePlan: async (id, { goal, description, content }, topicId) => {
+  updatePlan: async (id, { orchestrationWorkflow, description, content }, topicId) => {
     const doc = await useNotebookStore
       .getState()
-      .updateDocument({ content, description, id, title: goal }, topicId ?? '');
+      .updateDocument({ content, description, id, title: orchestrationWorkflow }, topicId ?? '');
     if (!doc) throw new Error(`Plan not found after update: ${id}`);
     return normalizePlanDoc(doc);
   },

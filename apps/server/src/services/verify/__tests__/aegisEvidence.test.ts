@@ -11,7 +11,7 @@ import {
 const closeout = (overrides: Record<string, unknown> = {}) =>
   JSON.stringify({
     confidence: 'A',
-    evidence: [{ action: 'edited foo.ts', covered: 'goal', result: 'passed' }],
+    evidence: [{ action: 'edited foo.ts', covered: 'orchestrationWorkflow', result: 'passed' }],
     goalClosure: 'done',
     schema: 'orvilo.aegis-closeout.v0',
     summary: 'shipped',

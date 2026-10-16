@@ -8,8 +8,8 @@ export const TaskApiName = {
   /** Create a new task, optionally as a subtask of another task */
   createTask: 'createTask',
 
-  /** Confirm and start a goal-driven task with automatic delivery acceptance */
-  createGoal: 'createGoal',
+  /** Confirm and start a orchestration workflow-driven task with automatic delivery acceptance */
+  startOrchestrationWorkflow: 'startOrchestrationWorkflow',
 
   /** Create multiple tasks in a single call (batched) */
   createTasks: 'createTasks',
@@ -85,7 +85,7 @@ export interface CreateTaskState {
 
 // ==================== createGoal ====================
 
-export interface GoalCriterionDraft {
+export interface OrchestrationWorkflowCriterionDraft {
   description?: string;
   instruction?: string;
   onFail?: 'auto_repair' | 'manual';
@@ -95,13 +95,13 @@ export interface GoalCriterionDraft {
   verifierType?: 'agent' | 'llm' | 'program';
 }
 
-export interface CreateGoalParams {
-  criteria: GoalCriterionDraft[];
+export interface CreateOrchestrationWorkflowParams {
+  criteria: OrchestrationWorkflowCriterionDraft[];
   /** ISO-8601 calendar-time budget; past it the coordinator stops dispatching. */
   deadline?: string | null;
   instruction: string;
   /**
-   * How many of the goal's Tasks may run at once (1–10). Null/undefined uses
+   * How many of the orchestration workflow's Tasks may run at once (1–10). Null/undefined uses
    * the coordinator's default.
    */
   maxConcurrentTasks?: number | null;
@@ -110,10 +110,10 @@ export interface CreateGoalParams {
   name: string;
 }
 
-export interface CreateGoalState {
-  /** The `goals` row the Goal Graph was created as — what the card opens. */
-  goalId?: string;
+export interface CreateOrchestrationWorkflowState {
   name?: string;
+  /** The `orchestration workflows` row the Orchestration workflow Graph was created as — what the card opens. */
+  orchestrationWorkflowId?: string;
   startedAt?: string;
   success: boolean;
   /** The responsible task the first coordinator tick dispatched, when it got that far. */

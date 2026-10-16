@@ -1,4 +1,4 @@
-import { buildTaskRunPrompt, type TaskRunPromptGoalLoop } from '@orvilo/prompts';
+import { buildTaskRunPrompt, type TaskRunPromptOrchestrationWorkflowLoop } from '@orvilo/prompts';
 import type {
   AutomationOccurrenceSnapshot,
   TaskDependencyReceipt,
@@ -10,7 +10,7 @@ import type {
 
 import { AcceptanceModel } from '@/database/models/acceptance';
 import type { BriefModel } from '@/database/models/brief';
-import { GoalModel } from '@/database/models/goal';
+import { OrchestrationWorkflowModel } from '@/database/models/orchestrationWorkflow';
 import type { TaskModel } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import type { TaskTopicModel } from '@/database/models/taskTopic';
@@ -21,31 +21,35 @@ import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { OrviloDatabase } from '@/database/type';
 import { extractFileIdsFromEditorData } from '@/server/services/file/extractFileIdsFromEditorData';
 import { resolveAttachmentMetadata } from '@/server/services/file/resolveAttachments';
-import { resolveTaskAttemptBudget } from '@/server/services/goal/recoveryPolicy';
+import { resolveTaskAttemptBudget } from '@/server/services/orchestrationWorkflow/recoveryPolicy';
 import { resolveTaskAcceptance } from '@/server/services/verify/taskAcceptance';
 
 import { renderAutomationInput } from './automationInput';
 
 /** Cap on unresolved checks carried into the next round's prompt. */
-const MAX_GOAL_FAILED_CHECKS = 8;
+const MAX_ORCHESTRATION_WORKFLOW_FAILED_CHECKS = 8;
 
 /**
- * For a goal task that already ran at least one round, collect what the next
+ * For a orchestration workflow task that already ran at least one round, collect what the next
  * round must know: the previous round's unresolved checks (with the verifier's
  * why/suggestion) and the user's reject comment, both read off the task's
  * acceptance aggregate. Best-effort — any lookup failure degrades to the bare
  * round counters so prompt building never blocks a run.
  */
-const resolveGoalLoopContext = async (
+const resolveOrchestrationWorkflowLoopContext = async (
   task: TaskItem,
   deps: BuildTaskPromptDeps,
-): Promise<TaskRunPromptGoalLoop | undefined> => {
+): Promise<TaskRunPromptOrchestrationWorkflowLoop | undefined> => {
   const { db, userId, workspaceId } = deps;
-  const goal = await new GoalModel(db, userId, workspaceId).findByGraphTask(task.id);
-  if (!goal || !task.totalTopics) return undefined;
+  const orchestrationWorkflow = await new OrchestrationWorkflowModel(
+    db,
+    userId,
+    workspaceId,
+  ).findByGraphTask(task.id);
+  if (!orchestrationWorkflow || !task.totalTopics) return undefined;
 
-  const budget = resolveTaskAttemptBudget(goal);
-  const context: TaskRunPromptGoalLoop = {
+  const budget = resolveTaskAttemptBudget(orchestrationWorkflow);
+  const context: TaskRunPromptOrchestrationWorkflowLoop = {
     maxRounds: Number.isFinite(budget) ? budget : null,
     round: (task.totalTopics || 0) + 1,
   };
@@ -66,8 +70,10 @@ const resolveGoalLoopContext = async (
       if (comment) context.rejectComment = comment;
     }
 
-    const automaticReview = [...runs].reverse().find((run) => run.metadata?.goalReview)
-      ?.metadata?.goalReview;
+    const automaticReview = [...runs]
+      .reverse()
+      .find((run) => run.metadata?.orchestrationWorkflowReview)
+      ?.metadata?.orchestrationWorkflowReview;
     if (automaticReview && automaticReview.status !== 'passed') {
       context.automaticReviewFeedback = automaticReview.feedback;
     }
@@ -88,7 +94,8 @@ const resolveGoalLoopContext = async (
         const r = byItem.get(item.id);
         return { title: item.title, why: r?.suggestion || r?.toulmin?.reasoning || undefined };
       });
-    if (failed.length > 0) context.failedChecks = failed.slice(0, MAX_GOAL_FAILED_CHECKS);
+    if (failed.length > 0)
+      context.failedChecks = failed.slice(0, MAX_ORCHESTRATION_WORKFLOW_FAILED_CHECKS);
     return context;
   } catch {
     return context;
@@ -118,10 +125,10 @@ export interface BuiltTaskPrompt {
    * to forward to execAgent so files arrive as multimodal inputs. */
   fileIds: string[];
   /**
-   * Goal-loop context rendered into the prompt (round + attempt budget),
+   * OrchestrationWorkflow-loop context rendered into the prompt (round + attempt budget),
    * surfaced so the run contract freezes the same budget the agent saw.
    */
-  goalLoop?: TaskRunPromptGoalLoop;
+  orchestrationWorkflowLoop?: TaskRunPromptOrchestrationWorkflowLoop;
   prompt: string;
 }
 
@@ -446,10 +453,10 @@ export async function buildTaskPrompt(
       });
   }
 
-  const goalLoop = await resolveGoalLoopContext(task, deps);
+  const orchestrationWorkflowLoop = await resolveOrchestrationWorkflowLoopContext(task, deps);
 
   const prompt = buildTaskRunPrompt({
-    ...(goalLoop ? { goalLoop } : {}),
+    ...(orchestrationWorkflowLoop ? { orchestrationWorkflowLoop } : {}),
     activities: {
       briefs: briefs.map((b: any) => ({
         createdAt: b.createdAt,
@@ -574,7 +581,7 @@ export async function buildTaskPrompt(
     acceptanceEnabled: verifyEnabled,
     contractContent,
     fileIds: opts?.occurrence?.fileIds ?? allFileIds,
-    ...(goalLoop ? { goalLoop } : {}),
+    ...(orchestrationWorkflowLoop ? { orchestrationWorkflowLoop } : {}),
     prompt,
   };
 }

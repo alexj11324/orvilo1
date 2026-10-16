@@ -30,7 +30,7 @@ const buildItem = (overrides: Partial<VerifyCheckItem> = {}): VerifyCheckItem =>
   index: 0,
   onFail: 'manual',
   required: true,
-  title: 'goal met',
+  title: 'orchestration workflow met',
   verifierConfig: {},
   verifierType: 'llm',
   ...overrides,
@@ -293,13 +293,16 @@ describe('VerifyCheckResultModel', () => {
     await model.updateByCheckItem(verifyRunId, 'a', {
       confidence: 0.9,
       status: 'passed',
-      toulmin: { evidence: 'tests passed', reasoning: 'covers the goal' },
+      toulmin: { evidence: 'tests passed', reasoning: 'covers the orchestration workflow' },
       verdict: 'passed',
     });
 
     const [row] = await model.listByRun(verifyRunId);
     expect(row).toMatchObject({ confidence: 0.9, status: 'passed', verdict: 'passed' });
-    expect(row.toulmin).toEqual({ evidence: 'tests passed', reasoning: 'covers the goal' });
+    expect(row.toulmin).toEqual({
+      evidence: 'tests passed',
+      reasoning: 'covers the orchestration workflow',
+    });
   });
 });
 

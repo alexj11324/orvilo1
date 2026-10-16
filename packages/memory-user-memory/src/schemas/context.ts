@@ -69,7 +69,9 @@ export const WithContextSchema = z.object({
   title: z.string().describe('Required synthesized context headline'),
   type: z
     .string()
-    .describe("High level context archetype (e.g., 'project', 'relationship', 'goal')"),
+    .describe(
+      "High level context archetype (e.g., 'project', 'relationship', 'orchestration workflow')",
+    ),
 });
 
 /**

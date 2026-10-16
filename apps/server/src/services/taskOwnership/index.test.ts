@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import {
@@ -43,10 +44,12 @@ beforeEach(async () => {
     slug: workspaceId,
   });
   await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
-  await db.insert(agents).values([
-    { id: 'agent-a', slug: 'agent-a', userId, workspaceId },
-    { id: 'agent-b', slug: 'agent-b', userId, workspaceId },
-  ]);
+  await db.insert(agents).values(
+    await withTestAgentDevices(db, [
+      { id: 'agent-a', slug: 'agent-a', userId, workspaceId },
+      { id: 'agent-b', slug: 'agent-b', userId, workspaceId },
+    ]),
+  );
 });
 
 afterEach(cleanup);

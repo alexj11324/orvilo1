@@ -9,6 +9,7 @@ import { Pool } from 'pg';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import * as schema from '../../schemas';
 import {
   agents,
@@ -74,7 +75,9 @@ beforeEach(async () => {
     .returning();
   const agentId = randomUUID();
   const topicId = randomUUID();
-  await db.insert(agents).values({ id: agentId, userId, workspaceId: workspace.id });
+  await db
+    .insert(agents)
+    .values(await withTestAgentDevices(db, { id: agentId, userId, workspaceId: workspace.id }));
   await db.insert(topics).values({ id: topicId, userId, workspaceId: workspace.id });
   const [task] = await db
     .insert(tasks)

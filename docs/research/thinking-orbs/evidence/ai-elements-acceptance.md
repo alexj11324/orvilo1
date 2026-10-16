@@ -26,8 +26,8 @@ remains unavailable; earlier direct CLI success is not desktop E2E evidence.
   never executed. Terminal shows ANSI green stdout, 30 fixture lines and stderr,
   with a success indicator; real result data is joined from the fixture database.
 - Actual Plan displays current-turn todos 1/3, current item Implement components,
-  and expands all three items. A goal/checklist saved through the actual local
-  service displays goal + one tracked item and expands the Task checklist.
+  and expands all three items. A orchestration workflow/checklist saved through the actual local
+  service displays orchestration workflow + one tracked item and expands the Task checklist.
 - Plain assistant Sources displays two results, expands, and exposes the correct
   AI Elements documentation href. The assistant-with-tools grouped fixture did
   not display its stored citations; that distinct rendering path is not proven.
@@ -55,7 +55,7 @@ remains unavailable; earlier direct CLI success is not desktop E2E evidence.
 ## Limits and findings
 
 No real model streaming, gateway stop, approval resume/persistence, actual attachment upload,
-IME composition, task client/server execution or goal editing persistence was
+IME composition, task client/server execution or orchestration workflow editing persistence was
 validated by this fixture inventory. Specialized HTML/Mermaid render paths were exercised in the additional checks below. Dark/light/narrow
 screenshots show actual presentation, not user approval of the design.
 
@@ -101,7 +101,7 @@ ai-preview-surfaces.json. Source remains d5ddda5fc9eff2c89fa96da3011862c003bc02f
 Implementation checks used `bun run check` with explicit changed paths (no full
 root suite or local root typecheck). Successful batches included 48 Markdown/code
 and attachment tests, 55 composer/draft/send/queue tests, 29 approval/state tests,
-5 command utility tests, 7 goal tests, and message/action/follow-up/scroll/group
+5 command utility tests, 7 orchestration workflow tests, and message/action/follow-up/scroll/group
 batches (8, 7, 54, 24). Batches can overlap; these are not a unique-test total.
 Scoped lint and the native-control/device-boundary commit hooks passed. The
 stylesheet/manifest/locales check also passed (one file had no applicable linter).

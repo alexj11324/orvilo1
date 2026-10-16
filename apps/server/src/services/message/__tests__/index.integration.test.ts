@@ -17,6 +17,8 @@ import { MessageGroupType } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
+
 import { MessageService } from '../index';
 
 // Mock FileService to avoid S3 environment variable requirements
@@ -63,7 +65,9 @@ describe('MessageService Integration Tests', () => {
       const messageService = new MessageService(serverDB, userId);
 
       // Create agent and session
-      await serverDB.insert(agents).values({ id: 'agent-1', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-1', userId }));
       await serverDB.insert(sessions).values({ id: 'session-1', userId });
       await serverDB
         .insert(agentsToSessions)
@@ -84,7 +88,9 @@ describe('MessageService Integration Tests', () => {
     it('should create message with topicId', async () => {
       const messageService = new MessageService(serverDB, userId);
 
-      await serverDB.insert(agents).values({ id: 'agent-1', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-1', userId }));
       await serverDB.insert(sessions).values({ id: 'session-1', userId });
       await serverDB
         .insert(agentsToSessions)
@@ -107,7 +113,9 @@ describe('MessageService Integration Tests', () => {
     it('should query messages by agentId (new data)', async () => {
       const messageService = new MessageService(serverDB, userId);
 
-      await serverDB.insert(agents).values({ id: 'agent-1', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-1', userId }));
       await serverDB.insert(sessions).values({ id: 'session-1', userId });
       await serverDB
         .insert(agentsToSessions)
@@ -130,7 +138,9 @@ describe('MessageService Integration Tests', () => {
     it('should query messages by agentId (legacy sessionId data)', async () => {
       const messageService = new MessageService(serverDB, userId);
 
-      await serverDB.insert(agents).values({ id: 'agent-1', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-1', userId }));
       await serverDB.insert(sessions).values({ id: 'session-1', userId });
       await serverDB
         .insert(agentsToSessions)
@@ -159,7 +169,9 @@ describe('MessageService Integration Tests', () => {
     it('should query mixed data (both agentId and sessionId)', async () => {
       const messageService = new MessageService(serverDB, userId);
 
-      await serverDB.insert(agents).values({ id: 'agent-1', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-1', userId }));
       await serverDB.insert(sessions).values({ id: 'session-1', userId });
       await serverDB
         .insert(agentsToSessions)
@@ -218,7 +230,9 @@ describe('MessageService Integration Tests', () => {
     it('should delete multiple messages and return remaining', async () => {
       const messageService = new MessageService(serverDB, userId);
 
-      await serverDB.insert(agents).values({ id: 'agent-1', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-1', userId }));
       await serverDB.insert(sessions).values({ id: 'session-1', userId });
       await serverDB
         .insert(agentsToSessions)
@@ -244,7 +258,9 @@ describe('MessageService Integration Tests', () => {
     it('should update message and return message list with agentId', async () => {
       const messageService = new MessageService(serverDB, userId);
 
-      await serverDB.insert(agents).values({ id: 'agent-1', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-1', userId }));
       await serverDB.insert(sessions).values({ id: 'session-1', userId });
       await serverDB
         .insert(agentsToSessions)
@@ -270,7 +286,9 @@ describe('MessageService Integration Tests', () => {
     it('should persist message errors and return them in queried messages', async () => {
       const messageService = new MessageService(serverDB, userId);
 
-      await serverDB.insert(agents).values({ id: 'agent-1', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-1', userId }));
       await serverDB.insert(sessions).values({ id: 'session-1', userId });
       await serverDB
         .insert(agentsToSessions)
@@ -312,7 +330,9 @@ describe('MessageService Integration Tests', () => {
     it('should update metadata and return message list with agentId', async () => {
       const messageService = new MessageService(serverDB, userId);
 
-      await serverDB.insert(agents).values({ id: 'agent-1', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-1', userId }));
       await serverDB.insert(sessions).values({ id: 'session-1', userId });
       await serverDB
         .insert(agentsToSessions)
@@ -337,10 +357,12 @@ describe('MessageService Integration Tests', () => {
     it('should not return messages from other users', async () => {
       const messageService = new MessageService(serverDB, userId);
 
-      await serverDB.insert(agents).values([
-        { id: 'agent-1', userId },
-        { id: 'agent-2', userId: otherUserId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: 'agent-1', userId },
+          { id: 'agent-2', userId: otherUserId },
+        ]),
+      );
       await serverDB.insert(sessions).values([
         { id: 'session-1', userId },
         { id: 'session-2', userId: otherUserId },
@@ -381,7 +403,9 @@ describe('MessageService Integration Tests', () => {
       const messageService = new MessageService(serverDB, userId);
 
       // Setup: agent, session, topic
-      await serverDB.insert(agents).values({ id: 'agent-1', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-1', userId }));
       await serverDB.insert(sessions).values({ id: 'session-1', userId });
       await serverDB
         .insert(agentsToSessions)

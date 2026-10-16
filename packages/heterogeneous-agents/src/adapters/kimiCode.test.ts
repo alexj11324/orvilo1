@@ -133,6 +133,8 @@ describe('KimiCodeAdapter', () => {
     expect(adapter.adapt('bad')).toEqual([]);
     expect(adapter.adapt({ role: 'assistant', tool_calls: [{ id: 3 }] })).toEqual([]);
     expect(adapter.adapt({ role: 'meta', type: 'system.version', version: '0.28.0' })).toEqual([]);
-    expect(adapter.adapt({ status: 'complete', type: 'goal.summary' })).toEqual([]);
+    expect(adapter.adapt({ status: 'complete', type: 'orchestrationWorkflow.summary' })).toEqual(
+      [],
+    );
   });
 });

@@ -9,14 +9,16 @@ export type ClarificationAnswers = Record<number, string>;
  * The composer runs the reader on every submit, so this gate is the whole
  * difference between a helpful confirmation and a tax on every task. It stops
  * only for something the user alone can settle: a question whose answer
- * changes the deliverable, a request that is really a standing goal, or a
+ * changes the deliverable, a request that is really a standing orchestrationWorkflow, or a
  * reading the model itself is not sure of.
  */
 export const shouldConfirmIntent = (analysis: TaskIntentAnalysis): boolean =>
-  analysis.clarifications.length > 0 || analysis.kind === 'goal' || analysis.confidence !== 'high';
+  analysis.clarifications.length > 0 ||
+  analysis.kind === 'orchestrationWorkflow' ||
+  analysis.confidence !== 'high';
 
 /**
- * The goal flow's rule, applied to tasks: a generated brief may expand on the
+ * The orchestrationWorkflow flow's rule, applied to tasks: a generated brief may expand on the
  * request but must never replace it, so the user's own words survive verbatim
  * into what the agent reads.
  */
@@ -125,9 +127,9 @@ export const buildConfirmedDraft = ({
 };
 
 /**
- * The requirement seed handed to the goal modal when the user takes the
- * "this is really a goal" exit. Keeps the answers already given so the
- * handoff doesn't ask for them a second time. Markdown only — the goal modal
+ * The requirement seed handed to the orchestrationWorkflow modal when the user takes the
+ * "this is really a orchestrationWorkflow" exit. Keeps the answers already given so the
+ * handoff doesn't ask for them a second time. Markdown only — the orchestrationWorkflow modal
  * seeds its own editor from text.
  */
 export const buildGoalSeed = ({

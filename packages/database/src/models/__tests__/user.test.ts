@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import {
+  agents,
+  devices,
   documentHistories,
   documents,
   messages,
@@ -664,6 +666,42 @@ describe('UserModel', () => {
     });
 
     describe('deleteUser', () => {
+      it('retires a referenced workspace host and retains a teammate Agent when its enroller deletes their account', async () => {
+        const [workspace] = await serverDB
+          .insert(workspaces)
+          .values({
+            name: 'Host custody',
+            primaryOwnerId: otherUserId,
+            slug: 'host-custody',
+          })
+          .returning();
+        const [host] = await serverDB
+          .insert(devices)
+          .values({
+            deviceId: 'departing-enroller-host',
+            identitySource: 'installation',
+            userId,
+            workspaceId: workspace.id,
+            visibility: 'public',
+          })
+          .returning();
+        const [teammate] = await serverDB
+          .insert(agents)
+          .values({
+            userId: otherUserId,
+            workspaceId: workspace.id,
+            agencyConfig: { boundDeviceId: host.deviceId, executionTarget: 'device' },
+          })
+          .returning();
+        await UserModel.deleteUser(serverDB, userId);
+        expect(
+          await serverDB.query.agents.findFirst({ where: eq(agents.id, teammate.id) }),
+        ).toBeDefined();
+        const retained = await serverDB.query.devices.findFirst({ where: eq(devices.id, host.id) });
+        expect(retained?.userId).toBe(otherUserId);
+        expect(retained?.retiredAt).toBeInstanceOf(Date);
+      });
+
       it('should delete a user', async () => {
         await serverDB.insert(tasks).values({
           createdByUserId: userId,

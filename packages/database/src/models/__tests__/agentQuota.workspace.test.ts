@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createTestSecretCipher } from '../../../tests/secretCipher';
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agentProviderAccounts, agents, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import {
@@ -34,10 +35,12 @@ beforeEach(async () => {
     primaryOwnerId: userId,
     slug: workspaceId,
   });
-  await serverDB.insert(agents).values([
-    { id: agentId, userId },
-    { id: wsAgentId, userId, workspaceId },
-  ]);
+  await serverDB.insert(agents).values(
+    await withTestAgentDevices(serverDB, [
+      { id: agentId, userId },
+      { id: wsAgentId, userId, workspaceId },
+    ]),
+  );
 });
 
 afterEach(async () => {

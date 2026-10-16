@@ -50,9 +50,11 @@ describe('chainTaskInstruction', () => {
     expect(system).toContain('not a one-line restatement of the request');
     expect(system).toContain('a complete brief in markdown');
     expect(system).toContain('an opening paragraph stating the outcome');
-    // Completeness invites padding: an audience or business goal nobody stated
+    // Completeness invites padding: an audience or business orchestration workflow nobody stated
     // reads as a requirement to the executor.
-    expect(system).toContain('Do not name an audience, a purpose or a business goal');
+    expect(system).toContain(
+      'Do not name an audience, a purpose or a business orchestration workflow',
+    );
     expect(system).toContain('a requirements section under a markdown heading');
     // Open points are latitude, not a blocker that stalls the run.
     expect(system).toContain('in the wording of latitude rather than of a blocker');

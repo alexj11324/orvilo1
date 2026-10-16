@@ -32,13 +32,13 @@ export const taskRunIdempotencyKey = {
   }): string =>
     `dependency-cascade:${[...new Set(input.completedTaskIds)].sort().join(',')}:task:${input.taskId}:generation:${input.executionGeneration + 1}:revision:${input.taskRevision}`,
 
-  goalTaskAttempt: (input: {
+  orchestrationWorkflowTaskAttempt: (input: {
     executionGeneration: number;
-    goalId: string;
+    orchestrationWorkflowId: string;
     taskId: string;
     taskRevision: number;
   }): string =>
-    `goal:${input.goalId}:task:${input.taskId}:generation:${input.executionGeneration + 1}:revision:${input.taskRevision}`,
+    `orchestrationWorkflow:${input.orchestrationWorkflowId}:task:${input.taskId}:generation:${input.executionGeneration + 1}:revision:${input.taskRevision}`,
 
   integrationCorrection: (input: {
     attempt: number;

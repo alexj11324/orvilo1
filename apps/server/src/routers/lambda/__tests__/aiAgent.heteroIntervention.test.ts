@@ -18,6 +18,7 @@ import {
   deriveAgentInterventionContinuationOperationId,
   deriveAgentInterventionQueueDeduplicationId,
 } from '@/business/server/agent-run/agentInterventionIdentity';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { ResourcePermissionModel } from '@/database/models/resourcePermission';
 import type * as ToolApprovalReceipt from '@/server/services/agentExecution/toolApprovalReceipt';
 
@@ -222,9 +223,14 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
       { userId, workspaceId, role: 'owner' },
       { userId: otherId, workspaceId, role: 'member' },
     ]);
-    await serverDB
-      .insert(agents)
-      .values({ id: 'shared-operation-agent', userId, workspaceId, visibility: 'public' });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        id: 'shared-operation-agent',
+        userId,
+        workspaceId,
+        visibility: 'public',
+      }),
+    );
     await new ResourcePermissionModel(serverDB, workspaceId).upsertCollaborators({
       accessLevel: 'use',
       createdBy: userId,
@@ -1684,7 +1690,9 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
       userId,
     });
     const { agentOperations } = await import('@/database/schemas');
-    await serverDB.insert(agents).values({ id: 'agent-runtime', userId });
+    await serverDB
+      .insert(agents)
+      .values(await withTestAgentDevices(serverDB, { id: 'agent-runtime', userId }));
     await serverDB.insert(topics).values({ id: 'topic-runtime', userId });
     await serverDB.insert(agentOperations).values({
       agentId: 'agent-runtime',
@@ -1788,7 +1796,9 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     });
     const deduplicationId = deriveAgentInterventionQueueDeduplicationId(continuationOperationId, 0);
     const { agentOperations } = await import('@/database/schemas');
-    await serverDB.insert(agents).values({ id: 'agent-ack-backfill', userId });
+    await serverDB
+      .insert(agents)
+      .values(await withTestAgentDevices(serverDB, { id: 'agent-ack-backfill', userId }));
     await serverDB.insert(topics).values({ id: 'topic-ack-backfill', userId });
     await serverDB.insert(agentOperations).values({
       agentId: 'agent-ack-backfill',
@@ -1907,7 +1917,9 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
     });
     const deduplicationId = deriveAgentInterventionQueueDeduplicationId(continuationOperationId, 0);
     const { agentOperations } = await import('@/database/schemas');
-    await serverDB.insert(agents).values({ id: 'agent-ready-disappears', userId });
+    await serverDB
+      .insert(agents)
+      .values(await withTestAgentDevices(serverDB, { id: 'agent-ready-disappears', userId }));
     await serverDB.insert(topics).values({ id: 'topic-ready-disappears', userId });
     await serverDB.insert(agentOperations).values({
       agentId: 'agent-ready-disappears',
@@ -2026,7 +2038,9 @@ describe('aiAgentRouter — remote Human-in-the-loop', () => {
       userId,
     });
     const { agentOperations } = await import('@/database/schemas');
-    await serverDB.insert(agents).values({ id: 'agent-durable-ready-missing', userId });
+    await serverDB
+      .insert(agents)
+      .values(await withTestAgentDevices(serverDB, { id: 'agent-durable-ready-missing', userId }));
     await serverDB.insert(topics).values({ id: 'topic-durable-ready-missing', userId });
     await serverDB.insert(agentOperations).values({
       agentId: 'agent-durable-ready-missing',

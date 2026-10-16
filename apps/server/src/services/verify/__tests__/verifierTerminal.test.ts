@@ -27,7 +27,7 @@ vi.mock('@/database/models/verifyCheckResult', () => ({
   VerifyCheckResultModel: vi.fn().mockImplementation(function () {
     return {
       listByRun: listResultsByRunMock,
-      updateByCheckItem: updateByCheckItemMock,
+      completeVerifierCheck: updateByCheckItemMock,
     };
   }),
 }));
@@ -45,11 +45,13 @@ const db = {} as any;
 describe('settleVerifierCheckFromTerminal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    updateByCheckItemMock.mockResolvedValue(true);
     findRunByOperationMock.mockResolvedValue({ id: 'run-1' });
     listResultsByRunMock.mockResolvedValue([
       {
         checkItemId: 'check-1',
         status: 'running',
+        verifierOperationId: 'verifier-op',
       },
     ]);
   });
@@ -71,7 +73,7 @@ describe('settleVerifierCheckFromTerminal', () => {
     // A verifier that terminated without a verdict is an infra failure, not a
     // delivery judgment — recorded as `errored` with no verdict so it never gates
     // delivery or seeds a repair round.
-    const written = updateByCheckItemMock.mock.calls[0][2];
+    const written = updateByCheckItemMock.mock.calls[0][3];
     expect(written).toMatchObject({
       status: 'errored',
       toulmin: {

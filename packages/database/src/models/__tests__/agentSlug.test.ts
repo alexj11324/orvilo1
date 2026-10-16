@@ -3,6 +3,7 @@ import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agents, users } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AgentModel } from '../agent';
@@ -22,9 +23,14 @@ afterEach(async () => {
 
 describe('AgentModel.updateSlug', () => {
   it('should rename an ordinary agent', async () => {
-    await serverDB
-      .insert(agents)
-      .values({ id: 'agent-rename', slug: 'old-slug', title: 'Agent', userId });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        id: 'agent-rename',
+        slug: 'old-slug',
+        title: 'Agent',
+        userId,
+      }),
+    );
 
     const model = new AgentModel(serverDB, userId);
     expect(await model.updateSlug('agent-rename', 'new-slug')).toEqual({ success: true });
@@ -37,9 +43,14 @@ describe('AgentModel.updateSlug', () => {
   });
 
   it('should normalize case and surrounding whitespace', async () => {
-    await serverDB
-      .insert(agents)
-      .values({ id: 'agent-case', slug: 'agent-case', title: 'Agent', userId });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        id: 'agent-case',
+        slug: 'agent-case',
+        title: 'Agent',
+        userId,
+      }),
+    );
 
     const model = new AgentModel(serverDB, userId);
     expect(await model.updateSlug('agent-case', '  Mixed-Case  ')).toEqual({ success: true });
@@ -52,9 +63,14 @@ describe('AgentModel.updateSlug', () => {
   });
 
   it('should reject a malformed slug', async () => {
-    await serverDB
-      .insert(agents)
-      .values({ id: 'agent-invalid', slug: 'agent-invalid', title: 'Agent', userId });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        id: 'agent-invalid',
+        slug: 'agent-invalid',
+        title: 'Agent',
+        userId,
+      }),
+    );
 
     const model = new AgentModel(serverDB, userId);
     expect(await model.updateSlug('agent-invalid', 'not a slug!')).toEqual({
@@ -64,9 +80,14 @@ describe('AgentModel.updateSlug', () => {
   });
 
   it('should reject renaming TO a builtin slug', async () => {
-    await serverDB
-      .insert(agents)
-      .values({ id: 'agent-to-builtin', slug: 'agent-to-builtin', title: 'Agent', userId });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        id: 'agent-to-builtin',
+        slug: 'agent-to-builtin',
+        title: 'Agent',
+        userId,
+      }),
+    );
 
     const model = new AgentModel(serverDB, userId);
     expect(await model.updateSlug('agent-to-builtin', BUILTIN_AGENT_SLUGS.inbox)).toEqual({
@@ -79,12 +100,14 @@ describe('AgentModel.updateSlug', () => {
   // that string. Renaming one away used to succeed, which minted a second empty
   // inbox on the next lookup and stranded the original's history.
   it('should reject renaming a builtin agent AWAY from its slug', async () => {
-    await serverDB.insert(agents).values({
-      id: 'agent-inbox',
-      slug: BUILTIN_AGENT_SLUGS.inbox,
-      title: 'Orvilo AI',
-      userId,
-    });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        id: 'agent-inbox',
+        slug: BUILTIN_AGENT_SLUGS.inbox,
+        title: 'Orvilo AI',
+        userId,
+      }),
+    );
 
     const model = new AgentModel(serverDB, userId);
     expect(await model.updateSlug('agent-inbox', 'my-inbox')).toEqual({
@@ -102,12 +125,14 @@ describe('AgentModel.updateSlug', () => {
   // Saving the identity form without touching the slug must not trip the
   // builtin guard — the no-op check runs first.
   it('should accept a builtin agent re-submitting its own slug', async () => {
-    await serverDB.insert(agents).values({
-      id: 'agent-inbox-noop',
-      slug: BUILTIN_AGENT_SLUGS.inbox,
-      title: 'Orvilo AI',
-      userId,
-    });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        id: 'agent-inbox-noop',
+        slug: BUILTIN_AGENT_SLUGS.inbox,
+        title: 'Orvilo AI',
+        userId,
+      }),
+    );
 
     const model = new AgentModel(serverDB, userId);
     expect(await model.updateSlug('agent-inbox-noop', BUILTIN_AGENT_SLUGS.inbox)).toEqual({
@@ -116,10 +141,12 @@ describe('AgentModel.updateSlug', () => {
   });
 
   it('should reject a slug already taken in the same scope', async () => {
-    await serverDB.insert(agents).values([
-      { id: 'agent-a', slug: 'agent-a', title: 'A', userId },
-      { id: 'agent-b', slug: 'agent-b', title: 'B', userId },
-    ]);
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, [
+        { id: 'agent-a', slug: 'agent-a', title: 'A', userId },
+        { id: 'agent-b', slug: 'agent-b', title: 'B', userId },
+      ]),
+    );
 
     const model = new AgentModel(serverDB, userId);
     expect(await model.updateSlug('agent-a', 'agent-b')).toEqual({
@@ -130,9 +157,14 @@ describe('AgentModel.updateSlug', () => {
 
   it('should throw for an agent the caller does not own', async () => {
     await serverDB.insert(users).values([{ id: 'other-user' }]);
-    await serverDB
-      .insert(agents)
-      .values({ id: 'agent-foreign', slug: 'agent-foreign', title: 'X', userId: 'other-user' });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        id: 'agent-foreign',
+        slug: 'agent-foreign',
+        title: 'X',
+        userId: 'other-user',
+      }),
+    );
 
     const model = new AgentModel(serverDB, userId);
     await expect(model.updateSlug('agent-foreign', 'stolen')).rejects.toThrow();

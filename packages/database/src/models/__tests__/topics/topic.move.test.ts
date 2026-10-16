@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import { agents, messages, sessions, threads, topics, users } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
 import { TopicModel } from '../../topic';
@@ -16,10 +17,12 @@ describe('TopicModel - batchMoveToAgent', () => {
     await serverDB.delete(users);
     await serverDB.transaction(async (tx) => {
       await tx.insert(users).values([{ id: userId }, { id: otherUserId }]);
-      await tx.insert(agents).values([
-        { id: 'source-agent', userId, title: 'Source' },
-        { id: 'target-agent', userId, title: 'Target' },
-      ]);
+      await tx.insert(agents).values(
+        await withTestAgentDevices(tx, [
+          { id: 'source-agent', userId, title: 'Source' },
+          { id: 'target-agent', userId, title: 'Target' },
+        ]),
+      );
     });
   });
 
@@ -165,7 +168,11 @@ describe('TopicModel - batchMoveToAgent', () => {
     await serverDB.transaction(async (tx) => {
       await tx
         .insert(agents)
-        .values([{ id: 'foreign-agent', userId: otherUserId, title: 'Foreign' }]);
+        .values(
+          await withTestAgentDevices(tx, [
+            { id: 'foreign-agent', userId: otherUserId, title: 'Foreign' },
+          ]),
+        );
       await tx.insert(topics).values([{ id: 'topic-x', userId, agentId: 'source-agent' }]);
       await tx
         .insert(messages)

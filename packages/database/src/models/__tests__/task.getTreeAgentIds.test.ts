@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agents, users } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
@@ -12,7 +13,10 @@ const userId = 'tree-agent-test-user-id';
 const userId2 = 'tree-agent-test-user-id-2';
 
 const createAgent = async (id: string, uid = userId) => {
-  await serverDB.insert(agents).values({ id, slug: id, userId: uid }).onConflictDoNothing();
+  await serverDB
+    .insert(agents)
+    .values(await withTestAgentDevices(serverDB, { id, slug: id, userId: uid }))
+    .onConflictDoNothing();
   return id;
 };
 

@@ -1,0 +1,12 @@
+BEGIN
+NOTICE:  PASS: direct NULL-device Agent INSERT rejected (23514)
+NOTICE:  PASS: unknown-device Agent INSERT rejected (23514)
+NOTICE:  PASS: direct Agent UPDATE removing binding rejected (23514)
+NOTICE:  PASS: referenced device DELETE rejected (23503)
+DO
+ agents | unbound_agents 
+--------+----------------
+      8 |              0
+(1 row)
+
+ROLLBACK

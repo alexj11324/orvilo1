@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { uuid } from '@/utils/uuid';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import {
   agents,
   agentsToSessions,
@@ -810,7 +811,13 @@ describe('MessageModel Delete Tests', () => {
   describe('batchDeleteByAgentId', () => {
     it('should delete messages with direct agentId match', async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([{ id: 'agent-del-1', userId, title: 'Agent Delete 1' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'agent-del-1', userId, title: 'Agent Delete 1' },
+            ]),
+          );
 
         await trx.insert(messages).values([
           {
@@ -844,7 +851,13 @@ describe('MessageModel Delete Tests', () => {
       await serverDB.transaction(async (trx) => {
         await trx.insert(sessions).values([{ id: 'session-del', userId }]);
 
-        await trx.insert(agents).values([{ id: 'agent-del-2', userId, title: 'Agent Delete 2' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'agent-del-2', userId, title: 'Agent Delete 2' },
+            ]),
+          );
 
         await trx
           .insert(agentsToSessions)
@@ -886,7 +899,11 @@ describe('MessageModel Delete Tests', () => {
 
         await trx
           .insert(agents)
-          .values([{ id: 'agent-del-mixed', userId, title: 'Agent Delete Mixed' }]);
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'agent-del-mixed', userId, title: 'Agent Delete Mixed' },
+            ]),
+          );
 
         await trx
           .insert(agentsToSessions)
@@ -932,10 +949,12 @@ describe('MessageModel Delete Tests', () => {
 
     it('should only delete messages belonging to the current user', async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([
-          { id: 'agent-del-user', userId, title: 'Agent Delete User' },
-          { id: 'agent-del-other', userId: otherUserId, title: 'Agent Delete Other' },
-        ]);
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, [
+            { id: 'agent-del-user', userId, title: 'Agent Delete User' },
+            { id: 'agent-del-other', userId: otherUserId, title: 'Agent Delete Other' },
+          ]),
+        );
 
         await trx.insert(messages).values([
           {
@@ -974,7 +993,11 @@ describe('MessageModel Delete Tests', () => {
     it('should do nothing when agentId has no associated messages', async () => {
       await serverDB
         .insert(agents)
-        .values([{ id: 'agent-del-empty', userId, title: 'Agent Delete Empty' }]);
+        .values(
+          await withTestAgentDevices(serverDB, [
+            { id: 'agent-del-empty', userId, title: 'Agent Delete Empty' },
+          ]),
+        );
 
       await serverDB.insert(messages).values([
         {
@@ -1002,7 +1025,11 @@ describe('MessageModel Delete Tests', () => {
     // creator, so id-less sweeps must leave them alone.
     beforeEach(async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([{ id: 'share-agent', userId, title: 'Shared Agent' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [{ id: 'share-agent', userId, title: 'Shared Agent' }]),
+          );
 
         await trx.insert(topics).values([
           { agentId: 'share-agent', id: 'creator-topic', userId },

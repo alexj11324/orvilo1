@@ -1,5 +1,5 @@
 import { goalStatusKey } from '@/features/AgentGoals/goalPresentation';
-import type { GoalListItem } from '@/store/goal/initialState';
+import type { OrchestrationWorkflowListItem } from '@/store/goal/initialState';
 
 /** Past this the rail card stops being a card and starts being a page. */
 export const HOME_GOAL_COLLAPSED_COUNT = 5;
@@ -44,19 +44,19 @@ const isOpenGoalStatus = (statusKey: string): statusKey is GoalStatusKey =>
 const BUCKET_ORDER: HomeGoalBucket[] = ['review', 'running'];
 
 /** The rail's goal rows, bucketed and ordered. */
-export const buildHomeGoalEntries = (goals: GoalListItem[]): HomeGoalEntry[] => {
+export const buildHomeGoalEntries = (goals: OrchestrationWorkflowListItem[]): HomeGoalEntry[] => {
   const entries = goals.flatMap<HomeGoalEntry>((item) => {
-    const statusKey = goalStatusKey(item.goal.status);
+    const statusKey = goalStatusKey(item.orchestrationWorkflow.status);
     if (!isOpenGoalStatus(statusKey)) return [];
 
     return [
       {
-        agentId: item.goal.agentId ?? null,
+        agentId: item.orchestrationWorkflow.agentId ?? null,
         bucket: BUCKET_BY_STATUS_KEY[statusKey],
-        id: item.goal.id,
+        id: item.orchestrationWorkflow.id,
         pendingDecisions: item.pendingDecisions,
         statusKey,
-        title: item.goal.title,
+        title: item.orchestrationWorkflow.title,
         taskDone: item.taskDone,
         taskTotal: item.taskTotal,
       },

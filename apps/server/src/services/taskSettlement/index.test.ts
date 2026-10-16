@@ -165,21 +165,21 @@ describe('settleTaskExecution', () => {
     );
   });
 
-  it.each([{ completionRequestedByOperation: true }, { runTrigger: 'goal' as const }])(
-    'keeps successful completion intent behind required human review: %j',
-    async (context) => {
-      mocks.resolveTaskReviewRequirement.mockResolvedValue(true);
+  it.each([
+    { completionRequestedByOperation: true },
+    { runTrigger: 'orchestrationWorkflow' as const },
+  ])('keeps successful completion intent behind required human review: %j', async (context) => {
+    mocks.resolveTaskReviewRequirement.mockResolvedValue(true);
 
-      const result = await settle({ context, outcome: 'succeeded' });
+    const result = await settle({ context, outcome: 'succeeded' });
 
-      expect(result).toMatchObject({
-        applied: true,
-        attention: 'review_required',
-        decision: { type: 'review' },
-        workflowCategory: 'in_review',
-      });
-    },
-  );
+    expect(result).toMatchObject({
+      applied: true,
+      attention: 'review_required',
+      decision: { type: 'review' },
+      workflowCategory: 'in_review',
+    });
+  });
 
   it('agent waiting → workflow stays in_progress, execution=waiting, attention=needs_input', async () => {
     const result = await settle({ outcome: 'waiting_for_input' });

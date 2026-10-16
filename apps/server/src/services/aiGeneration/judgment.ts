@@ -995,6 +995,9 @@ export const runAcpJudgment = async <T = unknown>(
           taskId: judgment.taskId ?? null,
         },
         autoStart: true,
+        // Judgment operations inspect a delivery; they are not another builder
+        // run and must not instantiate the task's verification plan recursively.
+        skipTaskVerification: true,
         disableTools: judgment.outputMode !== 'tool',
         fileIds: judgment.fileIds,
         instructions,
@@ -1010,7 +1013,7 @@ export const runAcpJudgment = async <T = unknown>(
                 prompt,
                 '## Output contract',
                 'Write a JSON file matching this schema, then submit it using the built-in Orvilo CLI tool:',
-                `orvilo goal submit-draft --token ${JSON.stringify(intentKey)} --file <path>`,
+                `orvilo orchestration-workflow submit-draft --token ${JSON.stringify(intentKey)} --file <path>`,
                 'The CLI uses ORVILO_OPERATION_ID. Submit exactly once and then finish the turn. A prose or JSON reply alone does not record a result.',
                 JSON.stringify(input.schema),
               ].join('\n\n')

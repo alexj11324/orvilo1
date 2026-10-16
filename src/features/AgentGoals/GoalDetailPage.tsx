@@ -85,15 +85,15 @@ LivenessValue.displayName = 'GoalLivenessValue';
 interface GoalDetailPageProps {
   /** Absent for a goal with no responsible agent — e.g. one created from a project. */
   agentId?: string;
-  goalId: string;
+  orchestrationWorkflowId: string;
 }
 
-const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
+const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, orchestrationWorkflowId }) => {
   const { t } = useTranslation('chat');
   const { allowed: canEdit } = usePermission('create_content');
   const useFetchGoalGraph = useGoalStore((s) => s.useFetchGoalGraph);
-  const { error, isLoading, mutate } = useFetchGoalGraph(goalId);
-  const snapshot = useGoalStore(goalSelectors.goalGraph(goalId));
+  const { error, isLoading, mutate } = useFetchGoalGraph(orchestrationWorkflowId);
+  const snapshot = useGoalStore(goalSelectors.goalGraph(orchestrationWorkflowId));
   const pauseGoal = useGoalStore((s) => s.pauseGoal);
   const resumeGoal = useGoalStore((s) => s.resumeGoal);
 
@@ -101,7 +101,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
 
   const showPortal = useChatStore(chatPortalSelectors.showPortal);
   const currentViewType = useChatStore(chatPortalSelectors.currentViewType);
-  const chat = useGoalChatPanel(goalId, agentId);
+  const chat = useGoalChatPanel(orchestrationWorkflowId, agentId);
   const openGoalMetric = useChatStore((s) => s.openGoalMetric);
   const clearPortalStack = useChatStore((s) => s.clearPortalStack);
 
@@ -115,7 +115,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
 
   // The portal stack belongs to this goal's inspection session — leaving the
   // page (or switching goals) must not leak it into the conversation surface.
-  useEffect(() => () => clearPortalStack(), [clearPortalStack, goalId]);
+  useEffect(() => () => clearPortalStack(), [clearPortalStack, orchestrationWorkflowId]);
 
   const liveness = useMemo(() => {
     if (!snapshot) return { latest: undefined };
@@ -134,33 +134,36 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
       <NotFound desc={t('goalDetail.notFoundDescription')} title={t('goalDetail.notFoundTitle')} />
     );
 
-  const { goal, nodes } = snapshot;
-  const managerConversation = goalManagerConversation(goal.config);
+  const { orchestrationWorkflow, nodes } = snapshot;
+  const managerConversation = goalManagerConversation(orchestrationWorkflow.config);
   const tasks = nodes.filter((node) => node.kind === 'task').length;
   const findings = nodes.filter((node) => node.kind === 'finding').length;
-  const open = (metric: GoalMetricKind) => () => openGoalMetric(goalId, metric);
+  const open = (metric: GoalMetricKind) => () => openGoalMetric(orchestrationWorkflowId, metric);
 
   // The panel hosts the goal conversation only when the goal has a
   // responsible agent; without one it is drill-down-only.
   const panelExpandable = !!chat.agentId;
   const chatVisible = chat.open && panelExpandable;
 
-  const paused = goal.status === 'paused';
+  const paused = orchestrationWorkflow.status === 'paused';
   // Pace control exists only while the coordinator loop is actually moving (or
   // explicitly paused). A goal in review awaits the human, and a closed goal
   // cannot move — pausing either would be a dead or misleading button.
   const canPause =
     canEdit &&
     nodes.length > 0 &&
-    ['paused', 'planning', 'running', 'verifying'].includes(goal.status);
+    ['paused', 'planning', 'running', 'verifying'].includes(orchestrationWorkflow.status);
 
-  const durationText = goal.startedAt
-    ? formatSpan((goal.completedAt ?? new Date()).getTime() - goal.startedAt.getTime())
+  const durationText = orchestrationWorkflow.startedAt
+    ? formatSpan(
+        (orchestrationWorkflow.completedAt ?? new Date()).getTime() -
+          orchestrationWorkflow.startedAt.getTime(),
+      )
     : '—';
   // Spend is the metric; the cap is the context it is read against — see
   // `summarizeGoalBudget`. The label names only the number in the lead, and the
   // cap trails it at secondary weight rather than sharing top billing.
-  const budget = summarizeGoalBudget(goal, snapshot.spend);
+  const budget = summarizeGoalBudget(orchestrationWorkflow, snapshot.spend);
   const budgetLabel = t(
     budget.kind === 'rounds' ? 'goalProcess.metrics.rounds' : 'goalProcess.metrics.spend',
   );
@@ -186,17 +189,21 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
               {agentId ? (
                 <AgentBreadcrumb
                   agentId={agentId}
-                  extraItems={[goal.title]}
+                  extraItems={[orchestrationWorkflow.title]}
                   // The goal title owns the last crumb, so this one is a way back
                   // to the agent's goal list rather than a label for this page.
                   title={<Link to={buildAgentPath('goals')}>{t('goalList.title')}</Link>}
                 />
               ) : (
-                <div className="text-sm font-medium">{goal.title}</div>
+                <div className="text-sm font-medium">{orchestrationWorkflow.title}</div>
               )}
               {/* Not nested under the breadcrumb: an agent-less goal still has to
                   be deletable, and this menu is the only place that can do it. */}
-              <GoalDetailActions agentId={agentId} goalId={goal.id} projectId={goal.projectId} />
+              <GoalDetailActions
+                agentId={agentId}
+                orchestrationWorkflowId={orchestrationWorkflow.id}
+                projectId={orchestrationWorkflow.projectId}
+              />
             </div>
           }
           right={
@@ -228,14 +235,16 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
         <div className="flex flex-col flex-1" style={{ overflowY: 'auto' }}>
           <WideScreenContainer wrapperStyle={{ gap: 20, paddingBlock: 16 }}>
             <div className={`flex flex-col gap-2 ${styles.header}`}>
-              <h1 className="text-xl font-semibold">{goal.title}</h1>
+              <h1 className="text-xl font-semibold">{orchestrationWorkflow.title}</h1>
               <div className={`flex gap-2 flex-wrap ${styles.metrics}`}>
                 <Metric
                   label={t('goalProcess.metrics.status')}
                   value={
                     <>
-                      <GoalStatusGlyph size={16} status={goal.status} />
-                      <div className="text-base font-semibold">{t(goalStatusKey(goal.status))}</div>
+                      <GoalStatusGlyph size={16} status={orchestrationWorkflow.status} />
+                      <div className="text-base font-semibold">
+                        {t(goalStatusKey(orchestrationWorkflow.status))}
+                      </div>
                     </>
                   }
                   onClick={open('lifecycle')}
@@ -279,7 +288,11 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
                   <Button
                     size="compact"
                     variant={paused ? 'default' : 'outline'}
-                    onClick={() => void (paused ? resumeGoal(goal.id) : pauseGoal(goal.id))}
+                    onClick={() =>
+                      void (paused
+                        ? resumeGoal(orchestrationWorkflow.id)
+                        : pauseGoal(orchestrationWorkflow.id))
+                    }
                   >
                     {paused ? (
                       <PlayIcon data-icon="inline-start" />
@@ -293,19 +306,25 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
                   )}
                 </div>
               )}
-              {goal.requirement && (
-                <GoalRequirement goalId={goal.id} requirement={goal.requirement} />
+              {orchestrationWorkflow.requirement && (
+                <GoalRequirement
+                  orchestrationWorkflowId={orchestrationWorkflow.id}
+                  requirement={orchestrationWorkflow.requirement}
+                />
               )}
               {/* North-star strip beside the requirement document: the measured
                   clauses ARE half of the acceptance contract, so they read
                   with it — not squeezed between the title and the execution
                   metrics (review feedback, r1). */}
-              <NorthStarMetrics canEdit={canEdit} goalId={goalId} />
+              <NorthStarMetrics
+                canEdit={canEdit}
+                orchestrationWorkflowId={orchestrationWorkflowId}
+              />
             </div>
 
             <ProcessControl
-              goalId={goal.id}
               graphFullscreen={graphFullscreen}
+              orchestrationWorkflowId={orchestrationWorkflow.id}
               onGraphFullscreenChange={setGraphFullscreen}
             />
           </WideScreenContainer>
@@ -333,17 +352,17 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
         ) : chat.agentId && chat.topicId ? (
           <GoalSupervision
             agentId={chat.agentId}
-            goalId={goalId}
-            key={`${goalId}:${chat.agentId}:${chat.request}`}
+            key={`${orchestrationWorkflowId}:${chat.agentId}:${chat.request}`}
+            orchestrationWorkflowId={orchestrationWorkflowId}
             topicId={chat.topicId}
             onCollapse={() => chat.setOpen(false)}
           />
         ) : chat.agentId ? (
           <GoalChat
             agentId={chat.agentId}
-            goalId={goalId}
             initialTopicId={chat.topicId}
-            key={`${goalId}:${chat.agentId}:${chat.request}`}
+            key={`${orchestrationWorkflowId}:${chat.agentId}:${chat.request}`}
+            orchestrationWorkflowId={orchestrationWorkflowId}
             onCollapse={() => chat.setOpen(false)}
           />
         ) : null}

@@ -10,11 +10,11 @@ import { GoalDetailPage } from '@/features/AgentGoals';
  * is the only way to open one.
  */
 const GoalDetailRoute = () => {
-  const { goalId } = useParams<{ goalId?: string }>();
+  const { goalId: orchestrationWorkflowId } = useParams<{ goalId?: string }>();
 
-  if (!goalId) return null;
+  if (!orchestrationWorkflowId) return null;
 
-  return <GoalDetailPage goalId={goalId} />;
+  return <GoalDetailPage orchestrationWorkflowId={orchestrationWorkflowId} />;
 };
 
 export default GoalDetailRoute;

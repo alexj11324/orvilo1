@@ -80,30 +80,30 @@ Either way the snapshot is cached to `.agent-tracing/_remote/<opId>.json`, and e
 
 Implementation: `packages/agent-tracing/src/store/loadSnapshot.ts` (resolution order: local store → `_remote/` cache → injected `resolveDownloadUrl` → `TRACING_BASE_URL`) and `store/remote-store.ts` (URL built as `{base}/{agentId}/{topicId}/{opId}.json.zst`). Reading a compressed snapshot needs Node >= 22.15.
 
-## Goal Trajectories
+## Orchestration Workflow Trajectories
 
-A goal is one complete _goal_ execution the way an operation is one complete agent execution, so it gets the same trace format one level up: `GoalTrajectory : AdvanceSnapshot` mirrors `ExecutionSnapshot : StepSnapshot`. There is no table of advances, exactly as there is no `agent_steps` table — `goal_traces` holds one rollup row per goal plus the object key, and the detail lives in the object.
+A goal is one complete _orchestration workflow_ execution the way an operation is one complete agent execution, so it gets the same trace format one level up: `OrchestrationWorkflowTrajectory : AdvanceSnapshot` mirrors `ExecutionSnapshot : StepSnapshot`. There is no table of advances, exactly as there is no `agent_steps` table — `orchestration_workflow_traces` holds one rollup row per orchestration workflow plus the object key, and the detail lives in the object.
 
-The leaves join back down: an advance records the `operationId`s it put in flight (on `tick.effects[].operationId`), so `orvilo trace op inspect <opId>` continues from where the goal trace stops.
+The leaves join back down: an advance records the `operationId`s it put in flight (on `tick.effects[].operationId`), so `orvilo trace op inspect <opId>` continues from where the orchestration workflow trace stops.
 
 ```bash
-agent-tracing goal               # list local goal trajectories
-agent-tracing goal goal_xxx      # the run: triggers, outcomes, graph, gates, ops
-agent-tracing goal goal_xxx -a 3 # one advance in full, with the frontier it ranked
-agent-tracing goal goal_xxx -j   # raw JSON
+orvilo trace orchestration-workflow list
+orvilo trace orchestration-workflow inspect <id>
+orvilo trace orchestration-workflow inspect <id> -a 3
+orvilo trace orchestration-workflow inspect <id> -j
 ```
 
 What each tick records is the **decision input**, not just the result: the graph it read (as a delta against the previous tick), the budget it evaluated, the responsible task's state, and every eligible work node **including the ones it passed over**. Without the losers a trace cannot answer "why not that node".
 
 **Storage** follows the operation switch, so a deployment that keeps one keeps the other:
 
-- Completed: `goal-traces/{goalId}.json.zst`
-- In progress: `goal-traces/_partial/{goalId}.json.zst` (an unfinished long-horizon goal is the normal thing to inspect)
-- Dev: `.goal-tracing/{goalId}.json`
+- Completed: `orchestration-workflow-traces/{orchestrationWorkflowId}.json.zst`
+- In progress: `orchestration-workflow-traces/_partial/{orchestrationWorkflowId}.json.zst` (an unfinished long-horizon goal is the normal thing to inspect)
+- Dev: `.orchestration-workflow-tracing/{orchestrationWorkflowId}.json`
 
-**Replay.** `replayGoalAgainstCurrentCoordinator(trajectory)` re-runs the real `decideNextMove` over the recorded inputs and reports `{advanceSeq, tickIndex, field, recorded, replayed}` wherever the current coordinator would now choose differently. This reproduces the coordinator's _decisions_ exactly; it says nothing about whether the dispatched work would have gone the same way.
+**Replay.** `replayOrchestrationWorkflowAgainstCurrentCoordinator(trajectory)` re-runs the real `decideNextMove` over the recorded inputs and reports `{advanceSeq, tickIndex, field, recorded, replayed}` wherever the current coordinator would now choose differently. This reproduces the coordinator's _decisions_ exactly; it says nothing about whether the dispatched work would have gone the same way.
 
-Implementation: `packages/agent-tracing/src/goal/`, recorded through `apps/server/src/services/goal/advanceGoal.ts` (the single funnel every advance passes through) via the `onDecision` side channel on `GoalService.tick`.
+Implementation: `packages/agent-tracing/src/orchestrationWorkflow/`, recorded through `apps/server/src/services/orchestrationWorkflow/advanceOrchestrationWorkflow.ts` (the single funnel every advance passes through) via the `onDecision` side channel on `OrchestrationWorkflowService.tick`.
 
 ## CLI Commands
 

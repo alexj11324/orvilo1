@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   chatGroups,
@@ -62,10 +63,16 @@ describe('RecentModel', () => {
     });
 
     it('only returns rows for the calling user', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-mine', userId, slug: 'inbox' });
       await serverDB
         .insert(agents)
-        .values({ id: 'agent-other', userId: otherUserId, slug: 'inbox' });
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-mine', userId, slug: 'inbox' }));
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          id: 'agent-other',
+          userId: otherUserId,
+          slug: 'inbox',
+        }),
+      );
 
       await serverDB.insert(topics).values([
         { id: 'topic-mine', userId, agentId: 'agent-mine', title: 'mine', updatedAt: now() },
@@ -85,7 +92,11 @@ describe('RecentModel', () => {
 
     describe('topics arm', () => {
       it('includes inbox-agent topics and group topics', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-inbox', userId, slug: 'inbox' });
+        await serverDB
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(serverDB, { id: 'agent-inbox', userId, slug: 'inbox' }),
+          );
         await serverDB.insert(chatGroups).values({ id: 'group-1', userId });
 
         await serverDB.insert(topics).values([
@@ -122,7 +133,11 @@ describe('RecentModel', () => {
       });
 
       it('orders topic rows by topic updatedAt even when messages are newer', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-activity', userId, virtual: false });
+        await serverDB
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(serverDB, { id: 'agent-activity', userId, virtual: false }),
+          );
         await serverDB.insert(topics).values([
           {
             agentId: 'agent-activity',
@@ -159,7 +174,9 @@ describe('RecentModel', () => {
       it('breaks identical updatedAt ties deterministically by id', async () => {
         // shared-timestamp rows used to flip order depending on the plan; the
         // union now orders by (updated_at desc, id desc).
-        await serverDB.insert(agents).values({ id: 'agent-tie', userId, slug: 'inbox' });
+        await serverDB
+          .insert(agents)
+          .values(await withTestAgentDevices(serverDB, { id: 'agent-tie', userId, slug: 'inbox' }));
         const tiedAt = now();
         await serverDB.insert(topics).values([
           {
@@ -185,7 +202,11 @@ describe('RecentModel', () => {
       });
 
       it('includes topics on non-virtual non-group agents', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-real', userId, virtual: false });
+        await serverDB
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(serverDB, { id: 'agent-real', userId, virtual: false }),
+          );
 
         await serverDB.insert(topics).values({
           id: 'topic-real',
@@ -204,7 +225,13 @@ describe('RecentModel', () => {
         // Agent-share visitor topics keep the creator's userId, but a non-null
         // senderId marks them as visitor traffic that must not surface in the
         // creator's own Recent feed.
-        await serverDB.insert(agents).values({ id: 'agent-share-recent', userId, virtual: false });
+        await serverDB.insert(agents).values(
+          await withTestAgentDevices(serverDB, {
+            id: 'agent-share-recent',
+            userId,
+            virtual: false,
+          }),
+        );
 
         await serverDB.insert(topics).values([
           {
@@ -229,7 +256,11 @@ describe('RecentModel', () => {
       });
 
       it('excludes topics on virtual agents that are not in a group', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-virtual', userId, virtual: true });
+        await serverDB
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(serverDB, { id: 'agent-virtual', userId, virtual: true }),
+          );
 
         await serverDB.insert(topics).values({
           id: 'topic-virtual',
@@ -244,7 +275,11 @@ describe('RecentModel', () => {
       });
 
       it('excludes topics with system triggers', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-inbox', userId, slug: 'inbox' });
+        await serverDB
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(serverDB, { id: 'agent-inbox', userId, slug: 'inbox' }),
+          );
 
         await serverDB.insert(topics).values([
           { id: 'topic-cron', userId, agentId: 'agent-inbox', trigger: 'cron', updatedAt: now() },
@@ -284,7 +319,11 @@ describe('RecentModel', () => {
       });
 
       it('falls back to "Untitled Topic" when title is null', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-inbox', userId, slug: 'inbox' });
+        await serverDB
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(serverDB, { id: 'agent-inbox', userId, slug: 'inbox' }),
+          );
         await serverDB.insert(topics).values({
           id: 'topic-untitled',
           userId,
@@ -298,7 +337,11 @@ describe('RecentModel', () => {
       });
 
       it('returns topic metadata when present', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-inbox', userId, slug: 'inbox' });
+        await serverDB
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(serverDB, { id: 'agent-inbox', userId, slug: 'inbox' }),
+          );
         await serverDB.insert(topics).values({
           id: 'topic-with-meta',
           userId,
@@ -457,7 +500,9 @@ describe('RecentModel', () => {
 
     describe('tasks arm', () => {
       it('includes active tasks and surfaces assigneeAgentId as routeId', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-assignee', userId });
+        await serverDB
+          .insert(agents)
+          .values(await withTestAgentDevices(serverDB, { id: 'agent-assignee', userId }));
 
         await serverDB.insert(tasks).values({
           id: 'task-active',
@@ -589,7 +634,11 @@ describe('RecentModel', () => {
 
     describe('combined results', () => {
       it('orders all three types by updatedAt desc and applies the limit', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-inbox', userId, slug: 'inbox' });
+        await serverDB
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(serverDB, { id: 'agent-inbox', userId, slug: 'inbox' }),
+          );
 
         await serverDB.insert(topics).values({
           id: 'topic-1',
@@ -628,7 +677,11 @@ describe('RecentModel', () => {
       });
 
       it('respects the limit parameter', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-inbox', userId, slug: 'inbox' });
+        await serverDB
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(serverDB, { id: 'agent-inbox', userId, slug: 'inbox' }),
+          );
         await serverDB.insert(topics).values(
           Array.from({ length: 5 }, (_, i) => ({
             id: `topic-${i}`,
@@ -645,7 +698,11 @@ describe('RecentModel', () => {
       });
 
       it('applies the limit after excluding inbox topics and returns rich topic previews', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-inbox', userId, slug: 'inbox' });
+        await serverDB
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(serverDB, { id: 'agent-inbox', userId, slug: 'inbox' }),
+          );
         await serverDB.insert(topics).values([
           {
             agentId: 'agent-inbox',
@@ -697,7 +754,11 @@ describe('RecentModel', () => {
       });
 
       it('strips markdown syntax from topic previews', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-inbox', userId, slug: 'inbox' });
+        await serverDB
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(serverDB, { id: 'agent-inbox', userId, slug: 'inbox' }),
+          );
         await serverDB.insert(topics).values({
           agentId: 'agent-inbox',
           id: 'topic-markdown-preview',
@@ -723,7 +784,11 @@ describe('RecentModel', () => {
       });
 
       it('returns Date objects for updatedAt', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-inbox', userId, slug: 'inbox' });
+        await serverDB
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(serverDB, { id: 'agent-inbox', userId, slug: 'inbox' }),
+          );
         await serverDB.insert(topics).values({
           id: 'topic-date',
           userId,
@@ -748,9 +813,14 @@ describe('RecentModel', () => {
           { role: 'member', userId, workspaceId },
           { role: 'member', userId: otherUserId, workspaceId },
         ]);
-        await serverDB
-          .insert(agents)
-          .values({ id: 'agent-ws', userId, slug: 'inbox', workspaceId });
+        await serverDB.insert(agents).values(
+          await withTestAgentDevices(serverDB, {
+            id: 'agent-ws',
+            userId,
+            slug: 'inbox',
+            workspaceId,
+          }),
+        );
         await serverDB.insert(topics).values([
           {
             agentId: 'agent-ws',
@@ -791,15 +861,17 @@ describe('RecentModel', () => {
         // private rows visible, so the owner's own private agent is the one case
         // the workspace predicate cannot catch on its own.
         beforeEach(async () => {
-          await serverDB.insert(agents).values([
-            { id: 'agent-ws-private-mine', userId, visibility: 'private', workspaceId },
-            {
-              id: 'agent-ws-private-other',
-              userId: otherUserId,
-              visibility: 'private',
-              workspaceId,
-            },
-          ]);
+          await serverDB.insert(agents).values(
+            await withTestAgentDevices(serverDB, [
+              { id: 'agent-ws-private-mine', userId, visibility: 'private', workspaceId },
+              {
+                id: 'agent-ws-private-other',
+                userId: otherUserId,
+                visibility: 'private',
+                workspaceId,
+              },
+            ]),
+          );
           await serverDB
             .insert(chatGroups)
             .values([{ id: 'group-ws-private-mine', userId, visibility: 'private', workspaceId }]);
@@ -878,7 +950,8 @@ describe('RecentModel', () => {
           ];
           // Personal scope must be enforced even if visibility is public (the
           // default on legacy/personal rows). It is independent of private.
-          if (kind === 'agent') await serverDB.insert(agents).values(resources);
+          if (kind === 'agent')
+            await serverDB.insert(agents).values(await withTestAgentDevices(serverDB, resources));
           else await serverDB.insert(chatGroups).values(resources);
 
           const conversations = resources.flatMap((resource) =>
@@ -949,7 +1022,8 @@ describe('RecentModel', () => {
               workspaceId,
             },
           ];
-          if (kind === 'agent') await serverDB.insert(agents).values(resources);
+          if (kind === 'agent')
+            await serverDB.insert(agents).values(await withTestAgentDevices(serverDB, resources));
           else await serverDB.insert(chatGroups).values(resources);
 
           await serverDB.insert(topics).values(

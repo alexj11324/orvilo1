@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   projects,
@@ -31,9 +32,13 @@ beforeEach(async () => {
   await serverDB
     .insert(workspaces)
     .values({ id: workspaceId, name: 'WS', primaryOwnerId: inviterId, slug: 'wi-ws' });
-  await serverDB
-    .insert(agents)
-    .values({ id: coordinatorAgentId, slug: coordinatorAgentId, userId: inviterId });
+  await serverDB.insert(agents).values(
+    await withTestAgentDevices(serverDB, {
+      id: coordinatorAgentId,
+      slug: coordinatorAgentId,
+      userId: inviterId,
+    }),
+  );
   await serverDB.insert(projects).values({
     coordinatorAgentId,
     id: projectId,

@@ -1,17 +1,18 @@
 // @vitest-environment node
 import type { ProjectOrchestrationPolicy } from '@orvilo/types';
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
-  goalNodes,
-  goals,
   mcpEventBindings,
   mcpEventInbox,
   mcpEventTriggerRuns,
   mcpEventTriggers,
+  orchestrationWorkflowNodes,
+  orchestrationWorkflows,
   projectAgents,
   projects,
   taskDispatches,
@@ -45,9 +46,13 @@ const cleanup = async () => {
   await db.delete(mcpEventBindings);
   await db.delete(userConnectors).where(eq(userConnectors.workspaceId, workspaceId));
   await db.delete(workspaceMembers).where(eq(workspaceMembers.workspaceId, workspaceId));
-  await db.delete(goalNodes);
-  await db.delete(goals).where(eq(goals.workspaceId, workspaceId));
-  await db.delete(goals).where(eq(goals.workspaceId, otherWorkspaceId));
+  await db.delete(orchestrationWorkflowNodes);
+  await db
+    .delete(orchestrationWorkflows)
+    .where(eq(orchestrationWorkflows.workspaceId, workspaceId));
+  await db
+    .delete(orchestrationWorkflows)
+    .where(eq(orchestrationWorkflows.workspaceId, otherWorkspaceId));
   await db.delete(taskTopics);
   await db.delete(taskDispatches);
   await db.delete(tasks).where(eq(tasks.workspaceId, workspaceId));
@@ -114,25 +119,29 @@ const createPersonalTask = async (id: string, identifier: string, seq: number) =
   return task;
 };
 
-const attachTaskToGoal = async (taskId: string, status: 'paused' | 'running', seq: number) => {
-  const [goal] = await db
-    .insert(goals)
+const attachTaskToOrchestrationWorkflow = async (
+  taskId: string,
+  status: 'paused' | 'running',
+  seq: number,
+) => {
+  const [orchestrationWorkflow] = await db
+    .insert(orchestrationWorkflows)
     .values({
-      id: `goal-${seq}`,
+      id: `orchestration-workflow-${seq}`,
       status,
-      title: `Goal ${seq}`,
+      title: `Orchestration workflow ${seq}`,
       userId,
       workspaceId,
     })
     .returning();
-  await db.insert(goalNodes).values({
+  await db.insert(orchestrationWorkflowNodes).values({
     createdByUserId: userId,
-    goalId: goal.id,
+    orchestrationWorkflowId: orchestrationWorkflow.id,
     kind: 'task',
     taskId,
     title: 'Owned node',
   });
-  return goal;
+  return orchestrationWorkflow;
 };
 
 /** Seed the durable chain `verifyEventEvidence` re-checks at claim time. */
@@ -253,10 +262,12 @@ const seedEventEvidence = async (taskId: string) => {
 describe('TaskDispatchModel', () => {
   it('authorizes the current executor as the runner user, honoring delegation over assignee', async () => {
     const task = await createTask('AUTH-1', 1);
-    await db.insert(agents).values([
-      { id: 'agt-owner-private', userId, workspaceId, visibility: 'private' },
-      { id: 'agt-delegate-private', userId: otherUserId, workspaceId, visibility: 'private' },
-    ]);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, [
+        { id: 'agt-owner-private', userId, workspaceId, visibility: 'private' },
+        { id: 'agt-delegate-private', userId: otherUserId, workspaceId, visibility: 'private' },
+      ]),
+    );
     await db
       .update(tasks)
       .set({ assigneeAgentId: 'agt-owner-private' })
@@ -340,7 +351,9 @@ describe('TaskDispatchModel', () => {
 
   it('freezes one event identity across concurrent replay and edits, then versions the next event', async () => {
     const task = await createTask('EVT-FROZEN', 102);
-    await db.insert(agents).values({ id: 'event-version-agent', userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: 'event-version-agent', userId, workspaceId }));
     await db
       .update(tasks)
       .set({
@@ -587,7 +600,9 @@ describe('TaskDispatchModel', () => {
 
   it('keeps a manually assigned member run current while the inbox Agent executes ephemerally', async () => {
     const task = await createTask('RUN-2B', 21);
-    await db.insert(agents).values({ id: 'manual-inbox-agent', userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: 'manual-inbox-agent', userId, workspaceId }));
     await db.update(tasks).set({ assigneeUserId: userId }).where(eq(tasks.id, task.id));
     const model = new TaskDispatchModel(db, workspaceId);
     const requested = await model.request({
@@ -985,7 +1000,9 @@ describe('TaskDispatchModel', () => {
 
   it('resumes the same waiting dispatch after an Agent is assigned', async () => {
     const task = await createTask('RUN-6', 6);
-    await db.insert(agents).values({ id: 'dispatch-agent-1', userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: 'dispatch-agent-1', userId, workspaceId }));
     const model = new TaskDispatchModel(db, workspaceId);
     const first = await model.request({
       idempotencyKey: 'orchestrator:RUN-6:plan-1',
@@ -1015,7 +1032,9 @@ describe('TaskDispatchModel', () => {
 
   it('resumes a repaired waiting dispatch for a new request key without replacing its identity', async () => {
     const task = await createTask('RUN-6B', 61);
-    await db.insert(agents).values({ id: 'dispatch-agent-2', userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: 'dispatch-agent-2', userId, workspaceId }));
     const model = new TaskDispatchModel(db, workspaceId);
     const first = await model.request({
       idempotencyKey: 'orchestrator:RUN-6B:plan-1',
@@ -1050,10 +1069,12 @@ describe('TaskDispatchModel', () => {
   });
 
   it('cancels a dispatch whose assigned Agent changed before claim', async () => {
-    await db.insert(agents).values([
-      { id: 'dispatch-agent-old', userId, workspaceId },
-      { id: 'dispatch-agent-new', userId, workspaceId },
-    ]);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, [
+        { id: 'dispatch-agent-old', userId, workspaceId },
+        { id: 'dispatch-agent-new', userId, workspaceId },
+      ]),
+    );
     const task = await createTask('RUN-7', 7);
     await db
       .update(tasks)
@@ -1082,7 +1103,11 @@ describe('TaskDispatchModel', () => {
   });
 
   it('cancels a claimed dispatch when its execution contract changes during provisioning', async () => {
-    await db.insert(agents).values({ id: 'dispatch-agent-contract', userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(
+        await withTestAgentDevices(db, { id: 'dispatch-agent-contract', userId, workspaceId }),
+      );
     const task = await createTask('RUN-7B', 72);
     await db
       .update(tasks)
@@ -1130,7 +1155,9 @@ describe('TaskDispatchModel', () => {
   });
 
   it('keeps a dispatch valid across status-only domain revisions', async () => {
-    await db.insert(agents).values({ id: 'dispatch-agent-status', userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: 'dispatch-agent-status', userId, workspaceId }));
     const task = await createTask('RUN-7C', 73);
     await db
       .update(tasks)
@@ -1347,28 +1374,28 @@ describe('TaskDispatchModel', () => {
   });
 });
 
-describe('goal dispatch fence', () => {
-  it('parks a new automated dispatch while the owning goal is paused', async () => {
+describe('orchestration workflow dispatch fence', () => {
+  it('parks a new automated dispatch while the owning orchestration workflow is paused', async () => {
     const task = await createTask('RUN-G1', 40);
-    const goal = await attachTaskToGoal(task.id, 'paused', 1);
+    const orchestrationWorkflow = await attachTaskToOrchestrationWorkflow(task.id, 'paused', 1);
     const model = new TaskDispatchModel(db, workspaceId);
 
     const requested = await model.request({
-      idempotencyKey: 'goal:RUN-G1:request-1',
-      requestedBy: goal.id,
+      idempotencyKey: 'orchestrationWorkflow:RUN-G1:request-1',
+      requestedBy: orchestrationWorkflow.id,
       taskId: task.id,
-      trigger: 'goal',
+      trigger: 'orchestrationWorkflow',
     });
 
     expect(requested.state).toBe('created');
     if (requested.state === 'busy') throw new Error('unexpected busy');
     expect(requested.dispatch.phase).toBe('waiting');
-    expect(requested.dispatch.waitingReason).toBe('goal_paused');
+    expect(requested.dispatch.waitingReason).toBe('orchestration_workflow_paused');
   });
 
-  it('lets a manual request through while the owning goal is paused', async () => {
+  it('lets a manual request through while the owning orchestration workflow is paused', async () => {
     const task = await createTask('RUN-G2', 41);
-    await attachTaskToGoal(task.id, 'paused', 2);
+    await attachTaskToOrchestrationWorkflow(task.id, 'paused', 2);
     const model = new TaskDispatchModel(db, workspaceId);
 
     const requested = await model.request({
@@ -1383,29 +1410,41 @@ describe('goal dispatch fence', () => {
     expect(requested.dispatch.waitingReason).toBeNull();
   });
 
-  it('resumes the same waiting dispatch once the goal runs again', async () => {
+  it('resumes the same waiting dispatch once the orchestration workflow runs again', async () => {
     const task = await createTask('RUN-G3', 42);
-    const goal = await attachTaskToGoal(task.id, 'paused', 3);
-    await db.insert(agents).values({ id: 'goal-agent-3', userId, workspaceId });
-    await db.update(tasks).set({ assigneeAgentId: 'goal-agent-3' }).where(eq(tasks.id, task.id));
+    const orchestrationWorkflow = await attachTaskToOrchestrationWorkflow(task.id, 'paused', 3);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, {
+        id: 'orchestration-workflow-agent-3',
+        userId,
+        workspaceId,
+      }),
+    );
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'orchestration-workflow-agent-3' })
+      .where(eq(tasks.id, task.id));
     const model = new TaskDispatchModel(db, workspaceId);
 
     const parked = await model.request({
-      idempotencyKey: 'goal:RUN-G3:request-1',
-      requestedBy: goal.id,
+      idempotencyKey: 'orchestrationWorkflow:RUN-G3:request-1',
+      requestedBy: orchestrationWorkflow.id,
       taskId: task.id,
-      trigger: 'goal',
+      trigger: 'orchestrationWorkflow',
     });
     if (parked.state === 'busy') throw new Error('unexpected busy');
     expect(parked.dispatch.phase).toBe('waiting');
 
-    await db.update(goals).set({ status: 'running' }).where(eq(goals.id, goal.id));
+    await db
+      .update(orchestrationWorkflows)
+      .set({ status: 'running' })
+      .where(eq(orchestrationWorkflows.id, orchestrationWorkflow.id));
 
     const resumed = await model.request({
-      idempotencyKey: 'goal:RUN-G3:request-1',
-      requestedBy: goal.id,
+      idempotencyKey: 'orchestrationWorkflow:RUN-G3:request-1',
+      requestedBy: orchestrationWorkflow.id,
       taskId: task.id,
-      trigger: 'goal',
+      trigger: 'orchestrationWorkflow',
     });
     expect(resumed.state).toBe('existing');
     if (resumed.state === 'busy') throw new Error('unexpected busy');
@@ -1414,70 +1453,85 @@ describe('goal dispatch fence', () => {
     expect(resumed.dispatch.waitingReason).toBeNull();
   });
 
-  it('re-parks a waiting dispatch when a stray trigger arrives while the goal stays paused', async () => {
+  it('re-parks a waiting dispatch when a stray trigger arrives while the orchestration workflow stays paused', async () => {
     const task = await createTask('RUN-G4', 43);
-    await attachTaskToGoal(task.id, 'paused', 4);
-    await db.insert(agents).values({ id: 'goal-agent-4', userId, workspaceId });
-    await db.update(tasks).set({ assigneeAgentId: 'goal-agent-4' }).where(eq(tasks.id, task.id));
+    await attachTaskToOrchestrationWorkflow(task.id, 'paused', 4);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, {
+        id: 'orchestration-workflow-agent-4',
+        userId,
+        workspaceId,
+      }),
+    );
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'orchestration-workflow-agent-4' })
+      .where(eq(tasks.id, task.id));
     const model = new TaskDispatchModel(db, workspaceId);
 
     await model.request({
-      idempotencyKey: 'goal:RUN-G4:request-1',
-      requestedBy: 'goal-4',
+      idempotencyKey: 'orchestrationWorkflow:RUN-G4:request-1',
+      requestedBy: 'orchestration-workflow-4',
       taskId: task.id,
-      trigger: 'goal',
+      trigger: 'orchestrationWorkflow',
     });
 
     const stray = await model.request({
-      idempotencyKey: 'goal:RUN-G4:request-1',
-      requestedBy: 'goal-4',
+      idempotencyKey: 'orchestrationWorkflow:RUN-G4:request-1',
+      requestedBy: 'orchestration-workflow-4',
       taskId: task.id,
       trigger: 'heartbeat',
     });
     if (stray.state === 'busy') throw new Error('unexpected busy');
     expect(stray.dispatch.phase).toBe('waiting');
-    expect(stray.dispatch.waitingReason).toBe('goal_paused');
+    expect(stray.dispatch.waitingReason).toBe('orchestration_workflow_paused');
   });
 
-  it('parks the dispatch at provisioning claim when the goal pauses in between', async () => {
+  it('parks the dispatch at provisioning claim when the orchestration workflow pauses in between', async () => {
     const task = await createTask('RUN-G5', 44);
-    const goal = await attachTaskToGoal(task.id, 'running', 5);
+    const orchestrationWorkflow = await attachTaskToOrchestrationWorkflow(task.id, 'running', 5);
     const model = new TaskDispatchModel(db, workspaceId);
 
     const requested = await model.request({
-      idempotencyKey: 'goal:RUN-G5:request-1',
-      requestedBy: goal.id,
+      idempotencyKey: 'orchestrationWorkflow:RUN-G5:request-1',
+      requestedBy: orchestrationWorkflow.id,
       taskId: task.id,
-      trigger: 'goal',
+      trigger: 'orchestrationWorkflow',
     });
     if (requested.state === 'busy') throw new Error('unexpected busy');
 
-    await db.update(goals).set({ status: 'paused' }).where(eq(goals.id, goal.id));
+    await db
+      .update(orchestrationWorkflows)
+      .set({ status: 'paused' })
+      .where(eq(orchestrationWorkflows.id, orchestrationWorkflow.id));
 
     const claim = await model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000);
     expect(claim).toBeNull();
     await expect(model.findById(requested.dispatch.id)).resolves.toMatchObject({
       phase: 'waiting',
-      waitingReason: 'goal_paused',
+      waitingReason: 'orchestration_workflow_paused',
     });
   });
 
-  it('parks the dispatch at a transition when the goal pauses mid-flight', async () => {
+  it('parks the dispatch at a transition when the orchestration workflow pauses mid-flight', async () => {
     const task = await createTask('RUN-G6', 45);
-    const goal = await attachTaskToGoal(task.id, 'running', 6);
+    const orchestrationWorkflow = await attachTaskToOrchestrationWorkflow(task.id, 'running', 6);
     const model = new TaskDispatchModel(db, workspaceId);
 
     const requested = await model.request({
-      idempotencyKey: 'goal:RUN-G6:request-1',
-      requestedBy: goal.id,
+      idempotencyKey: 'orchestrationWorkflow:RUN-G6:request-1',
+      requestedBy: orchestrationWorkflow.id,
       taskId: task.id,
-      trigger: 'goal',
+      trigger: 'orchestrationWorkflow',
     });
     if (requested.state === 'busy') throw new Error('unexpected busy');
     const claim = await model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000);
     if (!claim) throw new Error('dispatch was not claimed');
 
-    await db.update(goals).set({ status: 'paused' }).where(eq(goals.id, goal.id));
+    await db
+      .update(orchestrationWorkflows)
+      .set({ status: 'paused' })
+      .where(eq(orchestrationWorkflows.id, orchestrationWorkflow.id));
 
     const transitioned = await model.transition({
       dispatchId: requested.dispatch.id,
@@ -1489,14 +1543,16 @@ describe('goal dispatch fence', () => {
     expect(transitioned).toBeNull();
     await expect(model.findById(requested.dispatch.id)).resolves.toMatchObject({
       phase: 'waiting',
-      waitingReason: 'goal_paused',
+      waitingReason: 'orchestration_workflow_paused',
     });
   });
 });
 
 describe('persisted dispatch origin + final admission re-check (SA05-B)', () => {
   const seedAssigned = async (identifier: string, seq: number) => {
-    await db.insert(agents).values({ id: `agent-${identifier}`, userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: `agent-${identifier}`, userId, workspaceId }));
     const task = await createTask(identifier, seq);
     await db
       .update(tasks)
@@ -1692,8 +1748,64 @@ describe('tiered orchestration', () => {
     return project;
   };
 
+  it('excludes an awaiting split from intake while ordinary Backlog work stays eligible', async () => {
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: 'split-intake-agent', userId, workspaceId }));
+    const project = await seedTieredProject('SPLIT');
+    const parent = await createTask('PARENT-201', 201);
+    const child = await createTask('CHILD-202', 202);
+    const ordinary = await createTask('ORDINARY-203', 203);
+    await db
+      .update(tasks)
+      .set({ projectId: project.id, assigneeAgentId: 'split-intake-agent' })
+      .where(inArray(tasks.id, [parent.id, child.id, ordinary.id]));
+    await db.update(tasks).set({ parentTaskId: parent.id }).where(eq(tasks.id, child.id));
+    const [split] = await db
+      .insert(orchestrationWorkflows)
+      .values({
+        userId,
+        workspaceId,
+        title: 'Awaiting split',
+        subjectType: 'task',
+        subjectId: parent.id,
+        config: {
+          conversationPlan: {
+            topicId: 'conversation',
+            postedMessageId: 'split-message',
+            postedAt: new Date().toISOString(),
+          },
+        },
+      })
+      .returning();
+    expect(
+      (await TaskDispatchModel.findBacklogIntakeCandidates(db)).map((item) => item.taskId),
+    ).toEqual([ordinary.id]);
+    for (const planConfirmedAt of [null, '']) {
+      await db
+        .update(orchestrationWorkflows)
+        .set({ config: { ...split.config, planConfirmedAt } as never })
+        .where(eq(orchestrationWorkflows.id, split.id));
+      expect(
+        (await TaskDispatchModel.findBacklogIntakeCandidates(db)).map((item) => item.taskId),
+      ).toEqual([ordinary.id]);
+    }
+    await db
+      .update(orchestrationWorkflows)
+      .set({ config: { ...split.config, planConfirmedAt: new Date().toISOString() } })
+      .where(eq(orchestrationWorkflows.id, split.id));
+    expect(
+      (await TaskDispatchModel.findBacklogIntakeCandidates(db)).map((item) => item.taskId),
+    ).toEqual(expect.arrayContaining([ordinary.id, child.id]));
+    expect(
+      (await TaskDispatchModel.findBacklogIntakeCandidates(db)).map((item) => item.taskId),
+    ).not.toContain(parent.id);
+  });
+
   it("snapshots the bound agent's roster tier onto the dispatch row", async () => {
-    await db.insert(agents).values({ id: 'tier-agent-low', userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: 'tier-agent-low', userId, workspaceId }));
     const project = await seedTieredProject('T1');
     await db.insert(projectAgents).values({
       agentId: 'tier-agent-low',
@@ -1724,7 +1836,9 @@ describe('tiered orchestration', () => {
   });
 
   it('records a null tier for an agent with no roster band', async () => {
-    await db.insert(agents).values({ id: 'tier-agent-none', userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: 'tier-agent-none', userId, workspaceId }));
     const task = await createTask('TIER-0', 79);
     await db.update(tasks).set({ assigneeAgentId: 'tier-agent-none' }).where(eq(tasks.id, task.id));
 
@@ -1741,10 +1855,12 @@ describe('tiered orchestration', () => {
   });
 
   it('re-snapshots the tier when the bound agent changes mid-flight', async () => {
-    await db.insert(agents).values([
-      { id: 'tier-agent-a', userId, workspaceId },
-      { id: 'tier-agent-b', userId, workspaceId },
-    ]);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, [
+        { id: 'tier-agent-a', userId, workspaceId },
+        { id: 'tier-agent-b', userId, workspaceId },
+      ]),
+    );
     const project = await seedTieredProject('T2');
     await db.insert(projectAgents).values([
       { agentId: 'tier-agent-a', projectId: project.id, tier: 'low', workspaceId },
@@ -1780,7 +1896,9 @@ describe('tiered orchestration', () => {
   });
 
   it('returns the newest terminally settled dispatch — the durable escalation signal', async () => {
-    await db.insert(agents).values({ id: 'tier-agent-term', userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: 'tier-agent-term', userId, workspaceId }));
     const project = await seedTieredProject('T3');
     await db.insert(projectAgents).values({
       agentId: 'tier-agent-term',
@@ -1841,7 +1959,7 @@ describe('tiered orchestration', () => {
   });
 
   it('lists the enabled roster in stable order and skips disabled rows', async () => {
-    await db.insert(agents).values([
+    const rosterAgents = await withTestAgentDevices(db, [
       { id: 'roster-a', userId, workspaceId },
       {
         agencyConfig: { heterogeneousProvider: { type: 'codex' } },
@@ -1852,6 +1970,7 @@ describe('tiered orchestration', () => {
       },
       { id: 'roster-c', userId, workspaceId },
     ]);
+    await db.insert(agents).values(rosterAgents);
     const project = await seedTieredProject('T4');
     await db.insert(projectAgents).values([
       { agentId: 'roster-b', projectId: project.id, sortOrder: 2, tier: 'high', workspaceId },
@@ -1870,7 +1989,7 @@ describe('tiered orchestration', () => {
       TaskDispatchModel.listProjectAgentRoster(db, { projectId: project.id, workspaceId }),
     ).resolves.toEqual([
       {
-        agencyConfig: null,
+        agencyConfig: rosterAgents[0].agencyConfig,
         agentId: 'roster-a',
         model: null,
         role: null,
@@ -1878,7 +1997,7 @@ describe('tiered orchestration', () => {
         tier: 'low',
       },
       {
-        agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+        agencyConfig: rosterAgents[1].agencyConfig,
         agentId: 'roster-b',
         model: 'codex-model',
         role: null,
@@ -1890,7 +2009,9 @@ describe('tiered orchestration', () => {
 
   it('counts orchestrated runs toward executionBudget.maxRuns — escalations included', async () => {
     const project = await seedTieredProject('T5', { executionBudget: { maxRuns: 1 } });
-    await db.insert(agents).values({ id: 'budget-agent', userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: 'budget-agent', userId, workspaceId }));
     await db.insert(projectAgents).values({
       agentId: 'budget-agent',
       projectId: project.id,

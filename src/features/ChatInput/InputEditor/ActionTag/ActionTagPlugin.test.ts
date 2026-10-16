@@ -1,4 +1,3 @@
-import { isGoalPrompt } from '@orvilo/builtin-tool-goal';
 import { AGENT_SKILLS_IDENTIFIER_PREFIX } from '@orvilo/const';
 import { describe, expect, it } from 'vitest';
 
@@ -97,17 +96,15 @@ describe('resolveActionTagFromMatch', () => {
 });
 
 describe('writeActionTagMarkdown', () => {
-  it('serializes the goal chip back to the `/goal` prefix the runtime detects', () => {
+  it('serializes the existing frontend goal chip to its legacy text prefix', () => {
     const markdown = writeActionTagMarkdown({
       actionCategory: 'command',
       actionLabel: '设定目标',
       actionType: 'goal',
     });
 
-    // The chip is structured state; `/goal` is the wire format both the client
-    // tool gate and the server system role key off.
+    // Frontend entry removal is owned by the frontend work; the backend no longer detects this prefix.
     expect(markdown).toBe('/goal ');
-    expect(isGoalPrompt(`${markdown}ship the homepage`)).toBe(true);
   });
 
   it('keeps the other categories on the XML wire format', () => {

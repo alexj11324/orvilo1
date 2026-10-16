@@ -335,21 +335,21 @@ const TaskVerifyConfig = memo(() => {
 
   // ---- actions ----
   const generateCriteria = useCallback(
-    async (goal: string) => {
-      if (!goal || generating || !model || !provider) return;
+    async (orchestrationWorkflow: string) => {
+      if (!orchestrationWorkflow || generating || !model || !provider) return;
       setExpanded(true);
-      setRequirement(goal);
+      setRequirement(orchestrationWorkflow);
       setGenerating(true);
       try {
         const generated = await verifyService.generateCriteria({
           context: taskName?.trim() ? `Task: ${taskName.trim()}` : undefined,
-          goal,
+          orchestrationWorkflow,
           maxCriteria: 8,
           modelConfig: { model, provider },
         });
         if (generated.length === 0) throw new Error('No acceptance criteria were generated.');
         const items = generated.map((draft) => toDraftItem(draft));
-        commit(items, { enabled: true, requirement: goal });
+        commit(items, { enabled: true, requirement: orchestrationWorkflow });
       } catch (error) {
         console.error('[TaskVerifyConfig] generate failed:', error);
         toast.error(
@@ -365,9 +365,9 @@ const TaskVerifyConfig = memo(() => {
   );
 
   const handleGenerate = useCallback(async () => {
-    const goal = requirement.trim();
-    if (!goal || generating || !model || !provider) return;
-    await generateCriteria(goal);
+    const orchestrationWorkflow = requirement.trim();
+    if (!orchestrationWorkflow || generating || !model || !provider) return;
+    await generateCriteria(orchestrationWorkflow);
   }, [generateCriteria, generating, model, provider, requirement]);
 
   const handleCollapsedClick = useCallback(() => {

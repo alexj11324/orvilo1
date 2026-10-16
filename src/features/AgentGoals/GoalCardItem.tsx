@@ -15,16 +15,20 @@ const styles = {
   card: 'min-w-0 [transition:border-color_0.2s_var(--orvilo-motion-ease-out),background_0.2s_var(--orvilo-motion-ease-out),transform_0.2s_var(--orvilo-motion-ease-out)] hover:[transform:translateY(-1px)] hover:border-primary-border hover:bg-fill-quaternary',
 };
 
-export const GoalCardItem = memo<GoalItemProps>(({ goal: item }) => {
+export const GoalCardItem = memo<GoalItemProps>(({ orchestrationWorkflow: item }) => {
   const navigate = useWorkspaceAwareNavigate();
   const { aid } = useActiveRouteParams<{ aid?: string }>();
-  const { goal } = item;
+  const { orchestrationWorkflow } = item;
   // On the project Goals page there is no `aid` in the route, and a goal created
   // there has no responsible agent either — so fall back the same way tasks do,
   // to the bare detail route. Without this every card there is a dead link.
-  const agentId = aid ?? goal.agentId;
+  const agentId = aid ?? orchestrationWorkflow.agentId;
   const handleClick = () => {
-    navigate(agentId ? `/agent/${agentId}/goal/${goal.id}` : `/goal/${goal.id}`);
+    navigate(
+      agentId
+        ? `/agent/${agentId}/goal/${orchestrationWorkflow.id}`
+        : `/goal/${orchestrationWorkflow.id}`,
+    );
   };
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -44,12 +48,17 @@ export const GoalCardItem = memo<GoalItemProps>(({ goal: item }) => {
       <div className="flex items-start gap-3 justify-between">
         <div className="flex flex-col gap-1" style={{ minWidth: 0 }}>
           <div className="flex items-center gap-1.75">
-            <GoalStatusGlyph size={16} status={goal.status} />
-            <div className="truncate min-w-0 text-sm font-semibold">{goal.title}</div>
+            <GoalStatusGlyph size={16} status={orchestrationWorkflow.status} />
+            <div className="truncate min-w-0 text-sm font-semibold">
+              {orchestrationWorkflow.title}
+            </div>
           </div>
-          {goal.requirement && goal.requirement !== goal.title && (
-            <div className="truncate min-w-0 text-xs text-muted-foreground">{goal.requirement}</div>
-          )}
+          {orchestrationWorkflow.requirement &&
+            orchestrationWorkflow.requirement !== orchestrationWorkflow.title && (
+              <div className="truncate min-w-0 text-xs text-muted-foreground">
+                {orchestrationWorkflow.requirement}
+              </div>
+            )}
         </div>
         <ArrowRightIcon color={'var(--foreground-quaternary)'} size={16} />
       </div>

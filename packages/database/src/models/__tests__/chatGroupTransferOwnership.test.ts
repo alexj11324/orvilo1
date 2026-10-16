@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   agentsKnowledgeBases,
@@ -39,11 +40,25 @@ const seedGroupWithRoster = async () => {
   const group = await ownerModel.create({ title: 'Handover Group', visibility: 'public' });
   const [supervisor] = await serverDB
     .insert(agents)
-    .values({ title: 'Supervisor', userId: ownerId, virtual: true, workspaceId: wsId })
+    .values(
+      await withTestAgentDevices(serverDB, {
+        title: 'Supervisor',
+        userId: ownerId,
+        virtual: true,
+        workspaceId: wsId,
+      }),
+    )
     .returning();
   const [referenced] = await serverDB
     .insert(agents)
-    .values({ title: 'Standalone', userId: teammateId, virtual: false, workspaceId: wsId })
+    .values(
+      await withTestAgentDevices(serverDB, {
+        title: 'Standalone',
+        userId: teammateId,
+        virtual: false,
+        workspaceId: wsId,
+      }),
+    )
     .returning();
   await serverDB.insert(chatGroupsAgents).values([
     {

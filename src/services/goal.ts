@@ -1,10 +1,10 @@
-import type { GoalStatus } from '@orvilo/const/goal';
+import type { OrchestrationWorkflowStatus } from '@orvilo/const/orchestrationWorkflow';
 import type {
-  GoalCreateConfig,
-  GoalGraphSnapshot,
-  GoalMetricCriterion,
-  GoalNodeKind,
-  GoalTickResult,
+  OrchestrationWorkflowCreateConfig,
+  OrchestrationWorkflowGraphSnapshot,
+  OrchestrationWorkflowMetricCriterion,
+  OrchestrationWorkflowNodeKind,
+  OrchestrationWorkflowTickResult,
 } from '@orvilo/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
@@ -14,21 +14,21 @@ export interface GoalListParams {
   limit?: number;
   offset?: number;
   projectId?: string;
-  statuses?: GoalStatus[];
+  statuses?: OrchestrationWorkflowStatus[];
 }
 
 /** Every graph method takes the `goals` row id. */
-class GoalService {
+class OrchestrationWorkflowService {
   /**
    * List goals. Each item is the execution-carrier task with the goal row
    * attached plus subtree run statistics — see `GoalModel.list` on the server.
    */
-  list = async (params: GoalListParams) => lambdaClient.goal.list.query(params);
+  list = async (params: GoalListParams) => lambdaClient.orchestrationWorkflow.list.query(params);
 
   /** Create a goal and seed its graph with a problem node and the given Work. */
   create = async (params: {
     agentId?: string;
-    config?: GoalCreateConfig;
+    config?: OrchestrationWorkflowCreateConfig;
     /** Set by the `/goal` tool so the seeded graph is authored by the agent. */
     createdByAgentId?: string;
     /** Structured acceptance criteria — persisted rows that gate the terminal acceptance. */
@@ -41,32 +41,32 @@ class GoalService {
     requirement?: string;
     title: string;
     work?: Array<{ description?: string; title: string } | string>;
-  }): Promise<GoalGraphSnapshot> => {
-    const { data } = await lambdaClient.goal.create.mutate(params);
+  }): Promise<OrchestrationWorkflowGraphSnapshot> => {
+    const { data } = await lambdaClient.orchestrationWorkflow.create.mutate(params);
     return data;
   };
 
   /** Rebind which persisted verify criteria gate this goal's terminal acceptance. */
   setAcceptanceCriteria = async (id: string, criteriaIds: string[]) =>
-    lambdaClient.goal.setAcceptanceCriteria.mutate({ criteriaIds, id });
+    lambdaClient.orchestrationWorkflow.setAcceptanceCriteria.mutate({ criteriaIds, id });
 
   setMetricCriteria = async (
     id: string,
-    metrics: GoalMetricCriterion[],
+    metrics: OrchestrationWorkflowMetricCriterion[],
     mode?: 'merge' | 'replace',
-  ) => lambdaClient.goal.setMetricCriteria.mutate({ id, metrics, mode });
+  ) => lambdaClient.orchestrationWorkflow.setMetricCriteria.mutate({ id, metrics, mode });
 
   recordObservation = async (
     id: string,
     observation: { key: string; observedAt?: Date; title?: string; unit?: string; value: number },
-  ) => lambdaClient.goal.recordObservation.mutate({ id, ...observation });
+  ) => lambdaClient.orchestrationWorkflow.recordObservation.mutate({ id, ...observation });
 
   /** Delete a goal and its graph. The dispatched Work Tasks are left in place. */
-  delete = async (id: string) => lambdaClient.goal.delete.mutate({ id });
+  delete = async (id: string) => lambdaClient.orchestrationWorkflow.delete.mutate({ id });
 
   /** The whole Goal Graph in one read: nodes, edges, decisions, events, work-version links. */
-  getGraph = async (id: string): Promise<GoalGraphSnapshot> => {
-    const { data } = await lambdaClient.goal.graph.query({ id });
+  getGraph = async (id: string): Promise<OrchestrationWorkflowGraphSnapshot> => {
+    const { data } = await lambdaClient.orchestrationWorkflow.graph.query({ id });
     return data;
   };
 
@@ -75,21 +75,21 @@ class GoalService {
    * on its own as its Work Tasks settle — this is the explicit nudge, not the
    * engine, so the surface never has to hold a tick loop open.
    */
-  advance = async (id: string): Promise<GoalTickResult & { ticks: number }> => {
-    const { data } = await lambdaClient.goal.advance.mutate({ id });
+  advance = async (id: string): Promise<OrchestrationWorkflowTickResult & { ticks: number }> => {
+    const { data } = await lambdaClient.orchestrationWorkflow.advance.mutate({ id });
     return data;
   };
 
   /** Advance the graph by exactly one coordinator step. */
-  tick = async (id: string): Promise<GoalTickResult> => {
-    const { data } = await lambdaClient.goal.tick.mutate({ id });
+  tick = async (id: string): Promise<OrchestrationWorkflowTickResult> => {
+    const { data } = await lambdaClient.orchestrationWorkflow.tick.mutate({ id });
     return data;
   };
 
   /** Stop scheduling new work. Does not abort the operation already running. */
-  pause = async (id: string) => lambdaClient.goal.pause.mutate({ id });
+  pause = async (id: string) => lambdaClient.orchestrationWorkflow.pause.mutate({ id });
 
-  resume = async (id: string) => lambdaClient.goal.resume.mutate({ id });
+  resume = async (id: string) => lambdaClient.orchestrationWorkflow.resume.mutate({ id });
 
   /** Resolve a pending decision gate. Does not resume a paused goal by itself. */
   decide = async (params: {
@@ -97,7 +97,7 @@ class GoalService {
     id: string;
     optionId: string;
     resolution?: string;
-  }) => lambdaClient.goal.decide.mutate(params);
+  }) => lambdaClient.orchestrationWorkflow.decide.mutate(params);
 
   setBudget = async (params: {
     deadline?: string | null;
@@ -105,21 +105,21 @@ class GoalService {
     maxConcurrentTasks?: number | null;
     maxRounds?: number | null;
     maxTotalCost?: number | null;
-  }) => lambdaClient.goal.setBudget.mutate(params);
+  }) => lambdaClient.orchestrationWorkflow.setBudget.mutate(params);
 
   addNode = async (params: {
     description?: string;
     id: string;
-    kind: GoalNodeKind;
+    kind: OrchestrationWorkflowNodeKind;
     priority?: number;
     title: string;
-  }) => lambdaClient.goal.addNode.mutate(params);
+  }) => lambdaClient.orchestrationWorkflow.addNode.mutate(params);
 
   updateRequirement = async (id: string, requirement: string) =>
-    lambdaClient.goal.updateRequirement.mutate({ id, requirement });
+    lambdaClient.orchestrationWorkflow.updateRequirement.mutate({ id, requirement });
 }
 
-export const goalService = new GoalService();
+export const orchestrationWorkflowService = new OrchestrationWorkflowService();
 
-export type GoalListResult = Awaited<ReturnType<GoalService['list']>>;
-export type GoalListItem = GoalListResult['goals'][number];
+export type GoalListResult = Awaited<ReturnType<OrchestrationWorkflowService['list']>>;
+export type OrchestrationWorkflowListItem = GoalListResult['orchestrationWorkflows'][number];

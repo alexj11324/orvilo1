@@ -55,8 +55,9 @@ export const OrviloAgentManifest: BuiltinToolManifest = {
       renderDisplayControl: 'expand',
       parameters: {
         properties: {
-          goal: {
-            description: 'The main goal or objective to achieve (used as document title).',
+          orchestrationWorkflow: {
+            description:
+              'The main orchestration workflow or objective to achieve (used as document title).',
             type: 'string',
           },
           description: {
@@ -65,27 +66,27 @@ export const OrviloAgentManifest: BuiltinToolManifest = {
           },
           context: {
             description:
-              'Detailed context, constraints, background information, or strategic considerations relevant to the goal.',
+              'Detailed context, constraints, background information, or strategic considerations relevant to the orchestration workflow.',
             type: 'string',
           },
         },
-        required: ['goal', 'description', 'context'],
+        required: ['orchestrationWorkflow', 'description', 'context'],
         type: 'object',
       },
     },
     {
       description:
-        'Update an existing plan document. Only use this when the goal fundamentally changes. Plans should remain stable once created - do not update plans just because details change.',
+        'Update an existing plan document. Only use this when the orchestration workflow fundamentally changes. Plans should remain stable once created - do not update plans just because details change.',
       name: OrviloAgentApiName.updatePlan,
       parameters: {
         properties: {
           planId: {
             description:
-              'The document ID of the plan to update (e.g., "docs_xxx"). This ID is returned in the createPlan response. Do NOT use the goal text as planId.',
+              'The document ID of the plan to update (e.g., "docs_xxx"). This ID is returned in the createPlan response. Do NOT use the orchestration workflow text as planId.',
             type: 'string',
           },
-          goal: {
-            description: 'Updated goal (document title).',
+          orchestrationWorkflow: {
+            description: 'Updated orchestration workflow (document title).',
             type: 'string',
           },
           description: {

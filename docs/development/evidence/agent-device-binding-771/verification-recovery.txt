@@ -1,0 +1,38 @@
+                  id                  |                        operation_id                         | status 
+--------------------------------------+-------------------------------------------------------------+--------
+ 2d97d246-9f0d-4c9e-a2be-20a419353aaf | op_1791913750631_agt_D8XfGW18Nrwz_tpc_7Qsj8MlrANPR_bJh3OFM7 | passed
+ 67781b31-dd7f-4b5c-a08c-0ef82f9a9001 | op_1791913749135_agt_D8XfGW18Nrwz_tpc_TPQw9Y8hwd53_aaOrwv7U | passed
+(2 rows)
+
+            check_item_id             | status | verdict |                     verifier_operation                      |     agent_id     |   workspace_id   | verifier_status | skip_task_verify |            device_id             | harness  |         bound_device_row_id          
+--------------------------------------+--------+---------+-------------------------------------------------------------+------------------+------------------+-----------------+------------------+----------------------------------+----------+--------------------------------------
+ 19e46cbc-d98b-44db-bbd8-a969fb6b6fe6 | passed | passed  | op_1791933497250_agt_RMDxwvZJorZU_tpc_1GdE9nS15uQ2_UlyQeNpB | agt_RMDxwvZJorZU | 1cyEyVj9Xztx4Xkh | done            |                  | 7622e30c796f5722db51a8c9d22a3096 | opencode | bb715544-04f0-43d1-a366-5053da0f51c0
+ 8aa52563-d560-4b9f-9991-9e65aeacd3ba | passed | passed  | op_1791934539019_agt_ROrvAGB6Qxqy_tpc_RAbsQ1LiXlko_AnaRK6D2 | agt_ROrvAGB6Qxqy | 1cyEyVj9Xztx4Xkh | done            | true             | 7622e30c796f5722db51a8c9d22a3096 | opencode | bb715544-04f0-43d1-a366-5053da0f51c0
+(2 rows)
+
+      task_id      | worker_attempts 
+-------------------+-----------------
+ task_36GW5X3j6gAg |               3
+ task_jEQXNmK0mfwR |               3
+(2 rows)
+
+                 id                 | status | paused_by 
+------------------------------------+--------+-----------
+ orchestrationWorkflow_Ik35XWX81wlB | paused | user
+(1 row)
+
+ recursive_runs 
+----------------
+              0
+(1 row)
+
+ server_provider_bindings 
+--------------------------
+                        0
+(1 row)
+
+             model             | provider |                                                                                                                                                                                                                              admitted_execution                                                                                                                                                                                                                               
+-------------------------------+----------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ opencode/mimo-v2.6-flash-free | opencode | {"agentId": "agt_ROrvAGB6Qxqy", "subject": {"kind": "task", "taskId": "task_jEQXNmK0mfwR"}, "deviceId": "7622e30c796f5722db51a8c9d22a3096", "harnessId": "opencode", "modelRoute": {"model": "opencode/mimo-v2.6-flash-free", "provider": "opencode"}, "resolution": {"kind": "device", "reason": "agent_default"}, "operationId": "op_1791934539019_agt_ROrvAGB6Qxqy_tpc_RAbsQ1LiXlko_AnaRK6D2", "executionGeneration": 1, "workingDirectoryBinding": "/home/agent/Desktop"}
+(1 row)
+

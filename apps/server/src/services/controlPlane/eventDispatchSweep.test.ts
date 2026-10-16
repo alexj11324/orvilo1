@@ -6,6 +6,7 @@ import type { ExecAgentResult, McpEventBinding } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import {
   agents,
   mcpEventBindings,
@@ -100,7 +101,9 @@ describe('signed callback through the server admission sweep', () => {
       userId,
       workspaceId,
     });
-    await db.insert(agents).values({ id: agentId, slug: agentId, userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: agentId, slug: agentId, userId, workspaceId }));
     await db.insert(resourcePermissions).values({
       accessLevel: 'use',
       createdBy: userId,

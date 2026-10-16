@@ -3,6 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agentHistoryJobs,
   agentHistoryJobTopics,
@@ -49,7 +50,7 @@ afterEach(async () => {
 const seedSourceAgent = async () => {
   const [agent] = await serverDB
     .insert(agents)
-    .values({ title: 'Source Agent', userId })
+    .values(await withTestAgentDevices(serverDB, { title: 'Source Agent', userId }))
     .returning();
 
   await serverDB.insert(topics).values([
@@ -95,7 +96,9 @@ const seedSourceAgent = async () => {
 const seedTargetShells = async (sourceAgentId: string) => {
   const [newAgent] = await serverDB
     .insert(agents)
-    .values({ title: 'Copied Agent', userId, workspaceId: wsId })
+    .values(
+      await withTestAgentDevices(serverDB, { title: 'Copied Agent', userId, workspaceId: wsId }),
+    )
     .returning();
 
   const topicPairs: [string, string][] = [

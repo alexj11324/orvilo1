@@ -409,11 +409,15 @@ describe('chatDockSlice', () => {
       });
 
       expect(result.current.portalStack).toEqual([
-        { goalId: 'goal_1', nodeId: 'node_1', type: PortalViewType.GoalNode },
+        {
+          orchestrationWorkflowId: 'goal_1',
+          nodeId: 'node_1',
+          type: PortalViewType.GoalNode,
+        },
       ]);
       expect(result.current.showPortal).toBe(true);
       expect(chatPortalSelectors.goalNodeView(result.current)).toEqual({
-        goalId: 'goal_1',
+        orchestrationWorkflowId: 'goal_1',
         nodeId: 'node_1',
         type: PortalViewType.GoalNode,
       });
@@ -430,7 +434,11 @@ describe('chatDockSlice', () => {
       // Same view type replaces instead of stacking, so Back never walks
       // through a trail of metric tabs.
       expect(result.current.portalStack).toEqual([
-        { goalId: 'goal_1', metric: 'liveness', type: PortalViewType.GoalMetric },
+        {
+          orchestrationWorkflowId: 'goal_1',
+          metric: 'liveness',
+          type: PortalViewType.GoalMetric,
+        },
       ]);
       expect(chatPortalSelectors.goalMetricView(result.current)?.metric).toBe('liveness');
     });

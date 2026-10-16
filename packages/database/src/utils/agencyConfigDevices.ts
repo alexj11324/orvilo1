@@ -1,5 +1,5 @@
 import type { OrviloAgentAgencyConfig } from '@orvilo/types';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import type { PartialDeep } from 'type-fest';
 
 import { devices } from '../schemas';
@@ -65,6 +65,7 @@ export const sanitizeAgencyConfigsForWorkspace = async (
           .where(
             and(
               eq(devices.workspaceId, targetWorkspaceId),
+              isNull(devices.retiredAt),
               inArray(devices.deviceId, allCandidateIds),
             ),
           )

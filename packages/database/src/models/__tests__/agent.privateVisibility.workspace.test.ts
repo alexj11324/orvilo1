@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agents, sessionGroups, users, workspaceMembers, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AgentModel } from '../agent';
@@ -50,17 +51,19 @@ describe('AgentModel — private/public cross-user isolation', () => {
     title?: string;
     virtual?: boolean;
   }) => {
-    await serverDB.insert(agents).values({
-      avatar: 'avatar',
-      backgroundColor: '#000',
-      description: 'desc',
-      id: params.id,
-      title: params.title ?? params.id,
-      userId: params.userId,
-      virtual: params.virtual ?? false,
-      visibility: params.visibility,
-      workspaceId: params.workspaceId ?? null,
-    });
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, {
+        avatar: 'avatar',
+        backgroundColor: '#000',
+        description: 'desc',
+        id: params.id,
+        title: params.title ?? params.id,
+        userId: params.userId,
+        virtual: params.virtual ?? false,
+        visibility: params.visibility,
+        workspaceId: params.workspaceId ?? null,
+      }),
+    );
   };
 
   describe('workspace mode', () => {

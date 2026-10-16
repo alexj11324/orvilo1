@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveExpertiseModelConfig } from '../expertise/modelConfig';
-import { resolveGoalModelConfig } from '../goal/modelConfig';
 
 const { getAgentConfig, getAgentModelConfig, getUserSettings, resolveBinding } = vi.hoisted(() => ({
   getAgentConfig: vi.fn(),
@@ -29,13 +28,13 @@ beforeEach(() => {
   vi.resetAllMocks();
   getUserSettings.mockResolvedValue({
     systemAgent: {
-      goal: { model: 'fallback', provider: 'openai' },
+      orchestrationWorkflow: { model: 'fallback', provider: 'openai' },
       expertise: { model: 'fallback', provider: 'openai' },
     },
   });
 });
 
-for (const resolve of [resolveGoalModelConfig, resolveExpertiseModelConfig])
+for (const resolve of [resolveExpertiseModelConfig])
   describe(resolve.name, () => {
     it('prefers the owning agent to the global setting', async () => {
       getAgentConfig.mockResolvedValue({ model: 'agent-model' });

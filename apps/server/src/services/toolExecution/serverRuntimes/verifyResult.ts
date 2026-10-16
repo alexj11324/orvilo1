@@ -65,21 +65,27 @@ class VerifyResultExecutionRuntime {
     }
 
     const status = params.verdict === 'passed' ? 'passed' : 'failed';
-    await new VerifyCheckResultModel(this.db, this.userId, this.workspaceId).updateByCheckItem(
-      run.id,
-      params.checkItemId,
-      {
-        completedAt: new Date(),
-        status,
-        toulmin: {
-          counterEvidence: params.counterEvidence,
-          evidence: params.evidence,
-          limitation: params.limitation,
-          reasoning: params.reasoning,
-        },
-        verdict: params.verdict,
+    const completed = await new VerifyCheckResultModel(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).completeVerifierCheck(run.id, params.checkItemId, this.operationId, {
+      completedAt: new Date(),
+      status,
+      toulmin: {
+        counterEvidence: params.counterEvidence,
+        evidence: params.evidence,
+        limitation: params.limitation,
+        reasoning: params.reasoning,
       },
-    );
+      verdict: params.verdict,
+    });
+    if (!completed)
+      return {
+        content: 'This verifier attempt is no longer active.',
+        error: 'STALE_VERIFIER_ATTEMPT',
+        success: false,
+      };
     await new VerifyStatusService(this.db, this.userId, this.workspaceId).recompute(
       targetOperationId,
     );

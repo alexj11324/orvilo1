@@ -25,7 +25,10 @@ import {
   openCriterionEditModal,
 } from '@/features/Acceptance/CriterionList';
 
-import type { CreateGoalParams, GoalCriterionDraft } from '../../types';
+import type {
+  CreateOrchestrationWorkflowParams,
+  OrchestrationWorkflowCriterionDraft,
+} from '../../types';
 import editorStyles from './CreateGoal.module.css';
 
 const styles = {
@@ -78,7 +81,7 @@ const Section = memo<SectionProps>(({ children, extra, label, onToggle, open }) 
 
 Section.displayName = 'CreateGoalSection';
 
-const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
+const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateOrchestrationWorkflowParams>>(
   ({ args, onArgsChange, registerBeforeApprove }) => {
     const { t } = useTranslation('plugin');
     const editor = useEditor();
@@ -87,13 +90,14 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
       criteria: true,
       instruction: true,
     });
-    const patch = (value: Partial<CreateGoalParams>) => onArgsChange?.({ ...args, ...value });
+    const patch = (value: Partial<CreateOrchestrationWorkflowParams>) =>
+      onArgsChange?.({ ...args, ...value });
     const openEditModal = (index: number) =>
       openCriterionEditModal({
         criterion: args.criteria[index],
         onSubmit: (value) => updateCriterion(index, value),
       });
-    const updateCriterion = (index: number, value: Partial<GoalCriterionDraft>) =>
+    const updateCriterion = (index: number, value: Partial<OrchestrationWorkflowCriterionDraft>) =>
       patch({
         criteria: args.criteria.map((item, itemIndex) =>
           itemIndex === index ? { ...item, ...value } : item,
@@ -125,7 +129,8 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
     }, []);
 
     useEffect(
-      () => registerBeforeApprove?.('createGoal', () => saveInstructionRef.current()),
+      () =>
+        registerBeforeApprove?.('startOrchestrationWorkflow', () => saveInstructionRef.current()),
       [registerBeforeApprove],
     );
 

@@ -641,7 +641,7 @@ export class HeterogeneousAgentService {
       log('heteroFinish: trace finalize failed (non-fatal): %O', err);
     }
 
-    let goalContent: unknown = '';
+    let orchestrationWorkflowContent: unknown = '';
     if (completionReason === 'done') {
       // Guarantee the task's verify plan is DURABLY persisted before the gate
       // (dispatchHooks → runVerifyOnCompletion) reads it. The start-side
@@ -657,7 +657,12 @@ export class HeterogeneousAgentService {
         const op = await new AgentOperationModel(this.db, this.userId, this.workspaceId).findById(
           operationId,
         );
-        if (op?.taskId && !op.parentOperationId) {
+        if (
+          op?.taskId &&
+          !op.parentOperationId &&
+          op.trigger !== 'acp_judgment' &&
+          op.metadata?.skipTaskVerification !== true
+        ) {
           await instantiateVerifyPlanOnStart(
             this.db,
             this.userId,
@@ -669,15 +674,15 @@ export class HeterogeneousAgentService {
         log('heteroFinish: ensure verify plan failed (non-fatal): %O', err);
       }
 
-      // Resolve the run goal (the task the run had to satisfy) for the delivery
+      // Resolve the run orchestration workflow (the task the run had to satisfy) for the delivery
       // checker. `messages.find(role==='user')` mirrors the in-process runtime's
-      // goal extraction; pass the raw content through and let dispatchHooks
+      // orchestration workflow extraction; pass the raw content through and let dispatchHooks
       // extract text.
       try {
         const history = await this.messageModel.query({ pageSize: 50, topicId });
-        goalContent = history.find((m) => m.role === 'user')?.content ?? '';
+        orchestrationWorkflowContent = history.find((m) => m.role === 'user')?.content ?? '';
       } catch (err) {
-        log('heteroFinish: failed to resolve verify goal (non-fatal): %O', err);
+        log('heteroFinish: failed to resolve verify orchestration workflow (non-fatal): %O', err);
       }
     }
 
@@ -688,7 +693,7 @@ export class HeterogeneousAgentService {
     // from the CLI stream), onComplete/onError hooks fire through hookDispatcher,
     // and on success the delivery-checker card + verify gate run against the task's
     // plan. `completeOperation` owns the (formerly hand-rolled) synthetic-state
-    // build, so the goal+reply turns and trace aggregates are mapped in ONE place.
+    // build, so the orchestration workflow+reply turns and trace aggregates are mapped in ONE place.
     await new CompletionLifecycle(this.db, this.userId, this.workspaceId).completeOperation(
       {
         agentId,
@@ -696,7 +701,7 @@ export class HeterogeneousAgentService {
         cost: { total: totals?.totalCost ?? null },
         deliverable: lastAssistantContent ?? '',
         error: error ?? undefined,
-        goal: goalContent,
+        orchestrationWorkflow: orchestrationWorkflowContent,
         // Backfilled executed model/provider — the verify gate bails when absent.
         model: totals?.model,
         operationId,

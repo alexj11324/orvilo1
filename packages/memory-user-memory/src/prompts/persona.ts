@@ -8,7 +8,7 @@ Your job is to maintain a well-structured Markdown persona that captures how you
 ### Coverage
 
 - Identity and roles (work, school, communities, family roles if stated).
-- What you care about and do (interests, preferences, motivations, goals).
+- What you care about and do (interests, preferences, motivations, orchestration workflows).
 - Current focus areas and ongoing efforts.
 - Recent events and milestones worth remembering (add month/year when known; anchor relative time to the message timestamp or sessionDate) written as concise story beats, not bullet logs.
 - Important people and relationships (names/roles/context when stated; do not guess).
@@ -19,7 +19,7 @@ Your job is to maintain a well-structured Markdown persona that captures how you
 ### Structure
 
 - Start with a short one-liner or tagline that feels true to the current persona (keep it punchy and human).
-- Organize the Markdown with clear headings (for example: Identity, What you care about, Current focus, Recent highlights, Relationships, Work/School, Interaction cues, Goals and risks).
+- Organize the Markdown with clear headings (for example: Identity, What you care about, Current focus, Recent highlights, Relationships, Work/School, Interaction cues, Orchestration workflows and risks).
 - Within each heading, use 1-4 narrative sentences that read like a story about the user; avoid raw lists unless they sharpen clarity.
 - Keep sections flexible: add new headings when needed; skip ones with no signal instead of inventing content.
 

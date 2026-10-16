@@ -3,6 +3,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agentHistoryJobAgents,
   agentHistoryJobs,
@@ -157,7 +158,15 @@ describe('Project and Issue collaboration boundaries', () => {
   it.each(['builtin', 'former Project coordinator'] as const)(
     'retains independent %s Agent, session and history after a distinct manager deletes its new Project',
     async (kind) => {
-      const builtin = await new AgentModel(db, member, workspaceId).getBuiltinAgent('inbox');
+      const builtin = await new AgentModel(db, member, workspaceId).getBuiltinAgent('inbox', {
+        runtime: await withTestAgentDevices(db, {
+          userId: member,
+          workspaceId,
+          model: 'codex',
+          provider: 'codex',
+          agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+        }),
+      });
       let agentId = builtin!.id;
       if (kind === 'former Project coordinator') {
         const old = await createManagedProject('OLD');
@@ -196,7 +205,15 @@ describe('Project and Issue collaboration boundaries', () => {
   it.each([member, owner])(
     'retains a replacement builtin and its history even when %s has Agent Manage',
     async (actor) => {
-      const builtin = await new AgentModel(db, member, workspaceId).getBuiltinAgent('inbox');
+      const builtin = await new AgentModel(db, member, workspaceId).getBuiltinAgent('inbox', {
+        runtime: await withTestAgentDevices(db, {
+          userId: member,
+          workspaceId,
+          model: 'codex',
+          provider: 'codex',
+          agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+        }),
+      });
       const history = await addHistory(builtin!.id);
       const project = await createManagedProject();
       await replaceCoordinator(project.id, builtin!.id);
@@ -323,7 +340,14 @@ describe('Project and Issue collaboration boundaries', () => {
     const project = await createManagedProject();
     const [independent] = await db
       .insert(agents)
-      .values({ userId: member, workspaceId, visibility: 'public', virtual: false })
+      .values(
+        await withTestAgentDevices(db, {
+          userId: member,
+          workspaceId,
+          visibility: 'public',
+          virtual: false,
+        }),
+      )
       .returning();
     await db.insert(projectAgents).values({
       projectId: project.id,

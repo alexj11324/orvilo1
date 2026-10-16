@@ -87,7 +87,7 @@
 
 - 侧栏收藏按 `favoritePageSize`（默认 5）切片，多出来的走 More + `AllFavoritesDrawer`；上 / 下箭头按**完整列表**下标重排，最后一行可见项可以和下一项（overflow）对调。个人模式不从收藏里丢掉 team pin（`favoriteReorder` CAS 会重写整表）
 
-- Web / Electron 主区 `matchRoutes` 覆盖 `/inbox` `/my-work` `/views` `/teams` 及其 workspace 镜像，叶子不是 splat `*`（NAV02 路由半边；原生通知完整点击矩阵仍是 CI\_E2E）
+- Web / Electron 主区 `matchRoutes` 覆盖 `/inbox` `/my-work` `/views` `/teams` 及其 workspace 镜像，叶子不是 splat `*`（NAV02 路由半边；原生通知完整点击矩阵仍是 CI_E2E）
 
 - Recents 的 project/savedView/team 不再打开空 ⋯：可 pin 的类型走 `useWorkFavoriteToggle`；菜单长度为 0 时不渲染 ⋯ /context menu
 
@@ -107,11 +107,11 @@
 
 - Push Typecheck 在 `a96c6aa4` 失败：`KanbanBoard` 把 My Work 的 `projectId: null`（No-project 过滤）传进 `createTaskModal`（只要 `string | undefined`）。`kanbanCreateTaskProjectId` 把 `null` 收成 `undefined`；grouped query 仍带 `null` 做 IS NULL
 
-- 视图 / 列表面再对齐 Linear：SavedView 详情页不再裸露 query JSON——owner 的名称 / 查询 / 布局 / 可见性表单收进 header 的「Edit view」折叠面板（结果页是默认态）；`WorkQueryResults` 列表行换成共享 `AgentTaskItem` 富行（identifier + 状态图标 + 标题 + chips + 头像 + 日期），平铺结果按与看板相同的 Cordy 列键分组（Linear 关联 `in_review` 进 needsInput，不进 Running；`workflowCategory` 视图跟 workflow 列）。Inbox 行加类型圆形 glyph（mention→AtSign、task\_assigned→CircleUserRound、acp\_permission→KeyRound、transfer→ArrowLeftRight、review→GitPullRequest、默认 Bell），替代 Linear 的 avatar+type badge 角色
+- 视图 / 列表面再对齐 Linear：SavedView 详情页不再裸露 query JSON——owner 的名称 / 查询 / 布局 / 可见性表单收进 header 的「Edit view」折叠面板（结果页是默认态）；`WorkQueryResults` 列表行换成共享 `AgentTaskItem` 富行（identifier + 状态图标 + 标题 + chips + 头像 + 日期），平铺结果按与看板相同的 Cordy 列键分组（Linear 关联 `in_review` 进 needsInput，不进 Running；`workflowCategory` 视图跟 workflow 列）。Inbox 行加类型圆形 glyph（mention→AtSign、task_assigned→CircleUserRound、acp_permission→KeyRound、transfer→ArrowLeftRight、review→GitPullRequest、默认 Bell），替代 Linear 的 avatar+type badge 角色
 
 - Team 页分诊行对齐 Views/My Work 列表 chrome：失败不再渲染成空队列（`teamSurfaceState`）、Skeleton、identifier、WideScreenContainer、Segmented 列表 / 看板。Accept/Decline 留在行上；Mark duplicate / Reassign / Move to team 进 overflow。Team 看板走 `WorkQueryResults` → `KanbanBoard` `external` prop（与其它页同一个组件，不自建）
 
-- Linear IA 收敛（`623f670c`）：一级侧栏改成固定合同 `inbox / my-work / reviews` + 手风琴 `agent / workspace / favorites / teams` + spacer（`DEFAULT_SIDEBAR_ITEMS`，`sidebarItems` selector 直接返回常量，stored/overlay 顺序完全不再生效 —— 旧 preference 无法复活 retired keys）。`RETIRED_SIDEBAR_KEYS` 扩到 home/tasks/automations/resource/recents/private/project/views（一级退役，路由深链保留）。新 `WorkspaceSection`（Projects / Views / Members→`/settings/members` / More 下拉：Automations、Resource、工作区设置）与 `TeamsSection`（`team.teams` 扁平行→`/teams/:id`，仅 workspace 模式渲染；TeamPage 无 Home/Issues 子 tab，不做展开子导航）。Reviews 一级指向 `/my-work?tab=review`（v4 合同已冻结 `/my-work`，没有另建 `/reviews` 路由），Body 用 `useSearchParams` 拆开两个高亮。CustomizeSidebarModal 收窄为只能隐藏可选 section（核心 pin 住，不可重排）。Header 搜索行 hover 出新建任务铅笔（`createTaskModal`）。User 弹层补 `UserPanelWorkspaceSection`（个人空间 ✓ + workspace 列表切换）。移动端 NavBar 第三栏 Tasks→My Work。`sidebarContract.ts` 登记 SCHEMA\_VERSION=2 / FIXED\_PRIMARY\_KEYS / LEGACY\_PRIMARY\_KEYS。**deviation**：spec 写 `/my-issues`，按 v4 合同保留 `/my-work`。lint 干净，89 passed。不是 64× AC。
+- Linear IA 收敛（`623f670c`）：一级侧栏改成固定合同 `inbox / my-work / reviews` + 手风琴 `agent / workspace / favorites / teams` + spacer（`DEFAULT_SIDEBAR_ITEMS`，`sidebarItems` selector 直接返回常量，stored/overlay 顺序完全不再生效 —— 旧 preference 无法复活 retired keys）。`RETIRED_SIDEBAR_KEYS` 扩到 home/tasks/automations/resource/recents/private/project/views（一级退役，路由深链保留）。新 `WorkspaceSection`（Projects / Views / Members→`/settings/members` / More 下拉：Automations、Resource、工作区设置）与 `TeamsSection`（`team.teams` 扁平行→`/teams/:id`，仅 workspace 模式渲染；TeamPage 无 Home/Issues 子 tab，不做展开子导航）。Reviews 一级指向 `/my-work?tab=review`（v4 合同已冻结 `/my-work`，没有另建 `/reviews` 路由），Body 用 `useSearchParams` 拆开两个高亮。CustomizeSidebarModal 收窄为只能隐藏可选 section（核心 pin 住，不可重排）。Header 搜索行 hover 出新建任务铅笔（`createTaskModal`）。User 弹层补 `UserPanelWorkspaceSection`（个人空间 ✓ + workspace 列表切换）。移动端 NavBar 第三栏 Tasks→My Work。`sidebarContract.ts` 登记 SCHEMA_VERSION=2 / FIXED_PRIMARY_KEYS / LEGACY_PRIMARY_KEYS。**deviation**：spec 写 `/my-issues`，按 v4 合同保留 `/my-work`。lint 干净，89 passed。不是 64× AC。
 
 - Linear 侧栏解剖第二轮（`c2d90a23`）：对照 linear.app 真实截图 + 官方文档把侧栏拆成 Linear 的四层。①Header 不再是搜索文字行 —— 是 workspace 名称 + 图标切换器（`useActiveIdentity`），右侧 ⌕ 开 CmdK、✎ 开 `createTaskModal`；`Header/components/Nav.tsx`、`InboxButton.tsx` 删除，未读数挪进 Inbox 行的 `extra`（`useInboxUnreadCount`）。②Your teams 团队行可展开成 Linear 子导航 Home/Triage/Issues/Projects/Views：嵌套 `AccordionRoot indicatorPlacement='start'`，展开态经 `mergeSidebarExpandedKeys` 以 `team:<id>` 键并入 `sidebarExpandedKeys`；每项落到 TeamPage 新增的 `?tab=` 区段 ——projects 走 `workAttentionService.query`（entityType project + teamId，经 `projectTeams` join），views 走 `savedViewList` 过滤 `visibility==='team' && teamId`。③底栏 = Linear 的？+ 用户头像（`UserPanel` 包 `UserAvatar`）。④Drafts 仍不出 —— 没有真 draft domain（spec 明文）。lint 干净，25 passed。
 
@@ -168,7 +168,7 @@ Preview 限额解开后跑 N12 / END06–08。不要用 mock 报完成。不要 
 - 不要手改 migration `_journal.json`（`bun run db:generate` 后 rename / 幂等加固）
 - 不要跑 `bun run test`（全量套件）
 - 不要本机跑全仓 `bun run check --type`（CI-only，`scripts/type-check.mjs` 会 fail-fast）。本地：`pnpm type-check` 进对应 package，或 CI=true 的全仓脚本（会很吃内存）
-- 不要 UpdateGoal complete
+- 不要 UpdateOrchestration workflow complete
 - 不要碰受保护 clone `/Users/alexjiang/Desktop/vibe/orvilo1`
 - SAFE-BY-ABSENCE，不要主动做：TRI06 AI 自动执行、SEC04 username mapping、SEC07 破坏性清理 job、TRI04 按团队复制 Project 导航器
 - **F38 Drafts — 明确缺席**：Linear 的 Drafts 一级入口需要一条真实的草稿域模型（issue 草稿持久化表、跨端同步、发布 / 丢弃生命周期）。仓库里不存在这个域；v5 包裁决为「无真实模型前不露假入口」。所以侧栏**不放** Drafts 行，任何页面不造假草稿列表。要做真的才动：先落 draft 表 + create/update/publish/discard 过程，再开入口
@@ -210,13 +210,13 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 - `c24608a4` / 变基后 `5e793f23`：My Work store 看板 Linear 跨列拖放走 `moveBoard`。lint 干净。不是 64× AC。
 - `215edfa9`：SEC01 客户端与服务端共用 URL allowlist。lint 干净，types 4 + inboxOrganize + feedCard 9 passed。不是 64× AC。
 - `ac32ad47`：TRI04 `queryProjects` 跨团队不放大行。`workQuery.test.ts` 21 passed。不是 64× AC。
-- `cc9289c0`：status 分组 Linear 卡提升到 `moveBoard` workflowCategory。`workQueryBoardMove` 覆盖 in\_review vs paused。不是 64× AC。
+- `cc9289c0`：status 分组 Linear 卡提升到 `moveBoard` workflowCategory。`workQueryBoardMove` 覆盖 in_review vs paused。不是 64× AC。
 - `994a7015`：用法文档对齐固定一级 IA。lint 干净。不是 64× AC。
 - 本增量 scoped `bun run check`：lint 干净，48 passed。不是 64× AC。
 - `c2d90a23`：Linear 侧栏解剖（workspace 头部 / 团队子导航 / 底栏头像）。不要回滚。
 - `ecaaa108`：列表改状态 refetch + Linear `moveBoard`。lint 干净，67 passed。不是 64× AC。
 - `da1dcc0a`：看板卡右键改状态走 `applyWorkQueryStatusChange`。lint 干净，27 passed。不是 64× AC。
-- `0331f0f4`：OSS workspace 激活链接上真链路 ——`useActiveWorkspaceId`/`Slug` 不再是 null stub，改成模块 store + `useWorkspaceUrlSync`（已挂进 web/desktop/mobile 三个主 layout）；`getBusinessTrpcHeaders` 发 `X-Workspace-Id`，`team.teams`/workspace settings 的 wsCompat 在 OSS 真能跑通（本地建 ws `orvilo-dev` + team `Engineering` 实测：`/orvilo-dev/teams/:id?tab=` 与 `/orvilo-dev/settings/members` 全真）。`WORKSPACE_MIRRORED_FIRST_SEGMENTS` 补齐 inbox/my-work/views/teams/automations/goal（此前 sidebar 链在 workspace 模式丢 slug 前缀掉回个人态）。Agent 改成扁平行 → `/agents`（`SidebarTabKey.Agent` 新增，旧 agent 手风琴退役出 SIDEBAR\_ACCORDION\_KEYS）。Workspace ▸ "More" 改成可见行（Linear 形状，不再是 hover ⋯）。`useActiveIdentity` 实装：workspace 模式头部显示 workspace 名 / 头像。lint 干净，104 passed。不是 64× AC。
+- `0331f0f4`：OSS workspace 激活链接上真链路 ——`useActiveWorkspaceId`/`Slug` 不再是 null stub，改成模块 store + `useWorkspaceUrlSync`（已挂进 web/desktop/mobile 三个主 layout）；`getBusinessTrpcHeaders` 发 `X-Workspace-Id`，`team.teams`/workspace settings 的 wsCompat 在 OSS 真能跑通（本地建 ws `orvilo-dev` + team `Engineering` 实测：`/orvilo-dev/teams/:id?tab=` 与 `/orvilo-dev/settings/members` 全真）。`WORKSPACE_MIRRORED_FIRST_SEGMENTS` 补齐 inbox/my-work/views/teams/automations/orchestration workflow（此前 sidebar 链在 workspace 模式丢 slug 前缀掉回个人态）。Agent 改成扁平行 → `/agents`（`SidebarTabKey.Agent` 新增，旧 agent 手风琴退役出 SIDEBAR_ACCORDION_KEYS）。Workspace ▸ "More" 改成可见行（Linear 形状，不再是 hover ⋯）。`useActiveIdentity` 实装：workspace 模式头部显示 workspace 名 / 头像。lint 干净，104 passed。不是 64× AC。
 - `67de7007`：SEC06 退出私有团队后 Inbox 丢掉任务标题。lint 干净，`notification.test.ts` 53 passed。不是 64× AC。
 - `09ab2664`：SEC06 私有项目走 `ProjectModel.readable`。Inbox / `searchProjects` / `queryProjects` / Recents 共用 `buildProjectReadableWhere`。lint 干净，`notification` + `workQuery` + `project` + `recent` 139 passed。不是 64× AC。
 - `9f30cfb4` / 变基后 `6c80f4ac`：TRI05/SEC06 未过滤 work-query 与 `searchTasks` 隐藏私有团队任务。叠在 Devin `8aa4f7cb`（Inbox 分页 + 工作面错误态）与 `b16936c2`（看板 raw 维度 + 持久重排）之上。lint 干净，rebase 后 `workQuery` + `notification` 77 passed。不是 64× AC。不要回滚 Devin 这两刀。
@@ -255,7 +255,7 @@ cd packages/database && bunx vitest run --silent='passed-only' <file>
 | F21 分页 / F22 团队视图 + 共享 + 新建继承              | fixed          | `971ae8e1` + 早前 cursor 分页                                         |
 | F23–F26/F31–F32 视图编辑器 / 筛选 / 项目看板           | fixed          | `89619d13`                                                            |
 | F27 groupBy=none / F29 同列排序持久化 / F30 组元数据   | fixed          | `b16936c2`                                                            |
-| F28 in\_review≠needs\_input                            | fixed          | Cordy 映射回 `workflow`/`status` 双维                                 |
+| F28 in_review≠needs_input                              | fixed          | Cordy 映射回 `workflow`/`status` 双维                                 |
 | F33 Project readable / F34 sidebar-teams key           | fixed          | `09ab2664`+`ac32ad47` /key 含 userId+workspaceId                      |
 | F35–F37 SidebarRow 密度 / TeamIdentity/WorkSurface     | fixed          | `315b7b7d`（NavItem 子项密度残余记在案）                              |
 | F38 Drafts                                             | **缺席即正确** | 无真实草稿域；裁决已写入「明确不要做」                                |

@@ -607,6 +607,7 @@ const settleRemoteDispatchOutcome = async (
 };
 
 export interface HeteroDispatchInput {
+  afterOperationPersisted?: (input: { operationId: string; topicId: string }) => Promise<void>;
   /**
    * Runs inside the operation's commit window — after the id is minted,
    * before the durable row exists. Task runners use it to revalidate their
@@ -716,6 +717,7 @@ export const dispatchHeteroAgent = async (
   } = ctx;
   const {
     beforeOperationStart,
+    afterOperationPersisted,
     builtinToolSpecs,
     canManageAgent,
     externalToolMounts,
@@ -863,6 +865,19 @@ export const dispatchHeteroAgent = async (
   if (!operationPersisted) {
     hookDispatcher.unregister(operationId);
     throw new Error('Failed to persist heterogeneous agent operation');
+  }
+  try {
+    await afterOperationPersisted?.({ operationId, topicId });
+  } catch (error) {
+    await finalizeHeteroDispatchError(deps, {
+      agentId: resolvedAgentId,
+      assistantMessageId,
+      operationId,
+      topicId,
+      message: 'Operation binding failed',
+      detail: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
   }
 
   // Read resume session id for next-turn continuity.
@@ -1369,6 +1384,11 @@ export const dispatchHeteroAgent = async (
     if (executionPlan.kind !== 'device' || !remoteDeviceId) {
       const blockedCode = executionPlan.kind === 'blocked' ? executionPlan.code : 'DEVICE_REQUIRED';
       const denied = blockedCode === 'DEVICE_ACCESS_DENIED';
+      const deviceError = denied
+        ? 'Device access denied'
+        : blockedCode === 'DEVICE_REQUIRED'
+          ? 'No bound device'
+          : 'Device unavailable';
       log('execAgent: remote hetero dispatch blocked (code=%s)', blockedCode);
       // Structured admission refusal — the code lives in `errorData.code`
       // (the contract surface the repair UI branches on), never embedded in
@@ -1399,7 +1419,7 @@ export const dispatchHeteroAgent = async (
             ? `${blockedCode}: ${executionPlan.detail}`
             : 'No local or connected device is available for this agent.',
         errorData: admissionError,
-        message: denied ? 'Device access denied' : 'No bound device',
+        message: deviceError,
         operationId,
         topicId,
       });
@@ -1408,7 +1428,7 @@ export const dispatchHeteroAgent = async (
         assistantMessageId,
         autoStarted: false,
         createdAt: new Date().toISOString(),
-        error: denied ? 'Device access denied' : 'No bound device',
+        error: deviceError,
         errorData: admissionError,
         message: denied
           ? 'This sender is not allowed to run agents on a bound device'
@@ -1641,6 +1661,11 @@ export const dispatchHeteroAgent = async (
       // instead of silently re-resolving onto a default device.
       const blockedCode = heteroPlan.kind === 'blocked' ? heteroPlan.code : 'DEVICE_REQUIRED';
       const denied = blockedCode === 'DEVICE_ACCESS_DENIED';
+      const deviceError = denied
+        ? 'Device access denied'
+        : blockedCode === 'DEVICE_REQUIRED'
+          ? 'No bound device'
+          : 'Device unavailable';
       const pickerHint = !supportsCloudHeterogeneousSandbox(heteroType)
         ? 'Pick a local or connected device in the Execution Device switcher.'
         : 'Pick a device in the Execution Device switcher, or switch to Cloud sandbox.';
@@ -1674,7 +1699,7 @@ export const dispatchHeteroAgent = async (
             ? `${blockedCode}: ${heteroPlan.detail} ${pickerHint}`
             : `No device bound. ${pickerHint}`,
         errorData: admissionError,
-        message: denied ? 'Device access denied' : 'No bound device',
+        message: deviceError,
         operationId,
         topicId,
       });
@@ -1683,7 +1708,7 @@ export const dispatchHeteroAgent = async (
         assistantMessageId,
         autoStarted: false,
         createdAt: new Date().toISOString(),
-        error: denied ? 'Device access denied' : 'No bound device',
+        error: deviceError,
         errorData: admissionError,
         message: denied
           ? 'This sender is not allowed to run agents on a bound device'

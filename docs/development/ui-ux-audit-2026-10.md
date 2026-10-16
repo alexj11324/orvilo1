@@ -48,7 +48,7 @@ face. DESIGN.md/Linear convention: IDs are `fontFamilyCode`, muted. Now
 
 `ActionIcon` feeds both tooltip and `aria-label` from `title`; the
 Clock3/PanelRightClose icons in `AgentTaskManager`, `PageEditor/Copilot`, and
-`AgentGoals/GoalChat` toolbars had none — verified `aria-label === null` live
+`AgentGoals/Orchestration workflowChat` toolbars had none — verified `aria-label === null` live
 via CDP. Same gap in the shared `ModalClose`/`AlertModalClose` atoms
 (`src/components/Modal/atoms.tsx`). All now carry `title` / `aria-label`
 (`topic.actions.showTopics`, `chat.workingPanel.tabs.closePanel`,
@@ -71,7 +71,7 @@ rejects arbitrary values on added lines).
 ### F7 — Close/dismiss icon buttons without accessible names (E2E follow-up)
 
 The recorded E2E pass caught the same F4 class on controls the audit sweep
-missed: the Create Task / Create Goal / create / template-detail modal close
+missed: the Create Task / Create Orchestration workflow / create / template-detail modal close
 buttons, the task-dock dismiss-all button, the Portal thread/topic/local-file
 header closes (plus the unlabeled swap-threads control), and the chat alert
 dismiss buttons. All now carry `title` (`common.close`, new

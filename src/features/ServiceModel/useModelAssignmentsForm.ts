@@ -15,7 +15,7 @@ import type { SystemAgentItem, UserServiceModelConfigKey } from '@/types/user/se
 export type ModelAssignmentItemKey = Extract<
   UserServiceModelConfigKey,
   | 'expertise'
-  | 'goal'
+  | 'orchestrationWorkflow'
   | 'memoryAnalysisAgentConfig'
   | 'userMemoryEmbedding'
   | 'userMemoryPersonaWriter'
@@ -47,7 +47,7 @@ const assignmentValue = (value: SystemAgentItem): AssignmentValue => ({
 
 export const SYSTEM_AGENT_MODEL_ITEMS: SystemAgentModelItem[] = [
   { key: 'expertise' },
-  { key: 'goal' },
+  { key: 'orchestrationWorkflow' },
 ];
 
 export const MEMORY_MODEL_ITEMS: SystemAgentModelItem[] = [
@@ -96,7 +96,7 @@ export const useModelAssignmentsForm = () => {
       defaultAgent: { config: defaultAgent.config },
       systemAgent: {
         expertise: assignmentValue(systemAgentSettings.expertise),
-        goal: assignmentValue(systemAgentSettings.goal),
+        orchestrationWorkflow: assignmentValue(systemAgentSettings.orchestrationWorkflow),
         memoryAnalysisAgentConfig: assignmentValue(systemAgentSettings.memoryAnalysisAgentConfig),
         userMemoryEmbedding: assignmentValue(systemAgentSettings.userMemoryEmbedding),
         userMemoryPersonaWriter: assignmentValue(systemAgentSettings.userMemoryPersonaWriter),

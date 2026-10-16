@@ -3,6 +3,49 @@ import { describe, expect, it } from 'vitest';
 import { resolveRunToolSurface } from '../pipeline/runToolSurface';
 
 describe('resolveRunToolSurface', () => {
+  it('mounts orchestration work automatically for the Orchestrator conversation only', () => {
+    const identifier = 'orvilo-orchestration-workflow';
+    expect(
+      resolveRunToolSurface({ isOrchestratorConversation: true }).builtinToolSpecs.some(
+        (spec) => spec.identifier === identifier,
+      ),
+    ).toBe(true);
+    for (const input of [
+      {},
+      { additionalPluginIds: [identifier] },
+      { selectedToolIds: [identifier] },
+      { exclusivePluginIds: [identifier] },
+    ]) {
+      expect(
+        resolveRunToolSurface(input).builtinToolSpecs.some(
+          (spec) => spec.identifier === identifier,
+        ),
+      ).toBe(false);
+    }
+    expect(
+      resolveRunToolSurface({
+        isOrchestratorConversation: true,
+        supportsBuiltinToolMount: false,
+      }).builtinToolSpecs.some((spec) => spec.identifier === identifier),
+    ).toBe(false);
+  });
+  it('gives the Orchestrator normal Issue revision tools without broadening exclusive runs', () => {
+    const taskTool = resolveRunToolSurface({
+      isOrchestratorConversation: true,
+    }).builtinToolSpecs.find((spec) => spec.identifier === 'orvilo-task');
+    expect(taskTool?.apis.map((api) => api.name)).toEqual(
+      expect.arrayContaining(['viewTask', 'editTask', 'setTaskVerify', 'deleteTask']),
+    );
+    expect(
+      resolveRunToolSurface({}).builtinToolSpecs.some((spec) => spec.identifier === 'orvilo-task'),
+    ).toBe(false);
+    expect(
+      resolveRunToolSurface({
+        isOrchestratorConversation: true,
+        exclusivePluginIds: ['orvilo-verify'],
+      }).builtinToolSpecs.some((spec) => spec.identifier === 'orvilo-task'),
+    ).toBe(false);
+  });
   it('mounts builtin tools with server runtimes as AcpBuiltinToolSpec', () => {
     const surface = resolveRunToolSurface({
       additionalPluginIds: ['orvilo-task'],

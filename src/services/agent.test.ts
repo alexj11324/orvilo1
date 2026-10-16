@@ -3,13 +3,45 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { agentService } from './agent';
 
-const api = vi.hoisted(() => ({ config: vi.fn() }));
+const api = vi.hoisted(() => ({ config: vi.fn(), transfer: vi.fn(), transferMany: vi.fn() }));
 vi.mock('@/libs/trpc/client', () => ({
-  lambdaClient: { agent: { getAgentConfigById: { query: api.config } } },
+  lambdaClient: {
+    agent: {
+      getAgentConfigById: { query: api.config },
+      transferAgent: { mutate: api.transfer },
+      transferAgents: { mutate: api.transferMany },
+    },
+  },
 }));
 
 beforeEach(() => {
   api.config.mockReset();
+  api.transfer.mockReset();
+  api.transferMany.mockReset();
+});
+
+describe('agent transfer replacement device', () => {
+  it('forwards targetDeviceId for a single transfer', async () => {
+    api.transfer.mockResolvedValue({ agentId: 'a', slug: null, transferJobId: null });
+    await agentService.transferAgent('a', 'ws-2', 'public', 'device-2');
+    expect(api.transfer).toHaveBeenCalledWith({
+      agentId: 'a',
+      targetDeviceId: 'device-2',
+      targetVisibility: 'public',
+      targetWorkspaceId: 'ws-2',
+    });
+  });
+
+  it('forwards targetDeviceId for a batch transfer', async () => {
+    api.transferMany.mockResolvedValue([]);
+    await agentService.transferAgents(['a', 'b'], null, undefined, 'device-2');
+    expect(api.transferMany).toHaveBeenCalledWith({
+      agentIds: ['a', 'b'],
+      targetDeviceId: 'device-2',
+      targetVisibility: undefined,
+      targetWorkspaceId: null,
+    });
+  });
 });
 
 describe('full agent configuration consumer boundary', () => {

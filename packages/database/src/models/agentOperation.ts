@@ -133,16 +133,22 @@ export class AgentOperationModel {
    * blow up on the second createOperation call.
    */
   async recordStart(params: RecordOperationStartParams): Promise<void> {
+    const metadata = { ...params.metadata };
+    // This internal execution policy must survive a later gateway callback.
+    // Caller metadata cannot suppress the delivery verification gate.
+    delete metadata.skipTaskVerification;
+    if (params.skipTaskVerification || params.trigger === 'acp_judgment')
+      metadata.skipTaskVerification = true;
     const values: NewAgentOperation = {
       agentId: params.agentId ?? null,
       appContext: params.appContext,
       chatGroupId: params.chatGroupId ?? null,
       id: params.operationId,
       maxSteps: params.maxSteps,
-      ...(params.metadata || params.executionEngine
+      ...(Object.keys(metadata).length || params.executionEngine
         ? {
             metadata: {
-              ...params.metadata,
+              ...metadata,
               // The declared engine wins over a caller-supplied metadata key —
               // provenance must reflect the path that actually recorded the
               // row, not whatever an upstream payload happened to carry.

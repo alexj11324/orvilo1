@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { RunSubject } from '@orvilo/types';
 import { sql } from 'drizzle-orm';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { ChatExecutionControlModel } from '@/database/models/chatExecutionControl';
 import { TaskExecutionControlModel } from '@/database/models/taskExecutionControl';
 import {
@@ -38,7 +39,9 @@ export async function createCanonicalRunFixture(
     .returning();
   await db.insert(workspaceMembers).values({ userId, workspaceId: workspace.id, role: 'owner' });
   const agentId = `agt_${randomUUID()}`;
-  await db.insert(agents).values({ id: agentId, userId, workspaceId: workspace.id });
+  await db
+    .insert(agents)
+    .values(await withTestAgentDevices(db, { id: agentId, userId, workspaceId: workspace.id }));
   const topicId = `tpc_${randomUUID()}`;
   await db.insert(topics).values({ id: topicId, userId, workspaceId: workspace.id });
   const [task] = await db
@@ -155,7 +158,9 @@ export async function createCanonicalChatRunFixture(
     chatWorkspaceId = workspace.id;
   }
   const agentId = `agt_${randomUUID()}`;
-  await db.insert(agents).values({ id: agentId, userId, workspaceId: chatWorkspaceId });
+  await db
+    .insert(agents)
+    .values(await withTestAgentDevices(db, { id: agentId, userId, workspaceId: chatWorkspaceId }));
   const topicId = `tpc_${randomUUID()}`;
   await db.insert(topics).values({ agentId, id: topicId, userId, workspaceId: chatWorkspaceId });
   const operationId = `op_${randomUUID()}`;

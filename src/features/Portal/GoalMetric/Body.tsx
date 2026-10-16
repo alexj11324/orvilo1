@@ -1,4 +1,4 @@
-import type { GoalSpend } from '@orvilo/types';
+import type { OrchestrationWorkflowSpend } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -37,10 +37,10 @@ const styles = {
 
 const NodeRow = memo<{
   extra?: ReactNode;
-  goalId: string;
+  orchestrationWorkflowId: string;
   nodeId: string;
   graph: GoalGraphView;
-}>(({ extra, goalId, graph, nodeId }) => {
+}>(({ extra, orchestrationWorkflowId, graph, nodeId }) => {
   const openGoalNode = useChatStore((s) => s.openGoalNode);
   const view = graph.byId[nodeId];
   if (!view) return null;
@@ -48,7 +48,7 @@ const NodeRow = memo<{
   return (
     <div
       className={cn('flex flex-row items-center gap-2', styles.row)}
-      onClick={() => openGoalNode(goalId, nodeId)}
+      onClick={() => openGoalNode(orchestrationWorkflowId, nodeId)}
     >
       {view.seq !== undefined && (
         <div className={cn('flex-none text-xs text-muted-foreground', styles.mono)}>
@@ -64,9 +64,9 @@ const NodeRow = memo<{
 
 NodeRow.displayName = 'GoalMetricNodeRow';
 
-const Lifecycle = memo<{ goalId: string; graph: GoalGraphView }>(({ graph }) => {
+const Lifecycle = memo<{ orchestrationWorkflowId: string; graph: GoalGraphView }>(({ graph }) => {
   const { t } = useTranslation('chat');
-  const snapshot = useGoalStore(goalSelectors.goalGraph(graph.goal.id));
+  const snapshot = useGoalStore(goalSelectors.goalGraph(graph.orchestrationWorkflow.id));
   const events = useMemo(
     () =>
       [...(snapshot?.events ?? [])].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
@@ -111,68 +111,72 @@ const Lifecycle = memo<{ goalId: string; graph: GoalGraphView }>(({ graph }) => 
 
 Lifecycle.displayName = 'GoalMetricLifecycle';
 
-const Tasks = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph }) => {
-  const { t } = useTranslation('chat');
-  const works = graph.nodes.filter((view) => view.node.kind === 'task');
+const Tasks = memo<{ orchestrationWorkflowId: string; graph: GoalGraphView }>(
+  ({ orchestrationWorkflowId, graph }) => {
+    const { t } = useTranslation('chat');
+    const works = graph.nodes.filter((view) => view.node.kind === 'task');
 
-  return (
-    <div className="flex flex-col gap-0">
-      {works.map((view) => (
-        <NodeRow
-          goalId={goalId}
-          graph={graph}
-          key={view.node.id}
-          nodeId={view.node.id}
-          extra={
-            <div className="flex flex-row items-center gap-1.5">
-              {view.integration && (
-                <RunIntegrationTag
-                  integration={view.integration}
-                  taskId={view.node.taskId ?? undefined}
-                  topicId={view.integration.topicId}
-                />
-              )}
-              <Badge size="sm" variant="secondary">
-                {t(`goalProcess.nodeStatus.${view.node.status}` as const)}
-              </Badge>
-            </div>
-          }
-        />
-      ))}
-    </div>
-  );
-});
+    return (
+      <div className="flex flex-col gap-0">
+        {works.map((view) => (
+          <NodeRow
+            graph={graph}
+            key={view.node.id}
+            nodeId={view.node.id}
+            orchestrationWorkflowId={orchestrationWorkflowId}
+            extra={
+              <div className="flex flex-row items-center gap-1.5">
+                {view.integration && (
+                  <RunIntegrationTag
+                    integration={view.integration}
+                    taskId={view.node.taskId ?? undefined}
+                    topicId={view.integration.topicId}
+                  />
+                )}
+                <Badge size="sm" variant="secondary">
+                  {t(`goalProcess.nodeStatus.${view.node.status}` as const)}
+                </Badge>
+              </div>
+            }
+          />
+        ))}
+      </div>
+    );
+  },
+);
 
 Tasks.displayName = 'GoalMetricTasks';
 
-const Findings = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph }) => {
-  const { t } = useTranslation('chat');
-  const findings = [...graph.findings].sort(
-    (a, b) =>
-      (b.node.resolvedAt ?? b.node.createdAt).getTime() -
-      (a.node.resolvedAt ?? a.node.createdAt).getTime(),
-  );
+const Findings = memo<{ orchestrationWorkflowId: string; graph: GoalGraphView }>(
+  ({ orchestrationWorkflowId, graph }) => {
+    const { t } = useTranslation('chat');
+    const findings = [...graph.findings].sort(
+      (a, b) =>
+        (b.node.resolvedAt ?? b.node.createdAt).getTime() -
+        (a.node.resolvedAt ?? a.node.createdAt).getTime(),
+    );
 
-  return (
-    <div className="flex flex-col gap-0">
-      {findings.map((view) => (
-        <NodeRow
-          goalId={goalId}
-          graph={graph}
-          key={view.node.id}
-          nodeId={view.node.id}
-          extra={
-            view.producedBy ? (
-              <div className="truncate min-w-0 shrink text-xs text-muted-foreground">
-                {t('goalProcess.findings.from', { title: view.producedBy.title })}
-              </div>
-            ) : undefined
-          }
-        />
-      ))}
-    </div>
-  );
-});
+    return (
+      <div className="flex flex-col gap-0">
+        {findings.map((view) => (
+          <NodeRow
+            graph={graph}
+            key={view.node.id}
+            nodeId={view.node.id}
+            orchestrationWorkflowId={orchestrationWorkflowId}
+            extra={
+              view.producedBy ? (
+                <div className="truncate min-w-0 shrink text-xs text-muted-foreground">
+                  {t('goalProcess.findings.from', { title: view.producedBy.title })}
+                </div>
+              ) : undefined
+            }
+          />
+        ))}
+      </div>
+    );
+  },
+);
 
 Findings.displayName = 'GoalMetricFindings';
 
@@ -199,12 +203,12 @@ const BUDGET_FIELDS = {
 const BudgetField = memo<{
   cap: number | null;
   field: keyof typeof BUDGET_FIELDS;
-  goalId: string;
+  orchestrationWorkflowId: string;
   label: string;
   /** Blank input meaning — 'uncapped' for budgets, 'auto' for parallelism. */
   placeholder?: string;
   used: number;
-}>(({ cap, field, goalId, label, placeholder, used }) => {
+}>(({ cap, field, orchestrationWorkflowId, label, placeholder, used }) => {
   const { t } = useTranslation('chat');
   const { allowed: canEdit } = usePermission('create_content');
   const setGoalBudget = useGoalStore((s) => s.setGoalBudget);
@@ -235,7 +239,7 @@ const BudgetField = memo<{
       // Only the field that changed is sent: `setBudget` treats an omitted
       // dimension as untouched, so editing the cost cap keeps the round cap.
       await setGoalBudget(
-        goalId,
+        orchestrationWorkflowId,
         field === 'maxTotalCost'
           ? { maxTotalCost: draft }
           : field === 'maxRounds'
@@ -296,232 +300,251 @@ const formatTokens = (value: number): string =>
  * Rows are ordered by spend, and a Task whose runs have not settled shows $0
  * rather than being dropped: it is still consuming rounds.
  */
-const CostBreakdown = memo<{ goalId: string; graph: GoalGraphView; spend?: GoalSpend }>(
-  ({ goalId, graph, spend }) => {
+const CostBreakdown = memo<{
+  orchestrationWorkflowId: string;
+  graph: GoalGraphView;
+  spend?: OrchestrationWorkflowSpend;
+}>(({ orchestrationWorkflowId, graph, spend }) => {
+  const { t } = useTranslation('chat');
+  const openGoalNode = useChatStore((s) => s.openGoalNode);
+
+  const rows = useMemo(() => {
+    const nodeByTaskId = new Map(
+      graph.nodes
+        .filter((view) => view.node.taskId)
+        .map((view) => [view.node.taskId!, view] as const),
+    );
+    return (spend?.byTask ?? [])
+      .map((row) => ({ ...row, view: nodeByTaskId.get(row.taskId) }))
+      .sort((a, b) => b.totalCost - a.totalCost || b.totalTokens - a.totalTokens);
+  }, [graph, spend]);
+
+  if (rows.length === 0)
+    return (
+      <div className="text-sm text-muted-foreground">
+        {t('goalProcess.metricDetail.budget.perTaskEmpty')}
+      </div>
+    );
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className={styles.label}>{t('goalProcess.metricDetail.budget.perTaskTitle')}</span>
+      <div className="flex flex-col gap-0">
+        {rows.map((row) => {
+          const body = (
+            <div className="flex flex-row items-center gap-2" key={row.taskId}>
+              {row.view?.seq !== undefined && (
+                <div className={cn('flex-none text-xs text-muted-foreground', styles.mono)}>
+                  #{row.view.seq}
+                </div>
+              )}
+              <div className="truncate flex-1 min-w-0">{row.view?.node.title ?? row.taskId}</div>
+              <div className={cn('flex-none text-xs text-muted-foreground', styles.mono)}>
+                {t('goalProcess.metricDetail.budget.tokensValue', {
+                  value: formatTokens(row.totalTokens),
+                })}
+              </div>
+              <div className={cn('flex-none font-medium', styles.mono)}>
+                {formatUsd(row.totalCost)}
+              </div>
+            </div>
+          );
+
+          // A row without a graph node is a Task the snapshot no longer
+          // carries — still billed, but nothing to open.
+          return row.view ? (
+            <div
+              className={cn('flex flex-col', styles.row)}
+              key={row.taskId}
+              onClick={() => openGoalNode(orchestrationWorkflowId, row.view!.node.id)}
+            >
+              {body}
+            </div>
+          ) : (
+            <div className={cn('flex flex-col', styles.staticRow)} key={row.taskId}>
+              {body}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
+CostBreakdown.displayName = 'GoalMetricCostBreakdown';
+
+const Budget = memo<{ orchestrationWorkflowId: string; graph: GoalGraphView }>(
+  ({ orchestrationWorkflowId, graph }) => {
     const { t } = useTranslation('chat');
-    const openGoalNode = useChatStore((s) => s.openGoalNode);
-
-    const rows = useMemo(() => {
-      const nodeByTaskId = new Map(
-        graph.nodes
-          .filter((view) => view.node.taskId)
-          .map((view) => [view.node.taskId!, view] as const),
-      );
-      return (spend?.byTask ?? [])
-        .map((row) => ({ ...row, view: nodeByTaskId.get(row.taskId) }))
-        .sort((a, b) => b.totalCost - a.totalCost || b.totalTokens - a.totalTokens);
-    }, [graph, spend]);
-
-    if (rows.length === 0)
-      return (
-        <div className="text-sm text-muted-foreground">
-          {t('goalProcess.metricDetail.budget.perTaskEmpty')}
-        </div>
-      );
+    const { config, maxRounds, maxTotalCost } = graph.orchestrationWorkflow;
+    const snapshot = useGoalStore(goalSelectors.goalGraph(orchestrationWorkflowId));
+    const spend = snapshot?.spend;
+    // In-flight Tasks are what the cap bounds — the coordinator counts the same
+    // population when deciding whether the frontier may dispatch further.
+    const inFlight = graph.nodes.filter(
+      (view) => view.node.kind === 'task' && view.node.status === 'active',
+    ).length;
 
     return (
-      <div className="flex flex-col gap-1">
-        <span className={styles.label}>{t('goalProcess.metricDetail.budget.perTaskTitle')}</span>
-        <div className="flex flex-col gap-0">
-          {rows.map((row) => {
-            const body = (
-              <div className="flex flex-row items-center gap-2" key={row.taskId}>
-                {row.view?.seq !== undefined && (
-                  <div className={cn('flex-none text-xs text-muted-foreground', styles.mono)}>
-                    #{row.view.seq}
-                  </div>
-                )}
-                <div className="truncate flex-1 min-w-0">{row.view?.node.title ?? row.taskId}</div>
-                <div className={cn('flex-none text-xs text-muted-foreground', styles.mono)}>
-                  {t('goalProcess.metricDetail.budget.tokensValue', {
-                    value: formatTokens(row.totalTokens),
-                  })}
-                </div>
-                <div className={cn('flex-none font-medium', styles.mono)}>
-                  {formatUsd(row.totalCost)}
-                </div>
-              </div>
-            );
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3.5">
+          <span className={styles.label}>{t('goalProcess.metricDetail.budget.controlTitle')}</span>
+          <BudgetField
+            cap={maxTotalCost}
+            field={'maxTotalCost'}
+            label={t('goalProcess.metricDetail.budget.totalCost')}
+            orchestrationWorkflowId={orchestrationWorkflowId}
+            used={spend?.totalCost ?? 0}
+          />
+          <BudgetField
+            cap={maxRounds}
+            field={'maxRounds'}
+            label={t('goalProcess.metricDetail.budget.rounds')}
+            orchestrationWorkflowId={orchestrationWorkflowId}
+            used={spend?.runs ?? 0}
+          />
+          <BudgetField
+            cap={config?.maxConcurrentTasks ?? null}
+            field={'maxConcurrentTasks'}
+            label={t('goalProcess.metricDetail.budget.parallelism')}
+            orchestrationWorkflowId={orchestrationWorkflowId}
+            placeholder={t('goalProcess.metricDetail.budget.parallelismAuto')}
+            used={inFlight}
+          />
+          {/* Raising a cap is how a user restarts a goal the coordinator parked on
+            one — say so, because the alternative gesture (Resume) looks like the
+            obvious one and does nothing while the budget is still binding. */}
+          <div className="text-xs leading-5 text-muted-foreground">
+            {t('goalProcess.metricDetail.budget.raiseNote')}
+          </div>
+        </div>
+        <CostBreakdown
+          graph={graph}
+          orchestrationWorkflowId={orchestrationWorkflowId}
+          spend={spend}
+        />
+      </div>
+    );
+  },
+);
 
-            // A row without a graph node is a Task the snapshot no longer
-            // carries — still billed, but nothing to open.
-            return row.view ? (
-              <div
-                className={cn('flex flex-col', styles.row)}
-                key={row.taskId}
-                onClick={() => openGoalNode(goalId, row.view!.node.id)}
-              >
-                {body}
-              </div>
-            ) : (
-              <div className={cn('flex flex-col', styles.staticRow)} key={row.taskId}>
-                {body}
-              </div>
-            );
-          })}
+Budget.displayName = 'GoalMetricBudget';
+
+const Duration = memo<{ orchestrationWorkflowId: string; graph: GoalGraphView }>(
+  ({ orchestrationWorkflowId, graph }) => {
+    const { t } = useTranslation('chat');
+    const { completedAt, startedAt } = graph.orchestrationWorkflow;
+    const end = completedAt ?? new Date();
+    const works = graph.nodes.filter(
+      (view) => view.node.kind === 'task' && view.attempts.length > 0,
+    );
+
+    return (
+      <div className="flex flex-col gap-3.5">
+        {startedAt && (
+          <div className="flex flex-col gap-0.5">
+            <span className={styles.label}>{t('goalProcess.metricDetail.duration.total')}</span>
+            <div className={cn('text-xl leading-7 font-semibold', styles.mono)}>
+              {formatSpan(end.getTime() - startedAt.getTime())}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {formatAbsoluteDateTime(startedAt)} →{' '}
+              {completedAt
+                ? formatAbsoluteDateTime(completedAt)
+                : t('goalProcess.metricDetail.duration.now')}
+            </div>
+          </div>
+        )}
+        <div className="flex flex-col gap-1">
+          <span className={styles.label}>{t('goalProcess.metricDetail.duration.taskSpans')}</span>
+          <div className="flex flex-col gap-0">
+            {works.map((view) => {
+              const first = view.attempts[0];
+              const last = view.attempts.at(-1)!;
+              const spanEnd = last.endedAt ?? new Date();
+              return (
+                <NodeRow
+                  graph={graph}
+                  key={view.node.id}
+                  nodeId={view.node.id}
+                  orchestrationWorkflowId={orchestrationWorkflowId}
+                  extra={
+                    <div className={cn('flex-none text-xs text-muted-foreground', styles.mono)}>
+                      {dayjs(first.startedAt).format('HH:mm')}–
+                      {last.endedAt ? dayjs(last.endedAt).format('HH:mm') : '…'} ·{' '}
+                      {formatSpan(spanEnd.getTime() - first.startedAt.getTime())}
+                    </div>
+                  }
+                />
+              );
+            })}
+          </div>
         </div>
       </div>
     );
   },
 );
 
-CostBreakdown.displayName = 'GoalMetricCostBreakdown';
-
-const Budget = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph }) => {
-  const { t } = useTranslation('chat');
-  const { config, maxRounds, maxTotalCost } = graph.goal;
-  const snapshot = useGoalStore(goalSelectors.goalGraph(goalId));
-  const spend = snapshot?.spend;
-  // In-flight Tasks are what the cap bounds — the coordinator counts the same
-  // population when deciding whether the frontier may dispatch further.
-  const inFlight = graph.nodes.filter(
-    (view) => view.node.kind === 'task' && view.node.status === 'active',
-  ).length;
-
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3.5">
-        <span className={styles.label}>{t('goalProcess.metricDetail.budget.controlTitle')}</span>
-        <BudgetField
-          cap={maxTotalCost}
-          field={'maxTotalCost'}
-          goalId={goalId}
-          label={t('goalProcess.metricDetail.budget.totalCost')}
-          used={spend?.totalCost ?? 0}
-        />
-        <BudgetField
-          cap={maxRounds}
-          field={'maxRounds'}
-          goalId={goalId}
-          label={t('goalProcess.metricDetail.budget.rounds')}
-          used={spend?.runs ?? 0}
-        />
-        <BudgetField
-          cap={config?.maxConcurrentTasks ?? null}
-          field={'maxConcurrentTasks'}
-          goalId={goalId}
-          label={t('goalProcess.metricDetail.budget.parallelism')}
-          placeholder={t('goalProcess.metricDetail.budget.parallelismAuto')}
-          used={inFlight}
-        />
-        {/* Raising a cap is how a user restarts a goal the coordinator parked on
-            one — say so, because the alternative gesture (Resume) looks like the
-            obvious one and does nothing while the budget is still binding. */}
-        <div className="text-xs leading-5 text-muted-foreground">
-          {t('goalProcess.metricDetail.budget.raiseNote')}
-        </div>
-      </div>
-      <CostBreakdown goalId={goalId} graph={graph} spend={spend} />
-    </div>
-  );
-});
-
-Budget.displayName = 'GoalMetricBudget';
-
-const Duration = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph }) => {
-  const { t } = useTranslation('chat');
-  const { completedAt, startedAt } = graph.goal;
-  const end = completedAt ?? new Date();
-  const works = graph.nodes.filter((view) => view.node.kind === 'task' && view.attempts.length > 0);
-
-  return (
-    <div className="flex flex-col gap-3.5">
-      {startedAt && (
-        <div className="flex flex-col gap-0.5">
-          <span className={styles.label}>{t('goalProcess.metricDetail.duration.total')}</span>
-          <div className={cn('text-xl leading-7 font-semibold', styles.mono)}>
-            {formatSpan(end.getTime() - startedAt.getTime())}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {formatAbsoluteDateTime(startedAt)} →{' '}
-            {completedAt
-              ? formatAbsoluteDateTime(completedAt)
-              : t('goalProcess.metricDetail.duration.now')}
-          </div>
-        </div>
-      )}
-      <div className="flex flex-col gap-1">
-        <span className={styles.label}>{t('goalProcess.metricDetail.duration.taskSpans')}</span>
-        <div className="flex flex-col gap-0">
-          {works.map((view) => {
-            const first = view.attempts[0];
-            const last = view.attempts.at(-1)!;
-            const spanEnd = last.endedAt ?? new Date();
-            return (
-              <NodeRow
-                goalId={goalId}
-                graph={graph}
-                key={view.node.id}
-                nodeId={view.node.id}
-                extra={
-                  <div className={cn('flex-none text-xs text-muted-foreground', styles.mono)}>
-                    {dayjs(first.startedAt).format('HH:mm')}–
-                    {last.endedAt ? dayjs(last.endedAt).format('HH:mm') : '…'} ·{' '}
-                    {formatSpan(spanEnd.getTime() - first.startedAt.getTime())}
-                  </div>
-                }
-              />
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-});
-
 Duration.displayName = 'GoalMetricDuration';
 
-const Liveness = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph }) => {
-  const { t } = useTranslation('chat');
-  const latest = useMemo(
-    () =>
-      graph.nodes.reduce<Date | undefined>((max, view) => {
-        const at = view.node.updatedAt;
-        return !max || at > max ? at : max;
-      }, undefined),
-    [graph],
-  );
-  const running = graph.nodes.filter(
-    (view) => view.node.kind === 'task' && view.node.status === 'active',
-  );
+const Liveness = memo<{ orchestrationWorkflowId: string; graph: GoalGraphView }>(
+  ({ orchestrationWorkflowId, graph }) => {
+    const { t } = useTranslation('chat');
+    const latest = useMemo(
+      () =>
+        graph.nodes.reduce<Date | undefined>((max, view) => {
+          const at = view.node.updatedAt;
+          return !max || at > max ? at : max;
+        }, undefined),
+      [graph],
+    );
+    const running = graph.nodes.filter(
+      (view) => view.node.kind === 'task' && view.node.status === 'active',
+    );
 
-  return (
-    <div className="flex flex-col gap-3.5">
-      <div className="flex flex-col gap-0.5">
-        <span className={styles.label}>{t('goalProcess.metricDetail.liveness.latest')}</span>
-        <div className={cn('text-xl leading-7 font-semibold', styles.mono)}>
-          {latest ? formatAbsoluteDateTime(latest) : '—'}
-        </div>
-      </div>
-      {running.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <span className={styles.label}>{t('goalProcess.metricDetail.liveness.running')}</span>
-          <div className="flex flex-col gap-0">
-            {running.map((view) => (
-              <NodeRow goalId={goalId} graph={graph} key={view.node.id} nodeId={view.node.id} />
-            ))}
+    return (
+      <div className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-0.5">
+          <span className={styles.label}>{t('goalProcess.metricDetail.liveness.latest')}</span>
+          <div className={cn('text-xl leading-7 font-semibold', styles.mono)}>
+            {latest ? formatAbsoluteDateTime(latest) : '—'}
           </div>
         </div>
-      )}
-      {/* The contract that makes "walk away" safe: event-driven advancement
+        {running.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <span className={styles.label}>{t('goalProcess.metricDetail.liveness.running')}</span>
+            <div className="flex flex-col gap-0">
+              {running.map((view) => (
+                <NodeRow
+                  graph={graph}
+                  key={view.node.id}
+                  nodeId={view.node.id}
+                  orchestrationWorkflowId={orchestrationWorkflowId}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        {/* The contract that makes "walk away" safe: event-driven advancement
           plus the recovery sweep. State it where the user checks for a pulse. */}
-      <div className="text-xs leading-5 text-muted-foreground">
-        {t('goalProcess.metricDetail.liveness.driver')}
+        <div className="text-xs leading-5 text-muted-foreground">
+          {t('goalProcess.metricDetail.liveness.driver')}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 Liveness.displayName = 'GoalMetricLiveness';
 
 const Body = memo(() => {
   const { t } = useTranslation('chat');
   const view = useChatStore(chatPortalSelectors.goalMetricView);
-  const snapshot = useGoalStore(goalSelectors.goalGraph(view?.goalId ?? ''));
+  const snapshot = useGoalStore(goalSelectors.goalGraph(view?.orchestrationWorkflowId ?? ''));
   const useFetchGoalGraph = useGoalStore((s) => s.useFetchGoalGraph);
   // Same SWR key as the goal page, so this shares its request; it only adds the
   // loading / error status the store snapshot alone cannot express.
-  const { error, isLoading, mutate } = useFetchGoalGraph(view?.goalId);
+  const { error, isLoading, mutate } = useFetchGoalGraph(view?.orchestrationWorkflowId);
   const graph = useMemo(() => (snapshot ? buildGoalGraphView(snapshot) : undefined), [snapshot]);
 
   if (!view) return null;
@@ -536,16 +559,28 @@ const Body = memo(() => {
       />
     );
   }
-  const { goalId, metric } = view;
+  const { orchestrationWorkflowId, metric } = view;
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto p-4 text-sm leading-5.5">
-      {metric === 'lifecycle' && <Lifecycle goalId={goalId} graph={graph} />}
-      {metric === 'tasks' && <Tasks goalId={goalId} graph={graph} />}
-      {metric === 'findings' && <Findings goalId={goalId} graph={graph} />}
-      {metric === 'budget' && <Budget goalId={goalId} graph={graph} />}
-      {metric === 'duration' && <Duration goalId={goalId} graph={graph} />}
-      {metric === 'liveness' && <Liveness goalId={goalId} graph={graph} />}
+      {metric === 'lifecycle' && (
+        <Lifecycle graph={graph} orchestrationWorkflowId={orchestrationWorkflowId} />
+      )}
+      {metric === 'tasks' && (
+        <Tasks graph={graph} orchestrationWorkflowId={orchestrationWorkflowId} />
+      )}
+      {metric === 'findings' && (
+        <Findings graph={graph} orchestrationWorkflowId={orchestrationWorkflowId} />
+      )}
+      {metric === 'budget' && (
+        <Budget graph={graph} orchestrationWorkflowId={orchestrationWorkflowId} />
+      )}
+      {metric === 'duration' && (
+        <Duration graph={graph} orchestrationWorkflowId={orchestrationWorkflowId} />
+      )}
+      {metric === 'liveness' && (
+        <Liveness graph={graph} orchestrationWorkflowId={orchestrationWorkflowId} />
+      )}
     </div>
   );
 });

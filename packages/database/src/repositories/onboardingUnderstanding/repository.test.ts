@@ -8,6 +8,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { UserPersonaModel } from '../../models/userMemory/persona';
 import {
   agents,
@@ -179,10 +180,12 @@ describe('OnboardingUnderstandingRepository', () => {
   beforeEach(async () => {
     await db.delete(users).where(inArray(users.id, [userId, otherUserId]));
     await db.insert(users).values([{ id: userId }, { id: otherUserId }]);
-    await db.insert(agents).values([
-      { id: agentId, userId },
-      { id: otherAgentId, userId },
-    ]);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, [
+        { id: agentId, userId },
+        { id: otherAgentId, userId },
+      ]),
+    );
     await installTopic();
     repository = new OnboardingUnderstandingRepository(db, userId);
   });

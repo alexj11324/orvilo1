@@ -1,5 +1,5 @@
 import { Markdown } from '@lobehub/ui';
-import type { GoalGraphSnapshot } from '@orvilo/types';
+import type { OrchestrationWorkflowGraphSnapshot } from '@orvilo/types';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -28,7 +28,7 @@ export const ExperimentDetail = ({
 }: {
   graph: GoalGraphView;
   view: GoalNodeView;
-  snapshot: GoalGraphSnapshot;
+  snapshot: OrchestrationWorkflowGraphSnapshot;
   children: ReactNode;
 }) => {
   const { t } = useTranslation('chat');
@@ -105,7 +105,7 @@ export const ExperimentDetail = ({
                   justifyContent: 'flex-start',
                   textAlign: 'start',
                 }}
-                onClick={() => openNode(graph.goal.id, relative.node.id)}
+                onClick={() => openNode(graph.orchestrationWorkflow.id, relative.node.id)}
               >
                 {t(kind === 'parents' ? 'goalExperiment.parentLink' : 'goalExperiment.childLink', {
                   number: relative.seq,

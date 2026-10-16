@@ -1,8 +1,12 @@
-import type { GoalGraphEdge, GoalGraphNode, GoalNodeKind } from '@orvilo/types';
+import type {
+  OrchestrationWorkflowGraphEdge,
+  OrchestrationWorkflowGraphNode,
+  OrchestrationWorkflowNodeKind,
+} from '@orvilo/types';
 
 import { type LayoutBox, layoutGraph } from './layout';
 
-export interface ExplorationEdge extends GoalGraphEdge {
+export interface ExplorationEdge extends OrchestrationWorkflowGraphEdge {
   originalSource: string;
   originalTarget: string;
   projected: boolean;
@@ -10,10 +14,10 @@ export interface ExplorationEdge extends GoalGraphEdge {
 
 /** Collapse is a projection of one global graph, never navigation to another scope. */
 export const explorationMap = (
-  nodes: GoalGraphNode[],
-  edges: GoalGraphEdge[],
+  nodes: OrchestrationWorkflowGraphNode[],
+  edges: OrchestrationWorkflowGraphEdge[],
   collapsed: ReadonlySet<string>,
-  hiddenKinds: ReadonlySet<GoalNodeKind> = new Set(),
+  hiddenKinds: ReadonlySet<OrchestrationWorkflowNodeKind> = new Set(),
 ) => {
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const owner = new Map(
@@ -66,7 +70,7 @@ export const explorationMap = (
   }
 
   const boxes: Record<string, LayoutBox> = {};
-  const ordered: GoalGraphNode[] = [];
+  const ordered: OrchestrationWorkflowGraphNode[] = [];
   const children = (parent?: string) => visible.filter((node) => parents.get(node.id) === parent);
   const branchAt = (id: string, scope?: string): string | undefined => {
     let current: string | undefined = id;

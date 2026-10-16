@@ -96,7 +96,7 @@ drops builtin specs at dispatch admission). Gates at three loci, all
 upstream of dispatch minting:
 
 1. **Intake selection** — when the task's contract requires the surface
-   (`taskRequiresBuiltinToolMount`: goal-bound tasks, acceptance-enabled
+   (`taskRequiresBuiltinToolMount`: orchestration-workflow-bound tasks, acceptance-enabled
    tasks, legacy agent-mode briefs), `pickTieredAgent` treats
    mount-incapable roster rows as ineligible for _that_ task. Non-capable
    agents stay fully pickable for normal tasks — they are skipped per task,
@@ -105,23 +105,23 @@ upstream of dispatch minting:
    (`assignee_agent_unusable` /
    `assignee_engine_cannot_mount_builtin_tool_surface`) instead of minting a
    dispatch that can only throw at admission.
-2. **Goal binding** — `GoalService.create`/`setAgent`/`restart` reject a
+2. **Orchestration workflow binding** — `Orchestration workflowService.create`/`setAgent`/`restart` reject a
    mount-incapable bound agent with `BAD_REQUEST` (the bound agent executes
-   every Task the coordinator creates, and goal work always requires the
-   surface). A goal bound _before_ the gate existed is caught at
+   every Task the coordinator creates, and orchestration workflow work always requires the
+   surface). A orchestration workflow bound _before_ the gate existed is caught at
    `dispatchWork`: the task is parked `paused` with the reason recorded and
    handed to the same manager-or-human gate every unresolvable failure uses
    — no dispatch minted, no admission throw.
-3. **Goal supervisor** — its virtual agent is the builtin `orvilo` binding
-   (mount-capable by construction), but a heterogeneous goal-model override
+3. **Orchestration workflow supervisor** — its virtual agent is the builtin `orvilo` binding
+   (mount-capable by construction), but a heterogeneous orchestration-workflow-model override
    retypes it, so the diagnostic dispatch checks the effective binding and
    escalates the incident immediately instead of parking on the diagnosis
    timeout.
 
 Defense-in-depth stays: `requiredToolIds` still throws at dispatch
 admission if a required builtin tool cannot mount. There is no UI picker
-that binds a goal to an agent (the create modal forwards a page-context
-`agentId`, and `goal.setAgent` is service/TRPC-only), so nothing is grayed
+that binds a orchestration workflow to an agent (the create modal forwards a page-context
+`agentId`, and `orchestrationWorkflow.setAgent` is service/TRPC-only), so nothing is grayed
 out yet — gating lives entirely at the service layer.
 
 ## Escalate-on-failure

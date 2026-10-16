@@ -14,19 +14,19 @@ describe('deriveOperationGoals', () => {
     const goals = deriveOperationGoals([
       block([
         {
-          apiName: 'createGoal',
+          apiName: 'startOrchestrationWorkflow',
           arguments: JSON.stringify({
             criteria: [{ title: 'Four lines' }, { title: 'No English' }],
             maxIterations: 3,
             name: 'San Francisco night fog',
           }),
           id: 'call-1',
-          identifier: 'orvilo-goal',
+          identifier: 'orvilo-orchestration-workflow',
           result: {
             content: 'started',
             id: 'tool-1',
             state: {
-              goalId: 'goal-41',
+              orchestrationWorkflowId: 'goal-41',
               name: 'San Francisco night fog',
               success: true,
               taskId: 'task-41',
@@ -38,7 +38,7 @@ describe('deriveOperationGoals', () => {
     ]);
 
     expect(goals).toEqual([
-      { criteriaCount: 2, goalId: 'goal-41', name: 'San Francisco night fog' },
+      { criteriaCount: 2, orchestrationWorkflowId: 'goal-41', name: 'San Francisco night fog' },
     ]);
   });
 
@@ -47,14 +47,14 @@ describe('deriveOperationGoals', () => {
       deriveOperationGoals([
         block([
           {
-            apiName: 'createGoal',
+            apiName: 'startOrchestrationWorkflow',
             arguments: '{}',
             id: 'pending',
             identifier: 'orvilo-task',
             type: 'builtin',
           },
           {
-            apiName: 'createGoal',
+            apiName: 'startOrchestrationWorkflow',
             arguments: '{}',
             id: 'failed',
             identifier: 'orvilo-task',
@@ -62,7 +62,7 @@ describe('deriveOperationGoals', () => {
               content: 'failed',
               error: { message: 'boom' },
               id: 'tool-failed',
-              state: { goalId: 'goal-42', success: false },
+              state: { orchestrationWorkflowId: 'goal-42', success: false },
             },
             type: 'builtin',
           },
@@ -74,7 +74,7 @@ describe('deriveOperationGoals', () => {
             result: {
               content: 'created',
               id: 'tool-task',
-              state: { goalId: 'goal-43', success: true },
+              state: { orchestrationWorkflowId: 'goal-43', success: true },
             },
             type: 'builtin',
           },

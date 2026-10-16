@@ -329,7 +329,7 @@ export const deleteTaskWork = async (
  * gate, so without this a caller could wipe a live Work's version history by
  * id alone. `external` / `file` Works have no backing row and are always
  * eligible. Cascades `work_versions`, `project_works` and
- * `goal_node_work_versions` via FK.
+ * `orchestration_workflow_node_work_versions` via FK.
  */
 export const deleteWork = async (ctx: WorkContext, params: DeleteWorkParams): Promise<void> => {
   const backingResourceGone = sql<boolean>`case ${works.resourceType}

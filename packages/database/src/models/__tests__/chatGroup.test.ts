@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { OrviloDatabase } from '@/database/type';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import type { NewChatGroup } from '../../schemas';
 import {
   agents as agentsTable,
@@ -201,11 +202,13 @@ describe('ChatGroupModel', () => {
         ]);
 
         // Create agents
-        await trx.insert(agentsTable).values([
-          { id: 'agent-1', userId, title: 'Agent 1' },
-          { id: 'agent-2', userId, title: 'Agent 2' },
-          { id: 'agent-3', userId, title: 'Agent 3' },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            { id: 'agent-1', userId, title: 'Agent 1' },
+            { id: 'agent-2', userId, title: 'Agent 2' },
+            { id: 'agent-3', userId, title: 'Agent 3' },
+          ]),
+        );
 
         // Link agents to groups
         await trx.insert(chatGroupsAgents).values([
@@ -259,10 +262,12 @@ describe('ChatGroupModel', () => {
           title: 'Group with Agents',
         });
 
-        await trx.insert(agentsTable).values([
-          { id: 'agent-1', userId, title: 'Agent 1' },
-          { id: 'agent-2', userId, title: 'Agent 2' },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            { id: 'agent-1', userId, title: 'Agent 1' },
+            { id: 'agent-2', userId, title: 'Agent 2' },
+          ]),
+        );
 
         await trx.insert(chatGroupsAgents).values([
           { chatGroupId: 'group-with-agents', agentId: 'agent-1', userId, order: 1 },
@@ -329,10 +334,12 @@ describe('ChatGroupModel', () => {
   describe('createWithAgents', () => {
     it('should create group and add agents', async () => {
       // Create test agents
-      await serverDB.insert(agentsTable).values([
-        { id: 'agent-1', userId, title: 'Agent 1' },
-        { id: 'agent-2', userId, title: 'Agent 2' },
-      ]);
+      await serverDB.insert(agentsTable).values(
+        await withTestAgentDevices(serverDB, [
+          { id: 'agent-1', userId, title: 'Agent 1' },
+          { id: 'agent-2', userId, title: 'Agent 2' },
+        ]),
+      );
 
       const groupData: Omit<NewChatGroup, 'userId'> = {
         title: 'Group with Agents',
@@ -412,23 +419,25 @@ describe('ChatGroupModel', () => {
         visibility: 'private',
         workspaceId,
       });
-      await serverDB.insert(agentsTable).values([
-        {
-          id: 'publish-supervisor',
-          title: 'Supervisor',
-          userId,
-          virtual: true,
-          visibility: 'private',
-          workspaceId,
-        },
-        {
-          id: 'publish-private-member',
-          title: 'Private member',
-          userId,
-          visibility: 'private',
-          workspaceId,
-        },
-      ]);
+      await serverDB.insert(agentsTable).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            id: 'publish-supervisor',
+            title: 'Supervisor',
+            userId,
+            virtual: true,
+            visibility: 'private',
+            workspaceId,
+          },
+          {
+            id: 'publish-private-member',
+            title: 'Private member',
+            userId,
+            visibility: 'private',
+            workspaceId,
+          },
+        ]),
+      );
       await serverDB.insert(chatGroupsAgents).values([
         {
           agentId: 'publish-supervisor',
@@ -472,11 +481,13 @@ describe('ChatGroupModel', () => {
           title: 'Test Group',
         });
 
-        await trx.insert(agentsTable).values({
-          id: 'test-agent',
-          userId,
-          title: 'Test Agent',
-        });
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, {
+            id: 'test-agent',
+            userId,
+            title: 'Test Agent',
+          }),
+        );
       });
 
       const result = await chatGroupModel.addAgentToGroup('test-group', 'test-agent', {
@@ -500,11 +511,13 @@ describe('ChatGroupModel', () => {
           title: 'Test Group 2',
         });
 
-        await trx.insert(agentsTable).values({
-          id: 'test-agent-2',
-          userId,
-          title: 'Test Agent 2',
-        });
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, {
+            id: 'test-agent-2',
+            userId,
+            title: 'Test Agent 2',
+          }),
+        );
       });
 
       const result = await chatGroupModel.addAgentToGroup('test-group-2', 'test-agent-2');
@@ -526,12 +539,14 @@ describe('ChatGroupModel', () => {
           { id: 'owner-group', title: 'Owner', userId },
           { id: 'poacher-group', title: 'Poacher', userId },
         ]);
-        await trx.insert(agentsTable).values({
-          id: 'group-built-member',
-          title: 'Group Built',
-          userId,
-          virtual: true,
-        });
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, {
+            id: 'group-built-member',
+            title: 'Group Built',
+            userId,
+            virtual: true,
+          }),
+        );
         await trx.insert(chatGroupsAgents).values({
           agentId: 'group-built-member',
           chatGroupId: 'owner-group',
@@ -557,13 +572,15 @@ describe('ChatGroupModel', () => {
       // a group and then leaving would delete the Inbox.
       await serverDB.transaction(async (trx) => {
         await trx.insert(chatGroups).values({ id: 'builtin-add-group', title: 'B', userId });
-        await trx.insert(agentsTable).values({
-          id: 'my-inbox',
-          slug: 'inbox',
-          title: 'Inbox',
-          userId,
-          virtual: true,
-        });
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, {
+            id: 'my-inbox',
+            slug: 'inbox',
+            title: 'Inbox',
+            userId,
+            virtual: true,
+          }),
+        );
       });
 
       await expect(
@@ -583,12 +600,14 @@ describe('ChatGroupModel', () => {
       // every virtual agent breaks the builder outright.
       await serverDB.transaction(async (trx) => {
         await trx.insert(chatGroups).values({ id: 'builder-group', title: 'Builder', userId });
-        await trx.insert(agentsTable).values({
-          id: 'freshly-built',
-          title: 'Freshly Built',
-          userId,
-          virtual: true,
-        });
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, {
+            id: 'freshly-built',
+            title: 'Freshly Built',
+            userId,
+            virtual: true,
+          }),
+        );
       });
 
       const result = await chatGroupModel.addAgentsToGroup('builder-group', ['freshly-built']);
@@ -606,11 +625,13 @@ describe('ChatGroupModel', () => {
           title: 'Multi Agent Group',
         });
 
-        await trx.insert(agentsTable).values([
-          { id: 'agent-1', userId, title: 'Agent 1' },
-          { id: 'agent-2', userId, title: 'Agent 2' },
-          { id: 'agent-3', userId, title: 'Agent 3' },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            { id: 'agent-1', userId, title: 'Agent 1' },
+            { id: 'agent-2', userId, title: 'Agent 2' },
+            { id: 'agent-3', userId, title: 'Agent 3' },
+          ]),
+        );
       });
 
       const result = await chatGroupModel.addAgentsToGroup('multi-agent-group', [
@@ -632,12 +653,14 @@ describe('ChatGroupModel', () => {
           title: 'Order Add Group',
         });
 
-        await trx.insert(agentsTable).values([
-          { id: 'oa-existing', userId, title: 'Existing' },
-          { id: 'oa-1', userId, title: 'A1' },
-          { id: 'oa-2', userId, title: 'A2' },
-          { id: 'oa-3', userId, title: 'A3' },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            { id: 'oa-existing', userId, title: 'Existing' },
+            { id: 'oa-1', userId, title: 'A1' },
+            { id: 'oa-2', userId, title: 'A2' },
+            { id: 'oa-3', userId, title: 'A3' },
+          ]),
+        );
 
         // Existing member sitting at the default order 0.
         await trx.insert(chatGroupsAgents).values({
@@ -671,10 +694,12 @@ describe('ChatGroupModel', () => {
           title: 'Existing Agent Group',
         });
 
-        await trx.insert(agentsTable).values([
-          { id: 'existing-agent', userId, title: 'Existing Agent' },
-          { id: 'new-agent', userId, title: 'New Agent' },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            { id: 'existing-agent', userId, title: 'Existing Agent' },
+            { id: 'new-agent', userId, title: 'New Agent' },
+          ]),
+        );
 
         // Add one agent already
         await trx.insert(chatGroupsAgents).values({
@@ -708,11 +733,13 @@ describe('ChatGroupModel', () => {
           title: 'All Existing Group',
         });
 
-        await trx.insert(agentsTable).values({
-          id: 'existing-only',
-          userId,
-          title: 'Existing Only',
-        });
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, {
+            id: 'existing-only',
+            userId,
+            title: 'Existing Only',
+          }),
+        );
 
         await trx.insert(chatGroupsAgents).values({
           chatGroupId: 'all-existing-group',
@@ -746,13 +773,15 @@ describe('ChatGroupModel', () => {
             workspaceId,
             visibility: 'private',
           });
-          await trx.insert(agentsTable).values({
-            id: 'agt-mine-private',
-            title: 'Mine — private agent',
-            userId: otherUserId,
-            workspaceId,
-            visibility: 'private',
-          });
+          await trx.insert(agentsTable).values(
+            await withTestAgentDevices(trx, {
+              id: 'agt-mine-private',
+              title: 'Mine — private agent',
+              userId: otherUserId,
+              workspaceId,
+              visibility: 'private',
+            }),
+          );
         });
 
         const result = await workspaceChatGroupModel.addAgentsToGroup('mine-private-group', [
@@ -771,13 +800,15 @@ describe('ChatGroupModel', () => {
             workspaceId,
             visibility: 'private',
           });
-          await trx.insert(agentsTable).values({
-            id: 'agt-ws-public',
-            title: 'Workspace public agent',
-            userId, // owned by the workspace owner — visible to all members
-            workspaceId,
-            visibility: 'public',
-          });
+          await trx.insert(agentsTable).values(
+            await withTestAgentDevices(trx, {
+              id: 'agt-ws-public',
+              title: 'Workspace public agent',
+              userId, // owned by the workspace owner — visible to all members
+              workspaceId,
+              visibility: 'public',
+            }),
+          );
         });
 
         const result = await workspaceChatGroupModel.addAgentsToGroup('mine-private-group-pub', [
@@ -796,13 +827,15 @@ describe('ChatGroupModel', () => {
             workspaceId,
             visibility: 'private',
           });
-          await trx.insert(agentsTable).values({
-            id: 'agt-other-private',
-            title: 'Other private agent',
-            userId,
-            workspaceId,
-            visibility: 'private',
-          });
+          await trx.insert(agentsTable).values(
+            await withTestAgentDevices(trx, {
+              id: 'agt-other-private',
+              title: 'Other private agent',
+              userId,
+              workspaceId,
+              visibility: 'private',
+            }),
+          );
         });
 
         await expect(
@@ -821,13 +854,15 @@ describe('ChatGroupModel', () => {
             workspaceId,
             visibility: 'public',
           });
-          await trx.insert(agentsTable).values({
-            id: 'agt-mine-private-2',
-            title: 'Mine — private agent',
-            userId: otherUserId,
-            workspaceId,
-            visibility: 'private',
-          });
+          await trx.insert(agentsTable).values(
+            await withTestAgentDevices(trx, {
+              id: 'agt-mine-private-2',
+              title: 'Mine — private agent',
+              userId: otherUserId,
+              workspaceId,
+              visibility: 'private',
+            }),
+          );
         });
 
         await expect(
@@ -844,13 +879,15 @@ describe('ChatGroupModel', () => {
             workspaceId,
             visibility: 'public',
           });
-          await trx.insert(agentsTable).values({
-            id: 'agt-mine-private-3',
-            title: 'Mine — private agent',
-            userId: otherUserId,
-            workspaceId,
-            visibility: 'private',
-          });
+          await trx.insert(agentsTable).values(
+            await withTestAgentDevices(trx, {
+              id: 'agt-mine-private-3',
+              title: 'Mine — private agent',
+              userId: otherUserId,
+              workspaceId,
+              visibility: 'private',
+            }),
+          );
         });
 
         await expect(
@@ -870,11 +907,13 @@ describe('ChatGroupModel', () => {
           title: 'Remove Test Group',
         });
 
-        await trx.insert(agentsTable).values({
-          id: 'remove-test-agent',
-          userId,
-          title: 'Remove Test Agent',
-        });
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, {
+            id: 'remove-test-agent',
+            userId,
+            title: 'Remove Test Agent',
+          }),
+        );
 
         await trx.insert(chatGroupsAgents).values({
           chatGroupId: 'remove-test-group',
@@ -914,11 +953,13 @@ describe('ChatGroupModel', () => {
           title: 'Batch Remove Group',
         });
 
-        await trx.insert(agentsTable).values([
-          { id: 'agent-to-remove-1', userId, title: 'Agent 1' },
-          { id: 'agent-to-remove-2', userId, title: 'Agent 2' },
-          { id: 'agent-to-keep', userId, title: 'Agent to Keep' },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            { id: 'agent-to-remove-1', userId, title: 'Agent 1' },
+            { id: 'agent-to-remove-2', userId, title: 'Agent 2' },
+            { id: 'agent-to-keep', userId, title: 'Agent to Keep' },
+          ]),
+        );
 
         await trx.insert(chatGroupsAgents).values([
           { chatGroupId: 'batch-remove-group', agentId: 'agent-to-remove-1', userId },
@@ -948,11 +989,13 @@ describe('ChatGroupModel', () => {
           title: 'Empty Remove Group',
         });
 
-        await trx.insert(agentsTable).values({
-          id: 'agent-stays',
-          userId,
-          title: 'Agent Stays',
-        });
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, {
+            id: 'agent-stays',
+            userId,
+            title: 'Agent Stays',
+          }),
+        );
 
         await trx.insert(chatGroupsAgents).values({
           chatGroupId: 'empty-remove-group',
@@ -996,10 +1039,12 @@ describe('ChatGroupModel', () => {
           title: 'Remove All Group',
         });
 
-        await trx.insert(agentsTable).values([
-          { id: 'remove-all-1', userId, title: 'Remove All 1' },
-          { id: 'remove-all-2', userId, title: 'Remove All 2' },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            { id: 'remove-all-1', userId, title: 'Remove All 1' },
+            { id: 'remove-all-2', userId, title: 'Remove All 2' },
+          ]),
+        );
 
         await trx.insert(chatGroupsAgents).values([
           { chatGroupId: 'remove-all-group', agentId: 'remove-all-1', userId },
@@ -1027,11 +1072,13 @@ describe('ChatGroupModel', () => {
           title: 'Update Agent Group',
         });
 
-        await trx.insert(agentsTable).values({
-          id: 'update-agent',
-          userId,
-          title: 'Update Agent',
-        });
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, {
+            id: 'update-agent',
+            userId,
+            title: 'Update Agent',
+          }),
+        );
 
         await trx.insert(chatGroupsAgents).values({
           chatGroupId: 'update-agent-group',
@@ -1085,11 +1132,13 @@ describe('ChatGroupModel', () => {
           title: 'Cascade Delete Group',
         });
 
-        await trx.insert(agentsTable).values({
-          id: 'cascade-agent',
-          userId,
-          title: 'Cascade Agent',
-        });
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, {
+            id: 'cascade-agent',
+            userId,
+            title: 'Cascade Agent',
+          }),
+        );
 
         await trx.insert(chatGroupsAgents).values({
           chatGroupId: 'cascade-delete-group',
@@ -1114,14 +1163,16 @@ describe('ChatGroupModel', () => {
           .insert(chatGroups)
           .values({ id: 'owned-cleanup-group', title: 'Owned Cleanup', userId });
 
-        await trx.insert(agentsTable).values([
-          // Group-built members: the supervisor plus a virtual member. Neither
-          // has any existence outside this group.
-          { id: 'owned-supervisor', title: 'Supervisor', userId, virtual: true },
-          { id: 'owned-member', title: 'Owned Member', userId, virtual: true },
-          // Someone's own agent, merely linked in.
-          { id: 'referenced-member', title: 'Referenced Member', userId, virtual: false },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            // Group-built members: the supervisor plus a virtual member. Neither
+            // has any existence outside this group.
+            { id: 'owned-supervisor', title: 'Supervisor', userId, virtual: true },
+            { id: 'owned-member', title: 'Owned Member', userId, virtual: true },
+            // Someone's own agent, merely linked in.
+            { id: 'referenced-member', title: 'Referenced Member', userId, virtual: false },
+          ]),
+        );
 
         await trx.insert(chatGroupsAgents).values([
           {
@@ -1162,10 +1213,12 @@ describe('ChatGroupModel', () => {
           .insert(chatGroups)
           .values({ id: 'legacy-cleanup-group', title: 'Legacy Cleanup', userId });
 
-        await trx.insert(agentsTable).values([
-          { id: 'legacy-virtual', title: 'Legacy Virtual', userId, virtual: true },
-          { id: 'legacy-real', title: 'Legacy Real', userId, virtual: false },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            { id: 'legacy-virtual', title: 'Legacy Virtual', userId, virtual: true },
+            { id: 'legacy-real', title: 'Legacy Real', userId, virtual: false },
+          ]),
+        );
 
         await trx.insert(chatGroupsAgents).values([
           { agentId: 'legacy-virtual', chatGroupId: 'legacy-cleanup-group', userId },
@@ -1198,14 +1251,16 @@ describe('ChatGroupModel', () => {
           workspaceId,
         });
 
-        await trx.insert(agentsTable).values({
-          id: 'ws-private-owned',
-          title: 'Private Owned',
-          userId: otherUserId,
-          virtual: true,
-          visibility: 'private',
-          workspaceId,
-        });
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, {
+            id: 'ws-private-owned',
+            title: 'Private Owned',
+            userId: otherUserId,
+            virtual: true,
+            visibility: 'private',
+            workspaceId,
+          }),
+        );
 
         await trx.insert(chatGroupsAgents).values({
           agentId: 'ws-private-owned',
@@ -1234,13 +1289,15 @@ describe('ChatGroupModel', () => {
           .insert(chatGroups)
           .values({ id: 'builtin-cleanup-group', title: 'Builtin Cleanup', userId });
 
-        await trx.insert(agentsTable).values({
-          id: 'builtin-inbox',
-          slug: 'inbox',
-          title: 'Inbox',
-          userId,
-          virtual: true,
-        });
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, {
+            id: 'builtin-inbox',
+            slug: 'inbox',
+            title: 'Inbox',
+            userId,
+            virtual: true,
+          }),
+        );
 
         await trx.insert(chatGroupsAgents).values({
           agentId: 'builtin-inbox',
@@ -1302,11 +1359,13 @@ describe('ChatGroupModel', () => {
           title: 'Ordered Group',
         });
 
-        await trx.insert(agentsTable).values([
-          { id: 'agent-1', userId, title: 'Agent 1' },
-          { id: 'agent-2', userId, title: 'Agent 2' },
-          { id: 'agent-3', userId, title: 'Agent 3' },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            { id: 'agent-1', userId, title: 'Agent 1' },
+            { id: 'agent-2', userId, title: 'Agent 2' },
+            { id: 'agent-3', userId, title: 'Agent 3' },
+          ]),
+        );
 
         await trx.insert(chatGroupsAgents).values([
           { chatGroupId: 'ordered-group', agentId: 'agent-1', userId, order: 2 },
@@ -1332,11 +1391,13 @@ describe('ChatGroupModel', () => {
           title: 'Numeric Order Group',
         });
 
-        await trx.insert(agentsTable).values([
-          { id: 'agent-order-1', userId, title: 'Agent Order 1' },
-          { id: 'agent-order-2', userId, title: 'Agent Order 2' },
-          { id: 'agent-order-10', userId, title: 'Agent Order 10' },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            { id: 'agent-order-1', userId, title: 'Agent Order 1' },
+            { id: 'agent-order-2', userId, title: 'Agent Order 2' },
+            { id: 'agent-order-10', userId, title: 'Agent Order 10' },
+          ]),
+        );
 
         await trx.insert(chatGroupsAgents).values([
           { chatGroupId: 'numeric-order-group', agentId: 'agent-order-10', userId, order: 10 },
@@ -1368,11 +1429,13 @@ describe('ChatGroupModel', () => {
           title: 'Legacy Tie Group',
         });
 
-        await trx.insert(agentsTable).values([
-          { id: 'legacy-c', userId, title: 'Legacy C' },
-          { id: 'legacy-a', userId, title: 'Legacy A' },
-          { id: 'legacy-b', userId, title: 'Legacy B' },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            { id: 'legacy-c', userId, title: 'Legacy C' },
+            { id: 'legacy-a', userId, title: 'Legacy A' },
+            { id: 'legacy-b', userId, title: 'Legacy B' },
+          ]),
+        );
 
         await trx.insert(chatGroupsAgents).values([
           {
@@ -1422,10 +1485,12 @@ describe('ChatGroupModel', () => {
           title: 'Enabled Test Group',
         });
 
-        await trx.insert(agentsTable).values([
-          { id: 'enabled-agent', userId, title: 'Enabled Agent' },
-          { id: 'disabled-agent', userId, title: 'Disabled Agent' },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            { id: 'enabled-agent', userId, title: 'Enabled Agent' },
+            { id: 'disabled-agent', userId, title: 'Disabled Agent' },
+          ]),
+        );
 
         await trx.insert(chatGroupsAgents).values([
           { chatGroupId: 'enabled-test-group', agentId: 'enabled-agent', userId, enabled: true },
@@ -1452,11 +1517,13 @@ describe('ChatGroupModel', () => {
           { id: 'group-c', userId, title: 'Group C' },
         ]);
 
-        await trx.insert(agentsTable).values([
-          { id: 'agent-x', userId, title: 'Agent X' },
-          { id: 'agent-y', userId, title: 'Agent Y' },
-          { id: 'agent-z', userId, title: 'Agent Z' },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            { id: 'agent-x', userId, title: 'Agent X' },
+            { id: 'agent-y', userId, title: 'Agent Y' },
+            { id: 'agent-z', userId, title: 'Agent Z' },
+          ]),
+        );
 
         await trx.insert(chatGroupsAgents).values([
           { chatGroupId: 'group-a', agentId: 'agent-x', userId },
@@ -1496,10 +1563,12 @@ describe('ChatGroupModel', () => {
           { id: 'other-user-group', userId: otherUserId, title: 'Other User Group' },
         ]);
 
-        await trx.insert(agentsTable).values([
-          { id: 'user-agent', userId, title: 'User Agent' },
-          { id: 'other-agent', userId: otherUserId, title: 'Other Agent' },
-        ]);
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, [
+            { id: 'user-agent', userId, title: 'User Agent' },
+            { id: 'other-agent', userId: otherUserId, title: 'Other Agent' },
+          ]),
+        );
 
         await trx.insert(chatGroupsAgents).values([
           { chatGroupId: 'user-group', agentId: 'user-agent', userId },
@@ -1522,12 +1591,14 @@ describe('ChatGroupModel', () => {
           userId,
           workspaceId,
         });
-        await trx.insert(agentsTable).values({
-          id: 'workspace-agent',
-          title: 'Workspace Agent',
-          userId,
-          workspaceId,
-        });
+        await trx.insert(agentsTable).values(
+          await withTestAgentDevices(trx, {
+            id: 'workspace-agent',
+            title: 'Workspace Agent',
+            userId,
+            workspaceId,
+          }),
+        );
         await trx.insert(chatGroupsAgents).values({
           agentId: 'workspace-agent',
           chatGroupId: 'workspace-group',
@@ -1544,10 +1615,12 @@ describe('ChatGroupModel', () => {
 
   describe('getMemberAvatarsByGroupIds', () => {
     it('should group member avatars by chatGroupId in member order with inbox fallback', async () => {
-      await serverDB.insert(agentsTable).values([
-        { avatar: '/custom.png', id: 'member-custom', slug: 'custom', userId },
-        { avatar: null, id: 'member-inbox', slug: INBOX_SESSION_ID, userId },
-      ]);
+      await serverDB.insert(agentsTable).values(
+        await withTestAgentDevices(serverDB, [
+          { avatar: '/custom.png', id: 'member-custom', slug: 'custom', userId },
+          { avatar: null, id: 'member-inbox', slug: INBOX_SESSION_ID, userId },
+        ]),
+      );
       await serverDB.insert(chatGroups).values({ id: 'group-avatars', title: 'G', userId });
       await serverDB.insert(chatGroupsAgents).values([
         { agentId: 'member-inbox', chatGroupId: 'group-avatars', order: 1, userId },
@@ -1585,24 +1658,26 @@ describe('ChatGroupModel', () => {
         visibility: 'public',
         workspaceId,
       });
-      await serverDB.insert(agentsTable).values([
-        {
-          avatar: '/pub.png',
-          id: 'agt-public-member',
-          title: 'Public member',
-          userId,
-          visibility: 'public',
-          workspaceId,
-        },
-        {
-          avatar: '/priv.png',
-          id: 'agt-demoted-member',
-          title: 'Demoted member',
-          userId,
-          visibility: 'private',
-          workspaceId,
-        },
-      ]);
+      await serverDB.insert(agentsTable).values(
+        await withTestAgentDevices(serverDB, [
+          {
+            avatar: '/pub.png',
+            id: 'agt-public-member',
+            title: 'Public member',
+            userId,
+            visibility: 'public',
+            workspaceId,
+          },
+          {
+            avatar: '/priv.png',
+            id: 'agt-demoted-member',
+            title: 'Demoted member',
+            userId,
+            visibility: 'private',
+            workspaceId,
+          },
+        ]),
+      );
       await serverDB.insert(chatGroupsAgents).values([
         {
           agentId: 'agt-public-member',
@@ -1691,13 +1766,15 @@ describe('ChatGroupModel', () => {
     };
 
     beforeEach(async () => {
-      await serverDB.insert(agentsTable).values({
-        id: 'agt-supervisor',
-        title: 'Supervisor agent',
-        userId,
-        visibility: 'public',
-        workspaceId,
-      });
+      await serverDB.insert(agentsTable).values(
+        await withTestAgentDevices(serverDB, {
+          id: 'agt-supervisor',
+          title: 'Supervisor agent',
+          userId,
+          visibility: 'public',
+          workspaceId,
+        }),
+      );
     });
 
     it('blocks when the agent supervises a public group', async () => {

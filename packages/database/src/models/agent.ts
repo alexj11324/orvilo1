@@ -93,7 +93,10 @@ import {
 } from '../utils/agentKnowledgeMounts';
 import { rehomeAgentLabelsForRecipient } from '../utils/agentLabelsOwnership';
 import { rehomeAgentQuotaBindingsForRecipient } from '../utils/agentQuotaBindings';
-import { assertAgentRuntimeCreation } from '../utils/agentRuntimeCreation';
+import {
+  assertAgentDeviceBinding,
+  assertAgentRuntimeCreation,
+} from '../utils/agentRuntimeCreation';
 import { normalizeAgentRuntimeIdentity } from '../utils/agentRuntimeIdentity';
 import { genEndDateWhere, genRangeWhere, genStartDateWhere, genWhere } from '../utils/genWhere';
 import { resolveGroupMembershipType } from '../utils/groupMembership';
@@ -520,7 +523,10 @@ export class AgentModel {
       })) ??
       (await this.db.query.agents.findFirst({
         columns: { id: true },
-        where: and(this.executionScope(), eq(agents.slug, idOrSlug)),
+        where: and(
+          RESERVED_AGENT_SLUGS.has(idOrSlug) ? this.strictOwnership() : this.executionScope(),
+          eq(agents.slug, idOrSlug),
+        ),
       }));
     return row?.id ?? null;
   };
@@ -611,7 +617,12 @@ export class AgentModel {
     const rows = await this.db
       .select({ model: agents.model, provider: agents.provider })
       .from(agents)
-      .where(and(this.ownership(), or(eq(agents.id, idOrSlug), eq(agents.slug, idOrSlug))))
+      .where(
+        and(
+          RESERVED_AGENT_SLUGS.has(idOrSlug) ? this.strictOwnership() : this.ownership(),
+          or(eq(agents.id, idOrSlug), eq(agents.slug, idOrSlug)),
+        ),
+      )
       .limit(1);
 
     const row = rows[0];
@@ -856,7 +867,10 @@ export class AgentModel {
         where: and(this.ownership(), eq(agents.id, idOrSlug)),
       })) ??
       (await this.db.query.agents.findFirst({
-        where: and(this.ownership(), eq(agents.slug, idOrSlug)),
+        where: and(
+          RESERVED_AGENT_SLUGS.has(idOrSlug) ? this.strictOwnership() : this.ownership(),
+          eq(agents.slug, idOrSlug),
+        ),
       }));
 
     if (!agent) return null;
@@ -2055,26 +2069,6 @@ export class AgentModel {
     if (agent.slug !== BUILTIN_AGENT_SLUGS.agentBuilder) this.runtimeAvatar(mergedValue);
     mergedValue.agencyConfig = normalizeAgencyConfigForWrite(mergedValue.agencyConfig);
 
-    // The inbox is Orvilo's built-in default cloud agent; it must never be
-    // turned into a heterogeneous (external-CLI) agent. Two independent inputs can
-    // flip it — a stray `agencyConfig.heterogeneousProvider`, and a legacy hetero
-    // `model` id, which AiAgentService still treats as heterogeneous on its own even
-    // without a provider config. Either one
-    // reroutes the whole chat surface through the device gateway and breaks it with
-    // GATEWAY_NOT_CONFIGURED, so sanitize both at this write chokepoint regardless
-    // of caller (mirrors AGENT_BUILDER_PROTECTED_FIELDS).
-    if (agent.slug === INBOX_SESSION_ID) {
-      // The builtin 'orvilo' harness is the inbox agent's own engine — only
-      // external-CLI bindings would reroute it through the device gateway.
-      const agency = mergedValue.agencyConfig;
-      if (agency?.heterogeneousProvider && agency.heterogeneousProvider.type !== 'orvilo') {
-        delete agency.heterogeneousProvider;
-      }
-      if (isHeterogeneousAgentModelId(mergedValue.model)) {
-        mergedValue.model = null;
-      }
-    }
-
     // A character sheet is authored as a whole: the studio reads the current
     // profile and writes the version it wants. Deep-merging it would make a
     // cleared trait or a removed artwork impossible to express, since a missing
@@ -2390,8 +2384,54 @@ export class AgentModel {
    * Builtin agents are standalone agents not bound to sessions.
    *
    */
-  getBuiltinAgent = async (slug: string): Promise<AgentItem | null> => {
+  getBuiltinAgent = async (
+    slug: string,
+    options: { runtime?: Pick<AgentItem, 'agencyConfig' | 'model' | 'provider'> } = {},
+  ): Promise<AgentItem | null> => {
     const persistConfig = getAgentPersistConfig(slug);
+    const resolveRuntime = async () => {
+      let runtime = options.runtime;
+      if (!runtime) {
+        const defaults = !this.workspaceId
+          ? await new UserModel(this.db, this.userId).getUserSettingsDefaultAgentConfig()
+          : undefined;
+        if (defaults?.agencyConfig?.boundDeviceId) {
+          runtime = {
+            agencyConfig: defaults.agencyConfig,
+            model: defaults.model ?? null,
+            provider: defaults.provider ?? null,
+          };
+        }
+      }
+      if (!runtime) {
+        const sourceId = await this.getOrchestratorSourceAgentId();
+        // Cross-owner configuration copies require the server's full-config
+        // permission resolver, which supplies options.runtime. The model-only
+        // path can inherit only its caller's own source in this exact scope.
+        const [source] = await this.db
+          .select({ id: agents.id })
+          .from(agents)
+          .where(
+            and(eq(agents.id, sourceId), eq(agents.userId, this.userId), this.strictOwnership()),
+          )
+          .limit(1);
+        if (!source)
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Agent runtime configuration is unavailable',
+          });
+        runtime = await this.inheritRuntimeForCreation(sourceId, {
+          purpose: 'orchestrator',
+          visibility: 'public',
+        });
+      }
+      const agencyConfig = await assertAgentRuntimeCreation(
+        this.db,
+        { userId: this.userId, workspaceId: this.workspaceId },
+        { ...runtime, visibility: 'public' },
+      );
+      return { ...runtime, agencyConfig: this.withWorkspaceSelectionPolicyDefaults(agencyConfig) };
+    };
 
     // 1. First try to find existing agent by slug (strict scope: builtin
     // slugs are per-scope singletons — an unfiled inbox agent must not
@@ -2401,24 +2441,24 @@ export class AgentModel {
     });
 
     if (existing) {
+      if (!persistConfig) return existing;
       // Persist-config keys a builtin must carry (e.g. the inbox's harness
       // binding) heal on read: an existing row that predates the config is
       // backfilled, while user-customized values on the same key are left alone.
-      const persistAgency = persistConfig?.agencyConfig;
       const existingAgency = existing.agencyConfig as OrviloAgentAgencyConfig | null | undefined;
-      const healAgency =
-        persistAgency?.heterogeneousProvider && !existingAgency?.heterogeneousProvider
-          ? { ...existingAgency, ...persistAgency }
+      const runtime =
+        !existingAgency?.boundDeviceId ||
+        !existingAgency.heterogeneousProvider?.type ||
+        !['device', 'local'].includes(existingAgency.executionTarget ?? '')
+          ? await resolveRuntime()
           : undefined;
 
-      if (persistConfig?.chatConfig || healAgency) {
+      if (persistConfig?.chatConfig || runtime || !existing.boundDeviceRowId) {
         const [updated] = await this.db
           .update(agents)
           .set({
             ...(persistConfig?.chatConfig ? { chatConfig: persistConfig.chatConfig } : {}),
-            ...(healAgency
-              ? { agencyConfig: this.withWorkspaceSelectionPolicyDefaults(healAgency) }
-              : {}),
+            ...runtime,
           })
           .where(eq(agents.id, existing.id))
           .returning();
@@ -2445,7 +2485,11 @@ export class AgentModel {
         // Use both id and userId to ensure we only update current user's agent
         const [updatedAgent] = await this.db
           .update(agents)
-          .set({ slug: INBOX_SESSION_ID, virtual: true })
+          .set({
+            slug: INBOX_SESSION_ID,
+            virtual: true,
+            ...(!result[0].agent.agencyConfig?.boundDeviceId ? await resolveRuntime() : {}),
+          })
           .where(eq(agents.id, result[0].agent.id))
           .returning();
 
@@ -2455,6 +2499,7 @@ export class AgentModel {
 
     // 3. Check if this is a known builtin agent
     if (!persistConfig) return null;
+    const runtime = await resolveRuntime();
 
     // 4. Create the builtin agent with persist config.
     // Idempotent under concurrent callers: two parallel requests for the same
@@ -2484,16 +2529,21 @@ export class AgentModel {
             )
             .for('update')
         : [];
+      if (this.workspaceId && (!member || !['owner', 'admin', 'member'].includes(member.role)))
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Active writable membership is required to create an Agent',
+        });
       const created = await tx
         .insert(agents)
         .values(
           buildWorkspacePayload(
             { userId: this.userId, workspaceId: this.workspaceId },
             {
-              agencyConfig: this.withWorkspaceSelectionPolicyDefaults(persistConfig.agencyConfig),
+              agencyConfig: runtime.agencyConfig,
               chatConfig: persistConfig.chatConfig,
-              model: persistConfig.model,
-              provider: persistConfig.provider,
+              model: runtime.model,
+              provider: runtime.provider,
               slug: persistConfig.slug,
               virtual: true,
             },
@@ -2502,8 +2552,8 @@ export class AgentModel {
         .onConflictDoNothing()
         .returning();
 
-      // Provisioning is also used by readonly/internal callers. Only the
-      // winning active writable creator gets a Use row; rereads never restore it.
+      // Only the winning active writable creator gets a Use row;
+      // rereading an existing builtin never restores a revoked grant.
       if (
         this.workspaceId &&
         created[0] &&
@@ -2723,7 +2773,7 @@ export class AgentModel {
     targetWorkspaceId: string | null,
     targetUserId: string,
     targetVisibility?: 'private' | 'public',
-    options: { rejectForeignTopicCommentAuthors?: boolean } = {},
+    options: { rejectForeignTopicCommentAuthors?: boolean; targetDeviceId?: string } = {},
   ): Promise<{ agentId: string; slug: string | null; transferJobId: string | null }> => {
     const [result] = await this.transferAgents(
       [agentId],
@@ -2746,7 +2796,7 @@ export class AgentModel {
     targetWorkspaceId: string | null,
     targetUserId: string,
     targetVisibility?: 'private' | 'public',
-    options: { rejectForeignTopicCommentAuthors?: boolean } = {},
+    options: { rejectForeignTopicCommentAuthors?: boolean; targetDeviceId?: string } = {},
   ): Promise<{ agentId: string; slug: string | null; transferJobId: string | null }[]> => {
     if (agentIds.length === 0) return [];
 
@@ -2870,22 +2920,27 @@ export class AgentModel {
         workspaceId: targetWorkspaceId,
       };
 
-      // 3a. Strip stale device bindings when moving INTO a workspace: any
-      // boundDeviceId / workingDirByDevice entry that isn't enrolled in the
-      // target workspace is silently dropped. Otherwise the moved agent would
-      // reference a device only the previous owner can reach. Moving to a
-      // personal scope (`targetWorkspaceId === null`) keeps existing bindings.
-      // Device rows for the whole batch are fetched with one query.
+      // Keep or explicitly replace the binding in the destination scope.
+      // Missing hosts block the transaction; a transfer cannot stage an unbound Agent.
       const resolvedAgencyConfigs = new Map<string, OrviloAgentAgencyConfig | null>();
-      if (targetWorkspaceId) {
-        const cleanedConfigs = await this.sanitizeAgencyConfigForWorkspace(
+      for (const agent of foundAgents) {
+        const config = options.targetDeviceId
+          ? {
+              ...agent.agencyConfig,
+              boundDeviceId: options.targetDeviceId,
+              executionTarget: 'device' as const,
+            }
+          : agent.agencyConfig;
+        await assertAgentDeviceBinding(
           trx,
-          targetWorkspaceId,
-          foundAgents.map((agent) => agent.agencyConfig),
+          {
+            userId: targetUserId,
+            workspaceId: targetWorkspaceId ?? undefined,
+          },
+          config,
+          targetWorkspaceId ? (targetVisibility ?? agent.visibility) : 'private',
         );
-        foundAgents.forEach((agent, index) =>
-          resolvedAgencyConfigs.set(agent.id, cleanedConfigs[index]),
-        );
+        resolvedAgencyConfigs.set(agent.id, config);
       }
 
       // 4. Update the agent records. slug / agencyConfig differ per agent, so
@@ -2904,9 +2959,7 @@ export class AgentModel {
           .set({
             ...ownershipUpdate,
             ...visibilityUpdate,
-            agencyConfig: targetWorkspaceId
-              ? (resolvedAgencyConfigs.get(agent.id) ?? null)
-              : (agent.agencyConfig ?? null),
+            agencyConfig: resolvedAgencyConfigs.get(agent.id) ?? null,
             // Pins are shared state now, exactly like the folder above: a pin
             // the previous owner set for themselves would arrive as a pin for
             // every member of the target workspace. Both belong to the source
@@ -3318,6 +3371,16 @@ export class AgentModel {
       .limit(1);
     if (existingShare) throw new Error(AGENT_SHARED_TRANSFER_BLOCKED);
 
+    // Handover cannot leave the recipient with an unbound Agent. Validate
+    // the destination before sanitation or any associated-resource changes.
+    // The owner must select a device both parties can use before transferring.
+    await assertAgentDeviceBinding(
+      trx,
+      { userId: toUserId, workspaceId: this.workspaceId },
+      agent.agencyConfig,
+      agent.visibility,
+    );
+
     // A PRIVATE agent stops resolving for everyone but the recipient. Groups
     // that reference it and are NOT the recipient's would render a silent hole
     // in their roster; leave those groups explicitly instead (the manifest
@@ -3359,10 +3422,8 @@ export class AgentModel {
       }
     }
 
-    // Re-home device bindings: a boundDeviceId / workingDirByDevice entry (or
-    // a fixed device policy) pointing at the previous owner's personal device
-    // would leave the recipient's runs unroutable. Same sanitation as moving
-    // an agent into a workspace.
+    // Keep the already authorized device binding. Sanitation removes only
+    // inaccessible auxiliary working directories and selection policies.
     const [cleanedAgencyConfig] = await this.sanitizeAgencyConfigForWorkspace(
       trx,
       this.workspaceId,

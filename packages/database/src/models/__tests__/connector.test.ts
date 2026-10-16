@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import type { ConnectorCredentials } from '../../schemas';
 import { agents, githubUserConnections, userConnectors, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -284,7 +285,9 @@ describe('ConnectorModel', () => {
         sourceType: 'builtin',
         status: 'connected',
       });
-      await serverDB.insert(agents).values({ id: 'github-agent', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'github-agent', userId }));
       await model.create({
         agentId: 'github-agent',
         identifier: 'github',
@@ -358,7 +361,9 @@ describe('ConnectorModel', () => {
         sourceType: 'builtin',
         status: 'connected',
       });
-      await serverDB.insert(agents).values({ id: 'gmail-agent', userId, workspaceId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'gmail-agent', userId, workspaceId }));
       await model.create({
         agentId: 'gmail-agent',
         identifier: 'gmail',

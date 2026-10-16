@@ -3,8 +3,9 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import type { AgentShareConfig } from '../../schemas';
-import { agents, agentShares, users, workspaces } from '../../schemas';
+import { agents, agentShares, devices, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AgentShareModel } from '../agentShare';
 
@@ -31,22 +32,24 @@ describe('AgentShareModel', () => {
         primaryOwnerId: userId,
         slug: 'agent-share-test-workspace',
       });
-      await tx.insert(agents).values([
-        {
-          avatar: '🤯',
-          backgroundColor: '#000000',
-          description: 'Shareable agent',
-          id: agentId,
-          name: 'Shareable Agent',
-          // Explicit (the column defaults to random words): `create` seeds the
-          // share slug from it, so tests below can assert the exact value.
-          slug: 'shareable-agent',
-          title: 'Shareable Agent Title',
-          userId,
-        },
-        { id: otherAgentId, title: 'Other Agent', userId: otherUserId },
-        { id: workspaceAgentId, userId, workspaceId },
-      ]);
+      await tx.insert(agents).values(
+        await withTestAgentDevices(tx, [
+          {
+            avatar: '🤯',
+            backgroundColor: '#000000',
+            description: 'Shareable agent',
+            id: agentId,
+            name: 'Shareable Agent',
+            // Explicit (the column defaults to random words): `create` seeds the
+            // share slug from it, so tests below can assert the exact value.
+            slug: 'shareable-agent',
+            title: 'Shareable Agent Title',
+            userId,
+          },
+          { id: otherAgentId, title: 'Other Agent', userId: otherUserId },
+          { id: workspaceAgentId, userId, workspaceId },
+        ]),
+      );
     });
   });
 
@@ -549,6 +552,14 @@ describe('AgentShareModel', () => {
     // notice the agent left personal scope on its own, like `findByShareId`.
     it('revokes an in-flight run once the agent is moved into a workspace', async () => {
       const created = await agentShareModel.create(agentId, 'link');
+      const [agent] = await serverDB.select().from(agents).where(eq(agents.id, agentId));
+      await serverDB.insert(devices).values({
+        deviceId: agent.agencyConfig!.boundDeviceId!,
+        identitySource: 'installation',
+        userId,
+        workspaceId,
+        visibility: 'public',
+      });
       await serverDB.update(agents).set({ workspaceId }).where(eq(agents.id, agentId));
 
       expect(

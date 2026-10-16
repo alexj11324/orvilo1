@@ -6,6 +6,7 @@ import { MAX_TOOL_IDENTIFIER_LENGTH } from '@/utils/clampToolIdentifier';
 import { uuid } from '@/utils/uuid';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import {
   agents,
   chatGroups,
@@ -726,7 +727,9 @@ describe('MessageModel Create Tests', () => {
     });
 
     it('should copy the topic transcript into a thread preserving tool-call pairing', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-1', title: 'Agent 1', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-1', title: 'Agent 1', userId }));
       await serverDB.insert(topics).values({ id: 'copy-src-topic', userId });
       await serverDB
         .insert(threads)
@@ -807,7 +810,9 @@ describe('MessageModel Create Tests', () => {
     });
 
     it('should not copy other threads’ messages or task rows', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-1', title: 'Agent 1', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-1', title: 'Agent 1', userId }));
       await serverDB.insert(topics).values({ id: 'copy-src-topic-2', userId });
       await serverDB.insert(threads).values([
         { id: 'copy-thread-2', topicId: 'copy-src-topic-2', type: 'continuation', userId },

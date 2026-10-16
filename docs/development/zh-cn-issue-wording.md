@@ -12,7 +12,7 @@ as the English word `Issue`.
   full-width punctuation, and keep the existing space after quantifiers (`3 个 Issue`). `子 Issue` has
   no space after the preceding Chinese character (`添加子 Issue`).
 - 任务 stays 任务 where it is not the Issue entity: scheduled tasks and automations (定时任务), agent
-  task runs and goal plan nodes, Claude Code / Codex built-in task tools, the home task manager, and
+  task runs and orchestration workflow plan nodes, Claude Code / Codex built-in task tools, the home task manager, and
   generic to-do items.
 - 问题 stays 问题 where it means a question or a problem (error copy, feedback, FAQ, prompts).
 - 事项 stays where it means a matter or an item (优先事项，待办事项).
@@ -31,7 +31,7 @@ entries listed in the PR that introduced this document.
 The English source follows the same entity decision: where it names the Issue entity on an Issues
 surface, "Task(s)" is worded "Issue(s)" ("sub-task" becomes "sub-issue", "a task" becomes "an issue").
 Only values change in `packages/locales/src/default/*.ts` (mirrored in `locales/en-US/*.json`); i18n
-keys, identifiers, routes and tool/API names keep their `task` names. Scheduled tasks, goal nodes,
+keys, identifiers, routes and tool/API names keep their `task` names. Scheduled tasks, orchestration workflow nodes,
 agent run cards, Claude Code / Codex built-in tools and to-do lists keep "task". The task manager
 panel's own copy names Issues: `taskManager.welcome` and the composer placeholders
 `sendPlaceholderHeterogeneous` / `sendPlaceholderWithAgentAssignment` read "issue(s)" in en-US and

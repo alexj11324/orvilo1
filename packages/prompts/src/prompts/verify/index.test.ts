@@ -17,7 +17,7 @@ describe('buildVerifierPrompt', () => {
     const prompt = buildVerifierPrompt({
       checkItem,
       deliverable: 'Draft complete',
-      goal: 'Write a novel',
+      orchestrationWorkflow: 'Write a novel',
       taskDocuments: [
         {
           agentDocumentId: 'agent-doc-manuscript',
@@ -39,7 +39,7 @@ describe('buildVerifierPrompt', () => {
     const prompt = buildVerifierPrompt({
       checkItem,
       deliverable: 'Done',
-      goal: 'Ship it',
+      orchestrationWorkflow: 'Ship it',
     });
 
     expect(prompt).not.toContain('## Task documents');

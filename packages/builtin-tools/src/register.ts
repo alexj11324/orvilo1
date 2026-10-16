@@ -39,14 +39,6 @@ import {
   CloudSandboxStreamings,
 } from '@orvilo/builtin-tool-cloud-sandbox/client';
 import {
-  GoalInspectors,
-  GoalInterventions,
-  GoalManifest,
-  GoalRenders,
-  GoalSupervisorInspectors,
-  GoalSupervisorManifest,
-} from '@orvilo/builtin-tool-goal/client';
-import {
   GroupAgentBuilderInspectors,
   GroupAgentBuilderManifest,
   GroupAgentBuilderRenders,
@@ -82,6 +74,14 @@ import {
   MemoryRenders,
   MemoryStreamings,
 } from '@orvilo/builtin-tool-memory/client';
+import {
+  OrchestrationWorkflowInspectors,
+  OrchestrationWorkflowInterventions,
+  OrchestrationWorkflowManifest,
+  OrchestrationWorkflowRenders,
+  OrchestrationWorkflowSupervisorInspectors,
+  OrchestrationWorkflowSupervisorManifest,
+} from '@orvilo/builtin-tool-orchestration-workflow/client';
 import {
   OrviloAgentInspectors,
   OrviloAgentInterventions,
@@ -261,7 +261,10 @@ export const registerBuiltinToolSurfaces = (): void => {
       BuiltinRender
     >,
     [GroupManagementManifest.identifier]: GroupManagementRenders as Record<string, BuiltinRender>,
-    [GoalManifest.identifier]: GoalRenders as Record<string, BuiltinRender>,
+    [OrchestrationWorkflowManifest.identifier]: OrchestrationWorkflowRenders as Record<
+      string,
+      BuiltinRender
+    >,
     [KnowledgeBaseManifest.identifier]: KnowledgeBaseRenders as Record<string, BuiltinRender>,
     [OrviloAgentManifest.identifier]: OrviloAgentRenders as Record<string, BuiltinRender>,
     [LocalSystemManifest.identifier]: LocalSystemRenders as Record<string, BuiltinRender>,
@@ -325,8 +328,11 @@ export const registerBuiltinToolSurfaces = (): void => {
       string,
       BuiltinInspector
     >,
-    [GoalManifest.identifier]: GoalInspectors as Record<string, BuiltinInspector>,
-    [GoalSupervisorManifest.identifier]: GoalSupervisorInspectors,
+    [OrchestrationWorkflowManifest.identifier]: OrchestrationWorkflowInspectors as Record<
+      string,
+      BuiltinInspector
+    >,
+    [OrchestrationWorkflowSupervisorManifest.identifier]: OrchestrationWorkflowSupervisorInspectors,
     [KnowledgeBaseManifest.identifier]: KnowledgeBaseInspectors as Record<string, BuiltinInspector>,
     [OrviloAgentManifest.identifier]: OrviloAgentInspectors as Record<string, BuiltinInspector>,
     [LocalSystemManifest.identifier]: LocalSystemInspectors as Record<string, BuiltinInspector>,
@@ -413,7 +419,10 @@ export const registerBuiltinToolSurfaces = (): void => {
       string,
       BuiltinIntervention
     >,
-    [GoalManifest.identifier]: GoalInterventions as Record<string, BuiltinIntervention>,
+    [OrchestrationWorkflowManifest.identifier]: OrchestrationWorkflowInterventions as Record<
+      string,
+      BuiltinIntervention
+    >,
     [OrviloAgentManifest.identifier]: OrviloAgentInterventions as Record<
       string,
       BuiltinIntervention

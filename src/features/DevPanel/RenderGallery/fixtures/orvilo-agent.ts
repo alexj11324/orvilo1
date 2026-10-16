@@ -83,7 +83,7 @@ export default defineFixtures({
           context:
             'We want a reusable development-only page that renders every registered builtin tool card with a stable sample fixture.',
           description: 'Create a maintainable preview harness for builtin tool renders.',
-          goal: 'Build /devtools render preview',
+          orchestrationWorkflow: 'Build /devtools render preview',
           id: 'plan_devtools_preview',
         },
       },
@@ -131,7 +131,7 @@ export default defineFixtures({
           context:
             'The route is now in place; expand the preview harness by keeping fixture data next to the page.',
           description: 'Track the follow-up work for richer render fixtures.',
-          goal: 'Expand /devtools coverage',
+          orchestrationWorkflow: 'Expand /devtools coverage',
           id: 'plan_devtools_preview',
         },
       },

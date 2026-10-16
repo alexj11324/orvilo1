@@ -33,7 +33,7 @@ const originalActions = {
 };
 const rowKeys = [
   'expertise',
-  'goal',
+  'orchestrationWorkflow',
   'memoryAnalysisAgentConfig',
   'userMemoryPersonaWriter',
   'userMemoryEmbedding',
@@ -63,7 +63,7 @@ const useFormFields = () => {
   const fields = {
     defaultAgent: useController({ control, name: 'defaultAgent.config' }),
     expertise: useController({ control, name: 'systemAgent.expertise' }),
-    goal: useController({ control, name: 'systemAgent.goal' }),
+    orchestrationWorkflow: useController({ control, name: 'systemAgent.orchestrationWorkflow' }),
     memoryAnalysisAgentConfig: useController({
       control,
       name: 'systemAgent.memoryAnalysisAgentConfig',
@@ -167,7 +167,10 @@ describe('useModelAssignmentsForm owned autosave', () => {
   it('initializes the six existing model fields and only the three memory context limits', () => {
     const { result } = mount();
     expect(Object.keys(result.current.fields)).toEqual(['defaultAgent', ...rowKeys]);
-    expect(SYSTEM_AGENT_MODEL_ITEMS.map(({ key }) => key)).toEqual(['expertise', 'goal']);
+    expect(SYSTEM_AGENT_MODEL_ITEMS.map(({ key }) => key)).toEqual([
+      'expertise',
+      'orchestrationWorkflow',
+    ]);
     expect(
       MEMORY_MODEL_ITEMS.filter(({ contextLimit }) => contextLimit).map(({ key }) => key),
     ).toEqual(Object.keys(result.current.limits));
@@ -271,9 +274,9 @@ describe('useModelAssignmentsForm owned autosave', () => {
         result.current.fields.defaultAgent.field.onChange,
       );
       await result.current.changeSystemAgentModel(
-        'goal',
+        'orchestrationWorkflow',
         nextChoice,
-        result.current.fields.goal.field.onChange,
+        result.current.fields.orchestrationWorkflow.field.onChange,
       );
       await result.current.changeContextLimit(
         'memoryAnalysisAgentConfig',
@@ -334,13 +337,13 @@ describe('useModelAssignmentsForm owned autosave', () => {
     const { result } = mount();
     await act(async () =>
       result.current.changeSystemAgentModel(
-        'goal',
+        'orchestrationWorkflow',
         nextChoice,
-        result.current.fields.goal.field.onChange,
+        result.current.fields.orchestrationWorkflow.field.onChange,
       ),
     );
     expect(result.current.saveStatus).toBe('failed');
-    expect(result.current.fields.goal.field.value).toMatchObject(nextChoice);
+    expect(result.current.fields.orchestrationWorkflow.field.value).toMatchObject(nextChoice);
     await act(async () => result.current.retrySave());
     expect(userService.updateUserSettings).toHaveBeenCalledTimes(2);
     expect(vi.mocked(userService.updateUserSettings).mock.calls[1][0]).toEqual(
@@ -349,10 +352,14 @@ describe('useModelAssignmentsForm owned autosave', () => {
     expect(result.current.saveStatus).toBe('saved');
     act(() =>
       useUserStore.setState({
-        settings: { systemAgent: { goal: { model: 'fixture-third', provider: 'orvilo' } } },
+        settings: {
+          systemAgent: { orchestrationWorkflow: { model: 'fixture-third', provider: 'orvilo' } },
+        },
       }),
     );
-    await waitFor(() => expect(result.current.fields.goal.field.value.model).toBe('fixture-third'));
+    await waitFor(() =>
+      expect(result.current.fields.orchestrationWorkflow.field.value.model).toBe('fixture-third'),
+    );
   });
 
   it('validates a legacy invalid context on submit without writing all fields', async () => {

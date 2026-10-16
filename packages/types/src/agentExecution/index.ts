@@ -48,7 +48,7 @@ export interface AgentOperationJudgmentContext {
   intentKey?: string;
   /** Planning rounds persist their result through the operation-bound CLI tool. */
   outputMode?: 'tool';
-  /** Stable consumer identifier, e.g. 'verify.judge', 'goal.criteriaDraft'. */
+  /** Stable consumer identifier, e.g. 'verify.judge', 'orchestration workflow.criteriaDraft'. */
   purpose: string;
 }
 
@@ -223,11 +223,11 @@ export interface ExecAgentAppContext {
   /** Topic ID */
   topicId?: string | null;
   /**
-   * Goal detail page the conversation is happening on. The server builds
-   * `RuntimeInitialContext.goalOverview` from the goal graph so the agent can
+   * OrchestrationWorkflow detail page the conversation is happening on. The server builds
+   * `RuntimeInitialContext.orchestrationWorkflowOverview` from the orchestration workflow graph so the agent can
    * answer progress questions without tool calls.
    */
-  viewedGoal?: { goalId: string };
+  viewedOrchestrationWorkflow?: { orchestrationWorkflowId: string };
 }
 
 /**

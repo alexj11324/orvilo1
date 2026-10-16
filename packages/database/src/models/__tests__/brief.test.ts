@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agentCronJobs, agents, briefs, tasks, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { BriefModel } from '../brief';
@@ -204,13 +205,15 @@ describe('BriefModel', () => {
     });
 
     it('should join the producing agent and parent task status in one query', async () => {
-      await serverDB.insert(agents).values({
-        avatar: '🤖',
-        backgroundColor: '#fff',
-        id: 'agent-x',
-        title: 'Agent X',
-        userId,
-      });
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, {
+          avatar: '🤖',
+          backgroundColor: '#fff',
+          id: 'agent-x',
+          title: 'Agent X',
+          userId,
+        }),
+      );
       await serverDB.insert(tasks).values({
         context: { execution: { parked: { at: '2026-05-02T00:00:00.000Z' } } },
         createdByUserId: userId,
@@ -603,7 +606,11 @@ describe('BriefModel', () => {
 
   describe('findByCronJobId', () => {
     it('should return briefs for a cron job ordered newest first', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-cron', title: 'Cron Agent', userId });
+      await serverDB
+        .insert(agents)
+        .values(
+          await withTestAgentDevices(serverDB, { id: 'agent-cron', title: 'Cron Agent', userId }),
+        );
       await serverDB.insert(agentCronJobs).values({
         agentId: 'agent-cron',
         content: 'do it',

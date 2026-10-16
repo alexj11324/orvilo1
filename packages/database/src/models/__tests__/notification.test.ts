@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import { NotificationBulkError, NotificationModel } from '../../models/notification';
 import { ProjectModel } from '../../models/project';
@@ -90,7 +91,9 @@ describe('NotificationModel (integration)', () => {
   it('projects the original pending native question onto its Issue once and resolves its terminal state', async () => {
     const model = new NotificationModel(serverDB, userId, { workspaceId: null });
     const task = await new TaskModel(serverDB, userId).create({ instruction: 'Choose scope' });
-    await serverDB.insert(agents).values({ id: 'native-agent', userId, title: 'Codex' });
+    await serverDB
+      .insert(agents)
+      .values(await withTestAgentDevices(serverDB, { id: 'native-agent', userId, title: 'Codex' }));
     await serverDB.insert(topics).values({ agentId: 'native-agent', id: 'native-topic', userId });
     await serverDB.insert(taskTopics).values({
       operationId: 'native-op',

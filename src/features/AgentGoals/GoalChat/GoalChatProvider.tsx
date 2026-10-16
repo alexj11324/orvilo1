@@ -12,9 +12,9 @@ interface GoalChatProviderProps {
   /** The goal's responsible agent — the one the user asks about progress. */
   agentId: string;
   children: ReactNode;
-  goalId: string;
   /** Open a specific conversation when entering the panel (e.g. supervision). */
   initialTopicId?: string;
+  orchestrationWorkflowId: string;
 }
 
 /**
@@ -23,7 +23,7 @@ interface GoalChatProviderProps {
  * progress overview into the request (see streamingExecutor).
  */
 export const GoalChatProvider = memo<GoalChatProviderProps>(
-  ({ agentId, children, goalId, initialTopicId }) => {
+  ({ agentId, children, orchestrationWorkflowId, initialTopicId }) => {
     const [initialized, setInitialized] = useState(false);
     const setActiveAgentId = useAgentStore((s) => s.setActiveAgentId);
     const activeTopicId = useChatStore((s) => s.activeTopicId);
@@ -55,9 +55,9 @@ export const GoalChatProvider = memo<GoalChatProviderProps>(
       () => ({
         agentId,
         topicId: activeTopicId,
-        viewedGoal: { goalId },
+        viewedOrchestrationWorkflow: { orchestrationWorkflowId },
       }),
-      [activeTopicId, agentId, goalId],
+      [activeTopicId, agentId, orchestrationWorkflowId],
     );
 
     const chatKey = useMemo(() => messageMapKey(context), [context]);

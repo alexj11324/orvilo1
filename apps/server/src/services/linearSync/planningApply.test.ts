@@ -3,6 +3,7 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
@@ -158,7 +159,11 @@ describe('LinearPlanningWorker.applyProposal', () => {
     await db.insert(users).values({ id: memberId });
     await db.insert(workspaceMembers).values({ workspaceId, userId: memberId, role: 'member' });
     const agentId = 'private-planning-agent';
-    await db.insert(agents).values({ id: agentId, userId, workspaceId, visibility: 'private' });
+    await db
+      .insert(agents)
+      .values(
+        await withTestAgentDevices(db, { id: agentId, userId, workspaceId, visibility: 'private' }),
+      );
     if (selected)
       await db.insert(resourcePermissions).values({
         resourceType: 'agent',
@@ -293,7 +298,9 @@ describe('LinearPlanningWorker.applyProposal', () => {
   it('C08 commits a stable auto-dispatch intent before waking the task runner', async () => {
     const { project, revision, task } = await createRevision('Resume intent', false, true);
     const agentId = 'planning-resume-agent';
-    await db.insert(agents).values({ id: agentId, userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: agentId, userId, workspaceId }));
     await db.insert(resourcePermissions).values({
       resourceType: 'agent',
       resourceId: agentId,
@@ -395,7 +402,9 @@ describe('LinearPlanningWorker.applyProposal', () => {
     caidAdmission.allowed.mockResolvedValue(false);
     const { project, revision, task } = await createRevision('Resume intent gated', false, true);
     const agentId = 'planning-resume-agent';
-    await db.insert(agents).values({ id: agentId, userId, workspaceId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: agentId, userId, workspaceId }));
     await db.insert(resourcePermissions).values({
       resourceType: 'agent',
       resourceId: agentId,

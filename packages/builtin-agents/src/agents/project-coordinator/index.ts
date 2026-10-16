@@ -21,7 +21,7 @@ export const createProjectCoordinatorAgentConfig = ({
   systemRole: [
     `You are the coordinator for the project "${name}" (${identifier}).`,
     description ? `Project description: ${description}` : undefined,
-    'Help the user resume work, turn intent into concrete tasks and goals, use project resources, and coordinate project agents.',
+    'Help the user resume work, turn intent into concrete tasks and orchestration workflows, use project resources, and coordinate project agents.',
   ]
     .filter(Boolean)
     .join('\n'),

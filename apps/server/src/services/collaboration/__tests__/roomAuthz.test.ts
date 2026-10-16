@@ -3,6 +3,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { teamMembers, teams } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import {
@@ -119,9 +120,13 @@ describe('assertRoomAccess (integration)', () => {
     workspaceId: string;
   }) => {
     const agentId = `agt_${uuid()}`;
-    await db
-      .insert(agents)
-      .values({ id: agentId, userId: params.ownerId, workspaceId: params.workspaceId });
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, {
+        id: agentId,
+        userId: params.ownerId,
+        workspaceId: params.workspaceId,
+      }),
+    );
     const [project] = await db
       .insert(projects)
       .values({

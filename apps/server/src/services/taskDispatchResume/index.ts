@@ -33,7 +33,7 @@ export type TaskDispatchResumeOutcome =
 
 const RESUMABLE_TRIGGERS = [
   'event',
-  'goal',
+  'orchestrationWorkflow',
   'heartbeat',
   'manual',
   'orchestrator',
@@ -42,7 +42,7 @@ const RESUMABLE_TRIGGERS = [
 
 /**
  * The trigger prefix persisted in `requestedBy` (`${trigger}:${actor}`). A
- * stale row is re-driven under its original trigger so policy and goal gates
+ * stale row is re-driven under its original trigger so policy and orchestration workflow gates
  * see the same requester class the intent was minted with. Events reuse their
  * server-persisted evidence; request() revalidates live permission and binding
  * before resuming, without minting a replacement occurrence.
@@ -56,7 +56,7 @@ const resumeTrigger = (requestedBy: string): TaskRunTrigger | null => {
 
 /**
  * Re-drive one resumable dispatch under its stored idempotency key. The
- * shared `request()` path re-evaluates project policy, goal gates and
+ * shared `request()` path re-evaluates project policy, orchestration workflow gates and
  * assignee presence under the task lock, so a row that still cannot start
  * re-parks (or stays parked) with the current reason.
  */

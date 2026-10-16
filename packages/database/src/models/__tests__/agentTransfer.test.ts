@@ -128,7 +128,9 @@ describe('AgentModel.transferAgent', () => {
     const model = new AgentModel(serverDB, userId);
     const agent = await model.create(withRuntime({ title: 'Test Agent', slug: 'test-agent' }));
 
-    const result = await model.transferAgent(agent.id, wsId1, userId);
+    const result = await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     expect(result.agentId).toBe(agent.id);
 
@@ -145,7 +147,9 @@ describe('AgentModel.transferAgent', () => {
       withRuntime({ title: 'WS Agent', slug: 'ws-agent' }, userId, wsId1),
     );
 
-    const result = await model.transferAgent(agent.id, null, userId);
+    const result = await model.transferAgent(agent.id, null, userId, undefined, {
+      targetDeviceId: 'creation-host-' + userId,
+    });
 
     expect(result.agentId).toBe(agent.id);
 
@@ -162,7 +166,9 @@ describe('AgentModel.transferAgent', () => {
       withRuntime({ title: 'WS1 Agent', slug: 'ws1-agent' }, userId, wsId1),
     );
 
-    const result = await model.transferAgent(agent.id, wsId2, userId);
+    const result = await model.transferAgent(agent.id, wsId2, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId2 ?? userId),
+    });
 
     expect(result.agentId).toBe(agent.id);
 
@@ -182,7 +188,9 @@ describe('AgentModel.transferAgent', () => {
     const model2 = new AgentModel(serverDB, userId, wsId2);
     await model2.create(withRuntime({ title: 'Existing Agent', slug: 'my-agent' }, userId, wsId2));
 
-    const result = await model.transferAgent(agent1.id, wsId2, userId);
+    const result = await model.transferAgent(agent1.id, wsId2, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId2 ?? userId),
+    });
 
     expect(result.slug).toBe('my-agent-1');
 
@@ -202,7 +210,9 @@ describe('AgentModel.transferAgent', () => {
       .insert(agentsToSessions)
       .values({ agentId: agent.id, sessionId: 'sess-1', userId });
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const [session] = await serverDB.select().from(sessions).where(eq(sessions.id, 'sess-1'));
     expect(session.workspaceId).toBe(wsId1);
@@ -262,7 +272,9 @@ describe('AgentModel.transferAgent', () => {
       })
       .returning({ id: expertiseInsights.id });
 
-    await agentModel.transferAgent(agent.id, wsId2, targetUserId);
+    await agentModel.transferAgent(agent.id, wsId2, targetUserId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId2 ?? targetUserId),
+    });
     await serverDB.delete(workspaces).where(eq(workspaces.id, wsId1));
 
     const transferredExpertise = new ExpertiseModel(serverDB, targetUserId, wsId2);
@@ -313,7 +325,9 @@ describe('AgentModel.transferAgent', () => {
       .insert(agentsToSessions)
       .values({ agentId: agent.id, sessionId: 'sess-grouped', userId });
 
-    await model.transferAgent(agent.id, wsId1, userId, 'private');
+    await model.transferAgent(agent.id, wsId1, userId, 'private', {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const updated = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
     expect(updated?.sessionGroupId).toBeNull();
@@ -331,7 +345,9 @@ describe('AgentModel.transferAgent', () => {
       .insert(messages)
       .values({ id: 'msg-1', agentId: agent.id, userId, role: 'assistant' });
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const [topic] = await serverDB.select().from(topics).where(eq(topics.id, 'topic-1'));
     expect(topic.workspaceId).toBe(wsId1);
@@ -442,7 +458,9 @@ describe('AgentModel.transferAgent', () => {
       userId,
     });
 
-    await model.transferAgent(agent.id, wsId1, userId, 'private');
+    await model.transferAgent(agent.id, wsId1, userId, 'private', {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const timestampRows = await Promise.all([
       serverDB.select({ updatedAt: agents.updatedAt }).from(agents).where(eq(agents.id, agent.id)),
@@ -521,7 +539,9 @@ describe('AgentModel.transferAgent', () => {
       workspaceId: wsId1,
     });
 
-    await model.transferAgent(agent.id, wsId2, targetUserId);
+    await model.transferAgent(agent.id, wsId2, targetUserId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId2 ?? targetUserId),
+    });
 
     const [comment] = await serverDB
       .select()
@@ -566,7 +586,9 @@ describe('AgentModel.transferAgent', () => {
       workspaceId: wsId1,
     });
 
-    await model.transferAgent(agent.id, null, userId);
+    await model.transferAgent(agent.id, null, userId, undefined, {
+      targetDeviceId: 'creation-host-' + userId,
+    });
 
     // Personal topics cannot hold comments (NOT NULL workspaceId) — the whole
     // thread (root + reply) is removed and mention rows cascade with it
@@ -646,6 +668,7 @@ describe('AgentModel.transferAgent', () => {
         const outcomes = await Promise.allSettled([
           model.transferAgent(agent.id, wsId2, userId, undefined, {
             rejectForeignTopicCommentAuthors: true,
+            targetDeviceId: 'creation-host-' + (wsId2 ?? userId),
           }),
           commenterModel.createWithMentions({
             clientId: `transfer-comment-race-${i}`,
@@ -758,7 +781,9 @@ describe('AgentModel.transferAgent', () => {
       workspaceId: wsId1,
     });
 
-    await model.transferAgent(agent.id, wsId2, targetUserId);
+    await model.transferAgent(agent.id, wsId2, targetUserId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId2 ?? targetUserId),
+    });
 
     const [task] = await serverDB
       .select()
@@ -869,7 +894,9 @@ describe('AgentModel.transferAgent', () => {
       userId,
     });
 
-    await model.transferAgent(agent.id, wsId1, userId, 'private');
+    await model.transferAgent(agent.id, wsId1, userId, 'private', {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const [task] = await serverDB.select().from(tasks).where(eq(tasks.id, 'task-vis'));
     expect(task.workspaceId).toBe(wsId1);
@@ -915,7 +942,9 @@ describe('AgentModel.transferAgent', () => {
       workspaceId: wsId1,
     });
 
-    await model.transferAgent(agent.id, null, userId, 'private');
+    await model.transferAgent(agent.id, null, userId, 'private', {
+      targetDeviceId: 'creation-host-' + userId,
+    });
 
     const [task] = await serverDB.select().from(tasks).where(eq(tasks.id, 'task-personal'));
     expect(task.workspaceId).toBeNull();
@@ -932,7 +961,9 @@ describe('AgentModel.transferAgent', () => {
       .insert(chatGroupsAgents)
       .values({ chatGroupId: 'group-1', agentId: agent.id, userId });
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const groupLinks = await serverDB
       .select()
@@ -963,7 +994,11 @@ describe('AgentModel.transferAgent', () => {
       userId,
     });
 
-    await expect(model.transferAgent(supervisor.id, wsId1, userId)).rejects.toMatchObject({
+    await expect(
+      model.transferAgent(supervisor.id, wsId1, userId, undefined, {
+        targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+      }),
+    ).rejects.toMatchObject({
       groups: [{ agentId: supervisor.id, groupId: 'sup-group', groupTitle: 'Squad' }],
       message: 'AGENT_OWNED_BY_GROUP',
     });
@@ -996,9 +1031,11 @@ describe('AgentModel.transferAgent', () => {
       userId,
     });
 
-    await expect(model.transferAgent(supervisor.id, wsId1, userId)).rejects.toThrow(
-      'AGENT_OWNED_BY_GROUP',
-    );
+    await expect(
+      model.transferAgent(supervisor.id, wsId1, userId, undefined, {
+        targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+      }),
+    ).rejects.toThrow('AGENT_OWNED_BY_GROUP');
   });
 
   it('getGroupMembershipImpact reports groups an agent would leave', async () => {
@@ -1094,9 +1131,11 @@ describe('AgentModel.transferAgent', () => {
 
   it('should throw when agent not found', async () => {
     const model = new AgentModel(serverDB, userId);
-    await expect(model.transferAgent('nonexistent', wsId1, userId)).rejects.toThrow(
-      'Agent not found',
-    );
+    await expect(
+      model.transferAgent('nonexistent', wsId1, userId, undefined, {
+        targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+      }),
+    ).rejects.toThrow('Agent not found');
   });
 
   // Regression: a share carries the previous owner's tool grants, custom
@@ -1113,9 +1152,11 @@ describe('AgentModel.transferAgent', () => {
       .insert(agentShares)
       .values({ agentId: agent.id, shareConfig: { monthlySpendLimit: 5 }, visibility: 'link' });
 
-    await expect(model.transferAgent(agent.id, null, targetUserId)).rejects.toThrow(
-      AGENT_SHARED_TRANSFER_BLOCKED,
-    );
+    await expect(
+      model.transferAgent(agent.id, null, targetUserId, undefined, {
+        targetDeviceId: 'creation-host-' + targetUserId,
+      }),
+    ).rejects.toThrow(AGENT_SHARED_TRANSFER_BLOCKED);
 
     // Agent stays with the original owner: batch guard fires before any
     // mutation, so neither `agents.userId` nor the share row change.
@@ -1139,13 +1180,17 @@ describe('AgentModel.transferAgent', () => {
       .values({ agentId: agent.id, shareConfig: { monthlySpendLimit: 5 }, visibility: 'link' });
 
     // Personal → workspace (owner unchanged, share paused via workspaceId join).
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
     let rows = await serverDB.select().from(agentShares).where(eq(agentShares.agentId, agent.id));
     expect(rows).toHaveLength(1);
 
     // Workspace → personal, same owner: share resumes.
     const wsModel = new AgentModel(serverDB, userId, wsId1);
-    await wsModel.transferAgent(agent.id, null, userId);
+    await wsModel.transferAgent(agent.id, null, userId, undefined, {
+      targetDeviceId: 'creation-host-' + userId,
+    });
     rows = await serverDB.select().from(agentShares).where(eq(agentShares.agentId, agent.id));
     expect(rows).toHaveLength(1);
     expect(rows[0].visibility).toBe('link');
@@ -1178,7 +1223,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       userId,
     });
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const [moved] = await serverDB
       .select()
@@ -1218,7 +1265,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       })
       .returning();
 
-    await model.transferAgent(agent.id, null, userId);
+    await model.transferAgent(agent.id, null, userId, undefined, {
+      targetDeviceId: 'creation-host-' + userId,
+    });
 
     const [moved] = await serverDB
       .select()
@@ -1249,7 +1298,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       })
       .returning();
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const [after] = await serverDB
       .select()
@@ -1288,7 +1339,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       userId,
     });
 
-    await model.transferAgent(agent.id, wsId1, userId, 'private');
+    await model.transferAgent(agent.id, wsId1, userId, 'private', {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const [doc] = await serverDB.select().from(documents).where(eq(documents.id, 'dedicated-doc'));
     expect(doc.workspaceId).toBe(wsId1);
@@ -1330,7 +1383,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       userId,
     });
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const [doc] = await serverDB.select().from(documents).where(eq(documents.id, 'assoc-doc'));
     // The pre-existing personal document is NOT the agent's property.
@@ -1365,7 +1420,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       { agentId: stayingAgent.id, documentId: 'shared-dedicated-doc', userId },
     ]);
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const [doc] = await serverDB
       .select()
@@ -1417,7 +1474,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       userId,
     });
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     // The referencing topic moves with the agent, so the document moves too —
     // and the topic-document link follows its topic's scope.
@@ -1458,7 +1517,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       userId,
     });
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const [doc] = await serverDB.select().from(documents).where(eq(documents.id, 'stays-doc'));
     expect(doc.workspaceId).toBeNull();
@@ -1501,7 +1562,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       userId,
     });
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const [doc] = await serverDB.select().from(documents).where(eq(documents.id, 'task-stays-doc'));
     expect(doc.workspaceId).toBeNull();
@@ -1539,7 +1602,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
     // The originating agent is gone, so no external binding holds it back.
     await serverDB.delete(agents).where(eq(agents.id, outsider.id));
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const [doc] = await serverDB
       .select()
@@ -1580,7 +1645,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       userId,
     });
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const [doc] = await serverDB
       .select()
@@ -1630,7 +1697,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       { agentId: agent.id, documentId: 'own-skill-index', templateId: 'agent-skill', userId },
     ]);
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const docs = await serverDB
       .select()
@@ -1685,7 +1754,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       .insert(taskDocuments)
       .values({ documentId: 'pinned-skill-index', taskId: 'outside-task', userId });
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     // `parent_id` is never rewritten, so moving the bundle without its pinned
     // index would leave a tree straddling two scopes.
@@ -1735,7 +1806,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       userId,
     });
 
-    await model.transferAgent(agent.id, wsId1, userId);
+    await model.transferAgent(agent.id, wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     const [doc] = await serverDB.select().from(documents).where(eq(documents.id, 'slug-doc'));
     expect(doc.workspaceId).toBe(wsId1);
@@ -1774,7 +1847,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       workspaceId: wsId1,
     });
 
-    await model.transferAgent(agent.id, null, targetUserId);
+    await model.transferAgent(agent.id, null, targetUserId, undefined, {
+      targetDeviceId: 'creation-host-' + targetUserId,
+    });
 
     const [history] = await serverDB
       .select()
@@ -1818,7 +1893,9 @@ describe('AgentModel.transferAgent scope riders (connectors & documents)', () =>
       workspaceId: wsId1,
     });
 
-    await model.transferAgent(agent.id, wsId2, targetUserId);
+    await model.transferAgent(agent.id, wsId2, targetUserId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId2 ?? targetUserId),
+    });
 
     const [history] = await serverDB
       .select()
@@ -1846,7 +1923,9 @@ describe('AgentModel.transferAgents (batch)', () => {
       { id: 'batch-msg-2', agentId: agent2.id, userId, role: 'assistant' },
     ]);
 
-    const results = await model.transferAgents([agent1.id, agent2.id], wsId1, userId);
+    const results = await model.transferAgents([agent1.id, agent2.id], wsId1, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+    });
 
     expect(results).toHaveLength(2);
     expect(results.map((r) => r.agentId)).toEqual([agent1.id, agent2.id]);
@@ -1878,7 +1957,9 @@ describe('AgentModel.transferAgents (batch)', () => {
       withRuntime({ title: 'A2', slug: 'my-agent-1' }, userId, wsId1),
     );
 
-    const results = await model.transferAgents([agent1.id, agent2.id], wsId2, userId);
+    const results = await model.transferAgents([agent1.id, agent2.id], wsId2, userId, undefined, {
+      targetDeviceId: 'creation-host-' + (wsId2 ?? userId),
+    });
 
     const slugs = new Map(results.map((r) => [r.agentId, r.slug]));
     // agent1 collides with the existing `my-agent` → suffixed; agent2 must not
@@ -1897,9 +1978,11 @@ describe('AgentModel.transferAgents (batch)', () => {
     const model = new AgentModel(serverDB, userId);
     const agent = await model.create(withRuntime({ title: 'Survivor' }));
 
-    await expect(model.transferAgents([agent.id, 'nonexistent'], wsId1, userId)).rejects.toThrow(
-      'Agent not found',
-    );
+    await expect(
+      model.transferAgents([agent.id, 'nonexistent'], wsId1, userId, undefined, {
+        targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+      }),
+    ).rejects.toThrow('Agent not found');
 
     const untouched = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
     expect(untouched?.workspaceId).toBeNull();
@@ -1927,6 +2010,7 @@ describe('AgentModel.transferAgents (batch)', () => {
     await expect(
       model.transferAgents([agent1.id, agent2.id], wsId2, userId, undefined, {
         rejectForeignTopicCommentAuthors: true,
+        targetDeviceId: 'creation-host-' + (wsId2 ?? userId),
       }),
     ).rejects.toThrow(TOPIC_COMMENT_TRANSFER_HAS_FOREIGN_AUTHORS);
 
@@ -1938,7 +2022,11 @@ describe('AgentModel.transferAgents (batch)', () => {
 
   it('should return empty array for empty input', async () => {
     const model = new AgentModel(serverDB, userId);
-    await expect(model.transferAgents([], wsId1, userId)).resolves.toEqual([]);
+    await expect(
+      model.transferAgents([], wsId1, userId, undefined, {
+        targetDeviceId: 'creation-host-' + (wsId1 ?? userId),
+      }),
+    ).resolves.toEqual([]);
   });
 
   it('transferHasForeignRows should accept an array of agent ids', async () => {

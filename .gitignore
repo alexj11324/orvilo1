@@ -27,6 +27,7 @@ Desktop.ini
 prd
 # Recordings
 .records/
+.orchestration-workflow-tracing/
 
 # Agent-gateway probe captures (local debugging dumps)
 .agent-gateway/

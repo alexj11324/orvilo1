@@ -3,6 +3,7 @@ import debug from 'debug';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { DocumentModel } from '@/database/models/document';
+import { MessageModel } from '@/database/models/message';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
@@ -65,9 +66,9 @@ export const resolveVerificationDeliverable = async (
 export interface RunVerifyOnCompletionParams {
   /** The run's final output / artifacts, judged against the plan. */
   deliverable: string;
-  /** The user's task the run had to satisfy. */
-  goal: string;
   operationId: string;
+  /** The user's task the run had to satisfy. */
+  orchestrationWorkflow: string;
 }
 
 /**
@@ -89,6 +90,7 @@ const executeVerifyLifecycle = async (
   workspaceId?: string,
   evidenceSubmitted = false,
   throwOnError = false,
+  frozenDelivery = false,
 ): Promise<void> => {
   try {
     const run = await new VerifyRunModel(db, userId, workspaceId).findByOperation(
@@ -103,12 +105,15 @@ const executeVerifyLifecycle = async (
       log('op %s missing, cannot run verify', params.operationId);
       return;
     }
+    if (op.trigger === 'acp_judgment' || op.metadata?.skipTaskVerification === true) return;
 
     // Aegis method-pack runs (metadata.aegis.enabled, opt-in only) carry their
     // agent-submitted closeout/reports in the operation metadata — appended to
     // the deliverable as advisory self-report so every downstream consumer
     // (recorded evidence rows, the LLM judge, the verify report) sees them.
-    const aegisDeliverable = appendAegisDeliverableEvidence(params.deliverable, op.metadata);
+    const aegisDeliverable = frozenDelivery
+      ? params.deliverable
+      : appendAegisDeliverableEvidence(params.deliverable, op.metadata);
 
     if (op.taskId) {
       const taskTopic = await new TaskTopicModel(db, userId, workspaceId).findByOperationId(
@@ -207,7 +212,7 @@ const executeVerifyLifecycle = async (
             await startEvidenceSubmission({
               db,
               deliverable: aegisDeliverable,
-              goal: params.goal,
+              orchestrationWorkflow: params.orchestrationWorkflow,
               operation: op,
               plan: run.plan,
               userId,
@@ -246,6 +251,13 @@ const executeVerifyLifecycle = async (
       verifierAgentId = resolvedAcceptance?.config.verifierAgentId ?? undefined;
     }
 
+    const resolvedDeliverable = frozenDelivery
+      ? params.deliverable
+      : await resolveVerificationDeliverable(db, userId, aegisDeliverable, op.taskId, workspaceId);
+    await new VerifyRunModel(db, userId, workspaceId).recordVerificationContext(
+      run.id,
+      resolvedDeliverable,
+    );
     const modelConfig = await resolveVerifyModelConfig(
       db,
       userId,
@@ -256,19 +268,13 @@ const executeVerifyLifecycle = async (
       },
       workspaceId,
     );
-    const resolvedDeliverable = await resolveVerificationDeliverable(
-      db,
-      userId,
-      aegisDeliverable,
-      op.taskId,
-      workspaceId,
-    );
-    const verificationGoal = params.goal || run.goal || '';
+    const verificationOrchestrationWorkflow =
+      params.orchestrationWorkflow || run.orchestrationWorkflow || '';
 
     const executor = new VerifyExecutorService(db, userId, workspaceId);
     await executor.execute({
       deliverable: resolvedDeliverable,
-      goal: verificationGoal,
+      orchestrationWorkflow: verificationOrchestrationWorkflow,
       modelConfig,
       operationId: params.operationId,
       // `agent`-type checks run as the task-pinned verify agent (or the builtin
@@ -301,7 +307,7 @@ const executeVerifyLifecycle = async (
       {
         report: {
           deliverable: resolvedDeliverable,
-          goal: verificationGoal,
+          orchestrationWorkflow: verificationOrchestrationWorkflow,
           modelConfig,
           verifierAgentId,
         },
@@ -328,3 +334,53 @@ export const runVerifyAfterEvidenceSubmission = async (
   params: RunVerifyOnCompletionParams,
   workspaceId?: string,
 ): Promise<void> => executeVerifyLifecycle(db, userId, params, workspaceId, true, true);
+
+/** Rejudge the existing delivery after verifier configuration/device repair; never starts a worker. */
+export const retryErroredVerification = async (
+  db: OrviloDatabase,
+  userId: string,
+  operationId: string,
+  workspaceId?: string,
+): Promise<boolean> => {
+  const model = new VerifyRunModel(db, userId, workspaceId);
+  const run = await model.findByOperation(operationId);
+  if (!run) throw new Error('Verification run not found');
+  let deliverable = run.metadata?.verificationDeliverable;
+  if (typeof deliverable !== 'string') {
+    const operation = await new AgentOperationModel(db, userId, workspaceId).findById(operationId);
+    const messages = new MessageModel(db, run.userId, workspaceId);
+    const replyId = operation?.metadata?.assistantMessageId;
+    const recordedReply = typeof replyId === 'string' ? await messages.findById(replyId) : null;
+    // Native historical runs recorded the exact reply id before they stamped
+    // operation provenance on messages. Keep the same role and topic boundary.
+    const originalReply =
+      recordedReply?.role === 'assistant' && recordedReply.topicId === operation?.topicId
+        ? recordedReply
+        : operation?.topicId
+          ? await messages.findLatestAssistantByOperationId({
+              operationId,
+              topicId: operation.topicId,
+            })
+          : undefined;
+    const originalContent = originalReply?.content;
+    if (typeof originalContent !== 'string' || !originalContent)
+      throw new Error('VERIFICATION_CONTEXT_UNAVAILABLE: the original delivery was not recorded');
+    deliverable = originalContent;
+    await model.recordVerificationContext(run.id, originalContent);
+  }
+  if (!(await model.prepareErroredRetry(run.id))) return false;
+  await executeVerifyLifecycle(
+    db,
+    userId,
+    {
+      deliverable: deliverable as string,
+      operationId,
+      orchestrationWorkflow: run.orchestrationWorkflow ?? '',
+    },
+    workspaceId,
+    true,
+    true,
+    true,
+  );
+  return true;
+};

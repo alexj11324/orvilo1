@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { AgentModel } from '../../models/agent';
 import { ChatGroupModel } from '../../models/chatGroup';
 import {
@@ -73,9 +74,19 @@ afterEach(async () => {
 describe('buildMemberTransferManifest', () => {
   it('reports the owner’s cron, device binding, and detachable tasks for a private agent', async () => {
     const agent = await ownerModel.create(withRuntime({ title: 'Agent', visibility: 'public' }));
+    await serverDB.insert(devices).values({
+      deviceId: 'dev-1',
+      identitySource: 'installation',
+      userId: ownerId,
+      visibility: 'private',
+      workspaceId: wsId,
+    });
     await serverDB
       .update(agents)
-      .set({ agencyConfig: { boundDeviceId: 'dev-1' }, visibility: 'private' })
+      .set({
+        agencyConfig: withRuntime({ agencyConfig: { boundDeviceId: 'dev-1' } }).agencyConfig,
+        visibility: 'private',
+      })
       .where(eq(agents.id, agent.id));
     await serverDB.insert(agentCronJobs).values([
       {
@@ -114,8 +125,8 @@ describe('buildMemberTransferManifest', () => {
 
     expect(manifest).toEqual({
       cronJobs: 1,
-      // dev-1 is not enrolled anywhere the recipient can reach → sanitation
-      // would strip it, so the reset warning is real.
+      // The private device is inaccessible to the recipient. Handover requires
+      // an explicit accessible binding before it can proceed.
       connectorsAffected: 0,
       deviceBindingAffected: true,
       expertiseAffected: 0,
@@ -141,7 +152,9 @@ describe('buildMemberTransferManifest', () => {
     ]);
     await serverDB
       .update(agents)
-      .set({ agencyConfig: { boundDeviceId: 'public-dev' } })
+      .set({
+        agencyConfig: withRuntime({ agencyConfig: { boundDeviceId: 'public-dev' } }).agencyConfig,
+      })
       .where(eq(agents.id, agent.id));
 
     const manifest = await buildMemberTransferManifest(serverDB, {
@@ -301,13 +314,15 @@ describe('buildMemberTransferManifest', () => {
     const group = await groupModel.create({ title: 'Group', visibility: 'public' });
     const [referenced] = await serverDB
       .insert(agents)
-      .values({
-        title: 'Standalone',
-        userId: teammateId,
-        virtual: false,
-        visibility: 'private',
-        workspaceId: wsId,
-      })
+      .values(
+        await withTestAgentDevices(serverDB, {
+          title: 'Standalone',
+          userId: teammateId,
+          virtual: false,
+          visibility: 'private',
+          workspaceId: wsId,
+        }),
+      )
       .returning();
     await serverDB.insert(chatGroupsAgents).values([
       {

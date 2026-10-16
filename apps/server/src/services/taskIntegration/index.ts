@@ -2040,7 +2040,7 @@ export class TaskIntegrationService {
         this.userId,
         {
           deliverable: handoff?.content ?? '',
-          goal: task.instruction,
+          orchestrationWorkflow: task.instruction,
           operationId: originalRun.operationId!,
         },
         this.workspaceId,

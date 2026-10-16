@@ -85,7 +85,7 @@ describe('resolveVerifyModelConfig', () => {
         }),
       ).resolves.toEqual({ model: 'deepseek-v4-pro', provider: 'zhipu' });
 
-      expect(getBuiltinAgentMock).toHaveBeenCalledWith(BUILTIN_AGENT_SLUGS.verifyAgent);
+      expect(getBuiltinAgentMock).not.toHaveBeenCalled();
       expect(getAgentModelConfigMock).toHaveBeenCalledWith(BUILTIN_AGENT_SLUGS.verifyAgent);
     },
   );

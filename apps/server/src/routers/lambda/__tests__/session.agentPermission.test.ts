@@ -15,6 +15,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { AgentModel } from '@/database/models/agent';
 
 import { agentRouter } from '../agent';
@@ -48,15 +49,17 @@ describe('Session RPC Agent config protection', () => {
     ]);
     const [agent] = await db
       .insert(agents)
-      .values({
-        userId: ownerId,
-        workspaceId,
-        visibility: 'public',
-        title: 'Safe Agent title',
-        systemRole: 'CONFIDENTIAL_SYSTEM_PROMPT',
-        plugins: ['private-tool'],
-        agencyConfig: { heterogeneousProvider: { type: 'codex', env: { TOKEN: 'fixture-key' } } },
-      })
+      .values(
+        await withTestAgentDevices(db, {
+          userId: ownerId,
+          workspaceId,
+          visibility: 'public',
+          title: 'Safe Agent title',
+          systemRole: 'CONFIDENTIAL_SYSTEM_PROMPT',
+          plugins: ['private-tool'],
+          agencyConfig: { heterogeneousProvider: { type: 'codex', env: { TOKEN: 'fixture-key' } } },
+        }),
+      )
       .returning();
     const [group] = await db
       .insert(chatGroups)
@@ -86,14 +89,32 @@ describe('Session RPC Agent config protection', () => {
     sessionRouter.createCaller({ serverDB: db, userId: memberId, workspaceId } as never);
 
   it.each(['new Viewer', 'creator downgraded to Viewer'] as const)(
-    'bootstraps Inbox through the real read RPC for %s without mutable defaults or Use',
+    'reads a configured Inbox through the real RPC for %s without mutable defaults or Use',
     async (state) => {
+      const creatorId = state === 'creator downgraded to Viewer' ? memberId : ownerId;
+      const [source] = await db
+        .select({ agencyConfig: agents.agencyConfig })
+        .from(agents)
+        .where(eq(agents.userId, ownerId));
+      const provisioned = await new AgentModel(db, creatorId, workspaceId).getBuiltinAgent(
+        'inbox',
+        {
+          runtime: {
+            agencyConfig: {
+              boundDeviceId: source.agencyConfig!.boundDeviceId,
+              executionTarget: 'device',
+              heterogeneousProvider: { type: 'codex' },
+            },
+            model: null,
+            provider: null,
+          },
+        },
+      );
       if (state === 'creator downgraded to Viewer') {
-        const builtin = await new AgentModel(db, memberId, workspaceId).getBuiltinAgent('inbox');
         await db
           .update(agents)
           .set({ systemRole: 'KEEP_ORIGINAL_INBOX' })
-          .where(eq(agents.id, builtin!.id));
+          .where(eq(agents.id, provisioned!.id));
         // Revoked Use must remain revoked when this creator later becomes Viewer.
         await db.delete(resourcePermissions).where(eq(resourcePermissions.userId, memberId));
       }
@@ -110,7 +131,7 @@ describe('Session RPC Agent config protection', () => {
       expect(result?.id).toBeTruthy();
       expect(result?.systemRole).toBeUndefined();
       const [builtin] = await db.select().from(agents).where(eq(agents.slug, 'inbox'));
-      expect(builtin.userId).toBe(memberId);
+      expect(builtin.userId).toBe(creatorId);
       if (state === 'creator downgraded to Viewer')
         expect(builtin.systemRole).toBe('KEEP_ORIGINAL_INBOX');
       expect(

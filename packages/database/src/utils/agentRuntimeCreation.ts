@@ -16,7 +16,7 @@ export type AgentRuntimeCreationConfig = Partial<
   Pick<AgentItem, 'agencyConfig' | 'model' | 'provider' | 'visibility'>
 >;
 
-/** Explicit hosts require saved authority; unset public workspace profiles select at first send. */
+/** Every Agent needs a saved, scope-compatible host before it can be persisted. */
 export const assertAgentRuntimeCreation = async (
   db: OrviloDatabase,
   actor: { userId: string; workspaceId?: string },
@@ -37,36 +37,7 @@ export const assertAgentRuntimeCreation = async (
     const { env: _env, ...provider } = agencyConfig.heterogeneousProvider!;
     agencyConfig.heterogeneousProvider = provider;
   }
-  const publicWorkspaceAgent = Boolean(actor.workspaceId && config.visibility !== 'private');
-  const unsetWorkspaceTarget =
-    publicWorkspaceAgent &&
-    options.purpose !== 'orchestrator' &&
-    agencyConfig.executionTargetSelectionPolicy !== 'fixed' &&
-    agencyConfig.executionTarget === undefined &&
-    agencyConfig.boundDeviceId === undefined;
-  if (!unsetWorkspaceTarget) {
-    if (
-      !agencyConfig.boundDeviceId ||
-      !['device', 'local'].includes(agencyConfig.executionTarget ?? '')
-    ) {
-      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AGENT_HOST_REQUIRED' });
-    }
-    const [host] = await db
-      .select({ deviceId: devices.deviceId })
-      .from(devices)
-      .where(
-        and(
-          eq(devices.deviceId, agencyConfig.boundDeviceId),
-          publicWorkspaceAgent
-            ? buildStrictWorkspaceWhere({ ...actor, callerAgentVisibility: 'public' }, devices)
-            : buildWorkspaceWhere(actor, devices),
-        ),
-      )
-      .limit(1);
-    if (!host) {
-      throw new TRPCError({ code: 'FORBIDDEN', message: 'AGENT_HOST_UNAVAILABLE' });
-    }
-  }
+  await assertAgentDeviceBinding(db, actor, agencyConfig, config.visibility);
   if (agencyConfig.heterogeneousProvider?.type !== 'orvilo') return agencyConfig;
 
   const model = agencyConfig.heterogeneousProvider.model ?? config.model;
@@ -85,10 +56,41 @@ export const assertAgentRuntimeCreation = async (
       row.config.model === model &&
       (!config.provider || row.config.provider === config.provider),
   );
-  if (!binding || !(await bindings.ownsCredentialReference(binding.config.secretReference))) {
+  if (!binding || !(await bindings.ownsCredentialReference(binding.config.secretReference)))
     throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AGENT_PROVIDER_REQUIRED' });
-  }
   return agencyConfig;
+};
+
+/** Validate a host when an existing Agent changes scope, without inventing a new runtime. */
+export const assertAgentDeviceBinding = async (
+  db: OrviloDatabase,
+  actor: { userId: string; workspaceId?: string },
+  agencyConfig: OrviloAgentAgencyConfig | null | undefined,
+  visibility?: 'public' | 'private' | null,
+) => {
+  const publicWorkspaceAgent = Boolean(actor.workspaceId && visibility !== 'private');
+  if (
+    !agencyConfig?.boundDeviceId ||
+    !['device', 'local'].includes(agencyConfig.executionTarget ?? '')
+  ) {
+    throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'AGENT_HOST_REQUIRED' });
+  }
+  const [host] = await db
+    .select({ deviceId: devices.deviceId })
+    .from(devices)
+    .where(
+      and(
+        eq(devices.deviceId, agencyConfig.boundDeviceId),
+        isNull(devices.retiredAt),
+        publicWorkspaceAgent
+          ? buildStrictWorkspaceWhere({ ...actor, callerAgentVisibility: 'public' }, devices)
+          : buildWorkspaceWhere(actor, devices),
+      ),
+    )
+    .limit(1);
+  if (!host) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'AGENT_HOST_UNAVAILABLE' });
+  }
 };
 
 /** Creation-only initializer: pass only rows returned by the just-completed INSERT. */

@@ -1,0 +1,43 @@
+orvilo-binding-head-db.log
+ Test Files  3 passed (3)
+      Tests  28 passed (28)
+   Start at  23:09:26
+   Duration  14.38s (import 66%, transform 23%, tests 11%)
+
+orvilo-binding-head-server2.log
+ Test Files  4 passed (4)
+      Tests  68 passed (68)
+   Start at  23:15:27
+   Duration  49.10s (transform 61%, import 34%, setup 4%, tests 1%)
+
+orvilo-binding-legacy-scope-tests.log
+ Test Files  3 passed (3)
+      Tests  25 passed (25)
+   Start at  23:17:53
+   Duration  64.66s (transform 55%, import 36%, setup 8%)
+
+orvilo-binding-operation-policy-tests.log
+ Test Files  1 passed (1)
+      Tests  36 passed (36)
+   Start at  23:26:31
+   Duration  12.38s (import 74%, transform 19%, tests 6%)
+
+orvilo-binding-ci-repairs2.log
+ Test Files  3 passed (3)
+      Tests  61 passed (61)
+   Start at  23:29:30
+   Duration  51.47s (transform 44%, import 30%, tests 22%, setup 4%)
+
+orvilo-binding-ci-repairs3.log
+ Test Files  2 passed (2)
+      Tests  141 passed (141)
+   Start at  23:31:51
+   Duration  80.89s (tests 60%, transform 23%, import 16%, setup 1%)
+
+orvilo-binding-inbox-final2.log
+ Test Files  2 passed (2)
+      Tests  253 passed | 5 skipped (258)
+   Start at  22:56:46
+   Duration  65.25s (import 57%, transform 25%, tests 14%, environment 3%)
+
+Isolated prior-source regressions: 4 failed before the plan/report scope and native reply recovery correction.

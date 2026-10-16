@@ -13,6 +13,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { and, eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { ResourcePermissionModel } from '@/database/models/resourcePermission';
 
 import { assertTopicCommentReadAccess } from '../../_helpers/topicCommentAccess';
@@ -191,13 +192,15 @@ describe('topicCommentRouter integration', () => {
   it('enforces target access after conversation access changes', async () => {
     const agentId = 'topic-comment-view-only-agent';
     const agentTopicId = 'topic-comment-view-only-topic';
-    await db.insert(agents).values({
-      id: agentId,
-      title: 'View-only Agent',
-      userId: adminId,
-      visibility: 'public',
-      workspaceId,
-    });
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, {
+        id: agentId,
+        title: 'View-only Agent',
+        userId: adminId,
+        visibility: 'public',
+        workspaceId,
+      }),
+    );
     await db.insert(topics).values({
       agentId,
       id: agentTopicId,
@@ -272,13 +275,15 @@ describe('topicCommentRouter integration', () => {
     const privateAgentId = 'topic-comment-private-agent';
     const privateTopicId = 'topic-comment-private-topic';
     const privateMessageId = 'topic-comment-private-message';
-    await db.insert(agents).values({
-      id: privateAgentId,
-      title: 'Private Agent',
-      userId: memberId,
-      visibility: 'private',
-      workspaceId,
-    });
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, {
+        id: privateAgentId,
+        title: 'Private Agent',
+        userId: memberId,
+        visibility: 'private',
+        workspaceId,
+      }),
+    );
     await db.insert(topics).values({
       agentId: privateAgentId,
       id: privateTopicId,
@@ -517,13 +522,15 @@ describe('topicCommentRouter integration', () => {
     const owner = topicCommentRouter.createCaller(context(ownerId, workspaceId));
     const privateAgentId = 'topic-comment-notify-private-agent';
     const privateTopicId = 'topic-comment-notify-private-topic';
-    await db.insert(agents).values({
-      id: privateAgentId,
-      title: 'Private Agent',
-      userId: memberId,
-      visibility: 'private',
-      workspaceId,
-    });
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, {
+        id: privateAgentId,
+        title: 'Private Agent',
+        userId: memberId,
+        visibility: 'private',
+        workspaceId,
+      }),
+    );
     await db.insert(topics).values({
       agentId: privateAgentId,
       id: privateTopicId,

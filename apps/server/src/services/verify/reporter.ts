@@ -23,8 +23,8 @@ const log = debug('orvilo-server:verify-reporter');
 
 export interface GenerateReportParams {
   deliverable: string;
-  goal: string;
   modelConfig: { model: string; provider: string };
+  orchestrationWorkflow: string;
   /**
    * Preferred ACP binding for the narrative judgment (task-pinned verifier).
    * Falls back to the builtin verify agent slug, then the env binding.
@@ -51,10 +51,12 @@ export class VerifyReporterService {
   private readonly evidenceModel: VerifyEvidenceModel;
   private readonly reportModel: VerifyReportModel;
   private readonly documentModel: DocumentModel;
+  private readonly workspaceId?: string;
 
   constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
+    this.workspaceId = workspaceId;
     this.resultModel = new VerifyCheckResultModel(db, userId, workspaceId);
     this.evidenceModel = new VerifyEvidenceModel(db, userId, workspaceId);
     this.reportModel = new VerifyReportModel(db, userId, workspaceId);
@@ -62,7 +64,8 @@ export class VerifyReporterService {
   }
 
   async generateReport(params: GenerateReportParams) {
-    const { verifyRunId, goal, deliverable, modelConfig, verifierAgentId } = params;
+    const { verifyRunId, orchestrationWorkflow, deliverable, modelConfig, verifierAgentId } =
+      params;
 
     const results = await this.resultModel.listByRun(verifyRunId);
     if (results.length === 0) {
@@ -93,7 +96,7 @@ export class VerifyReporterService {
 
     const chain = chainVerifyReport({
       deliverable,
-      goal,
+      orchestrationWorkflow,
       items: results.map((r) => ({
         confidence: r.confidence,
         evidence: evidenceByItem.get(r.checkItemId),
@@ -131,7 +134,7 @@ export class VerifyReporterService {
     verifierAgentId?: string,
   ) {
     try {
-      const ai = new AiGenerationService(this.db, this.userId);
+      const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
       const raw = await ai.generateObject(
         {
           ...chain,

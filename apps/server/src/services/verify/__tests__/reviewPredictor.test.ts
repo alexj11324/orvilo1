@@ -85,14 +85,20 @@ describe('isCurrentReviewPrediction', () => {
     ).toBe(true);
   });
 
-  it('includes the exact configured-model prediction used by a Goal review', () => {
+  it('includes the exact configured-model prediction used by an Orchestration workflow review', () => {
     const prediction = {
-      id: 'goal-prediction',
+      id: 'orchestration-workflow-prediction',
       model: 'gpt-4o',
       provider: 'openai',
       promptVersion: REVIEW_PREDICT_PROMPT_VERSION,
     };
-    expect(isCurrentReviewPrediction(prediction, current, new Set(['goal-prediction']))).toBe(true);
+    expect(
+      isCurrentReviewPrediction(
+        prediction,
+        current,
+        new Set(['orchestration-workflow-prediction']),
+      ),
+    ).toBe(true);
     expect(isCurrentReviewPrediction(prediction, current, new Set(['another-prediction']))).toBe(
       false,
     );

@@ -156,7 +156,7 @@
     },
     {
       "rule": "web-closure",
-      "importer": "packages/agent-tracing/src/goal/store/file-store.ts",
+      "importer": "packages/agent-tracing/src/orchestrationWorkflow/store/file-store.ts",
       "target": "builtin:fs/promises",
       "scope": "closure",
       "owner": "wd-04",
@@ -165,7 +165,7 @@
     },
     {
       "rule": "web-closure",
-      "importer": "packages/agent-tracing/src/goal/store/loadTrajectory.ts",
+      "importer": "packages/agent-tracing/src/orchestrationWorkflow/store/loadTrajectory.ts",
       "target": "builtin:fs/promises",
       "scope": "closure",
       "owner": "wd-04",
@@ -174,7 +174,7 @@
     },
     {
       "rule": "web-closure",
-      "importer": "packages/agent-tracing/src/goal/store/remote-store.ts",
+      "importer": "packages/agent-tracing/src/orchestrationWorkflow/store/remote-store.ts",
       "target": "builtin:fs/promises",
       "scope": "closure",
       "owner": "wd-04",

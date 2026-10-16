@@ -59,7 +59,7 @@ export const chainTaskInstruction = ({
         '',
         'Return:',
         '- instruction: a complete brief in markdown, structured as:',
-        '  1. an opening paragraph stating the outcome — what is being produced and from what. Do not name an audience, a purpose or a business goal the user did not state;',
+        '  1. an opening paragraph stating the outcome — what is being produced and from what. Do not name an audience, a purpose or a business orchestration workflow the user did not state;',
         "  2. a requirements section under a markdown heading, its title written in the user's language, listing every settled requirement as its own bullet: the deliverable and its format, the sources or inputs to work from, the dimensions or metrics to cover, and every constraint the user stated or answered;",
         '  3. a closing note naming what is deliberately left to the executor, phrased as latitude — only when the user actually left something open.',
         '- title: a short, specific task name in the imperative, consistent with the brief.',

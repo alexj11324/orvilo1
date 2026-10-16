@@ -1,6 +1,8 @@
 import type { VerifyCheckItem } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AiGenerationService } from '@/server/services/aiGeneration';
+
 import { VerifyPlanGeneratorService } from '../planGenerator';
 
 // Mock the model modules the generator constructs (holistic fallback).
@@ -76,7 +78,7 @@ describe('generateDraftPlan — holistic fallback', () => {
   it('synthesizes one agent-type holistic check from the requirement when no criteria', async () => {
     const svc = new VerifyPlanGeneratorService(db, 'user-1');
     await svc.generateDraftPlan({
-      goal: 'do the thing',
+      orchestrationWorkflow: 'do the thing',
       holisticFallback: true,
       operationId: 'op-1',
       requirement: 'The UI shows the new badge',
@@ -92,10 +94,10 @@ describe('generateDraftPlan — holistic fallback', () => {
     });
   });
 
-  it('falls back to the goal when no requirement', async () => {
+  it('falls back to the orchestration workflow when no requirement', async () => {
     const svc = new VerifyPlanGeneratorService(db, 'user-1');
     await svc.generateDraftPlan({
-      goal: 'fix the bug',
+      orchestrationWorkflow: 'fix the bug',
       holisticFallback: true,
       operationId: 'op-1',
     });
@@ -104,7 +106,11 @@ describe('generateDraftPlan — holistic fallback', () => {
 
   it('does NOT synthesize when holisticFallback is off — empty plan stays empty', async () => {
     const svc = new VerifyPlanGeneratorService(db, 'user-1');
-    await svc.generateDraftPlan({ goal: 'x', holisticFallback: false, operationId: 'op-1' });
+    await svc.generateDraftPlan({
+      orchestrationWorkflow: 'x',
+      holisticFallback: false,
+      operationId: 'op-1',
+    });
     expect(lastPlan()).toHaveLength(0);
   });
 
@@ -123,7 +129,7 @@ describe('generateDraftPlan — holistic fallback', () => {
     ]);
     const svc = new VerifyPlanGeneratorService(db, 'user-1');
     await svc.generateDraftPlan({
-      goal: 'x',
+      orchestrationWorkflow: 'x',
       holisticFallback: true,
       operationId: 'op-1',
       verifyRubricId: 'rub-1',
@@ -151,7 +157,7 @@ describe('generateDraftPlan — holistic fallback', () => {
     ]);
 
     await new VerifyPlanGeneratorService(db, 'user-1').generateDraftPlan({
-      goal: 'x',
+      orchestrationWorkflow: 'x',
       operationId: 'op-1',
       verifyRubricId: 'rub-1',
     });
@@ -163,11 +169,33 @@ describe('generateDraftPlan — holistic fallback', () => {
 });
 
 describe('generateCriteria tracing', () => {
+  it('keeps workspace criteria drafting on the workspace device runtime', async () => {
+    vi.mocked(AiGenerationService).mockClear();
+    generateObjectMock.mockResolvedValue({ criteria: [] });
+    await new VerifyPlanGeneratorService(db, 'user-1', 'ws-1').generateCriteria({
+      orchestrationWorkflow: 'Ship the workspace feature',
+      modelConfig: { model: 'test-model', provider: 'test-provider' },
+    });
+    expect(AiGenerationService).toHaveBeenCalledWith(db, 'user-1', 'ws-1');
+  });
+
+  it('keeps automatic workspace verification plans out of personal scope', async () => {
+    vi.mocked(AiGenerationService).mockClear();
+    generateObjectMock.mockResolvedValue({ criteria: [] });
+    await new VerifyPlanGeneratorService(db, 'user-1', 'ws-1').generateDraftPlan({
+      enableAiGeneration: true,
+      orchestrationWorkflow: 'Check workspace delivery',
+      modelConfig: { model: 'test-model', provider: 'test-provider' },
+      operationId: 'op-ws',
+    });
+    expect(AiGenerationService).toHaveBeenCalledWith(db, 'user-1', 'ws-1');
+  });
+
   it('keeps generic task criteria generation on the verify-plan scenario', async () => {
     generateObjectMock.mockResolvedValue({ criteria: [] });
 
     await new VerifyPlanGeneratorService(db, 'user-1').generateCriteria({
-      goal: 'Ship the feature',
+      orchestrationWorkflow: 'Ship the feature',
       modelConfig: { model: 'test-model', provider: 'test-provider' },
     });
 

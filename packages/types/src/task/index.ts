@@ -40,7 +40,7 @@ export type TaskTriageStatus = 'accepted' | 'declined' | 'duplicate' | 'untriage
 export type TaskAssignmentMode = 'manual' | 'rules' | 'orchestrated';
 
 export type TaskOrchestrationOwner =
-  'manual' | `goal:${string}` | `project:${string}` | `team:${string}`;
+  'manual' | `orchestration workflow:${string}` | `project:${string}` | `team:${string}`;
 
 export type TaskCreationSubjectKind = 'agent' | 'integration' | 'system' | 'user';
 
@@ -96,7 +96,7 @@ export type TaskHandoffStrategy = 'cancel_and_restart';
 
 /**
  * Authoritative execution origin persisted on a dispatch row (SA05-B):
- * `caid` = a new orchestrated writer (goal/planner/cascade entry);
+ * `caid` = a new orchestrated writer (orchestration workflow/planner/cascade entry);
  * `internal` = settlement work continuing an existing dispatch (corrective
  * merges, reservation handoffs); `external` = direct user/schedule
  * invocation. `null` on rows persisted before the column existed.
@@ -292,7 +292,7 @@ export interface TaskEventDispatchEvidence {
 export interface TaskExecutionContract {
   /** Acceptance gate the run must satisfy (required evidence exists). */
   acceptance: { enabled: boolean };
-  /** Frozen budget: goal-loop round and attempt cap (`null` = unbounded). */
+  /** Frozen budget: orchestration workflow-loop round and attempt cap (`null` = unbounded). */
   budget: { maxRounds: number | null; round: number };
   /** Frozen policy payload — instruction, verify gate, dependency receipts. */
   content?: TaskExecutionContractContent;
@@ -516,7 +516,7 @@ export const isAutomationRunTrigger = (trigger?: TaskRunTrigger): boolean =>
  *                 scheduling state, nor count against the maxExecutions quota.
  * - `schedule`  — a cron `schedule` tick fired the run.
  * - `heartbeat` — a heartbeat interval tick fired the run.
- * - `goal`      — the Goal coordinator started this Work attempt.
+ * - `orchestrationWorkflow`      — the OrchestrationWorkflow coordinator started this Work attempt.
  *                 Like `manual`, it never counts against automation quotas.
  * - `orchestrator` — the dependency/project planner started this run. Project
  *                    dispatch policy and execution budgets apply.
@@ -524,7 +524,7 @@ export const isAutomationRunTrigger = (trigger?: TaskRunTrigger): boolean =>
  *             authoritative event admission before the existing runner may start.
  */
 export type TaskRunTrigger =
-  'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator' | 'event';
+  'manual' | 'schedule' | 'heartbeat' | 'orchestrationWorkflow' | 'orchestrator' | 'event';
 
 /**
  * A clarifying question the intent reader wants answered before an agent
@@ -547,8 +547,8 @@ export interface TaskIntentAnalysis {
   clarifications: TaskIntentClarification[];
   /** How sure the reader is the brief can go to an executor as-is. */
   confidence: 'high' | 'medium' | 'low';
-  /** Whether this is a single delivery or a standing goal. */
-  kind: 'task' | 'goal';
+  /** Whether this is a single delivery or a standing orchestration workflow. */
+  kind: 'task' | 'orchestrationWorkflow';
   kindReason?: string;
   /** The request rewritten as a full brief, without added scope. */
   refinedInstruction: string;
@@ -1450,7 +1450,7 @@ export interface TaskDetailActivity {
   time?: string;
   title?: string;
   topicId?: string | null;
-  /** Topic-only: what opened this round — `goal` marks a coordinator-started attempt. */
+  /** Topic-only: what opened this round — `orchestration workflow` marks a coordinator-started attempt. */
   trigger?: TaskRunTrigger | null;
   type: TaskActivityType;
   /** Comment-only: ISO timestamp of the latest persisted edit. */

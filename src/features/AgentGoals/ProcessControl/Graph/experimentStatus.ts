@@ -1,9 +1,9 @@
-import type { GoalNodeStatus } from '@orvilo/types';
+import type { OrchestrationWorkflowNodeStatus } from '@orvilo/types';
 
 import { TASK_STATUS_VISUALS } from '@/components/ExecutionStatus';
 
 /** A container describes its work; it is not itself a running Task. */
-export const experimentStatusVisual = (status: GoalNodeStatus) => {
+export const experimentStatusVisual = (status: OrchestrationWorkflowNodeStatus) => {
   const visuals = {
     active: TASK_STATUS_VISUALS.running,
     proposed: TASK_STATUS_VISUALS.backlog,

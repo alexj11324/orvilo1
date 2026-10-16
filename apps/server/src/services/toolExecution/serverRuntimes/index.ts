@@ -7,9 +7,9 @@
  * - Per-request runtimes (e.g., CloudSandbox - needs topicId, userId)
  *
  * Runtime modules are loaded lazily per identifier: several of them
- * (goal / goalSupervisor / task / ...) import service-layer modules that reach
+ * (orchestration workflow / orchestrationWorkflowSupervisor / task / ...) import service-layer modules that reach
  * back into `services/aiAgent`, so static imports here would close an import
- * cycle (`aiAgent → runToolSurface → serverRuntimes → goal → aiAgent`). Keeping
+ * cycle (`aiAgent → runToolSurface → serverRuntimes → orchestration workflow → aiAgent`). Keeping
  * this module a leaf in the static graph keeps `lint:circular` clean. The map
  * keys are the registration identifiers — `__tests__/registry.test.ts` asserts
  * each loaded module's `identifier` matches its key.
@@ -38,8 +38,10 @@ const runtimeLoaders: Record<string, () => Promise<ServerRuntimeRegistration>> =
   'orvilo-cloud-sandbox': async () => (await import('./cloudSandbox')).cloudSandboxRuntime,
   'orvilo-computer-use': async () => (await import('./auv')).auvRuntime,
   'orvilo-creds': async () => (await import('./creds')).credsRuntime,
-  'orvilo-goal': async () => (await import('./goal')).goalRuntime,
-  'orvilo-goal-supervisor': async () => (await import('./goalSupervisor')).goalSupervisorRuntime,
+  'orvilo-orchestration-workflow': async () =>
+    (await import('./orchestrationWorkflow')).orchestrationWorkflowRuntime,
+  'orvilo-orchestration-workflow-supervisor': async () =>
+    (await import('./orchestrationWorkflowSupervisor')).orchestrationWorkflowSupervisorRuntime,
   'orvilo-group-agent-builder': async () =>
     (await import('./groupAgentBuilder')).groupAgentBuilderRuntime,
   'orvilo-group-management': async () => (await import('./groupManagement')).groupManagementRuntime,

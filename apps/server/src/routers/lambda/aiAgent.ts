@@ -3281,7 +3281,7 @@ export const aiAgentRouter = router({
   /**
    * Re-mint the operation token a long `orvilo hetero exec` run authenticates with.
    *
-   * The token is signed for four hours, and a Goal Task can run far longer. Past
+   * The token is signed for four hours, and a OrchestrationWorkflow Task can run far longer. Past
    * the expiry every heteroIngest is rejected, the run's heartbeats stop renewing
    * its lease, and the operation is reclaimed as abandoned while the agent is still
    * working. The producer calls this before expiry. The replacement carries the

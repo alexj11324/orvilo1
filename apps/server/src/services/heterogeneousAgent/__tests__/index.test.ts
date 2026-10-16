@@ -750,6 +750,36 @@ describe('HeterogeneousAgentService', () => {
       dispatchSpy.mockRestore();
     });
 
+    it.each([{ trigger: 'acp_judgment' }, { metadata: { skipTaskVerification: true } }])(
+      'preserves verification suppression across native completion callbacks (%o)',
+      async (policy) => {
+        const { service } = createService({ operationId: 'op-judgment' });
+        const findByIdSpy = vi
+          .spyOn(AgentOperationModel.prototype, 'findById')
+          .mockResolvedValue({ ...policy, parentOperationId: null, taskId: 'task-1' } as any);
+        const instantiateSpy = vi
+          .spyOn(verifyService, 'instantiateVerifyPlanOnStart')
+          .mockResolvedValue();
+        const dispatchSpy = vi
+          .spyOn(CompletionLifecycle.prototype, 'dispatchHooks')
+          .mockResolvedValue();
+        try {
+          await service.heteroFinish({
+            agentType: 'claude-code',
+            operationId: 'op-judgment',
+            result: 'success',
+            topicId: 'topic-judgment',
+          });
+          expect(instantiateSpy).not.toHaveBeenCalled();
+          expect(dispatchSpy).toHaveBeenCalledTimes(1);
+        } finally {
+          findByIdSpy.mockRestore();
+          instantiateSpy.mockRestore();
+          dispatchSpy.mockRestore();
+        }
+      },
+    );
+
     it('skips verify-plan instantiation for a non-task hetero run', async () => {
       const { service } = createService({ operationId: 'op-no-task' });
 

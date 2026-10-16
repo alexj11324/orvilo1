@@ -61,6 +61,7 @@ const agentRow = {
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
+      getOrchestratorSourceAgentId: vi.fn().mockResolvedValue(undefined),
       getAgentConfig: mockAgentConfig,
       queryAgents: vi.fn().mockResolvedValue([]),
     };

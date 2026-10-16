@@ -27,7 +27,9 @@ vi.mock('@/features/Conversation', () => ({
     selector({ scheduledSendAt: undefined, setScheduledSendAt: mocks.schedule }),
 }));
 vi.mock('@/store/user', () => ({ useUserStore: () => true }));
-vi.mock('@/features/ChatInput/InputEditor/ActionTag/goalTag', () => ({ insertGoalTag: vi.fn() }));
+vi.mock('@/features/ChatInput/InputEditor/ActionTag/goalTag', () => ({
+  insertGoalTag: vi.fn(),
+}));
 
 it('retains scheduling and formatting without an application goal action', () => {
   render(<HeteroPlus />);

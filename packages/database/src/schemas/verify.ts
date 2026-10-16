@@ -591,8 +591,8 @@ export const verifyRuns = pgTable(
 
     /** Human-readable round title (report title / test name). */
     title: text('title'),
-    /** The delivery goal being verified. */
-    goal: text('goal'),
+    /** The delivery orchestration workflow being verified. */
+    orchestrationWorkflow: text('orchestration_workflow'),
 
     /**
      * The scenario's context — its scope/provenance (shape keyed by `scenario`;

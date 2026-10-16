@@ -6,7 +6,7 @@ import { instantiateVerifyPlanOnStart } from '../planInstantiation';
 import { createRepairRunner } from '../repairService';
 
 const mocks = vi.hoisted(() => ({
-  goalFind: vi.fn(),
+  orchestrationWorkflowFind: vi.fn(),
   loadRounds: vi.fn(),
   acceptanceAttachPolicyRun: vi.fn(),
   acceptanceEnsureForSubject: vi.fn(),
@@ -24,9 +24,9 @@ const mocks = vi.hoisted(() => ({
   taskAcceptanceResolve: vi.fn(),
 }));
 
-vi.mock('@/database/models/goal', () => ({
-  GoalModel: vi.fn(function () {
-    return { findByGraphTask: mocks.goalFind };
+vi.mock('@/database/models/orchestrationWorkflow', () => ({
+  OrchestrationWorkflowModel: vi.fn(function () {
+    return { findByGraphTask: mocks.orchestrationWorkflowFind };
   }),
 }));
 
@@ -94,8 +94,8 @@ const db = {} as any;
 const plan = [{ id: 'check-1', required: true }];
 
 describe('Verify acceptance lifecycle', () => {
-  it('reuses the Goal acceptance checklist and supplemental check ids on a repair attempt', async () => {
-    mocks.goalFind.mockResolvedValue({ id: 'goal-1' });
+  it('reuses the Orchestration workflow acceptance checklist and supplemental check ids on a repair attempt', async () => {
+    mocks.orchestrationWorkflowFind.mockResolvedValue({ id: 'orchestration-workflow-1' });
     mocks.taskAcceptanceResolve.mockResolvedValue({
       acceptance: { id: 'a1' },
       config: { enabled: true },

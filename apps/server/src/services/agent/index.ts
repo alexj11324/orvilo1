@@ -23,6 +23,7 @@ import {
 import { getServerDefaultAgentConfig } from '@/server/globalConfig';
 import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 
+import { getExecutableBuiltinAgent } from './builtinRuntimeCreation';
 import { type UpdateAgentResult } from './type';
 
 const log = debug('orvilo-agent:service');
@@ -93,7 +94,7 @@ export class AgentService {
   ): Promise<(OrviloAgentConfig & { workspaceId?: string | null }) | null> {
     // Fetch agent and defaultAgentConfig in parallel
     const [agent, defaultAgentConfig] = await Promise.all([
-      this.agentModel.getBuiltinAgent(slug),
+      getExecutableBuiltinAgent(this.db, this.userId, slug, this.workspaceId),
       this.userModel.getUserSettingsDefaultAgentConfig(),
     ]);
 

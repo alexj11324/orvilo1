@@ -50,8 +50,9 @@ export interface VerifierAgentRunner {
     checkItem: VerifyCheckItem;
     /** Evidence the builder captured for this item — input to the verifier's judgment. */
     evidence?: JudgeEvidence[];
-    goal: string;
+    orchestrationWorkflow: string;
     operationId: string;
+    onOperationCreated?: (operationId: string) => Promise<void>;
   }): Promise<{ verifierOperationId: string } | null>;
 }
 
@@ -60,9 +61,9 @@ export interface ExecuteVerifyParams {
   batchLlm?: boolean;
   /** The run's final output / artifacts, judged against the criteria. */
   deliverable: string;
-  goal: string;
   modelConfig: { model: string; provider: string };
   operationId: string;
+  orchestrationWorkflow: string;
   /** Runs agent checks and program checks without a native runner as verifier sub-agents. */
   runVerifierAgent?: VerifierAgentRunner;
   /**
@@ -82,6 +83,8 @@ const terminalResultStatuses = new Set<VerifyCheckResultStatus>([
   'skipped',
 ]);
 
+type ClaimedVerifyParams = ExecuteVerifyParams & { attempts: ReadonlyMap<string, string> };
+
 /** Group a run's evidence rows by the plan item they back, for judge injection. */
 type EvidenceByItem = Map<string, JudgeEvidence[]>;
 
@@ -95,6 +98,7 @@ const toToulmin = (v: SingleVerdict): ToulminVerdict => ({
 export class VerifyExecutorService {
   private readonly db: OrviloDatabase;
   private readonly userId: string;
+  private readonly workspaceId?: string;
   private readonly runModel: VerifyRunModel;
   private readonly resultModel: VerifyCheckResultModel;
   private readonly statusService: VerifyStatusService;
@@ -106,6 +110,7 @@ export class VerifyExecutorService {
   constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.db = db;
     this.userId = userId;
+    this.workspaceId = workspaceId;
     this.runModel = new VerifyRunModel(db, userId, workspaceId);
     this.resultModel = new VerifyCheckResultModel(db, userId, workspaceId);
     this.statusService = new VerifyStatusService(db, userId, workspaceId);
@@ -145,16 +150,33 @@ export class VerifyExecutorService {
     }
 
     const verifyRunId = run.id;
-    const items = run.plan as VerifyCheckItem[];
+    const plan = run.plan as VerifyCheckItem[];
 
     // Idempotently create the pending result rows (skip ones already present —
     // an item may already have a row from evidence uploaded mid-run).
     const existing = await this.resultModel.listByRun(verifyRunId);
     const existingIds = new Set(existing.map((r) => r.checkItemId));
-    const toCreate = items
+    const toCreate = plan
       .filter((i) => !existingIds.has(i.id))
       .map((item) => planItemToPendingResult(verifyRunId, params.operationId, item));
     if (toCreate.length > 0) await this.resultModel.createMany(toCreate);
+
+    const claims = await Promise.all(
+      plan.map(async (item) => {
+        const attemptId = await this.resultModel.claimPendingCheck(verifyRunId, item.id);
+        return attemptId ? { item, attemptId } : null;
+      }),
+    );
+    const claimed = claims.filter(
+      (claim): claim is { item: VerifyCheckItem; attemptId: string } => claim !== null,
+    );
+    const items = claimed.map(({ item }) => item);
+    if (items.length === 0) return;
+    const execution: ClaimedVerifyParams = {
+      ...params,
+      attempts: new Map(claimed.map(({ item, attemptId }) => [item.id, attemptId])),
+    };
+    await this.runModel.recordVerificationContext(verifyRunId, params.deliverable);
 
     await this.statusService.markVerifying(params.operationId);
 
@@ -165,7 +187,7 @@ export class VerifyExecutorService {
     // Structural gate (server, no LLM): an evidence-driven item missing any of
     // its declared evidence types is marked uncertain up front and excluded from
     // the judges — we never let a required artifact-backed claim pass unseen.
-    const gapIds = await this.runStructuralGate(verifyRunId, items, evidenceByItem);
+    const gapIds = await this.runStructuralGate(execution, verifyRunId, items, evidenceByItem);
     const gated = items.filter((i) => !gapIds.has(i.id));
 
     const declaredLlmItems = gated.filter((i) => i.verifierType === 'llm');
@@ -201,10 +223,10 @@ export class VerifyExecutorService {
     // currently use the verifier agent as an evidence-producing fallback until a
     // sandboxed native program runner is available.
     await Promise.all([
-      this.runProgramItems(params, verifyRunId, programItems, evidenceByItem),
-      this.runLlmItems(params, verifyRunId, llmItems, evidenceByItem, multimodalItemIds),
+      this.runProgramItems(execution, verifyRunId, programItems, evidenceByItem),
+      this.runLlmItems(execution, verifyRunId, llmItems, evidenceByItem, multimodalItemIds),
       ...agentItems.map((item) =>
-        this.runAgentItem(params, verifyRunId, item, evidenceByItem.get(item.id) ?? []),
+        this.runAgentItem(execution, verifyRunId, item, evidenceByItem.get(item.id) ?? []),
       ),
     ]);
 
@@ -261,6 +283,7 @@ export class VerifyExecutorService {
    * pass through untouched.
    */
   private async runStructuralGate(
+    params: ClaimedVerifyParams,
     verifyRunId: string,
     items: VerifyCheckItem[],
     evidenceByItem: EvidenceByItem,
@@ -278,21 +301,26 @@ export class VerifyExecutorService {
 
       gapIds.add(item.id);
       const missing = gaps.join(', ');
-      await this.resultModel.updateByCheckItem(verifyRunId, item.id, {
-        completedAt: new Date(),
-        confidence: 0,
-        status: 'failed',
-        suggestion: `Capture and upload the missing evidence (${missing}) via \`orvilo verify upload-evidence\`.`,
-        toulmin: { limitation: `Required evidence not provided: ${missing}.` },
-        verdict: 'uncertain',
-      });
+      await this.resultModel.updateClaimedCheck(
+        verifyRunId,
+        item.id,
+        params.attempts.get(item.id)!,
+        {
+          completedAt: new Date(),
+          confidence: 0,
+          status: 'failed',
+          suggestion: `Capture and upload the missing evidence (${missing}) via \`orvilo verify upload-evidence\`.`,
+          toulmin: { limitation: `Required evidence not provided: ${missing}.` },
+          verdict: 'uncertain',
+        },
+      );
     }
     return gapIds;
   }
 
   /** Execute program checks through the verifier agent until a native runner exists. */
   private async runProgramItems(
-    params: ExecuteVerifyParams,
+    params: ClaimedVerifyParams,
     verifyRunId: string,
     items: VerifyCheckItem[],
     evidenceByItem: EvidenceByItem,
@@ -307,19 +335,24 @@ export class VerifyExecutorService {
     }
 
     for (const item of items) {
-      await this.resultModel.updateByCheckItem(verifyRunId, item.id, {
-        completedAt: new Date(),
-        status: item.required ? 'errored' : 'skipped',
-        toulmin: {
-          limitation: 'Program verifier requires a native runner or verifier-agent fallback.',
+      await this.resultModel.updateClaimedCheck(
+        verifyRunId,
+        item.id,
+        params.attempts.get(item.id)!,
+        {
+          completedAt: new Date(),
+          status: item.required ? 'errored' : 'skipped',
+          toulmin: {
+            limitation: 'Program verifier requires a native runner or verifier-agent fallback.',
+          },
         },
-      });
+      );
     }
   }
 
   /** Judge all LLM items via the Toulmin judge (one batched call by default). */
   private async runLlmItems(
-    params: ExecuteVerifyParams,
+    params: ClaimedVerifyParams,
     verifyRunId: string,
     items: VerifyCheckItem[],
     evidenceByItem: EvidenceByItem,
@@ -340,22 +373,27 @@ export class VerifyExecutorService {
     } catch (error) {
       log('llm judge failed for op %s: %O', params.operationId, error);
       if (isAcpJudgmentBindingError(error)) {
-        // Missing authorization is not an infra hiccup — it means no verifier
-        // agent is bound, so the judgment can never legitimately run. Mark each
-        // item failed/uncertain so it GATES delivery (unlike `errored`).
+        // Missing execution configuration did not judge the delivery. Keep it
+        // out of the repair set; only the verifier may be retried after repair.
         await Promise.all(
           items.map((item) =>
-            this.resultModel.updateByCheckItem(verifyRunId, item.id, {
-              completedAt: new Date(),
-              status: 'failed',
-              toulmin: { limitation: error.message },
-              verdict: 'uncertain',
-            }),
+            this.resultModel.updateClaimedCheck(
+              verifyRunId,
+              item.id,
+              params.attempts.get(item.id)!,
+              {
+                completedAt: new Date(),
+                status: 'errored',
+                toulmin: { limitation: error.message },
+                verdict: null,
+              },
+            ),
           ),
         );
         return;
       }
       await this.markUnfinishedErrored(
+        params,
         verifyRunId,
         items,
         `LLM judge failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -365,25 +403,43 @@ export class VerifyExecutorService {
 
   /** Run one agent check as a verifier sub-agent (verdict lands async via its hook) or skip. */
   private async runAgentItem(
-    params: ExecuteVerifyParams,
+    params: ClaimedVerifyParams,
     verifyRunId: string,
     item: VerifyCheckItem,
     evidence: JudgeEvidence[],
   ): Promise<void> {
     if (!params.runVerifierAgent) {
-      await this.resultModel.updateByCheckItem(verifyRunId, item.id, {
-        completedAt: new Date(),
-        status: item.required ? 'errored' : 'skipped',
-        toulmin: { limitation: 'Agent verifier requires runtime context; not run here.' },
-      });
+      await this.resultModel.updateClaimedCheck(
+        verifyRunId,
+        item.id,
+        params.attempts.get(item.id)!,
+        {
+          completedAt: new Date(),
+          status: item.required ? 'errored' : 'skipped',
+          toulmin: { limitation: 'Agent verifier requires runtime context; not run here.' },
+        },
+      );
       return;
     }
+    let childOperationId: string | undefined;
     try {
       const spawned = await params.runVerifierAgent({
         checkItem: item,
         evidence,
-        goal: params.goal,
+        orchestrationWorkflow: params.orchestrationWorkflow,
         operationId: params.operationId,
+        onOperationCreated: async (operationId) => {
+          childOperationId = operationId;
+          if (
+            !(await this.resultModel.bindVerifierOperation(
+              verifyRunId,
+              item.id,
+              operationId,
+              params.attempts.get(item.id)!,
+            ))
+          )
+            throw new Error('VERIFIER_ATTEMPT_SUPERSEDED');
+        },
       });
 
       if (!spawned?.verifierOperationId) {
@@ -395,14 +451,19 @@ export class VerifyExecutorService {
           item.id,
           spawned,
         );
-        await this.resultModel.updateByCheckItem(verifyRunId, item.id, {
-          completedAt: new Date(),
-          // Infra failure, not a delivery verdict: the verifier never started, so
-          // there is nothing to judge. `errored` (no verdict) keeps this out of
-          // the delivery gate and the auto-repair set.
-          status: 'errored',
-          toulmin: { limitation: 'Agent verifier failed to start (no operation id returned).' },
-        });
+        await this.resultModel.failUnboundVerifierCheck(
+          verifyRunId,
+          item.id,
+          params.attempts.get(item.id)!,
+          {
+            completedAt: new Date(),
+            // Infra failure, not a delivery verdict: the verifier never started, so
+            // there is nothing to judge. `errored` (no verdict) keeps this out of
+            // the delivery gate and the auto-repair set.
+            status: 'errored',
+            toulmin: { limitation: 'Agent verifier failed to start (no operation id returned).' },
+          },
+        );
         return;
       }
 
@@ -411,11 +472,14 @@ export class VerifyExecutorService {
       );
       if (current && terminalResultStatuses.has(current.status)) return;
 
-      await this.resultModel.updateByCheckItem(verifyRunId, item.id, {
-        startedAt: new Date(),
-        status: 'running',
-        verifierOperationId: spawned.verifierOperationId,
-      });
+      // Runners using the callback already bound the child before dispatch.
+      // This conditional fallback cannot overwrite a terminal or newer attempt.
+      await this.resultModel.bindVerifierOperation(
+        verifyRunId,
+        item.id,
+        spawned.verifierOperationId,
+        params.attempts.get(item.id)!,
+      );
     } catch (error) {
       // Surface the real cause: the spawn throws during agent startup (before
       // the verifier operation is persisted), and this catch previously only
@@ -425,19 +489,33 @@ export class VerifyExecutorService {
       // the verdict limitation so it is queryable from verify_check_results.
       const detail = error instanceof Error ? error.message : String(error);
       console.error('[verify] agent verifier spawn failed for item %s: %O', item.id, error);
-      await this.resultModel.updateByCheckItem(verifyRunId, item.id, {
+      const failure = {
         completedAt: new Date(),
         // Infra failure (spawn threw before the verifier op was persisted), not a
         // delivery verdict — mark `errored` so it neither gates delivery nor seeds
         // a repair round.
-        status: 'errored',
+        status: 'errored' as const,
         toulmin: { limitation: `Agent verifier failed to start: ${detail}` },
-      });
+      };
+      if (childOperationId)
+        await this.resultModel.completeVerifierCheck(
+          verifyRunId,
+          item.id,
+          childOperationId,
+          failure,
+        );
+      else
+        await this.resultModel.failUnboundVerifierCheck(
+          verifyRunId,
+          item.id,
+          params.attempts.get(item.id)!,
+          failure,
+        );
     }
   }
 
   private async judgeBatch(
-    params: ExecuteVerifyParams,
+    params: ClaimedVerifyParams,
     verifyRunId: string,
     items: VerifyCheckItem[],
     evidenceByItem: EvidenceByItem,
@@ -454,12 +532,12 @@ export class VerifyExecutorService {
     );
     const chain = chainVerifyJudge({
       deliverable: params.deliverable,
-      goal: params.goal,
+      orchestrationWorkflow: params.orchestrationWorkflow,
       items: promptItems,
       mode: 'batch',
     });
 
-    const ai = new AiGenerationService(this.db, this.userId);
+    const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
     const raw = await ai.generateObject(
       {
         ...chain,
@@ -487,6 +565,7 @@ export class VerifyExecutorService {
           // Backfill the tracing FK only after the (async, best-effort) tracing
           // row is persisted — verdicts are written with a null link below.
           onPersisted: this.backfillTracing(
+            params,
             verifyRunId,
             items.map((i) => i.id),
           ),
@@ -507,6 +586,7 @@ export class VerifyExecutorService {
       if (!validIds.has(v.checkItemId)) continue;
       returnedIds.add(v.checkItemId);
       await this.writeVerdict({
+        attemptId: params.attempts.get(v.checkItemId)!,
         checkItemId: v.checkItemId,
         verdict: v,
         verifyRunId,
@@ -520,7 +600,7 @@ export class VerifyExecutorService {
   }
 
   private async judgeSingle(
-    params: ExecuteVerifyParams,
+    params: ClaimedVerifyParams,
     verifyRunId: string,
     item: VerifyCheckItem,
     evidenceByItem: EvidenceByItem,
@@ -533,7 +613,7 @@ export class VerifyExecutorService {
       : evidenceByItem.get(item.id);
     const chain = chainVerifyJudge({
       deliverable: params.deliverable,
-      goal: params.goal,
+      orchestrationWorkflow: params.orchestrationWorkflow,
       items: [
         {
           evidence: hydratedEvidence,
@@ -545,7 +625,7 @@ export class VerifyExecutorService {
       mode: 'single',
     });
 
-    const ai = new AiGenerationService(this.db, this.userId);
+    const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
     const raw = await ai.generateObject(
       {
         ...chain,
@@ -575,7 +655,7 @@ export class VerifyExecutorService {
             schemaName: SINGLE_VERDICT_JSON_SCHEMA.name,
             tracingId,
           } satisfies TracingOptions),
-          onPersisted: this.backfillTracing(verifyRunId, [item.id]),
+          onPersisted: this.backfillTracing(params, verifyRunId, [item.id]),
         },
       },
     );
@@ -583,14 +663,20 @@ export class VerifyExecutorService {
     const parsed = SingleVerdictSchema.safeParse(raw);
     if (!parsed.success) {
       log('single judge output invalid: %O', parsed.error.flatten());
-      await this.resultModel.updateByCheckItem(verifyRunId, item.id, {
-        completedAt: new Date(),
-        status: 'errored',
-        toulmin: { limitation: 'LLM judge returned an invalid structured verdict.' },
-      });
+      await this.resultModel.updateClaimedCheck(
+        verifyRunId,
+        item.id,
+        params.attempts.get(item.id)!,
+        {
+          completedAt: new Date(),
+          status: 'errored',
+          toulmin: { limitation: 'LLM judge returned an invalid structured verdict.' },
+        },
+      );
       return;
     }
     await this.writeVerdict({
+      attemptId: params.attempts.get(item.id)!,
       checkItemId: item.id,
       verdict: parsed.data,
       verifyRunId,
@@ -598,6 +684,7 @@ export class VerifyExecutorService {
   }
 
   private async markUnfinishedErrored(
+    params: ClaimedVerifyParams,
     verifyRunId: string,
     items: VerifyCheckItem[],
     limitation: string,
@@ -612,7 +699,7 @@ export class VerifyExecutorService {
       items
         .filter((item) => !terminalIds.has(item.id))
         .map((item) =>
-          this.resultModel.updateByCheckItem(verifyRunId, item.id, {
+          this.resultModel.updateClaimedCheck(verifyRunId, item.id, params.attempts.get(item.id)!, {
             completedAt: new Date(),
             status: 'errored',
             toulmin: { limitation },
@@ -622,6 +709,7 @@ export class VerifyExecutorService {
   }
 
   private async writeVerdict(params: {
+    attemptId: string;
     checkItemId: string;
     verdict: SingleVerdict;
     verifyRunId: string;
@@ -630,7 +718,7 @@ export class VerifyExecutorService {
     // `verifier_tracing_id` is intentionally left null here — the tracing row is
     // written asynchronously (best-effort, after the response), so linking it now
     // would violate the FK. It is backfilled by `backfillTracing` once the row exists.
-    await this.resultModel.updateByCheckItem(verifyRunId, checkItemId, {
+    await this.resultModel.updateClaimedCheck(verifyRunId, checkItemId, params.attemptId, {
       completedAt: new Date(),
       confidence: verdict.confidence,
       status: verdictToStatus(verdict.verdict),
@@ -647,11 +735,20 @@ export class VerifyExecutorService {
    * FK link. Receives the persisted tracing id (or null if tracing was disabled
    * or the record failed), so a missing tracing row simply leaves the link null.
    */
-  private backfillTracing(verifyRunId: string, checkItemIds: string[]) {
+  private backfillTracing(
+    params: ClaimedVerifyParams,
+    verifyRunId: string,
+    checkItemIds: string[],
+  ) {
     return async (tracingId: string | null): Promise<void> => {
       if (!tracingId) return;
       try {
-        await this.resultModel.backfillTracingId(verifyRunId, checkItemIds, tracingId);
+        await this.resultModel.backfillTracingId(
+          verifyRunId,
+          checkItemIds,
+          tracingId,
+          params.attempts,
+        );
       } catch (error) {
         log('tracing-id backfill failed for run %s (non-fatal): %O', verifyRunId, error);
       }

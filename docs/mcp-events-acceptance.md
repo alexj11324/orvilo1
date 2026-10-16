@@ -15,7 +15,7 @@ Baseline: `28dc3bbad36e4661f8d09154ff8b017cf5cadaeb`.
 
 The existing automation UI is backed by real schedule and heartbeat execution, not external event subscriptions. `src/features/Automations/AutomationTriggerDraft.tsx` restricts persisted trigger drafts to `schedule | heartbeat`. The comment in `automationTemplates.ts` explicitly says webhook/API templates have no implementation equivalent. A Slack digest template is therefore not evidence of Slack webhook delivery.
 
-`apps/server/src/router-hono/webhooks/index.ts` registers identity-provider, Linear, and memory callbacks; it has no Slack, GitHub, or MCP Events receiver at the baseline. `packages/types/src/task/index.ts` and `packages/database/src/schemas/task.ts` support manual, schedule, heartbeat, goal, and orchestrator run origins, with no event run origin.
+`apps/server/src/router-hono/webhooks/index.ts` registers identity-provider, Linear, and memory callbacks; it has no Slack, GitHub, or MCP Events receiver at the baseline. `packages/types/src/task/index.ts` and `packages/database/src/schemas/task.ts` support manual, schedule, heartbeat, orchestration workflow, and orchestrator run origins, with no event run origin.
 
 `TaskRunnerService` requires a stable idempotency key for non-manual runs and enters `TaskDispatchService`/`TaskDispatchModel` for durable request, admission, claim, and fenced transitions. This is the existing execution boundary an event worker must reuse. A persisted event inbox by itself does not establish that an agent ran.
 

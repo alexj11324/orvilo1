@@ -1,6 +1,6 @@
 'use client';
 
-import { experimentOwner } from '@orvilo/utils/goalGraph';
+import { experimentOwner } from '@orvilo/utils/orchestrationWorkflowGraph';
 import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/accordion';
 import { resolveGoalDispatchNotice } from '@/features/AgentTasks/shared/dispatchNotice';
 import { usePermission } from '@/hooks/usePermission';
-import { goalService } from '@/services/goal';
+import { orchestrationWorkflowService } from '@/services/goal';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 import { goalSelectors, useGoalStore } from '@/store/goal';
@@ -39,20 +39,23 @@ const styles = {
 };
 
 interface ProcessControlProps {
-  /** The `goals` row id — not the carrier task's identifier. */
-  goalId: string;
   /** Owned by the page so it can swap its portal panel for the overlay's. */
   graphFullscreen: boolean;
   onGraphFullscreenChange: (fullscreen: boolean) => void;
+  /** The `goals` row id — not the carrier task's identifier. */
+  orchestrationWorkflowId: string;
 }
 
 const ProcessControl = memo<ProcessControlProps>(
-  ({ goalId, graphFullscreen, onGraphFullscreenChange }) => {
+  ({ orchestrationWorkflowId, graphFullscreen, onGraphFullscreenChange }) => {
     const { t } = useTranslation('chat');
     const { allowed: canEdit } = usePermission('create_content');
     const [lastSelectedId, setSelectedId] = useState<string>();
     const nodePortal = useChatStore(chatPortalSelectors.goalNodeView);
-    const selectedId = nodePortal?.goalId === goalId ? nodePortal.nodeId : lastSelectedId;
+    const selectedId =
+      nodePortal?.orchestrationWorkflowId === orchestrationWorkflowId
+        ? nodePortal.nodeId
+        : lastSelectedId;
 
     const useFetchGoalGraph = useGoalStore((s) => s.useFetchGoalGraph);
     const decideGoal = useGoalStore((s) => s.decideGoal);
@@ -60,21 +63,30 @@ const ProcessControl = memo<ProcessControlProps>(
     const openTaskResult = useChatStore((s) => s.openTaskResult);
     const openTaskDetail = useChatStore((s) => s.openTaskDetail);
     const openGoalNode = useChatStore((s) => s.openGoalNode);
-    useFetchGoalGraph(goalId);
-    const snapshot = useGoalStore(goalSelectors.goalGraph(goalId));
+    useFetchGoalGraph(orchestrationWorkflowId);
+    const snapshot = useGoalStore(goalSelectors.goalGraph(orchestrationWorkflowId));
 
     const graph = useMemo(() => (snapshot ? buildGoalGraphView(snapshot) : undefined), [snapshot]);
 
     const actions: FrontierActions = useMemo(
       () => ({
         addTask: async (title: string, description?: string) => {
-          await goalService.addNode({ description, id: goalId, kind: 'task', title });
-          await refreshGoalGraph(goalId);
+          await orchestrationWorkflowService.addNode({
+            description,
+            id: orchestrationWorkflowId,
+            kind: 'task',
+            title,
+          });
+          await refreshGoalGraph(orchestrationWorkflowId);
         },
         decide: (decisionId, optionId, resolution) =>
-          void decideGoal(goalId, { decisionId, optionId, resolution }),
+          void decideGoal(orchestrationWorkflowId, {
+            decisionId,
+            optionId,
+            resolution,
+          }),
       }),
-      [decideGoal, goalId, refreshGoalGraph],
+      [decideGoal, orchestrationWorkflowId, refreshGoalGraph],
     );
 
     // Every click funnels here: keep the map highlight (spatial continuity) and
@@ -88,7 +100,7 @@ const ProcessControl = memo<ProcessControlProps>(
         const view = graph?.byId[nodeId];
         const taskId = view?.node.taskId;
         if (!taskId || (graph && view && isExperiment(graph, view))) {
-          openGoalNode(goalId, nodeId);
+          openGoalNode(orchestrationWorkflowId, nodeId);
           return;
         }
         if (
@@ -102,7 +114,7 @@ const ProcessControl = memo<ProcessControlProps>(
         else if (view && opensOnResultSurface(view)) openTaskResult(taskId);
         else openTaskDetail(taskId);
       },
-      [goalId, graph, openGoalNode, openTaskDetail, openTaskResult],
+      [orchestrationWorkflowId, graph, openGoalNode, openTaskDetail, openTaskResult],
     );
 
     // Task-carried goals share the `goals` table but never grow a graph. Nothing
@@ -115,18 +127,18 @@ const ProcessControl = memo<ProcessControlProps>(
     // state. The surfaces below promise the incoming structure instead of
     // reading as an empty goal — the graph poll fills them in as nodes land.
     const planning =
-      ['planning', 'running'].includes(graph.goal.status) &&
+      ['planning', 'running'].includes(graph.orchestrationWorkflow.status) &&
       !graph.nodes.some((view) => view.node.kind === 'task');
     // Presence of the acceptance block (not a non-empty list) keeps the section
     // mounted: removing the last criterion must leave the add control reachable,
     // while legacy prose-only goals (no acceptance config at all) show nothing.
-    const acceptanceConfig = graph.goal.config?.acceptance;
+    const acceptanceConfig = graph.orchestrationWorkflow.config?.acceptance;
     const criteriaIds = acceptanceConfig?.criteriaIds ?? [];
     // A closed goal cannot move: the coordinator returns immediately for these,
     // and a Task added here would sit `proposed` forever. Stop offering actions
     // that cannot land. The goal otherwise advances entirely on its own — the
     // only legitimate human control over its pace is pause/resume.
-    const closed = ['achieved', 'canceled', 'failed'].includes(graph.goal.status);
+    const closed = ['achieved', 'canceled', 'failed'].includes(graph.orchestrationWorkflow.status);
     const canAct = canEdit && !closed;
     const hasExperiments = graph.nodes.some((view) => view.node.kind === 'experiment');
 
@@ -134,7 +146,7 @@ const ProcessControl = memo<ProcessControlProps>(
       <Graph
         fullscreen={graphFullscreen}
         graph={graph}
-        key={goalId}
+        key={orchestrationWorkflowId}
         planning={planning}
         selectedId={selectedId}
         onFullscreenChange={onGraphFullscreenChange}
@@ -152,7 +164,7 @@ const ProcessControl = memo<ProcessControlProps>(
             graph={graph}
             planning={planning}
             notice={resolveGoalDispatchNotice({
-              goalStatus: graph.goal.status,
+              goalStatus: graph.orchestrationWorkflow.status,
               orchestrationAdmission: snapshot?.orchestrationAdmission,
             })}
             onSelect={select}
@@ -170,7 +182,10 @@ const ProcessControl = memo<ProcessControlProps>(
               !!acceptanceConfig && {
                 children: (
                   <div className={`flex flex-col ${styles.section}`}>
-                    <GoalAcceptanceCriteria criteriaIds={criteriaIds} goalId={goalId} />
+                    <GoalAcceptanceCriteria
+                      criteriaIds={criteriaIds}
+                      orchestrationWorkflowId={orchestrationWorkflowId}
+                    />
                   </div>
                 ),
                 key: 'acceptance',

@@ -1,4 +1,4 @@
-import type { GoalStatus } from '@orvilo/const/goal';
+import type { OrchestrationWorkflowStatus } from '@orvilo/const/orchestrationWorkflow';
 import { memo } from 'react';
 
 import { TASK_STATUS_VISUALS } from '@/components/ExecutionStatus';
@@ -12,7 +12,10 @@ import { goalStatusToTaskStatus } from './goalPresentation';
  * across the app — while every other state keeps its canonical static glyph
  * from `ExecutionStatus`.
  */
-const GoalStatusGlyph = memo<{ size?: number; status: GoalStatus }>(({ status, size = 16 }) => {
+const GoalStatusGlyph = memo<{
+  size?: number;
+  status: OrchestrationWorkflowStatus;
+}>(({ status, size = 16 }) => {
   if (status === 'running') return <RunningGlyph size={size} />;
 
   const visual = TASK_STATUS_VISUALS[goalStatusToTaskStatus(status)] ?? TASK_STATUS_VISUALS.backlog;

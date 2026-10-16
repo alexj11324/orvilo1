@@ -6,6 +6,8 @@ import { ThreadStatus, ThreadType } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
+
 import { aiAgentRouter } from '../aiAgent';
 import { cleanupTestUser, createTestUser } from './integration/setup';
 
@@ -65,13 +67,15 @@ describe('aiAgentRouter.getSubAgentTaskStatus', () => {
     // Create test agent
     const [agent] = await serverDB
       .insert(agents)
-      .values({
-        userId,
-        title: 'Test SubAgent',
-        model: 'gpt-4o-mini',
-        provider: 'openai',
-        systemRole: 'You are a helpful assistant.',
-      })
+      .values(
+        await withTestAgentDevices(serverDB, {
+          userId,
+          title: 'Test SubAgent',
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          systemRole: 'You are a helpful assistant.',
+        }),
+      )
       .returning();
     testAgentId = agent.id;
 

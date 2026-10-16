@@ -20,6 +20,7 @@ import type { ProviderBindingConfig } from '@orvilo/types';
 import { eq, sql } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { CredentialModel } from '@/database/models/credential';
 import {
   agentOperations,
@@ -93,7 +94,9 @@ const seedDispatchRun = async () => {
   seeded.push({ userId, workspaceId: workspace.id });
   await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId: workspace.id });
   const agentId = `agt_${randomBytes(8).toString('hex')}`;
-  await db.insert(agents).values({ id: agentId, userId, workspaceId: workspace.id });
+  await db
+    .insert(agents)
+    .values(await withTestAgentDevices(db, { id: agentId, userId, workspaceId: workspace.id }));
   const topicId = `tpc_${randomBytes(8).toString('hex')}`;
   const operationId = `op_${Date.now()}_${agentId}_${topicId}_${randomBytes(6).toString('hex')}`;
   const assistantMessageId = `msg_${randomBytes(8).toString('hex')}`;

@@ -59,6 +59,15 @@ beforeEach(async () => {
   await serverDB
     .insert(workspaces)
     .values([{ id: wsId, name: 'WS', slug: 'atj-ws', primaryOwnerId: userId }]);
+  await serverDB
+    .insert(devices)
+    .values({
+      deviceId: `atj-host-${userId}`,
+      userId,
+      workspaceId: wsId,
+      visibility: 'public',
+      identitySource: 'installation',
+    });
 });
 
 afterEach(async () => {
@@ -106,7 +115,9 @@ describe('transferAgents fast path (small history)', () => {
   it('rewrites messages, topic-only rows, child tables and message_groups inline', async () => {
     const { agent, model } = await seedAgentWithHistory();
 
-    const [result] = await model.transferAgents([agent.id], wsId, userId);
+    const [result] = await model.transferAgents([agent.id], wsId, userId, undefined, {
+      targetDeviceId: 'atj-host-' + userId,
+    });
     expect(result.transferJobId).toBeNull();
 
     // no job recorded
@@ -137,7 +148,9 @@ describe('transferAgents slow path (async backfill job)', () => {
   it('records a job, leaves messages in source scope, and drains topic-by-topic', async () => {
     const { agent, model } = await seedAgentWithHistory();
 
-    const [result] = await model.transferAgents([agent.id], wsId, userId);
+    const [result] = await model.transferAgents([agent.id], wsId, userId, undefined, {
+      targetDeviceId: 'atj-host-' + userId,
+    });
     expect(result.transferJobId).not.toBeNull();
 
     // topics moved synchronously, messages did not
@@ -177,7 +190,9 @@ describe('transferAgents slow path (async backfill job)', () => {
       .set({ updatedAt: new Date('2026-01-01') })
       .where(eq(topics.id, 'atj-t2'));
 
-    const [result] = await model.transferAgents([agent.id], wsId, userId);
+    const [result] = await model.transferAgents([agent.id], wsId, userId, undefined, {
+      targetDeviceId: 'atj-host-' + userId,
+    });
     const jobId = result.transferJobId!;
 
     // user opens t2 → jump the queue
@@ -199,13 +214,17 @@ describe('transferAgents slow path (async backfill job)', () => {
 
   it('rejects a second transfer and owner deletes while the job is pending', async () => {
     const { agent, model } = await seedAgentWithHistory();
-    const [result] = await model.transferAgents([agent.id], wsId, userId);
+    const [result] = await model.transferAgents([agent.id], wsId, userId, undefined, {
+      targetDeviceId: 'atj-host-' + userId,
+    });
     expect(result.transferJobId).not.toBeNull();
 
     const wsModel = new AgentModel(serverDB, userId, wsId);
-    await expect(wsModel.transferAgents([agent.id], null, userId)).rejects.toThrow(
-      AGENT_TRANSFER_IN_PROGRESS,
-    );
+    await expect(
+      wsModel.transferAgents([agent.id], null, userId, undefined, {
+        targetDeviceId: 'atj-host-' + userId,
+      }),
+    ).rejects.toThrow(AGENT_TRANSFER_IN_PROGRESS);
     await expect(UserModel.deleteUser(serverDB, userId)).rejects.toThrow(
       AGENT_TRANSFER_PENDING_OWNER_DELETE,
     );
@@ -216,17 +235,23 @@ describe('transferAgents slow path (async backfill job)', () => {
     // once drained, both operations unblock
     await AgentTransferJobModel.drain(serverDB, result.transferJobId!);
     await expect(
-      new AgentModel(serverDB, userId, wsId).transferAgents([agent.id], null, userId),
+      new AgentModel(serverDB, userId, wsId).transferAgents([agent.id], null, userId, undefined, {
+        targetDeviceId: 'atj-host-' + userId,
+      }),
     ).resolves.toBeTruthy();
   });
 
   it('round-trips personal → workspace → personal with consistent data', async () => {
     const { agent, model } = await seedAgentWithHistory();
-    const [out] = await model.transferAgents([agent.id], wsId, userId);
+    const [out] = await model.transferAgents([agent.id], wsId, userId, undefined, {
+      targetDeviceId: 'atj-host-' + userId,
+    });
     await AgentTransferJobModel.drain(serverDB, out.transferJobId!);
 
     const wsModel = new AgentModel(serverDB, userId, wsId);
-    const [back] = await wsModel.transferAgents([agent.id], null, userId);
+    const [back] = await wsModel.transferAgents([agent.id], null, userId, undefined, {
+      targetDeviceId: 'atj-host-' + userId,
+    });
     if (back.transferJobId) await AgentTransferJobModel.drain(serverDB, back.transferJobId);
 
     for (const id of ['atj-m1', 'atj-m2', 'atj-m3', 'atj-m4', 'atj-m5']) {

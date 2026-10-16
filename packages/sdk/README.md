@@ -28,7 +28,7 @@ await orvilo.agentGroups.create({ body: { name: 'My group' } });
 await orvilo.files.uploadBatch({ body: { files: [/* … */] } });
 ```
 
-Resources map to the API's top-level path segments: `health`, `agentGroups`, `agents`, `files`, `knowledgeBases`, `messageTranslations`, `messages`, `models`, `permissions`, `providers`, `responses`, `roles`, `topics`, `users`. Method names follow a fixed rule — `list` / `get` / `create` / `update` / `delete` plus PascalCase sub-segments (`files.listChunks`, `roles.updatePermissions`) — with a few curated names (`files.uploadBatch`, `files.query`, `knowledgeBases.addFiles`, `users.me`).
+Resources map to the API's top-level path segments: `health`, `agentGroups`, `agents`, `files`, `knowledgeBases`, `messageTranslations`, `messages`, `models`, `permissions`, `providers`, `responses`, `roles`, `topics`, `users`. Method names follow a fixed rule — `list` / `get` / `create` / `update` / `delete` plus PascalCase sub-segments (`files.listChunks`, `roles.updatePermissions`) — with a few curated names (`files.uploadBatch`, `files.query`, `knowledgeBases.addFiles`, `users.me`)..
 
 Point the client at another deployment with `baseURL`, and pass any other client option (custom `fetch`, `headers`, …):
 
@@ -55,7 +55,7 @@ for await (const chunk of response.body!) {
 }
 ```
 
-(First-class typed SSE methods will come with the spec's response schemas.)
+(First-class typed SSE methods will come with the spec's response schemas.))
 
 ## Development
 
@@ -65,6 +65,6 @@ for await (const chunk of response.body!) {
 
 ## Releasing
 
-Publishing is automated by [`release-sdk.yml`](../../.github/workflows/release-sdk.yml): every push to `canary` touching `packages/sdk/**` publishes `1.0.<UTC timestamp>` to npm with provenance (manual `workflow_dispatch` also available). To ship a spec change, run `bun generate` and commit the regenerated output — the workflow's drift check (`bun scripts/generate-sdk.ts --check`) guards the published artifact.
+Publishing is automated by [`release-sdk.yml`](../../.github/workflows/release-sdk.yml): every push to `canary` touching `packages/sdk/**` publishes `1.0.<UTC timestamp>` to npm with provenance (manual `workflow_dispatch` also available). To ship a spec change, run `bun generate` and commit the regenerated output — the workflow's drift check (`bun scripts/generate-sdk.ts --check`) guards the published artifact..
 
 Regular PR CI does not gate on spec drift — the check runs locally (`bun run test`) and inside the release workflow only.

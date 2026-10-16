@@ -55,7 +55,7 @@ export const REVIEW_PREDICT_CONCURRENCY = 4;
 export interface PredictReviewParams {
   /** The check result to re-judge. */
   checkResultId: string;
-  /** Goal reviews also inspect original nonvisual evidence. */
+  /** Orchestration workflow reviews also inspect original nonvisual evidence. */
   includeTextEvidence?: boolean;
   /** The check's detailed judging rubric, when the criterion links one. */
   instructionDocumentId?: string | null;

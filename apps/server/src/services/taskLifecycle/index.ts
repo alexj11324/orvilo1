@@ -33,7 +33,7 @@ import {
   notifyScheduledTaskFailed,
 } from '@/business/server/task/notifyScheduledTaskResult';
 import { BriefModel } from '@/database/models/brief';
-import { GoalModel } from '@/database/models/goal';
+import { OrchestrationWorkflowModel } from '@/database/models/orchestrationWorkflow';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
@@ -477,17 +477,19 @@ export class TaskLifecycleService {
         //    The agent-driven `createBrief` tool path stays the default until
         //    the GrowthBook flag flips. See for the rollout plan.
         //
-        //    Goal Task rounds are deliberately silent. The coordinator can run
+        //    OrchestrationWorkflow Task rounds are deliberately silent. The coordinator can run
         //    many attempts on one Task before it converges, and a card per round
         //    buries the one moment that actually needs the user — the decision
         //    gate the coordinator opens when the attempt budget runs out.
-        const isGoalLoopRound =
+        const isOrchestrationWorkflowLoopRound =
           !!currentTask &&
-          !!(await new GoalModel(this.db, this.userId, this.workspaceId).findByGraphTask(
-            currentTask.id,
-          ));
+          !!(await new OrchestrationWorkflowModel(
+            this.db,
+            this.userId,
+            this.workspaceId,
+          ).findByGraphTask(currentTask.id));
         if (
-          !isGoalLoopRound &&
+          !isOrchestrationWorkflowLoopRound &&
           getBriefMode(currentTask) === 'auto' &&
           currentTask &&
           topicId &&
@@ -515,7 +517,7 @@ export class TaskLifecycleService {
         //      'scheduled' to wait for the next tick. They never auto-pause
         //      on success — only `reason === 'error'` below puts them in
         //      'paused' for human attention.
-        //    - Goal-owned root tasks complete immediately. The Goal coordinator
+        //    - OrchestrationWorkflow-owned root tasks complete immediately. The OrchestrationWorkflow coordinator
         //      owns the broader delivery decision and cannot consume a task that
         //      merely stays running after its topic has already finished.
         //    - Subtasks complete immediately. Their parent owns the broader
@@ -556,7 +558,7 @@ export class TaskLifecycleService {
           // The settlement policy owns every 'done' transition now:
           // verify-bound → hold (verify drives it later), capped schedule →
           // complete, automation tick → keep_open at 'scheduled', agent /
-          // goal self-complete → complete, explicit review gate → in_review,
+          // orchestration workflow self-complete → complete, explicit review gate → in_review,
           // otherwise → complete to 'done'. `resolveTaskReviewRequirement`
           // replaces the retired default-pause.
           const settlement = await settleOwned({

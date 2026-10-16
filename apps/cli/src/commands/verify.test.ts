@@ -775,14 +775,14 @@ describe('formatAnnotationRegion', () => {
 
 describe('file evidence descriptions', () => {
   it('preserves an explicit description', () => {
-    expect(evidenceDescriptionForFile('Goal final state', '/tmp/state.json')).toBe(
-      'Goal final state',
-    );
+    expect(
+      evidenceDescriptionForFile('Orchestration workflow final state', '/tmp/state.json'),
+    ).toBe('Orchestration workflow final state');
   });
 
   it('retains the basename when a file is inlined without a description', () => {
     expect(evidenceDescriptionForFile(undefined, '/tmp/goal-final-state.json')).toBe(
-      'goal-final-state.json',
+      'orchestration-workflow-final-state.json',
     );
     expect(evidenceDescriptionForFile('  ', '/tmp/events.json')).toBe('events.json');
   });

@@ -34,10 +34,10 @@ const genId = () => `chk_${Math.random().toString(36).slice(2, 10)}`;
  */
 interface TopicGoal {
   checks: TrayCheck[];
-  goal: string;
+  orchestrationWorkflow: string;
 }
 
-const EMPTY: TopicGoal = { checks: [], goal: '' };
+const EMPTY: TopicGoal = { checks: [], orchestrationWorkflow: '' };
 
 const swrKey = (topicId: string) =>
   verifyKeys.acceptanceBySubject('topic', topicId) as unknown as string;
@@ -50,7 +50,7 @@ const read = async (topicId: string): Promise<TopicGoal> => {
       method: c.method ?? '',
       name: c.name,
     })),
-    goal: acceptance?.requirement ?? '',
+    orchestrationWorkflow: acceptance?.requirement ?? '',
   };
 };
 
@@ -77,8 +77,8 @@ const commit = async (topicId: string, next: TopicGoal, write: () => Promise<unk
   await scopedMutate(swrKey(topicId));
 };
 
-const persistChecks = (topicId: string, goal: string, checks: TrayCheck[]) =>
-  commit(topicId, { checks, goal }, () =>
+const persistChecks = (topicId: string, orchestrationWorkflow: string, checks: TrayCheck[]) =>
+  commit(topicId, { checks, orchestrationWorkflow }, () =>
     verifyService.saveAcceptanceChecklist(
       'topic',
       topicId,
@@ -86,8 +86,10 @@ const persistChecks = (topicId: string, goal: string, checks: TrayCheck[]) =>
     ),
   );
 
-const persistGoal = (topicId: string, goal: string, checks: TrayCheck[]) =>
-  commit(topicId, { checks, goal }, () => verifyService.saveAcceptanceGoal('topic', topicId, goal));
+const persistGoal = (topicId: string, orchestrationWorkflow: string, checks: TrayCheck[]) =>
+  commit(topicId, { checks, orchestrationWorkflow }, () =>
+    verifyService.saveAcceptanceGoal('topic', topicId, orchestrationWorkflow),
+  );
 
 /**
  * The topic's Goal + tracking checks, persisted on the verify aggregate — not
@@ -98,7 +100,7 @@ export const useTopicGoal = (topicId: string | undefined) => {
   const { data, isLoading } = useClientDataSWR(topicId ? swrKey(topicId) : null, () =>
     read(topicId!),
   );
-  const { checks, goal } = data ?? EMPTY;
+  const { checks, orchestrationWorkflow } = data ?? EMPTY;
 
   const setGoal = useCallback(
     (next: string) => {
@@ -111,9 +113,9 @@ export const useTopicGoal = (topicId: string | undefined) => {
   const addCheck = useCallback(
     (item: { method: string; name: string }) => {
       if (!topicId) return;
-      return persistChecks(topicId, goal, [...checks, { ...item, id: genId() }]);
+      return persistChecks(topicId, orchestrationWorkflow, [...checks, { ...item, id: genId() }]);
     },
-    [topicId, goal, checks],
+    [topicId, orchestrationWorkflow, checks],
   );
 
   const updateCheck = useCallback(
@@ -121,11 +123,11 @@ export const useTopicGoal = (topicId: string | undefined) => {
       if (!topicId) return;
       return persistChecks(
         topicId,
-        goal,
+        orchestrationWorkflow,
         checks.map((c) => (c.id === id ? { ...c, ...patch } : c)),
       );
     },
-    [topicId, goal, checks],
+    [topicId, orchestrationWorkflow, checks],
   );
 
   const removeCheck = useCallback(
@@ -133,12 +135,20 @@ export const useTopicGoal = (topicId: string | undefined) => {
       if (!topicId) return;
       return persistChecks(
         topicId,
-        goal,
+        orchestrationWorkflow,
         checks.filter((c) => c.id !== id),
       );
     },
-    [topicId, goal, checks],
+    [topicId, orchestrationWorkflow, checks],
   );
 
-  return { addCheck, checks, goal, isLoading, removeCheck, setGoal, updateCheck };
+  return {
+    addCheck,
+    checks,
+    orchestrationWorkflow,
+    isLoading,
+    removeCheck,
+    setGoal,
+    updateCheck,
+  };
 };

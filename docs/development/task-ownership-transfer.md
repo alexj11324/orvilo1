@@ -42,11 +42,11 @@ fence incumbent dispatch（requestStopForTasks）
 
 三个入口的策略：
 
-| 入口                                 | 路径                                                              | 后继策略                                              |
-| ------------------------------------ | ----------------------------------------------------------------- | ----------------------------------------------------- |
-| UI `task.handoff`                    | `TaskService.handoffTask`（`cancel_and_restart`）                 | fence → CAS → settle → `runTask` 为继任者重启         |
-| Linear inbound（`updatePublicTask`） | 检测「running + assignee 变更」→ `transferTaskExecutionOwnership` | park；`reason: 'linear_assignee_change'`              |
-| Goal `setAgent`                      | 先对 running 集合 `requestStopForTasks('goal_agent_change')` 再写 | 与原来一致 ——coordinator 按 goal 自动调度策略重新派发 |
+| 入口                                 | 路径                                                                                | 后继策略                                                                |
+| ------------------------------------ | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| UI `task.handoff`                    | `TaskService.handoffTask`（`cancel_and_restart`）                                   | fence → CAS → settle → `runTask` 为继任者重启                           |
+| Linear inbound（`updatePublicTask`） | 检测「running + assignee 变更」→ `transferTaskExecutionOwnership`                   | park；`reason: 'linear_assignee_change'`                                |
+| Orchestration workflow `setAgent`    | 先对 running 集合 `requestStopForTasks('orchestration_workflow_agent_change')` 再写 | 与原来一致 ——coordinator 按 orchestration workflow 自动调度策略重新派发 |
 
 ## CAS
 

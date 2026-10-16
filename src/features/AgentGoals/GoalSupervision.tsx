@@ -15,13 +15,18 @@ import { GoalChatProvider } from './GoalChat/GoalChatProvider';
 
 interface GoalSupervisionProps {
   agentId: string;
-  goalId: string;
   onCollapse: () => void;
+  orchestrationWorkflowId: string;
   topicId: string;
 }
 
 /** The manager's ongoing record is inspectable without sending or editing messages. */
-export const GoalSupervision = ({ agentId, goalId, onCollapse, topicId }: GoalSupervisionProps) => {
+export const GoalSupervision = ({
+  agentId,
+  orchestrationWorkflowId,
+  onCollapse,
+  topicId,
+}: GoalSupervisionProps) => {
   const { t } = useTranslation('chat');
   const useFetchAgentConfig = useAgentStore((s) => s.useFetchAgentConfig);
   useFetchAgentConfig(true, agentId);
@@ -36,7 +41,11 @@ export const GoalSupervision = ({ agentId, goalId, onCollapse, topicId }: GoalSu
   );
 
   return (
-    <GoalChatProvider agentId={agentId} goalId={goalId} initialTopicId={topicId}>
+    <GoalChatProvider
+      agentId={agentId}
+      initialTopicId={topicId}
+      orchestrationWorkflowId={orchestrationWorkflowId}
+    >
       <div className="flex flex-col h-full" style={{ overflow: 'hidden' }}>
         <NavHeader
           showTogglePanelButton={false}

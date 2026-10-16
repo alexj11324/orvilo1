@@ -231,7 +231,7 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   exporter: 'blocked',
   file: rw('file:read', 'file:write'),
   followUpAction: rw('chat:read', 'chat:write'),
-  goal: rw('agent:read', 'agent:write'),
+  orchestrationWorkflow: rw('agent:read', 'agent:write'),
   // user GitHub App grant lifecycle — external credential management, same
   // class as connector/composio
   githubOAuth: 'blocked',
@@ -256,7 +256,7 @@ export const TRPC_NAMESPACE_API_KEY_RULES: Record<string, TrpcNamespaceScopeRule
   // workspace event triggers on tasks — member-gated like linearSync
   mcpEvents: rw('workspace:read', 'workspace:write'),
   message: rw('chat:read', 'chat:write'),
-  // numeric telemetry attached to a goal / agent / task / project — same
+  // numeric telemetry attached to a orchestration workflow / agent / task / project — same
   // domain as the subjects that own it
   metric: rw('agent:read', 'agent:write'),
   notebook: rw('knowledge:read', 'knowledge:write'),

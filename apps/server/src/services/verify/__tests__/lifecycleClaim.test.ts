@@ -1,7 +1,11 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { runVerifyAfterEvidenceSubmission, runVerifyOnCompletion } from '../lifecycle';
+import {
+  retryErroredVerification,
+  runVerifyAfterEvidenceSubmission,
+  runVerifyOnCompletion,
+} from '../lifecycle';
 import { VERIFY_ABANDONED_MS } from '../staleness';
 
 const {
@@ -11,6 +15,10 @@ const {
   evidenceListByRun,
   findByOperation,
   operationFindById,
+  messageFindById,
+  messageFindByOperation,
+  prepareErroredRetry,
+  recordVerificationContext,
   taskTopicFindByOperationId,
   finalizeVerifyRun,
   recordHeterogeneousDeliverableEvidence,
@@ -24,6 +32,10 @@ const {
   finalizeVerifyRun: vi.fn(),
   findByOperation: vi.fn(),
   operationFindById: vi.fn(),
+  messageFindById: vi.fn(),
+  messageFindByOperation: vi.fn(),
+  prepareErroredRetry: vi.fn(),
+  recordVerificationContext: vi.fn(),
   taskTopicFindByOperationId: vi.fn(),
   recordHeterogeneousDeliverableEvidence: vi.fn(),
   startEvidenceSubmission: vi.fn(),
@@ -34,8 +46,18 @@ vi.mock('@/database/models/verifyRun', () => ({
   VerifyRunModel: vi.fn(function () {
     return {
       claimEvidenceCollection,
+      recordVerificationContext,
+      prepareErroredRetry,
       findByOperation,
       updateStatus,
+    };
+  }),
+}));
+vi.mock('@/database/models/message', () => ({
+  MessageModel: vi.fn(function () {
+    return {
+      findById: messageFindById,
+      findLatestAssistantByOperationId: messageFindByOperation,
     };
   }),
 }));
@@ -95,7 +117,7 @@ vi.mock('../taskAcceptance', () => ({
 }));
 
 const db = {} as any;
-const params = { deliverable: 'done', goal: 'ship it', operationId: 'op-1' };
+const params = { deliverable: 'done', orchestrationWorkflow: 'ship it', operationId: 'op-1' };
 
 const confirmedRun = {
   id: 'run-1',
@@ -103,6 +125,46 @@ const confirmedRun = {
   planConfirmedAt: new Date(),
   status: 'planned',
 };
+
+describe('retryErroredVerification — original native delivery', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    findByOperation.mockResolvedValue({ ...confirmedRun, status: 'errored', userId: 'u1' });
+    operationFindById.mockResolvedValue({
+      id: 'op-1',
+      metadata: { assistantMessageId: 'msg-original' },
+      topicId: 'topic-original',
+    });
+    messageFindByOperation.mockResolvedValue(undefined);
+    // The claim lost to another retry; recovering context still precedes it.
+    prepareErroredRetry.mockResolvedValue(false);
+  });
+
+  it('recovers the exact native reply without substituting a later topic reply', async () => {
+    messageFindById.mockResolvedValue({
+      content: 'original delivery',
+      role: 'assistant',
+      topicId: 'topic-original',
+    });
+
+    expect(await retryErroredVerification(db, 'u1', 'op-1', 'ws-1')).toBe(false);
+    expect(messageFindById).toHaveBeenCalledWith('msg-original');
+    expect(messageFindByOperation).not.toHaveBeenCalled();
+    expect(recordVerificationContext).toHaveBeenCalledWith('run-1', 'original delivery');
+  });
+
+  it.each([
+    { role: 'assistant', topicId: 'another-topic' },
+    { role: 'user', topicId: 'topic-original' },
+  ])('rejects an unrelated recorded message (%o)', async (message) => {
+    messageFindById.mockResolvedValue({ ...message, content: 'unrelated' });
+    await expect(retryErroredVerification(db, 'u1', 'op-1', 'ws-1')).rejects.toThrow(
+      'VERIFICATION_CONTEXT_UNAVAILABLE',
+    );
+    expect(prepareErroredRetry).not.toHaveBeenCalled();
+    expect(recordVerificationContext).not.toHaveBeenCalled();
+  });
+});
 
 describe('runVerifyOnCompletion — verification claim', () => {
   beforeEach(() => {
@@ -125,6 +187,17 @@ describe('runVerifyOnCompletion — verification claim', () => {
     claimVerifying.mockResolvedValue(true);
     evidenceListByRun.mockResolvedValue([]);
   });
+
+  it.each([{ trigger: 'acp_judgment' }, { metadata: { skipTaskVerification: true } }])(
+    'does not verify an internal judgment or corrective operation (%o)',
+    async (policy) => {
+      operationFindById.mockResolvedValue({ id: 'op-1', taskId: 'task-1', ...policy });
+      await runVerifyOnCompletion(db, 'u1', params);
+      expect(claimEvidenceCollection).not.toHaveBeenCalled();
+      expect(claimVerifying).not.toHaveBeenCalled();
+      expect(execute).not.toHaveBeenCalled();
+    },
+  );
 
   it('defers task verification while its workspace integration is unresolved', async () => {
     operationFindById.mockResolvedValue({ id: 'op-1', taskId: 'task-1' });

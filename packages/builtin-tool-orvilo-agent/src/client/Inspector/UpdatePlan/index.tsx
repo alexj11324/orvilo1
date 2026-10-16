@@ -20,7 +20,7 @@ export const UpdatePlanInspector = memo<BuiltinInspectorProps<UpdatePlanParams, 
 
     const planId = args?.planId || partialArgs?.planId;
     const completed = args?.completed;
-    const hasUpdates = args?.goal || args?.description || args?.context;
+    const hasUpdates = args?.orchestrationWorkflow || args?.description || args?.context;
 
     if (isArgumentsStreaming && !planId) {
       return (

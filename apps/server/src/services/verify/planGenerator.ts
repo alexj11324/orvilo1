@@ -31,8 +31,6 @@ export interface GeneratePlanParams {
   context?: string;
   /** Ask the LLM to propose additional criteria beyond the mounted ones. */
   enableAiGeneration?: boolean;
-  /** The user's task / instruction text the run must satisfy. */
-  goal: string;
   /**
    * When the run opted into verify but produced no decomposed criteria, synthesize
    * a single agent-type holistic check (the coarse "one broad agent verify"
@@ -43,7 +41,9 @@ export interface GeneratePlanParams {
   /** Required only when `enableAiGeneration` is true. */
   modelConfig?: { model: string; provider: string };
   operationId: string;
-  /** One-sentence acceptance the holistic check verifies against (falls back to `goal`). */
+  /** The user's task / instruction text the run must satisfy. */
+  orchestrationWorkflow: string;
+  /** One-sentence acceptance the holistic check verifies against (falls back to `orchestration workflow`). */
   requirement?: string;
   /** Preferred ACP binding for the criteria-generation judgment. */
   verifierAgentId?: string | null;
@@ -76,14 +76,18 @@ export interface CriterionDraft {
 
 /**
  * Synthesize a single `agent`-type holistic check from the task's acceptance
- * requirement (or its goal). The agent verifier investigates the whole
+ * requirement (or its orchestration workflow). The agent verifier investigates the whole
  * deliverable and submits one verdict — the coarse "one broad agent verify"
  * default for tasks that opted into verify without decomposing into criteria
  * No `requiredEvidence` hard gate: the agent self-captures, so the
  * structural gate never marks it uncertain for "missing evidence".
  */
-const buildHolisticAgentItem = (requirement?: string, goal?: string): VerifyCheckItem => {
-  const acceptance = requirement?.trim() || goal?.trim() || 'The deliverable fulfills the task.';
+const buildHolisticAgentItem = (
+  requirement?: string,
+  orchestrationWorkflow?: string,
+): VerifyCheckItem => {
+  const acceptance =
+    requirement?.trim() || orchestrationWorkflow?.trim() || 'The deliverable fulfills the task.';
   return {
     description: acceptance,
     id: randomUUID(),
@@ -140,6 +144,7 @@ export class VerifyPlanGeneratorService {
   private readonly rubricModel: VerifyRubricModel;
   private readonly runModel: VerifyRunModel;
   private readonly documentModel: DocumentModel;
+  private readonly workspaceId?: string;
   /**
    * Visibility of the agent that triggered this plan (only set when invoked
    * from a tool runtime). Threaded into every instruction-document create so
@@ -156,6 +161,7 @@ export class VerifyPlanGeneratorService {
   ) {
     this.db = db;
     this.userId = userId;
+    this.workspaceId = workspaceId;
     this.callerAgentVisibility = callerAgentVisibility;
     this.criterionModel = new VerifyCriterionModel(db, userId, workspaceId);
     this.rubricModel = new VerifyRubricModel(db, userId, workspaceId);
@@ -172,16 +178,20 @@ export class VerifyPlanGeneratorService {
   /** Draft criteria for the generic task verification configuration surface. */
   async generateCriteria(params: {
     context?: string;
-    goal: string;
+    orchestrationWorkflow: string;
     maxCriteria?: number;
     modelConfig: { model: string; provider: string };
   }): Promise<CriterionDraft[]> {
     const maxCriteria = params.maxCriteria ?? DEFAULT_MAX_AI_CRITERIA;
-    const raw = await new AiGenerationService(this.db, this.userId).generateObject(
+    const raw = await new AiGenerationService(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).generateObject(
       {
         ...chainVerifyPlan({
           context: params.context,
-          goal: params.goal,
+          orchestrationWorkflow: params.orchestrationWorkflow,
           maxCriteria,
         }),
         ...params.modelConfig,
@@ -296,7 +306,7 @@ export class VerifyPlanGeneratorService {
         const generated = await this.generateCriteriaWithAi({
           context: params.context,
           existingTitles: items.map((i) => i.title),
-          goal: params.goal,
+          orchestrationWorkflow: params.orchestrationWorkflow,
           maxCriteria: params.maxAiCriteria ?? DEFAULT_MAX_AI_CRITERIA,
           modelConfig: params.modelConfig,
           operationId: params.operationId,
@@ -315,11 +325,13 @@ export class VerifyPlanGeneratorService {
     //    criteria — synthesize one agent-type check over the whole deliverable
     //    so verify actually runs (instead of an empty plan → no-op).
     if (items.length === 0 && params.holisticFallback) {
-      items.push(buildHolisticAgentItem(params.requirement, params.goal));
+      items.push(buildHolisticAgentItem(params.requirement, params.orchestrationWorkflow));
       log('synthesized holistic agent check for op %s', params.operationId);
     }
 
-    const run = await this.runModel.ensureForOperation(params.operationId, { goal: params.goal });
+    const run = await this.runModel.ensureForOperation(params.operationId, {
+      orchestrationWorkflow: params.orchestrationWorkflow,
+    });
     await this.runModel.setPlan(run.id, items);
     log('generated draft plan for op %s with %d items', params.operationId, items.length);
 
@@ -329,7 +341,7 @@ export class VerifyPlanGeneratorService {
   private async generateCriteriaWithAi(params: {
     context?: string;
     existingTitles: string[];
-    goal: string;
+    orchestrationWorkflow: string;
     maxCriteria: number;
     modelConfig: { model: string; provider: string };
     operationId: string;
@@ -338,11 +350,11 @@ export class VerifyPlanGeneratorService {
     const chain = chainVerifyPlan({
       context: params.context,
       existingTitles: params.existingTitles,
-      goal: params.goal,
+      orchestrationWorkflow: params.orchestrationWorkflow,
       maxCriteria: params.maxCriteria,
     });
 
-    const ai = new AiGenerationService(this.db, this.userId);
+    const ai = new AiGenerationService(this.db, this.userId, this.workspaceId);
     const raw = await ai.generateObject(
       {
         ...chain,

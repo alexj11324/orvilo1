@@ -1,6 +1,6 @@
 import type { TaskItem } from '@orvilo/types';
 
-import { GoalModel } from '@/database/models/goal';
+import { OrchestrationWorkflowModel } from '@/database/models/orchestrationWorkflow';
 import { TaskModel } from '@/database/models/task';
 import type { OrviloDatabase } from '@/database/type';
 import { resolveTaskAcceptance } from '@/server/services/verify/taskAcceptance';
@@ -13,7 +13,7 @@ import { resolveTaskAcceptance } from '@/server/services/verify/taskAcceptance';
  * contract carries the builtin *tools* (Acceptance evidence, legacy
  * agent-mode Brief) that only mount via `session/new` `mcpServers` — builtin
  * *skills* (`orvilo-task-skill`) mount as capability text on any harness and
- * never gate. Goal-bound tasks are goal-mode work outright, so they require
+ * never gate. OrchestrationWorkflow-bound tasks are orchestration workflow-mode work outright, so they require
  * the surface even if their acceptance policy is later disabled.
  *
  * Selection and binding gates check this BEFORE minting a dispatch; the
@@ -26,7 +26,8 @@ export const taskRequiresBuiltinToolMount = async (
 ): Promise<boolean> => {
   const { userId, workspaceId } = principal;
 
-  if (await new GoalModel(db, userId, workspaceId).findByGraphTask(task.id)) return true;
+  if (await new OrchestrationWorkflowModel(db, userId, workspaceId).findByGraphTask(task.id))
+    return true;
 
   // Same skip as buildTaskPrompt: automation-owned tasks never resolve an
   // acceptance policy into the run contract.

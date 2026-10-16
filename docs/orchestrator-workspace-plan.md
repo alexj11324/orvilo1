@@ -7,7 +7,7 @@ Per CAID (Geng & Neubig 2026), the coordination loop is:
 > dependency DAG → dispatch ready tasks → engineers work in **isolated git worktrees** →
 > self-verify + commit → **merge back to main** → **recompute plan → reassign** → final review
 
-Orvilo already owns: goal graph + frontier selection (`decideNextMove`), manager planning
+Orvilo already owns: orchestration workflow graph + frontier selection (`decideNextMove`), manager planning
 turns (`gateOrTakeOver`), dispatch (`taskRunner` → `execAgent` → local/device/sandbox),
 settle cascade (`taskLifecycle.onTopicComplete` → `cascadeOnCompletionMany`), verify/acceptance,
 reviewer + steer.
@@ -110,7 +110,7 @@ GitHub remote for a later integrator run to land it.
   re-entering the same gate. Merged → `integrated` + `prUrl` + `pushedToRemote` on every
   row tracking the branch; exhausted attempts → `blocked`.
 
-### 6. Non-goals (v1)
+### 6. Non-orchestration workflows (v1)
 
 - Desktop in-process `local` runs (same provisioning via GitCtr IPC)
 - Cross-repo / multi-repo tasks

@@ -31,7 +31,7 @@ const readOperationTokenExpiry = (jwt: string): number | undefined => {
 /**
  * Keep the operation token of a long `hetero exec` run valid.
  *
- * The server signs it for four hours, and a Goal Task can run far longer. Once
+ * The server signs it for four hours, and a OrchestrationWorkflow Task can run far longer. Once
  * it expires every ingest is rejected — heartbeats included — so the lease stops
  * renewing and the server reclaims the operation as abandoned while the agent is
  * still working. Renewing writes the new token back to `ORVILO_JWT`, which the

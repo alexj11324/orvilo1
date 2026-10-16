@@ -1,12 +1,12 @@
 # CAID 版本化计划与增量 DAG
 
-> 对应 P12：在现有 Goal/Task graph 上加入 CAID planning policy ——
+> 对应 P12：在现有 Orchestration workflow/Task graph 上加入 CAID planning policy ——
 > append/replace/retire 增量补丁 + `expectedPlanRevision` CAS。
 
 ## 入口与校验链
 
-`orvilo goal plan` / `goal.submitPlan`（及 operation-authenticated
-`submitOperationPlan`）的同一个 `GoalManagerService.submit` 现接受第五个 action：
+`orvilo orchestration-workflow plan` / `orchestrationWorkflow.submitPlan`（及 operation-authenticated
+`submitOperationPlan`）的同一个 `Orchestration workflowManagerService.submit` 现接受第五个 action：
 
 ```json
 {"action":"patch","strategy":"caid","expectedPlanRevision":0,

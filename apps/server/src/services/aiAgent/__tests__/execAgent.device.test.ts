@@ -127,6 +127,7 @@ const baseAgentConfig = {
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
+      getOrchestratorSourceAgentId: vi.fn().mockResolvedValue(undefined),
       getAgentConfig: vi.fn().mockResolvedValue(baseAgentConfig),
       queryAgents: vi.fn().mockResolvedValue([]),
     };
@@ -411,7 +412,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       expect(mockDispatchAgentRun).not.toHaveBeenCalled();
       expect(result).toMatchObject({
         autoStarted: false,
-        error: 'No bound device',
+        error: 'Device unavailable',
         success: false,
       });
     });
@@ -425,7 +426,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       expect(mockDispatchAgentRun).not.toHaveBeenCalled();
       expect(result).toMatchObject({
         autoStarted: false,
-        error: 'No bound device',
+        error: 'Device unavailable',
         success: false,
       });
     });
@@ -449,7 +450,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       expect(mockDispatchAgentRun).not.toHaveBeenCalled();
       expect(result).toMatchObject({
         autoStarted: false,
-        error: 'No bound device',
+        error: 'Device unavailable',
         success: false,
       });
     });
@@ -554,7 +555,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
       expect(result).toMatchObject({
         autoStarted: false,
-        error: 'No bound device',
+        error: 'Device unavailable',
         success: false,
       });
     });
@@ -683,7 +684,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
 
         expect(mockDispatchAgentRun).not.toHaveBeenCalled();
         expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
-        expect(result).toMatchObject({ error: 'No bound device', success: false });
+        expect(result).toMatchObject({ error: 'Device unavailable', success: false });
         // Every admission refusal carries the structured contract surface —
         // the repair UI branches on errorData.code, never the prose.
         expect(result.errorData?.code).toMatch(/^DEVICE_/);

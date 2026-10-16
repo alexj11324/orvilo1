@@ -1,4 +1,4 @@
-import type { GoalStatus } from '@orvilo/const/goal';
+import type { OrchestrationWorkflowStatus } from '@orvilo/const/orchestrationWorkflow';
 
 export type GoalTaskPhase =
   | 'achieved'
@@ -15,12 +15,15 @@ interface GoalTaskProgressInput {
   criteriaCount: number;
   /** Decision gates waiting on a human right now — they outrank the goal's own status. */
   pendingDecisions?: number;
-  status?: GoalStatus;
+  status?: OrchestrationWorkflowStatus;
   taskDone?: number;
   taskTotal?: number;
 }
 
-const resolvePhase = (status?: GoalStatus, pendingDecisions = 0): GoalTaskPhase => {
+const resolvePhase = (
+  status?: OrchestrationWorkflowStatus,
+  pendingDecisions = 0,
+): GoalTaskPhase => {
   if (pendingDecisions > 0) return 'waiting';
   switch (status) {
     case 'achieved': {

@@ -9,7 +9,7 @@ describe('resolveSystemAgentModelConfig', () => {
         model: 'deepseek-v4-pro',
         provider: 'orvilo',
       },
-      taskKey: 'goal',
+      taskKey: 'orchestrationWorkflow',
     });
 
     expect(result).toEqual({ model: 'deepseek-v4-pro', provider: 'orvilo' });
@@ -21,7 +21,7 @@ describe('resolveSystemAgentModelConfig', () => {
         model: 'mapped-topic-model',
         provider: 'orvilo',
       },
-      taskKey: 'goal',
+      taskKey: 'orchestrationWorkflow',
     });
 
     expect(result).toEqual({ model: 'mapped-topic-model', provider: 'orvilo' });
@@ -33,7 +33,7 @@ describe('resolveSystemAgentModelConfig', () => {
         model: 'ag/gemini-3.1-pro-high',
         provider: 'orvilo',
       },
-      taskKey: 'goal',
+      taskKey: 'orchestrationWorkflow',
     });
 
     expect(result).toEqual({ model: 'ag/gemini-3.1-pro-high', provider: 'orvilo' });
@@ -45,7 +45,7 @@ describe('resolveSystemAgentModelConfig', () => {
         model: 'private-model',
         provider: 'openai-compatible',
       },
-      taskKey: 'goal',
+      taskKey: 'orchestrationWorkflow',
     });
 
     expect(result).toEqual({ model: 'private-model', provider: 'openai-compatible' });

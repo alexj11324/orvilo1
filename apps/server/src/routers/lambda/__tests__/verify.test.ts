@@ -16,8 +16,8 @@ const modelMocks = vi.hoisted(() => ({
   findRunById: vi.fn(),
   findResultById: vi.fn(),
   generateCriteria: vi.fn(),
-  generateGoalCriteria: vi.fn(),
-  generateGoalPlan: vi.fn(),
+  generateOrchestrationWorkflowCriteria: vi.fn(),
+  generateOrchestrationWorkflowPlan: vi.fn(),
   getFullFileUrl: vi.fn(),
   getServerDB: vi.fn(async () => ({})),
   updateRun: vi.fn(),
@@ -72,10 +72,10 @@ vi.mock('@/server/services/verify/acceptancePurge', () => ({
   purgeVerifyRun: modelMocks.purgeVerifyRun,
 }));
 
-vi.mock('@/server/services/goal/criteriaGenerator', () => ({
-  GoalCriteriaGeneratorService: class GoalCriteriaGeneratorService {
-    generate = modelMocks.generateGoalCriteria;
-    generatePlan = modelMocks.generateGoalPlan;
+vi.mock('@/server/services/orchestrationWorkflow/criteriaGenerator', () => ({
+  OrchestrationWorkflowCriteriaGeneratorService: class OrchestrationWorkflowCriteriaGeneratorService {
+    generate = modelMocks.generateOrchestrationWorkflowCriteria;
+    generatePlan = modelMocks.generateOrchestrationWorkflowPlan;
   },
 }));
 
@@ -119,7 +119,7 @@ describe('verifyRouter', () => {
 
       const error = await createCaller()
         .generateCriteria({
-          goal: 'Ship a responsive task board',
+          orchestrationWorkflow: 'Ship a responsive task board',
           modelConfig: { model: 'claude-sonnet-4-6', provider: 'anthropic' },
         })
         .catch((error) => error);
@@ -147,34 +147,42 @@ describe('verifyRouter', () => {
 
       await expect(
         createCaller().generateCriteria({
-          goal: 'Ship a responsive task board',
+          orchestrationWorkflow: 'Ship a responsive task board',
           modelConfig: { model: 'claude-sonnet-4-6', provider: 'anthropic' },
         }),
       ).rejects.toThrow('Provider timed out');
     });
   });
 
-  describe('generateGoalCriteria', () => {
+  describe('generateOrchestrationWorkflowCriteria', () => {
     it('preserves the selected ACP agent for both drafting endpoints', async () => {
-      await createCaller().generateGoalCriteria({ goal: 'Ship it', agentId: 'codex' });
-      await createCaller().generateGoalPlan({ goal: 'Ship it', agentId: 'codex' });
-      expect(modelMocks.generateGoalCriteria).toHaveBeenCalledWith({
-        goal: 'Ship it',
+      await createCaller().generateOrchestrationWorkflowCriteria({
+        orchestrationWorkflow: 'Ship it',
         agentId: 'codex',
       });
-      expect(modelMocks.generateGoalPlan).toHaveBeenCalledWith({
-        goal: 'Ship it',
+      await createCaller().generateOrchestrationWorkflowPlan({
+        orchestrationWorkflow: 'Ship it',
+        agentId: 'codex',
+      });
+      expect(modelMocks.generateOrchestrationWorkflowCriteria).toHaveBeenCalledWith({
+        orchestrationWorkflow: 'Ship it',
+        agentId: 'codex',
+      });
+      expect(modelMocks.generateOrchestrationWorkflowPlan).toHaveBeenCalledWith({
+        orchestrationWorkflow: 'Ship it',
         agentId: 'codex',
       });
     });
 
     it('does not accept a caller-selected model config', async () => {
-      modelMocks.generateGoalCriteria.mockResolvedValueOnce([]);
+      modelMocks.generateOrchestrationWorkflowCriteria.mockResolvedValueOnce([]);
 
-      await createCaller().generateGoalCriteria({ goal: 'Ship a responsive task board' });
+      await createCaller().generateOrchestrationWorkflowCriteria({
+        orchestrationWorkflow: 'Ship a responsive task board',
+      });
 
-      expect(modelMocks.generateGoalCriteria).toHaveBeenCalledWith({
-        goal: 'Ship a responsive task board',
+      expect(modelMocks.generateOrchestrationWorkflowCriteria).toHaveBeenCalledWith({
+        orchestrationWorkflow: 'Ship a responsive task board',
       });
     });
 
@@ -184,10 +192,12 @@ describe('verifyRouter', () => {
         instruction: 'Ship a responsive task board.',
         title: 'Ship task board',
       };
-      modelMocks.generateGoalPlan.mockResolvedValueOnce(plan);
+      modelMocks.generateOrchestrationWorkflowPlan.mockResolvedValueOnce(plan);
 
       await expect(
-        createCaller().generateGoalPlan({ goal: 'Ship a responsive task board' }),
+        createCaller().generateOrchestrationWorkflowPlan({
+          orchestrationWorkflow: 'Ship a responsive task board',
+        }),
       ).resolves.toEqual(plan);
     });
   });
@@ -335,7 +345,7 @@ describe('verifyRouter', () => {
               url: 'https://github.com/alexj11324/orvilo1/pull/42',
             },
           },
-          goal: 'ship x',
+          orchestrationWorkflow: 'ship x',
         },
         verifyRunId: 'run-1',
       });
@@ -350,7 +360,7 @@ describe('verifyRouter', () => {
             url: 'https://github.com/alexj11324/orvilo1/pull/42',
           },
         },
-        goal: 'ship x',
+        orchestrationWorkflow: 'ship x',
       });
     });
 
@@ -621,7 +631,7 @@ describe('verifyRouter', () => {
 
     it('hides a private run from visitors but not its owner', async () => {
       const run = {
-        goal: 'Ship a working page',
+        orchestrationWorkflow: 'Ship a working page',
         id: RUN_UUID,
         title: 'Run report',
         userId: 'owner-user',
@@ -649,7 +659,7 @@ describe('verifyRouter', () => {
 
     it('reads a standalone report without a logged-in user', async () => {
       const run = {
-        goal: 'Ship a working page',
+        orchestrationWorkflow: 'Ship a working page',
         id: RUN_UUID,
         title: 'Run report',
         userId: 'owner-user',
@@ -732,7 +742,7 @@ describe('verifyRouter', () => {
       });
 
       const run = {
-        goal: 'Ship a working page',
+        orchestrationWorkflow: 'Ship a working page',
         id: RUN_UUID,
         title: 'Run report',
         userId: 'owner-user',

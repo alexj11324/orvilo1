@@ -565,8 +565,17 @@ export interface VerifyRubricConfig {
  */
 export interface VerifyRunMetadata {
   [key: string]: unknown;
-  /** Autonomous Goal review, kept separate from human decisions and verifier verdicts. */
-  goalReview?: {
+  interactionCost?: VerifyInteractionCost;
+  /**
+   * Per-run override for the repair-round cap, taking precedence over the
+   * rubric's {@link VerifyRubricConfig.maxRepairRounds}. Set from a task's
+   * `TaskVerifyConfig.maxIterations` so a task with ad-hoc criteria or a per-task
+   * override honors its saved cap (the rubric may not carry it). Read at repair
+   * time via {@link DEFAULT_MAX_REPAIR_ROUNDS} fallback.
+   */
+  maxRepairRounds?: number;
+  /** Autonomous Orchestration workflow review, kept separate from human decisions and verifier verdicts. */
+  orchestrationWorkflowReview?: {
     feedback: string;
     predictionIds: string[];
     /**
@@ -577,15 +586,6 @@ export interface VerifyRunMetadata {
      */
     status: 'passed' | 'rejected' | 'errored' | 'unjudgeable';
   };
-  interactionCost?: VerifyInteractionCost;
-  /**
-   * Per-run override for the repair-round cap, taking precedence over the
-   * rubric's {@link VerifyRubricConfig.maxRepairRounds}. Set from a task's
-   * `TaskVerifyConfig.maxIterations` so a task with ad-hoc criteria or a per-task
-   * override honors its saved cap (the rubric may not carry it). Read at repair
-   * time via {@link DEFAULT_MAX_REPAIR_ROUNDS} fallback.
-   */
-  maxRepairRounds?: number;
   /**
    * Where this report came from — the Orvilo conversation whose agent produced
    * it. Set when the harness runs inside a Orvilo-spawned agent (the runtime

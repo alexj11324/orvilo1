@@ -11,6 +11,7 @@ import type { McpEventBinding } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import {
   agents,
   executionGrants,
@@ -122,12 +123,14 @@ describe('core event dispatch admission', () => {
       userId,
       workspaceId,
     });
-    await db.insert(agents).values({
-      id: agentId,
-      slug: agentId,
-      userId,
-      workspaceId,
-    });
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, {
+        id: agentId,
+        slug: agentId,
+        userId,
+        workspaceId,
+      }),
+    );
     await db.insert(tasks).values([
       {
         automationMode: 'event',

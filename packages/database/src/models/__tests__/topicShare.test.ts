@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   chatGroups,
@@ -40,7 +41,7 @@ describe('TopicShareModel', () => {
         { id: sessionId, userId },
         { id: `${sessionId}-2`, userId: userId2 },
       ]);
-      await tx.insert(agents).values([{ id: agentId, userId }]);
+      await tx.insert(agents).values(await withTestAgentDevices(tx, [{ id: agentId, userId }]));
       await tx.insert(topics).values([
         { id: topicId, sessionId, userId, agentId, title: 'Test Topic' },
         { id: topicId2, sessionId, userId, title: 'Test Topic 2' },
@@ -498,7 +499,11 @@ describe('TopicShareModel', () => {
         .returning();
 
       const agent2Id = 'group-member-agent';
-      await serverDB.insert(agents).values({ id: agent2Id, userId, title: 'Group Agent' });
+      await serverDB
+        .insert(agents)
+        .values(
+          await withTestAgentDevices(serverDB, { id: agent2Id, userId, title: 'Group Agent' }),
+        );
       await serverDB
         .insert(chatGroupsAgents)
         .values({ chatGroupId: group.id, agentId: agent2Id, userId, order: 0 });

@@ -4,6 +4,7 @@ import { type EnabledAiModel } from 'model-bank';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { agents, topics, users } from '@/database/schemas';
 import type * as DatabaseServerModule from '@/database/server';
 import { type MemoryExtractionPrivateConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
@@ -545,7 +546,9 @@ describe('MemoryExtractionExecutor runtime ownership', () => {
     const userId = 'memory-runtime-owner';
     await db.insert(users).values({ id: userId });
     try {
-      await db.insert(agents).values({ id: 'memory-acp-agent', userId, model: 'codex' });
+      await db
+        .insert(agents)
+        .values(await withTestAgentDevices(db, { id: 'memory-acp-agent', userId, model: 'codex' }));
       await db
         .insert(topics)
         .values({ id: 'memory-acp-topic', userId, agentId: 'memory-acp-agent' });

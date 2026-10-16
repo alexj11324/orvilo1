@@ -5,6 +5,8 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
+
 import { topicRouter } from '../../topic';
 import { cleanupTestUser, createTestAgent, createTestContext, createTestUser } from './setup';
 
@@ -47,7 +49,7 @@ describe('Topic Router Integration Tests', () => {
     const { agents } = await import('@/database/schemas');
     const [agent] = await serverDB
       .insert(agents)
-      .values({ userId, title: 'Test Agent' })
+      .values(await withTestAgentDevices(serverDB, { userId, title: 'Test Agent' }))
       .returning();
     testAgentId = agent.id;
 
@@ -537,10 +539,12 @@ describe('Topic Router Integration Tests', () => {
       const { agents, agentsToSessions } = await import('@/database/schemas');
       const [newAgent] = await serverDB
         .insert(agents)
-        .values({
-          userId,
-          title: 'New Agent',
-        })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            userId,
+            title: 'New Agent',
+          }),
+        )
         .returning();
 
       const [newSession] = await serverDB
@@ -580,7 +584,7 @@ describe('Topic Router Integration Tests', () => {
       const { agents } = await import('@/database/schemas');
       const [nextAgent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Next Agent' })
+        .values(await withTestAgentDevices(serverDB, { userId, title: 'Next Agent' }))
         .returning();
 
       await caller.updateTopic({ id: topicId, value: { agentId: nextAgent.id } });
@@ -599,7 +603,7 @@ describe('Topic Router Integration Tests', () => {
       const { agents } = await import('@/database/schemas');
       const [nextAgent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Next Agent' })
+        .values(await withTestAgentDevices(serverDB, { userId, title: 'Next Agent' }))
         .returning();
 
       await caller.updateTopic({
@@ -621,7 +625,9 @@ describe('Topic Router Integration Tests', () => {
       const { agents } = await import('@/database/schemas');
       const [foreignAgent] = await serverDB
         .insert(agents)
-        .values({ userId: otherUserId, title: 'Someone else' })
+        .values(
+          await withTestAgentDevices(serverDB, { userId: otherUserId, title: 'Someone else' }),
+        )
         .returning();
 
       await expect(
@@ -675,7 +681,7 @@ describe('Topic Router Integration Tests', () => {
       const { agents, agentsToSessions } = await import('@/database/schemas');
       const [otherAgent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Other Agent' })
+        .values(await withTestAgentDevices(serverDB, { userId, title: 'Other Agent' }))
         .returning();
       const [otherSession] = await serverDB
         .insert(sessions)
@@ -715,7 +721,14 @@ describe('Topic Router Integration Tests', () => {
       const { agents } = await import('@/database/schemas');
       const [inboxAgent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Inbox Agent', slug: 'inbox', virtual: true })
+        .values(
+          await withTestAgentDevices(serverDB, {
+            userId,
+            title: 'Inbox Agent',
+            slug: 'inbox',
+            virtual: true,
+          }),
+        )
         .returning();
       inboxAgentId = inboxAgent.id;
     });

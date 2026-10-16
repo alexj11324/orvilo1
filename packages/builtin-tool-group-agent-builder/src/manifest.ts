@@ -384,7 +384,7 @@ export const GroupAgentBuilderManifest: BuiltinToolManifest = {
     },
     {
       description:
-        "Update the group's shared prompt/content. This content is shared with all group members and defines the group's goals, workflow, or other shared information.",
+        "Update the group's shared prompt/content. This content is shared with all group members and defines the group's orchestration workflows, workflow, or other shared information.",
       name: GroupAgentBuilderApiName.updateGroupPrompt,
       parameters: {
         properties: {

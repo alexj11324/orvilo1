@@ -473,7 +473,7 @@ function GoalsStep({
   onGoalToggle,
 }: {
   goals: GoalValue[];
-  onGoalToggle: (goal: GoalValue, checked: boolean) => void;
+  onGoalToggle: (orchestrationWorkflow: GoalValue, checked: boolean) => void;
 }) {
   const { t } = useTranslation('onboarding');
   const { goalOptions } = createOnboardingData(t);
@@ -801,13 +801,17 @@ export function Onboarding({
     });
   }, [currentStep, currentStepMeta.id]);
 
-  function handleGoalToggle(goal: GoalValue, checked: boolean) {
+  function handleGoalToggle(orchestrationWorkflow: GoalValue, checked: boolean) {
     setGoals((currentGoals) => {
       if (checked) {
-        return currentGoals.includes(goal) ? currentGoals : [...currentGoals, goal];
+        return currentGoals.includes(orchestrationWorkflow)
+          ? currentGoals
+          : [...currentGoals, orchestrationWorkflow];
       }
 
-      return currentGoals.filter((currentGoal) => currentGoal !== goal);
+      return currentGoals.filter(
+        (currentOrchestrationWorkflow) => currentOrchestrationWorkflow !== orchestrationWorkflow,
+      );
     });
   }
 

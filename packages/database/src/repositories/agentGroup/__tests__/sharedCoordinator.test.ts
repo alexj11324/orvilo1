@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import { ChatGroupModel } from '../../../models/chatGroup';
 import {
   agents,
@@ -33,14 +34,16 @@ beforeEach(async () => {
 const seed = async () => {
   const [agent] = await db
     .insert(agents)
-    .values({
-      title: 'Existing coordinator',
-      userId,
-      workspaceId,
-      virtual: false,
-      agencyConfig: { heterogeneousProvider: { type: 'codex' }, executionTarget: 'local' },
-      visibility: 'public',
-    })
+    .values(
+      await withTestAgentDevices(db, {
+        title: 'Existing coordinator',
+        userId,
+        workspaceId,
+        virtual: false,
+        agencyConfig: { heterogeneousProvider: { type: 'codex' }, executionTarget: 'local' },
+        visibility: 'public',
+      }),
+    )
     .returning();
   const [group] = await db
     .insert(chatGroups)
@@ -128,7 +131,9 @@ describe('shared group coordinator', () => {
     const { agent, group } = await seed();
     const [owned] = await db
       .insert(agents)
-      .values({ title: 'Legacy', userId, workspaceId, virtual: true })
+      .values(
+        await withTestAgentDevices(db, { title: 'Legacy', userId, workspaceId, virtual: true }),
+      )
       .returning();
     await db.insert(chatGroupsAgents).values({
       agentId: owned.id,
@@ -157,13 +162,15 @@ describe('shared group coordinator', () => {
     const { agent, group } = await seed();
     const [second] = await db
       .insert(agents)
-      .values({
-        title: 'Second',
-        userId,
-        workspaceId,
-        visibility: 'public',
-        agencyConfig: { heterogeneousProvider: { type: 'codex' }, executionTarget: 'local' },
-      })
+      .values(
+        await withTestAgentDevices(db, {
+          title: 'Second',
+          userId,
+          workspaceId,
+          visibility: 'public',
+          agencyConfig: { heterogeneousProvider: { type: 'codex' }, executionTarget: 'local' },
+        }),
+      )
       .returning();
     await model.addAgentsToGroup(group.id, [second.id]);
     await model.updateAgentInGroup(group.id, second.id, { role: 'supervisor' });
@@ -181,13 +188,15 @@ describe('shared group coordinator', () => {
     const { agent, group } = await seed();
     const [unsupported] = await db
       .insert(agents)
-      .values({
-        title: 'Participant',
-        userId,
-        workspaceId,
-        visibility: 'public',
-        agencyConfig: { heterogeneousProvider: { type: 'pi' }, executionTarget: 'local' },
-      })
+      .values(
+        await withTestAgentDevices(db, {
+          title: 'Participant',
+          userId,
+          workspaceId,
+          visibility: 'public',
+          agencyConfig: { heterogeneousProvider: { type: 'pi' }, executionTarget: 'local' },
+        }),
+      )
       .returning();
     await model.addAgentsToGroup(group.id, [unsupported.id]);
     await expect(
@@ -210,7 +219,14 @@ describe('shared group coordinator', () => {
     const { agent, group } = await seed();
     const [privateAgent] = await db
       .insert(agents)
-      .values({ title: 'Private', userId: otherId, workspaceId, visibility: 'private' })
+      .values(
+        await withTestAgentDevices(db, {
+          title: 'Private',
+          userId: otherId,
+          workspaceId,
+          visibility: 'private',
+        }),
+      )
       .returning();
     await expect(
       model.updateAgentInGroup(group.id, privateAgent.id, { role: 'supervisor' }),

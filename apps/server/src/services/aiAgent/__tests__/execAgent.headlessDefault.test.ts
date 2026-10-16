@@ -3,13 +3,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AiAgentService } from '../index';
 
-const { mockCreateOperation, mockDispatchHeteroAgent, mockGetAgentConfig, mockMessageCreate } =
-  vi.hoisted(() => ({
-    mockCreateOperation: vi.fn(),
-    mockDispatchHeteroAgent: vi.fn(),
-    mockGetAgentConfig: vi.fn(),
-    mockMessageCreate: vi.fn(),
-  }));
+const {
+  mockCreateOperation,
+  mockDispatchHeteroAgent,
+  mockGetAgentConfig,
+  mockMessageCreate,
+  mockGetExecutableBuiltin,
+} = vi.hoisted(() => ({
+  mockCreateOperation: vi.fn(),
+  mockDispatchHeteroAgent: vi.fn(),
+  mockGetAgentConfig: vi.fn(),
+  mockMessageCreate: vi.fn(),
+  mockGetExecutableBuiltin: vi.fn(),
+}));
+
+vi.mock('@/server/services/agent/builtinRuntimeCreation', () => ({
+  getExecutableBuiltinAgent: mockGetExecutableBuiltin,
+}));
 
 vi.mock('@/libs/trusted-client', () => ({
   generateTrustedClientToken: vi.fn().mockReturnValue(undefined),
@@ -32,6 +42,7 @@ vi.mock('@/database/models/message', () => ({
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
+      getOrchestratorSourceAgentId: vi.fn().mockResolvedValue(undefined),
       getAgentConfig: vi.fn(),
       queryAgents: vi.fn().mockResolvedValue([]),
     };
@@ -180,6 +191,18 @@ describe('AiAgentService.execAgent - dispatch wiring', () => {
       topicId: 'topic-1',
     });
     service = new AiAgentService(mockDb, userId);
+  });
+
+  it('executes the builtin selected in this scope rather than a personal slug match', async () => {
+    const personal = { id: 'personal-verifier', slug: 'verify-agent' };
+    const workspace = { id: 'workspace-verifier', slug: 'verify-agent' };
+    mockGetExecutableBuiltin.mockResolvedValue(workspace);
+    mockGetAgentConfig.mockImplementation(async (id) =>
+      id === workspace.id ? workspace : personal,
+    );
+    const scoped = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
+    expect(await (scoped as any).resolveAgentConfigOrThrow('verify-agent')).toEqual(workspace);
+    expect(mockGetAgentConfig).toHaveBeenLastCalledWith(workspace.id);
   });
 
   it('threads beforeOperationStart into the dispatch commit window', async () => {

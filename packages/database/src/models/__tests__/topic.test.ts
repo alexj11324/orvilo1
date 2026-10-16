@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agentOperations,
   agents,
@@ -80,7 +81,9 @@ describe('TopicModel', () => {
 
   describe('batchCreate', () => {
     it('keeps a session topic session-scoped and a group topic group-scoped', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-b', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-b', userId }));
       await serverDB.insert(sessions).values({ id: 'session-x', userId });
       await serverDB.insert(chatGroups).values({ id: 'group-b', userId });
 
@@ -234,7 +237,9 @@ describe('TopicModel', () => {
 
   describe('query', () => {
     it('orders favorites first then by recent activity', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-q', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-q', userId }));
       await serverDB.insert(topics).values([
         {
           agentId: 'agent-q',
@@ -255,7 +260,9 @@ describe('TopicModel', () => {
     });
 
     it('adopts orphan rows for the inbox agent only', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-inbox', slug: 'inbox', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-inbox', slug: 'inbox', userId }));
       await serverDB.insert(topics).values([
         { agentId: 'agent-inbox', id: 't-direct', title: 'direct', userId },
         // legacy orphan: every owner column null
@@ -285,7 +292,9 @@ describe('TopicModel', () => {
       // ownership matches them) but carry a non-null senderId. The creator's
       // own topic sidebar (`query({ agentId })`) must never surface them —
       // only the visitor-scoped `queryBySender` should.
-      await serverDB.insert(agents).values({ id: 'agent-share', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-share', userId }));
       await serverDB.insert(topics).values([
         { agentId: 'agent-share', id: 't-creator', title: 'creator', userId },
         {
@@ -310,7 +319,9 @@ describe('TopicModel', () => {
 
     describe('status filtering & ordering', () => {
       it('excludes topics whose status is in excludeStatuses but keeps null status', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-s', userId });
+        await serverDB
+          .insert(agents)
+          .values(await withTestAgentDevices(serverDB, { id: 'agent-s', userId }));
         await serverDB.insert(topics).values([
           { agentId: 'agent-s', id: 't-active', status: 'active', title: 'active', userId },
           { agentId: 'agent-s', id: 't-done', status: 'completed', title: 'done', userId },
@@ -326,7 +337,9 @@ describe('TopicModel', () => {
       });
 
       it('orders by status priority floating unread above active/completed', async () => {
-        await serverDB.insert(agents).values({ id: 'agent-rank', userId });
+        await serverDB
+          .insert(agents)
+          .values(await withTestAgentDevices(serverDB, { id: 'agent-rank', userId }));
         // all share the same activity time so only the status rank decides order
         const at = minutesAgo(5);
         await serverDB.insert(topics).values([
@@ -378,7 +391,9 @@ describe('TopicModel', () => {
 
     describe('trigger filtering', () => {
       beforeEach(async () => {
-        await serverDB.insert(agents).values({ id: 'agent-trig', userId });
+        await serverDB
+          .insert(agents)
+          .values(await withTestAgentDevices(serverDB, { id: 'agent-trig', userId }));
         await serverDB.insert(topics).values([
           { agentId: 'agent-trig', id: 't-chat', title: 'chat', trigger: 'chat', userId },
           { agentId: 'agent-trig', id: 't-cron', title: 'cron', trigger: 'cron', userId },
@@ -410,7 +425,9 @@ describe('TopicModel', () => {
     });
 
     it('returns card-detail columns only when withDetails is set', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-d', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-d', userId }));
       await serverDB.insert(topics).values({
         agentId: 'agent-d',
         description: 'desc',
@@ -440,7 +457,9 @@ describe('TopicModel', () => {
 
   describe('queryBySender', () => {
     it('projects only the visitor-safe runningOperation fields, stripping the rest of metadata', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-share-running', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-share-running', userId }));
       await serverDB.insert(topics).values({
         agentId: 'agent-share-running',
         id: 't-visitor-running',
@@ -478,7 +497,9 @@ describe('TopicModel', () => {
     });
 
     it('returns a null runningOperation when the topic has no active run', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-share-idle', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-share-idle', userId }));
       await serverDB.insert(topics).values({
         agentId: 'agent-share-idle',
         id: 't-visitor-idle',
@@ -700,12 +721,14 @@ describe('TopicModel', () => {
         await serverDB
           .insert(workspaces)
           .values({ id: workspaceId, name: 'ws', primaryOwnerId: userId, slug: workspaceId });
-        await serverDB.insert(agents).values([
-          { id: 'agent-shared', userId, visibility: 'public', workspaceId },
-          { id: 'agent-private-mine', userId, visibility: 'private', workspaceId },
-          { id: 'agent-private-other', userId: otherUserId, visibility: 'private', workspaceId },
-          { id: 'agent-personal-other', userId: otherUserId, workspaceId: null },
-        ]);
+        await serverDB.insert(agents).values(
+          await withTestAgentDevices(serverDB, [
+            { id: 'agent-shared', userId, visibility: 'public', workspaceId },
+            { id: 'agent-private-mine', userId, visibility: 'private', workspaceId },
+            { id: 'agent-private-other', userId: otherUserId, visibility: 'private', workspaceId },
+            { id: 'agent-personal-other', userId: otherUserId, workspaceId: null },
+          ]),
+        );
         await serverDB.insert(topics).values([
           {
             agentId: 'agent-shared',
@@ -791,7 +814,9 @@ describe('TopicModel', () => {
 
   describe('count', () => {
     it('counts all owned topics and can scope to an agent', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-c', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-c', userId }));
       await serverDB.insert(topics).values([
         { agentId: 'agent-c', id: 'c1', title: '1', userId },
         { id: 'c2', title: '2', userId },
@@ -1231,10 +1256,12 @@ describe('TopicModel', () => {
     });
 
     it('batchDeleteByAgentId removes all topics under one agent', async () => {
-      await serverDB.insert(agents).values([
-        { id: 'agent-del', userId },
-        { id: 'agent-keep', userId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: 'agent-del', userId },
+          { id: 'agent-keep', userId },
+        ]),
+      );
       await serverDB.insert(topics).values([
         { agentId: 'agent-del', id: 'd1', title: '1', userId },
         { agentId: 'agent-del', id: 'd2', title: '2', userId },
@@ -1314,10 +1341,12 @@ describe('TopicModel', () => {
 
   describe('batchMoveToAgent', () => {
     it('reassigns agentId, clears sessionId, and moves child messages', async () => {
-      await serverDB.insert(agents).values([
-        { id: 'agent-src', userId },
-        { id: 'agent-dst', userId },
-      ]);
+      await serverDB.insert(agents).values(
+        await withTestAgentDevices(serverDB, [
+          { id: 'agent-src', userId },
+          { id: 'agent-dst', userId },
+        ]),
+      );
       await serverDB.insert(topics).values({
         agentId: 'agent-src',
         id: 'move-1',
@@ -1345,7 +1374,9 @@ describe('TopicModel', () => {
     });
 
     it('throws when the target agent is not accessible', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-foreign', userId: otherUserId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-foreign', userId: otherUserId }));
       await serverDB.insert(topics).values({ id: 'move-x', title: 'x', userId });
 
       await expect(topicModel.batchMoveToAgent(['move-x'], 'agent-foreign')).rejects.toThrow(
@@ -1360,7 +1391,9 @@ describe('TopicModel', () => {
 
   describe('getCronTopicsGroupedByCronJob', () => {
     it('groups cron-triggered topics by their cronJobId and skips topics without one', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-cron', userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: 'agent-cron', userId }));
       await serverDB.insert(topics).values([
         {
           agentId: 'agent-cron',
@@ -1406,7 +1439,11 @@ describe('TopicModel', () => {
 
   describe('queryRecent', () => {
     it('orders recent topics by latest activity and tags type', async () => {
-      await serverDB.insert(agents).values({ id: 'agent-recent', slug: 'inbox', userId });
+      await serverDB
+        .insert(agents)
+        .values(
+          await withTestAgentDevices(serverDB, { id: 'agent-recent', slug: 'inbox', userId }),
+        );
       await serverDB.insert(chatGroups).values({ id: 'group-recent', userId });
       await serverDB.insert(topics).values([
         {

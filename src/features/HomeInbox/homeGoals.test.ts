@@ -1,40 +1,51 @@
-import type { GoalStatus } from '@orvilo/const/goal';
+import type { OrchestrationWorkflowStatus } from '@orvilo/const/orchestrationWorkflow';
 import { describe, expect, it } from 'vitest';
 
-import type { GoalListItem } from '@/store/goal/initialState';
+import type { OrchestrationWorkflowListItem } from '@/store/goal/initialState';
 
 import { buildHomeGoalEntries, homeGoalHref, resolveHomeGoalView } from './homeGoals';
 
 interface GoalOverrides {
   agentId?: string | null;
-  goal?: Partial<GoalListItem['goal']>;
   id: string;
+  orchestrationWorkflow?: Partial<OrchestrationWorkflowListItem['orchestrationWorkflow']>;
   pendingDecisions?: number;
   taskDone?: number;
   taskTotal?: number;
   title?: string;
 }
 
-const goal = ({ agentId = 'agt_1', id, goal: overrides, ...rest }: GoalOverrides): GoalListItem =>
+const orchestrationWorkflow = ({
+  agentId = 'agt_1',
+  id,
+  orchestrationWorkflow: overrides,
+  ...rest
+}: GoalOverrides): OrchestrationWorkflowListItem =>
   ({
     findingCount: 0,
-    goal: { agentId, id: `g-${id}`, status: 'running', title: `goal ${id}`, ...overrides },
+    orchestrationWorkflow: {
+      agentId,
+      id: `g-${id}`,
+      status: 'running',
+      title: `goal ${id}`,
+      ...overrides,
+    },
     pendingDecisions: 0,
     totalRunCost: 0,
     totalRunDuration: 0,
     taskDone: 1,
     taskTotal: 3,
     ...rest,
-  }) as GoalListItem;
+  }) as OrchestrationWorkflowListItem;
 
 const titlesOf = (entries: { title: string }[]) => entries.map(({ title }) => title);
 
 describe('buildHomeGoalEntries', () => {
   it('puts the goals waiting on the user ahead of the ones still working', () => {
     const goals = [
-      goal({ id: 'r1', goal: { status: 'running' } }),
-      goal({ id: 'd1', goal: { status: 'review' } }),
-      goal({ id: 'r2', goal: { status: 'verifying' } }),
+      orchestrationWorkflow({ id: 'r1', orchestrationWorkflow: { status: 'running' } }),
+      orchestrationWorkflow({ id: 'd1', orchestrationWorkflow: { status: 'review' } }),
+      orchestrationWorkflow({ id: 'r2', orchestrationWorkflow: { status: 'verifying' } }),
     ];
 
     const entries = buildHomeGoalEntries(goals);
@@ -45,18 +56,20 @@ describe('buildHomeGoalEntries', () => {
 
   it('drops goals that are finished or parked', () => {
     const goals = [
-      goal({ id: 'a', goal: { status: 'canceled' } }),
-      goal({ id: 'b', goal: { status: 'failed' } }),
-      goal({ id: 'c', goal: { status: 'paused' } }),
-      goal({ id: 'd', goal: { status: 'achieved' } }),
-      goal({ id: 'e', goal: { status: 'running' } }),
+      orchestrationWorkflow({ id: 'a', orchestrationWorkflow: { status: 'canceled' } }),
+      orchestrationWorkflow({ id: 'b', orchestrationWorkflow: { status: 'failed' } }),
+      orchestrationWorkflow({ id: 'c', orchestrationWorkflow: { status: 'paused' } }),
+      orchestrationWorkflow({ id: 'd', orchestrationWorkflow: { status: 'achieved' } }),
+      orchestrationWorkflow({ id: 'e', orchestrationWorkflow: { status: 'running' } }),
     ];
 
     expect(titlesOf(buildHomeGoalEntries(goals))).toEqual(['goal e']);
   });
 
   it('reads a review goal as pending the user even without an acceptance read', () => {
-    const goals = [goal({ id: 'live', goal: { status: 'review' } })];
+    const goals = [
+      orchestrationWorkflow({ id: 'live', orchestrationWorkflow: { status: 'review' } }),
+    ];
 
     const [entry] = buildHomeGoalEntries(goals);
 
@@ -65,7 +78,9 @@ describe('buildHomeGoalEntries', () => {
   });
 
   it('keeps a verifying goal in the running bucket', () => {
-    const goals = [goal({ id: 'v', goal: { status: 'verifying' } })];
+    const goals = [
+      orchestrationWorkflow({ id: 'v', orchestrationWorkflow: { status: 'verifying' } }),
+    ];
 
     const [entry] = buildHomeGoalEntries(goals);
 
@@ -74,7 +89,9 @@ describe('buildHomeGoalEntries', () => {
   });
 
   it('carries the graph roll-up the row renders', () => {
-    const goals = [goal({ id: 'x', pendingDecisions: 2, taskDone: 2, taskTotal: 5 })];
+    const goals = [
+      orchestrationWorkflow({ id: 'x', pendingDecisions: 2, taskDone: 2, taskTotal: 5 }),
+    ];
 
     expect(buildHomeGoalEntries(goals)[0]).toMatchObject({
       agentId: 'agt_1',
@@ -88,10 +105,13 @@ describe('buildHomeGoalEntries', () => {
 });
 
 describe('resolveHomeGoalView', () => {
-  const entries = (count: number, status: GoalStatus = 'running') =>
+  const entries = (count: number, status: OrchestrationWorkflowStatus = 'running') =>
     buildHomeGoalEntries(
       Array.from({ length: count }, (_, index) =>
-        goal({ goal: { id: `g${index}`, status }, id: `g${index}` }),
+        orchestrationWorkflow({
+          orchestrationWorkflow: { id: `g${index}`, status },
+          id: `g${index}`,
+        }),
       ),
     );
 
@@ -126,9 +146,12 @@ describe('resolveHomeGoalView', () => {
   it('cuts the least urgent rows, never the ones waiting on the user', () => {
     const goals = [
       ...Array.from({ length: 6 }, (_, index) =>
-        goal({ goal: { id: `g-r${index}`, status: 'running' }, id: `r${index}` }),
+        orchestrationWorkflow({
+          orchestrationWorkflow: { id: `g-r${index}`, status: 'running' },
+          id: `r${index}`,
+        }),
       ),
-      goal({ goal: { id: 'g-d1', status: 'review' }, id: 'd1' }),
+      orchestrationWorkflow({ orchestrationWorkflow: { id: 'g-d1', status: 'review' }, id: 'd1' }),
     ];
 
     const { buckets } = resolveHomeGoalView(buildHomeGoalEntries(goals));
@@ -142,13 +165,13 @@ describe('resolveHomeGoalView', () => {
 
 describe('homeGoalHref', () => {
   it('routes to the goal detail page under its owning agent', () => {
-    const [entry] = buildHomeGoalEntries([goal({ id: 'g1' })]);
+    const [entry] = buildHomeGoalEntries([orchestrationWorkflow({ id: 'g1' })]);
 
     expect(homeGoalHref(entry)).toBe('/agent/agt_1/goal/g-g1');
   });
 
   it('has nowhere to go for an unassigned goal', () => {
-    const [entry] = buildHomeGoalEntries([goal({ agentId: null, id: 'g1' })]);
+    const [entry] = buildHomeGoalEntries([orchestrationWorkflow({ agentId: null, id: 'g1' })]);
 
     expect(homeGoalHref(entry)).toBeUndefined();
   });

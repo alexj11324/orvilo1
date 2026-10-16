@@ -53,7 +53,7 @@ beforeEach(() => {
 });
 
 /**
- * Regression: a Goal Task ran past the four hours its operation token was
+ * Regression: a OrchestrationWorkflow Task ran past the four hours its operation token was
  * signed for, and there was no way to get another. Every ingest after that was
  * rejected, so the run's output and completion never reached the server.
  */

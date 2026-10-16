@@ -344,7 +344,7 @@ export const MemoryManifest: BuiltinToolManifest = {
               },
               type: {
                 description:
-                  "High level context archetype (e.g., 'project', 'relationship', 'goal')",
+                  "High level context archetype (e.g., 'project', 'relationship', 'orchestration workflow')",
                 type: 'string',
               },
             },

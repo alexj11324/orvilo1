@@ -603,6 +603,7 @@ describe('runAcpJudgment', () => {
     const execArgs = mocks.execAgent.mock.calls[0][0];
     expect(execArgs.model).toBeUndefined();
     expect(execArgs.provider).toBeUndefined();
+    expect(execArgs.skipTaskVerification).toBe(true);
   });
 
   it('applies the advisory model/provider only for slug-bound builtins', async () => {
@@ -1161,7 +1162,7 @@ describe('planning tool submissions (#623)', () => {
       input: JUDGMENT_INPUT,
       judgment: {
         binding: { agentId: 'agent-1' },
-        purpose: 'goal.criteriaDraft',
+        purpose: 'orchestrationWorkflow.criteriaDraft',
         outputMode: 'tool',
       },
     });
@@ -1172,7 +1173,7 @@ describe('planning tool submissions (#623)', () => {
         appContext: expect.objectContaining({
           judgment: expect.objectContaining({ outputMode: 'tool' }),
         }),
-        prompt: expect.stringContaining('orvilo goal submit-draft'),
+        prompt: expect.stringContaining('orvilo orchestration-workflow submit-draft'),
       }),
     );
   });
@@ -1183,7 +1184,7 @@ describe('planning tool submissions (#623)', () => {
         input: JUDGMENT_INPUT,
         judgment: {
           binding: { agentId: 'agent-1' },
-          purpose: 'goal.criteriaDraft',
+          purpose: 'orchestrationWorkflow.criteriaDraft',
           outputMode: 'tool',
         },
       }),

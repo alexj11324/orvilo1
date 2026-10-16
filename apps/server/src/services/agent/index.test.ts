@@ -14,6 +14,18 @@ import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/wor
 
 import { AgentService } from './index';
 
+vi.mock('./builtinRuntimeCreation', () => ({
+  getExecutableBuiltinAgent: async (
+    db: unknown,
+    userId: string,
+    slug: string,
+    workspaceId?: string,
+  ) => {
+    const { AgentModel } = await import('@/database/models/agent');
+    return new AgentModel(db as any, userId, workspaceId).getBuiltinAgent(slug);
+  },
+}));
+
 vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
   assertCanUseWorkspaceAgent: vi.fn().mockResolvedValue(undefined),
 }));

@@ -84,6 +84,8 @@ export const devices = pgTable(
     adapterVersion: varchar('adapter_version', { length: 32 }),
     /** When `capabilitySnapshot`/`adapterVersion` were last verified fresh. */
     lastVerifiedAt: timestamptz('last_verified_at'),
+    /** Retained registry identity after execution access has been revoked. */
+    retiredAt: timestamptz('retired_at'),
 
     firstSeenAt: timestamptz('first_seen_at').defaultNow().notNull(),
     lastSeenAt: timestamptz('last_seen_at').defaultNow().notNull(),

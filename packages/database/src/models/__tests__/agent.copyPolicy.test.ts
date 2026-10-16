@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import {
   agents,
   agentsToSessions,
@@ -59,15 +60,17 @@ const source = async () =>
   (
     await db
       .insert(agents)
-      .values({
-        workspaceId,
-        userId: owner,
-        visibility: 'public',
-        title: 'Safe profile',
-        systemRole: 'CONFIDENTIAL_COPY_FIXTURE',
-        plugins: ['private-plugin'],
-        agencyConfig,
-      })
+      .values(
+        await withTestAgentDevices(db, {
+          workspaceId,
+          userId: owner,
+          visibility: 'public',
+          title: 'Safe profile',
+          systemRole: 'CONFIDENTIAL_COPY_FIXTURE',
+          plugins: ['private-plugin'],
+          agencyConfig,
+        }),
+      )
       .returning()
   )[0];
 

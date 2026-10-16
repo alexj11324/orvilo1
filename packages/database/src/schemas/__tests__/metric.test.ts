@@ -22,8 +22,8 @@ describe('metrics schema', () => {
       .insert(metrics)
       .values({
         key: 'twitter.followers',
-        subjectId: 'goal_schema_test',
-        subjectType: 'goal',
+        subjectId: 'orchestration_workflow_schema_test',
+        subjectType: 'orchestrationWorkflow',
         userId,
       })
       .returning();
@@ -34,8 +34,8 @@ describe('metrics schema', () => {
     await expect(
       serverDB.insert(metrics).values({
         key: 'twitter.followers',
-        subjectId: 'goal_schema_test',
-        subjectType: 'goal',
+        subjectId: 'orchestration_workflow_schema_test',
+        subjectType: 'orchestrationWorkflow',
         userId,
       }),
     ).rejects.toThrow();
@@ -44,8 +44,8 @@ describe('metrics schema', () => {
     await expect(
       serverDB.insert(metrics).values({
         key: 'twitter.followers',
-        subjectId: 'goal_schema_test_other',
-        subjectType: 'goal',
+        subjectId: 'orchestration_workflow_schema_test_other',
+        subjectType: 'orchestrationWorkflow',
         userId,
       }),
     ).resolves.not.toThrow();

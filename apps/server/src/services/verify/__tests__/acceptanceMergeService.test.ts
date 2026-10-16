@@ -31,13 +31,13 @@ vi.mock('@/database/models/verifyReport', () => ({
     return {};
   }),
 }));
-vi.mock('@/database/models/goal', () => ({ GoalModel: vi.fn() }));
+vi.mock('@/database/models/orchestrationWorkflow', () => ({ OrchestrationWorkflowModel: vi.fn() }));
 vi.mock('@/database/models/task', () => ({ TaskModel: vi.fn() }));
 vi.mock('@/database/models/topic', () => ({ TopicModel: vi.fn() }));
 vi.mock('@/database/models/document', () => ({ DocumentModel: vi.fn() }));
-vi.mock('../goalLoop', () => ({
-  maybeContinueGoalLoop: vi.fn(),
-  syncGoalToolState: vi.fn(),
+vi.mock('../orchestrationWorkflowLoop', () => ({
+  maybeContinueOrchestrationWorkflowLoop: vi.fn(),
+  syncOrchestrationWorkflowToolState: vi.fn(),
 }));
 vi.mock('@/server/services/task', () => ({ TaskService: vi.fn() }));
 

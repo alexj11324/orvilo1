@@ -3,6 +3,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
 import { TaskModel } from '@/database/models/task';
 import { TaskLabelModel } from '@/database/models/taskLabel';
@@ -75,13 +76,15 @@ describe('TaskIssueDefinitionService', () => {
     async (copyAssignees) => {
       const [agent] = await db
         .insert(agents)
-        .values({
-          userId,
-          workspaceId,
-          title: 'Assigned Agent',
-          model: 'gpt-4',
-          provider: 'openai',
-        })
+        .values(
+          await withTestAgentDevices(db, {
+            userId,
+            workspaceId,
+            title: 'Assigned Agent',
+            model: 'gpt-4',
+            provider: 'openai',
+          }),
+        )
         .returning();
       const source = await model.create({
         instruction: 'Assigned issue',
@@ -343,7 +346,7 @@ describe('TaskIssueDefinitionService', () => {
     await seedPrimeRuntime(db, { userId, workspaceId });
     const source = await model.create({
       name: 'Large issue',
-      instruction: 'Project goal',
+      instruction: 'Project orchestration workflow',
       workflowCategory: 'todo',
     });
     const child = await model.create({
@@ -359,7 +362,13 @@ describe('TaskIssueDefinitionService', () => {
       issueName: 'Converted from issue',
     });
     expect(await db.select().from(projects).where(eq(projects.id, result.projectId))).toMatchObject(
-      [{ name: 'Converted project', description: 'Project goal', status: 'backlog' }],
+      [
+        {
+          name: 'Converted project',
+          description: 'Project orchestration workflow',
+          status: 'backlog',
+        },
+      ],
     );
     expect(await model.findByIds([source.id, child.id])).toEqual(
       expect.arrayContaining([

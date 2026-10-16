@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import {
   agents,
   mcpEventBindings,
@@ -86,9 +87,14 @@ const seed = async (
   // needs an Agent somebody else created.
   const agentCreatorId = options.useGranted === false ? agentAuthorId : userId;
   if (agentCreatorId !== userId) await db.insert(users).values({ id: agentCreatorId });
-  await db
-    .insert(agents)
-    .values({ id: agentId, title: 'Event runner', userId: agentCreatorId, workspaceId });
+  await db.insert(agents).values(
+    await withTestAgentDevices(db, {
+      id: agentId,
+      title: 'Event runner',
+      userId: agentCreatorId,
+      workspaceId,
+    }),
+  );
   if (options.useGranted !== false) {
     await db.insert(resourcePermissions).values({
       accessLevel: 'use',

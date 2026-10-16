@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import { agents, messages, sessions, threads, topics, users } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
 import { MessageModel } from '../../message';
@@ -26,10 +27,12 @@ afterEach(async () => {
 
 describe('MessageModel thread query', () => {
   it('finds the latest assistant message owned by the requested agent in an exact thread', async () => {
-    await serverDB.insert(agents).values([
-      { id: 'agent1', userId },
-      { id: 'agent2', userId },
-    ]);
+    await serverDB.insert(agents).values(
+      await withTestAgentDevices(serverDB, [
+        { id: 'agent1', userId },
+        { id: 'agent2', userId },
+      ]),
+    );
     await serverDB.insert(topics).values({ id: 'topic1', userId });
     await serverDB.insert(threads).values({
       agentId: 'agent1',
@@ -153,7 +156,9 @@ describe('MessageModel thread query', () => {
 
     it('should return parent messages + thread messages when querying with agentId', async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([{ id: 'agent1', userId }]);
+        await trx
+          .insert(agents)
+          .values(await withTestAgentDevices(trx, [{ id: 'agent1', userId }]));
         await trx.insert(sessions).values([{ id: 'session1', userId }]);
         await trx.insert(topics).values([{ id: 'topic1', sessionId: 'session1', userId }]);
 
@@ -224,10 +229,12 @@ describe('MessageModel thread query', () => {
 
     it('should return parent messages + thread messages when querying with topicId and threadId', async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([
-          { id: 'agent1', userId },
-          { id: 'agent2', userId },
-        ]);
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, [
+            { id: 'agent1', userId },
+            { id: 'agent2', userId },
+          ]),
+        );
         await trx.insert(sessions).values([{ id: 'session1', userId }]);
         await trx.insert(topics).values([
           { id: 'topic1', sessionId: 'session1', userId },
@@ -403,7 +410,9 @@ describe('MessageModel thread query', () => {
 
     it('should return only thread messages for Isolation type (no parent messages)', async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([{ id: 'agent1', userId }]);
+        await trx
+          .insert(agents)
+          .values(await withTestAgentDevices(trx, [{ id: 'agent1', userId }]));
         await trx.insert(topics).values([{ id: 'topic1', userId }]);
 
         // Create thread with Isolation type
@@ -722,7 +731,9 @@ describe('MessageModel thread query', () => {
 
     it('should return empty array for Isolation thread type', async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([{ id: 'agent1', userId }]);
+        await trx
+          .insert(agents)
+          .values(await withTestAgentDevices(trx, [{ id: 'agent1', userId }]));
         await trx.insert(topics).values([{ id: 'topic1', userId }]);
 
         await trx.insert(messages).values([

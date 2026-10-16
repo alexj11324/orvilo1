@@ -48,9 +48,8 @@ const GoalTray = memo<GoalTrayProps>(({ topAttached }) => {
   const displayMessages = useConversationStore((s) => s.displayMessages);
   const armedAt = useGoalArmStore((s) => (agentId ? s.armedAt[agentId] : undefined));
   const disarm = useGoalArmStore((s) => s.disarm);
-  const { goal, checks, isLoading, setGoal, addCheck, updateCheck, removeCheck } = useTopicGoal(
-    topicId ?? undefined,
-  );
+  const { orchestrationWorkflow, checks, isLoading, setGoal, addCheck, updateCheck, removeCheck } =
+    useTopicGoal(topicId ?? undefined);
   const [open, setOpen] = useState(false);
 
   // The armed goal only applies to the topic it was armed in. Once a topic
@@ -62,22 +61,31 @@ const GoalTray = memo<GoalTrayProps>(({ topAttached }) => {
   // leaks to the next topic.
   useEffect(() => {
     if (!agentId || armedAt === undefined || !topicId || isLoading) return;
-    if (!goal) {
+    if (!orchestrationWorkflow) {
       const armedMessage = pickArmedMessage(displayMessages, armedAt);
       if (armedMessage?.content) void setGoal(armedMessage.content);
     }
     disarm(agentId);
-  }, [agentId, armedAt, topicId, isLoading, goal, displayMessages, setGoal, disarm]);
+  }, [
+    agentId,
+    armedAt,
+    topicId,
+    isLoading,
+    orchestrationWorkflow,
+    displayMessages,
+    setGoal,
+    disarm,
+  ]);
 
   // The pre-topic "armed" state is surfaced as a chip in the composer action bar
   // (see GoalArmedChip), not as a tray here — the tray is only the "goal set"
   // home once a topic exists.
-  if (!topicId || !goal) return null;
+  if (!topicId || !orchestrationWorkflow) return null;
 
   const openAddCheck = () => openCheckEditModal({ onSubmit: (v) => addCheck(v) });
   const openEditGoal = () =>
     openGoalModal({
-      initialGoal: goal,
+      initialOrchestrationWorkflow: orchestrationWorkflow,
       // Clearing the goal writes an empty requirement — the tray hides itself
       // once there's no goal (tracking checks are kept, so re-setting a goal
       // brings them back).
@@ -94,7 +102,7 @@ const GoalTray = memo<GoalTrayProps>(({ topAttached }) => {
       <PlanHeader>
         <div className="min-w-0 space-y-1">
           <PlanTitle>{t('acceptance.tray.goalLabel')}</PlanTitle>
-          <PlanDescription>{goal}</PlanDescription>
+          <PlanDescription>{orchestrationWorkflow}</PlanDescription>
         </div>
         <PlanAction className="flex shrink-0 items-center gap-1">
           <TooltipProvider>

@@ -11,6 +11,7 @@ import {
 } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { withTestAgentDevices } from '@/database/core/testAgentFixture';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import {
   agentOperations,
@@ -158,6 +159,7 @@ const heteroAgentConfig = {
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
+      getOrchestratorSourceAgentId: vi.fn().mockResolvedValue(undefined),
       getAgentConfig: vi.fn().mockResolvedValue(heteroAgentConfig),
       queryAgents: vi.fn().mockResolvedValue([]),
     };
@@ -349,7 +351,11 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
         { role: 'owner', userId: ownerId, workspaceId },
         ...(actorId === ownerId ? [] : [{ role: 'member', userId: actorId, workspaceId }]),
       ]);
-    await workspaceDb.insert(agents).values({ id: 'agent-1', userId: ownerId, workspaceId });
+    await workspaceDb
+      .insert(agents)
+      .values(
+        await withTestAgentDevices(workspaceDb, { id: 'agent-1', userId: ownerId, workspaceId }),
+      );
     await workspaceDb.insert(resourcePermissions).values({
       accessLevel: 'use',
       createdBy: ownerId,
@@ -520,7 +526,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     await service.execAgent({
       agentId: 'agent-1',
       clientIds: { userMessageId: 'msg-manager-turn' },
-      prompt: 'Inspect the Goal',
+      prompt: 'Inspect the Orchestration workflow',
     });
     expect(recordStartSpy).toHaveBeenCalledWith(
       expect.objectContaining({

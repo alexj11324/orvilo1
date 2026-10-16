@@ -27,5 +27,5 @@ Page titles use the My Work / Teams style: `text-sm font-medium`. Pages that sho
 ## Not migrated
 
 - Chat surfaces, `Conversation`, `PageEditor`, `Portal/Document` and `SelfLearning` keep the chat lane.
-- Projects, Reviews, Goals, Inbox, group pages (`GroupPermission`) and `AgentTaskDetail` are owned by
+- Projects, Reviews, Orchestration workflows, Inbox, group pages (`GroupPermission`) and `AgentTaskDetail` are owned by
   other changes.

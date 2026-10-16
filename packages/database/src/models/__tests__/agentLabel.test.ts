@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { agentLabelAssignments, agentLabels, agents, users, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AgentLabelModel } from '../agentLabel';
@@ -34,7 +35,9 @@ afterEach(async () => {
 });
 
 const createAgent = async (id: string, wsId?: string) => {
-  await serverDB.insert(agents).values({ id, userId, workspaceId: wsId ?? null });
+  await serverDB
+    .insert(agents)
+    .values(await withTestAgentDevices(serverDB, { id, userId, workspaceId: wsId ?? null }));
 };
 
 describe('AgentLabelModel', () => {

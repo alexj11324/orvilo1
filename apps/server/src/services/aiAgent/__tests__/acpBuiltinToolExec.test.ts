@@ -208,6 +208,25 @@ const baseInput = {
 };
 
 describe('execAcpBuiltinTool', () => {
+  it('forwards an orchestration call with its trusted conversation and source user message, without an approval dialog', async () => {
+    const input = {
+      ...baseInput,
+      identifier: 'orvilo-orchestration-workflow',
+      apiName: 'prepareOrchestrationWorkflow',
+    };
+    const op = {
+      ...baseOp,
+      taskId: null,
+      appContext: { ...baseOp.appContext, sourceMessageId: 'user-reply' },
+      metadata: { ...baseOp.metadata, builtinTools: { [input.identifier]: [input.apiName] } },
+    };
+    await execAcpBuiltinTool(buildDeps({ op }), input);
+    expect(mockExecute).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ messageId: 'user-reply', topicId: op.topicId }),
+    );
+    expect(mockUpsertReceipt).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     mockExecute.mockResolvedValue({ content: 'done', success: true });

@@ -8,7 +8,7 @@ import { AiAgentService } from '../index';
 // `capabilityContext`/`extraSystemContext`; DB agent_skills and
 // agent-document skills are lazily activated by the `skills` runtime on the
 // execution host instead of being eagerly inlined here. `exclusivePluginIds`
-// is the caller-driven isolation channel (e.g. a direct /goal prompt from the
+// is the caller-driven isolation channel (e.g. a direct startOrchestrationWorkflow prompt from the
 // skill-management layer).
 const { mockDispatchHeteroAgent, mockGetAgentConfig, mockMessageCreate, mockPluginQuery } =
   vi.hoisted(() => ({
@@ -40,6 +40,7 @@ vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
       getAgentConfig: vi.fn(),
+      getOrchestratorSourceAgentId: vi.fn().mockResolvedValue(undefined),
       queryAgents: vi.fn().mockResolvedValue([]),
     };
   }),
@@ -175,19 +176,19 @@ describe('AiAgentService.execAgent - run tool surface', () => {
     expect(dispatchInput().extraSystemContext).toBeDefined();
   });
 
-  it('restricts the surface to exclusivePluginIds (the /goal isolation channel)', async () => {
+  it('restricts the surface to exclusivePluginIds (the exclusive supervisor channel)', async () => {
     mockGetAgentConfig.mockResolvedValue(
       baseAgentConfig({ plugins: ['orvilo-agent', 'orvilo-task'] }),
     );
 
     await service.execAgent({
       agentId: 'agent-1',
-      exclusivePluginIds: ['orvilo-goal'],
-      prompt: '/goal ship it',
+      exclusivePluginIds: ['orvilo-orchestration-workflow-supervisor'],
+      prompt: 'inspect the orchestration workflow',
       selectedToolIds: ['selected-tool'],
     } as any);
 
-    expect(builtinSpecIds()).toEqual(['orvilo-goal']);
+    expect(builtinSpecIds()).toEqual(['orvilo-orchestration-workflow-supervisor']);
   });
 
   it('merges turn-scoped selectedToolIds into the surface', async () => {

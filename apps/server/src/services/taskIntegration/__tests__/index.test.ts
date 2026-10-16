@@ -540,7 +540,7 @@ describe('TaskIntegrationService', () => {
       'user-1',
       {
         deliverable: 'delivered result',
-        goal: 'ship it',
+        orchestrationWorkflow: 'ship it',
         operationId: 'op-original',
       },
       'ws-1',

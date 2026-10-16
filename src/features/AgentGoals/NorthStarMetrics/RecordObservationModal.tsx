@@ -16,75 +16,85 @@ import { useGoalStore } from '@/store/goal';
  * the automated writer; this is the human's entry for numbers only they can
  * see — and the server advances the goal when the observation clears the gate.
  */
-const RecordObservationContent = memo<{ goalId: string; metricKey: string; metricTitle?: string }>(
-  ({ goalId, metricKey, metricTitle }) => {
-    const { t } = useTranslation('chat');
-    const { close } = useModalContext();
-    const recordGoalObservation = useGoalStore((s) => s.recordGoalObservation);
+const RecordObservationContent = memo<{
+  orchestrationWorkflowId: string;
+  metricKey: string;
+  metricTitle?: string;
+}>(({ orchestrationWorkflowId, metricKey, metricTitle }) => {
+  const { t } = useTranslation('chat');
+  const { close } = useModalContext();
+  const recordGoalObservation = useGoalStore((s) => s.recordGoalObservation);
 
-    const [value, setValue] = useState('');
-    const [busy, setBusy] = useState(false);
+  const [value, setValue] = useState('');
+  const [busy, setBusy] = useState(false);
 
-    const submit = async () => {
-      const parsed = Number(value);
-      if (!Number.isFinite(parsed) || value.trim() === '' || busy) return;
-      setBusy(true);
-      try {
-        // The clause's display name rides along so the series created by the
-        // first observation carries it too.
-        await recordGoalObservation(goalId, { key: metricKey, title: metricTitle, value: parsed });
-        close();
-      } catch (error) {
-        console.error('[NorthStar] failed to record observation:', error);
-        toast.error(t('goalProcess.northStar.record.failed'));
-      } finally {
-        setBusy(false);
-      }
-    };
+  const submit = async () => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || value.trim() === '' || busy) return;
+    setBusy(true);
+    try {
+      // The clause's display name rides along so the series created by the
+      // first observation carries it too.
+      await recordGoalObservation(orchestrationWorkflowId, {
+        key: metricKey,
+        title: metricTitle,
+        value: parsed,
+      });
+      close();
+    } catch (error) {
+      console.error('[NorthStar] failed to record observation:', error);
+      toast.error(t('goalProcess.northStar.record.failed'));
+    } finally {
+      setBusy(false);
+    }
+  };
 
-    return (
-      <div className="flex flex-col gap-4" style={{ paddingBlock: '4px 8px' }}>
-        <div className="flex flex-col gap-1.5">
-          <div className="text-(length:--text-dense) font-medium">
-            {t('goalProcess.northStar.record.valueLabel', { key: metricKey })}
-          </div>
-          <Input
-            autoFocus
-            placeholder={'42180'}
-            value={value}
-            visualSize="normal"
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') void submit();
-            }}
-          />
+  return (
+    <div className="flex flex-col gap-4" style={{ paddingBlock: '4px 8px' }}>
+      <div className="flex flex-col gap-1.5">
+        <div className="text-(length:--text-dense) font-medium">
+          {t('goalProcess.northStar.record.valueLabel', { key: metricKey })}
         </div>
-        <div className="flex justify-end">
-          <Button
-            disabled={!Number.isFinite(Number(value)) || value.trim() === ''}
-            loading={busy}
-            size="lg"
-            variant="outline"
-            onClick={() => void submit()}
-          >
-            {t('goalProcess.northStar.record.submit')}
-          </Button>
-        </div>
+        <Input
+          autoFocus
+          placeholder={'42180'}
+          value={value}
+          visualSize="normal"
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') void submit();
+          }}
+        />
       </div>
-    );
-  },
-);
+      <div className="flex justify-end">
+        <Button
+          disabled={!Number.isFinite(Number(value)) || value.trim() === ''}
+          loading={busy}
+          size="lg"
+          variant="outline"
+          onClick={() => void submit()}
+        >
+          {t('goalProcess.northStar.record.submit')}
+        </Button>
+      </div>
+    </div>
+  );
+});
 
 RecordObservationContent.displayName = 'RecordObservationContent';
 
 export const openRecordObservationModal = (
-  goalId: string,
+  orchestrationWorkflowId: string,
   metricKey: string,
   metricTitle?: string,
 ): ModalInstance =>
   createModal({
     content: (
-      <RecordObservationContent goalId={goalId} metricKey={metricKey} metricTitle={metricTitle} />
+      <RecordObservationContent
+        metricKey={metricKey}
+        metricTitle={metricTitle}
+        orchestrationWorkflowId={orchestrationWorkflowId}
+      />
     ),
     footer: null,
     maskClosable: true,

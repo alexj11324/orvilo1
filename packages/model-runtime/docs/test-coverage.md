@@ -608,7 +608,7 @@ bunx eslint src/providers/{provider}/
   - **search1api** (52.08% → 100%) - 86 tests, complex payload and models logic
   - **openrouter** (52.83% → \~95%) - 69 tests, pricing and thinking features
   - **sensenova** (53.01% → 100%) - 104 tests, vision model message conversion
-  - **zhipu** (55.83% → 100%) - 55 tests, tool\_calls index fixing, thinking modes
+  - **zhipu** (55.83% → 100%) - 55 tests, tool_calls index fixing, thinking modes
   - **ollama** (56.03% → \~95%) - 56 tests, embeddings and pull model features
   - **ai360** (56.14% → 100%) - 79 tests, web search and reasoning models
   - **mistral** (57.14% → 100%) - 53 tests, temperature normalization

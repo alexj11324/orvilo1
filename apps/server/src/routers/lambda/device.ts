@@ -88,17 +88,13 @@ const canEditWorkspaceDevice = (
  * that promise intact until an editor changes the agent back to member choice
  * (or binds a different public device) before hiding/removing this row.
  */
-const assertDeviceNotBoundToFixedAgent = async (
-  model: DeviceModel,
-  deviceId: string,
-): Promise<void> => {
-  if (!(await model.hasFixedAgentBinding(deviceId))) return;
+const assertDeviceNotBoundToAgent = async (model: DeviceModel, deviceId: string): Promise<void> => {
+  if (!(await model.hasAgentBinding(deviceId))) return;
 
   throw new TRPCError({
-    cause: { data: { code: 'DeviceBoundToFixedAgent' } },
+    cause: { data: { code: 'DeviceBoundToAgent' } },
     code: 'PRECONDITION_FAILED',
-    message:
-      'This device is fixed to one or more workspace agents. Change those agent settings first.',
+    message: 'This device is bound to one or more Agents. Rebind those Agents before removing it.',
   });
 };
 
@@ -1473,7 +1469,9 @@ export const deviceRouter = router({
 
       // Caller-invisible rows (another member's private enrollment) were
       // rejected above, so an undefined here really means "no row yet".
-      const existing = await model.findWorkspaceDeviceById(probe.identity.deviceId);
+      const existing = await model.findWorkspaceDeviceById(probe.identity.deviceId, {
+        includeRetired: true,
+      });
       if (existing) {
         if (!input.confirmOverwrite) {
           return {
@@ -1491,7 +1489,7 @@ export const deviceRouter = router({
           });
         }
         if ((input.visibility ?? 'private') === 'private') {
-          await assertDeviceNotBoundToFixedAgent(model, existing.deviceId);
+          await assertDeviceNotBoundToAgent(model, existing.deviceId);
         }
       }
 
@@ -1596,7 +1594,7 @@ export const deviceRouter = router({
         });
       }
       if (input.visibility === 'private') {
-        await assertDeviceNotBoundToFixedAgent(model, input.deviceId);
+        await assertDeviceNotBoundToAgent(model, input.deviceId);
       }
       await model.setWorkspaceDeviceVisibility(input.deviceId, input.visibility);
       return { success: true };
@@ -1660,7 +1658,7 @@ export const deviceRouter = router({
           message: 'Only the enrolling member or a workspace owner can remove this device.',
         });
       }
-      await assertDeviceNotBoundToFixedAgent(model, input.deviceId);
+      await assertDeviceNotBoundToAgent(model, input.deviceId);
       // Tell a live device to drop its workspace connection and stop
       // auto-reconnecting, so removal doesn't leave an online ghost. For most
       // rows this stays best-effort — an offline device simply stops resolving.

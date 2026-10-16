@@ -34,8 +34,8 @@ const styles = {
   track: 'overflow-hidden h-1 rounded-full bg-selected',
 };
 
-const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string }>(
-  ({ canEdit, card, goalId }) => {
+const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; orchestrationWorkflowId: string }>(
+  ({ canEdit, card, orchestrationWorkflowId }) => {
     const { t } = useTranslation('chat');
 
     const freshness =
@@ -64,7 +64,9 @@ const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string 
                       className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                       size="sm"
                       variant="ghost"
-                      onClick={() => openRecordObservationModal(goalId, card.key, card.label)}
+                      onClick={() =>
+                        openRecordObservationModal(orchestrationWorkflowId, card.key, card.label)
+                      }
                     >
                       <Plus className="size-4" size={16} />
                     </Button>
@@ -109,21 +111,21 @@ MetricCard.displayName = 'NorthStarMetricCard';
 
 interface NorthStarMetricsProps {
   canEdit: boolean;
-  goalId: string;
+  orchestrationWorkflowId: string;
 }
 
-const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
+const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, orchestrationWorkflowId }) => {
   const { t } = useTranslation('chat');
 
-  const snapshot = useGoalStore(goalSelectors.goalGraph(goalId));
+  const snapshot = useGoalStore(goalSelectors.goalGraph(orchestrationWorkflowId));
   const useFetchGoalMetricSeries = useGoalStore((s) => s.useFetchGoalMetricSeries);
-  const series = useGoalStore(goalSelectors.goalMetricSeries(goalId));
+  const series = useGoalStore(goalSelectors.goalMetricSeries(orchestrationWorkflowId));
 
-  const criteria = snapshot?.goal.config?.acceptance?.metrics;
+  const criteria = snapshot?.orchestrationWorkflow.config?.acceptance?.metrics;
   // Fetch only when there is something to join against — a goal without
   // declared clauses renders the guidance row and costs no series read.
   const { error, isLoading, mutate } = useFetchGoalMetricSeries(
-    criteria?.length ? goalId : undefined,
+    criteria?.length ? orchestrationWorkflowId : undefined,
   );
 
   const cards = useMemo(
@@ -141,7 +143,7 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
             className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
             size="sm"
             variant="ghost"
-            onClick={() => openDeclareMetricModal(goalId)}
+            onClick={() => openDeclareMetricModal(orchestrationWorkflowId)}
           >
             {t('goalProcess.northStar.declare.title')}
           </Button>
@@ -174,7 +176,12 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
   return (
     <div className="flex gap-2.5 flex-wrap">
       {cards.map((card) => (
-        <MetricCard canEdit={canEdit} card={card} goalId={goalId} key={card.key} />
+        <MetricCard
+          canEdit={canEdit}
+          card={card}
+          key={card.key}
+          orchestrationWorkflowId={orchestrationWorkflowId}
+        />
       ))}
       {canEdit && (
         <Tooltip>
@@ -185,7 +192,7 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
                 size="compact"
                 style={{ alignSelf: 'center' }}
                 variant="ghost"
-                onClick={() => openDeclareMetricModal(goalId)}
+                onClick={() => openDeclareMetricModal(orchestrationWorkflowId)}
               >
                 <Plus className="size-4" size={16} />
               </Button>

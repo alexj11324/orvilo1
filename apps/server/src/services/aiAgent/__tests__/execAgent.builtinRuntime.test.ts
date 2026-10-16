@@ -31,6 +31,10 @@ const {
 vi.mock('../pipeline/heteroDispatch', () => ({
   dispatchHeteroAgent: mockDispatchHeteroAgent,
 }));
+vi.mock('@/server/services/agent/builtinRuntimeCreation', () => ({
+  getExecutableBuiltinAgent: async (_db: unknown, _userId: string, slug: string) =>
+    (await mockGetBuiltinAgent(slug)) ?? (await mockGetAgentConfig(slug)),
+}));
 
 vi.mock('@/libs/trusted-client', () => ({
   generateTrustedClientToken: vi.fn().mockReturnValue(undefined),
@@ -53,6 +57,7 @@ vi.mock('@/database/models/message', () => ({
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
+      getOrchestratorSourceAgentId: vi.fn().mockResolvedValue(undefined),
       getAgentConfig: vi.fn(),
       getBuiltinAgent: mockGetBuiltinAgent,
       queryAgents: vi.fn().mockResolvedValue([]),

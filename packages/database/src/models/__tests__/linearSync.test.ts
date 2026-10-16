@@ -3,6 +3,7 @@ import { desc, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { withTestAgentDevices } from '../../core/testAgentFixture';
 import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import {
   agents,
@@ -532,7 +533,9 @@ describe('LinearSyncModel', () => {
   it('queues and atomically settles one stable create_issue intent for an app task', async () => {
     const projectId = 'linear-create-project';
     const agentId = 'linear-create-agent';
-    await db.insert(agents).values({ id: agentId, slug: agentId, userId });
+    await db
+      .insert(agents)
+      .values(await withTestAgentDevices(db, { id: agentId, slug: agentId, userId }));
     await db.insert(projects).values({
       coordinatorAgentId: agentId,
       id: projectId,
@@ -720,10 +723,12 @@ describe('LinearSyncModel', () => {
     const nextProjectId = 'linear-move-project-b';
     const agentId = 'linear-move-agent-a';
     const nextAgentId = 'linear-move-agent-b';
-    await db.insert(agents).values([
-      { id: agentId, slug: agentId, userId },
-      { id: nextAgentId, slug: nextAgentId, userId },
-    ]);
+    await db.insert(agents).values(
+      await withTestAgentDevices(db, [
+        { id: agentId, slug: agentId, userId },
+        { id: nextAgentId, slug: nextAgentId, userId },
+      ]),
+    );
     await db.insert(projects).values([
       {
         coordinatorAgentId: agentId,

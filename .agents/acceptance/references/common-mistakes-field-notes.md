@@ -230,8 +230,7 @@ sent payload through a _different_ entry point that happens to be easier to driv
 **Why it fails:** insertion is half the affordance; the caret it leaves behind is
 the other half. A caret parked in front of the inserted node sends the user's very
 next keystroke to the wrong side of it. For any chip that serializes into the prompt
-with position semantics — the `/goal` marker must lead the message for `isGoalPrompt`
-to match — that silently rewrites the payload into something the runtime no longer
+with position semantics, that silently rewrites the payload into something the runtime no longer
 recognizes, while every screenshot of the insertion itself still looks correct.
 Verifying the payload through a different entry point hides it completely: the path
 with the defect is never the path that gets sent.
@@ -471,7 +470,7 @@ count the versions under `node_modules/<pkg>` and every `packages/*/node_modules
 and require one distinct value — never from the root manifest. Remember `apps/desktop`
 and `apps/cli` are standalone installs that a root install never covers.
 
-#### L-S15 — Trusting a lockfile-false workspace's node\_modules to track current specs
+#### L-S15 — Trusting a lockfile-false workspace's node_modules to track current specs
 
 **Wrong approach:** debug a "missing export" build failure in a workspace with
 `lockfile: false` by bumping package.json specs or running `pnpm up`, assuming the
@@ -484,7 +483,7 @@ because it installs from scratch.
 
 **Correct approach:** when installed versions contradict fresh-resolution
 expectations, delete the hidden `node_modules/.pnpm/lock.yaml` (or the whole
-node\_modules) in the affected workspace root and reinstall, then re-verify the
+node_modules) in the affected workspace root and reinstall, then re-verify the
 actual resolved version via the importing package's symlink.
 
 ### Moved to PROCESS.md as rules that hold under pressure (narrative kept here)

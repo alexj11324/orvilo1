@@ -1026,13 +1026,13 @@ export class TaskTopicModel {
   }
 
   /**
-   * A goal's spend and round count in one aggregate: how many runs those tasks
+   * A orchestration workflow's spend and round count in one aggregate: how many runs those tasks
    * produced and what they cost.
    *
-   * The Goal page renders these numbers and the coordinator enforces the budget
+   * The OrchestrationWorkflow page renders these numbers and the coordinator enforces the budget
    * against them, so both read them from here — a second definition of "what
-   * this goal has spent" would let the header disagree with the move that
-   * parks the goal on `budget_exhausted`.
+   * this orchestration workflow has spent" would let the header disagree with the move that
+   * parks the orchestration workflow on `budget_exhausted`.
    *
    * `topics.totalCost` is NULL for a run that has not settled yet; those count
    * as a round but contribute nothing to the sum.

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
+import { withTestAgentDevices } from '../../../core/testAgentFixture';
 import {
   agents,
   agentsToSessions,
@@ -500,7 +501,13 @@ describe('TopicModel - Query', () => {
 
     it('should apply excludeStatuses on the agent query branch', async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([{ id: 'status-agent', userId, title: 'Status Agent' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'status-agent', userId, title: 'Status Agent' },
+            ]),
+          );
         await trx.insert(topics).values([
           {
             id: 'agent-active',
@@ -566,7 +573,9 @@ describe('TopicModel - Query', () => {
     it('should not match legacy session-only topics by agentId', async () => {
       await serverDB.transaction(async (trx) => {
         await trx.insert(sessions).values([{ id: 'session-for-agent', userId }]);
-        await trx.insert(agents).values([{ id: 'agent1', userId, title: 'Agent 1' }]);
+        await trx
+          .insert(agents)
+          .values(await withTestAgentDevices(trx, [{ id: 'agent1', userId, title: 'Agent 1' }]));
         await trx
           .insert(agentsToSessions)
           .values([{ agentId: 'agent1', sessionId: 'session-for-agent', userId }]);
@@ -590,10 +599,12 @@ describe('TopicModel - Query', () => {
 
     it('should filter new topics by agentId directly', async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([
-          { id: 'new-agent-1', userId, title: 'New Agent 1' },
-          { id: 'new-agent-2', userId, title: 'New Agent 2' },
-        ]);
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, [
+            { id: 'new-agent-1', userId, title: 'New Agent 1' },
+            { id: 'new-agent-2', userId, title: 'New Agent 2' },
+          ]),
+        );
         await trx.insert(topics).values([
           {
             id: 'new-topic-1',
@@ -621,7 +632,11 @@ describe('TopicModel - Query', () => {
     it('should only return topics carrying the agentId, ignoring session-only ones', async () => {
       await serverDB.transaction(async (trx) => {
         await trx.insert(sessions).values([{ id: 'mixed-session', userId }]);
-        await trx.insert(agents).values([{ id: 'mixed-agent', userId, title: 'Mixed Agent' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [{ id: 'mixed-agent', userId, title: 'Mixed Agent' }]),
+          );
         await trx
           .insert(agentsToSessions)
           .values([{ agentId: 'mixed-agent', sessionId: 'mixed-session', userId }]);
@@ -660,7 +675,11 @@ describe('TopicModel - Query', () => {
     it('should not return duplicate topics when both agentId and sessionId match', async () => {
       await serverDB.transaction(async (trx) => {
         await trx.insert(sessions).values([{ id: 'dedup-session', userId }]);
-        await trx.insert(agents).values([{ id: 'dedup-agent', userId, title: 'Dedup Agent' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [{ id: 'dedup-agent', userId, title: 'Dedup Agent' }]),
+          );
         await trx
           .insert(agentsToSessions)
           .values([{ agentId: 'dedup-agent', sessionId: 'dedup-session', userId }]);
@@ -686,7 +705,11 @@ describe('TopicModel - Query', () => {
         await trx.insert(sessions).values([{ id: 'session1', userId }]);
         await trx
           .insert(agents)
-          .values([{ id: 'agent-no-match', userId, title: 'Agent No Match' }]);
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'agent-no-match', userId, title: 'Agent No Match' },
+            ]),
+          );
         await trx
           .insert(topics)
           .values([{ id: 'topic-session1', userId, sessionId: 'session1', agentId: null }]);
@@ -699,7 +722,13 @@ describe('TopicModel - Query', () => {
 
     it('should return topics with direct agentId match even without agentsToSessions entry', async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([{ id: 'orphan-agent', userId, title: 'Orphan Agent' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'orphan-agent', userId, title: 'Orphan Agent' },
+            ]),
+          );
         await trx.insert(topics).values([
           {
             id: 'orphan-topic',
@@ -722,7 +751,13 @@ describe('TopicModel - Query', () => {
 
       await serverDB.transaction(async (trx) => {
         await trx.insert(users).values([{ id: otherUserId }]);
-        await trx.insert(agents).values([{ id: 'shared-agent-name', userId, title: 'User Agent' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'shared-agent-name', userId, title: 'User Agent' },
+            ]),
+          );
         await trx.insert(topics).values([
           { id: 'user-topic', userId, agentId: 'shared-agent-name' },
           { id: 'other-user-topic', userId: otherUserId, agentId: 'shared-agent-name' },
@@ -744,10 +779,12 @@ describe('TopicModel - Query', () => {
           { id: 'user-session', userId },
           { id: 'other-user-session', userId: otherUserId },
         ]);
-        await trx.insert(agents).values([
-          { id: 'user-agent', userId, title: 'User Agent' },
-          { id: 'other-user-agent', userId: otherUserId, title: 'Other User Agent' },
-        ]);
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, [
+            { id: 'user-agent', userId, title: 'User Agent' },
+            { id: 'other-user-agent', userId: otherUserId, title: 'Other User Agent' },
+          ]),
+        );
         await trx
           .insert(agentsToSessions)
           .values([
@@ -769,7 +806,11 @@ describe('TopicModel - Query', () => {
       await serverDB.transaction(async (trx) => {
         await trx
           .insert(agents)
-          .values([{ id: 'paginate-agent', userId, title: 'Paginate Agent' }]);
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'paginate-agent', userId, title: 'Paginate Agent' },
+            ]),
+          );
         await trx.insert(topics).values([
           {
             id: 'page-topic1',
@@ -809,7 +850,11 @@ describe('TopicModel - Query', () => {
 
     it('should work with agentId and favorite sorting', async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([{ id: 'fav-agent', userId, title: 'Fav Agent' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [{ id: 'fav-agent', userId, title: 'Fav Agent' }]),
+          );
         await trx.insert(topics).values([
           {
             id: 'fav-topic1',
@@ -867,7 +912,11 @@ describe('TopicModel - Query', () => {
         await trx.insert(sessions).values([{ id: 'container-only-session', userId }]);
         await trx
           .insert(agents)
-          .values([{ id: 'priority-agent', userId, title: 'Priority Agent' }]);
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'priority-agent', userId, title: 'Priority Agent' },
+            ]),
+          );
         await trx.insert(topics).values([
           {
             id: 'agent-topic',
@@ -900,7 +949,11 @@ describe('TopicModel - Query', () => {
           .values([{ id: 'priority-group', title: 'Priority Group', userId }]);
         await trx
           .insert(agents)
-          .values([{ id: 'priority-agent', userId, title: 'Priority Agent' }]);
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'priority-agent', userId, title: 'Priority Agent' },
+            ]),
+          );
         await trx.insert(topics).values([
           {
             id: 'group-topic',
@@ -939,7 +992,11 @@ describe('TopicModel - Query', () => {
       await serverDB.transaction(async (trx) => {
         await trx
           .insert(agents)
-          .values([{ id: 'builder-agent', userId, title: 'Group Agent Builder' }]);
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'builder-agent', userId, title: 'Group Agent Builder' },
+            ]),
+          );
         await trx.insert(chatGroups).values([
           { id: 'grp-a', userId, title: 'Group A' },
           { id: 'grp-b', userId, title: 'Group B' },
@@ -1004,11 +1061,13 @@ describe('TopicModel - Query', () => {
 
     it('should filter agent-builder topics by the agent they configured', async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([
-          { id: 'agent-builder-agent', userId, title: 'Agent Builder' },
-          { id: 'edited-agent-a', userId, title: 'Edited A' },
-          { id: 'edited-agent-b', userId, title: 'Edited B' },
-        ]);
+        await trx.insert(agents).values(
+          await withTestAgentDevices(trx, [
+            { id: 'agent-builder-agent', userId, title: 'Agent Builder' },
+            { id: 'edited-agent-a', userId, title: 'Edited A' },
+            { id: 'edited-agent-b', userId, title: 'Edited B' },
+          ]),
+        );
         await trx.insert(topics).values([
           {
             id: 'agent-build-a',
@@ -1045,7 +1104,13 @@ describe('TopicModel - Query', () => {
       trigger?: string,
     ) => {
       await serverDB.transaction(async (tx) => {
-        await tx.insert(agents).values({ id: `agt-${topicId}`, userId, title: `Agent ${topicId}` });
+        await tx.insert(agents).values(
+          await withTestAgentDevices(tx, {
+            id: `agt-${topicId}`,
+            userId,
+            title: `Agent ${topicId}`,
+          }),
+        );
         await tx.insert(topics).values({
           id: topicId,
           userId,
@@ -1118,7 +1183,11 @@ describe('TopicModel - Query', () => {
 
     it('returns null firstUserMessage when no user message exists', async () => {
       await serverDB.transaction(async (tx) => {
-        await tx.insert(agents).values({ id: 'agt-no-user-msg', userId, title: 'No User Msg' });
+        await tx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(tx, { id: 'agt-no-user-msg', userId, title: 'No User Msg' }),
+          );
         await tx.insert(topics).values({
           id: 'no-user-msg-topic',
           userId,
@@ -1149,7 +1218,9 @@ describe('TopicModel - Query', () => {
 
     it('picks the earliest user message by createdAt for firstUserMessage', async () => {
       await serverDB.transaction(async (tx) => {
-        await tx.insert(agents).values({ id: 'agt-order', userId, title: 'Order' });
+        await tx
+          .insert(agents)
+          .values(await withTestAgentDevices(tx, { id: 'agt-order', userId, title: 'Order' }));
         await tx.insert(topics).values({
           id: 'order-topic',
           userId,
@@ -1239,7 +1310,11 @@ describe('TopicModel - Query', () => {
       const descriptionText = 'd'.repeat(200);
 
       await serverDB.transaction(async (tx) => {
-        await tx.insert(agents).values({ id: 'agt-size-bench', userId, title: 'Size Bench' });
+        await tx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(tx, { id: 'agt-size-bench', userId, title: 'Size Bench' }),
+          );
         await tx.insert(topics).values(
           Array.from({ length: TOPIC_COUNT }, (_, i) => ({
             id: `size-topic-${i}`,
@@ -1314,7 +1389,11 @@ describe('TopicModel - Query', () => {
   describe('isInbox parameter', () => {
     it('should query legacy inbox topics when isInbox is true', async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([{ id: 'inbox-agent', userId, title: 'Inbox Agent' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [{ id: 'inbox-agent', userId, title: 'Inbox Agent' }]),
+          );
         await trx.insert(topics).values([
           {
             id: 'legacy-inbox-1',
@@ -1355,7 +1434,13 @@ describe('TopicModel - Query', () => {
 
     it('should NOT query legacy inbox topics when isInbox is false or undefined', async () => {
       await serverDB.transaction(async (trx) => {
-        await trx.insert(agents).values([{ id: 'normal-agent', userId, title: 'Normal Agent' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'normal-agent', userId, title: 'Normal Agent' },
+            ]),
+          );
         await trx.insert(topics).values([
           {
             id: 'legacy-inbox',
@@ -1385,7 +1470,13 @@ describe('TopicModel - Query', () => {
     it('should not include topics with unrelated sessionId when querying inbox legacy data', async () => {
       await serverDB.transaction(async (trx) => {
         await trx.insert(sessions).values([{ id: 'some-session', userId }]);
-        await trx.insert(agents).values([{ id: 'inbox-agent-2', userId, title: 'Inbox Agent 2' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'inbox-agent-2', userId, title: 'Inbox Agent 2' },
+            ]),
+          );
         await trx.insert(topics).values([
           {
             id: 'true-legacy-inbox',
@@ -1419,7 +1510,11 @@ describe('TopicModel - Query', () => {
         await trx.insert(sessions).values([{ id: 'inbox-session', slug: 'inbox', userId }]);
         await trx
           .insert(agents)
-          .values([{ id: 'inbox-agent-linked', userId, title: 'Inbox Agent' }]);
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'inbox-agent-linked', userId, title: 'Inbox Agent' },
+            ]),
+          );
         await trx
           .insert(agentsToSessions)
           .values([{ agentId: 'inbox-agent-linked', sessionId: 'inbox-session', userId }]);
@@ -1467,7 +1562,13 @@ describe('TopicModel - Query', () => {
     it('should not include topics with groupId when querying inbox legacy data', async () => {
       await serverDB.transaction(async (trx) => {
         await trx.insert(chatGroups).values([{ id: 'some-group', title: 'Some Group', userId }]);
-        await trx.insert(agents).values([{ id: 'inbox-agent-3', userId, title: 'Inbox Agent 3' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'inbox-agent-3', userId, title: 'Inbox Agent 3' },
+            ]),
+          );
         await trx.insert(topics).values([
           {
             id: 'true-legacy-inbox-2',
@@ -1499,7 +1600,13 @@ describe('TopicModel - Query', () => {
 
       await serverDB.transaction(async (trx) => {
         await trx.insert(users).values([{ id: otherUserId }]);
-        await trx.insert(agents).values([{ id: 'inbox-agent-4', userId, title: 'Inbox Agent 4' }]);
+        await trx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'inbox-agent-4', userId, title: 'Inbox Agent 4' },
+            ]),
+          );
         await trx.insert(topics).values([
           {
             id: 'my-legacy-inbox',
@@ -1530,7 +1637,11 @@ describe('TopicModel - Query', () => {
       await serverDB.transaction(async (trx) => {
         await trx
           .insert(agents)
-          .values([{ id: 'inbox-paginate', userId, title: 'Inbox Paginate' }]);
+          .values(
+            await withTestAgentDevices(trx, [
+              { id: 'inbox-paginate', userId, title: 'Inbox Paginate' },
+            ]),
+          );
         await trx.insert(topics).values([
           {
             id: 'inbox-page-1',
@@ -1771,7 +1882,9 @@ describe('TopicModel - Query', () => {
 
     it('should match topics by agentId when the scope provides one (no sessionId)', async () => {
       await serverDB.transaction(async (tx) => {
-        await tx.insert(agents).values([{ id: 'search-agent', userId }]);
+        await tx
+          .insert(agents)
+          .values(await withTestAgentDevices(tx, [{ id: 'search-agent', userId }]));
         await tx.insert(topics).values([
           // New agent system: topic carries agentId but no sessionId.
           { id: 'agent-topic', title: 'Hello world', agentId: 'search-agent', userId },
@@ -1791,10 +1904,12 @@ describe('TopicModel - Query', () => {
       // shares the resolved session must not leak into this agent's search,
       // and un-backfilled rows the list hides must not appear here either.
       await serverDB.transaction(async (tx) => {
-        await tx.insert(agents).values([
-          { id: 'search-agent', userId },
-          { id: 'other-agent', userId },
-        ]);
+        await tx.insert(agents).values(
+          await withTestAgentDevices(tx, [
+            { id: 'search-agent', userId },
+            { id: 'other-agent', userId },
+          ]),
+        );
         await tx.insert(topics).values([
           { id: 'agent-topic', title: 'Hello world', agentId: 'search-agent', userId },
           // Same session mapping, but already stamped for a DIFFERENT agent.
@@ -1821,10 +1936,12 @@ describe('TopicModel - Query', () => {
 
     it('should not leak other agents topics when scoped by agentId', async () => {
       await serverDB.transaction(async (tx) => {
-        await tx.insert(agents).values([
-          { id: 'search-agent', userId },
-          { id: 'other-agent', userId },
-        ]);
+        await tx.insert(agents).values(
+          await withTestAgentDevices(tx, [
+            { id: 'search-agent', userId },
+            { id: 'other-agent', userId },
+          ]),
+        );
         await tx.insert(topics).values([
           { id: 'agent-topic', title: 'Hello world', agentId: 'search-agent', userId },
           { id: 'other-agent-topic', title: 'Hello world', agentId: 'other-agent', userId },
@@ -1972,22 +2089,24 @@ describe('TopicModel - Query', () => {
   describe('queryRecent', () => {
     it('should return recent topics with agentId', async () => {
       await serverDB.transaction(async (tx) => {
-        await tx.insert(agents).values([
-          {
-            id: 'agent1',
-            userId,
-            title: 'Agent 1',
-            avatar: 'avatar1.png',
-            backgroundColor: '#ff0000',
-          },
-          {
-            id: 'agent2',
-            userId,
-            title: 'Agent 2',
-            avatar: 'avatar2.png',
-            backgroundColor: '#00ff00',
-          },
-        ]);
+        await tx.insert(agents).values(
+          await withTestAgentDevices(tx, [
+            {
+              id: 'agent1',
+              userId,
+              title: 'Agent 1',
+              avatar: 'avatar1.png',
+              backgroundColor: '#ff0000',
+            },
+            {
+              id: 'agent2',
+              userId,
+              title: 'Agent 2',
+              avatar: 'avatar2.png',
+              backgroundColor: '#00ff00',
+            },
+          ]),
+        );
         await tx.insert(topics).values([
           {
             id: 'recent-topic-1',
@@ -2026,7 +2145,11 @@ describe('TopicModel - Query', () => {
 
     it('should respect limit parameter', async () => {
       await serverDB.transaction(async (tx) => {
-        await tx.insert(agents).values([{ id: 'limit-agent', userId, title: 'Limit Agent' }]);
+        await tx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(tx, [{ id: 'limit-agent', userId, title: 'Limit Agent' }]),
+          );
         await tx.insert(topics).values([
           { id: 'limit-topic-1', title: 'Topic 1', userId, agentId: 'limit-agent' },
           { id: 'limit-topic-2', title: 'Topic 2', userId, agentId: 'limit-agent' },
@@ -2041,7 +2164,13 @@ describe('TopicModel - Query', () => {
 
     it('should order recent topics by latest message activity', async () => {
       await serverDB.transaction(async (tx) => {
-        await tx.insert(agents).values([{ id: 'activity-agent', userId, title: 'Activity Agent' }]);
+        await tx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(tx, [
+              { id: 'activity-agent', userId, title: 'Activity Agent' },
+            ]),
+          );
         await tx.insert(topics).values([
           {
             agentId: 'activity-agent',
@@ -2107,15 +2236,17 @@ describe('TopicModel - Query', () => {
       await serverDB.transaction(async (tx) => {
         await tx.insert(users).values([{ id: otherUserId }]);
         // Create agents for both users (topics need valid agents)
-        await tx.insert(agents).values([
-          { id: 'user-agent-for-recent', userId, title: 'User Agent', virtual: false },
-          {
-            id: 'other-agent-for-recent',
-            userId: otherUserId,
-            title: 'Other Agent',
-            virtual: false,
-          },
-        ]);
+        await tx.insert(agents).values(
+          await withTestAgentDevices(tx, [
+            { id: 'user-agent-for-recent', userId, title: 'User Agent', virtual: false },
+            {
+              id: 'other-agent-for-recent',
+              userId: otherUserId,
+              title: 'Other Agent',
+              virtual: false,
+            },
+          ]),
+        );
         await tx.insert(topics).values([
           {
             id: 'user-recent-topic',
@@ -2143,7 +2274,11 @@ describe('TopicModel - Query', () => {
         // Create a valid agent for topics
         await tx
           .insert(agents)
-          .values([{ id: 'agent-for-limit-test', userId, title: 'Test Agent', virtual: false }]);
+          .values(
+            await withTestAgentDevices(tx, [
+              { id: 'agent-for-limit-test', userId, title: 'Test Agent', virtual: false },
+            ]),
+          );
         const topicValues = Array.from({ length: 15 }, (_, i) => ({
           id: `default-limit-topic-${i}`,
           title: `Topic ${i}`,
@@ -2164,7 +2299,11 @@ describe('TopicModel - Query', () => {
         await tx.insert(chatGroups).values([{ id: 'group-for-type', userId, title: 'Type Group' }]);
         await tx
           .insert(agents)
-          .values([{ id: 'agent-for-type', userId, title: 'Type Agent', virtual: false }]);
+          .values(
+            await withTestAgentDevices(tx, [
+              { id: 'agent-for-type', userId, title: 'Type Agent', virtual: false },
+            ]),
+          );
         await tx.insert(topics).values([
           {
             id: 'group-topic-type',
@@ -2194,10 +2333,12 @@ describe('TopicModel - Query', () => {
 
     it('should exclude topics from virtual agents', async () => {
       await serverDB.transaction(async (tx) => {
-        await tx.insert(agents).values([
-          { id: 'normal-agent', userId, title: 'Normal Agent', virtual: false },
-          { id: 'virtual-agent', userId, title: 'Virtual Agent', virtual: true },
-        ]);
+        await tx.insert(agents).values(
+          await withTestAgentDevices(tx, [
+            { id: 'normal-agent', userId, title: 'Normal Agent', virtual: false },
+            { id: 'virtual-agent', userId, title: 'Virtual Agent', virtual: true },
+          ]),
+        );
         await tx.insert(topics).values([
           {
             id: 'normal-agent-topic',
@@ -2225,10 +2366,12 @@ describe('TopicModel - Query', () => {
 
     it('should include topics from inbox agent (slug=inbox)', async () => {
       await serverDB.transaction(async (tx) => {
-        await tx.insert(agents).values([
-          { id: 'inbox-agent', userId, title: 'Orvilo AI', slug: 'inbox', virtual: true },
-          { id: 'other-virtual', userId, title: 'Other Virtual', virtual: true },
-        ]);
+        await tx.insert(agents).values(
+          await withTestAgentDevices(tx, [
+            { id: 'inbox-agent', userId, title: 'Orvilo AI', slug: 'inbox', virtual: true },
+            { id: 'other-virtual', userId, title: 'Other Virtual', virtual: true },
+          ]),
+        );
         await tx.insert(topics).values([
           {
             id: 'inbox-topic',
@@ -2257,7 +2400,11 @@ describe('TopicModel - Query', () => {
     it('should include topics with groupId and mark them as group type', async () => {
       await serverDB.transaction(async (tx) => {
         await tx.insert(chatGroups).values([{ id: 'test-group', title: 'Test Group', userId }]);
-        await tx.insert(agents).values([{ id: 'group-member', userId, title: 'Group Member' }]);
+        await tx
+          .insert(agents)
+          .values(
+            await withTestAgentDevices(tx, [{ id: 'group-member', userId, title: 'Group Member' }]),
+          );
         await tx.insert(topics).values([
           {
             id: 'group-topic',
@@ -2280,11 +2427,13 @@ describe('TopicModel - Query', () => {
     it('should return mixed results from agent, inbox, and group topics', async () => {
       await serverDB.transaction(async (tx) => {
         await tx.insert(chatGroups).values([{ id: 'mixed-group', title: 'Mixed Group', userId }]);
-        await tx.insert(agents).values([
-          { id: 'normal-agent', userId, title: 'Normal Agent', virtual: false },
-          { id: 'inbox-agent', userId, title: 'Orvilo AI', slug: 'inbox', virtual: true },
-          { id: 'virtual-agent', userId, title: 'Virtual Agent', virtual: true },
-        ]);
+        await tx.insert(agents).values(
+          await withTestAgentDevices(tx, [
+            { id: 'normal-agent', userId, title: 'Normal Agent', virtual: false },
+            { id: 'inbox-agent', userId, title: 'Orvilo AI', slug: 'inbox', virtual: true },
+            { id: 'virtual-agent', userId, title: 'Virtual Agent', virtual: true },
+          ]),
+        );
         await tx.insert(topics).values([
           {
             id: 'agent-topic',
@@ -2414,7 +2563,9 @@ describe('TopicModel - Query', () => {
   describe('getCronTopicsGroupedByCronJob', () => {
     it('should return cron topics grouped by cronJobId', async () => {
       const agentId = 'cron-agent';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
       const [session] = await serverDB
         .insert(sessions)
         .values({ userId, type: 'agent' })
@@ -2462,7 +2613,9 @@ describe('TopicModel - Query', () => {
 
     it('should return empty array when no cron topics exist', async () => {
       const agentId = 'no-cron-agent';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
 
       const result = await topicModel.getCronTopicsGroupedByCronJob(agentId);
       expect(result).toEqual([]);
@@ -2470,7 +2623,9 @@ describe('TopicModel - Query', () => {
 
     it('should not return topics without cronJobId in metadata', async () => {
       const agentId = 'cron-agent-no-meta';
-      await serverDB.insert(agents).values({ id: agentId, userId });
+      await serverDB
+        .insert(agents)
+        .values(await withTestAgentDevices(serverDB, { id: agentId, userId }));
       const [session] = await serverDB
         .insert(sessions)
         .values({ userId, type: 'agent' })

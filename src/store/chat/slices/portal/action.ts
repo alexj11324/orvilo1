@@ -636,23 +636,29 @@ export class ChatPortalActionImpl {
     this.#get().pushPortalView({ taskId, type: PortalViewType.TaskResult });
   };
 
-  openGoalNode = (goalId: string, nodeId: string): void => {
-    this.#get().pushPortalView({ goalId, nodeId, type: PortalViewType.GoalNode });
+  openGoalNode = (orchestrationWorkflowId: string, nodeId: string): void => {
+    this.#get().pushPortalView({
+      orchestrationWorkflowId,
+      nodeId,
+      type: PortalViewType.GoalNode,
+    });
   };
 
   /** Follow graph provenance without replacing the experiment being inspected. */
-  drillIntoGoalNode = (goalId: string, nodeId: string): void => {
+  drillIntoGoalNode = (orchestrationWorkflowId: string, nodeId: string): void => {
     const { portalStack } = this.#get();
     const existing = portalStack.findIndex(
       (view) =>
-        view.type === PortalViewType.GoalNode && view.goalId === goalId && view.nodeId === nodeId,
+        view.type === PortalViewType.GoalNode &&
+        view.orchestrationWorkflowId === orchestrationWorkflowId &&
+        view.nodeId === nodeId,
     );
     this.#set(
       {
         portalStack:
           existing >= 0
             ? portalStack.slice(0, existing + 1)
-            : [...portalStack, { goalId, nodeId, type: PortalViewType.GoalNode }],
+            : [...portalStack, { orchestrationWorkflowId, nodeId, type: PortalViewType.GoalNode }],
         showPortal: true,
       },
       false,
@@ -660,8 +666,12 @@ export class ChatPortalActionImpl {
     );
   };
 
-  openGoalMetric = (goalId: string, metric: GoalMetricKind): void => {
-    this.#get().pushPortalView({ goalId, metric, type: PortalViewType.GoalMetric });
+  openGoalMetric = (orchestrationWorkflowId: string, metric: GoalMetricKind): void => {
+    this.#get().pushPortalView({
+      orchestrationWorkflowId,
+      metric,
+      type: PortalViewType.GoalMetric,
+    });
   };
 
   openTopicCommentThread = (

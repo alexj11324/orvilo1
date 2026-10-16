@@ -1447,7 +1447,7 @@ describe('GoogleGenerativeAIStream', () => {
                     functionCall: {
                       name: 'orvilo-agent____createPlan',
                       args: {
-                        goal: 'Fix Linear API Argument Validation Error',
+                        orchestrationWorkflow: 'Fix Linear API Argument Validation Error',
                         description: 'Investigate the Linear API error.',
                         context: 'The user is encountering a validation error.',
                       },
@@ -1554,7 +1554,7 @@ describe('GoogleGenerativeAIStream', () => {
           // First tool call (createPlan)
           'id: chat_test',
           'event: tool_calls',
-          `data: [{"function":{"arguments":"{\\"goal\\":\\"Fix Linear API Argument Validation Error\\",\\"description\\":\\"Investigate the Linear API error.\\",\\"context\\":\\"The user is encountering a validation error.\\"}","name":"orvilo-agent____createPlan"},"id":"orvilo-agent____createPlan_0_tool_id_1","index":0,"thoughtSignature":"${scopedThoughtSignature('EoIYCv8XAXLI2nx+C18votz5l0A...')}","type":"function"}]\n`,
+          `data: [{"function":{"arguments":"{\\"orchestrationWorkflow\\":\\"Fix Linear API Argument Validation Error\\",\\"description\\":\\"Investigate the Linear API error.\\",\\"context\\":\\"The user is encountering a validation error.\\"}","name":"orvilo-agent____createPlan"},"id":"orvilo-agent____createPlan_0_tool_id_1","index":0,"thoughtSignature":"${scopedThoughtSignature('EoIYCv8XAXLI2nx+C18votz5l0A...')}","type":"function"}]\n`,
 
           // Second tool call (createTodos) - should be a SEPARATE event with index:0
           'id: chat_test',

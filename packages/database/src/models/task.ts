@@ -1067,7 +1067,7 @@ export class TaskModel {
       // dispatch. The check lives inside the row lock so a task cannot slip
       // into `running` between a caller's own pre-read and this write, and
       // on the lowest write path so service-level callers (Linear inbound
-      // sync, goal agent moves, …) cannot bypass it. `updateWithLog`
+      // sync, orchestration workflow agent moves, …) cannot bypass it. `updateWithLog`
       // repeats the same check for its activity diff; a write that also
       // leaves `running` in the same statement is already consistent.
       return this.db.transaction(async (tx) => {
@@ -2196,28 +2196,28 @@ export class TaskModel {
     if (taskIds.length === 0) return [];
 
     const result = await this.db.execute<TaskRunStats>(sql`
-      WITH RECURSIVE goal_tree AS (
+      WITH RECURSIVE orchestration_workflow_tree AS (
         SELECT ${tasks.id} AS root_id, ${tasks.id} AS task_id
         FROM ${tasks}
         WHERE ${inArray(tasks.id, taskIds)} AND ${this.ownership()}
         UNION ALL
-        SELECT goal_tree.root_id, child.id
+        SELECT orchestration_workflow_tree.root_id, child.id
         FROM ${tasks} child
-        JOIN goal_tree ON child.parent_task_id = goal_tree.task_id
+        JOIN orchestration_workflow_tree ON child.parent_task_id = orchestration_workflow_tree.task_id
         WHERE ${this.ownershipSql('child')}
       )
       SELECT
-        goal_tree.root_id,
+        orchestration_workflow_tree.root_id,
         coalesce(sum(${topics.totalCost}), 0) AS total_run_cost,
         coalesce(
           sum(extract(epoch from (${topics.completedAt} - ${taskTopics.createdAt})) * 1000)
             filter (where ${topics.completedAt} is not null),
           0
         ) AS total_run_duration
-      FROM goal_tree
-      LEFT JOIN ${taskTopics} ON ${taskTopics.taskId} = goal_tree.task_id
+      FROM orchestration_workflow_tree
+      LEFT JOIN ${taskTopics} ON ${taskTopics.taskId} = orchestration_workflow_tree.task_id
       LEFT JOIN ${topics} ON ${topics.id} = ${taskTopics.topicId}
-      GROUP BY goal_tree.root_id
+      GROUP BY orchestration_workflow_tree.root_id
     `);
 
     return result.rows;

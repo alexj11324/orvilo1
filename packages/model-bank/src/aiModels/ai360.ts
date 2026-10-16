@@ -215,7 +215,7 @@ const ai360ChatModels: AIChatModelCard[] = [
     },
     contextWindowTokens: 65_536,
     description:
-      'The goal of DeepSeek-V3.2 is to balance reasoning capability with output length, making it suitable for everyday use, such as Q&A scenarios and general-purpose agent tasks. In public reasoning benchmarks, DeepSeek-V3.2 achieves performance on par with GPT-5, just slightly below Gemini-3.0-Pro. Compared to Kimi-K2-Thinking, V3.2 offers significantly shorter outputs, greatly reducing computational cost and user wait times.',
+      'The orchestration workflow of DeepSeek-V3.2 is to balance reasoning capability with output length, making it suitable for everyday use, such as Q&A scenarios and general-purpose agent tasks. In public reasoning benchmarks, DeepSeek-V3.2 achieves performance on par with GPT-5, just slightly below Gemini-3.0-Pro. Compared to Kimi-K2-Thinking, V3.2 offers significantly shorter outputs, greatly reducing computational cost and user wait times.',
     displayName: 'DeepSeek V3.2',
     family: 'deepseek',
     generation: 'deepseek-v3.2',

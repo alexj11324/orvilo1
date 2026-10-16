@@ -59,7 +59,7 @@ The skeleton cannot know whether an issue has a parent, so the parent line is al
   medium-weight label; these undo label layout rather than recolor the control.
 - **`TaskTriggerTag`, `TaskVisibilityChipLabel` and the acceptance, verify, schedule and run
   sub-features** (`TaskAcceptance*`, `TaskVerifyConfig`, `TaskScheduleConfig`, `RunVerify*`,
-  `RunSubtasksPreview`, `GoalRound*`, `TaskArtifacts`, `TaskBriefCard`, `CommentInput`,
+  `RunSubtasksPreview`, `Orchestration workflowRound*`, `TaskArtifacts`, `TaskBriefCard`, `CommentInput`,
   `TopicChatDrawer`). They still hold template-literal class names and `text-[12px]`; they are
   a second, purely mechanical pass kept out of this change to keep it reviewable.
 

@@ -4,21 +4,21 @@ Verification record for the plan item `feat/caid-recovery-and-human-gates`
 (deps: P13 `feat/caid-completion-driven-scheduler`, P15
 `feat/caid-verified-integration`). The survey covered every failure surface the
 item names: self-retry loops, unauthorized recovery, late completion events,
-receipt invalidation, goal stop, and unconfirmable physical state.
+receipt invalidation, orchestration workflow stop, and unconfirmable physical state.
 
 ## Existing guarantees (audited, unchanged)
 
 - **New attempts, same chain.** `TaskRecoveryCoordinator` issues each retry as a
-  new attempt bound to `goalTaskAttempt(generation, goalId, taskId,
+  new attempt bound to `orchestrationWorkflowTaskAttempt(generation, orchestrationWorkflowId, taskId,
 taskRevision)` idempotency keys, carries `lastErrorCode`/`lastError` evidence
   from the failed dispatch, and caps retries at
-  `resolveTaskAttemptBudget(goal)` (default 3) plus `goal.maxTotalCost`.
+  `resolveTaskAttemptBudget(orchestration workflow)` (default 3) plus `orchestrationWorkflow.maxTotalCost`.
 - **No self-retry loop.** `decideNextMove` short-circuits to `pending_decision`
   whenever a failure decision is already open, so the same repeated error opens
   exactly one human gate.
 - **Human decisions are not auto-bypassed.** `statusAuthoredByActor` respects a
   manual `pausedBy` marker; pause/stop is the stop boundary a tick cannot
-  overwrite, and a goal deletion fences outstanding claims by lock + pause +
+  overwrite, and a orchestration workflow deletion fences outstanding claims by lock + pause +
   CAS re-checks on manager/supervisor state.
 - **Late completions cannot double-write.** A finishing run settles through the
   `settle` CAS (fence + generation + operation identity), and completion
@@ -34,19 +34,19 @@ expectedHeadSha` and the record waits rather than completing the new
 
 ## Changes in this PR
 
-### Goal stop is a dispatch-level fence
+### Orchestration workflow stop is a dispatch-level fence
 
-`taskDispatches` rows carry no `goalId` — goal membership lives on
-`goal_nodes.taskId` — so a queued dispatch could be resumed by any non-goal
+`taskDispatches` rows carry no `orchestrationWorkflowId` — orchestration workflow membership lives on
+`orchestration_workflow_nodes.taskId` — so a queued dispatch could be resumed by any non-orchestration workflow
 trigger (heartbeat, schedule, orchestrator, a successor claim) while its owning
-goal was paused or stopped. `TaskDispatchModel` now joins
-`goal_nodes → goals` in `goalDispatchWaitingReason` and treats a goal in
+orchestration workflow was paused or stopped. `TaskDispatchModel` now joins
+`orchestration_workflow_nodes → orchestration workflows` in `orchestrationWorkflowDispatchWaitingReason` and treats a orchestration workflow in
 `paused | canceled | failed | achieved` as a stop boundary at every boundary an
 automated trigger can cross:
 
 - `request()` — both the idempotent waiting-row resume and the fresh-dispatch
-  insert path now resolve `goal_<status>` as a `waitingReason`. A parked
-  dispatch resumes on the next request once the goal runs again (the row stays
+  insert path now resolve `orchestration_workflow_<status>` as a `waitingReason`. A parked
+  dispatch resumes on the next request once the orchestration workflow runs again (the row stays
   'waiting', never 'canceled' — a canceled row would deadlock idempotent
   re-request, which returns 'existing' rows as-is).
 - `claimForProvisioning()` — a stop landing between request and claim parks the
@@ -58,7 +58,7 @@ A `manual` trigger bypasses the fence, matching how it already bypasses project
 policy — a user starting a task with their own hands is the override.
 
 Regression coverage: `packages/database/src/models/__tests__/taskDispatch.test.ts`
-→ `goal dispatch fence` (new dispatch parked, manual bypass, same-dispatch
+→ `orchestration workflow dispatch fence` (new dispatch parked, manual bypass, same-dispatch
 resume, stray-trigger re-park, claim-time park, transition-time park).
 
 ### Bounded verification polling in the delivery review sweep

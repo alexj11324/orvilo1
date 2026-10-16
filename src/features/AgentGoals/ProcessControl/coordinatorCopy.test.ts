@@ -23,7 +23,9 @@ describe('coordinatorNodeTitleKey', () => {
     const view = (node: any, dec?: any) => ({ decision: dec, humanTouches: [], node }) as any;
 
     expect(
-      coordinatorNodeTitleKey(view({ kind: 'task', title: 'Complete full Goal acceptance' })),
+      coordinatorNodeTitleKey(
+        view({ kind: 'task', title: 'Complete full Orchestration workflow acceptance' }),
+      ),
     ).toBe('goalProcess.node.terminalAcceptance');
     expect(
       coordinatorNodeTitleKey(

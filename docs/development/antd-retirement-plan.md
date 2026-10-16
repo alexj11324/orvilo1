@@ -135,7 +135,7 @@ Linear 2024 年改版后，所有主题由三个输入生成：base color、acce
 - 根 `package.json` 保留 `antd`、`antd-style`、`@lobehub/ui`（`@lobehub/editor`、`@lobehub/charts`、`@lobehub/icons` 的 peer 依赖，运行时确有 import）和 `@ant-design/cssinjs`（LobeThemeScope 用它把 antd cssinjs 放进 `@layer antd`）。JSON 不能写注释，原因记在本文件与 `antd-global-style-layer.md`。
 - 三个微应用不再声明 `@ant-design/cssinjs`；builtin-tool 等包里只声明不使用的 `antd`、`antd-style`、`@lobehub/ui` peer 全部删除。新增 `katex`（KaTeX 样式改为本地打包，版本与 `@streamdown/math` 一致）。
 - 棘轮基线：`--ant-*` 0；`antd` 0；`antd-style` 1、`@ant-design/cssinjs` 1、`@lobehub/ui` 2，全部在 `src/components/LobeThemeScope`。
-- 待做：在运行中的 Electron 文档里按 `antd-global-style-layer.md` 末尾的清单核查。
+- 待做：在运行中的 Electron 文档里按 `antd-global-style-layer.md` 末尾的清单核查。由维护者在本地 Electron 完成（2026/10/16 约定），云端会话不做 Electron 验收。
 
 ### P7 编辑器换成 shadcn-editor（真正去掉 antd）
 
@@ -168,7 +168,12 @@ Markdown：shadcn-editor 的 Markdown 不是源码模式编辑器，而是 Lexic
 步骤（每步一个 PR，目标 `canary`）：
 
 1. **Lexical 升级验证**：shadcn-editor 用 Lexical 0.52，我们与 `@lobehub/editor` 锁在 0.42。先在分支上把 Lexical 升到 0.52，确认 `@lobehub/editor` 仍能运行。能跑，迁移期两个编辑器可以共存，按页面逐步换；不能跑，就只能在一个 PR 里一次性切换，不留共存期。同一个应用不装两个 Lexical 版本。
-2. **旧文档兼容**：列出 `@lobehub/editor` 注册的全部节点类型，分三类处理。shadcn-editor 有对应节点的（标题、列表、表格、代码、链接、图片、提及等）在加载时映射过去；没有对应、但内容需要保留的，降级成段落或纯文本；`diff` / `diff-content` 等未处理的 AI 建议，按 “拒绝” 处理，保留原文。先写一次性迁移，把已存文档转换一遍，再上线新编辑器。测试：用真实的旧文档 JSON 跑迁移，新编辑器能完整加载，文字内容不丢。
+2. **旧文档兼容**（设计与转换函数见 `docs/development/editor-migration-p7.md`、`src/libs/editor-migration/`，分支 `refactor/editor-shadcn`）：列出 `@lobehub/editor` 注册的全部节点类型并逐一定规则。shadcn-editor 有对应节点的（标题、列表、表格、代码、链接、图片、提及、公式、折叠块等）在加载时映射过去；没有对应、但内容需要保留的，降级成链接、段落或纯文本；`diff` / `diff-content` / `table-row-diff` / `table-cell-diff` 等未处理的 AI 建议，按 “拒绝” 处理，保留原文。
+   - **加载时转换，不做一次性数据库迁移**：`editor_data`（jsonb）分布在 16 张表里，含只追加的历史表；桌面端客户端更新不同步，迁移跑完后旧客户端仍可能写回旧格式。所以在所有读取已存文档的入口调用 `convertLegacyEditorState`（幂等、不改输入），等不再有客户端写旧格式后，再用分批脚本做一次回填。
+   - **反向兼容**：旧版桌面端打开新编辑器保存的文档会遇到不认识的节点，需要设最低客户端版本，或让旧客户端回退到 `content` 文本列。
+   - **文件附件（2026/10/16 拍板，按最佳实践）**：移植一个本地 `file` 节点，沿用原来的 `type` 名和序列化字段，保留附件卡片、上传状态和点击打开，不降级成链接。理由：附件是用户数据而不是排版，降级会丢失上传状态和文件引用，任务评论依赖它；而 Lexical DecoratorNode 实现成本小，和移植聊天节点（`refer-topic`、`action-tag`、`local-file-tag`）同一套做法。
+   - **其他必须项**：拷入的 mention 节点要保存 `metadata`（聊天命令解析依赖它）；`editorAttachments.ts` 对图片 `status` 的判断要兼容转换后不带状态的图片。
+   - 测试：用 `@lobehub/editor` 真实导出的文档 JSON 跑转换，新编辑器能完整加载，文字内容不丢，转换两次结果相同。
 3. **聊天输入框**（`src/features/ChatInput`，约 34 个文件）：用 shadcn-editor 的 `chat-input-plugin`、`mention-plugin`、`component-picker` 和 Markdown 快捷方式重写；操作栏与附件复用仓库已有的 AI Elements `prompt-input`；快捷键沿用现有 hotkey 配置。范围最清楚，先做。
 4. **文档与页面编辑器**（`PageEditor`、`EditorCanvas`、`EditorModal`、`AgentTasks`、`TaskDrafts`、`Projects` 等）：换成 shadcn-editor 的工具栏、浮动工具栏、表格、列表、链接、图片、拖拽块和 Markdown 互转；`LexicalRenderer` 只读渲染改为同一套节点以只读模式渲染。
 5. **AI 改文档**：去掉 LiteXML 与 `diff` 审阅。`builtin-tool-page-agent` 的 `getPageContent` 返回 Markdown；`modifyNodes` 删除，改动统一走 `replaceText`（按原文片段替换）或整篇 Markdown 写回，直接生效。撤销靠编辑器历史与文档版本历史（参照现有 `WorkVersionHistoryCard`）。`packages/editor-runtime` 与服务端无头编辑器改用 `@lexical/headless` 加同一套 Markdown transformer。更新 page-agent 与 agent-documents 的 system prompt 和测试。
@@ -186,6 +191,32 @@ P7 完成后，“结束时同时成立” 里关于保留 `@lobehub/editor` 及
 - 运行中的文档里没有 `--ant-*`，也没有任何 antd 或 Emotion 注入的样式表。
 - 旧文档经迁移后能打开、编辑、保存，文字内容不丢；@提及、斜杠命令、Markdown 快捷方式可用；AI 通过 Markdown 改文档端到端可用。
 
+### P8 收尾清理（退役完成的判定）
+
+P7 删掉依赖后，仓库里仍会留下不再生效的代码、配置和说明。它们有的会让删依赖直接失败，有的会把旧做法再引回来。P8 把 “退役完成” 写成可检查的标准，全部满足才算结束。
+
+清理范围（2026/10/16 实测）：
+
+1. **测试与 mock**：38 个测试、`__mocks__`、`__tests__`、`fixtures` 文件仍 `vi.mock` 或 import 这些包（棘轮目前跳过它们）。逐个改成 mock 本地组件或删掉已无对象的 mock。
+2. **仓库根与构建代码**：`eslint.config.mjs`、`vitest.config.mts`（含 `@lobehub/fluent-emoji` 预构建项）、`tests/setup.ts`、`scripts/ci/checkNativeControls.test.mjs`，以及 `plugins/vite` 下只为 LobeHub /antd 服务的插件（`orviloUiImports`、`orviloIconImports`、`staticStylesPrecompile`、`staticStylesRuntime`、`emotionSpeedy` 与 `sharedRendererConfig` 里的相关配置及其测试）。
+3. **失效的选择器**：19 个文件中 222 处 `.ant-*` 选择器（为覆盖 antd 组件而写），编辑器换掉后不再命中任何节点，删除。
+4. **未定义的变量**：12 个文件中 94 处 `var(--lobe-*)`（如内置工具渲染里的 `--lobe-text-*`、`--lobe-fill-tertiary`），仓库从未定义它们，现已是失效样式。换成对应的本地语义角色。
+5. **LobeHub 类名与 id**：37 处 `lobe-` 前缀，例如为 `@lobehub/icons` 复制进 `globals.css` 的 `.lobe-flex`、`#lobe-ui-theme-app` 宿主。随 `LobeThemeScope` 一并删除。
+6. **说明文档与规则**：`AGENTS.md` 技术栈里的 “retained `@lobehub/ui` features, antd-style”；`react`、`modal`、`hotkey`、`ux`、`testing`、`project-overview`、`design-prototype`、`split-micro-app` 等 skill 中推荐 LobeHub 组件的段落；`docs/development` 下 antd-style 迁移系列文档（`antd-style-to-tailwind.md`、`antd-style-layer-spike.md`、`antd-style-rollout-batch-1.md`、`antd-style-chat-terminal-batch.md`、`antd-global-style-layer.md` 等）归档或删除。
+
+不处理（有意保留）：
+
+- 主色名 `geekblue`、`volcano` 等沿用了 antd 色板命名，但它们是用户已保存的设置值，改名需要数据迁移，收益不抵成本。
+- 代码高亮与 Mermaid 主题 id 中的 `lobe-theme` 同理，属于已存的设置值。
+
+退役完成的判定（全部满足）：
+
+- 棘轮扫描整个仓库（含测试、mock、fixtures、根配置、`plugins`、`scripts`、`e2e`、`tests`），计数对象加入 `@lobehub/editor`、`@lobehub/charts`、`@lobehub/icons`、`.ant-` 选择器、`var(--lobe-` 和 `lobe-` 类名，基线全部为 0。
+- `no-restricted-imports` 对这些包是 error，且没有任何例外目录。
+- `package.json`（根、各 app、各 package）和各 lockfile 都不含 `antd`、`antd-style`、`@ant-design/*`、`@lobehub/ui`、`@lobehub/editor`、`@lobehub/charts`、`@lobehub/icons`、`@lobehub/fluent-emoji`。
+- 运行中的 Electron 文档里：没有 antd 或 Emotion 注入的样式表，`:root` 与任何节点上都没有 `--ant-*` 和 `--lobe-*`。
+- `AGENTS.md` 与各 skill 不再推荐或提及这些包作为可用选项。
+
 ## 验证要求
 
 - 每个改产品行为的 PR：在真实 Electron 里明暗两种外观走受影响路径，截图附在 PR 上，注明 commit SHA。
@@ -197,7 +228,7 @@ P7 完成后，“结束时同时成立” 里关于保留 `@lobehub/editor` 及
 
 - 不重做 Settings 供应商页和 ModelSwitchPanel 的布局，只在共用符号被替换时改 import。
 - 不引入 react-hook-form 去替代现有表单；GroupForm 已是本地表单。
-- 不在退役过程中做 taste /redesign 式的视觉改造。视觉打磨在 P6 之后单独进行。
+- 不在退役过程中做 taste /redesign 式的视觉改造。视觉打磨在 P8 之后单独进行。
 
 ## 已拍板 (2026/10/15)
 

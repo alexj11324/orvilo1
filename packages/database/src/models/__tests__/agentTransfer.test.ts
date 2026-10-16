@@ -106,15 +106,15 @@ beforeEach(async () => {
   ]);
 });
 
-// A codex-typed runtime satisfies admission with a host binding alone, so the
-// fixtures need no provider bindings. `actor`/`workspaceId` mirror the scope
+// A Codex runtime needs a saved host and an explicit model. The fixtures
+// need no provider bindings. `actor`/`workspaceId` mirror the scope
 // of the AgentModel being exercised.
 const withRuntime = (config: Partial<NewAgent> = {}, actor = userId, workspaceId?: string) => ({
   ...config,
   agencyConfig: {
     boundDeviceId: `creation-host-${workspaceId ?? actor}`,
     executionTarget: 'device' as const,
-    heterogeneousProvider: { type: 'codex' as const },
+    heterogeneousProvider: { model: 'default', type: 'codex' as const },
     ...config.agencyConfig,
   },
 });

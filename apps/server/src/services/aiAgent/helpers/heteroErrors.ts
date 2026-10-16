@@ -40,6 +40,34 @@ export const HETERO_DISPATCH_ERROR_HEADLINES: Record<string, string> = {
     "The run device gateway isn't configured on the server, so this agent can't reach a device to run on. Configure the device gateway, or switch this agent to a connected local device.",
 };
 
+const UNNAMED_DEVICE_PHRASE = 'The device this agent runs on';
+
+/** Codes whose headline starts with {@link UNNAMED_DEVICE_PHRASE} and can name the device. */
+const NAMEABLE_DEVICE_CODES = new Set([
+  'DEVICE_CHANNEL_UNAVAILABLE',
+  'DEVICE_NOT_CONNECTED',
+  'DEVICE_OFFLINE',
+]);
+
+const nameDeviceInHeadline = (headline: string, deviceName?: string): string =>
+  deviceName && headline.startsWith(UNNAMED_DEVICE_PHRASE)
+    ? `The device "${deviceName}" this agent runs on${headline.slice(UNNAMED_DEVICE_PHRASE.length)}`
+    : headline;
+
+/**
+ * Whether a persisted error message is the headline for `code`, with or without a
+ * device name in it. Consumers that recognise a stored `task.error` use this
+ * instead of comparing against {@link HETERO_DISPATCH_ERROR_HEADLINES} verbatim.
+ */
+export const matchesHeteroDispatchHeadline = (error: string, code: string): boolean => {
+  const headline = HETERO_DISPATCH_ERROR_HEADLINES[code];
+  if (!headline) return false;
+  if (error.includes(headline)) return true;
+  if (!NAMEABLE_DEVICE_CODES.has(code)) return false;
+  const tail = headline.slice(UNNAMED_DEVICE_PHRASE.length);
+  return error.includes(tail) && /The device ".+" this agent runs on/.test(error);
+};
+
 /**
  * The gateway may answer with a bare code (`DEVICE_OFFLINE`) or with a code the
  * device-gateway client annotated with the status it came from
@@ -50,10 +78,17 @@ export const HETERO_DISPATCH_ERROR_HEADLINES: Record<string, string> = {
 const toDispatchErrorCode = (raw?: string): string | undefined =>
   raw?.trim().match(/^([A-Z][\dA-Z_]*)/)?.[1];
 
-export const humanizeHeteroDispatchError = (raw?: string): string => {
+/**
+ * `deviceName` (friendlyName, else hostname, else the id) is woven into the
+ * offline / not-connected headlines so the user knows which machine to wake.
+ */
+export const humanizeHeteroDispatchError = (raw?: string, deviceName?: string): string => {
   const code = toDispatchErrorCode(raw);
+  const headline = code && HETERO_DISPATCH_ERROR_HEADLINES[code];
 
-  return (code && HETERO_DISPATCH_ERROR_HEADLINES[code]) || raw || 'Device dispatch failed';
+  return (
+    (headline && nameDeviceInHeadline(headline, deviceName)) || raw || 'Device dispatch failed'
+  );
 };
 
 /**

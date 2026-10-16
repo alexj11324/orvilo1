@@ -1,6 +1,6 @@
 import type { AgentRunAdmissionState } from '../agent/acpExecution';
-import type { HeterogeneousTopicPin } from '../agent/agencyConfig';
 import type { OrviloAgentChatConfig } from '../agent/chatConfig';
+import type { HeterogeneousReasoningEffort } from '../agent/heteroSelectorCapabilities';
 import type { CreateThreadWithMessageParams } from '../aiChat';
 import type {
   DeviceAdmissionErrorData,
@@ -8,7 +8,7 @@ import type {
   WorkingDirConfig,
 } from '../device';
 import type { TaskDetail, UIChatMessage } from '../message';
-import type { ChatTopic } from '../topic';
+import type { ChatTopic, TopicExecutionConfig } from '../topic';
 
 export type AgentSignalOperationKind =
   'memory' | 'nightly-review' | 'self-feedback-intent' | 'self-reflection' | 'skill';
@@ -146,6 +146,8 @@ export interface ExecAgentAppContext {
    * this execution. Ignored when a topicId is already provided (existing topic).
    */
   initialTopicMetadata?: {
+    executionConfig?: TopicExecutionConfig;
+    heteroEffort?: HeterogeneousReasoningEffort;
     repos?: string[];
     workingDirectory?: string;
     workingDirectoryConfig?: WorkingDirConfig;
@@ -291,27 +293,7 @@ export interface ExecAgentParams {
   instructions?: string;
   /** Current desktop's device ID; used only when the effective target is `local`. */
   localDeviceId?: string;
-  /** Override the agent's default model */
-  model?: string;
-  /**
-   * Model / provider / reasoning effort the user picked in a blank composer,
-   * before the conversation had a topic to pin them to. They are written onto
-   * the topic THIS run creates — the same `topics.model`/`topics.provider`
-   * columns and `metadata.heteroEffort` slot a later turn reads back — and are
-   * never written to the agent row: a chat-side pick is conversation-scoped
-   * (docs/development/chat-agent-model-ia.md §5.2).
-   *
-   * Distinct from {@link model} / {@link provider}, which override the agent's
-   * default model for the whole run through the shared member-policy resolver.
-   * A topic pin is stored in the topic's own vocabulary (a CLI pin carries the
-   * harness type as `provider`) and is subject to the topic-pin compatibility
-   * rules, so the two cannot share a field.
-   *
-   * Ignored when the run reuses an existing topic — an open conversation pins
-   * its model through `updateTopicModel` instead. Absent for every caller that
-   * has no composer pick, which leaves the agent-config snapshot untouched.
-   */
-  newTopicPins?: HeterogeneousTopicPin;
+
   /**
    * Parent operation ID when this run is a sub-agent invocation. Forwarded
    * to `agent_operations.parent_operation_id` so analytics can join the
@@ -320,8 +302,6 @@ export interface ExecAgentParams {
   parentOperationId?: string;
   /** The user input/prompt */
   prompt: string;
-  /** Override the agent's default provider */
-  provider?: string;
   /**
    * Existing topic operation this fresh turn atomically supersedes. The server
    * accepts the handoff only while the topic marker still belongs to this id.
@@ -354,12 +334,8 @@ export interface ScheduleAgentRunParams {
   fileIds?: string[];
   /** Group to file the topic under, when scheduling from a group conversation */
   groupId?: string | null;
-  /** Override the agent's default model */
-  model?: string;
   /** The user input/prompt, replayed verbatim when the run comes due */
   prompt: string;
-  /** Override the agent's default provider */
-  provider?: string;
   /** When to run. UTC ISO-8601 (`…Z`) — see `TopicScheduledRun.runAt`. */
   runAt: string;
   /** The agent slug to run (either agentId or slug is required) */
@@ -544,18 +520,10 @@ export interface ExecSubAgentParams {
    * transports set this; direct-mention and group `callAgent` spawns do not.
    */
   isSubAgent?: boolean;
-  /**
-   * Model the spawned run should use, resolved by the spawn site from the
-   * parent agent's `agencyConfig.subagent`. Passed explicitly so the execution
-   * side never re-reads the parent config.
-   */
-  model?: string;
   /** The parent message ID that anchors the isolated thread */
   parentMessageId: string;
   /** Parent operation ID for dispatching callAgent hooks */
   parentOperationId?: string;
-  /** Provider for {@link model}. */
-  provider?: string;
   /** Timeout in milliseconds (optional) */
   timeout?: number;
   /** Thread title shown in UI */
@@ -591,19 +559,10 @@ export interface ExecVirtualSubAgentParams {
   inheritMessages?: boolean;
   /** Instruction/prompt for the virtual sub-agent */
   instruction: string;
-  /**
-   * Model the sub-agent should run on, resolved by the spawn site from the
-   * parent agent's `agencyConfig.subagent` (explicit override or the parent's
-   * effective model). Passed explicitly so the execution side never re-reads
-   * the parent config.
-   */
-  model?: string;
   /** The parent placeholder tool message ID */
   parentMessageId: string;
   /** Parent operation ID to bridge and resume on completion */
   parentOperationId: string;
-  /** Provider for {@link model}. */
-  provider?: string;
   /** Timeout in milliseconds (optional) */
   timeout?: number;
   /** Thread title shown in UI */

@@ -838,33 +838,6 @@ export class TaskRunnerService {
         );
       }
 
-      const pinnedDeviceId = (task.config as { automationDeviceId?: string } | null)
-        ?.automationDeviceId;
-      if (pinnedDeviceId) {
-        const executionAgent = this.workspaceId
-          ? await this.agentModel.getAgentConfigForExecution(executingAgentId)
-          : await this.agentModel.getAgentConfig(executingAgentId);
-        const agency = executionAgent?.agencyConfig;
-        if (
-          !executionAgent ||
-          (agency?.executionTargetSelectionPolicy === 'fixed' &&
-            (agency.executionTarget !== 'device' || agency.boundDeviceId !== pinnedDeviceId))
-        ) {
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message: 'The automation Device conflicts with the current Agent execution policy.',
-          });
-        }
-        const executor = agency?.heterogeneousProvider as
-          { type?: string; engine?: string } | undefined;
-        if (executor?.type === 'native' || executor?.engine === 'prime') {
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message: 'EXECUTOR_UNSUPPORTED: Prime execution on the bound Device is not available.',
-          });
-        }
-      }
-
       // Workspace provisioning (CAID isolation): a fresh run on a
       // workspace-bound task gets its own git worktree on the bound device —
       // or, when no device exists and the run resolves to the cloud sandbox,
@@ -965,8 +938,6 @@ export class TaskRunnerService {
       // restate text it already wrote.
       if (acceptanceEnabled) pluginIds.push(AcceptanceEvidenceIdentifier);
 
-      const taskConfig = (task.config ?? {}) as Record<string, unknown>;
-
       const initialWorkingDirectory =
         workspaceOverride?.workingDirectory ?? provisioned?.workingDirectory;
       const initialWorkingDirectoryConfig =
@@ -1066,11 +1037,6 @@ export class TaskRunnerService {
         // dispatch instead of executing without them. Sourced from the
         // persisted contract so admission and the contract cannot diverge.
         requiredToolIds: executionContract.tools,
-        ...(typeof taskConfig.automationDeviceId === 'string'
-          ? { deviceId: taskConfig.automationDeviceId }
-          : {}),
-        ...(typeof taskConfig.model === 'string' && { model: taskConfig.model }),
-        ...(typeof taskConfig.provider === 'string' && { provider: taskConfig.provider }),
         skipTaskVerification,
         beforeOperationStart: async ({ operationId, topicId }) => {
           await this.db.transaction(async (tx) => {

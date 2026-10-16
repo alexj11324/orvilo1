@@ -35,24 +35,16 @@ export interface AgentDeviceSettingsState {
  */
 export const resolveAgentDeviceSettingsState = ({
   bindingState,
-  explicitLocalDeviceIsEligible,
-  runtimeInventoryOfflineOnly,
   boundDevice,
   canSelectDevice,
   deviceInventoryComplete,
   isPreferenceLoading,
   selectableDeviceCount,
 }: AgentDeviceSettingsStateInput): AgentDeviceSettingsState => ({
-  showDeviceGroup: !(
-    !isPreferenceLoading &&
-    selectableDeviceCount === 1 &&
-    bindingState !== 'invalid' &&
-    (deviceInventoryComplete || (runtimeInventoryOfflineOnly && explicitLocalDeviceIsEligible))
-  ),
+  showDeviceGroup: true,
   showOfflineNotice: bindingState === 'valid' && !!boundDevice && !boundDevice.online,
 
-  // The principal has a resolved binding but may not change it (policy-fixed
-  // or no permission): the binding is displayed, only the control is hidden.
+  // Without management permission, a resolved binding is displayed read-only.
   showReadOnlyBinding:
     deviceInventoryComplete &&
     !isPreferenceLoading &&

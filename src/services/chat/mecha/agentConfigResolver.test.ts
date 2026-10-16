@@ -150,7 +150,7 @@ describe('resolveAgentConfig', () => {
       expect(result.chatConfig).toEqual(mockChatConfig);
     });
 
-    it('uses the current member model override for a workspace Agent that allows it', () => {
+    it('ignores member model choice for a public workspace Agent', () => {
       vi.spyOn(agentSelectors.agentByIdSelectors, 'getAgentById').mockReturnValue(
         () => ({ visibility: 'public', workspaceId: 'workspace-1' }) as any,
       );
@@ -158,25 +158,27 @@ describe('resolveAgentConfig', () => {
         () =>
           ({
             ...mockAgentConfig,
-            agencyConfig: { modelSelectionPolicy: 'member' },
+            agencyConfig: {},
             provider: 'openai',
           }) as any,
       );
       useUserStore.setState({
         workspaceUserPreference: {
-          agentModelOverrides: {
-            'test-agent': { model: 'member-model', provider: 'member-provider' },
-          },
+          ...({
+            agentModelOverrides: {
+              'test-agent': { model: 'member-model', provider: 'member-provider' },
+            },
+          } as any),
         },
       });
 
       const result = resolveAgentConfig({ agentId: 'test-agent' });
 
-      expect(result.agentConfig.model).toBe('member-model');
-      expect(result.agentConfig.provider).toBe('member-provider');
+      expect(result.agentConfig.model).toBe('gpt-4');
+      expect(result.agentConfig.provider).toBe('openai');
     });
 
-    it('uses a retained member model override when a legacy workspace policy is missing', () => {
+    it('uses the saved model when a member preference still contains a model', () => {
       vi.spyOn(agentSelectors.agentByIdSelectors, 'getAgentById').mockReturnValue(
         () => ({ visibility: 'public', workspaceId: 'workspace-1' }) as any,
       );
@@ -185,19 +187,21 @@ describe('resolveAgentConfig', () => {
       );
       useUserStore.setState({
         workspaceUserPreference: {
-          agentModelOverrides: {
-            'test-agent': { model: 'member-model', provider: 'member-provider' },
-          },
+          ...({
+            agentModelOverrides: {
+              'test-agent': { model: 'member-model', provider: 'member-provider' },
+            },
+          } as any),
         },
       });
 
       const result = resolveAgentConfig({ agentId: 'test-agent' });
 
-      expect(result.agentConfig.model).toBe('member-model');
-      expect(result.agentConfig.provider).toBe('member-provider');
+      expect(result.agentConfig.model).toBe('gpt-4');
+      expect(result.agentConfig.provider).toBe('openai');
     });
 
-    it('uses the member model override on a collaborative builtin the caller created', () => {
+    it('uses the saved model on a collaborative builtin the caller created', () => {
       vi.spyOn(agentSelectors.agentByIdSelectors, 'getAgentById').mockReturnValue(
         () =>
           ({
@@ -214,16 +218,18 @@ describe('resolveAgentConfig', () => {
       useUserStore.setState({
         user: { id: 'member-1' } as any,
         workspaceUserPreference: {
-          agentModelOverrides: {
-            'test-agent': { model: 'member-model', provider: 'member-provider' },
-          },
+          ...({
+            agentModelOverrides: {
+              'test-agent': { model: 'member-model', provider: 'member-provider' },
+            },
+          } as any),
         },
       });
 
       const result = resolveAgentConfig({ agentId: 'test-agent' });
 
-      expect(result.agentConfig.model).toBe('member-model');
-      expect(result.agentConfig.provider).toBe('member-provider');
+      expect(result.agentConfig.model).toBe('gpt-4');
+      expect(result.agentConfig.provider).toBe('openai');
     });
 
     it('ignores a retained member model override when the workspace policy is fixed', () => {
@@ -234,15 +240,17 @@ describe('resolveAgentConfig', () => {
         () =>
           ({
             ...mockAgentConfig,
-            agencyConfig: { modelSelectionPolicy: 'fixed' },
+            agencyConfig: {},
             provider: 'openai',
           }) as any,
       );
       useUserStore.setState({
         workspaceUserPreference: {
-          agentModelOverrides: {
-            'test-agent': { model: 'member-model', provider: 'member-provider' },
-          },
+          ...({
+            agentModelOverrides: {
+              'test-agent': { model: 'member-model', provider: 'member-provider' },
+            },
+          } as any),
         },
       });
 
@@ -260,15 +268,17 @@ describe('resolveAgentConfig', () => {
         () =>
           ({
             ...mockAgentConfig,
-            agencyConfig: { modelSelectionPolicy: 'member' },
+            agencyConfig: {},
             provider: 'openai',
           }) as any,
       );
       useUserStore.setState({
         workspaceUserPreference: {
-          agentModelOverrides: {
-            'test-agent': { model: 'member-model', provider: 'member-provider' },
-          },
+          ...({
+            agentModelOverrides: {
+              'test-agent': { model: 'member-model', provider: 'member-provider' },
+            },
+          } as any),
         },
       });
 
@@ -569,7 +579,6 @@ describe('resolveAgentConfig', () => {
       resolveAgentConfig({
         agentId: 'builtin-agent',
         documentContent: 'some document content',
-        model: 'gpt-4-turbo',
         plugins: ['input-plugin'],
         targetAgentConfig: targetAgentConfig as any,
       });
@@ -578,7 +587,7 @@ describe('resolveAgentConfig', () => {
         'agent-builder',
         expect.objectContaining({
           documentContent: 'some document content',
-          model: 'gpt-4-turbo',
+          model: 'gpt-4',
           plugins: ['input-plugin'],
           targetAgentConfig,
           userLocale: expect.any(String),

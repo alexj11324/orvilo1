@@ -1,5 +1,6 @@
 import type { AgentItem, ProviderBinding } from '@orvilo/types';
 import { PROVIDER_CONFIG_ANCHOR_MODEL, providerBindingConfigSchema } from '@orvilo/types';
+import { TRPCClientError } from '@trpc/client';
 
 import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 
@@ -21,6 +22,8 @@ const belongsPrivatelyToWorkspace = (config: unknown, workspaceId: string) => {
 };
 
 /** Reconcile a committed row after a lost create response before trying again. */
+const PRE_INSERT_REJECTIONS = new Set(['BAD_REQUEST', 'FORBIDDEN', 'PRECONDITION_FAILED']);
+
 export const createOnboardingAgentOnce = async (
   checkpoint: FirstAgentCreationCheckpoint,
   params: CreateAgentParams,
@@ -53,8 +56,16 @@ export const createOnboardingAgentOnce = async (
     ...params.config,
     params: { ...params.config?.params, onboardingCreateId: checkpoint.requestId },
   } as CreateAgentParams['config'];
-  const result = await createAgent({ ...params, config });
-  return { ...result, config };
+  try {
+    const result = await createAgent({ ...params, config });
+    return { ...result, config };
+  } catch (cause) {
+    // Validation (input, host/model precondition or host authorization) refused
+    // the mutation before insertion; the user can correct it and retry.
+    if (cause instanceof TRPCClientError && PRE_INSERT_REJECTIONS.has(cause.data?.code))
+      checkpoint.attempted = false;
+    throw cause;
+  }
 };
 
 export const getOnboardingWorkspaceAgent = async (agentId: string, workspaceId: string) => {
@@ -108,8 +119,8 @@ export const ensureFirstAgentInWorkspace = async (
   workspaceId: string,
   host: FirstAgentHost,
 ) => {
+  if (!host.boundDeviceId) throw new Error('FIRST_AGENT_DEVICE_REQUIRED');
   if (host.executionTarget === 'device') {
-    if (!host.boundDeviceId) throw new Error('FIRST_AGENT_DEVICE_REQUIRED');
     await verifyFirstAgentDevice(host.boundDeviceId);
   }
   const existing = await getOnboardingWorkspaceAgent(agentId, workspaceId);
@@ -141,8 +152,9 @@ export const ensureFirstAgentInWorkspace = async (
   const saved = await workspaceClient.agent.getAgentConfigById.query({ agentId });
   if (!belongsPrivatelyToWorkspace(saved, workspaceId))
     throw new Error('FIRST_AGENT_WORKSPACE_REQUIRED');
-  await workspaceClient.workspaceUserSettings.updatePreference.mutate({
-    agentDeviceOverrides: { [agentId]: host },
+  await workspaceClient.agent.updateAgentConfig.mutate({
+    agentId,
+    value: { agencyConfig: { ...saved?.agencyConfig, ...host } },
   });
 };
 

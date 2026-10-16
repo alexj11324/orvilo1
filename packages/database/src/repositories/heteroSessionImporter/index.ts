@@ -62,7 +62,7 @@ export class HeteroSessionImporterRepo {
    * The agent's heterogeneous runtime type (`claude-code`, `codex`, …), pinned
    * onto every topic this importer creates. Resolved once per batch: it is the
    * same agent for the whole call, and every reader that attributes a topic to
-   * a CLI runtime goes through `topics.provider`.
+   * a CLI runtime is identified in its imported metadata.
    */
   private resolveHeteroType = async (agentId: string): Promise<string | null> => {
     const [agent] = await this.db
@@ -89,7 +89,7 @@ export class HeteroSessionImporterRepo {
     session: HeteroSessionImportPayload,
     agentId: string,
     groupId?: string | null,
-    heteroType?: string | null,
+    _heteroType?: string | null,
   ): Promise<HeteroSessionImportResult> =>
     this.db.transaction(async (tx) => {
       // the source transcript's last raw-record timestamp — the picker compares it
@@ -149,11 +149,6 @@ export class HeteroSessionImporterRepo {
           groupId: groupId || null,
           id: topicId,
           metadata: { ...session.metadata, ...metadataPatch },
-          // An imported CLI session has no pinned model — the transcript's own
-          // records carry it per message — but the runtime is known, and a topic
-          // left with a NULL provider reads as "not a hetero session" to every
-          // provider-scoped query.
-          provider: heteroType ?? null,
           title: session.title || 'Imported Session',
           userId: this.userId,
           workspaceId: this.workspaceId ?? null,

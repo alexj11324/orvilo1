@@ -62,13 +62,6 @@ const workspaceAgent = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const publicDevice = {
-  deviceId: 'workspace-device',
-  online: true,
-  scope: 'workspace',
-  visibility: 'public',
-};
-
 const setup = (agentId = 'agent-1') => renderHook(() => useAgentPermission(agentId));
 
 describe('useAgentPermission', () => {
@@ -156,13 +149,6 @@ describe('useAgentPermission', () => {
     expect(result.current.isWorkspaceAgent).toBe(false);
   });
 
-  it('defaults both policies to member-switchable when nothing is stored', () => {
-    const { result } = setup();
-
-    expect(result.current.modelPolicy).toBe('member');
-    expect(result.current.executionTargetPolicy).toBe('member');
-  });
-
   it('defaults topic sharing to member, so legacy agents keep sharing', () => {
     const { result } = setup();
 
@@ -181,89 +167,6 @@ describe('useAgentPermission', () => {
 
     expect(mocks.updateAgentConfigById).toHaveBeenCalledWith('agent-1', {
       agencyConfig: { topicSharePolicy: 'member' },
-    });
-  });
-
-  it('reads the stored intent on a private agent instead of the run-time resolution', () => {
-    // `resolveAgentModelSelectionPolicy` would answer `fixed` here (a private
-    // agent has no members), which would strand the control on "can't switch".
-    mocks.agentMap = {
-      'agent-1': workspaceAgent({
-        agencyConfig: { modelSelectionPolicy: 'member' },
-        visibility: 'private',
-      }),
-    };
-
-    const { result } = setup();
-
-    expect(result.current.modelPolicy).toBe('member');
-  });
-
-  it('saves the model policy through the agent config', () => {
-    const { result } = setup();
-
-    result.current.setModelPolicy('fixed');
-
-    expect(mocks.updateAgentConfigById).toHaveBeenCalledWith('agent-1', {
-      agencyConfig: { modelSelectionPolicy: 'fixed' },
-    });
-  });
-
-  it('pins the currently selected environment when the policy is fixed', () => {
-    mocks.devices = [publicDevice];
-    mocks.agentMap = {
-      'agent-1': workspaceAgent({
-        agencyConfig: {
-          boundDeviceId: 'workspace-device',
-          executionTarget: 'device',
-          heterogeneousProvider: { type: 'claude-code' },
-        },
-      }),
-    };
-
-    const { result } = setup();
-
-    expect(result.current.canFixExecutionTarget).toBe(true);
-    result.current.setExecutionTargetPolicy('fixed');
-
-    expect(mocks.updateAgentConfigById).toHaveBeenCalledWith('agent-1', {
-      agencyConfig: {
-        boundDeviceId: 'workspace-device',
-        executionTarget: 'device',
-        executionTargetSelectionPolicy: 'fixed',
-      },
-    });
-  });
-
-  it('refuses to fix an environment that has not been picked yet', () => {
-    mocks.agentMap = {
-      'agent-1': workspaceAgent({
-        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
-      }),
-    };
-
-    const { result } = setup();
-
-    expect(result.current.canFixExecutionTarget).toBe(false);
-
-    result.current.setExecutionTargetPolicy('fixed');
-
-    expect(mocks.updateAgentConfigById).not.toHaveBeenCalled();
-  });
-
-  it('reopens member selection without touching the stored target', () => {
-    mocks.agentMap = {
-      'agent-1': workspaceAgent({
-        agencyConfig: { executionTarget: 'sandbox', executionTargetSelectionPolicy: 'fixed' },
-      }),
-    };
-
-    const { result } = setup();
-
-    result.current.setExecutionTargetPolicy('member');
-
-    expect(mocks.updateAgentConfigById).toHaveBeenCalledWith('agent-1', {
-      agencyConfig: { executionTargetSelectionPolicy: 'member' },
     });
   });
 

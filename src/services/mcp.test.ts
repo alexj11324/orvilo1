@@ -14,11 +14,21 @@ const mockElectronIpc = {
   },
 };
 
-// Bound execution devices persisted on conversations.
-const mockTopicBindings = vi.hoisted(() => new Map<string, string | undefined>());
+// Cached topics identify their owning Agent; metadata is never a device authority.
+const mockTopics = vi.hoisted(
+  () =>
+    new Map<
+      string,
+      {
+        agentId?: string;
+        metadata?: { boundDeviceId?: string; executionConfig?: { boundDeviceId?: string } };
+      }
+    >(),
+);
+const mockAgentConfig = vi.hoisted(() => vi.fn());
 
 // The authoritative topic read — reached when the display cache misses. Keyed
-// by topicId -> bound deviceId; `null` = topic not found/not owned (binding
+// by topicId -> owning Agent; `null` = topic not found/not owned (binding
 // unreadable), a thrown rejection = fetch failed.
 const mockTopicDetail = vi.hoisted(() => ({
   getTopicDetail: vi.fn(),
@@ -118,15 +128,16 @@ vi.mock('@/store/chat/selectors', () => ({
     // The topic store is a DISPLAY cache: an id not paged in returns
     // `undefined` (cache MISS), which must escalate to the authoritative
     // `getTopicDetail` — it is never an answer on its own.
-    getTopicById: (id: string) => () =>
-      mockTopicBindings.has(id)
-        ? { metadata: { executionConfig: { boundDeviceId: mockTopicBindings.get(id) } } }
-        : undefined,
+    getTopicById: (id: string) => () => mockTopics.get(id),
   },
 }));
 
 vi.mock('@/store/chat/store', () => ({
   getChatStoreState: () => ({}),
+}));
+
+vi.mock('@/services/agent', () => ({
+  agentService: { getAgentFullConfigById: mockAgentConfig },
 }));
 
 vi.mock('@/services/localExecutionIdentity', () => ({
@@ -139,7 +150,10 @@ describe('MCPService', () => {
     vi.clearAllMocks();
     vi.resetModules();
     mockGetToolStoreState.mockReturnValue({});
-    mockTopicBindings.clear();
+    mockTopics.clear();
+    mockAgentConfig.mockResolvedValue({
+      agencyConfig: { executionTarget: 'device', boundDeviceId: 'device-b' },
+    });
     mockTopicDetail.getTopicDetail.mockResolvedValue(null);
     // Default: this host is a proven local execution device.
     mockLocalIdentity.resolveLocalExecutionIdentity.mockResolvedValue({
@@ -323,7 +337,10 @@ describe('MCPService', () => {
 
     it('should tunnel a device-only call to the bound remote device over the server relay', async () => {
       const { lambdaClient, toolsClient } = await import('@/libs/trpc/client');
-      mockTopicBindings.set('topic-remote', 'remote-device-1');
+      mockTopics.set('topic-remote', { agentId: 'agent-remote' });
+      mockAgentConfig.mockResolvedValue({
+        agencyConfig: { executionTarget: 'device', boundDeviceId: 'remote-device-1' },
+      });
 
       const mockStdioPlugin = {
         customParams: {
@@ -372,7 +389,10 @@ describe('MCPService', () => {
     });
 
     it('should surface a device-relay transport failure naming the bound device — never a fake success', async () => {
-      mockTopicBindings.set('topic-remote-fail', 'remote-device-1');
+      mockTopics.set('topic-remote-fail', { agentId: 'agent-remote' });
+      mockAgentConfig.mockResolvedValue({
+        agencyConfig: { executionTarget: 'device', boundDeviceId: 'remote-device-1' },
+      });
 
       const mockStdioPlugin = {
         customParams: {
@@ -1063,15 +1083,15 @@ describe('MCPService', () => {
       mockPluginSelectors.getCustomPluginById.mockReturnValue(() => null);
     });
 
-    it('controlling device B answers for B — install/manifest/call all tunnel to B, never touch A', async () => {
-      // The conversation is bound to B (authoritative read says B). Every
-      // operation under that scope executes on B through the server-side
-      // device RPC relay — A's IPC counters stay at zero.
+    it('saved Agent device beats stale topic metadata for install, manifest and tool calls', async () => {
+      // Topic metadata still names A, but the saved Agent now targets B.
       mockTopicDetail.getTopicDetail.mockResolvedValue({
-        metadata: { executionConfig: { boundDeviceId: deviceB } },
+        agentId: 'agent-b',
+        metadata: { executionConfig: { boundDeviceId: deviceA } },
       });
       mockDeviceLambda.callMcpTool.mockResolvedValue({ content: 'ok', success: true });
       mockDeviceLambda.getStdioMcpServerManifest.mockResolvedValue({ api: [] });
+      mockDeviceLambda.getStreamableMcpServerManifest.mockResolvedValue({ api: [] });
       mockDeviceLambda.checkMcpInstallable.mockResolvedValue({ success: true });
       const scope = { kind: 'topic', topicId: 'topic-b' } as const;
 
@@ -1092,6 +1112,15 @@ describe('MCPService', () => {
         expect.anything(),
       );
 
+      await mcpService.getStreamableMcpServerManifest(
+        { identifier: 'lan-plugin', url: 'http://localhost:3000/mcp' },
+        { scope },
+      );
+      expect(mockDeviceLambda.getStreamableMcpServerManifest).toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: deviceB }),
+        expect.anything(),
+      );
+
       await mcpService.checkInstallation(stdioPlugin.manifest as any, { scope });
       expect(mockDeviceLambda.checkMcpInstallable).toHaveBeenCalledWith(
         expect.objectContaining({ deviceId: deviceB }),
@@ -1102,6 +1131,7 @@ describe('MCPService', () => {
       // a request — its IPC counters stay at zero.
       expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
       expect(mockElectronIpc.mcp.getStdioMcpServerManifest).not.toHaveBeenCalled();
+      expect(mockElectronIpc.mcp.getStreamableMcpServerManifest).not.toHaveBeenCalled();
       expect(mockElectronIpc.mcp.validMcpServerInstallable).not.toHaveBeenCalled();
     });
 
@@ -1110,7 +1140,8 @@ describe('MCPService', () => {
       // PRECONDITION_FAILED/cause.data.code=OPERATION_UNSUPPORTED propagates
       // verbatim so the UI offers upgrade, not retry.
       mockTopicDetail.getTopicDetail.mockResolvedValue({
-        metadata: { executionConfig: { boundDeviceId: deviceB } },
+        agentId: 'agent-b',
+        metadata: { executionConfig: { boundDeviceId: deviceA } },
       });
       const unsupported = Object.assign(
         new Error('This device client does not support MCP manifest queries'),
@@ -1130,11 +1161,11 @@ describe('MCPService', () => {
       expect(mockElectronIpc.mcp.getStdioMcpServerManifest).not.toHaveBeenCalled();
     });
 
-    it('cleared topic cache → authoritative binding decides (B), never A', async () => {
-      // Display cache miss (topic not in the store) — the authoritative read
-      // reports the binding: B. A cache miss is never "unbound".
+    it('cleared topic cache resolves the owning Agent and ignores legacy metadata', async () => {
+      // A cache miss fetches the owner; legacy metadata still names A.
       mockTopicDetail.getTopicDetail.mockResolvedValue({
-        metadata: { boundDeviceId: deviceB },
+        agentId: 'agent-b',
+        metadata: { boundDeviceId: deviceA },
       });
       mockDeviceLambda.callMcpTool.mockResolvedValue({ content: 'ok', success: true });
 
@@ -1176,24 +1207,89 @@ describe('MCPService', () => {
       expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
     });
 
-    it('a topic that authoritatively has NO binding uses the local device', async () => {
-      // Unbound IS a real answer: the topic is cached and carries no pin —
-      // the run's own executor (this host) is the target.
-      mockTopicBindings.set('topic-unbound', undefined);
-      mockElectronIpc.mcp.callTool.mockResolvedValue('local result');
+    it.each(['local', 'auto', 'device', 'sandbox', 'none'])(
+      'saved Agent target %s without a device never falls back to local',
+      async (executionTarget) => {
+        mockTopics.set('topic-unbound', {
+          agentId: 'agent-unbound',
+          metadata: { boundDeviceId: deviceA },
+        });
+        mockAgentConfig.mockResolvedValue({ agencyConfig: { executionTarget } });
 
-      const result = await mcpService.invokeMcpToolCall(stdioPayload, {
-        scope: { kind: 'topic', topicId: 'topic-unbound' },
+        await expect(
+          mcpService.invokeMcpToolCall(stdioPayload, {
+            scope: { kind: 'topic', topicId: 'topic-unbound' },
+          }),
+        ).rejects.toThrow('requires an execution device');
+        expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
+        expect(mockDeviceLambda.callMcpTool).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(['local', 'auto'])(
+      'saved Agent target %s keeps its bound device instead of this host',
+      async (executionTarget) => {
+        mockTopics.set('topic-local-agent', {
+          agentId: 'agent-b',
+          metadata: { boundDeviceId: deviceA },
+        });
+        mockAgentConfig.mockResolvedValue({
+          agencyConfig: { executionTarget, boundDeviceId: deviceB },
+        });
+        mockDeviceLambda.callMcpTool.mockResolvedValue({ content: 'saved device', success: true });
+
+        expect(
+          await mcpService.invokeMcpToolCall(stdioPayload, {
+            scope: { kind: 'topic', topicId: 'topic-local-agent' },
+          }),
+        ).toMatchObject({ content: 'saved device', success: true });
+        expect(mockDeviceLambda.callMcpTool).toHaveBeenCalledWith(
+          expect.objectContaining({ deviceId: deviceB }),
+          expect.anything(),
+        );
+        expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(['sandbox', 'none'])(
+      'saved Agent target %s ignores its old bound device',
+      async (executionTarget) => {
+        mockTopics.set('topic-sandbox-agent', { agentId: 'agent-b' });
+        mockAgentConfig.mockResolvedValue({
+          agencyConfig: { executionTarget, boundDeviceId: deviceB },
+        });
+        await expect(
+          mcpService.invokeMcpToolCall(stdioPayload, {
+            scope: { kind: 'topic', topicId: 'topic-sandbox-agent' },
+          }),
+        ).rejects.toThrow('requires an execution device');
+        expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
+        expect(mockDeviceLambda.callMcpTool).not.toHaveBeenCalled();
+      },
+    );
+
+    it('an unreadable saved Agent never falls back to stale topic metadata or local', async () => {
+      mockTopics.set('topic-agent-denied', {
+        agentId: 'agent-denied',
+        metadata: { boundDeviceId: deviceA },
       });
-      expect(result).toEqual('local result');
-      expect(mockElectronIpc.mcp.callTool).toHaveBeenCalled();
+      mockAgentConfig.mockRejectedValue(new Error('denied'));
+      const result = await mcpService.invokeMcpToolCall(stdioPayload, {
+        scope: { kind: 'topic', topicId: 'topic-agent-denied' },
+      });
+      expect(result).toMatchObject({ error: { code: 'TARGET_QUERY_FAILED' }, success: false });
+      expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
+      expect(mockDeviceLambda.callMcpTool).not.toHaveBeenCalled();
     });
 
     it('B disconnected mid-flight still answers for B — never re-picked to A', async () => {
       // The binding targets B whether or not B is currently connected — the
       // call tunnels to B and the transport failure names B; it never
       // re-targets to this host.
-      mockTopicBindings.set('topic-b-offline', deviceB);
+      mockTopics.set('topic-b-offline', {
+        agentId: 'agent-b',
+        metadata: { boundDeviceId: deviceA },
+      });
       mockDeviceLambda.callMcpTool.mockResolvedValue({
         content: 'device unreachable',
         error: 'device unreachable',

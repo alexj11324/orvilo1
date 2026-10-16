@@ -50,6 +50,13 @@ Before changing SPA routes, read the `spa-routes` skill. Register common Web/Ele
 
 ### Starting the Dev Environment
 
+Development and UI acceptance default to real Electron with the existing local
+backend. Agents may start local development services and use
+`bun run dev:desktop:skip-login` without asking the user to select a local backend
+each time. Preserve existing `.env` configuration and unrelated running development
+environments. For cloud-specific acceptance, use the real cloud identity and record
+renderer/backend revisions separately from local verification.
+
 Full local setup — Postgres/Redis, migrations, seeds, troubleshooting — lives in [docs/development/local-setup.md](./docs/development/local-setup.md).
 
 ```bash

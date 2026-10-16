@@ -28,7 +28,7 @@ const userId = 'session-user';
 const runtimeAgencyConfig = {
   boundDeviceId: 'session-host',
   executionTarget: 'device' as const,
-  heterogeneousProvider: { type: 'codex' as const },
+  heterogeneousProvider: { type: 'codex' as const, model: 'gpt-5.5' },
 };
 const sessionModel = new SessionModel(serverDB, userId);
 
@@ -1198,6 +1198,7 @@ describe('SessionModel', () => {
           id: agentId,
           userId,
           model: 'gpt-3.5-turbo',
+          agencyConfig: runtimeAgencyConfig,
           title: 'Test Agent',
           params: {
             temperature: 0.7,
@@ -1251,6 +1252,7 @@ describe('SessionModel', () => {
           id: agentId,
           userId,
           model: 'gpt-3.5-turbo',
+          agencyConfig: runtimeAgencyConfig,
           title: 'Test Agent',
           params: {
             temperature: 0.7,
@@ -1365,6 +1367,7 @@ describe('SessionModel', () => {
           id: agentId,
           userId,
           model: 'gpt-3.5-turbo',
+          agencyConfig: runtimeAgencyConfig,
           title: 'Test Agent',
           params: {
             temperature: 0.7,
@@ -1419,6 +1422,7 @@ describe('SessionModel', () => {
           id: agentId,
           userId,
           model: 'gpt-3.5-turbo',
+          agencyConfig: runtimeAgencyConfig,
           title: 'Test Agent',
           params: {
             temperature: 0.7,

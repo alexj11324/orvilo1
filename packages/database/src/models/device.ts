@@ -74,7 +74,7 @@ export class DeviceModel {
   }
 
   /**
-   * Whether this workspace device is the enforced target of any fixed agent.
+   * Whether this workspace device is the saved host of an Agent.
    * Returns only a boolean so device-management callers cannot infer private
    * agent metadata from the reference guard.
    */
@@ -87,8 +87,7 @@ export class DeviceModel {
       .where(
         and(
           eq(agents.workspaceId, this.workspaceId),
-          sql`${agents.agencyConfig}->>'executionTargetSelectionPolicy' = 'fixed'`,
-          sql`${agents.agencyConfig}->>'executionTarget' = 'device'`,
+          sql`${agents.agencyConfig}->>'executionTarget' in ('device', 'local')`,
           sql`${agents.agencyConfig}->>'boundDeviceId' = ${deviceId}`,
         ),
       )
@@ -360,6 +359,34 @@ export class DeviceModel {
       )
       .limit(1);
     return device;
+  };
+
+  /**
+   * Display-only summary of the device an Agent is saved on, scoped to the current
+   * workspace but deliberately NOT to the caller's device visibility: a member who
+   * may Use the Agent must still be able to name the device it runs on.
+   * Selects only id, names and owner (the owner is for server-side gateway lookups
+   * and must not be forwarded to clients).
+   */
+  findAgentHostSummary = async (deviceId: string) => {
+    const where = this.workspaceId
+      ? and(eq(devices.deviceId, deviceId), eq(devices.workspaceId, this.workspaceId))
+      : and(
+          eq(devices.deviceId, deviceId),
+          eq(devices.userId, this.userId),
+          isNull(devices.workspaceId),
+        );
+    const [row] = await this.db
+      .select({
+        deviceId: devices.deviceId,
+        friendlyName: devices.friendlyName,
+        hostname: devices.hostname,
+        ownerId: devices.userId,
+      })
+      .from(devices)
+      .where(where)
+      .limit(1);
+    return row;
   };
 
   findByDeviceId = async (deviceId: string) => {

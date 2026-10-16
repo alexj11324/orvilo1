@@ -15,6 +15,8 @@ export interface DeviceUnavailableErrorData {
   code: 'DEVICE_BINDING_INVALID' | 'DEVICE_NOT_CONNECTED' | 'DEVICE_NOT_FOUND' | 'DEVICE_OFFLINE';
   /** Logical device requested by the failed dispatch. */
   deviceId: string;
+  /** User-facing name (friendlyName, else hostname) for error copy; absent if unresolved. */
+  deviceName?: string;
   /** When `DEVICE_BINDING_INVALID`: device ids the caller may explicitly
    * repair onto (other selectable devices in the same scope). */
   repairCandidates?: string[];

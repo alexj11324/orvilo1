@@ -1,6 +1,6 @@
 import { type AgentState } from '@orvilo/agent-execution';
 import { dispatchWorkRegistrationIntent } from '@orvilo/builtin-tools/workRegistration';
-import { getSubAgentChatConfigOverride, resolveSubAgentModel } from '@orvilo/const';
+import { getSubAgentChatConfigOverride } from '@orvilo/const';
 import {
   type AgentShareVisitorContext,
   type ChatToolPayload,
@@ -190,29 +190,10 @@ export const buildServerVirtualSubAgentRunner = (
   if (!agentId || !topicId) return undefined;
 
   const parentAgentConfig = state.world?.agent as OrviloAgentConfig | undefined;
-  // The model the parent run ACTUALLY uses. `world.agent` alone is not
-  // enough: when a run continues a topic whose model was switched, execAgent
-  // keeps the topic-pinned model only in `modelRuntimeConfig` while the
-  // world config retains the agent default.
-  const parentEffectiveModel = state.modelRuntimeConfig ?? parentAgentConfig;
 
   return {
     run: async ({ agentId: targetAgentId, description, inheritMessages, instruction, timeout }) => {
-      // This runner serves two tools, and only one of them may swap the model:
-      //   - `callSubAgent` names no agent, so the child is an anonymous clone of
-      //     the parent — it takes the parent's `agencyConfig.subagent` override,
-      //     or follows the parent's effective (topic-pinned) model when none is
-      //     configured.
-      //   - `callAgent` names an existing agent, which carries a model the user
-      //     configured on it. Overriding that would discard a deliberate choice,
-      //     the same way forcing a group member onto the sub-agent default would.
-      // Resolved here at the spawn site so the execution side never has to
-      // re-derive it from the parent config.
-      const subAgentModel = targetAgentId
-        ? undefined
-        : resolveSubAgentModel(parentAgentConfig?.agencyConfig?.subagent, parentEffectiveModel);
-      // Thinking / reasoning-effort overrides configured for the sub-agent
-      // model; same callSubAgent-only carve-out as the model above.
+      // Anonymous sub-agents retain their parent's reasoning configuration.
       const subAgentChatConfig = targetAgentId
         ? undefined
         : getSubAgentChatConfigOverride(parentAgentConfig?.agencyConfig?.subagent);
@@ -242,10 +223,8 @@ export const buildServerVirtualSubAgentRunner = (
         groupId: state.origin?.groupId ?? undefined,
         inheritMessages,
         instruction,
-        model: subAgentModel?.model,
         parentMessageId: placeholder.id,
         parentOperationId: ctx.operationId,
-        provider: subAgentModel?.provider,
         timeout,
         title: description,
         topicId,

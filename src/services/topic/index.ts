@@ -53,9 +53,6 @@ type UpdateTopicMetadataInput = Omit<Partial<ChatTopicMetadata>, 'onboardingSess
 };
 
 export class TopicService {
-  repairDeviceBinding = (...args: Parameters<typeof lambdaClient.topic.repairDeviceBinding.mutate>) =>
-    lambdaClient.topic.repairDeviceBinding.mutate(...args);
-
   getTopicContext = (...args: Parameters<typeof lambdaClient.topic.getTopicContext.query>) =>
     lambdaClient.topic.getTopicContext.query(...args);
 
@@ -197,17 +194,6 @@ export class TopicService {
       id,
       value: { ...data, agentId: data.agentId ?? undefined },
     });
-  };
-
-  updateTopicModel = (
-    id: string,
-    value: {
-      metadata?: Pick<ChatTopicMetadata, 'heteroEffort' | 'reasoningConfig'>;
-      model: string;
-      provider: string;
-    },
-  ) => {
-    return lambdaClient.topic.updateTopicModel.mutate({ id, ...value });
   };
 
   updateTopicMetadata = (id: string, metadata: UpdateTopicMetadataInput) => {

@@ -24,7 +24,7 @@ const workspaceId = 'copy-policy-workspace';
 const agencyConfig = {
   executionTarget: 'device' as const,
   boundDeviceId: 'copy-policy-host',
-  heterogeneousProvider: { type: 'codex' as const },
+  heterogeneousProvider: { type: 'codex' as const, model: 'gpt-5.5' },
 };
 
 beforeAll(async () => {

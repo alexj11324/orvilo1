@@ -144,6 +144,9 @@ vi.mock('@/server/services/agent', () => ({
 vi.mock('@/database/models/device', () => ({
   DeviceModel: vi.fn().mockImplementation(function () {
     return {
+      findAgentHostSummary: vi
+        .fn()
+        .mockResolvedValue({ deviceId: 'device-001', friendlyName: 'Build box', hostname: 'vm-1' }),
       findByDeviceId: mockDeviceFindByDeviceId,
       findWorkspaceDeviceById: mockDeviceFindWorkspaceDeviceById,
       // Unified admission's authorized candidate set — the devices this suite
@@ -325,8 +328,8 @@ vi.mock('model-bank', async (importOriginal) => {
 
 /**
  * Device routing under ACP dispatch. The resolved plan lives inside
- * `dispatchHeteroAgent` (`resolveExecutionPlan` over agencyConfig /
- * requestedDeviceId / canUseDevice); the observable boundaries are
+ * `dispatchHeteroAgent` (`resolveHeteroExecutionPlan` over the saved
+ * agencyConfig and authorized device inventory); the observable boundaries are
  * `deviceGateway.dispatchAgentRun` (device route), `spawnHeteroSandbox`
  * (cloud-sandbox route) and the returned error result (unrouted device
  * target). Hetero dispatch intentionally trusts the binding — it does NOT
@@ -461,8 +464,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
         executionTarget: 'sandbox',
         executionTargetSelectionPolicy: 'fixed',
       });
-      // `fixed` only engages for workspace-shared agents — the policy strips
-      // the request's deviceId override entirely.
+      // The saved sandbox target ignores request device overrides in every scope.
       service = new AiAgentService(mockDb, userId, { workspaceId: 'workspace-1' });
 
       await service.execAgent({
@@ -473,14 +475,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
 
       expect(mockDispatchAgentRun).not.toHaveBeenCalled();
       expect(mockSpawnHeteroSandbox).toHaveBeenCalled();
-      expect(topicMock.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          metadata: expect.objectContaining({
-            executionConfig: expect.objectContaining({ executionTarget: 'sandbox' }),
-          }),
-        }),
-        undefined,
-      );
+      expect(topicMock.create.mock.calls[0][0].metadata).not.toHaveProperty('executionConfig');
     });
   });
 
@@ -559,7 +554,8 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       });
     });
 
-    it('honours an explicit deviceId request over the stored sandbox target', async () => {
+    it('keeps the saved sandbox target when the request asks for a device', async () => {
+      mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
       await useAgencyConfig({ executionTarget: 'sandbox' });
 
       await service.execAgent({
@@ -568,17 +564,9 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
         prompt: 'Run a command',
       });
 
-      // requestedDeviceId forces device routing regardless of the stored
-      // target (the shared policy isn't `fixed`).
-      expect(mockDispatchAgentRun).toHaveBeenCalledWith(
-        expect.objectContaining({ deviceId: 'device-001' }),
-      );
-      expect(topicMock.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          metadata: expect.objectContaining({ boundDeviceId: 'device-001' }),
-        }),
-        undefined,
-      );
+      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(mockSpawnHeteroSandbox).toHaveBeenCalled();
+      expect(topicMock.create.mock.calls[0][0].metadata).not.toHaveProperty('boundDeviceId');
     });
 
     it('does not start a queued workspace run after Agent Use is revoked at admission', async () => {
@@ -613,25 +601,18 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       expect(mockDispatchAgentRun).toHaveBeenCalledWith(
         expect.objectContaining({ deviceId: 'device-001' }),
       );
-      expect(topicMock.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          metadata: expect.objectContaining({ boundDeviceId: 'device-001' }),
-        }),
-        undefined,
-      );
+      expect(topicMock.create.mock.calls[0][0].metadata).not.toHaveProperty('boundDeviceId');
     });
 
     it('does not reuse topic metadata boundDeviceId as the runtime binding', async () => {
-      // A stale `metadata.boundDeviceId` on the topic is a display record, not
-      // a routing input: with an explicit request the run goes to the
-      // requested device; the topic binding is not consulted.
+      // Neither the stale topic binding nor the request can replace the saved device.
       topicMock.findById.mockResolvedValue({ metadata: { boundDeviceId: 'device-002' } });
-      await useAgencyConfig({ executionTarget: 'sandbox' });
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
 
       await service.execAgent({
         agentId: 'agent-1',
         appContext: { topicId: 'topic-1' },
-        deviceId: 'device-001',
+        deviceId: 'device-002',
         prompt: 'Run a command',
       });
 
@@ -670,10 +651,8 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     it.each(['auto', 'device'] as const)(
       'reports the bound-device error for an unbound %s target',
       async (executionTarget) => {
-        // `auto` can't pick without online visibility (hetero dispatch never
-        // queries the online list) and `device` has no binding — both stay
-        // unrouted and surface the bound-device error instead of grabbing a
-        // device or silently falling back to the sandbox.
+        // Admission requires a saved device binding; neither target may pick
+        // another registered device or fall back to the sandbox.
         await useAgencyConfig({ executionTarget });
 
         const result = await service.execAgent({
@@ -686,7 +665,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
         expect(result).toMatchObject({ error: 'No bound device', success: false });
         // Every admission refusal carries the structured contract surface —
         // the repair UI branches on errorData.code, never the prose.
-        expect(result.errorData?.code).toMatch(/^DEVICE_/);
+        expect(result.errorData?.code).toBe('EXECUTION_TARGET_NONE');
         expect(result.errorData?.retryable).toBe(true);
       },
     );
@@ -740,6 +719,22 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
         deviceId: 'device-001',
         retryable: true,
         scope: 'personal',
+      });
+    });
+
+    it('names the device in the unreachable-device error', async () => {
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      mockDispatchAgentRun.mockResolvedValue({
+        error: 'DEVICE_CHANNEL_UNAVAILABLE',
+        errorCode: DeviceTransportErrorCode.DeviceChannelUnavailable,
+        success: false,
+      });
+
+      const result = await service.execAgent({ agentId: 'agent-1', prompt: 'Run a command' });
+
+      expect(result.errorData).toMatchObject({
+        code: 'DEVICE_NOT_CONNECTED',
+        deviceName: 'Build box',
       });
     });
 

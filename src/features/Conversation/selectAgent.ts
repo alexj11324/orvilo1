@@ -22,7 +22,6 @@ export const selectAgentForConversation = (agentId: string) => {
     {
       composerAgentId: agentId,
       composerHeteroEffort: undefined,
-      composerModelSelection: undefined,
     },
     false,
     'selectAgent/explicit',

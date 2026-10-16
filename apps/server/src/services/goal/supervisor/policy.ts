@@ -7,7 +7,7 @@ import type {
 } from '@orvilo/types';
 
 import type { AgentOperationItem } from '@/database/schemas/agentOperations';
-import { HETERO_DISPATCH_ERROR_HEADLINES } from '@/server/services/aiAgent/helpers/heteroErrors';
+import { matchesHeteroDispatchHeadline } from '@/server/services/aiAgent/helpers/heteroErrors';
 
 import { resolveTaskAttemptBudget } from '../recoveryPolicy';
 
@@ -89,10 +89,7 @@ const RETRYABLE_DISPATCH_CODES = [
  */
 const isRetryableDispatchFailure = (error: string) =>
   RETRYABLE_DISPATCH_CODES.some(
-    (code) =>
-      error.includes(code) ||
-      (HETERO_DISPATCH_ERROR_HEADLINES[code] &&
-        error.includes(HETERO_DISPATCH_ERROR_HEADLINES[code])),
+    (code) => error.includes(code) || matchesHeteroDispatchHeadline(error, code),
   );
 
 export const recoveryEligibility = (

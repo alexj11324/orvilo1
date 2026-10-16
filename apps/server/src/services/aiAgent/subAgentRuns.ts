@@ -229,11 +229,8 @@ export const execAgentThreadRun = async (
     autoStart: true,
     chatConfigOverride: options.chatConfig,
     hooks,
-    // Explicit sub-agent model override resolved at the spawn site.
-    model: options.model,
     parentOperationId,
     prompt: instruction,
-    provider: options.provider,
     trigger: inheritedTrigger,
     userInterventionConfig: { approvalMode: 'headless' },
   });

@@ -52,7 +52,7 @@ describe('legacy workspace hetero agent visibility', () => {
       agencyConfig: {
         boundDeviceId: `creation-host-${ws}`,
         executionTarget: 'device',
-        heterogeneousProvider: { command: 'claude', type: 'claude-code' },
+        heterogeneousProvider: { command: 'claude', model: 'default', type: 'claude-code' },
       } as any,
       provider: 'claude-code',
       systemRole: '',

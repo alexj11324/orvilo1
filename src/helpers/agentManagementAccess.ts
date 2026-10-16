@@ -73,8 +73,7 @@ export const rememberAgentManagementAccess = (
 };
 
 /**
- * The management-access decision runtime resolvers should feed
- * `resolveAgentAgencyConfig` / `resolveAgentModelConfig` as `canManage`.
+ * The management-access decision runtime resolvers use for member mode preferences.
  * Authors always manage; otherwise only a server-confirmed `true` (published
  * by the picker's `useAgentManagementAccess`) promotes the caller to manager.
  */

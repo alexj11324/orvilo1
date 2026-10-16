@@ -5,7 +5,7 @@ import { persistPermissionChoice } from './persistPermissionChoice';
 const params = {
   agentId: 'agent-a',
   getCurrentComposerAgentId: () => 'agent-a',
-  executionConfig: { executionTarget: 'local' as const, localSandbox: true },
+  executionConfig: { inheritWorkspaceScope: true },
   permission: { provider: 'codex', configId: 'mode', value: 'read-only' },
 };
 const makeStore = () => ({

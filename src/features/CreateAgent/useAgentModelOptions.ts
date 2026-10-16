@@ -15,6 +15,8 @@ export interface AgentModelOption {
 }
 
 export interface AgentModelOptions {
+  /** Catalog finished with no rows. The picker still offers Default. */
+  discoveryFailed: boolean;
   error?: Error;
   loading: boolean;
   options: AgentModelOption[];
@@ -60,20 +62,24 @@ export const useAgentModelOptions = ({
           typeof heterogeneousAgentCatalogService.listModels
         >[0]['type'],
       });
-      if (result.status === 'error') {
-        const error = new Error(result.error.message);
-        error.name = result.error.code;
-        throw error;
-      }
+      if (result.status === 'error') return [];
       return result.models;
     },
     { revalidateOnFocus: false, shouldRetryOnError: false },
   );
 
-  if (!supported) return { loading: false, options: [], retry: () => {}, supported: false };
+  if (!supported)
+    return {
+      discoveryFailed: false,
+      loading: false,
+      options: [],
+      retry: () => {},
+      supported: false,
+    };
 
   if (capability?.source === 'static') {
     return {
+      discoveryFailed: false,
       loading: false,
       options: getStaticModelOptions(provider?.type).map((option) => ({
         label: option.label,
@@ -84,10 +90,12 @@ export const useAgentModelOptions = ({
     };
   }
 
+  const models = catalog.data ?? [];
   return {
+    discoveryFailed: !catalog.isLoading && !catalog.error && models.length === 0,
     error: catalog.error,
     loading: catalog.isLoading,
-    options: (catalog.data ?? []).map((model: HeterogeneousAgentModel) => ({
+    options: models.map((model: HeterogeneousAgentModel) => ({
       label: modelDisplayLabel(model),
       value: model.id,
     })),

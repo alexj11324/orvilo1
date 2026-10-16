@@ -1043,6 +1043,7 @@
   "settingAgent.list.workspace": "工作区",
   "settingAgent.modelPolicy.title": "成员切换模型",
   "settingAgent.modelSettings.bindAction": "绑定服务商",
+  "settingAgent.modelSettings.catalogEmpty": "没有列出模型。仍可使用该运行时的默认模型。",
   "settingAgent.modelSettings.catalogError": "无法从所选设备加载模型。",
   "settingAgent.modelSettings.catalogPending": "设定执行目标后，将从所选设备加载模型。",
   "settingAgent.modelSettings.effortLabel": "推理强度",

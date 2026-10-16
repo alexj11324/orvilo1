@@ -1180,6 +1180,8 @@ export default {
   'settingAgent.generalSettings.title': 'Basic configuration',
   'settingAgent.modelPolicy.title': 'Member model switching',
   'settingAgent.modelSettings.bindAction': 'Bind a provider',
+  'settingAgent.modelSettings.catalogEmpty':
+    'Model discovery did not return a list. The runtime default is still available.',
   'settingAgent.modelSettings.catalogError': 'Could not load models from the selected device.',
   'settingAgent.modelSettings.catalogPending':
     'Models load from the selected machine once an execution target is set.',

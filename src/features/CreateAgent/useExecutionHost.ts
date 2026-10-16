@@ -43,7 +43,8 @@ export const useExecutionHost = (visibility?: 'private' | 'public') => {
     };
   }, [identityAttempt]);
   const pickable = eligibleExecutionDevices(devices ?? [], workspaceId ?? undefined, visibility);
-  const allowLocal = !workspaceId || visibility === 'private';
+  // A workspace agent is public, and `local` still means this desktop.
+  const allowLocal = !workspaceId || visibility === 'private' || !!localDeviceId;
   const localId = allowLocal ? localDeviceId : undefined;
   const deviceId = selectedId ?? localId ?? pickable[0]?.deviceId;
   const isLocal = !!deviceId && deviceId === localId;

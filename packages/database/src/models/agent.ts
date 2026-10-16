@@ -428,6 +428,27 @@ export class AgentModel {
     const candidates = this.collectBoundDeviceIds(agencyConfig).filter((id) => !existing.has(id));
     if (candidates.length === 0) return;
 
+    // `local` is the caller's own computer, not a device published to the
+    // workspace. Admit that machine without requiring a shared enrollment.
+    if (agencyConfig?.executionTarget === 'local') {
+      const owned = await this.db
+        .select({ deviceId: devices.deviceId })
+        .from(devices)
+        .where(and(eq(devices.userId, this.userId), inArray(devices.deviceId, candidates)));
+      const allowed = new Set(owned.map((row) => row.deviceId));
+      const invalid = candidates.find((id) => !allowed.has(id));
+      if (invalid) {
+        throw new TRPCError({
+          cause: { data: { code: 'WorkspaceAgentRequiresWorkspaceDevice', deviceId: invalid } },
+          code: 'FORBIDDEN',
+          message:
+            'Workspace agent can only bind devices enrolled in the same workspace. ' +
+            'Enroll the device to the workspace, or pick a workspace device.',
+        });
+      }
+      return;
+    }
+
     const rows = await this.db
       .select({ deviceId: devices.deviceId })
       .from(devices)

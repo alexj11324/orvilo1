@@ -272,6 +272,7 @@
   "createAgent.installHint": "Install a coding agent on this computer, then check again.",
   "createAgent.installed": "Installed on the selected device",
   "createAgent.model.choose": "Choose a model",
+  "createAgent.model.discoveryFailed": "Model discovery did not return a list. The runtime default is still available.",
   "createAgent.model.empty": "No matching models",
   "createAgent.model.error": "Could not load models.",
   "createAgent.model.loading": "Loading models…",

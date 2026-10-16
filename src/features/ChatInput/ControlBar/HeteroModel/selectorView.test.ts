@@ -61,12 +61,20 @@ describe('selector capabilities behind the engine form', () => {
     });
   });
 
-  it('labels Claude aliases without claiming a fixed model version', () => {
+  it('labels Claude models with the names the CLI reports', () => {
     expect(getStaticModelOptions('claude-code')).toEqual([
-      { label: 'Fable', value: 'fable' },
-      { label: 'Opus', value: 'opus' },
-      { label: 'Sonnet', value: 'sonnet' },
-      { label: 'Haiku', value: 'haiku' },
+      { label: 'Opus 5.5', value: 'opus' },
+      { label: 'Fable 5.1', value: 'fable' },
+      { label: 'Sonnet 5.5', value: 'sonnet' },
+      { label: 'Haiku 5.5', value: 'haiku' },
+      { label: 'Haiku 4.5', value: 'claude-haiku-4-5-20251001' },
+      { label: 'Sonnet 5', value: 'claude-sonnet-5' },
+      { label: 'Opus 5', value: 'claude-opus-5' },
+      { label: 'Fable 5', value: 'claude-fable-5' },
+      { label: 'Opus 4.8', value: 'claude-opus-4-8' },
+      { label: 'Opus 4.7', value: 'claude-opus-4-7' },
+      { label: 'Opus 4.6', value: 'claude-opus-4-6' },
+      { label: 'Sonnet 4.6', value: 'claude-sonnet-4-6' },
     ]);
   });
 

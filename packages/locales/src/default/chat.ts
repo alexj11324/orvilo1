@@ -1219,6 +1219,8 @@ export default {
   'createAgent.createFailed': 'Could not create the agent. Try again.',
   'createAgent.model.loading': 'Loading models…',
   'createAgent.model.error': 'Could not load models.',
+  'createAgent.model.discoveryFailed':
+    'Model discovery did not return a list. The runtime default is still available.',
   'createAgent.rescan': 'Check again',
   'createAgent.retry': 'Retry',
   // Op status tray (floating panel above the chat input during a run)

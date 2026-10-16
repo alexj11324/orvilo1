@@ -73,9 +73,7 @@ export const useModelCatalog = ({
         type,
       });
       if (result.status === 'error') {
-        const catalogError = new Error(result.error.message);
-        catalogError.name = result.error.code;
-        throw catalogError;
+        return { models: [], status: 'success' as const, updatedAt: result.updatedAt };
       }
       return result;
     },

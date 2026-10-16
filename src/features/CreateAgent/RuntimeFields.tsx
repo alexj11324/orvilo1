@@ -152,9 +152,7 @@ export const useAgentRuntimeForm = ({
         (!!binding || (!!apiKey.trim() && !!apiModel.trim() && !!endpoint.trim()))
       : scannedHostId === host.deviceId &&
         state.status === 'success' &&
-        installed.some((item) => item.type === choice) &&
-        !modelOptions.loading &&
-        !modelOptions.error);
+        installed.some((item) => item.type === choice));
 
   const prepare = async (): Promise<Partial<OrviloAgentConfig>> => {
     if (!ready || !host.deviceId) throw new Error('FIRST_AGENT_REQUIRED');
@@ -432,6 +430,11 @@ export const RuntimeFields = ({
                 onChange={form.setModel}
                 onRetry={form.modelOptions.retry}
               />
+              {form.modelOptions.discoveryFailed ? (
+                <p className="text-sm text-muted-foreground">
+                  {t('createAgent.model.discoveryFailed')}
+                </p>
+              ) : null}
             </Field>
           )}
           {!!form.efforts.length && (

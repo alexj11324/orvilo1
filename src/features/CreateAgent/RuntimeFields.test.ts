@@ -9,6 +9,13 @@ import { RuntimeFields, useAgentRuntimeForm } from './RuntimeFields';
 const state = vi.hoisted(() => ({
   builtinOffered: true,
   host: { deviceId: 'local-device', isLocal: true, loading: false },
+  modelOptions: {
+    discoveryFailed: false,
+    error: undefined as unknown,
+    loading: false,
+    options: [] as Array<{ label: string; value: string }>,
+    supported: true,
+  },
   scan: vi.fn().mockResolvedValue(undefined),
   reset: vi.fn(),
   scanState: { agents: { codex: { available: true } }, status: 'success' } as AgentScanState,
@@ -24,7 +31,7 @@ vi.mock('@/features/ConnectAgent/useAgentScan', () => ({
   useAgentScan: () => ({ scan: state.scan, reset: state.reset, state: state.scanState }),
 }));
 vi.mock('./useAgentModelOptions', () => ({
-  useAgentModelOptions: () => ({ loading: false, options: [], supported: true }),
+  useAgentModelOptions: () => state.modelOptions,
 }));
 vi.mock('@/store/providerBinding', () => ({
   useFetchProviderBindings: () => ({ isLoading: false }),
@@ -47,6 +54,13 @@ vi.mock('@/services/providerBinding', () => ({
 beforeEach(() => {
   state.builtinOffered = true;
   state.host = { deviceId: 'local-device', isLocal: true, loading: false };
+  state.modelOptions = {
+    discoveryFailed: false,
+    error: undefined,
+    loading: false,
+    options: [],
+    supported: true,
+  };
   state.scanState = { agents: { codex: { available: true } }, status: 'success' };
 });
 
@@ -130,6 +144,17 @@ describe('shared Agent runtime form', () => {
     expect(result.current.effort).toBe('max');
     act(() => result.current.setModel('gpt-5.4-mini'));
     expect(result.current.effort).toBe('default');
+  });
+  it('stays ready when the model catalog is still loading or has failed', async () => {
+    state.modelOptions = {
+      discoveryFailed: true,
+      error: new Error('catalog'),
+      loading: true,
+      options: [],
+      supported: true,
+    };
+    const { result } = renderHook(() => useAgentRuntimeForm({ initialType: 'codex' }));
+    await waitFor(() => expect(result.current.ready).toBe(true));
   });
   it('blocks creation while the selected execution host is still resolving', () => {
     state.host = { deviceId: 'local-device', isLocal: true, loading: true };

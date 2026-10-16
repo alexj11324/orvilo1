@@ -368,7 +368,9 @@ export const HETERO_SELECTOR_CAPABILITIES = {
     model: {
       encodings: [{ flags: ['--model'], kind: 'flag' }],
       resolve: resolveClaudeCodeModel,
-      source: 'catalog',
+      // The CLI accepts aliases (`haiku`) and versioned ids. The picker
+      // uses the names that CLI reports for those values.
+      source: 'static',
     },
   },
   'codebuddy': {

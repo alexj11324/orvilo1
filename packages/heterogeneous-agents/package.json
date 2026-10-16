@@ -14,6 +14,7 @@
     "./config": "./src/config.ts",
     "./labels": "./src/labels.ts",
     "./models": "./src/models/index.ts",
+    "./models/staticCatalogs": "./src/models/staticCatalogs.ts",
     "./protocol": "./src/protocol/index.ts",
     "./quota": "./src/quota/index.ts",
     "./quota-sampler": "./src/quota-sampler/index.ts",

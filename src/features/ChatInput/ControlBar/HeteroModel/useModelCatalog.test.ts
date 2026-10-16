@@ -23,6 +23,7 @@ describe('useModelCatalog', () => {
 
   it.each([
     'codebuddy',
+    'codex',
     'cursor',
     'droid',
     'grok-build',
@@ -166,12 +167,34 @@ describe('useModelCatalog', () => {
     expect(listModels).not.toHaveBeenCalled();
   });
 
-  it('revalidates a failed preload when the selector opens', async () => {
-    const failedCatalog = {
-      error: { code: 'device_unavailable' as const, message: 'Device unavailable' },
-      status: 'error' as const,
+  it('keeps an empty catalog when discovery reports an error', async () => {
+    const listModels = vi.spyOn(heterogeneousAgentCatalogService, 'listModels').mockResolvedValue({
+      error: { code: 'device_unavailable', message: 'Device unavailable' },
+      status: 'error',
       updatedAt: 1,
-    };
+    });
+
+    const { result } = renderHook(
+      () =>
+        useModelCatalog({
+          isDeviceListLoading: false,
+          isPreferenceLoading: false,
+          open: false,
+          provider: { type: 'qoder' },
+          targetReady: true,
+          type: 'qoder',
+        }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() =>
+      expect(result.current.data).toEqual({ models: [], status: 'success', updatedAt: 1 }),
+    );
+    expect(listModels).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toBeUndefined();
+  });
+
+  it('revalidates a rejected preload when the selector opens', async () => {
     const loadedCatalog = {
       models: [{ id: 'provider/model', modelId: 'model', providerId: 'provider' }],
       status: 'success' as const,
@@ -183,7 +206,7 @@ describe('useModelCatalog', () => {
     });
     const listModels = vi
       .spyOn(heterogeneousAgentCatalogService, 'listModels')
-      .mockResolvedValueOnce(failedCatalog)
+      .mockRejectedValueOnce(new Error('Device unavailable'))
       .mockReturnValueOnce(retry);
 
     const { rerender, result } = renderHook(
@@ -199,7 +222,7 @@ describe('useModelCatalog', () => {
       { initialProps: { open: false }, wrapper: createWrapper() },
     );
 
-    await waitFor(() => expect(result.current.error?.name).toBe('device_unavailable'));
+    await waitFor(() => expect(result.current.error).toBeInstanceOf(Error));
 
     rerender({ open: true });
 

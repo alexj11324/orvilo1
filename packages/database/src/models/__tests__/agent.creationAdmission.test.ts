@@ -255,6 +255,26 @@ describe('Agent creation admission', () => {
     expect(await db.select().from(agents)).toHaveLength(0);
   });
 
+  it('admits a public workspace agent bound to the caller local machine', async () => {
+    const scoped = new AgentModel(db, userId, workspaceId);
+    const agent = await scoped.create({
+      agencyConfig: {
+        boundDeviceId: 'saved-host',
+        executionTarget: 'local',
+        heterogeneousProvider: { command: 'claude', model: 'haiku', type: 'claude-code' },
+      },
+      title: 'Local Claude',
+      visibility: 'public',
+    });
+
+    expect(agent.visibility).toBe('public');
+    expect(agent.agencyConfig?.executionTarget).toBe('local');
+    expect(agent.agencyConfig?.heterogeneousProvider).toMatchObject({
+      model: 'haiku',
+      type: 'claude-code',
+    });
+  });
+
   it('keeps private personal hosts private instead of allowing a shared workspace default', async () => {
     const scoped = new AgentModel(db, userId, workspaceId);
     await expect(scoped.create({ ...prime, visibility: 'public' })).rejects.toMatchObject({

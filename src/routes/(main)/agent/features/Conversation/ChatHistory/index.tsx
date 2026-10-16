@@ -13,7 +13,7 @@ interface ChatHistoryMenuProps {
   };
   nativeButton?: boolean;
   placement?: 'bottomLeft' | 'topRight' | 'bottom' | 'top';
-  triggerProps?: ComponentProps<'button'>;
+  triggerProps?: ComponentProps<'button'> & { 'data-testid'?: string };
 }
 
 /**

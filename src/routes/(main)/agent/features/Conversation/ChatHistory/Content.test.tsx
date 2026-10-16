@@ -10,8 +10,11 @@ import ChatHistoryMenu from './index';
 
 const mocks = vi.hoisted(() => ({
   activeTopicId: 'topic-2' as string | undefined,
+  canCreate: true,
   isLoading: false,
+  isNewTopicSendInFlight: false,
   navigateToTopic: vi.fn(),
+  openNewTopicOrSaveTopic: vi.fn(),
   searchTopics: vi.fn(),
   topics: [
     { id: 'topic-1', title: 'First chat' },
@@ -34,6 +37,10 @@ vi.mock('@/features/AgentSidebar/Topic/hooks/useTopicNavigation', () => ({
   useTopicNavigation: () => ({ navigateToTopic: mocks.navigateToTopic }),
 }));
 
+vi.mock('@/hooks/usePermission', () => ({
+  usePermission: () => ({ allowed: mocks.canCreate }),
+}));
+
 vi.mock('@/services/topic', () => ({
   topicService: { searchTopics: mocks.searchTopics },
 }));
@@ -41,16 +48,19 @@ vi.mock('@/services/topic', () => ({
 vi.mock('@/store/chat', () => ({
   useChatStore: (selector: (state: unknown) => unknown) =>
     selector({
+      __inFlight: mocks.isNewTopicSendInFlight,
       __loading: mocks.isLoading,
       __topics: mocks.topics,
       activeAgentId: 'agent-1',
       activeTopicId: mocks.activeTopicId,
+      openNewTopicOrSaveTopic: mocks.openNewTopicOrSaveTopic,
     }),
 }));
 
 vi.mock('@/store/chat/selectors', () => ({
   topicSelectors: {
     displayTopics: (s: { __topics: unknown }) => s.__topics,
+    isNewTopicSendInFlight: (s: { __inFlight: boolean }) => s.__inFlight,
     isUndefinedTopics: (s: { __loading: boolean }) => s.__loading,
   },
 }));
@@ -59,6 +69,8 @@ describe('ChatHistoryContent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.isLoading = false;
+    mocks.canCreate = true;
+    mocks.isNewTopicSendInFlight = false;
     mocks.activeTopicId = 'topic-2';
     mocks.topics = [
       { id: 'topic-1', title: 'First chat' },
@@ -81,6 +93,30 @@ describe('ChatHistoryContent', () => {
 
     expect(mocks.navigateToTopic).toHaveBeenCalledWith('topic-1');
     expect(onNavigate).toHaveBeenCalled();
+  });
+
+  it('starts a new topic from the first row and closes the popover', () => {
+    const onNavigate = vi.fn();
+    render(<ChatHistoryContent onNavigate={onNavigate} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'topic:newTopic' }));
+
+    expect(mocks.openNewTopicOrSaveTopic).toHaveBeenCalledOnce();
+    expect(onNavigate).toHaveBeenCalledOnce();
+  });
+
+  it('disables the new topic row while a new-topic send is in flight', () => {
+    mocks.isNewTopicSendInFlight = true;
+    render(<ChatHistoryContent />);
+
+    expect(screen.getByRole('button', { name: 'topic:newTopic' })).toBeDisabled();
+  });
+
+  it('disables the new topic row without the create permission', () => {
+    mocks.canCreate = false;
+    render(<ChatHistoryContent />);
+
+    expect(screen.getByRole('button', { name: 'topic:newTopic' })).toBeDisabled();
   });
 
   it('shows the empty state when there is no history', () => {

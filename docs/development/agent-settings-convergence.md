@@ -127,14 +127,14 @@ connect flow: inventory failure ≠ empty, single candidate auto-resolves at
 flow admission, zero candidates shows the blocking empty state with offline
 devices still listed.
 
-## Agent sidebar nav
+## Agent navigation
 
-`src/features/AgentSidebar/Header/Nav.tsx` carries the lobehub nav rows —
-新话题 / 搜索 / 助理档案 /self-learning+goals (labs-gated) / 任务 — with the
-permission gate (`hideProfile` = not editable, or access not yet resolved, or
-no resource/content edit rights) restored. The profile entry pushes
-`/agent/:aid/profile`, whose route owns the Settings→Agents exile redirect
-into `/settings/agents/:aid`; the tasks entry lands on `/agent/:aid/tasks`.
+An agent conversation no longer owns a route panel. `/agent/*` and `/chat/*`
+resolve to the global `home` navigation (`src/features/NavPanel/routeKey.ts`);
+only `/agent/:aid/docs` keeps its own `agent-docs` panel. Topic history and
+"new topic" live in the conversation header's title menu
+(`src/routes/(main)/agent/features/Conversation/ChatHistory`); renaming and
+deleting the current topic stay in the header's `···` menu.
 
 ## Invariants pinned by tests
 

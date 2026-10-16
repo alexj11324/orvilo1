@@ -30,6 +30,21 @@ const topicReferenceGuidanceProvider: HeterogeneousPromptContextProvider = {
 
 const defaultContextProviders = [topicReferenceGuidanceProvider];
 
+const SKILL_CHIP = /<skill\s[^>]*?name="([^"]+)"[^>]*\/>/g;
+const CLI_SKILL_NAME = /^[\w.:-]+$/;
+// Agent-document skills are Orvilo's own; the CLI has no command for them.
+const AGENT_DOCUMENT_SKILL_PREFIX = 'agent-skills:';
+
+/**
+ * The composer writes a picked skill as `<skill name="…" label="…" />`. An
+ * external CLI reads that as plain text; it loads a skill from `/name`. Only
+ * the text sent to the CLI changes; the stored message keeps the chip.
+ */
+export const rewriteSkillChipsForCli = (prompt: string): string =>
+  prompt.replaceAll(SKILL_CHIP, (chip, name: string) =>
+    CLI_SKILL_NAME.test(name) && !name.startsWith(AGENT_DOCUMENT_SKILL_PREFIX) ? `/${name}` : chip,
+  );
+
 /**
  * Builds the semantic prompt shared by every heterogeneous-agent transport.
  * Providers add Orvilo context before the user message; per-agent wire
@@ -53,7 +68,7 @@ export class HeterogeneousPromptEngine {
       if (context) blocks.push({ text: context, type: 'text' });
     }
 
-    if (prompt) blocks.push({ text: prompt, type: 'text' });
+    if (prompt) blocks.push({ text: rewriteSkillChipsForCli(prompt), type: 'text' });
     blocks.push(
       ...imageList.map(({ id, url }): AgentImageBlock => ({
         source: { id, type: 'url', url },

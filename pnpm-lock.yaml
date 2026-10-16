@@ -165,6 +165,20 @@ settings:
 overrides:
   '@ant-design/icons': 6.3.2
   '@codemirror/language': 6.12.4
+  '@lexical/clipboard': 0.52.0
+  '@lexical/code-core': 0.52.0
+  '@lexical/dragon': 0.52.0
+  '@lexical/extension': 0.52.0
+  '@lexical/headless': 0.52.0
+  '@lexical/history': 0.52.0
+  '@lexical/html': 0.52.0
+  '@lexical/link': 0.52.0
+  '@lexical/list': 0.52.0
+  '@lexical/rich-text': 0.52.0
+  '@lexical/selection': 0.52.0
+  '@lexical/table': 0.52.0
+  '@lexical/utils': 0.52.0
+  '@lexical/yjs': 0.52.0
   '@react-pdf/image': 3.0.4
   '@types/react': 19.2.13
   '@vitest/coverage-v8': 5.0.0
@@ -172,7 +186,7 @@ overrides:
   baseline-browser-mapping: 2.10.31
   drizzle-orm: ^0.45.2
   fast-xml-parser: 5.4.2
-  lexical: 0.42.0
+  lexical: 0.52.0
   node-gyp: ^12.4.0
   pdfjs-dist: 5.4.530
   react: 19.2.7
@@ -185,6 +199,7 @@ overrides:
 
 patchedDependencies:
   '@copilotkit/channels-slack@0.11.0': 7b50d83e2423e23523d29ea96c820154bfbc77b206f1953bd13e3bbad5c6f769
+  '@lobehub/editor@4.29.2': 804912d8818c1bd59dbc445ad9e10f484be1fd3f8e2d7c8d60085a26066ebb0c
 
 importers:
 
@@ -278,8 +293,8 @@ importers:
         specifier: ^13.13.0
         version: 13.15.1(react@19.2.7)
       '@lexical/utils':
-        specifier: ^0.42.0
-        version: 0.42.0
+        specifier: 0.52.0
+        version: 0.52.0(typescript@6.0.3)
       '@lobehub/analytics':
         specifier: ^1.6.4
         version: 1.6.4(@types/react@19.2.13)(debug@4.4.3(supports-color@10.2.2))(preact-render-to-string@6.6.5)(react@19.2.7)(supports-color@10.2.2)
@@ -288,7 +303,7 @@ importers:
         version: 5.7.2(@lobehub/ui@5.56.0)(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
       '@lobehub/editor':
         specifier: ^4.27.3
-        version: 4.29.2(@lobehub/ui@5.56.0)(@types/mdast@4.0.4)(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(unified@11.0.5)
+        version: 4.29.2(patch_hash=804912d8818c1bd59dbc445ad9e10f484be1fd3f8e2d7c8d60085a26066ebb0c)(@lobehub/ui@5.56.0)(@types/mdast@4.0.4)(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(typescript@6.0.3)(unified@11.0.5)
       '@lobehub/icons':
         specifier: ^5.18.0
         version: 5.23.1(@lobehub/ui@5.56.0)(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
@@ -791,8 +806,8 @@ importers:
         specifier: ^3.38.20
         version: 3.39.2
       lexical:
-        specifier: 0.42.0
-        version: 0.42.0
+        specifier: 0.52.0
+        version: 0.52.0(typescript@6.0.3)
       lucide-react:
         specifier: ^1.31.0
         version: 1.57.0(@types/react@19.2.13)(react@19.2.7)
@@ -1457,7 +1472,7 @@ importers:
         version: 1.6.4(@types/react@19.2.13)(debug@4.4.3(supports-color@10.2.2))(preact-render-to-string@6.6.5)(react@19.2.7)(supports-color@10.2.2)
       '@lobehub/editor':
         specifier: ^4.27.3
-        version: 4.29.2(@lobehub/ui@5.56.0)(@types/mdast@4.0.4)(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(unified@11.0.5)
+        version: 4.29.2(patch_hash=804912d8818c1bd59dbc445ad9e10f484be1fd3f8e2d7c8d60085a26066ebb0c)(@lobehub/ui@5.56.0)(@types/mdast@4.0.4)(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(typescript@6.0.3)(unified@11.0.5)
       '@lobehub/market-sdk':
         specifier: 0.41.0
         version: 0.41.0(supports-color@10.2.2)(zod@4.5.4)
@@ -1765,8 +1780,8 @@ importers:
         specifier: ^3.38.20
         version: 3.39.2
       lexical:
-        specifier: 0.42.0
-        version: 0.42.0
+        specifier: 0.52.0
+        version: 0.52.0(typescript@6.0.3)
       mammoth:
         specifier: ^1.12.1
         version: 1.13.0
@@ -2568,7 +2583,7 @@ importers:
     dependencies:
       '@lobehub/editor':
         specifier: ^4
-        version: 4.29.2(@lobehub/ui@5.56.0)(@types/mdast@4.0.4)(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(unified@11.0.5)
+        version: 4.29.2(patch_hash=804912d8818c1bd59dbc445ad9e10f484be1fd3f8e2d7c8d60085a26066ebb0c)(@lobehub/ui@5.56.0)(@types/mdast@4.0.4)(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(typescript@6.0.3)(unified@11.0.5)
       '@orvilo/builtin-tool-user-interaction':
         specifier: workspace:*
         version: link:../builtin-tool-user-interaction
@@ -3239,7 +3254,7 @@ importers:
     dependencies:
       '@lobehub/editor':
         specifier: ^4.17.1
-        version: 4.29.2(@lobehub/ui@5.56.0)(@types/mdast@4.0.4)(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(unified@11.0.5)
+        version: 4.29.2(patch_hash=804912d8818c1bd59dbc445ad9e10f484be1fd3f8e2d7c8d60085a26066ebb0c)(@lobehub/ui@5.56.0)(@types/mdast@4.0.4)(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(typescript@6.0.3)(unified@11.0.5)
       '@orvilo/prompts':
         specifier: workspace:*
         version: link:../prompts
@@ -3248,8 +3263,8 @@ importers:
         version: 4.4.3(supports-color@10.2.2)
     devDependencies:
       lexical:
-        specifier: 0.42.0
-        version: 0.42.0
+        specifier: 0.52.0
+        version: 0.52.0(typescript@6.0.3)
 
   packages/electron-client-ipc:
     dependencies:
@@ -7485,52 +7500,134 @@ packages:
     engines: {node: '>= 8.0.0'}
     deprecated: '**IMPORTANT 10x+ PERFORMANCE UPGRADE**: Please upgrade to v12.0.1+ as we have fixed an issue with debuglog causing 10x slower router benchmark performance, see https://github.com/koajs/router/pull/173'
 
-  '@lexical/clipboard@0.42.0':
-    resolution: {integrity: sha512-D3K2ID0zew/+CKpwxnUTTh/N46yU4IK8bFWV9Htz+g1vFhgUF9UnDOQCmqpJbdP7z+9U1F8rk3fzf9OmP2Fm2w==}
-
-  '@lexical/code-core@0.42.0':
-    resolution: {integrity: sha512-vrZTUPWDJkHjAAvuV2+Qte4vYE80s7hIO7wxipiJmWojGx6lcmQjO+UqJ8AIrqI4Wjy8kXrK74kisApWmwxuCw==}
-
-  '@lexical/dragon@0.42.0':
-    resolution: {integrity: sha512-/TQzP+7PLJMqq9+MlgQWiJsxS9GOOa8Gp0svCD8vNIOciYmXfd28TR1Go+ZnBWwr7k/2W++3XUYVQU2KUcQsDQ==}
-
-  '@lexical/extension@0.42.0':
-    resolution: {integrity: sha512-rkZq/h8d1BenKRqU4t/zQUVfY/RinMX1Tz7t+Ee3ss0sk+kzP4W+URXNAxpn7r39Vn6wrFBqmCziah3dLAIqPw==}
-
-  '@lexical/headless@0.42.0':
-    resolution: {integrity: sha512-/bfeYhRn82IWfZZkn9XW37cfEOVjKZyjVrKfXNgI14gBvdMuX9aN5CSmr4yEusIJJ4svLzKV0STuMWEopn6Iag==}
-
-  '@lexical/history@0.42.0':
-    resolution: {integrity: sha512-YfCZ1ICUt6BCg2ncJWFMuS4yftnB7FEHFRf3qqTSTf6oGZ4IZfzabMNEy47xybUuf7FXBbdaCKJrc/zOM+wGxw==}
-
-  '@lexical/html@0.42.0':
-    resolution: {integrity: sha512-KgBUDLXehufCsXW3w0XsuoI2xecIhouOishnaNOH4zIA7dAtnNAfdPN/kWrWs0s83gz44OrnqccP+Bprw3UDEQ==}
-
-  '@lexical/link@0.42.0':
-    resolution: {integrity: sha512-cdeM/+f+kn7aGwW/3FIi6USjl1gBNdEEwg0/ZS+KlYcsy8gxx2e4cyVjsomBu/WU17Qxa0NC0paSr7qEJ/1Fig==}
-
-  '@lexical/list@0.42.0':
-    resolution: {integrity: sha512-TIezILnmIVuvfqEEbcMnsT4xQRlswI6ysHISqsvKL6l5EBhs1gqmNYjHa/Yrfzaq5y52TM1PAtxbFts+G7N6kg==}
-
-  '@lexical/offset@0.42.0':
-    resolution: {integrity: sha512-V+4af1KmTOnBZrR+kU3e6eD33W/g3QqMPPp3cpFwyXk/dKRc4K8HfyDsSDrjop1mPd9pl3lKSiEmX6uQG8K9XQ==}
-
-  '@lexical/rich-text@0.42.0':
-    resolution: {integrity: sha512-v4YgiM3oK3FZcRrfB+LetvLbQ5aee9MRO9tHf0EFweXg19XnSjHV0cfPAW7TyPxRELzB69+K0Q3AybRlTMjG4Q==}
-
-  '@lexical/selection@0.42.0':
-    resolution: {integrity: sha512-iWTjLA5BSEuUnvWe9Xwu9FSdZFl3Yi0NqalabXKI+7KgCIlIVXE74y4NvWPUSLkSCB/Z1RPKiHmZqZ1vyu/yGQ==}
-
-  '@lexical/table@0.42.0':
-    resolution: {integrity: sha512-GKiZyjQsHDXRckq5VBrOowyvds51WoVRECfDgcl8pqLMnKyEdCa58E7fkSJrr5LS80Scod+Cjn6SBRzOcdsrKg==}
-
-  '@lexical/utils@0.42.0':
-    resolution: {integrity: sha512-wGNdCW3QWEyVdFiSTLZfFPtiASPyYLcekIiYYZmoRVxVimT/jY+QPfnkO4JYgkO7Z70g/dsg9OhqyQSChQfvkQ==}
-
-  '@lexical/yjs@0.42.0':
-    resolution: {integrity: sha512-DplzWnYhfFceGPR+UyDFpZdB287wF/vNOHFuDsBF/nGDdTezvr0Gf60opzyBEF3oXym6p3xTmGygxvO97LZ+vw==}
+  '@lexical/a11y@0.52.0':
+    resolution: {integrity: sha512-FxcKnksrgeoPDxQgwHqTz81Tbv7vZnP2i09m7uU+zusNRt4g1dgbwSEq4Uee9yfLJ9qxM5P9YOGQTe0A6lAuAg==}
     peerDependencies:
-      yjs: '>=13.5.22'
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/clipboard@0.52.0':
+    resolution: {integrity: sha512-SwUpKUEzTfl3dZlCXkYZN4CAU6AENzzuO3AtWCgbdtxG1HBnyUtMd6MP1XFUtYh0fhMGXw+QObzp+3+h0g3WTw==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/code-core@0.52.0':
+    resolution: {integrity: sha512-4ofNvUXEal2tm6DLGHtjJUc7C1qQP2RHUO4v/RHSSdWEHLKM1kITgIUUvWkf6FHnQNrTvrL2U5vxACv2bo0HVQ==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/dragon@0.52.0':
+    resolution: {integrity: sha512-XiNrujvAoywb41GRaRYFhPc/T7jxkFMf/bR9uE8S2t4fMERUFF1xM7Mos6NQ+skdDrF3KfxnLFzLCZ+4Oc9VyA==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/extension@0.52.0':
+    resolution: {integrity: sha512-do7uvUxg6mJK0702XlD0Z8UMCtr1Yij4/WpJ7+GY5CL2jKVercMeeYBBEE7cWc/OXQJgzVx3ClNXC7XAHI6Fvw==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/headless@0.52.0':
+    resolution: {integrity: sha512-/AvKTFBHUzGWqRuWEMGOOizlGTBrnGuu0O3g+IKj+var657uazbheDknhSq3lQGxDosOeesTM52II0kV65mEEQ==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/history@0.52.0':
+    resolution: {integrity: sha512-UJWmTcru+4KWkk8YtBSQ4dNLYuOJVCyCMFGsaCp/jVJEobwdY//jCTj9idOfE4b3H39kAixe9yQG/FNNOj4ujg==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/html@0.52.0':
+    resolution: {integrity: sha512-lRyntwgHnISsUKZHh3T+g9qU1CwTOH5hlnc1UzWE7/RXrvtnSmJTTcJu+sfFdRCiBAlkiIhKuJBCCYu99LeI7Q==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/internal@0.52.0':
+    resolution: {integrity: sha512-Y7jKqeh4Irf/FwNmAqHIk3b05HpMsHv2RyWPQ8+M7FAdEbT9N2mksjc8ZUZ3tHqDMi7FNiLkjZN/DwbdekUb1g==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/link@0.52.0':
+    resolution: {integrity: sha512-9hl/SxbkK5P0q1Rn4rTnaLHetTnf4zb+zgJjQwHAkqmeS561gLq34RcoO2i1zhibe8b6xk8gyhIe2cOpPeAC7w==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/list@0.52.0':
+    resolution: {integrity: sha512-B3+CdxWsdj6jBKtXiY7v4OSkyXBwotWyiD+75Baw0lvmjvniV33mvuMDgnPEQgEpFcGpBRmiu8M8kQdclQzXmQ==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/rich-text@0.52.0':
+    resolution: {integrity: sha512-P3Y4SM6JSCBG6uFwLpPVEZiShhfC/GCJA//lQU1ZljxPDnCb4ueVCfWSBBdw0nSejYg8KvDQsijc4Fczyjqqtw==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/selection@0.52.0':
+    resolution: {integrity: sha512-O1hgwqUvoF/R2DxXIOJJvCqXxNM7kOWq1TBxqnbjT4TXNlDokEdpkO5EpetAWYWZj5UE2BUphfGUZAPQjvcUKQ==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/table@0.52.0':
+    resolution: {integrity: sha512-zuVGmY37jUqGMT/7pFMPiLOKUD755SJR+yHZ3Jz7P4pdBI/sXHvbM8O7QDXMpDRFZwLQi1iBvgOj0Yv9FrTxQw==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/utils@0.52.0':
+    resolution: {integrity: sha512-3Azoh0EQckRcMd6CGOAuKue/UHDvkorrheXZFu9KpxhCBNQy+ic55jl0WQZFTOv2iO3NWReAMSuOAK0pWR2JPg==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  '@lexical/yjs@0.52.0':
+    resolution: {integrity: sha512-6Qd9/AkMDxDNalsXDs1X7ddLTw2OsqUy42RRvpIWlv0ya1MO4CNedl4NvgwMtYzxtLzOkq0prtspCPvkirYkmA==}
+    peerDependencies:
+      typescript: 6.0.3
+      yjs: '>=13.5.37'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   '@lezer/common@1.5.3':
     resolution: {integrity: sha512-H0iErY4e43LpXbYDyBci5W4v/RwTgGV3YzYOlJPiGZ8RY8w51kVE+xLn1tg3Z6UmSfyETvtsUK3r7YsgDQEI7Q==}
@@ -16675,8 +16772,13 @@ packages:
     resolution: {integrity: sha512-vzaalVBmFLnMaedq0QAsBAaXsWahzRpvnIBdBjj7y+7EKTS6lnziU2y/PsU2c6rV5qYj2B5IDw0uNJ9peXD0vw==}
     deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
-  lexical@0.42.0:
-    resolution: {integrity: sha512-GY9Lg3YEIU7nSFaiUlLspZ1fm4NfIcfABaxy9nT+fRVDkX7iV005T5Swil83gXUmxFUNKGal3j+hUxHOUDr+Aw==}
+  lexical@0.52.0:
+    resolution: {integrity: sha512-mePejqwCDaW0GR89IoofJTTlk/EiwwlGhbs1D8qOx/Iw6ieG5D3nh7PSPLv0Csia0UC58HpuV91DilJjqeAWSw==}
+    peerDependencies:
+      typescript: 6.0.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   lib0@0.2.119:
     resolution: {integrity: sha512-vh+TiejVy8Xm+hCdnRfn9BthGNvNUZdEXltNjVZL3TzRIKP3s1lnQh8pWd/Q0wCgY0FPAGVVjFF4ZiHUV3LFgA==}
@@ -26552,96 +26654,154 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@lexical/clipboard@0.42.0':
+  '@lexical/a11y@0.52.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/html': 0.42.0
-      '@lexical/list': 0.42.0
-      '@lexical/selection': 0.42.0
-      '@lexical/utils': 0.42.0
-      lexical: 0.42.0
+      '@lexical/extension': 0.52.0(typescript@6.0.3)
+      '@lexical/utils': 0.52.0(typescript@6.0.3)
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
 
-  '@lexical/code-core@0.42.0':
+  '@lexical/clipboard@0.52.0(typescript@6.0.3)':
     dependencies:
-      lexical: 0.42.0
+      '@lexical/extension': 0.52.0(typescript@6.0.3)
+      '@lexical/html': 0.52.0(typescript@6.0.3)
+      '@lexical/internal': 0.52.0(typescript@6.0.3)
+      '@lexical/list': 0.52.0(typescript@6.0.3)
+      '@lexical/selection': 0.52.0(typescript@6.0.3)
+      '@lexical/utils': 0.52.0(typescript@6.0.3)
+      '@types/trusted-types': 2.0.7
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
 
-  '@lexical/dragon@0.42.0':
+  '@lexical/code-core@0.52.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': 0.42.0
-      lexical: 0.42.0
+      '@lexical/extension': 0.52.0(typescript@6.0.3)
+      '@lexical/html': 0.52.0(typescript@6.0.3)
+      '@lexical/internal': 0.52.0(typescript@6.0.3)
+      '@lexical/utils': 0.52.0(typescript@6.0.3)
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
 
-  '@lexical/extension@0.42.0':
+  '@lexical/dragon@0.52.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/utils': 0.42.0
+      '@lexical/extension': 0.52.0(typescript@6.0.3)
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
+
+  '@lexical/extension@0.52.0(typescript@6.0.3)':
+    dependencies:
+      '@lexical/internal': 0.52.0(typescript@6.0.3)
+      '@lexical/utils': 0.52.0(typescript@6.0.3)
       '@preact/signals-core': 1.14.4
-      lexical: 0.42.0
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
 
-  '@lexical/headless@0.42.0':
+  '@lexical/headless@0.52.0(typescript@6.0.3)':
     dependencies:
+      '@lexical/internal': 0.52.0(typescript@6.0.3)
       happy-dom: 20.11.15
-      lexical: 0.42.0
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@lexical/history@0.42.0':
+  '@lexical/history@0.52.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': 0.42.0
-      '@lexical/utils': 0.42.0
-      lexical: 0.42.0
+      '@lexical/extension': 0.52.0(typescript@6.0.3)
+      '@lexical/utils': 0.52.0(typescript@6.0.3)
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
 
-  '@lexical/html@0.42.0':
+  '@lexical/html@0.52.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/selection': 0.42.0
-      '@lexical/utils': 0.42.0
-      lexical: 0.42.0
+      '@lexical/extension': 0.52.0(typescript@6.0.3)
+      '@lexical/internal': 0.52.0(typescript@6.0.3)
+      '@lexical/selection': 0.52.0(typescript@6.0.3)
+      '@lexical/utils': 0.52.0(typescript@6.0.3)
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
 
-  '@lexical/link@0.42.0':
-    dependencies:
-      '@lexical/extension': 0.42.0
-      '@lexical/utils': 0.42.0
-      lexical: 0.42.0
+  '@lexical/internal@0.52.0(typescript@6.0.3)':
+    optionalDependencies:
+      typescript: 6.0.3
 
-  '@lexical/list@0.42.0':
+  '@lexical/link@0.52.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/extension': 0.42.0
-      '@lexical/selection': 0.42.0
-      '@lexical/utils': 0.42.0
-      lexical: 0.42.0
+      '@lexical/a11y': 0.52.0(typescript@6.0.3)
+      '@lexical/extension': 0.52.0(typescript@6.0.3)
+      '@lexical/html': 0.52.0(typescript@6.0.3)
+      '@lexical/internal': 0.52.0(typescript@6.0.3)
+      '@lexical/utils': 0.52.0(typescript@6.0.3)
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
 
-  '@lexical/offset@0.42.0':
+  '@lexical/list@0.52.0(typescript@6.0.3)':
     dependencies:
-      lexical: 0.42.0
+      '@lexical/extension': 0.52.0(typescript@6.0.3)
+      '@lexical/html': 0.52.0(typescript@6.0.3)
+      '@lexical/internal': 0.52.0(typescript@6.0.3)
+      '@lexical/utils': 0.52.0(typescript@6.0.3)
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
 
-  '@lexical/rich-text@0.42.0':
+  '@lexical/rich-text@0.52.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/clipboard': 0.42.0
-      '@lexical/dragon': 0.42.0
-      '@lexical/selection': 0.42.0
-      '@lexical/utils': 0.42.0
-      lexical: 0.42.0
+      '@lexical/a11y': 0.52.0(typescript@6.0.3)
+      '@lexical/clipboard': 0.52.0(typescript@6.0.3)
+      '@lexical/dragon': 0.52.0(typescript@6.0.3)
+      '@lexical/extension': 0.52.0(typescript@6.0.3)
+      '@lexical/html': 0.52.0(typescript@6.0.3)
+      '@lexical/selection': 0.52.0(typescript@6.0.3)
+      '@lexical/utils': 0.52.0(typescript@6.0.3)
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
 
-  '@lexical/selection@0.42.0':
+  '@lexical/selection@0.52.0(typescript@6.0.3)':
     dependencies:
-      lexical: 0.42.0
+      '@lexical/internal': 0.52.0(typescript@6.0.3)
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
 
-  '@lexical/table@0.42.0':
+  '@lexical/table@0.52.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/clipboard': 0.42.0
-      '@lexical/extension': 0.42.0
-      '@lexical/utils': 0.42.0
-      lexical: 0.42.0
+      '@lexical/clipboard': 0.52.0(typescript@6.0.3)
+      '@lexical/extension': 0.52.0(typescript@6.0.3)
+      '@lexical/html': 0.52.0(typescript@6.0.3)
+      '@lexical/internal': 0.52.0(typescript@6.0.3)
+      '@lexical/utils': 0.52.0(typescript@6.0.3)
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
 
-  '@lexical/utils@0.42.0':
+  '@lexical/utils@0.52.0(typescript@6.0.3)':
     dependencies:
-      '@lexical/selection': 0.42.0
-      lexical: 0.42.0
+      '@lexical/internal': 0.52.0(typescript@6.0.3)
+      '@lexical/selection': 0.52.0(typescript@6.0.3)
+      lexical: 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
 
-  '@lexical/yjs@0.42.0(yjs@13.6.33)':
+  '@lexical/yjs@0.52.0(typescript@6.0.3)(yjs@13.6.33)':
     dependencies:
-      '@lexical/offset': 0.42.0
-      '@lexical/selection': 0.42.0
-      lexical: 0.42.0
+      '@lexical/internal': 0.52.0(typescript@6.0.3)
+      '@lexical/selection': 0.52.0(typescript@6.0.3)
+      lexical: 0.52.0(typescript@6.0.3)
       yjs: 13.6.33
+    optionalDependencies:
+      typescript: 6.0.3
 
   '@lezer/common@1.5.3': {}
 
@@ -26729,22 +26889,22 @@ snapshots:
       '@commitlint/cli': 19.8.1(@types/node@24.19.2)(typescript@6.0.3)
       commitlint-config-gitmoji: 2.3.1
 
-  '@lobehub/editor@4.29.2(@lobehub/ui@5.56.0)(@types/mdast@4.0.4)(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(unified@11.0.5)':
+  '@lobehub/editor@4.29.2(patch_hash=804912d8818c1bd59dbc445ad9e10f484be1fd3f8e2d7c8d60085a26066ebb0c)(@lobehub/ui@5.56.0)(@types/mdast@4.0.4)(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(typescript@6.0.3)(unified@11.0.5)':
     dependencies:
       '@floating-ui/dom': 1.8.0
       '@floating-ui/react': 0.27.20(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@lexical/clipboard': 0.42.0
-      '@lexical/code-core': 0.42.0
-      '@lexical/dragon': 0.42.0
-      '@lexical/headless': 0.42.0
-      '@lexical/history': 0.42.0
-      '@lexical/link': 0.42.0
-      '@lexical/list': 0.42.0
-      '@lexical/rich-text': 0.42.0
-      '@lexical/selection': 0.42.0
-      '@lexical/table': 0.42.0
-      '@lexical/utils': 0.42.0
-      '@lexical/yjs': 0.42.0(yjs@13.6.33)
+      '@lexical/clipboard': 0.52.0(typescript@6.0.3)
+      '@lexical/code-core': 0.52.0(typescript@6.0.3)
+      '@lexical/dragon': 0.52.0(typescript@6.0.3)
+      '@lexical/headless': 0.52.0(typescript@6.0.3)
+      '@lexical/history': 0.52.0(typescript@6.0.3)
+      '@lexical/link': 0.52.0(typescript@6.0.3)
+      '@lexical/list': 0.52.0(typescript@6.0.3)
+      '@lexical/rich-text': 0.52.0(typescript@6.0.3)
+      '@lexical/selection': 0.52.0(typescript@6.0.3)
+      '@lexical/table': 0.52.0(typescript@6.0.3)
+      '@lexical/utils': 0.52.0(typescript@6.0.3)
+      '@lexical/yjs': 0.52.0(typescript@6.0.3)(yjs@13.6.33)
       '@lobehub/ui': 5.56.0(@date-fns/tz@1.5.0)(@lobehub/fluent-emoji@4.1.1(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2))(@lobehub/icons@5.23.1)(@shikijs/themes@4.5.0)(@types/mdast@4.0.4)(@types/react-dom@19.2.3(@types/react@19.2.13))(@types/react@19.2.13)(antd@6.3.5(date-fns@4.4.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(date-fns@4.4.0)(micromark-util-types@2.0.3)(micromark@4.0.3(supports-color@10.2.2))(motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)(vue@3.5.44(typescript@6.0.3))
       '@shikijs/core': 4.5.0
       '@shikijs/engine-javascript': 4.5.0
@@ -26757,7 +26917,7 @@ snapshots:
       eventemitter3: 5.0.4
       fuse.js: 7.5.0
       katex: 0.18.10
-      lexical: 0.42.0
+      lexical: 0.52.0(typescript@6.0.3)
       lucide-react: 1.57.0(@types/react@19.2.13)(react@19.2.7)
       mermaid: 11.17.2
       motion: 12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -26783,6 +26943,7 @@ snapshots:
       - micromark
       - micromark-util-types
       - supports-color
+      - typescript
       - unified
       - utf-8-validate
 
@@ -37429,7 +37590,11 @@ snapshots:
 
   lex@1.7.9: {}
 
-  lexical@0.42.0: {}
+  lexical@0.52.0(typescript@6.0.3):
+    dependencies:
+      '@lexical/internal': 0.52.0(typescript@6.0.3)
+    optionalDependencies:
+      typescript: 6.0.3
 
   lib0@0.2.119:
     dependencies:

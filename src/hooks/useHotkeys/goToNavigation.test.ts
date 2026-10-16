@@ -1,3 +1,4 @@
+import { INBOX_SESSION_ID } from '@orvilo/const';
 import { HotkeyEnum, HOTKEYS_REGISTRATION } from '@orvilo/const/hotkeys';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -5,7 +6,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import hotkeyMeta from '@/locales/default/hotkey';
 import type { HotkeyId } from '@/types/hotkey';
 
-import { GO_TO_DESTINATIONS, useCreateTaskHotkey, useRegisterGoToHotkeys } from './globalScope';
+import {
+  GO_TO_DESTINATIONS,
+  useCreateTaskHotkey,
+  useGoToAgentHotkey,
+  useRegisterGoToHotkeys,
+} from './globalScope';
 
 type RegisteredHotkey = {
   callback: () => void;
@@ -13,8 +19,11 @@ type RegisteredHotkey = {
 };
 
 const mocks = vi.hoisted(() => ({
+  builtinOffered: false,
   createTaskModal: vi.fn(),
+  fallbackAgentId: 'agent-1' as string | undefined,
   navigate: vi.fn(),
+  navigateToAgent: vi.fn(),
   registered: new Map<HotkeyId, RegisteredHotkey>(),
   useHotkeyById: vi.fn(),
 }));
@@ -31,8 +40,16 @@ vi.mock('@/features/AgentTasks/CreateTaskModal', () => ({
   createTaskModal: mocks.createTaskModal,
 }));
 
+vi.mock('@/features/DefaultAgent/useFallbackAgentId', () => ({
+  useFallbackAgentId: () => mocks.fallbackAgentId,
+}));
+
+vi.mock('@/features/HeterogeneousAgent/builtinHarness', () => ({
+  useBuiltinHarnessOffered: () => mocks.builtinOffered,
+}));
+
 vi.mock('@/hooks/useNavigateToAgent', () => ({
-  useNavigateToAgent: () => vi.fn(),
+  useNavigateToAgent: () => mocks.navigateToAgent,
 }));
 
 vi.mock('@/hooks/usePinnedAgentState', () => ({
@@ -55,6 +72,7 @@ describe('GO_TO_DESTINATIONS', () => {
     expect(GO_TO_DESTINATIONS.map((d) => d.id)).toEqual([
       HotkeyEnum.GoToInbox,
       HotkeyEnum.GoToMyIssues,
+      HotkeyEnum.GoToReviews,
       HotkeyEnum.GoToDrafts,
       HotkeyEnum.GoToProjects,
       HotkeyEnum.GoToViews,
@@ -107,6 +125,51 @@ describe('useRegisterGoToHotkeys', () => {
 
       expect(mocks.navigate).toHaveBeenLastCalledWith(path);
     }
+  });
+});
+
+describe('useGoToAgentHotkey', () => {
+  beforeEach(() => {
+    mocks.registered.clear();
+    mocks.navigateToAgent.mockReset();
+    mocks.builtinOffered = false;
+    mocks.fallbackAgentId = 'agent-1';
+  });
+
+  it('registers g>j as a page-level chord and opens the default agent surface', () => {
+    renderHook(() => useGoToAgentHotkey());
+
+    const entry = mocks.registered.get(HotkeyEnum.GoToAgent);
+    expect(entry).toBeDefined();
+    expect(entry?.options).toMatchObject({ enableOnFormTags: false });
+
+    act(() => {
+      entry?.callback();
+    });
+
+    expect(mocks.navigateToAgent).toHaveBeenCalledWith('agent-1');
+  });
+
+  it('opens the inbox agent while the built-in harness is offered', () => {
+    mocks.builtinOffered = true;
+    renderHook(() => useGoToAgentHotkey());
+
+    act(() => {
+      mocks.registered.get(HotkeyEnum.GoToAgent)?.callback();
+    });
+
+    expect(mocks.navigateToAgent).toHaveBeenCalledWith(INBOX_SESSION_ID);
+  });
+
+  it('does nothing when no agent can be resolved', () => {
+    mocks.fallbackAgentId = undefined;
+    renderHook(() => useGoToAgentHotkey());
+
+    act(() => {
+      mocks.registered.get(HotkeyEnum.GoToAgent)?.callback();
+    });
+
+    expect(mocks.navigateToAgent).not.toHaveBeenCalled();
   });
 });
 

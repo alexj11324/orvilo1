@@ -1,0 +1,121 @@
+{
+  "root": {
+    "children": [
+      {
+        "children": [
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": "Hi ",
+            "type": "text",
+            "version": 1,
+            "$": {
+              "properties": {
+                "nodeId": "882nnyuxme"
+              }
+            },
+            "id": "882nnyuxme"
+          },
+          {
+            "type": "mention",
+            "version": 1,
+            "$": {
+              "properties": {
+                "nodeId": "x2b0bw18z1"
+              }
+            },
+            "label": "Ada",
+            "metadata": {
+              "id": "agt_1",
+              "type": "agent"
+            },
+            "id": "x2b0bw18z1"
+          },
+          {
+            "detail": 0,
+            "format": 0,
+            "mode": "normal",
+            "style": "",
+            "text": " see ",
+            "type": "text",
+            "version": 1,
+            "$": {
+              "properties": {
+                "nodeId": "xns4pixjkc"
+              }
+            },
+            "id": "xns4pixjkc"
+          },
+          {
+            "type": "image",
+            "version": 1,
+            "$": {
+              "properties": {
+                "nodeId": "794cixnjcl"
+              }
+            },
+            "altText": "chart",
+            "height": 0,
+            "maxWidth": 500,
+            "src": "https://cdn.example.com/c.png",
+            "width": 320,
+            "status": "uploaded",
+            "id": "794cixnjcl"
+          }
+        ],
+        "direction": "ltr",
+        "format": "",
+        "indent": 0,
+        "textFormat": 0,
+        "textStyle": "",
+        "type": "paragraph",
+        "version": 1,
+        "$": {
+          "properties": {
+            "nodeId": "kfurq7eyj0"
+          }
+        },
+        "id": "kfurq7eyj0"
+      },
+      {
+        "children": [
+          {
+            "type": "file",
+            "version": 1,
+            "$": {
+              "properties": {
+                "nodeId": "un2rwdlpqq"
+              }
+            },
+            "fileUrl": "https://cdn.example.com/r.pdf",
+            "message": "",
+            "name": "report.pdf",
+            "size": 2048,
+            "status": "uploaded",
+            "id": "un2rwdlpqq"
+          }
+        ],
+        "direction": "ltr",
+        "format": "",
+        "indent": 0,
+        "textFormat": 0,
+        "textStyle": "",
+        "type": "paragraph",
+        "version": 1,
+        "$": {
+          "properties": {
+            "nodeId": "o7jkoql6mz"
+          }
+        },
+        "id": "o7jkoql6mz"
+      }
+    ],
+    "direction": "ltr",
+    "format": "",
+    "indent": 0,
+    "type": "root",
+    "version": 1
+  }
+}

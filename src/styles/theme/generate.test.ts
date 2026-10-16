@@ -3,8 +3,9 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { compositeContrast, contrast } from './color';
+import { compositeContrast, compositeHex, contrast } from './color';
 import {
+  CONTROL_FILL_ALPHA,
   EDITOR_TOKEN_ROLES,
   editorScopeCss,
   generateEngineToken,
@@ -37,6 +38,12 @@ const combinations = MODES.flatMap((mode) =>
     })),
   ),
 );
+
+/** A hex role at `opacity`, as a Tailwind `/NN` modifier paints it. */
+const alpha = (hex: string, opacity: number) => {
+  const channel = (index: number) => Number.parseInt(hex.slice(1 + index * 2, 3 + index * 2), 16);
+  return `rgba(${channel(0)}, ${channel(1)}, ${channel(2)}, ${opacity})`;
+};
 
 /** Every pair below a floor, so a failure names all offenders at once. */
 const below = (pairs: Array<[string, number]>, floor: number) =>
@@ -103,9 +110,7 @@ describe('generateTheme contrast (every accent × base × mode)', () => {
 
   it.each(combinations)('$label: control edges and the focus ring reach 3:1', ({ theme }) => {
     const { roles } = theme;
-    const channel = (index: number) =>
-      Number.parseInt(roles.ring.slice(1 + index * 2, 3 + index * 2), 16);
-    const halfRing = `rgba(${channel(0)}, ${channel(1)}, ${channel(2)}, 0.5)`;
+    const halfRing = alpha(roles.ring, 0.5);
     const pairs: Array<[string, number]> = [];
     for (const surface of ['card', 'background', 'popover', 'surface-secondary']) {
       pairs.push(
@@ -114,6 +119,15 @@ describe('generateTheme contrast (every accent × base × mode)', () => {
         // Primitives paint `ring-ring/50` around the focused control.
         [`ring/50 on ${surface}`, compositeContrast(halfRing, roles[surface])],
       );
+      // Dark primitives fill the control with its own edge (`dark:bg-input/30`).
+      if (theme.mode === 'dark')
+        pairs.push([
+          `input on input/30 over ${surface}`,
+          contrast(
+            roles.input,
+            compositeHex(alpha(roles.input, CONTROL_FILL_ALPHA), roles[surface]),
+          ),
+        ]);
     }
     expect(below(pairs, MIN_NON_TEXT_CONTRAST)).toEqual([]);
   });

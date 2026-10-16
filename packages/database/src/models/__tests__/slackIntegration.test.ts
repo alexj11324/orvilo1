@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import {
   agents,
+  projects,
+  repositories,
   slackChannelBindings,
   slackUserConnections,
   users,
@@ -40,6 +42,8 @@ const bind = async (
   );
 
 beforeEach(async () => {
+  await db.delete(projects);
+  await db.delete(repositories);
   await db.delete(users);
   await db.insert(users).values([{ id: 'slack-user' }, { id: 'slack-other-user' }]);
   await db.insert(workspaces).values([
@@ -62,10 +66,46 @@ beforeEach(async () => {
   ]);
 });
 afterEach(async () => {
+  await db.delete(projects);
+  await db.delete(repositories);
   await db.delete(users);
 });
 
 describe('SlackIntegrationModel', () => {
+  it('persists channel defaults and permits clearing them without changing identity', async () => {
+    await db.insert(projects).values({
+      id: 'slack-project',
+      name: 'Project',
+      identifier: 'SLK',
+      workspaceId: 'slack-workspace',
+      userId: 'slack-user',
+    });
+    await db.insert(repositories).values({
+      id: 'slack-repo',
+      providerHost: 'github.com',
+      remoteRepositoryId: '1',
+      coordinate: { owner: 'owner', name: 'repo' },
+      workspaceId: 'slack-workspace',
+    });
+    await install(model, input);
+    const identity = { agentId: 'slack-agent', slackChannelId: 'C1', slackChannelName: 'general' };
+    await bind(model, { ...identity, projectId: 'slack-project', repositoryId: 'slack-repo' });
+    expect(await model.bindingByChannel('C1')).toMatchObject({
+      ...identity,
+      projectId: 'slack-project',
+      repositoryId: 'slack-repo',
+    });
+    expect((await model.bindings())[0]).toMatchObject({
+      projectId: 'slack-project',
+      repositoryId: 'slack-repo',
+    });
+    await bind(model, { ...identity, projectId: null, repositoryId: null });
+    expect(await model.bindingByChannel('C1')).toMatchObject({
+      ...identity,
+      projectId: null,
+      repositoryId: null,
+    });
+  });
   it('rejects an archived agent before writing its channel binding', async () => {
     await install(model, input);
     await db.update(agents).set({ deletedAt: new Date() }).where(eq(agents.id, 'slack-agent'));

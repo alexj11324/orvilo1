@@ -69,7 +69,7 @@ export interface TaskUpdatePayload {
   /** Owning project; `null` unassigns. */
   projectId?: string | null;
   /** Review-phase owner; auto-stamped on the paused transition when unset. */
-  reviewerUserId?: string | null;
+  reviewerAgentId?: string | null;
   /**
    * Status transition — the board commits one through `update` so a drop
    * writes status and position atomically. The lifecycle slice's own
@@ -318,6 +318,7 @@ export class TaskDetailSliceActionImpl {
     name?: string;
     parentTaskId?: string;
     priority?: number;
+    reviewerAgentId?: string;
     projectId?: string;
     schedulePattern?: string;
     scheduleTimezone?: string;
@@ -502,7 +503,18 @@ export class TaskDetailSliceActionImpl {
     data: TaskUpdatePayload,
     options?: TaskUpdateOptions,
   ): Promise<void> => {
-    const { assigneeAgentId, assigneeUserId, reviewerUserId, ...rest } = data;
+    const { assigneeAgentId, assigneeUserId, reviewerAgentId, ...rest } = data;
+    const cached = this.#get().taskDetailMap[id];
+    const reviewCategory =
+      reviewerAgentId === null && !cached
+        ? (await taskService.find(id)).data.workflowCategory
+        : cached?.workflowCategory;
+    if (reviewerAgentId === null && reviewCategory === 'in_review') {
+      toast.error(t('taskDetail.reviewerRequired', { ns: 'chat' }));
+      throw new Error(
+        'TASK_REVIEWER_REQUIRED: Select a reviewer Agent before moving the Issue to In Review',
+      );
+    }
     const optimisticRest = { ...rest };
     // Drop anchors are request geometry, not task fields — they must not land
     // on the optimistic detail object.
@@ -535,11 +547,11 @@ export class TaskDetailSliceActionImpl {
           assigneeUserId,
           current: {
             agentId: current.agentId,
-            reviewerUserId: current.reviewerUserId,
+            reviewerAgentId: current.reviewerAgentId,
             userId: current.userId,
           },
           now: new Date().toISOString(),
-          reviewerUserId,
+          reviewerAgentId,
           reviewerTarget: options?.optimisticReviewer,
           target: options?.optimisticAssignee,
         })
@@ -584,7 +596,7 @@ export class TaskDetailSliceActionImpl {
       ...optimisticRest,
       ...(assigneeAgentId !== undefined ? { agentId: assigneeAgentId } : {}),
       ...(assigneeUserId !== undefined ? { userId: assigneeUserId } : {}),
-      ...(reviewerUserId !== undefined ? { reviewerUserId } : {}),
+      ...(reviewerAgentId !== undefined ? { reviewerAgentId } : {}),
       ...(optimisticActivities.length > 0 || hasPropertyRow ? { activities } : {}),
     };
     const payload = options?.actorAgentId
@@ -615,7 +627,9 @@ export class TaskDetailSliceActionImpl {
     // keep `domainRevision`, so re-read the row the write is based on. Runs
     // after the optimistic dispatch so the assignee chip stays synchronous.
     if (
-      (data.assigneeAgentId !== undefined || data.assigneeUserId !== undefined) &&
+      (data.assigneeAgentId !== undefined ||
+        data.assigneeUserId !== undefined ||
+        data.reviewerAgentId !== undefined) &&
       payload.expectedDomainRevision === undefined
     ) {
       const revision = await Promise.resolve(taskService.find(id))
@@ -701,7 +715,7 @@ export class TaskDetailSliceActionImpl {
       // A workflow move appends the feed row that says where the Issue went
       // (and stamps or clears `completedAt`) — only the server knows both.
       data.workflowCategory !== undefined ||
-      reviewerUserId !== undefined
+      reviewerAgentId !== undefined
     ) {
       await Promise.all([this.#get().refreshTaskList(), refreshPatchedTargets()]).catch(() => {});
     } else if (rowOnlyChange) {
@@ -854,6 +868,13 @@ export class TaskDetailSliceActionImpl {
       throw error;
     }
   };
+
+  useFetchIssueInstructionTarget = (taskId?: string) =>
+    useClientDataSWR(
+      taskId ? taskKeys.instructionTarget(taskId) : null,
+      () => taskService.getInstructionTarget(taskId!),
+      { refreshInterval: taskId ? 15_000 : 0 },
+    );
 
   useFetchTaskDetail = (taskId?: string) => {
     // Drive polling from a reactive boolean. SWR's function-form refreshInterval

@@ -44,12 +44,11 @@ import { isRunEndedBadly, runEndingLabel } from './runEnding';
 import RunFailureReason from './RunFailureReason';
 import RunIntegrationTag from './RunIntegrationTag';
 import RunReplyEditor from './RunReplyEditor';
-import RunVerifyDetail from './RunVerifyDetail';
-import RunVerifyTag from './RunVerifyTag';
 import { shouldShowRunFollowUp } from './shouldShowRunFollowUp';
 import { useTaskDetailTaskId } from './TaskDetailScope';
 import TopicStatusIcon from './TopicStatusIcon';
 import { useAnchorHighlight } from './useAnchorHighlight';
+import { useIssueInstructionTarget } from './useIssueInstructionTarget';
 
 const formatDuration = (ms: number): string => {
   const seconds = Math.floor(ms / 1000);
@@ -109,7 +108,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
   const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
   const cancelTopic = useTaskStore((s) => s.cancelTopic);
   const deleteTopic = useTaskStore((s) => s.deleteTopic);
-  const addComment = useTaskStore((s) => s.addComment);
+  const runTask = useTaskStore((s) => s.runTask);
   const activeTaskId = useTaskDetailTaskId();
   const { allowed: canEditTask } = usePermission('create_content');
   const [commenting, setCommenting] = useState(false);
@@ -119,23 +118,24 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
   // owns the run so it appears where the run lives. Direct runs fall back to the
   // active task.
   const runTaskId = activity.sourceTaskId ?? activeTaskId;
-  const canFollowUp = canEditTask && !!runTaskId;
+  const { target: instructionTarget } = useIssueInstructionTarget(runTaskId);
+  const canInstruct =
+    !!activity.id &&
+    instructionTarget?.topicId === activity.id &&
+    instructionTarget?.agentId ===
+      (activity.author?.type === 'agent' ? activity.author.id : activity.agentId);
+  const canFollowUp = canEditTask && !!runTaskId && canInstruct;
   const showRunFollowUp = shouldShowRunFollowUp(canFollowUp, isRunning);
   // A failed, timed-out or stopped run always has something to read: the
   // recorded reason, or a sentence saying how it ended.
   const endedBadly = isRunEndedBadly(activity.status);
-  const hasBody = Boolean(
-    activity.summary || activity.content || showRunFollowUp || activity.verify?.total || endedBadly,
-  );
+  const hasBody = Boolean(activity.summary || activity.content || showRunFollowUp || endedBadly);
   const endingLabel = endedBadly
     ? runEndingLabel(
         String(t(`taskDetail.runEnded.label.${activity.status}` as never)),
         activity.error,
       )
     : undefined;
-  // A verdict with no results behind it has nothing to move down to, so it
-  // stays in the header no matter what the body is doing.
-  const verifyDetailOpen = bodyExpanded && Boolean(activity.verify?.total);
 
   const finalDuration =
     !isRunning && activity.time && activity.completedAt
@@ -388,9 +388,6 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
               · {durationText}
             </div>
           )}
-          {/* The verdict rides the header only while the run is folded; once
-              open it moves down to sit on the checklist that justifies it. */}
-          {!verifyDetailOpen && <RunVerifyTag verify={activity.verify} />}
           {/* Where the run's branch stands on its way back onto the base —
               nothing renders for runs that never provisioned a worktree. */}
           <RunIntegrationTag
@@ -461,23 +458,23 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
             </div>
           )}
           {activity.content && <RunContent content={activity.content} unclamped={primary} />}
-          {/* The verdict's evidence, next to the delivery it judged — reading
-              one should never require leaving for the acceptance page. */}
-          {activity.verify && (
-            <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
-              <RunVerifyDetail
-                extra={<RunVerifyTag verify={activity.verify} />}
-                operationId={activity.operationId}
-              />
-            </div>
-          )}
-          {showRunFollowUp &&
+          {(showRunFollowUp || commenting) &&
             (commenting ? (
               <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
                 <RunReplyEditor
                   onCancel={() => setCommenting(false)}
                   onSubmit={async (text) => {
-                    await addComment(runTaskId!, text, { topicId: activity.id });
+                    if (!canInstruct || !instructionTarget)
+                      throw new Error('The Issue Agent changed');
+                    await runTask(
+                      runTaskId!,
+                      {
+                        continueTopicId: activity.id,
+                        instructionAgentId: instructionTarget.agentId,
+                        prompt: text,
+                      },
+                      { throwOnError: true },
+                    );
                     setCommenting(false);
                   }}
                 />

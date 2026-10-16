@@ -2,6 +2,10 @@
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import {
+  seedConfirmedIssuePlan,
+  seedReviewedIssueDelivery,
+} from '../../../tests/fixtures/issueDelivery';
 import { getTestDB } from '../../core/getTestDB';
 import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import {
@@ -10,6 +14,8 @@ import {
   agents,
   briefs,
   documents,
+  mcpEventTriggers,
+  notifications,
   tasks,
   teamMembers,
   teams,
@@ -94,6 +100,7 @@ const derivedStatus = async (id: string) => {
 
 beforeEach(async () => {
   await serverDB.delete(workspaces);
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: userId2 }]);
   // Project creation provisions a coordinator through Prime inheritance.
@@ -102,6 +109,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await serverDB.delete(workspaces);
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
 });
 
@@ -468,80 +476,6 @@ describe('TaskModel', () => {
       const result = await model2.update(task.id, { name: 'Hacked' });
       expect(result).toBeNull();
     });
-
-    it('backfills the reviewer from the member assignee on the paused transition', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-
-      const updated = await model.update(task.id, { status: 'paused' });
-
-      expect(await derivedStatus(task.id)).toBe('paused');
-      expect(updated!.reviewerUserId).toBe(userId2);
-    });
-
-    it('falls back to the creator when no member assignee exists', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ instruction: 'Do X' });
-
-      const updated = await model.update(task.id, { status: 'paused' });
-
-      expect(updated!.reviewerUserId).toBe(userId);
-    });
-
-    it('keeps an explicitly chosen reviewer over the backfill', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-
-      const updated = await model.update(task.id, {
-        reviewerUserId: userId,
-        status: 'paused',
-      });
-
-      expect(updated!.reviewerUserId).toBe(userId);
-    });
-
-    it('lets an explicit null clear the reviewer even while pausing', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-
-      const updated = await model.update(task.id, {
-        reviewerUserId: null,
-        status: 'paused',
-      });
-
-      expect(updated!.reviewerUserId).toBeNull();
-    });
-
-    it('does not touch the reviewer on non-paused transitions', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-
-      const updated = await model.update(task.id, { status: 'running' });
-
-      expect(updated!.reviewerUserId).toBeNull();
-    });
-
-    it('keeps a previously stored reviewer on a later pause', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-      await model.update(task.id, { reviewerUserId: userId });
-
-      const updated = await model.update(task.id, { status: 'paused' });
-
-      expect(updated!.reviewerUserId).toBe(userId);
-    });
-  });
-
-  describe('updateStatusIfCurrent', () => {
-    it('backfills the reviewer when the transition lands on paused', async () => {
-      const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-      await dispatchFixture(task.id, 'running');
-
-      const updated = await model.updateStatusIfCurrent(task.id, 'running', 'paused');
-
-      expect(updated!.reviewerUserId).toBe(userId2);
-    });
   });
 
   describe('delete', () => {
@@ -846,6 +780,116 @@ describe('TaskModel', () => {
 
       // Omitting the flag must not narrow anything.
       expect((await model.list()).total).toBe(4);
+    });
+
+    it.each(['schedule', 'heartbeat'] as const)(
+      'should filter paused %s automation independently from a running execution',
+      async (automationMode) => {
+        const model = new TaskModel(serverDB, userId);
+        const config = { automationMode, heartbeatInterval: 3600, schedulePattern: '0 9 * * *' };
+        const paused = await model.create({ ...config, instruction: 'Paused while running' });
+        await model.updateContext(paused.id, { scheduler: { automationPaused: true } });
+        const active = await model.create({ ...config, instruction: 'Active while running' });
+        const manual = await model.create({ instruction: 'Ordinary running task' });
+        for (const task of [paused, active, manual]) await dispatchFixture(task.id, 'running');
+
+        const pausedList = await model.list({ automated: true, statuses: ['paused'] });
+        expect(pausedList.tasks.map((task) => task.id)).toEqual([paused.id]);
+        expect(pausedList.total).toBe(1);
+        const activeList = await model.list({
+          automated: true,
+          statuses: ['backlog', 'running', 'scheduled'],
+        });
+        expect(activeList.tasks.map((task) => task.id)).toEqual([active.id]);
+        expect(activeList.total).toBe(1);
+        expect((await model.list({ automated: true })).total).toBe(2);
+        expect(
+          (await model.list({ automated: false, statuses: ['running'] })).tasks.map(
+            (task) => task.id,
+          ),
+        ).toEqual([manual.id]);
+        expect((await model.list({ statuses: ['running'] })).total).toBe(3);
+      },
+    );
+
+    it.each(['schedule', 'heartbeat'] as const)(
+      'keeps a stopped manual %s run only in Active while its next tick remains armed',
+      async (automationMode) => {
+        const model = new TaskModel(serverDB, userId);
+        const task = await model.create({
+          automationMode,
+          heartbeatInterval: 600,
+          instruction: 'Stop current run, keep future scheduling',
+          schedulePattern: '0 9 * * *',
+        });
+        const scheduler = {
+          automationPaused: false,
+          scheduledAt: '2026-10-15T06:20:19.594Z',
+          tickRevision: 1,
+          tickToken: 'original-pending-tick',
+        };
+        await model.updateContext(task.id, { scheduler });
+        await dispatchFixture(task.id, 'running');
+        expect((await model.findById(task.id))?.status).toBe('scheduled');
+        await settleDispatches(task.id, 'canceled');
+        expect((await model.findById(task.id))?.status).toBe('scheduled');
+        const active = () =>
+          model.list({ automated: true, statuses: ['backlog', 'running', 'scheduled'] });
+        const paused = () => model.list({ automated: true, statuses: ['paused'] });
+        expect((await active()).tasks.map((row) => row.id)).toEqual([task.id]);
+        expect((await paused()).tasks).toEqual([]);
+        expect((await model.findById(task.id))?.context).toEqual({ scheduler });
+        await model.updateContext(task.id, { scheduler: { ...scheduler, automationPaused: true } });
+        expect((await active()).tasks).toEqual([]);
+        expect((await paused()).tasks.map((row) => row.id)).toEqual([task.id]);
+        await model.updateContext(task.id, { scheduler: { tickToken: scheduler.tickToken } });
+        expect((await paused()).tasks.map((row) => row.id)).toEqual([task.id]);
+      },
+    );
+
+    it('should keep event automation filters governed by enabled tenant triggers and parking', async () => {
+      const workspaceId = 'event-automation-filter-workspace';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Event filters',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await seedWorkspaceReaders();
+      const model = new TaskModel(serverDB, userId, workspaceId);
+      const eventIds: string[] = [];
+      for (const kind of ['enabled', 'disabled', 'parked', 'foreign-tenant']) {
+        const task = await model.create({ automationMode: 'event', instruction: kind });
+        eventIds.push(task.id);
+        await dispatchFixture(task.id, 'running');
+        await model.updateContext(task.id, { scheduler: { automationPaused: true } });
+        if (kind === 'parked') await model.updateStatus(task.id, 'paused');
+        await serverDB.insert(mcpEventTriggers).values({
+          enabled: kind !== 'disabled',
+          filters: [],
+          id: `trigger-${task.id}`,
+          sourceId: 'event-filter-source',
+          subscriptionId: 'event-filter-subscription',
+          taskId: task.id,
+          tenantId: kind === 'foreign-tenant' ? 'another-tenant' : workspaceId,
+          userId,
+          workspaceId,
+        });
+      }
+      try {
+        const active = await model.list({
+          automated: true,
+          statuses: ['backlog', 'running', 'scheduled'],
+        });
+        expect(active.tasks.map((task) => task.id)).toEqual([eventIds[0]]);
+        expect(active.total).toBe(1);
+        const paused = await model.list({ automated: true, statuses: ['paused'] });
+        expect(paused.tasks.map((task) => task.id).sort()).toEqual(eventIds.slice(1).sort());
+        expect(paused.total).toBe(3);
+      } finally {
+        for (const taskId of eventIds)
+          await serverDB.delete(mcpEventTriggers).where(eq(mcpEventTriggers.taskId, taskId));
+      }
     });
 
     it('should filter by projectId', async () => {
@@ -1435,6 +1479,7 @@ describe('TaskModel', () => {
     it('reserves one run when two callers race', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Run once' });
+      await seedConfirmedIssuePlan(serverDB, task.id);
 
       const results = await Promise.all([
         model.reserveRun(task.id, 'reservation-a'),
@@ -1448,6 +1493,7 @@ describe('TaskModel', () => {
     it('only lets the reservation owner roll back its generation', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Fenced rollback' });
+      await seedConfirmedIssuePlan(serverDB, task.id);
 
       await expect(model.reserveRun(task.id, 'reservation-a')).resolves.toBe(true);
       await expect(model.releaseRunReservation(task.id, 'reservation-a')).resolves.toBe(true);
@@ -1467,6 +1513,7 @@ describe('TaskModel', () => {
         automationMode: 'schedule',
         instruction: 'Fenced lifecycle',
       });
+      await seedConfirmedIssuePlan(serverDB, task.id);
       await model.reserveRun(task.id, 'completion:owner');
 
       await expect(
@@ -1520,6 +1567,7 @@ describe('TaskModel', () => {
     it('does not reclaim a crashed dispatch while its agent operation is active', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Crash-safe dispatch' });
+      await seedConfirmedIssuePlan(serverDB, task.id);
       await serverDB.insert(agentOperations).values({
         id: 'op-active-task-dispatch',
         status: 'running',
@@ -1569,7 +1617,7 @@ describe('TaskModel', () => {
       expect(deps[0].dependsOnId).toBe(taskA.id);
     });
 
-    it('should check all dependencies completed', async () => {
+    it('requires current reviewed deliveries from all dependencies', async () => {
       const model = new TaskModel(serverDB, userId);
       const taskA = await model.create({ instruction: 'Task A' });
       const taskB = await model.create({ instruction: 'Task B' });
@@ -1584,11 +1632,13 @@ describe('TaskModel', () => {
 
       // Complete A only
       await model.updateStatus(taskA.id, 'completed');
+      await seedReviewedIssueDelivery(serverDB, taskA.id);
       allDone = await model.areAllDependenciesCompleted(taskC.id);
       expect(allDone).toBe(false);
 
       // Complete B too
       await model.updateStatus(taskB.id, 'completed');
+      await seedReviewedIssueDelivery(serverDB, taskB.id);
       allDone = await model.areAllDependenciesCompleted(taskC.id);
       expect(allDone).toBe(true);
     });
@@ -1618,7 +1668,7 @@ describe('TaskModel', () => {
       expect(dependents).toHaveLength(2);
     });
 
-    it('should find unlocked tasks after dependency completes', async () => {
+    it('finds unlocked tasks after both dependency deliveries are reviewed', async () => {
       const model = new TaskModel(serverDB, userId);
       const taskA = await model.create({ instruction: 'Task A' });
       const taskB = await model.create({ instruction: 'Task B' });
@@ -1630,17 +1680,19 @@ describe('TaskModel', () => {
 
       // Complete A — C still blocked by B
       await model.updateStatus(taskA.id, 'completed');
+      await seedReviewedIssueDelivery(serverDB, taskA.id);
       let unlocked = await model.getUnlockedTasks(taskA.id);
       expect(unlocked).toHaveLength(0);
 
       // Complete B — C now unlocked
       await model.updateStatus(taskB.id, 'completed');
+      await seedReviewedIssueDelivery(serverDB, taskB.id);
       unlocked = await model.getUnlockedTasks(taskB.id);
       expect(unlocked).toHaveLength(1);
       expect(unlocked[0].id).toBe(taskC.id);
     });
 
-    it('requires canceled and failed dependencies to be completed', async () => {
+    it('requires current reviewed deliveries to replace canceled and failed dependencies', async () => {
       const model = new TaskModel(serverDB, userId);
       const canceled = await model.create({ instruction: 'Canceled dependency' });
       const failed = await model.create({ instruction: 'Failed dependency' });
@@ -1653,8 +1705,10 @@ describe('TaskModel', () => {
       await expect(model.areAllDependenciesCompleted(dependent.id)).resolves.toBe(false);
 
       await model.updateStatus(failed.id, 'completed');
+      await seedReviewedIssueDelivery(serverDB, failed.id);
       await expect(model.areAllDependenciesCompleted(dependent.id)).resolves.toBe(false);
       await model.updateStatus(canceled.id, 'completed');
+      await seedReviewedIssueDelivery(serverDB, canceled.id);
       await expect(model.areAllDependenciesCompleted(dependent.id)).resolves.toBe(true);
       await expect(model.getUnlockedTasks(failed.id)).resolves.toEqual([
         expect.objectContaining({ id: dependent.id }),
@@ -2090,6 +2144,7 @@ describe('TaskModel', () => {
     it('invalidates the active run when a user-facing config write requests it', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Scheduled run' });
+      await seedConfirmedIssuePlan(serverDB, task.id);
       await model.reserveRun(task.id, 'completion:op-1:lease-1');
 
       const updated = await model.updateTaskConfig(
@@ -2850,6 +2905,8 @@ describe('TaskModel', () => {
       // Both sides derive the same legacy status ('backlog'), which is why
       // this move used to leave no trace at all.
       await model.updateWithLog(task.id, { workflowCategory: 'in_progress' }, { userId });
+      await createAgent('workflow-reviewer');
+      await model.update(task.id, { reviewerAgentId: 'workflow-reviewer' });
       await model.updateWithLog(task.id, { workflowCategory: 'in_review' }, { userId });
 
       const activities = await model.getActivities(task.id);
@@ -3411,6 +3468,7 @@ describe('TaskModel', () => {
     it('can clear run reservations atomically with a terminal cascade', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Reserved' });
+      await seedConfirmedIssuePlan(serverDB, task.id);
       await model.reserveRun(task.id, 'completion:op-1');
 
       await model.updateStatusForIds([task.id], 'canceled', {
@@ -3451,6 +3509,8 @@ describe('TaskModel', () => {
       await model.updateStatus(a.id, 'completed');
       await model.updateStatus(b.id, 'completed');
 
+      await seedReviewedIssueDelivery(serverDB, a.id);
+      await seedReviewedIssueDelivery(serverDB, b.id);
       const unlocked = await model.getUnlockedTasksForMany([a.id, b.id]);
 
       expect(unlocked.map(({ id }) => id).sort()).toEqual(
@@ -3520,7 +3580,6 @@ describe('TaskModel', () => {
       await model.updateVerifyConfig(task.id, {
         enabled: true,
         maxIterations: 3,
-        verifierAgentId: 'agt_codex',
         verifyRubricId: 'rub_1',
       });
 
@@ -3530,7 +3589,6 @@ describe('TaskModel', () => {
       expect(config.verify).toEqual({
         enabled: true,
         maxIterations: 3,
-        verifierAgentId: 'agt_codex',
         verifyRubricId: 'rub_1',
       });
     });
@@ -3542,11 +3600,11 @@ describe('TaskModel', () => {
         instruction: 'Test',
       });
 
-      await model.updateVerifyConfig(task.id, { verifierAgentId: 'agt_codex' });
+      await model.updateVerifyConfig(task.id, { maxIterations: 4 });
 
       expect(model.getVerifyConfig((await model.findById(task.id))!)).toEqual({
         enabled: true,
-        verifierAgentId: 'agt_codex',
+        maxIterations: 4,
         verifyRubricId: 'rub_1',
       });
     });
@@ -3556,13 +3614,13 @@ describe('TaskModel', () => {
       const task = await model.create({
         config: {
           provider: 'anthropic',
-          verify: { enabled: true, verifierAgentId: 'agt_codex', verifyRubricId: 'rub_1' },
+          verify: { enabled: true, verifyRubricId: 'rub_1' },
         },
         instruction: 'Test',
       });
 
-      // Switch back to the default verifier + drop the rubric, keep enabled.
-      await model.updateVerifyConfig(task.id, { verifierAgentId: null, verifyRubricId: null });
+      // Drop the rubric while keeping the gate enabled.
+      await model.updateVerifyConfig(task.id, { verifyRubricId: null });
 
       const updated = (await model.findById(task.id))!;
       const config = updated.config as Record<string, any>;
@@ -3674,14 +3732,14 @@ describe('TaskModel', () => {
   });
 
   describe('static getScheduledTasks', () => {
-    it('should return schedule-mode tasks that are not terminal/paused/running', async () => {
+    it('returns eligible schedules while running so subsequent occurrences can be queued', async () => {
       const model = new TaskModel(serverDB, userId);
       const eligible = await model.create({
         automationMode: 'schedule',
         instruction: 'Eligible',
         schedulePattern: '0 * * * *',
       });
-      // Running excluded
+      // Active schedules still produce occurrences; durable dispatch serializes them.
       const running = await model.create({
         automationMode: 'schedule',
         instruction: 'Running',
@@ -3696,7 +3754,7 @@ describe('TaskModel', () => {
       const result = await TaskModel.getScheduledTasks(serverDB);
       const ids = result.map((t) => t.id);
       expect(ids).toContain(eligible.id);
-      expect(ids).not.toContain(running.id);
+      expect(ids).toContain(running.id);
     });
   });
 
@@ -4508,7 +4566,7 @@ describe('TaskModel', () => {
       expect((await outsider.findById(draft.id))?.id).toBe(draft.id);
     });
 
-    it('still lets assignees, reviewers, team members, and workspace admins find the task', async () => {
+    it('lets workspace members find shared Issues independently of assignment', async () => {
       const alice = new TaskModel(serverDB, userId, wsId);
       const bob = new TaskModel(serverDB, userId2, wsId);
       const assigned = await alice.create({
@@ -4521,7 +4579,6 @@ describe('TaskModel', () => {
       const reviewed = await alice.create({
         instruction: 'Review on the private team',
         name: 'Review on the private team',
-        reviewerUserId: userId2,
         teamId: privateTeamId,
         visibility: 'public',
       });
@@ -4722,5 +4779,314 @@ describe('TaskModel', () => {
       const { total } = await me.list({ assigneeUserId: userId });
       expect(total).toBe(1);
     });
+  });
+});
+
+describe('Issue review cycle', () => {
+  const model = new TaskModel(serverDB, userId);
+  const setup = async () => {
+    await createAgent('issue-reviewer');
+    return model.create({
+      name: 'Review issue',
+      instruction: 'Acceptance criterion',
+      reviewerAgentId: 'issue-reviewer',
+      workflowCategory: 'in_review',
+    });
+  };
+  const start = async (id: string, operationId: string) => {
+    const review = await model.claimIssueReview(id);
+    expect(review).not.toBeNull();
+    const input = { cycleId: review!.cycleId, actorAgentId: 'issue-reviewer', operationId };
+    expect(await model.bindIssueReviewOperation(id, input)).toBe(true);
+    await serverDB.insert(agentOperations).values({
+      id: operationId,
+      agentId: 'issue-reviewer',
+      taskId: id,
+      userId,
+      status: 'running',
+    });
+    return input;
+  };
+  it('posts a normal Agent comment and waits for acceptance without repeating review', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-pass');
+    await model.update(task.id, { name: 'Changed title', instruction: 'Criteria' });
+    const result = await model.recordIssueReviewVerdict(task.id, {
+      ...input,
+      verdict: 'pass',
+      comment: 'Passed',
+    });
+    expect(result?.task.workflowCategory).toBe('in_review');
+    expect(await model.claimIssueReview(task.id)).toBeNull();
+    expect(
+      await model.recordIssueReviewVerdict(task.id, {
+        ...input,
+        verdict: 'pass',
+        comment: 'Duplicate',
+      }),
+    ).toBeNull();
+    const comments = await serverDB
+      .select()
+      .from(taskComments)
+      .where(eq(taskComments.taskId, task.id));
+    expect(comments.map((comment) => [comment.authorAgentId, comment.content])).toEqual([
+      ['issue-reviewer', 'Passed'],
+    ]);
+  });
+  it('fences stale verdicts after manual leave and return and isolates user scope', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-stale');
+    await model.update(task.id, { workflowCategory: 'in_progress' });
+    await model.update(task.id, { workflowCategory: 'in_review' });
+    expect((await model.claimIssueReview(task.id))?.cycleId).not.toBe(input.cycleId);
+    expect(await model.recordIssueReviewVerdict(task.id, { ...input, verdict: 'pass' })).toBeNull();
+    expect(await new TaskModel(serverDB, userId2).claimIssueReview(task.id)).toBeNull();
+  });
+  it('keeps missing verdicts in review and fences the old operation', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-missing');
+    expect(await model.releaseIssueReview(task.id, { ...input, reason: 'Device offline' })).toBe(
+      true,
+    );
+    expect((await model.findById(task.id))?.workflowCategory).toBe('in_review');
+    expect(await model.recordIssueReviewVerdict(task.id, { ...input, verdict: 'pass' })).toBeNull();
+    const activities = await serverDB
+      .select()
+      .from(taskActivities)
+      .where(eq(taskActivities.taskId, task.id));
+    expect(activities.at(-1)).toMatchObject({
+      type: 'review_waiting',
+      payload: { reason: 'Device offline' },
+    });
+  });
+  it('preserves a queued review operation while recording one waiting activity', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-queued');
+    const waiting = { ...input, reason: 'Device offline', keepOperation: true };
+    expect(await model.releaseIssueReview(task.id, waiting)).toBe(true);
+    expect(await model.releaseIssueReview(task.id, waiting)).toBe(true);
+    expect(
+      await serverDB.select().from(taskActivities).where(eq(taskActivities.taskId, task.id)),
+    ).toHaveLength(1);
+    expect(
+      (await model.recordIssueReviewVerdict(task.id, { ...input, verdict: 'pass' }))?.task
+        .workflowCategory,
+    ).toBe('in_review');
+  });
+  it('fences reviewer changes and manual legacy status writes, but preserves a no-op category', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-property');
+    await model.update(task.id, { workflowCategory: 'in_review' });
+    expect((await model.claimIssueReview(task.id))?.cycleId).toBe(input.cycleId);
+    await createAgent('new-reviewer');
+    await model.update(task.id, { reviewerAgentId: 'new-reviewer' });
+    expect(await model.recordIssueReviewVerdict(task.id, { ...input, verdict: 'pass' })).toBeNull();
+    const review = await model.claimIssueReview(task.id);
+    await model.updateStatusForIds([task.id], 'paused');
+    expect((await model.claimIssueReview(task.id))?.cycleId).not.toBe(review?.cycleId);
+  });
+  it('retains repair intent until handoff and fences it after a manual move', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-repair');
+    await model.recordIssueReviewVerdict(task.id, {
+      ...input,
+      verdict: 'fail',
+      comment: 'Fix criteria',
+    });
+    expect(await model.isIssueReviewRepairCurrent(task.id, input)).toBe(true);
+    await model.update(task.id, {
+      status: 'running',
+      workflowCategory: 'in_progress',
+      workflowStateId: 'doing',
+      preserveIssueReviewCycle: true,
+    });
+    expect(await model.isIssueReviewRepairCurrent(task.id, input)).toBe(true);
+    expect(
+      (await TaskModel.queryPendingIssueReviews(serverDB, { createdByUserId: userId })).map(
+        (row) => row.id,
+      ),
+    ).toContain(task.id);
+    expect(await model.completeIssueReviewRepair(task.id, input)).toBe(true);
+    expect(await model.completeIssueReviewRepair(task.id, input)).toBe(false);
+    await model.update(task.id, { workflowCategory: 'done' });
+    expect(await model.isIssueReviewRepairCurrent(task.id, input)).toBe(false);
+    expect(await model.releaseIssueReviewRepair(task.id, input)).toBe(false);
+  });
+  it('preserves the authoritative verdict and manual invalidation across stale whole-config saves', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-stale-config');
+    const staleConfig = (await model.findById(task.id))!.config;
+    await model.recordIssueReviewVerdict(task.id, {
+      ...input,
+      verdict: 'fail',
+      comment: 'Fix criteria',
+    });
+    await model.update(task.id, { config: staleConfig });
+    expect((await model.findById(task.id))?.config).toMatchObject({
+      issueReview: { state: 'submitted', consecutiveFailures: 1, repairPending: true },
+    });
+    await model.update(task.id, { workflowCategory: 'in_review', config: staleConfig });
+    expect((await model.claimIssueReview(task.id))?.cycleId).not.toBe(input.cycleId);
+    expect(await model.recordIssueReviewVerdict(task.id, { ...input, verdict: 'pass' })).toBeNull();
+  });
+  it('fences a custom state change within In review and timestamps a fresh binding', async () => {
+    const task = await setup();
+    const review = await model.claimIssueReview(task.id);
+    await serverDB
+      .update(tasks)
+      .set({ updatedAt: new Date('2000-01-01') })
+      .where(eq(tasks.id, task.id));
+    const input = {
+      cycleId: review!.cycleId,
+      actorAgentId: 'issue-reviewer',
+      operationId: 'review-new-binding',
+    };
+    expect(await model.bindIssueReviewOperation(task.id, input)).toBe(true);
+    expect((await model.findById(task.id))!.updatedAt.getTime()).toBeGreaterThan(
+      Date.now() - 10_000,
+    );
+    await model.update(task.id, {
+      workflowStateId: 'custom-review-status',
+      workflowCategory: 'in_review',
+    });
+    expect((await model.claimIssueReview(task.id))?.cycleId).not.toBe(input.cycleId);
+  });
+  it('rejects late repair settlement under the row lock before its mutation callback', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-late-settle');
+    await model.recordIssueReviewVerdict(task.id, {
+      ...input,
+      verdict: 'fail',
+      comment: 'Fix criteria',
+    });
+    await model.update(task.id, {
+      workflowStateId: 'manual-paused',
+      workflowCategory: 'in_progress',
+    });
+    const current = (await model.findById(task.id))!;
+    let callbackRan = false;
+    const settled = await model.updateStatusForExecutionContract(
+      task.id,
+      'completed',
+      {
+        assigneeAgentId: current.assigneeAgentId,
+        executionGeneration: current.executionGeneration,
+        policyRevision: current.policyRevision,
+        requirementRevision: current.requirementRevision,
+      },
+      { workflowCategory: 'done', expectedIssueReviewCycleId: input.cycleId },
+      {},
+      async () => {
+        callbackRan = true;
+        return true;
+      },
+    );
+    expect(settled).toBeNull();
+    expect(callbackRan).toBe(false);
+    expect(await model.findById(task.id)).toMatchObject({
+      workflowCategory: 'in_progress',
+      workflowStateId: 'manual-paused',
+    });
+  });
+  it('leaves the manual pause and reservation untouched when a stale repair tries to reserve', async () => {
+    const task = await setup();
+    await seedConfirmedIssuePlan(serverDB, task.id);
+    const input = await start(task.id, 'review-stale-reserve');
+    await model.recordIssueReviewVerdict(task.id, {
+      ...input,
+      verdict: 'fail',
+      comment: 'Fix criteria',
+    });
+    await serverDB
+      .update(agentOperations)
+      .set({ status: 'done' })
+      .where(eq(agentOperations.id, input.operationId));
+    await model.update(task.id, {
+      workflowStateId: 'paused-by-person',
+      status: 'paused',
+      error: 'Owner paused',
+    });
+    const before = (await model.findById(task.id))!;
+    expect(
+      await model.reserveRun(
+        task.id,
+        'stale-repair',
+        new Date(),
+        30 * 60_000,
+        undefined,
+        input.cycleId,
+      ),
+    ).toBe(false);
+    expect(await model.findById(task.id)).toMatchObject({
+      context: before.context,
+      error: 'Owner paused',
+      runReservationId: before.runReservationId,
+      runReservationExpiresAt: before.runReservationExpiresAt,
+      workflowStateId: 'paused-by-person',
+    });
+    expect(await model.reserveRun(task.id, 'manual-resume')).toBe(true);
+  });
+  it('counts consecutive failures once and stops repair with one inbox entry at three', async () => {
+    const task = await setup();
+    for (let index = 1; index <= 3; index++) {
+      const input = await start(task.id, `review-fail-${index}`);
+      const result = await model.recordIssueReviewVerdict(task.id, {
+        ...input,
+        verdict: 'fail',
+        comment: `Missing ${index}`,
+      });
+      expect(result).toMatchObject({
+        repairPending: index < 3,
+        stopped: index === 3,
+        task: { workflowCategory: 'in_progress' },
+      });
+      expect(
+        await model.recordIssueReviewVerdict(task.id, {
+          ...input,
+          verdict: 'fail',
+          comment: 'Duplicate',
+        }),
+      ).toBeNull();
+      if (index < 3) await model.update(task.id, { workflowCategory: 'in_review' });
+    }
+    expect(
+      await serverDB.select().from(taskComments).where(eq(taskComments.taskId, task.id)),
+    ).toHaveLength(4);
+    const inbox = await serverDB
+      .select()
+      .from(notifications)
+      .where(eq(notifications.resourceId, task.id));
+    expect(inbox.map((notification) => notification.userId)).toEqual([userId]);
+  });
+  it('notifies only the assigned human owner when the creator is a different user', async () => {
+    const task = await setup();
+    await model.update(task.id, { assigneeUserId: userId2 });
+    for (let index = 1; index <= 3; index++) {
+      const input = await start(task.id, `review-owner-fail-${index}`);
+      await model.recordIssueReviewVerdict(task.id, {
+        ...input,
+        verdict: 'fail',
+        comment: `Missing ${index}`,
+      });
+      if (index < 3) await model.update(task.id, { workflowCategory: 'in_review' });
+    }
+    const inbox = await serverDB
+      .select()
+      .from(notifications)
+      .where(eq(notifications.resourceId, task.id));
+    expect(inbox.map((notification) => notification.userId)).toEqual([userId2]);
+  });
+  it('refuses the wrong operation Agent and direct SQL entry without a reviewer', async () => {
+    const task = await setup();
+    const input = await start(task.id, 'review-wrong-agent');
+    await createAgent('other-reviewer');
+    await serverDB
+      .update(agentOperations)
+      .set({ agentId: 'other-reviewer' })
+      .where(eq(agentOperations.id, input.operationId));
+    expect(await model.recordIssueReviewVerdict(task.id, { ...input, verdict: 'pass' })).toBeNull();
+    await expect(
+      serverDB.update(tasks).set({ reviewerAgentId: null }).where(eq(tasks.id, task.id)),
+    ).rejects.toThrow();
   });
 });

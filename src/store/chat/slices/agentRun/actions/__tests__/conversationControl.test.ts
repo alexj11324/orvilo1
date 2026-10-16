@@ -2068,68 +2068,6 @@ describe('ConversationControl actions', () => {
         executeGatewayAgentSpy.mockRestore();
       });
 
-      it('propagates a generic custom-submit failure without running side effects or settling the card', async () => {
-        const { result } = renderHook(() => useChatStore());
-        const agentId = 'server-agent';
-        const topicId = 'server-topic';
-        const chatKey = messageMapKey({ agentId, topicId });
-        const toolMessage = createMockMessage({
-          id: 'tool-msg-custom-failure',
-          plugin: {
-            apiName: 'showAgentMarketplace',
-            arguments: '{}',
-            identifier: 'orvilo-web-onboarding',
-            type: 'default',
-          },
-          pluginIntervention: {
-            batchId: 'batch-custom-failure',
-            operationId: 'operation-custom-failure',
-            status: 'pending',
-          },
-          role: 'tool',
-          tool_call_id: 'call-custom-failure',
-        } as any);
-        act(() => {
-          useChatStore.setState({
-            activeAgentId: agentId,
-            activeTopicId: topicId,
-            dbMessagesMap: { [chatKey]: [toolMessage] },
-            messagesMap: { [chatKey]: [toolMessage] },
-          });
-        });
-        vi.spyOn(result.current, 'isGatewayModeEnabled').mockReturnValue(true);
-        const legacySideEffect = vi.fn().mockResolvedValue({
-          response: { selectedTemplateIds: ['template-1'] },
-        });
-        const mutation = vi.mocked(lambdaClient.aiAgent.resolveAgentInterventionBySource.mutate);
-        mutation.mockRejectedValue(new Error('custom claim unavailable'));
-        const submit = () =>
-          result.current.submitToolInteraction('tool-msg-custom-failure', {}, undefined, {
-            agentInterventionAction: {
-              result: {
-                kind: 'agent_marketplace',
-                runtimeConfig: { model: 'gpt-4' },
-                selectedTemplateIds: ['template-1'],
-              },
-              type: 'submit_custom',
-            },
-            prepareLegacyFallback: legacySideEffect,
-          });
-
-        expect(await captureActError(submit)).toMatchObject({
-          message: 'custom claim unavailable',
-        });
-        expect(await captureActError(submit)).toMatchObject({
-          message: 'custom claim unavailable',
-        });
-
-        expect(legacySideEffect).not.toHaveBeenCalled();
-        expect(result.current.dbMessagesMap[chatKey][0].pluginIntervention?.status).toBe('pending');
-        expect(mutation.mock.calls[0]?.[0].resolutionRequestId).toBe(
-          mutation.mock.calls[1]?.[0].resolutionRequestId,
-        );
-      });
-
       it('resumes the submitted answer through the local client runtime when the agent has no gateway binding', async () => {
         const { result } = renderHook(() => useChatStore());
 

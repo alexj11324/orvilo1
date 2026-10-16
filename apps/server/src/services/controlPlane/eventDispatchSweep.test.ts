@@ -30,6 +30,8 @@ import { SqlMcpEventBindingRepository, SqlMcpEventInbox } from '@/server/service
 import { McpEventReceiver } from '@/server/services/mcpEvents/receiver';
 import { sweepMcpEventInbox } from '@/server/services/mcpEvents/runtime';
 
+import { seedConfirmedIssuePlan } from '../../../../../packages/database/tests/fixtures/issueDelivery';
+
 describe('signed callback through the server admission sweep', () => {
   const secret = Buffer.alloc(32, 9);
   let db: OrviloDatabase;
@@ -134,6 +136,7 @@ describe('signed callback through the server admission sweep', () => {
       seq: 1,
       workspaceId,
     });
+    await seedConfirmedIssuePlan(db, taskId);
     const binding: McpEventBinding = {
       callbackToken: token,
       callbackUrl: 'https://receiver.test/events/token',

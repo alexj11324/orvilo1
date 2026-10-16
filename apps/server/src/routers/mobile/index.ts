@@ -12,14 +12,12 @@ import { aiAgentRouter } from '../lambda/aiAgent';
 import { aiChatRouter } from '../lambda/aiChat';
 import { briefRouter } from '../lambda/brief';
 import { chunkRouter } from '../lambda/chunk';
-import { composioRouter } from '../lambda/composio';
 import { configRouter } from '../lambda/config';
 import { deviceRouter } from '../lambda/device';
 import { documentRouter } from '../lambda/document';
 import { fileRouter } from '../lambda/file';
 import { homeRouter } from '../lambda/home';
 import { knowledgeBaseRouter } from '../lambda/knowledgeBase';
-import { marketRouter } from '../lambda/market';
 import { messageRouter } from '../lambda/message';
 import { notificationRouter } from '../lambda/notification';
 import { pluginRouter } from '../lambda/plugin';
@@ -27,7 +25,6 @@ import { pushTokenRouter } from '../lambda/pushToken';
 import { sessionRouter } from '../lambda/session';
 import { sessionGroupRouter } from '../lambda/sessionGroup';
 import { taskRouter } from '../lambda/task';
-import { taskTemplateRouter } from '../lambda/taskTemplate';
 import { topicRouter } from '../lambda/topic';
 import { uploadRouter } from '../lambda/upload';
 import { userRouter } from '../lambda/user';
@@ -40,7 +37,6 @@ export const mobileRouter = router({
   aiChat: aiChatRouter,
   brief: briefRouter,
   chunk: chunkRouter,
-  composio: composioRouter,
   config: configRouter,
   device: deviceRouter,
   document: documentRouter,
@@ -48,7 +44,6 @@ export const mobileRouter = router({
   healthcheck: publicProcedure.query(() => "i'm live!"),
   home: homeRouter,
   knowledgeBase: knowledgeBaseRouter,
-  market: marketRouter,
   message: messageRouter,
   notification: notificationRouter,
   plugin: pluginRouter,
@@ -57,7 +52,6 @@ export const mobileRouter = router({
   sessionGroup: sessionGroupRouter,
   subscription: mobileSubscriptionRouter,
   task: taskRouter,
-  taskTemplate: taskTemplateRouter,
   topic: topicRouter,
   upload: uploadRouter,
   user: userRouter,

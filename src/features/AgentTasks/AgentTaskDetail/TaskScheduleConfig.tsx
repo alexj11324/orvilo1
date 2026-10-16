@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { automationStatusOf } from '@/features/Automations/shared';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
@@ -198,13 +199,13 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
   const finalCurrentInterval = currentInterval ?? activeTaskInterval;
 
   const enabled = !!automationMode;
+  const futureStatus = detail ? automationStatusOf(detail) : undefined;
   const [isStartingSchedule, setIsStartingSchedule] = useState(false);
   const canStartSchedule =
     ((automationMode === 'schedule' && !!schedulePattern) ||
       (automationMode === 'heartbeat' && finalCurrentInterval > 0)) &&
     !!finalTaskId &&
-    status !== 'scheduled' &&
-    status !== 'running';
+    (futureStatus !== 'active' || status === 'backlog');
 
   const summary = useMemo<{ primary: string; secondary?: string } | null>(() => {
     if (automationMode === 'heartbeat' && finalCurrentInterval > 0) {
@@ -226,7 +227,7 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
   }, [automationMode, finalCurrentInterval, schedulePattern, scheduleTimezone, t, i18n.language]);
 
   const nextRun = useMemo(() => {
-    if (!enabled) return null;
+    if (!enabled || futureStatus !== 'active') return null;
     if (automationMode === 'heartbeat') {
       return nextHeartbeatFiring(
         detail?.heartbeat?.scheduledAt ?? detail?.heartbeat?.lastAt,
@@ -243,6 +244,7 @@ const TaskScheduleConfig = memo(function TaskScheduleConfig({
     detail?.heartbeat?.scheduledAt,
     enabled,
     finalCurrentInterval,
+    futureStatus,
     schedulePattern,
     scheduleTimezone,
   ]);

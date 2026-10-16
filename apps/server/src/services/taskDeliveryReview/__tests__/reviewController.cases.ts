@@ -80,6 +80,9 @@ function snapshot(patch: Partial<RemotePrReviewSnapshot> = {}): RemotePrReviewSn
 
 function setup(
   options: {
+    stacked?: boolean;
+    accepted?: boolean;
+    dependencyDelivered?: boolean;
     confirmation?: Partial<RemotePrReviewSnapshot>;
     failPersistence?: boolean;
     first?: Partial<RemotePrReviewSnapshot>;
@@ -126,7 +129,7 @@ function setup(
     executionGeneration: options.staleGeneration ? 2 : 3,
     integration: {
       attempts: 0,
-      baseBranch: 'main',
+      baseBranch: options.stacked ? 'task/predecessor' : 'main',
       branch: 'task/T-1',
       expectedHeadSha: HEAD,
       ...(options.missingPr ? {} : { prNumber: 9 }),
@@ -195,6 +198,7 @@ function setup(
       // top-level binding those modules touch.
       AgentChatConfigSchema: {},
       cloudSandboxRepoPath: () => '/workspace/widgets',
+      isAutomationRunTrigger: () => false,
     },
     'debug': { __esModule: true, default: () => () => {} },
     'drizzle-orm': {
@@ -211,8 +215,42 @@ function setup(
         }
       },
     },
+    '@/database/models/issueDelivery': {
+      sameIssueDeliveryProof: (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b),
+    },
+    '@/server/services/task/deliveryGroup': {
+      completeAcceptedArtifacts: async () => {},
+      finishDeliveredIssue: async () => {
+        state.completed.push('completed');
+      },
+      readDeliveryGroup: async () => ({
+        accepted: options.accepted !== false,
+        ids: ['task-1'],
+        members: [],
+        proofs: {
+          'task-1': {
+            proof: {
+              taskId: 'task-1',
+              sourceSha: HEAD,
+              topicId: options.superseded ? 'newer-topic' : 'topic-1',
+              executionGeneration: 3,
+              targetBranch: 'main',
+            },
+            merged: options.superseded || row.integration.state === 'integrated',
+          },
+        },
+        dependencies:
+          options.dependencyDelivered === false
+            ? [{ type: 'blocks', taskId: 'task-1', dependsOnId: 'failed-upstream' }]
+            : [],
+        delivered: () => options.dependencyDelivered !== false,
+      }),
+    },
     '@/database/models/task': {
       TaskModel: class {
+        async withIssueDelivery(_id: string, callback: (db: unknown) => Promise<unknown>) {
+          return callback(db);
+        }
         async derivedStatusByIds(ids: string[]) {
           const fresh = { ...task, ...options.freshTask };
           return Object.fromEntries(ids.map((id) => [id, fresh.status]));
@@ -336,6 +374,10 @@ function setup(
         // The confirmation, not this response body, is the authority for the merge SHA.
         return { outcome: 'confirmed_success', sha: 'wrong-response-sha' };
       },
+      retargetPullRequest: async () => {
+        state.events.push('retarget-pr');
+        return true;
+      },
       resolveGithubAccessToken: async () => 'fixture-token',
       getPullRequestReviewSnapshot: async (
         _repo: string,
@@ -353,7 +395,7 @@ function setup(
           });
           if (
             expected &&
-            (result.baseBranch !== expected.baseBranch ||
+            ((expected.baseBranch !== undefined && result.baseBranch !== expected.baseBranch) ||
               result.headBranch !== expected.headBranch ||
               (expected.headSha !== undefined && expected.headSha !== result.headSha) ||
               (expected.nodeId !== undefined && expected.nodeId !== result.nodeId) ||
@@ -384,7 +426,7 @@ function setup(
         if (state.expected.length >= 3 && options.noMatchingRowsAtConfirmation) state.rows = [];
         if (
           expected &&
-          (result.baseBranch !== expected.baseBranch ||
+          ((expected.baseBranch !== undefined && result.baseBranch !== expected.baseBranch) ||
             result.headBranch !== expected.headBranch ||
             (expected.headSha !== undefined && expected.headSha !== result.headSha) ||
             (expected.nodeId !== undefined && expected.nodeId !== result.nodeId) ||
@@ -637,7 +679,7 @@ add('the confirmed merge proof wins over the merge API response SHA', async (loa
   assert.deepEqual(result.merged, ['T-1']);
   assert.equal(f.state.completed.length, 1);
   assert.equal(f.state.rows[0].integration.integratedSha, MERGE);
-  assert.equal(f.state.expected[0]?.headBranch, 'task/T-1');
+  assert.equal(f.state.expected[1]?.headBranch, 'task/T-1');
 });
 
 add(
@@ -909,3 +951,66 @@ add('a legacy scalar poll-failure counter normalizes into the stage map', async 
 });
 
 export { cases as reviewControllerCases };
+
+add(
+  'Reviewer pass and item acceptance cannot merge without final group acceptance',
+  async (load) => {
+    const f = setup({ accepted: false });
+    const result = await (await load(f.mocks))(f.db);
+    assert.deepEqual(result.waiting, ['T-1']);
+    assert.equal(f.state.merges.length, 0);
+    assert.equal(f.state.completed.length, 0);
+  },
+);
+add('a failed predecessor blocks this delivery without issuing its merge', async (load) => {
+  const f = setup({ dependencyDelivered: false });
+  const result = await (await load(f.mocks))(f.db);
+  assert.deepEqual(result.waiting, ['T-1']);
+  assert.equal(f.state.merges.length, 0);
+});
+
+add(
+  'retargets a stacked PR to its confirmed final branch without rewriting execution base or accepted head',
+  async (load) => {
+    const f = setup({
+      stacked: true,
+      reads: [
+        { baseBranch: 'task/predecessor' },
+        {},
+        {},
+        { merged: true, mergedAt: DATE, mergeCommitSha: MERGE },
+      ],
+      confirmation: { merged: true, mergedAt: DATE, mergeCommitSha: MERGE },
+    });
+    const result = await (await load(f.mocks))(f.db);
+    assert.deepEqual(result.merged, ['T-1']);
+    assert.ok(f.state.events.includes('retarget-pr'));
+    assert.equal(f.state.rows[0].integration.baseBranch, 'task/predecessor');
+    assert.equal(
+      (f.state.rows[0].integration as Record<string, unknown>).mergedTargetBranch,
+      'main',
+    );
+    assert.equal(f.state.merges[0].expectedHeadSha, HEAD);
+  },
+);
+
+add(
+  'an externally merged stacked PR is reconciled without trying to retarget its closed PR',
+  async (load) => {
+    const f = setup({
+      stacked: true,
+      first: { merged: true, mergedAt: DATE, mergeCommitSha: MERGE },
+    });
+    const result = await (await load(f.mocks))(f.db);
+    assert.deepEqual(result.merged, ['T-1']);
+    assert.equal(f.state.events.includes('retarget-pr'), false);
+    assert.equal(f.state.merges.length, 0);
+  },
+);
+
+add('an unpinned first read still rejects a foreign head repository before merge', async (load) => {
+  const f = setup({ first: { headRepositoryId: 99 } });
+  const result = await (await load(f.mocks))(f.db);
+  assert.deepEqual(result.waiting, ['T-1']);
+  assert.equal(f.state.merges.length, 0);
+});

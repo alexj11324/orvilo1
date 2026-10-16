@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import AsyncError from '@/components/AsyncError';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,8 @@ import { useOrchestratorPreference } from './useOrchestratorPreference';
 const SettingsContent = () => {
   const { t } = useTranslation('setting');
   const preference = useOrchestratorPreference();
+  const { role } = useWorkspaceCapabilities();
+  const canManage = !preference.workspaceId || role === 'owner' || role === 'admin';
   const [selection, setSelection] = useState<string>();
   const [ready, setReady] = useState(false);
   const [pending, setPending] = useState(false);
@@ -42,8 +45,9 @@ const SettingsContent = () => {
       </p>
       <ConfiguredOrchestratorSelector
         alsoDefault={alsoDefault}
-        disabled={pending || preference.loading}
+        disabled={!canManage || pending || preference.loading}
         value={selection ?? preference.agentId}
+        visibility={preference.workspaceId ? 'public' : 'private'}
         onAlsoDefaultChange={setAlsoDefault}
         onUnavailable={() => setReady(false)}
         onSelect={(id) => {
@@ -59,7 +63,7 @@ const SettingsContent = () => {
       )}
       <Button
         className="self-end"
-        disabled={!selection || !ready || pending}
+        disabled={!canManage || !selection || !ready || pending}
         loading={pending}
         onClick={() => void save()}
       >

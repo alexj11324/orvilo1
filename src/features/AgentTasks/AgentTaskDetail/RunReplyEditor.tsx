@@ -3,6 +3,7 @@ import { ChevronLeft } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { useEnterToSend } from '@/hooks/useEnterToSend';
 
@@ -29,10 +30,13 @@ const RunReplyEditor = memo<RunReplyEditorProps>(({ onSubmit, onCancel, placehol
     setSubmitting(true);
     try {
       await onSubmit(content);
+    } catch (error) {
+      console.error('[RunReplyEditor] Instruction was not sent', error);
+      toast.error(t('taskDetail.instructionSendFailed'));
     } finally {
       setSubmitting(false);
     }
-  }, [editor, onSubmit, submitting]);
+  }, [editor, onSubmit, submitting, t]);
 
   return (
     <ChatInput

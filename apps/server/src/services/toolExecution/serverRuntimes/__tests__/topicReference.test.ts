@@ -6,6 +6,28 @@ import { type ToolExecutionContext } from '../../types';
 // Mock database models
 const mockTopicModelFindOwnTopicById = vi.fn();
 const mockMessageModelQuery = vi.fn();
+const mockIssue = vi.fn().mockResolvedValue(null);
+const mockTask = vi.fn();
+const mockProject = vi.fn();
+const mockRead = vi.fn();
+vi.mock('@/database/models/taskTopic', () => ({
+  TaskTopicModel: class {
+    findIssueTopicById = mockIssue;
+  },
+}));
+vi.mock('@/database/models/task', () => ({
+  TaskModel: class {
+    findById = mockTask;
+  },
+}));
+vi.mock('@/database/models/project', () => ({
+  ProjectModel: class {
+    findById = mockProject;
+  },
+}));
+vi.mock('@/server/routers/lambda/_helpers/conversationResourceGuard', () => ({
+  assertCanViewTopicTargets: (...args: unknown[]) => mockRead(...args),
+}));
 
 vi.mock('@/database/models/topic', () => ({
   TopicModel: vi.fn().mockImplementation(function () {
@@ -89,11 +111,65 @@ describe('topicReferenceRuntime', () => {
     });
   });
 
+  describe('Slack live source boundary', () => {
+    const runtime = () =>
+      topicReferenceRuntime.factory({
+        serverDB: {} as never,
+        userId: 'user-1',
+        workspaceId: 'workspace-1',
+        topicId: 'source',
+        toolManifestMap: {},
+      });
+    beforeEach(() => {
+      mockIssue.mockReset().mockResolvedValue(null);
+      mockTask.mockReset().mockResolvedValue({ projectId: 'project', workspaceId: 'workspace-1' });
+      mockProject.mockReset().mockResolvedValue({ id: 'project' });
+      mockRead.mockReset();
+      mockTopicModelFindOwnTopicById.mockImplementation(async (id) =>
+        id === 'source'
+          ? { trigger: 'slack' }
+          : { id, historySummary: 'latest content', workspaceId: 'workspace-1' },
+      );
+      mockMessageModelQuery.mockClear();
+    });
+    it('fails closed if the originating conversation is deleted or no longer readable', async () => {
+      mockTopicModelFindOwnTopicById.mockImplementation(async (id) =>
+        id === 'source' ? null : { historySummary: 'private content' },
+      );
+      const result = await runtime().getTopicContext({ topicId: 'private' });
+      expect(result.success).toBe(false);
+      expect(result.content).not.toContain('private content');
+    });
+
+    it('excludes independent private and non-Issue sessions', async () => {
+      const result = await runtime().getTopicContext({ topicId: 'private' });
+      expect(result.success).toBe(false);
+      expect(result.content).not.toContain('latest content');
+      expect(mockMessageModelQuery).not.toHaveBeenCalled();
+    });
+    it('excludes caller-owned unfiled Issue sessions despite compatible model visibility', async () => {
+      mockIssue.mockResolvedValue({ taskId: 'personal-issue', workspaceId: null });
+      expect((await runtime().getTopicContext({ topicId: 'personal-run' })).success).toBe(false);
+      expect(mockMessageModelQuery).not.toHaveBeenCalled();
+    });
+
+    it('reads linked Issue content but rechecks Project permission each time', async () => {
+      mockIssue.mockResolvedValue({ taskId: 'issue', workspaceId: 'workspace-1' });
+      expect((await runtime().getTopicContext({ topicId: 'linked' })).content).toContain(
+        'latest content',
+      );
+      mockProject.mockResolvedValue(null);
+      expect((await runtime().getTopicContext({ topicId: 'linked' })).success).toBe(false);
+    });
+  });
+
   describe('getTopicContext', () => {
     let runtime: any;
 
     beforeEach(() => {
       vi.clearAllMocks();
+      mockIssue.mockResolvedValue(null);
+      mockRead.mockResolvedValue(undefined);
 
       const context: ToolExecutionContext = {
         serverDB: {} as any,

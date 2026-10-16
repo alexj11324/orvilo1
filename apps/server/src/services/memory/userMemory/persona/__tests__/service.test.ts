@@ -1,14 +1,24 @@
 // @vitest-environment node
 import { type OrviloDatabase } from '@orvilo/database';
-import { users, userSettings } from '@orvilo/database/schemas';
-import { getTestDB } from '@orvilo/database/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UserPersonaModel } from '@/database/models/userMemory/persona';
 import type * as AiInfraReposModule from '@/database/repositories/aiInfra';
-import { resolveRuntimeAgentConfig } from '@/server/services/memory/userMemory/extract';
 
 import { UserPersonaService } from '../service';
+
+const personaMocks = vi.hoisted(() => ({
+  historicalPersona: { persona: '# Historical persona', version: 1 },
+  upsertPersona: vi.fn(),
+}));
+vi.mock('@/database/models/userMemory/persona', () => ({
+  UserPersonaModel: vi.fn().mockImplementation(function () {
+    return {
+      getLatestPersonaDocument: async () => personaMocks.historicalPersona,
+      upsertPersona: personaMocks.upsertPersona,
+    };
+  }),
+}));
 
 // Use vi.hoisted to ensure mocks are available when vi.mock factory runs
 const aiInfraMocks = vi.hoisted(() => ({
@@ -97,87 +107,18 @@ beforeEach(async () => {
       openai: { keyVaults: { apiKey: 'vault-key', baseURL: 'https://vault.example.com' } },
     },
   });
-  db = await getTestDB();
-
-  await db.delete(users);
-  await db.insert(users).values({ id: userId });
+  db = {} as OrviloDatabase;
 });
 
 describe('UserPersonaService', () => {
-  it('composes and persists persona via agent', async () => {
-    const service = new UserPersonaService(db);
-    const result = await service.composeWriting({
-      personaNotes: '- note',
-      recentEvents: '- event',
-      retrievedMemories: '- mem',
-      userId,
-      username: 'User',
-    });
-
-    expect(toolCall).toHaveBeenCalledWith(
-      expect.objectContaining({
-        language: 'English',
-        username: 'User',
-      }),
-    );
-    expect(result.document.persona).toBe('# Persona');
-
+  it('rejects automatic persona writing and preserves the existing persona history', async () => {
     const model = new UserPersonaModel(db, userId);
-    const latest = await model.getLatestPersonaDocument();
-    expect(latest?.version).toBe(1);
-  });
-
-  it('passes existing persona baseline on subsequent runs', async () => {
-    const service = new UserPersonaService(db);
-    await service.composeWriting({ userId, username: 'User' });
-    await service.composeWriting({ userId, username: 'User' });
-
-    expect(toolCall).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        existingPersona: '# Persona',
-      }),
-    );
-  });
-
-  it('drops fallback credentials when persona writer provider is overridden', async () => {
-    await db.insert(userSettings).values({
-      id: userId,
-      systemAgent: {
-        userMemoryPersonaWriter: {
-          model: 'claude-mock',
-          provider: 'anthropic',
-        },
-      },
-    });
-    aiInfraMocks.tryMatchingProviderFrom.mockResolvedValue('anthropic');
-    aiInfraMocks.getAiProviderRuntimeState.mockResolvedValue({
-      enabledAiModels: [
-        { abilities: {}, enabled: true, id: 'claude-mock', providerId: 'anthropic', type: 'chat' },
-      ],
-      enabledAiProviders: [],
-      enabledChatAiProviders: [],
-      runtimeConfig: {},
-    });
-
-    const service = new UserPersonaService(db);
-    await service.composeWriting({ userId, username: 'User' });
-
-    expect(resolveRuntimeAgentConfig).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        apiKey: undefined,
-        baseURL: undefined,
-        model: 'claude-mock',
-        provider: 'anthropic',
-      }),
-      expect.objectContaining({
-        fallback: {
-          apiKey: undefined,
-          baseURL: undefined,
-        },
-        preferred: { providerIds: ['anthropic'] },
-        userId: 'user-persona-service',
-      }),
-      undefined,
-    );
+    const before = await model.getLatestPersonaDocument();
+    await expect(
+      new UserPersonaService(db).composeWriting({ userId, username: 'User' }),
+    ).rejects.toThrow('Platform memory persona writing is unavailable');
+    expect(await model.getLatestPersonaDocument()).toEqual(before);
+    expect(toolCall).not.toHaveBeenCalled();
+    expect(personaMocks.upsertPersona).not.toHaveBeenCalled();
   });
 });

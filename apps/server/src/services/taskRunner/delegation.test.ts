@@ -67,6 +67,7 @@ const setupHappyPath = (task: TaskItem, execResult: unknown) => {
   vi.spyOn(TaskModel.prototype, 'updateStatus').mockResolvedValue(task);
   vi.spyOn(TaskModel.prototype, 'resolveTaskReviewRequirement').mockResolvedValue(false);
   vi.spyOn(TaskModel.prototype, 'areAllDependenciesCompleted').mockResolvedValue(true);
+  vi.spyOn(TaskModel.prototype, 'assertConfirmedIssuePlan').mockResolvedValue(undefined);
   vi.spyOn(TaskModel.prototype, 'claimRunKickoff').mockResolvedValue(true);
   vi.spyOn(TaskTopicModel.prototype, 'findByTaskId').mockResolvedValue([]);
   vi.spyOn(TaskTopicModel.prototype, 'findByTopicId').mockResolvedValue(null);
@@ -158,6 +159,9 @@ describe('TaskRunnerService delegated runs', () => {
       success: true,
     });
     expect(execAgent).toHaveBeenCalledOnce();
+    expect(execAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ requiredToolIds: expect.arrayContaining(['orvilo-task']) }),
+    );
   });
 
   it('denies a visible workspace Agent without Use before policy, reservation or dispatch writes', async () => {

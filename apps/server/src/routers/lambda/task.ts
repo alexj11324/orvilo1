@@ -1,7 +1,6 @@
 import { TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import { AgentRuntimeErrorType } from '@orvilo/model-runtime';
 import type {
-  TaskItem,
   TaskListItem,
   TaskParticipant,
   TaskVerifyConfig,
@@ -22,9 +21,11 @@ import { TaskDomainError } from '@/database/errors/task';
 import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
 import { CredentialModel } from '@/database/models/credential';
+import { ProjectModel } from '@/database/models/project';
 import {
   TaskHandoffRequiredError,
   TaskModel,
+  TaskReviewerRequiredError,
   TaskRevisionConflictError,
 } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
@@ -52,26 +53,25 @@ import {
   TASK_INPUT_STATUSES,
   TaskInputService,
 } from '@/server/services/agentDelegation';
+import { agentCanMountBuiltinToolSurface } from '@/server/services/aiAgent/pipeline/resolveExecutionBinding';
 import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 import { AutomationResultDeliveryService } from '@/server/services/automationResultDelivery';
 import { automationResultWebhookConfigSchema } from '@/server/services/automationResultDelivery/transport';
 import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import { TaskService } from '@/server/services/task';
-import {
-  assertTaskExecutionUse,
-  resolveActivityActor,
-  type TaskExecutionUseContext,
-} from '@/server/services/task/access';
+import { assertTaskExecutionUse, resolveActivityActor } from '@/server/services/task/access';
 import { acceptancePolicyChanged } from '@/server/services/task/activityLogChange';
-import { mayTakeOverExecution } from '@/server/services/task/executionTakeover';
+import { IssueChecklistService } from '@/server/services/task/checklist';
 import { TaskIntentService } from '@/server/services/task/intent';
 import { TaskMutationService } from '@/server/services/task/mutations';
+import { TaskPlanService } from '@/server/services/task/plan';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 import { runTaskWatchdog } from '@/server/services/taskWatchdog';
 import { AcceptanceService } from '@/server/services/verify/acceptanceService';
+import { assertLegacyVerificationWritable } from '@/server/services/verify/retirement';
 import { resolveTaskAcceptance } from '@/server/services/verify/taskAcceptance';
 import { hasWorkspaceScopedPermission } from '@/server/services/workspacePermission';
 import {
@@ -84,8 +84,14 @@ import { TransferErrorCode } from '@/types/transferError';
 
 import { assertWorkspaceRowManageable } from './_helpers/assertWorkspaceRowManageable';
 import { assertIssueExecutionInput } from './_helpers/issueExecutionInput';
+import { resolveIssueInstructionTarget } from './_helpers/issueInstruction';
 import { assertCanUseWorkspaceAgent } from './_helpers/workspaceAgentGuard';
 import { projectWorkspaceConversationMetadata } from './_helpers/workspaceConversationMetadata';
+import {
+  confirmIssueChecklistSchema,
+  issueChecklistItemsDecisionSchema,
+  issueDeliveryDecisionSchema,
+} from './_schema/issueChecklist';
 
 const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -106,6 +112,8 @@ const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
       taskIntentService: new TaskIntentService(ctx.serverDB, ctx.userId, wsId),
       taskLabelModel: new TaskLabelModel(ctx.serverDB, ctx.userId, wsId),
       taskService: new TaskService(ctx.serverDB, ctx.userId, wsId),
+      issueChecklist: new IssueChecklistService(ctx.serverDB, ctx.userId, wsId),
+      taskPlan: new TaskPlanService(ctx.serverDB, ctx.userId, wsId),
       taskTopicModel: new TaskTopicModel(ctx.serverDB, ctx.userId, wsId),
       topicModel: new TopicModel(ctx.serverDB, ctx.userId, wsId),
     },
@@ -118,18 +126,6 @@ const taskProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => 
 const taskProcedureWrite = taskProcedure.use(withScopedPermission('agent:update'));
 // Execution consumes Agent Use, independently of Agent configuration management.
 const taskExecutionProcedure = taskProcedure.use(withScopedPermission('ai_model:invoke'));
-
-/** Whether the caller may stop or replace this Issue's execution without Use on its agent. */
-async function callerMayTakeOver(
-  ctx: TaskExecutionUseContext,
-  task: Pick<TaskItem, 'createdByUserId' | 'workspaceId'>,
-) {
-  const workspaceId = task.workspaceId ?? ctx.workspaceId;
-  const role = workspaceId
-    ? await getActiveWorkspaceMembershipRole(ctx.serverDB, { userId: ctx.userId, workspaceId })
-    : undefined;
-  return mayTakeOverExecution({ issue: task, role, userId: ctx.userId });
-}
 
 // All procedures that take an id accept either raw id (task_xxx) or identifier (TASK-1)
 // Resolution happens in the model layer via model.resolve()
@@ -149,7 +145,6 @@ const taskVerifyConfigPatchSchema = z.object({
   enabled: z.boolean().nullish(),
   maxIterations: z.number().min(1).max(10).nullish(),
   requirement: z.string().nullish(),
-  verifierAgentId: z.string().nullish(),
   verifyCriteriaIds: z.array(z.string()).nullish(),
   verifyRubricId: z.string().nullish(),
 });
@@ -182,6 +177,7 @@ const createSchema = z.object({
   parentTaskId: z.string().optional(),
   priority: z.number().min(0).max(4).optional(),
   projectId: z.string().optional(),
+  reviewerAgentId: z.string().nullish(),
   schedulePattern: z.string().optional(),
   scheduleTimezone: z.string().optional(),
   /** Execution-status preset — a status-grouped board column's `+`. */
@@ -213,7 +209,12 @@ const updateSchema = z.object({
   automationMode: z.enum(['heartbeat', 'schedule', 'event']).nullish(),
   beforeId: z.string().nullish(),
   config: z.record(z.string(), z.unknown()).optional(),
-  context: z.record(z.string(), z.unknown()).optional(),
+  context: z
+    .record(z.string(), z.unknown())
+    .refine((context) => !('issuePlan' in context), {
+      message: 'Issue plan confirmation is owned by confirmIssuePlan',
+    })
+    .optional(),
   description: z.string().optional(),
   /** Issue deadline as `YYYY-MM-DD`; `null` clears it. */
   dueDate: z.iso.date().nullish(),
@@ -261,7 +262,7 @@ const updateSchema = z.object({
   position: z.number().optional(),
   priority: z.number().min(0).max(4).optional(),
   projectId: z.string().nullish(),
-  reviewerUserId: z.string().nullish(),
+  reviewerAgentId: z.string().nullish(),
   schedulePattern: z.string().nullish(),
   scheduleTimezone: z.string().nullish(),
   status: z.enum(TASK_STATUSES).optional(),
@@ -522,6 +523,113 @@ const relationMutation = (ctx: { actingAgentId?: string | null }) => ({
 });
 
 export const taskRouter = router({
+  intakeIssue: taskExecutionProcedure
+    .input(
+      z.object({
+        name: z.string().trim().min(1).max(2000),
+        instruction: z.string().trim().min(1).max(100000),
+        projectId: z.string().optional(),
+        repositoryId: z.string().optional(),
+        teamId: z.string().optional(),
+        issueId: z.string().optional(),
+        sourceTopicId: z.string().min(1).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { sourceTopicId, ...request } = input;
+      const source = sourceTopicId ? await ctx.topicModel.findById(sourceTopicId) : undefined;
+      if (sourceTopicId && (!source || source.userId !== ctx.userId))
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Source conversation not found' });
+      return {
+        data: await ctx.taskPlan.intake({
+          ...request,
+          origin: source ? { topicId: source.id, agentId: source.agentId ?? undefined } : undefined,
+        }),
+        success: true,
+      };
+    }),
+  getInstructionTarget: taskProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.id);
+      try {
+        const target = await resolveIssueInstructionTarget(ctx, task);
+        const [agent] = await ctx.agentModel.getAgentAvatarsByIds([target.agentId]);
+        return {
+          data: agent
+            ? {
+                agentId: target.agentId,
+                topicId: target.topicId,
+                name: agent.title ?? agent.name ?? agent.id,
+                avatar: agent.avatar,
+              }
+            : null,
+          success: true,
+        };
+      } catch (error) {
+        if (
+          error instanceof TRPCError &&
+          ['FORBIDDEN', 'NOT_FOUND', 'CONFLICT'].includes(error.code)
+        )
+          return { data: null, success: true };
+        throw error;
+      }
+    }),
+  getIssuePlan: taskProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .query(async ({ ctx, input }) => ({
+      data: await ctx.taskPlan.getIssuePlan(input.id),
+      success: true,
+    })),
+  draftIssuePlan: taskExecutionProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => ({
+      data: await ctx.taskPlan.draftIssuePlan(input.id),
+      success: true,
+    })),
+  confirmIssuePlan: taskExecutionProcedure
+    .input(z.object({ id: z.string().min(1), revision: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => ({
+      data: await ctx.taskPlan.confirmIssuePlan(input),
+      success: true,
+    })),
+  acceptDelivery: taskProcedure
+    .input(issueDeliveryDecisionSchema)
+    .mutation(async ({ input, ctx }) => {
+      const data = await ctx.issueChecklist.acceptDelivery(input);
+      const task = await ctx.taskModel.findById(input.taskId);
+      if (task?.createdByUserId)
+        after(async () => {
+          const { runTaskDeliveryReviewSweep } =
+            await import('@/server/services/taskDeliveryReview');
+          await runTaskDeliveryReviewSweep(ctx.serverDB, {
+            createdByUserId: task.createdByUserId!,
+            workspaceId: task.workspaceId ?? undefined,
+          });
+        });
+      return { data, success: true };
+    }),
+
+  confirmChecklist: taskProcedure
+    .input(confirmIssueChecklistSchema)
+    .mutation(async ({ input, ctx }) => ({
+      data: await ctx.issueChecklist.confirmChecklist(input),
+      success: true,
+    })),
+
+  getChecklist: taskProcedure
+    .input(z.object({ taskId: z.string().min(1) }))
+    .query(async ({ input, ctx }) => ({
+      data: await ctx.issueChecklist.getChecklist(input.taskId),
+      success: true,
+    })),
+
+  reviewChecklistItems: taskProcedure
+    .input(issueChecklistItemsDecisionSchema)
+    .mutation(async ({ input, ctx }) => ({
+      data: await ctx.issueChecklist.reviewChecklistItems(input),
+      success: true,
+    })),
   /**
    * Read a composer draft and report what it means — a name, the outcome as
    * understood, the questions that would change the deliverable, and whether
@@ -871,6 +979,14 @@ export const taskRouter = router({
       }
     }),
 
+  cancelAutomationOccurrence: taskExecutionProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const task = await resolveOrThrow(ctx.taskModel, input.id);
+      await assertTaskExecutionUse(ctx, [task], [task.assigneeAgentId]);
+      return ctx.taskService.cancelAutomationOccurrence(task.id);
+    }),
+
   cancelTopic: taskExecutionProcedure
     .input(z.object({ topicId: z.string() }))
     .mutation(async ({ input, ctx }) => {
@@ -878,10 +994,7 @@ export const taskRouter = router({
         const target = await ctx.taskTopicModel.findIssueTopicById(input.topicId);
         if (!target) throw new TRPCError({ code: 'NOT_FOUND', message: 'Topic not found.' });
         const task = await resolveOrThrow(ctx.taskModel, target.taskId);
-        // Stopping a run is the smaller half of taking the Issue over.
-        await assertTaskExecutionUse(ctx, [task], [], {
-          waiveIncumbentUse: await callerMayTakeOver(ctx, task),
-        });
+        await assertTaskExecutionUse(ctx, [task]);
         await ctx.taskService.cancelTopic(input.topicId, task.id);
         return { message: 'Topic canceled', success: true };
       } catch (error) {
@@ -928,8 +1041,11 @@ export const taskRouter = router({
       });
     }
     try {
-      const parsedVerify = taskVerifyConfigPatchSchema.safeParse(createInput.config?.verify);
-      const { verify: _legacyVerify, ...taskConfig } = createInput.config ?? {};
+      if (
+        createInput.config &&
+        (Object.hasOwn(createInput.config, 'verify') || Object.hasOwn(createInput.config, 'review'))
+      )
+        assertLegacyVerificationWritable();
       // Board `+` presets: a workflow-category target resolves against the
       // team's imported states (exact match → stamp the state; otherwise keep
       // the bare category — the board groups on it regardless). Creating into
@@ -954,28 +1070,8 @@ export const taskRouter = router({
       const task = await ctx.taskService.createTask({
         ...createInput,
         ...workflowPreset,
-        config: parsedVerify.success ? taskConfig : createInput.config,
         createdByAgentId: creator.agentId ?? undefined,
       });
-      try {
-        if (parsedVerify.success) {
-          const { requirement, ...rawConfig } = parsedVerify.data;
-          const config = Object.fromEntries(
-            Object.entries(rawConfig).filter(([, value]) => value != null),
-          );
-          await new AcceptanceService(
-            ctx.serverDB,
-            ctx.userId,
-            ctx.workspaceId ?? undefined,
-          ).ensureForSubject('task', task.id, {
-            config,
-            requirement: requirement ?? undefined,
-          });
-        }
-      } catch (error) {
-        await ctx.taskModel.delete(task.id).catch(() => {});
-        throw error;
-      }
       // Creating a task already assigned to another member notifies them.
       notifyAssignedBestEffort(ctx, task);
       return { data: task, message: 'Task created', success: true };
@@ -1425,15 +1521,18 @@ export const taskRouter = router({
     .mutation(async ({ input, ctx }) => {
       try {
         const task = await resolveOrThrow(ctx.taskModel, input.taskId);
-        // Taking over skips the check on the incumbent only; the successor is
-        // always checked.
-        await assertTaskExecutionUse(ctx, [task], [input.toAgentId], {
-          waiveIncumbentUse: await callerMayTakeOver(ctx, task),
-        });
+        await assertTaskExecutionUse(ctx, [task], [input.toAgentId]);
         const result = await ctx.taskService.handoffTask(input);
         return { data: result, message: 'Task handed off', success: true };
       } catch (error) {
         if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
+        if (error instanceof TaskReviewerRequiredError) {
+          throw new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: error.message,
+          });
+        }
         if (error instanceof TaskRevisionConflictError) {
           throw new TRPCError({ code: 'CONFLICT', message: error.message });
         }
@@ -1486,6 +1585,33 @@ export const taskRouter = router({
         message: 'Failed to fetch grouped tasks',
       });
     }
+  }),
+
+  listReviewerAgents: taskProcedure.query(async ({ ctx }) => {
+    const agents = await ctx.agentModel.queryAgents();
+    const results = await Promise.all(
+      agents.map(async (agent) => {
+        try {
+          await assertCanUseWorkspaceAgent({
+            agentId: agent.id,
+            db: ctx.serverDB,
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId,
+          });
+          const config = await ctx.agentModel.getAgentConfigForExecution(agent.id);
+          return {
+            canReviewIssues: !!config && agentCanMountBuiltinToolSurface(config, config.model),
+            id: agent.id,
+            name: agent.title ?? agent.name ?? agent.id,
+          };
+        } catch (error) {
+          if (error instanceof TRPCError && ['FORBIDDEN', 'NOT_FOUND'].includes(error.code))
+            return null;
+          throw error;
+        }
+      }),
+    );
+    return { data: results.filter((agent) => agent !== null), success: true };
   }),
 
   list: taskProcedure.input(listSchema).query(async ({ input, ctx }) => {
@@ -1581,6 +1707,7 @@ export const taskRouter = router({
       idInput.merge(
         z.object({
           continueTopicId: z.string().optional(),
+          instructionAgentId: z.string().min(1).optional(),
           delegationGrantId: z.string().optional(),
           idempotencyKey: z.string().min(1).max(255).optional(),
           // SB08: which contract this run adopts. `continue` continues an
@@ -1616,15 +1743,28 @@ export const taskRouter = router({
           delegation = { agentId: grant.agentId, grantId: grant.id };
         }
 
+        const instruction =
+          input.continueTopicId || input.instructionAgentId
+            ? await resolveIssueInstructionTarget(ctx, task, {
+                agentId: input.instructionAgentId,
+                topicId: input.continueTopicId,
+              })
+            : undefined;
+        if (instruction && delegation)
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Issue input cannot replace the Run executor',
+          });
         const runner = new TaskRunnerService(
           ctx.serverDB,
-          ctx.userId,
+          instruction?.executionUserId ?? ctx.userId,
           ctx.workspaceId ?? undefined,
         );
         return await runner.runTask({
-          continueTopicId: input.continueTopicId,
+          continueTopicId: instruction?.topicId ?? input.continueTopicId,
           delegation,
           extraPrompt: input.prompt,
+          requestedBy: ctx.userId,
           idempotencyKey: input.idempotencyKey,
           intent: input.intent,
           replanApprovalId: input.replanApprovalId,
@@ -1633,6 +1773,13 @@ export const taskRouter = router({
         });
       } catch (error) {
         if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
+        if (error instanceof TaskReviewerRequiredError) {
+          throw new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: error.message,
+          });
+        }
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -1855,6 +2002,13 @@ export const taskRouter = router({
     try {
       const model = ctx.taskModel;
       const task = await resolveOrThrow(model, input.id);
+      if (
+        task.projectId &&
+        !(await new ProjectModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined).findById(
+          task.projectId,
+        ))
+      )
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
       return { data: model.getReviewConfig(task) || null, success: true };
     } catch (error) {
       if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
@@ -1897,6 +2051,7 @@ export const taskRouter = router({
       ),
     )
     .mutation(async ({ input, ctx }) => {
+      assertLegacyVerificationWritable();
       const { id, review } = input;
       try {
         const model = ctx.taskModel;
@@ -1958,6 +2113,7 @@ export const taskRouter = router({
       ),
     )
     .mutation(async ({ input, ctx }) => {
+      assertLegacyVerificationWritable();
       const { id, verify } = input;
       try {
         const model = ctx.taskModel;
@@ -2051,6 +2207,13 @@ export const taskRouter = router({
         return { data: result, success: true };
       } catch (error) {
         if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
+        if (error instanceof TaskReviewerRequiredError) {
+          throw new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: error.message,
+          });
+        }
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2085,6 +2248,13 @@ export const taskRouter = router({
         };
       } catch (error) {
         if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
+        if (error instanceof TaskReviewerRequiredError) {
+          throw new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: error.message,
+          });
+        }
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2268,6 +2438,8 @@ export const taskRouter = router({
     .input(idInput.merge(z.object({ config: z.record(z.string(), z.unknown()) })))
     .mutation(async ({ input, ctx }) => {
       const { id, config } = input;
+      if (Object.hasOwn(config, 'verify') || Object.hasOwn(config, 'review'))
+        assertLegacyVerificationWritable();
       try {
         const model = ctx.taskModel;
         const resolved = await resolveOrThrow(model, id);
@@ -2380,6 +2552,13 @@ export const taskRouter = router({
         };
       } catch (error) {
         if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
+        if (error instanceof TaskReviewerRequiredError) {
+          throw new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: error.message,
+          });
+        }
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }
@@ -2450,6 +2629,13 @@ export const taskRouter = router({
         return { data: result, message: `Task family ${input.status}`, success: true };
       } catch (error) {
         if (error instanceof TRPCError || error instanceof TaskDomainError) throw error;
+        if (error instanceof TaskReviewerRequiredError) {
+          throw new TRPCError({
+            cause: error,
+            code: 'PRECONDITION_FAILED',
+            message: error.message,
+          });
+        }
         if (error instanceof TaskDependencyError) {
           throw new TRPCError({ cause: error, code: error.code, message: error.message });
         }

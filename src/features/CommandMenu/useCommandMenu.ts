@@ -9,7 +9,6 @@ import { isDesktop } from '@/const/version';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import { useDefaultAgent } from '@/features/DefaultAgent/useDefaultAgent';
 import { useBuiltinHarnessOffered } from '@/features/HeterogeneousAgent/builtinHarness';
-import { useCreateNewModal } from '@/features/LibraryModal';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
@@ -22,7 +21,6 @@ import { builtinAgentSelectors } from '@/store/agent/selectors/builtinAgentSelec
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
-import { globalHelpers } from '@/store/global/helpers';
 
 import { useCommandMenuContext } from './CommandMenuContext';
 import { type CommandMenuSearchResult, type ThemeMode } from './types';
@@ -64,7 +62,6 @@ export const useCommandMenu = () => {
   // Asking without naming an Agent uses the inbox only while that Agent is
   // available, and otherwise uses the configured default Agent.
   const askAgentId = builtinOffered ? inboxAgentId : defaultAgent?.agentId;
-  const { open: openCreateLibraryModal } = useCreateNewModal();
 
   // Debounce search input to reduce API calls
   const debouncedSearch = useDebounce(search, { wait: 600 });
@@ -81,7 +78,6 @@ export const useCommandMenu = () => {
   } = useSWR<CommandMenuSearchResult[]>(
     hasSearch ? ['search', searchQuery, agentId, typeFilter, workspaceId] : null,
     async () => {
-      const locale = globalHelpers.getCurrentLanguage();
       const limitPerType = typeFilter
         ? COMMAND_MENU_TYPED_LIMIT_PER_TYPE
         : COMMAND_MENU_MIXED_LIMIT_PER_TYPE;
@@ -94,9 +90,7 @@ export const useCommandMenu = () => {
         wantsFts
           ? globalSearchService.queryFts({
               agentId,
-              includeMarketplace: false,
               limitPerType,
-              locale,
               query: searchQuery,
               type: ftsType,
             })
@@ -202,17 +196,6 @@ export const useCommandMenu = () => {
     onClose();
   }, [canCreate, openNewTopicOrSaveTopic, onClose]);
 
-  const handleCreateLibrary = useCallback(() => {
-    if (!canCreate) return;
-
-    onClose();
-    openCreateLibraryModal({
-      onSuccess: (id) => {
-        navigate(`/resource/library/${id}`);
-      },
-    });
-  }, [canCreate, onClose, openCreateLibraryModal, navigate]);
-
   const handleCreateTask = useCallback(() => {
     if (!canCreate) return;
 
@@ -241,7 +224,6 @@ export const useCommandMenu = () => {
     handleAskOrviloAI,
     handleBack,
     handleCreateConversation,
-    handleCreateLibrary,
     handleCreateProject,
     handleCreateTask,
     handleCreateTopic,

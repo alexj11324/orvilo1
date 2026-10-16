@@ -19,7 +19,6 @@ import { type CredsApi } from '../useCredsApi';
 import CredTypeSelector from './CredTypeSelector';
 import FileCredForm from './FileCredForm';
 import KVCredForm from './KVCredForm';
-import OAuthCredForm from './OAuthCredForm';
 
 export interface CreateCredModalContentProps {
   /**
@@ -66,9 +65,6 @@ const CreateCredModalContent: FC<CreateCredModalContentProps> = ({ credsApi, onS
             onSuccess={handleSuccess}
           />
         );
-      }
-      case 'oauth': {
-        return <OAuthCredForm credsApi={credsApi} onBack={handleBack} onSuccess={handleSuccess} />;
       }
       case 'file': {
         return <FileCredForm credsApi={credsApi} onBack={handleBack} onSuccess={handleSuccess} />;

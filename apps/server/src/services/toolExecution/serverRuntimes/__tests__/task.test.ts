@@ -2,10 +2,28 @@ import { normalizeListTasksParams, UNFINISHED_TASK_STATUSES } from '@orvilo/buil
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskDependencyError } from '@/database/models/taskDependency';
+import type * as taskReview from '@/server/services/task/review';
 
 import { createTaskRuntime, taskRuntime } from '../task';
 
+const intakeMocks = vi.hoisted(() => ({ intake: vi.fn(), source: vi.fn() }));
+vi.mock('@/database/models/topic', () => ({
+  TopicModel: class {
+    findOwnTopicById = intakeMocks.source;
+  },
+}));
+vi.mock('@/server/services/task/plan', () => ({
+  TaskPlanService: vi.fn(function () {
+    return intakeMocks;
+  }),
+}));
+
 const verifyMocks = vi.hoisted(() => ({ createCriteriaFromDrafts: vi.fn() }));
+const reviewMocks = vi.hoisted(() => ({ submitIssueReview: vi.fn() }));
+vi.mock('@/server/services/task/review', async (importOriginal) => ({
+  ...(await importOriginal<typeof taskReview>()),
+  ...reviewMocks,
+}));
 const automationInputMocks = vi.hoisted(() => ({ findByTaskId: vi.fn() }));
 vi.mock('@/database/models/taskTopic', () => ({
   TaskTopicModel: vi.fn().mockImplementation(function () {
@@ -117,6 +135,229 @@ describe('taskRuntime.factory', () => {
 });
 
 describe('createTaskRuntime', () => {
+  describe('intakeIssue', () => {
+    const runtime = (slack = false) =>
+      createTaskRuntime({
+        ...(slack ? { db: {} as never, userId: 'caller', workspaceId: 'workspace' } : {}),
+        agentId: 'agent-source',
+        topicId: 'topic-source',
+        assistantMessageId: 'message-source',
+        rootOperationId: 'root-operation',
+        operationId: 'child-operation',
+        toolCallId: 'intake-call',
+        agentModel: {} as never,
+        taskModel: {} as never,
+        taskService: {} as never,
+        taskCaller: {} as never,
+        taskPlanService: intakeMocks as never,
+      });
+
+    it('returns an Issue draft in the continuous source conversation without executing it', async () => {
+      intakeMocks.intake.mockResolvedValue({
+        id: 'issue-draft',
+        identifier: 'T-784',
+        name: 'Deliver feature',
+        priority: 0,
+        workflowCategory: 'triage',
+      });
+      const result = await runtime().intakeIssue({
+        name: 'Deliver feature',
+        instruction: 'Add the requested feature',
+        issueId: 'T-784',
+      });
+      expect(result).toMatchObject({
+        success: true,
+        state: { taskId: 'issue-draft', identifier: 'T-784', workflowCategory: 'triage' },
+      });
+      expect(result.content).toContain('Await human confirmation');
+      expect(intakeMocks.intake).toHaveBeenCalledWith(
+        expect.objectContaining({
+          issueId: 'T-784',
+          origin: {
+            agentId: 'agent-source',
+            topicId: 'topic-source',
+            messageId: 'message-source',
+            operationId: 'root-operation',
+            toolCallId: 'intake-call',
+          },
+        }),
+      );
+    });
+
+    it('clarifies an unspecified Slack delivery target instead of guessing from activity', async () => {
+      intakeMocks.intake.mockClear();
+      intakeMocks.source.mockResolvedValue({ trigger: 'slack' });
+      const result = await runtime(true).intakeIssue({
+        name: 'Feature',
+        instruction: 'Add feature',
+      });
+      expect(result.success).toBe(false);
+      expect(result.content).toContain('specify the target');
+      expect(intakeMocks.intake).not.toHaveBeenCalled();
+    });
+
+    it('uses configured channel defaults only after explicit Issue/project targets', async () => {
+      intakeMocks.source.mockResolvedValue({
+        trigger: 'slack',
+        metadata: { slackContext: { projectId: 'default-project', repositoryId: 'default-repo' } },
+      });
+      intakeMocks.intake.mockResolvedValue({
+        id: 'draft',
+        name: 'Feature',
+        workflowCategory: 'triage',
+      });
+      await runtime(true).intakeIssue({ name: 'Feature', instruction: 'Add feature' });
+      expect(intakeMocks.intake).toHaveBeenLastCalledWith(
+        expect.objectContaining({ projectId: 'default-project', repositoryId: 'default-repo' }),
+      );
+      await runtime(true).intakeIssue({
+        name: 'Feature',
+        instruction: 'Add feature',
+        projectId: 'explicit-project',
+      });
+      expect(intakeMocks.intake).toHaveBeenLastCalledWith(
+        expect.objectContaining({ projectId: 'explicit-project', repositoryId: undefined }),
+      );
+      await runtime(true).intakeIssue({
+        name: 'Feature',
+        instruction: 'Add feature',
+        issueId: 'explicit-issue',
+      });
+      expect(intakeMocks.intake).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          issueId: 'explicit-issue',
+          projectId: undefined,
+          repositoryId: undefined,
+        }),
+      );
+    });
+
+    it('asks for missing requirements without creating an Issue', async () => {
+      intakeMocks.intake.mockClear();
+      const result = await runtime().intakeIssue({ name: 'Feature', instruction: ' ' });
+      expect(result.success).toBe(false);
+      expect(intakeMocks.intake).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('submitTaskReview', () => {
+    const round = {
+      runId: '6a2e27c8-ec45-4c57-a77f-fd5019d24a9a',
+      proof: {
+        taskId: 'task-1',
+        topicId: 'topic-1',
+        deliveryOperationId: 'op-delivery',
+        executionGeneration: 1,
+        checklistRevision: 1,
+        deliveryKind: 'artifact' as const,
+      },
+      items: [
+        {
+          checkItemId: 'item-1',
+          verdict: 'pass' as const,
+          comment: 'Probe observed',
+          evidence: [{ type: 'text' as const, content: 'Executed probe output' }],
+        },
+      ],
+    };
+    const makeRuntime = (overrides: Record<string, unknown> = {}) =>
+      createTaskRuntime({
+        agentId: 'agt-reviewer',
+        agentModel: {} as never,
+        db: {} as never,
+        operationId: 'op-reviewer',
+        taskCaller: {} as never,
+        taskId: 'task-1',
+        taskModel: {
+          resolve: vi.fn().mockResolvedValue({
+            config: { issueReview: { cycleId: 'cycle-1' } },
+            id: 'task-1',
+            identifier: 'T-1',
+          }),
+        } as never,
+        taskService: {} as never,
+        userId: 'user-1',
+        workspaceId: 'ws-1',
+        ...overrides,
+      });
+
+    beforeEach(() => {
+      reviewMocks.submitIssueReview.mockReset();
+      reviewMocks.submitIssueReview.mockResolvedValue({
+        commentId: 'cmt-review',
+        stopped: false,
+        task: { identifier: 'T-1', workflowCategory: 'in_progress' },
+      });
+    });
+
+    it('records a failed review through the authenticated reviewer run', async () => {
+      const result = await makeRuntime().submitTaskReview({
+        ...round,
+        comment: 'The export is missing its title.',
+        identifier: 'T-1',
+        verdict: 'fail',
+      });
+
+      expect(result).toMatchObject({
+        state: { commentId: 'cmt-review', workflowCategory: 'in_progress' },
+        success: true,
+      });
+      expect(reviewMocks.submitIssueReview.mock.calls[0][2]).toMatchObject({
+        actorAgentId: 'agt-reviewer',
+        cycleId: 'cycle-1',
+        operationId: 'op-reviewer',
+        taskId: 'task-1',
+      });
+    });
+
+    it.each([{ agentId: undefined }, { operationId: undefined }, { taskId: undefined }])(
+      'rejects a verdict without an authenticated review run: %o',
+      async (missing) => {
+        const result = await makeRuntime(missing).submitTaskReview({
+          ...round,
+          identifier: 'T-1',
+          verdict: 'pass',
+        });
+        expect(result.success).toBe(false);
+        expect(reviewMocks.submitIssueReview).not.toHaveBeenCalled();
+      },
+    );
+
+    it('does not let a reviewer run judge a different Issue', async () => {
+      const result = await makeRuntime({
+        taskModel: {
+          resolve: vi.fn().mockResolvedValue({
+            config: { issueReview: { cycleId: 'other-cycle' } },
+            id: 'other-task',
+          }),
+        },
+      }).submitTaskReview({ ...round, identifier: 'T-2', verdict: 'pass' });
+      expect(result.success).toBe(false);
+      expect(reviewMocks.submitIssueReview).not.toHaveBeenCalled();
+    });
+
+    it('requires the frozen round and complete item evidence before dispatching a verdict', async () => {
+      const result = await makeRuntime().submitTaskReview({
+        ...round,
+        identifier: 'T-1',
+        verdict: 'pass',
+        items: [],
+      });
+      expect(result.success).toBe(false);
+      expect(reviewMocks.submitIssueReview).not.toHaveBeenCalled();
+    });
+    it('requires a useful comment for a failed review', async () => {
+      const result = await makeRuntime().submitTaskReview({
+        ...round,
+        comment: ' ',
+        identifier: 'T-1',
+        verdict: 'fail',
+      });
+      expect(result.success).toBe(false);
+      expect(reviewMocks.submitIssueReview).not.toHaveBeenCalled();
+    });
+  });
+
   describe('readAutomationInput', () => {
     const makeRuntime = (overrides: Record<string, unknown> = {}) => {
       const findById = vi.fn().mockResolvedValue({ id: 'task-1', content: 'Mutable definition' });
@@ -643,6 +884,25 @@ describe('createTaskRuntime', () => {
       const taskCaller = { update: vi.fn().mockResolvedValue({}) } as any;
       return { agentModel, taskCaller, taskModel, taskService };
     };
+
+    it.each(['agt-reviewer', null])(
+      'sets the delivered Issue reviewer to %s',
+      async (reviewerAgentId) => {
+        const deps = makeDeps();
+        const runtime = createTaskRuntime({
+          agentModel: deps.agentModel as never,
+          taskCaller: deps.taskCaller,
+          taskModel: deps.taskModel as never,
+          taskService: deps.taskService,
+        });
+        const result = await runtime.editTask({ identifier: 'T-1', reviewerAgentId });
+        expect(result.success).toBe(true);
+        expect(result.content).toContain(
+          reviewerAgentId ? `reviewer agent → ${reviewerAgentId}` : 'reviewer cleared',
+        );
+        expect(deps.taskCaller.update).toHaveBeenCalledWith({ id: 'task-1', reviewerAgentId });
+      },
+    );
 
     it('leaves dependencies untouched when the revision-fenced field update fails', async () => {
       const deps = makeDeps();
@@ -1517,5 +1777,37 @@ describe('agent-tool deletion prerequisite guard', () => {
     });
     expect(result.success).toBe(false);
     expect(deletionMocks.cleanupTaskWorktrees).not.toHaveBeenCalled();
+  });
+});
+
+describe('Orchestrator implementation refinement wiring', () => {
+  it('binds refinement to the actual server operation and refuses an unbound client call', async () => {
+    const refineIssuePlan = vi.fn().mockResolvedValue({
+      plan: { revision: 1, refinement: { revision: 1 } },
+      added: [{ id: 'new-task', identifier: 'T-2' }],
+    });
+    const deps = {
+      agentModel: {},
+      taskModel: {},
+      taskService: {},
+      taskCaller: {},
+      taskPlanService: { refineIssuePlan },
+      operationId: 'server-current-operation',
+    } as unknown as Parameters<typeof createTaskRuntime>[0];
+    const input = {
+      identifier: 'T-1',
+      revision: 1,
+      refinementRevision: 0,
+      addTasks: [
+        { sourceIdentifier: 'T-2', name: 'Implementation', instruction: 'Approved outcome detail' },
+      ],
+    };
+    expect((await createTaskRuntime(deps).refineIssuePlan(input)).success).toBe(true);
+    expect(refineIssuePlan).toHaveBeenCalledWith(input, 'server-current-operation');
+    refineIssuePlan.mockClear();
+    expect(
+      (await createTaskRuntime({ ...deps, operationId: undefined }).refineIssuePlan(input)).success,
+    ).toBe(false);
+    expect(refineIssuePlan).not.toHaveBeenCalled();
   });
 });

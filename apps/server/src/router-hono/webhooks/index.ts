@@ -5,7 +5,6 @@ import { casdoorWebhook } from './handlers/casdoor';
 import { githubEventsWebhook } from './handlers/githubEvents';
 import { linearWebhook } from './handlers/linear';
 import { logtoWebhook } from './handlers/logto';
-import { mcpEventsWebhook } from './handlers/mcpEvents';
 import { memoryExtractionWebhook } from './handlers/memoryExtraction';
 import { memoryExtractionBenchmarkLocomo } from './handlers/memoryExtractionBenchmarkLocomo';
 import { memoryUserMemoryChatTopicCancel } from './handlers/memoryUserMemoryChatTopicCancel';
@@ -20,7 +19,6 @@ app.post('/casdoor', casdoorWebhook);
 app.post('/logto', logtoWebhook);
 app.post('/linear/:workspaceId', linearWebhook);
 app.post('/github-events/:callbackToken', githubEventsWebhook);
-app.post('/mcp-events/:callbackToken', mcpEventsWebhook);
 app.post('/slack', bodyLimit({ maxSize: 1024 * 1024 }), slackWebhook);
 
 // Memory pipeline webhooks — share the configured static-header guard.

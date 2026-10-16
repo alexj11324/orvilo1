@@ -10,7 +10,10 @@ export const SLACK_BOT_SCOPES = [
   'channels:history',
   'groups:read',
   'groups:history',
+  'im:read',
+  'im:history',
   'users:read',
+  'files:read',
 ];
 export class SlackProviderError extends Error {
   constructor(public readonly code: string) {
@@ -24,7 +27,8 @@ export const getOAuthConfig = () => {
   return {
     clientId: env.SLACK_CLIENT_ID,
     clientSecret: env.SLACK_CLIENT_SECRET,
-    redirectUri: new URL('/oauth/slack/callback', appEnv.APP_URL).toString(),
+    redirectUri:
+      env.SLACK_REDIRECT_URI ?? new URL('/oauth/slack/callback', appEnv.APP_URL).toString(),
   };
 };
 export const slackApi = async (

@@ -113,40 +113,68 @@ const client = lambdaClient as unknown as TeammatesLambdaContract;
 
 export const teammatesService = {
   workspaceMember: {
-    list: (...args: Parameters<typeof client.workspaceMember.list.query>) => client.workspaceMember.list.query(...args),
-    listInvitations: (...args: Parameters<typeof client.workspaceMember.listInvitations.query>) => client.workspaceMember.listInvitations.query(...args),
-    removalPreview: (...args: Parameters<typeof client.workspaceMember.removalPreview.query>) => client.workspaceMember.removalPreview.query(...args),
-    invite: (...args: Parameters<typeof client.workspaceMember.invite.mutate>) => client.workspaceMember.invite.mutate(...args),
-    changeRole: (...args: Parameters<typeof client.workspaceMember.changeRole.mutate>) => client.workspaceMember.changeRole.mutate(...args),
-    suspend: (...args: Parameters<typeof client.workspaceMember.suspend.mutate>) => client.workspaceMember.suspend.mutate(...args),
-    resume: (...args: Parameters<typeof client.workspaceMember.resume.mutate>) => client.workspaceMember.resume.mutate(...args),
-    remove: (...args: Parameters<typeof client.workspaceMember.remove.mutate>) => client.workspaceMember.remove.mutate(...args),
-    leave: (...args: Parameters<typeof client.workspaceMember.leave.mutate>) => client.workspaceMember.leave.mutate(...args),
+    list: (...args: Parameters<typeof client.workspaceMember.list.query>) =>
+      client.workspaceMember.list.query(...args),
+    listInvitations: (...args: Parameters<typeof client.workspaceMember.listInvitations.query>) =>
+      client.workspaceMember.listInvitations.query(...args),
+    removalPreview: (...args: Parameters<typeof client.workspaceMember.removalPreview.query>) =>
+      client.workspaceMember.removalPreview.query(...args),
+    invite: (...args: Parameters<typeof client.workspaceMember.invite.mutate>) =>
+      client.workspaceMember.invite.mutate(...args),
+    changeRole: (...args: Parameters<typeof client.workspaceMember.changeRole.mutate>) =>
+      client.workspaceMember.changeRole.mutate(...args),
+    suspend: (...args: Parameters<typeof client.workspaceMember.suspend.mutate>) =>
+      client.workspaceMember.suspend.mutate(...args),
+    resume: (...args: Parameters<typeof client.workspaceMember.resume.mutate>) =>
+      client.workspaceMember.resume.mutate(...args),
+    remove: (...args: Parameters<typeof client.workspaceMember.remove.mutate>) =>
+      client.workspaceMember.remove.mutate(...args),
+    leave: (...args: Parameters<typeof client.workspaceMember.leave.mutate>) =>
+      client.workspaceMember.leave.mutate(...args),
   },
   workspace: {
-    pendingOwnershipTransfer: (...args: Parameters<typeof client.workspace.pendingOwnershipTransfer.query>) => client.workspace.pendingOwnershipTransfer.query(...args),
-    transferOwnership: (...args: Parameters<typeof client.workspace.transferOwnership.mutate>) => client.workspace.transferOwnership.mutate(...args),
-    respondOwnershipTransfer: (...args: Parameters<typeof client.workspace.respondOwnershipTransfer.mutate>) => client.workspace.respondOwnershipTransfer.mutate(...args),
-    cancelOwnershipTransfer: (...args: Parameters<typeof client.workspace.cancelOwnershipTransfer.mutate>) => client.workspace.cancelOwnershipTransfer.mutate(...args),
-    list: (...args: Parameters<typeof client.workspace.list.query>) => client.workspace.list.query(...args),
+    pendingOwnershipTransfer: (
+      ...args: Parameters<typeof client.workspace.pendingOwnershipTransfer.query>
+    ) => client.workspace.pendingOwnershipTransfer.query(...args),
+    transferOwnership: (...args: Parameters<typeof client.workspace.transferOwnership.mutate>) =>
+      client.workspace.transferOwnership.mutate(...args),
+    respondOwnershipTransfer: (
+      ...args: Parameters<typeof client.workspace.respondOwnershipTransfer.mutate>
+    ) => client.workspace.respondOwnershipTransfer.mutate(...args),
+    cancelOwnershipTransfer: (
+      ...args: Parameters<typeof client.workspace.cancelOwnershipTransfer.mutate>
+    ) => client.workspace.cancelOwnershipTransfer.mutate(...args),
+    list: (...args: Parameters<typeof client.workspace.list.query>) =>
+      client.workspace.list.query(...args),
   },
   workspaceAgent: {
-    list: (...args: Parameters<typeof client.workspaceAgent.list.query>) => client.workspaceAgent.list.query(...args),
+    list: (...args: Parameters<typeof client.workspaceAgent.list.query>) =>
+      client.workspaceAgent.list.query(...args),
   },
   projectMember: {
-    list: (...args: Parameters<typeof client.projectMember.list.query>) => client.projectMember.list.query(...args),
-    add: (...args: Parameters<typeof client.projectMember.add.mutate>) => client.projectMember.add.mutate(...args),
-    changeRole: (...args: Parameters<typeof client.projectMember.changeRole.mutate>) => client.projectMember.changeRole.mutate(...args),
-    remove: (...args: Parameters<typeof client.projectMember.remove.mutate>) => client.projectMember.remove.mutate(...args),
+    list: (...args: Parameters<typeof client.projectMember.list.query>) =>
+      client.projectMember.list.query(...args),
+    add: (...args: Parameters<typeof client.projectMember.add.mutate>) =>
+      client.projectMember.add.mutate(...args),
+    changeRole: (...args: Parameters<typeof client.projectMember.changeRole.mutate>) =>
+      client.projectMember.changeRole.mutate(...args),
+    remove: (...args: Parameters<typeof client.projectMember.remove.mutate>) =>
+      client.projectMember.remove.mutate(...args),
   },
   invitation: {
-    resend: (...args: Parameters<typeof client.invitation.resend.mutate>) => client.invitation.resend.mutate(...args),
-    revoke: (...args: Parameters<typeof client.invitation.revoke.mutate>) => client.invitation.revoke.mutate(...args),
-    preview: (...args: Parameters<typeof client.invitation.preview.query>) => client.invitation.preview.query(...args),
-    accept: (...args: Parameters<typeof client.invitation.accept.mutate>) => client.invitation.accept.mutate(...args),
+    resend: (...args: Parameters<typeof client.invitation.resend.mutate>) =>
+      client.invitation.resend.mutate(...args),
+    revoke: (...args: Parameters<typeof client.invitation.revoke.mutate>) =>
+      client.invitation.revoke.mutate(...args),
+    preview: (...args: Parameters<typeof client.invitation.preview.query>) =>
+      client.invitation.preview.query(...args),
+    accept: (...args: Parameters<typeof client.invitation.accept.mutate>) =>
+      client.invitation.accept.mutate(...args),
   },
   collaboration: {
-    snapshot: (...args: Parameters<typeof client.collaboration.snapshot.query>) => client.collaboration.snapshot.query(...args),
-    authorize: (...args: Parameters<typeof client.collaboration.authorize.mutate>) => client.collaboration.authorize.mutate(...args),
+    snapshot: (...args: Parameters<typeof client.collaboration.snapshot.query>) =>
+      client.collaboration.snapshot.query(...args),
+    authorize: (...args: Parameters<typeof client.collaboration.authorize.mutate>) =>
+      client.collaboration.authorize.mutate(...args),
   },
 };

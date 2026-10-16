@@ -174,8 +174,8 @@ describe('deploy docker-compose optional Elasticsearch', () => {
       '@hatchet-dev/typescript-sdk': '1.33.1',
       '@neondatabase/serverless': '^1.1.0',
       'drizzle-orm': '^0.45.2',
-      pg: '^8.23.0',
-      sharp: '0.34.5',
+      'pg': '^8.23.0',
+      'sharp': '0.34.5',
     });
     expect(runtimeDepsWorkspace).toContain('sharp: true');
     expect(runtimeDepsWorkspace).toContain("'@hatchet-dev/typescript-sdk': true");
@@ -253,9 +253,6 @@ describe('deploy docker-compose optional Elasticsearch', () => {
     expect(dockerfile).toContain(
       'COPY --from=builder /deps/node_modules/@grpc /app/node_modules/@grpc',
     );
-    expect(dockerfile).toContain(
-      'COPY --from=builder /deps/node_modules/@copilotkit /app/node_modules/@copilotkit',
-    );
   });
 
   it('loads the split Hatchet worker bundle with the external SDK', () => {
@@ -280,7 +277,6 @@ describe('deploy docker-compose optional Elasticsearch', () => {
           '--external:drizzle-orm/*',
           '--external:sharp',
           '--external:@hatchet-dev/typescript-sdk',
-          '--external:@copilotkit/channels-core',
           '--banner:js=import { createRequire as createRequireForHatchetBundle } from "node:module"; const require = createRequireForHatchetBundle(import.meta.url);',
         ],
         { stdio: 'ignore' },

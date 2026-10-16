@@ -3,7 +3,18 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { agents, goalEdges, goalNodeDecisions, goalNodes, goals, users } from '../../schemas';
+import {
+  agents,
+  goalEdges,
+  goalNodeDecisions,
+  goalNodes,
+  goals,
+  projectMembers,
+  projects,
+  users,
+  workspaceMembers,
+  workspaces,
+} from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { GoalModel } from '../goal';
 import { GoalGraphModel } from '../goalGraph';
@@ -458,5 +469,45 @@ describe('planning leases', () => {
       pausedBy: 'user',
       planningProtocol: 'lease-v1',
     });
+  });
+});
+
+describe('Goal archive Project ceiling', () => {
+  it('keeps private Project graphs and list totals hidden until the caller has an active grant', async () => {
+    const workspaceId = 'goal-archive-workspace';
+    await serverDB
+      .insert(workspaces)
+      .values({ id: workspaceId, name: 'Archive', slug: workspaceId, primaryOwnerId: userId });
+    await serverDB.insert(workspaceMembers).values([
+      { workspaceId, userId, role: 'owner' },
+      { workspaceId, userId: otherUserId, role: 'member' },
+    ]);
+    const [project] = await serverDB
+      .insert(projects)
+      .values({
+        identifier: 'ARCH',
+        name: 'Private archive',
+        userId,
+        workspaceId,
+        visibility: 'private',
+      })
+      .returning();
+    const owner = new GoalModel(serverDB, userId, workspaceId);
+    const goal = await owner.create({ title: 'Restricted historical goal', projectId: project.id });
+    await new GoalGraphModel(serverDB, userId, workspaceId).createNode(goal.id, {
+      kind: 'problem',
+      title: 'Confidential requirement',
+    });
+    const member = new GoalModel(serverDB, otherUserId, workspaceId);
+    const memberGraph = new GoalGraphModel(serverDB, otherUserId, workspaceId);
+    expect(await member.findById(goal.id)).toBeUndefined();
+    expect(await memberGraph.getGraph(goal.id)).toBeUndefined();
+    expect(await member.list()).toEqual({ goals: [], total: 0 });
+    expect((await owner.findById(goal.id))?.title).toBe('Restricted historical goal');
+    await serverDB
+      .insert(projectMembers)
+      .values({ projectId: project.id, workspaceId, userId: otherUserId, role: 'contributor' });
+    expect((await memberGraph.getGraph(goal.id))?.nodes[0].title).toBe('Confidential requirement');
+    expect((await member.list()).total).toBe(1);
   });
 });

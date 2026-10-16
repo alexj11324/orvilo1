@@ -104,7 +104,6 @@ export const getTestDB = async (): Promise<OrviloDatabase> => {
     testServerDB = nodeDrizzle(client, { schema });
 
     await nodeMigrate(testServerDB, { migrationsFolder });
-
     return testServerDB as unknown as OrviloDatabase;
   }
 

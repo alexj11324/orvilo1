@@ -13,7 +13,6 @@ import {
 } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
 import { recomputeTopicUsage } from '@/database/models/topicUsage';
-import { VerifyRunModel } from '@/database/models/verifyRun';
 import { WorkModel } from '@/database/models/work';
 import { type OrviloDatabase } from '@/database/type';
 import {
@@ -25,9 +24,7 @@ import { emitAgentSignalSourceEvent } from '@/server/services/agentSignal';
 import { toAgentSignalTraceEvents } from '@/server/services/agentSignal/observability/traceEvents';
 import { parseAgentSignalMarker } from '@/server/services/agentSignal/operationMarker';
 import { extractSelfIterationCompletionPayload } from '@/server/services/agentSignal/services/selfIteration/completion';
-import { instantiateVerifyPlanOnStart, runVerifyOnCompletion } from '@/server/services/verify';
 import { registerWorksForOperation } from '@/server/services/workRegistration';
-import { after } from '@/server/utils/scheduleAfterResponse';
 
 import { buildRuntimeInterventionNotification } from './agentInterventionNotification';
 import { CriticalHookDeliveryError, hookDispatcher, type SerializedHook } from './hooks';
@@ -176,13 +173,6 @@ export class CompletionLifecycle {
   private readonly messageModel: MessageModel;
   private readonly agentOperationModel: AgentOperationModel;
   private readonly workspaceId?: string;
-  /**
-   * In-flight verify-plan instantiations started in {@link recordStart}, keyed by
-   * operationId. `dispatchHooks` awaits the matching one before running the
-   * completion gate so a very short / no-op task run can't race past its own plan
-   * (instantiation is fire-and-forget at start and may not have settled yet).
-   */
-  private readonly verifyPlanInstantiations = new Map<string, Promise<void>>();
 
   constructor(
     private readonly serverDB: OrviloDatabase,
@@ -220,25 +210,6 @@ export class CompletionLifecycle {
     } catch (error) {
       persisted = false;
       log('[%s] Failed to record operation start (non-fatal): %O', params.operationId, error);
-    }
-
-    // Auto-instantiate the task's verify plan at run start so the completion gate
-    // fires. Only for a top-level task operation — repair / verifier sub-agents
-    // (which carry a parentOperationId) get their plan from the repair path, not
-    // here. Fire-and-forget; never blocks startup. We keep the promise (instead of
-    // void-ing it) so `dispatchHooks` can await it before the completion gate runs
-    // — a fast run can otherwise complete first and the gate would no-op on a plan
-    // that lands moments later. (instantiateVerifyPlanOnStart never rejects.)
-    if (params.taskId && !params.parentOperationId && !params.skipTaskVerification) {
-      this.verifyPlanInstantiations.set(
-        params.operationId,
-        instantiateVerifyPlanOnStart(
-          this.serverDB,
-          this.userId,
-          { operationId: params.operationId, taskId: params.taskId },
-          this.workspaceId,
-        ),
-      );
     }
 
     return persisted;
@@ -629,42 +600,6 @@ export class CompletionLifecycle {
   }
 
   /**
-   * Insert a `role='verify'` message that renders the Agent Run delivery-checker
-   * card (plan + results, read off `metadata.verifyOperationId`). Only created
-   * when the run actually has a verify plan. Self-guarded — failures never affect
-   * the run; the card is purely additive UI.
-   */
-  private async createVerifyMessage(
-    operationId: string,
-    assistantMessageId: string | undefined,
-    userId: string,
-  ): Promise<void> {
-    try {
-      const run = await new VerifyRunModel(this.serverDB, userId).findByOperation(operationId);
-      if (!run?.plan?.length) return;
-
-      const op = await new AgentOperationModel(this.serverDB, userId).findById(operationId);
-      if (!op?.topicId) return;
-
-      const messageModel = new MessageModel(this.serverDB, userId, undefined, undefined, {
-        includeShareVisitor: this.includeShareVisitor,
-      });
-      await messageModel.create({
-        agentId: op.agentId ?? undefined,
-        content: '',
-        groupId: op.chatGroupId ?? undefined,
-        metadata: { verifyOperationId: operationId },
-        parentId: assistantMessageId,
-        role: 'verify',
-        threadId: op.threadId ?? undefined,
-        topicId: op.topicId,
-      });
-    } catch (error) {
-      log('createVerifyMessage failed for op %s (non-fatal): %O', operationId, error);
-    }
-  }
-
-  /**
    * Expand a normalized {@link OperationCompletionInput} into the runtime `state`
    * shape `dispatchHooks` consumes. The SINGLE place that mirrors the runtime
    * state for non-in-process paths — goal/deliverable become the user/assistant
@@ -965,49 +900,15 @@ export class CompletionLifecycle {
         );
       }
 
-      // Delivery checker: on a successful completion, run the confirmed verify
-      // plan against the deliverable. Fire-and-forget and self-guarded — a run
-      // without an opted-in plan is a no-op, and failures never affect the run.
-      if (reason === 'done') {
-        // The task's verify plan is instantiated fire-and-forget at run start; a
-        // fast or no-op run can reach completion before it settles. Await the
-        // in-flight instantiation (if any) so the gate sees the confirmed plan
-        // instead of racing past it and leaving a planned run with no results/card.
-        await this.verifyPlanInstantiations.get(operationId);
-
-        const messages: any[] = Array.isArray(state?.messages) ? state.messages : [];
-        const firstUserMessage = messages.find((m) => m?.role === 'user');
-        const goal = firstUserMessage
-          ? (extractTextFromMessageContent(firstUserMessage.content) ?? '')
-          : '';
-        // Surface the delivery-checker card first (a role='verify' message that
-        // renders the run's plan + results). Awaited before verification so
-        // auto-repair can persist its failure feedback onto this card (the
-        // VerifyMessageProcessor then surfaces it into the repair run's context).
-        // Self-guarded — failures never affect the run.
-        await this.createVerifyMessage(
+      const operation = await this.agentOperationModel.findById(operationId);
+      if (operation?.appContext?.issueReviewCycleId) {
+        const { completeIssueReviewOperation } = await import('../task/review');
+        await completeIssueReviewOperation(
+          this.serverDB,
+          this.userId,
           operationId,
-          metadata?.assistantMessageId,
-          runOrigin.userId || this.userId,
-        );
-        // `after`, not a bare `void`: judging is minutes of LLM calls and the
-        // step handler must not wait for it, but a detached promise has nobody
-        // keeping it scheduled — on the serverless path the instance is free to
-        // stop running it the moment this response returns. That is not merely a
-        // lost verification: entering `verifying` is a durable write, so a run
-        // cut off mid-judge stays `verifying` forever. `after` hands the work to
-        // the host as post-response work instead (no-op fallback off Next).
-        after(() =>
-          runVerifyOnCompletion(
-            this.serverDB,
-            runOrigin.userId || this.userId,
-            {
-              deliverable: event.lastAssistantContent ?? '',
-              goal,
-              operationId,
-            },
-            this.workspaceId,
-          ),
+          reason,
+          this.workspaceId,
         );
       }
 
@@ -1076,10 +977,6 @@ export class CompletionLifecycle {
       // failures likewise keep them until the provider redelivery settles.
       if (!isAsyncToolPark && !shouldRetainHooksForRetry) {
         hookDispatcher.unregister(operationId);
-        // The instantiation has settled (awaited above) or this op never opted in
-        // — drop the entry so the map doesn't grow across the service's lifetime.
-        // Kept across an async-tool park: the op resumes under the same id.
-        this.verifyPlanInstantiations.delete(operationId);
       }
     }
   }

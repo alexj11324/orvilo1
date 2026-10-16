@@ -3,7 +3,6 @@ import '@/app/globals.css';
 import { ThemeProvider } from '@lobehub/ui';
 import { createGlobalStyle } from 'antd-style';
 import i18next from 'i18next';
-import { domAnimation, LazyMotion } from 'motion/react';
 import { type FC, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
@@ -22,7 +21,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { genFontFamily, genFontFamilyCode } from '@/const/font';
 import { TaskAcceptanceHeader } from '@/features/AgentTasks/AgentTaskDetail/TaskAcceptanceHeader';
 import { taskDetailLayoutStyles as taskStyles } from '@/features/AgentTasks/AgentTaskDetail/taskDetailLayoutStyles';
-import MCPDependenciesGuide from '@/features/MCP/MCPInstallProgress/MCPDependenciesGuide';
 import IssueFilterPopover from '@/features/Projects/Issues/IssueFilterPopover';
 import type { ProjectIssueFilter } from '@/features/Projects/Issues/issueFilters';
 import ApiKeyModalContent from '@/features/Settings/apikey/features/ApiKeyModal/Content';
@@ -148,28 +146,6 @@ function Fixture() {
             {language === 'zh-CN' ? '等待审核的发布验收' : 'Release acceptance awaiting review'}
           </Badge>
         ))}
-      </section>
-      <section data-testid="mcp-feature">
-        <LazyMotion features={domAnimation}>
-          <MCPDependenciesGuide
-            identifier="fixture-readonly"
-            systemDependencies={[
-              {
-                name: 'Node.js — local dependency',
-                meetRequirement: true,
-                installed: true,
-                version: '22.23.2',
-                requiredVersion: '>= 20',
-              },
-              {
-                name: 'Runtime tool — 待安装依赖',
-                meetRequirement: false,
-                installed: false,
-                requiredVersion: '>= 1',
-              },
-            ]}
-          />
-        </LazyMotion>
       </section>
       <section className="flex flex-wrap gap-2" data-testid="primitive-probes">
         {(['default', 'outline', 'secondary', 'ghost', 'destructive', 'link'] as const).map(

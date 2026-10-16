@@ -30,6 +30,7 @@ import { assertAgentUsableBy } from '@/database/utils/agent-access';
 import { authedProcedure, publicProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { createEvidenceFileResolver } from '@/server/services/verify/evidenceFiles';
+import { assertLegacyVerificationWritable } from '@/server/services/verify/retirement';
 
 import { resolveAcceptanceCommentAccess } from './_helpers/acceptanceCommentAccess';
 
@@ -90,6 +91,10 @@ const readProcedure = publicProcedure
   );
 
 const writeProcedure = authedProcedure
+  .use(({ next }) => {
+    assertLegacyVerificationWritable();
+    return next();
+  })
   .use(serverDatabase)
   .use(async ({ ctx, next }) =>
     next({ ctx: { acceptanceCommentModel: new AcceptanceCommentModel(ctx.serverDB) } }),
@@ -264,10 +269,7 @@ const enrich = async (
       author: getAuthor(row.authorUserId, row.authorAgentId),
       authorAgentId: row.authorAgentId,
       authorUserId: row.authorUserId,
-      canDelete:
-        !row.deletedAt &&
-        Boolean(scope.userId) &&
-        (row.authorUserId === scope.userId || Boolean(scope.canModerate)),
+      canDelete: false,
       checkItemId: row.checkItemId,
       clientId: row.clientId,
       content: row.content,

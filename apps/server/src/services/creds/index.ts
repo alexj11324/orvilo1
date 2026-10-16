@@ -10,7 +10,6 @@ import type {
   CredType,
   OwnCredSummary,
   OwnCredWithPlaintext,
-  SkillCredStatus,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
@@ -78,11 +77,8 @@ interface ResolvedFileCred {
  * `workspace_id` rows only, matching Market's org endpoint which 404s on
  * member-owned shared creds).
  *
- * The Market SDK is still used for exactly two things that stay on Market by
- * design: the OAuth connect broker (`listOAuthConnections` — token custody is
- * Market's) and the topic sandbox runtime that `inject` writes `~/.creds/env`
- * into. OAuth credential *values* therefore cannot be resolved or injected
- * locally — they record the connection id and display metadata only.
+ * The retained cloud transport is used only when explicit sandbox injection is requested.
+ * Historical OAuth references remain readable and are never resolved or injected locally.
  */
 export class OwnCredsService {
   private fileModel?: FileModel;
@@ -183,7 +179,7 @@ export class OwnCredsService {
           fileUrl: url ?? '',
         };
       }
-      // OAuth tokens live in Market's connect broker — there is no token API to
+      // Historical OAuth references have no local token API to
       // decrypt locally, so `get` exposes display metadata only.
       case 'oauth': {
         return {
@@ -325,42 +321,6 @@ export class OwnCredsService {
     });
   };
 
-  createOAuth = async (params: {
-    description?: string;
-    key: string;
-    name: string;
-    oauthConnectionId: number;
-    workspaceScope: boolean;
-  }) => {
-    const { workspaceScope, oauthConnectionId, ...rest } = params;
-
-    // Best-effort display metadata from the Market connect broker (provider /
-    // username shown in the list). Absent a Market connection it still
-    // succeeds — the reference is what matters.
-    let metadata: CredentialMetadata | undefined;
-    try {
-      const { connections } = await this.requireMarketService().market.connect.listConnections();
-      const connection = (connections ?? []).find((item: any) => item?.id === oauthConnectionId);
-      if (connection) {
-        metadata = {
-          oauthEmail: connection.providerEmail,
-          oauthProvider: connection.providerName ?? connection.providerId,
-          oauthUsername: connection.providerUsername,
-        };
-      }
-    } catch (error) {
-      log('createOAuth: failed to load connection metadata: %O', error);
-    }
-
-    return this.create({
-      ...rest,
-      metadata,
-      payload: { oauthConnectionId },
-      type: 'oauth',
-      workspaceScope,
-    });
-  };
-
   update = async (params: {
     description?: string;
     id: string;
@@ -444,10 +404,6 @@ export class OwnCredsService {
     };
   };
 
-  // ===== OAuth connections (Market connect broker — stays on Market) =====
-
-  listOAuthConnections = async () => this.requireMarketService().market.connect.listConnections();
-
   // ===== Runtime injection =====
 
   private resolveFileForInject = async (
@@ -476,7 +432,7 @@ export class OwnCredsService {
    * Market's infra — only the credential storage moved.
    *
    * OAuth credentials land in `unsupportedInSandbox` unconditionally: their
-   * token custody is Market's connect broker and cannot be resolved locally.
+   * historical token references cannot be resolved locally.
    */
   inject = async (input: { keys: string[]; sandbox?: boolean; topicId?: string }) => {
     const sandbox = input.sandbox ?? true;
@@ -523,7 +479,7 @@ export class OwnCredsService {
           }
           break;
         }
-        // Token custody stays with Market's connect broker.
+        // Historical OAuth references remain display-only.
         case 'oauth': {
           unsupportedInSandbox.push(row.key);
           break;
@@ -597,61 +553,6 @@ export class OwnCredsService {
     if (!result.success) {
       log('inject: sandbox env write failed: %O', result.error ?? result);
     }
-  };
-
-  // ===== Skill credential declarations (Market skill catalog — stays on Market) =====
-
-  /**
-   * Skill credential declarations come from the Market skill catalog; the
-   * `satisfied`/`boundCred` flags Market computes against its own cred store
-   * are recomputed here against our rows.
-   */
-  getSkillCredStatus = async (skillIdentifier: string): Promise<SkillCredStatus[]> => {
-    const declared =
-      await this.requireMarketService().market.creds.getSkillCredStatus(skillIdentifier);
-    const owned = new Map(
-      (this.workspaceId
-        ? (await this.model.listWorkspace(this.workspaceId)).map((row) => [row.key, row])
-        : (await this.model.listPersonal()).map((row) => [row.key, row])) as Array<
-        [string, CredentialItemLike]
-      >,
-    );
-
-    return (declared ?? []).map((item) => {
-      const bound = owned.get(item.key);
-      return {
-        ...item,
-        boundCred: bound
-          ? this.summarize(
-              bound,
-              this.workspaceId,
-              (bound as { ownerDisplayName?: string }).ownerDisplayName,
-            )
-          : undefined,
-        satisfied: Boolean(bound),
-      } as SkillCredStatus;
-    });
-  };
-
-  injectForSkill = async (input: {
-    sandbox?: boolean;
-    skillIdentifier: string;
-    topicId?: string;
-  }) => {
-    const statuses = await this.getSkillCredStatus(input.skillIdentifier);
-    const requiredKeys = statuses.map((status) => status.key);
-    const result = await this.inject({
-      keys: requiredKeys,
-      sandbox: input.sandbox,
-      topicId: input.topicId,
-    });
-
-    return {
-      ...result,
-      missing: statuses
-        .filter((status) => !status.satisfied)
-        .map((status) => ({ key: status.key, name: status.name, type: status.type })),
-    };
   };
 }
 

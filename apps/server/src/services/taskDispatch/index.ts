@@ -10,6 +10,7 @@ import type {
   TaskRunTrigger,
 } from '@orvilo/types';
 
+import { TaskModel } from '@/database/models/task';
 import {
   type EventDispatchEvidence,
   type EventDispatchEvidenceCode,
@@ -54,6 +55,12 @@ export class TaskDispatchConflictError extends Error {
   }
 }
 
+export class TaskDispatchQueuedError extends Error {
+  constructor(readonly dispatchId: string) {
+    super('Automation occurrence queued');
+  }
+}
+
 export class TaskDispatchWaitingError extends Error {
   constructor(
     message: string,
@@ -95,7 +102,7 @@ export class TaskDispatchService {
   private readonly model: TaskDispatchModel;
 
   constructor(
-    db: OrviloDatabase,
+    private readonly db: OrviloDatabase,
     private readonly workspaceId?: string,
   ) {
     this.model = new TaskDispatchModel(db, workspaceId);
@@ -113,6 +120,7 @@ export class TaskDispatchService {
 
   async prepare(input: {
     delegatedAgentId?: string;
+    automationParentDispatchId?: string;
     /** Server-verified admission evidence when `trigger === 'event'`. */
     eventEvidence?: EventDispatchEvidence;
     executionUserId?: string;
@@ -136,6 +144,7 @@ export class TaskDispatchService {
             ? assertCanUseWorkspaceAgent({ agentId, db, userId, workspaceId: this.workspaceId })
             : assertAgentVisibleTo(db, agentId, { userId }),
         delegatedAgentId: input.delegatedAgentId,
+        automationParentDispatchId: input.automationParentDispatchId,
         eventEvidence: input.eventEvidence,
         executionUserId: input.executionUserId,
         idempotencyKey: input.idempotencyKey,
@@ -175,6 +184,7 @@ export class TaskDispatchService {
     }
 
     const dispatch = requested.dispatch;
+    if (dispatch.phase === 'queued') throw new TaskDispatchQueuedError(dispatch.id);
 
     // Final CAID admission boundary: every new orchestrated claim funnels
     // here — goal fan-out, planner wakes, AND the dependency cascade — so a
@@ -207,6 +217,17 @@ export class TaskDispatchService {
       );
     }
     const currentTask = requested.task;
+    if (
+      dispatch.automationOccurrence &&
+      !(await new TaskModel(
+        this.db,
+        input.executionUserId ?? input.requestedBy,
+        this.workspaceId,
+      ).areAllDependenciesCompleted(currentTask.id))
+    ) {
+      await this.model.markWaiting(dispatch.id, 'task_dependencies_blocked');
+      throw new TaskDispatchWaitingError('Complete all prerequisite Issues', dispatch.id);
+    }
     if (dispatch.phase === 'waiting') {
       throw new TaskDispatchWaitingError(
         dispatch.waitingReason ?? 'Task execution is waiting for project policy',

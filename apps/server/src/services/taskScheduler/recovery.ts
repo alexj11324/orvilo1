@@ -6,6 +6,7 @@ import { tasks } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
 import type { OrviloDatabase } from '@/database/type';
 import { appEnv } from '@/envs/app';
+import { sweepQueuedDeviceOperations } from '@/server/services/aiAgent/deviceQueue';
 
 import { createTaskSchedulerModule } from './impls';
 import type { TaskSchedulerImpl } from './impls/type';
@@ -95,7 +96,11 @@ export function startLocalHeartbeatRecoveryLoop() {
     if (inFlight) return;
     inFlight = true;
     try {
-      await recoverLocalHeartbeatSchedules(await getServerDB());
+      const db = await getServerDB();
+      await sweepQueuedDeviceOperations({ db });
+      const { sweepIssueReviews } = await import('../task/review');
+      await sweepIssueReviews(db);
+      await recoverLocalHeartbeatSchedules(db);
     } catch {
       console.error('[task-scheduler] Persistent heartbeat recovery unavailable');
     } finally {

@@ -43,6 +43,7 @@ import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { AgentService } from '@/server/services/agent';
 import { EditLockService } from '@/server/services/editLock';
+import { rejectPlatformKnowledgeBaseWrite } from '@/server/services/knowledgeBase/retirement';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import {
   assertCanEditResource,
@@ -356,6 +357,7 @@ export const agentRouter = router({
     }),
 
   createAgentKnowledgeBase: agentProcedure
+    .use(() => rejectPlatformKnowledgeBaseWrite())
     .use(withScopedPermission('agent:update'))
     .input(
       z.object({
@@ -455,6 +457,7 @@ export const agentRouter = router({
     }),
 
   deleteAgentKnowledgeBase: agentProcedure
+    .use(() => rejectPlatformKnowledgeBaseWrite())
     .use(withScopedPermission('agent:update'))
     .input(
       z.object({
@@ -834,6 +837,7 @@ export const agentRouter = router({
     }),
 
   toggleKnowledgeBase: agentProcedure
+    .use(() => rejectPlatformKnowledgeBaseWrite())
     .use(withScopedPermission('agent:update'))
     .input(
       z.object({

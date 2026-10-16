@@ -14,6 +14,7 @@ import * as skillPreload from '@/services/chat/mecha/skillPreload';
 import { messageService } from '@/services/message';
 import * as agentGroupStore from '@/store/agentGroup';
 import { setPendingTopicRepos } from '@/store/chat/pendingTopicRepos';
+import { initialOperationState } from '@/store/chat/slices/operation/initialState';
 import { operationSelectors } from '@/store/chat/slices/operation/selectors';
 import type {
   VoiceMessageSend,
@@ -24,12 +25,14 @@ import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { topicMapKey } from '@/store/chat/utils/topicMapKey';
 import { useDeviceStore } from '@/store/device';
 import { fileChatSelectors, useFileStore } from '@/store/file';
+import { createServerConfigStore } from '@/store/serverConfig/store';
 import { getSessionStoreState } from '@/store/session';
 import * as toolStoreModule from '@/store/tool';
 import { pageAgentRuntime } from '@/store/tool/slices/builtin/executors/pageAgentRuntime';
 import { useUserStore } from '@/store/user';
 
 import { useChatStore } from '../../../../store';
+import type { ConnectGatewayParams } from '../transports/gateway/gateway';
 import { createMockAgentConfig, createMockMessage, TEST_CONTENT, TEST_IDS } from './fixtures';
 import { resetTestEnvironment, setupMockSelectors, spyOnMessageService } from './helpers';
 
@@ -3127,6 +3130,120 @@ describe('ConversationLifecycle actions', () => {
             TEST_IDS.ASSISTANT_MESSAGE_ID,
           ]),
         );
+      });
+
+      it('keeps one runtime owner when reconnect wins the dispatch response race and releases the queued follow-up', async () => {
+        const context = {
+          agentId: TEST_IDS.SESSION_ID,
+          scope: 'main' as const,
+          threadId: null,
+          topicId: TEST_IDS.TOPIC_ID,
+        };
+        const contextKey = messageMapKey(context);
+        const originalChat = useChatStore.getState();
+        const config = createServerConfigStore();
+        const originalConfig = config.getState();
+        config.setState({
+          featureFlags: { ...originalConfig.featureFlags, enableAgentSelfIteration: false },
+          serverConfig: {
+            ...originalConfig.serverConfig,
+            agentGatewayUrl: 'https://gateway.test.com',
+          },
+          serverConfigInit: true,
+        });
+        const { GatewayActionImpl } = await import('../transports/gateway/gateway');
+        const gateway = new GatewayActionImpl(useChatStore.setState, useChatStore.getState);
+        const connections: ConnectGatewayParams[] = [];
+        const connectToGateway = vi.fn((params: ConnectGatewayParams) => {
+          connections.push(params);
+        });
+        const persisted = makeGatewayResult({ operationId: 'server-race', heteroType: null });
+        let releaseDispatch!: (value: ExecAgentResult) => void;
+        const dispatchBarrier = new Promise<ExecAgentResult>((resolve) => {
+          releaseDispatch = resolve;
+        });
+        const dispatch = vi
+          .spyOn(aiAgentService, 'execAgentTask')
+          .mockReturnValueOnce(dispatchBarrier)
+          .mockResolvedValue(
+            makeGatewayResult({ operationId: 'server-follow-up', heteroType: null }),
+          );
+        vi.spyOn(aiAgentService, 'refreshGatewayToken').mockResolvedValue({
+          token: 'test-token',
+        });
+        useChatStore.setState({
+          ...initialOperationState,
+          activeAgentId: context.agentId,
+          activeTopicId: context.topicId,
+          connectToGateway,
+          dbMessagesMap: {},
+          executeGatewayAgent: gateway.executeGatewayAgent,
+          gatewayConnections: {},
+          isGatewayModeEnabled: () => true,
+          messagesMap: {},
+          topicDataMap: {},
+          topicDetailMap: {
+            [context.topicId]: {
+              createdAt: 0,
+              id: context.topicId,
+              title: 'Existing conversation',
+              updatedAt: 0,
+            },
+          },
+          updateTopicStatus: vi.fn().mockResolvedValue(undefined),
+        });
+        try {
+          const sending = useChatStore.getState().sendMessage({ context, message: 'first turn' });
+          await waitFor(() => expect(dispatch).toHaveBeenCalledOnce());
+          await gateway.reconnectToGatewayOperation({
+            agentId: context.agentId,
+            assistantMessageId: persisted.assistantMessageId,
+            heteroType: null,
+            operationId: persisted.operationId,
+            topicId: context.topicId,
+          });
+          const ownerId = Object.values(useChatStore.getState().operations).find(
+            (op) => op.metadata.serverOperationId === persisted.operationId,
+          )!.id;
+          releaseDispatch(persisted);
+          await sending;
+          const owners = Object.values(useChatStore.getState().operations).filter(
+            (op) => op.metadata.serverOperationId === persisted.operationId,
+          );
+          expect(owners.map((op) => op.id)).toEqual([ownerId]);
+
+          await useChatStore.getState().sendMessage({ context, message: 'queued follow-up' });
+          expect(dispatch).toHaveBeenCalledOnce();
+          expect(useChatStore.getState().queuedMessages[contextKey]).toHaveLength(1);
+          connections.at(-1)!.onEvent!({
+            data: { reason: 'completed', uiMessages: [] },
+            operationId: persisted.operationId,
+            stepIndex: 0,
+            timestamp: Date.now(),
+            type: 'agent_runtime_end',
+          });
+          await waitFor(() =>
+            expect(useChatStore.getState().operations[ownerId].status).toBe('completed'),
+          );
+          expect(operationSelectors.isInputLoadingByContext(context)(useChatStore.getState())).toBe(
+            false,
+          );
+          expect(
+            operationSelectors.isAgentRuntimeVisiblyRunningByContext(context)(
+              useChatStore.getState(),
+            ),
+          ).toBe(false);
+          await waitFor(() => expect(dispatch).toHaveBeenCalledTimes(2));
+          await waitFor(() => expect(connections).toHaveLength(3));
+          expect(dispatch).toHaveBeenLastCalledWith(
+            expect.objectContaining({ prompt: 'queued follow-up' }),
+            expect.anything(),
+          );
+          expect(useChatStore.getState().queuedMessages[contextKey]).toEqual([]);
+        } finally {
+          config.setState(originalConfig, true);
+          useChatStore.setState(originalChat, true);
+        }
       });
 
       it('should preserve editorData when enqueueing a queued message', async () => {

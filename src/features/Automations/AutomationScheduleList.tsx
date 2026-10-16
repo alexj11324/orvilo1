@@ -95,7 +95,7 @@ const AutomationRow = memo<AutomationRowProps>(({ checked, onCheckedChange, onOp
   const status =
     task.automationMode === 'event'
       ? eventAutomationStatusOf(eventBindings.data?.data.triggers[0])
-      : automationStatusOf(task.status);
+      : automationStatusOf(task);
   const eventStateUnavailable =
     task.automationMode === 'event' && (!eventBindings.data || eventBindings.error);
   const nextRun = automationNextRun(task);

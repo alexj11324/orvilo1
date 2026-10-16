@@ -11,7 +11,6 @@ import { referralRouter } from '@/business/server/lambda-routers/referral';
 import { spendRouter } from '@/business/server/lambda-routers/spend';
 import { storageOverageRouter } from '@/business/server/lambda-routers/storageOverage';
 import { subscriptionRouter } from '@/business/server/lambda-routers/subscription';
-import { taskTemplateRouter } from '@/business/server/lambda-routers/taskTemplate';
 import { topUpRouter } from '@/business/server/lambda-routers/topUp';
 import { waitlistRouter } from '@/business/server/lambda-routers/waitlist';
 import { workspaceRouter } from '@/business/server/lambda-routers/workspace';
@@ -48,7 +47,6 @@ import { briefRouter } from './brief';
 import { changelogRouter } from './changelog';
 import { chunkRouter } from './chunk';
 import { collaborationRouter } from './collaboration';
-import { composioRouter } from './composio';
 import { configRouter } from './config';
 import { connectorRouter } from './connector';
 import { deviceRouter } from './device';
@@ -69,7 +67,6 @@ import { knowledgeBaseRouter } from './knowledgeBase';
 import { linearImportRouter } from './linearImport';
 import { linearSyncRouter } from './linearSync';
 import { llmGenerationTracingRouter } from './llmGenerationTracing';
-import { marketRouter } from './market';
 import { mcpEventsRouter } from './mcpEvents';
 import { messageRouter } from './message';
 import { metricRouter } from './metric';
@@ -157,14 +154,12 @@ export const lambdaRouter = router({
   home: homeRouter,
   importer: importerRouter,
   invitation: invitationRouter,
-  composio: composioRouter,
 
   knowledge: knowledgeRouter,
   knowledgeBase: knowledgeBaseRouter,
   linearSync: linearSyncRouter,
   linearImport: linearImportRouter,
   llmGenerationTracing: llmGenerationTracingRouter,
-  market: marketRouter,
   message: messageRouter,
   metric: metricRouter,
   notebook: notebookRouter,
@@ -220,7 +215,6 @@ export const lambdaRouter = router({
   spend: spendRouter,
   storageOverage: storageOverageRouter,
   subscription: subscriptionRouter,
-  taskTemplate: taskTemplateRouter,
   topUp: topUpRouter,
   waitlist: waitlistRouter,
 });

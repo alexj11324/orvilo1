@@ -194,6 +194,30 @@ describe('decideNextMove', () => {
       );
     });
 
+    it('waits for review even when the run is completed', () => {
+      expect(
+        decide(snapshot, {
+          frontierTask: { ...task({ status: 'completed' }), workflowCategory: 'in_review' },
+        }),
+      ).toMatchObject({ branch: 'task_running', outcome: 'waiting_external' });
+    });
+
+    it('does not finish a delivered Issue still in progress', () => {
+      expect(
+        decide(snapshot, {
+          frontierTask: { ...task({ status: 'completed' }), workflowCategory: 'in_progress' },
+        }).outcome,
+      ).toBe('waiting_external');
+    });
+
+    it('uses done even when execution status is stale', () => {
+      expect(
+        decide(snapshot, {
+          frontierTask: { ...task({ status: 'running' }), workflowCategory: 'done' },
+        }).branch,
+      ).toBe('consume_completed');
+    });
+
     it('separates the two recoverable failures from the ones that need a person', () => {
       expect(
         decide(snapshot, {
@@ -414,6 +438,16 @@ describe('decideNextMove concurrency', () => {
       branch: 'create_task',
       chosenNodeId: 'b',
     });
+  });
+
+  it('moves past a pending review to start an independent Issue', () => {
+    const snapshot = graph({ nodes: [node('a', { taskId: 'task_1' }), node('b')] });
+    expect(
+      decide(snapshot, {
+        concurrency: 1,
+        tasks: [{ ...task({ status: 'completed' }), workflowCategory: 'in_review' }],
+      }),
+    ).toMatchObject({ branch: 'create_task', chosenNodeId: 'b' });
   });
 
   it('stops once the concurrency limit is reached', () => {
@@ -641,5 +675,28 @@ describe('exploration terminal phase', () => {
     expect(decide(snapshot, { frontierTask: task({ status: 'running' }) }).branch).not.toBe(
       'explore_graph',
     );
+  });
+});
+
+describe('Issue dependency frontier projection', () => {
+  it('uses Issue blockers even when the historical internal task edges disagree', () => {
+    const snapshot = graph({
+      nodes: [
+        node('a', { taskId: 'issue-a', status: 'resolved' }),
+        node('c', { taskId: 'issue-c' }),
+      ],
+      edges: [
+        {
+          createdAt: new Date(1000),
+          goalId: 'goal_1',
+          id: 'old-edge',
+          kind: 'depends_on',
+          sourceNodeId: 'c',
+          targetNodeId: 'a',
+        },
+      ],
+    });
+    expect(selectFrontier(snapshot, new Map([['issue-c', ['issue-b']]])).chosen).toBeUndefined();
+    expect(selectFrontier(snapshot, new Map([['issue-c', []]])).chosen?.id).toBe('c');
   });
 });

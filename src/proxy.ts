@@ -117,7 +117,6 @@ export const config = {
     '/auth-error(.*)',
     '/oauth(.*)',
     '/oidc(.*)',
-    '/market-auth-callback(.*)',
 
     // Workspace-scoped SPA mirrors — `/{workspaceSlug}/<segment>` for every
     // segment the router mounts under `/:workspaceSlug` (the shared main-area

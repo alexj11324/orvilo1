@@ -13,7 +13,6 @@ import {
 
 import type { ToolStoreState } from '../../initialState';
 import { agentSkillsSelectors } from '../agentSkills/selectors';
-import { ComposioServerStatus } from '../composioStore';
 
 export interface OrviloToolMetaWithAvailability extends OrviloToolMeta {
   /**
@@ -65,25 +64,6 @@ const toSkillMetaWithAvailability = (s: BuiltinSkillManifest): OrviloToolMetaWit
     canExecuteOnDevice: false,
   }),
 });
-
-const getComposioMetas = (s: ToolStoreState): OrviloToolMeta[] =>
-  (s.composioServers || [])
-    .filter((server) => server.status === ComposioServerStatus.ACTIVE && server.tools?.length)
-    .map((server) => ({
-      author: 'Composio',
-      // Use identifier as storage identifier (e.g., 'google-calendar')
-      identifier: server.identifier,
-      meta: {
-        avatar: '☁️',
-        description: `Orvilo Mcp Server: ${server.label}`,
-        tags: ['composio', 'mcp'],
-        title: server.label,
-      },
-      type: 'builtin' as const,
-    }));
-
-const getComposioMetasWithAvailability = (s: ToolStoreState): OrviloToolMetaWithAvailability[] =>
-  getComposioMetas(s).map((meta) => ({ ...meta, availableInWeb: true }));
 
 // Set form for O(1) lookup inside the filter loop.
 const RUNTIME_MANAGED_TOOL_IDS = new Set(runtimeManagedToolIds);
@@ -170,7 +150,7 @@ const buildVisibleMetaList = (
     .map(toSkillMeta);
   const agentSkillMetas = agentSkillsSelectors.agentSkillMetaList(s);
 
-  return [...skillMetas, ...agentSkillMetas, ...builtinMetas, ...getComposioMetas(s)];
+  return [...skillMetas, ...agentSkillMetas, ...builtinMetas];
 };
 
 /**
@@ -221,12 +201,7 @@ const allMetaList = (s: ToolStoreState): OrviloToolMetaWithAvailability[] => {
     .agentSkillMetaList(s)
     .map((meta) => ({ ...meta, availableInWeb: true }));
 
-  return [
-    ...skillMetas,
-    ...agentSkillMetas,
-    ...builtinMetas,
-    ...getComposioMetasWithAvailability(s),
-  ];
+  return [...skillMetas, ...agentSkillMetas, ...builtinMetas];
 };
 
 /**
@@ -257,7 +232,7 @@ const discoverableMetaList = (s: ToolStoreState): OrviloToolMeta[] => {
     })
     .map(toBuiltinMeta);
 
-  return [...skillMetas, ...agentSkillMetas, ...builtinMetas, ...getComposioMetas(s)];
+  return [...skillMetas, ...agentSkillMetas, ...builtinMetas];
 };
 
 /**
@@ -277,7 +252,7 @@ const installedAllMetaList = (s: ToolStoreState): OrviloToolMetaWithAvailability
     })
     .map(toBuiltinMetaWithAvailability);
 
-  return [...builtinMetas, ...getComposioMetasWithAvailability(s)];
+  return [...builtinMetas];
 };
 
 /**
@@ -297,7 +272,7 @@ const installedProfileConfigurableMetaList =
       .filter((item) => !uninstalledBuiltinTools.includes(item.identifier))
       .map(toBuiltinMetaWithAvailability);
 
-    return [...builtinMetas, ...getComposioMetasWithAvailability(s)];
+    return [...builtinMetas];
   };
 
 /**

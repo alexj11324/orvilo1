@@ -1,5 +1,7 @@
 import type {
   CheckpointConfig,
+  IssueChecklistItem,
+  IssueDeliveryProof,
   TaskAutomationMode,
   TaskInstructionSynthesis,
   TaskIntentAnalysis,
@@ -11,6 +13,38 @@ import type {
 import { lambdaClient } from '@/libs/trpc/client';
 
 class TaskService {
+  draftIssuePlan = async (id: string) => lambdaClient.task.draftIssuePlan.mutate({ id });
+
+  getInstructionTarget = async (id: string) => lambdaClient.task.getInstructionTarget.query({ id });
+
+  getIssuePlan = async (id: string) => lambdaClient.task.getIssuePlan.query({ id });
+
+  confirmIssuePlan = async (id: string, revision: number) =>
+    lambdaClient.task.confirmIssuePlan.mutate({ id, revision });
+
+  getChecklist = async (taskId: string) => lambdaClient.task.getChecklist.query({ taskId });
+
+  confirmChecklist = async (params: {
+    taskId: string;
+    expectedRevision: number;
+    items: IssueChecklistItem[];
+    deliveryKind: 'code' | 'artifact';
+    repo?: string;
+    targetBranch?: string;
+  }) => lambdaClient.task.confirmChecklist.mutate(params);
+
+  reviewChecklistItems = async (params: {
+    taskId: string;
+    runId: string;
+    proof: IssueDeliveryProof;
+    resultIds: string[];
+    action: 'accept' | 'reject';
+    comment?: string;
+  }) => lambdaClient.task.reviewChecklistItems.mutate(params);
+
+  acceptDelivery = async (params: { taskId: string; runId: string; proof: IssueDeliveryProof }) =>
+    lambdaClient.task.acceptDelivery.mutate(params);
+
   acquireTaskLock = (...args: Parameters<typeof lambdaClient.task.acquireTaskLock.mutate>) =>
     lambdaClient.task.acquireTaskLock.mutate(...args);
 
@@ -28,6 +62,8 @@ class TaskService {
   find = async (id: string) => lambdaClient.task.find.query({ id });
 
   getDetail = async (id: string) => lambdaClient.task.detail.query({ id });
+
+  listReviewerAgents = async () => lambdaClient.task.listReviewerAgents.query();
 
   list = async (params: {
     /** Keyset cursor: rows strictly after this `(orderBy timestamp, seq)` position. */
@@ -150,6 +186,7 @@ class TaskService {
     name?: string;
     parentTaskId?: string;
     priority?: number;
+    reviewerAgentId?: string;
     projectId?: string;
     schedulePattern?: string;
     scheduleTimezone?: string;
@@ -217,7 +254,7 @@ class TaskService {
       priority?: number;
       /** Owning project; `null` unassigns the task from its project. */
       projectId?: string | null;
-      reviewerUserId?: string | null;
+      reviewerAgentId?: string | null;
       // schedulePattern: cron expression for scheduled automation (e.g. '0 9 * * *')
       schedulePattern?: string | null;
       // scheduleTimezone: IANA timezone for the cron expression (e.g. 'Asia/Shanghai')
@@ -295,6 +332,7 @@ class TaskService {
     id: string,
     params?: {
       continueTopicId?: string;
+      instructionAgentId?: string;
       idempotencyKey?: string;
       intent?: 'continue' | 'repair' | 'authorized_replan';
       prompt?: string;
@@ -360,6 +398,9 @@ class TaskService {
 
   reorderSubtasks = async (id: string, order: string[]) =>
     lambdaClient.task.reorderSubtasks.mutate({ id, order });
+
+  cancelAutomationOccurrence = async (id: string) =>
+    lambdaClient.task.cancelAutomationOccurrence.mutate({ id });
 
   cancelTopic = async (topicId: string) => lambdaClient.task.cancelTopic.mutate({ topicId });
 

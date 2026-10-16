@@ -86,6 +86,11 @@ export const processTaskCancellation = async (input: {
         });
     }
 
+    if (claim.dispatch.automationOccurrence)
+      await (
+        await import('../taskAutomationQueue')
+      ).advanceCanceledAutomation(input.db, claim.dispatch.id, input.workspaceId);
+
     return {
       dispatchId: claim.dispatch.id,
       outcome: 'canceled',

@@ -11,7 +11,7 @@ import { TaskDomainError } from '@/database/errors/task';
 import { TaskDispatchEventEvidenceError } from '@/database/models/taskDispatch';
 import { taskDispatches } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
-import { TaskDispatchWaitingError } from '@/server/services/taskDispatch';
+import { TaskDispatchQueuedError, TaskDispatchWaitingError } from '@/server/services/taskDispatch';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 
 import { createMcpEventsSql } from './database';
@@ -104,6 +104,9 @@ export class McpEventDispatchAdmissionService implements EventDispatchAdmission 
       if (cause instanceof TaskDispatchEventEvidenceError) {
         return { reason: cause.code, status: 'denied' };
       }
+      if (cause instanceof TaskDispatchQueuedError) {
+        return { dispatchId: cause.dispatchId, status: 'accepted' };
+      }
       if (cause instanceof TaskDispatchWaitingError) {
         return { reason: 'admission-held', retryable: true, status: 'waiting' };
       }
@@ -127,7 +130,7 @@ export class McpEventDispatchAdmissionService implements EventDispatchAdmission 
           .limit(1);
         if (
           existing?.taskId === request.taskId &&
-          !['requested', 'claimed', 'provisioning', 'waiting'].includes(existing.phase)
+          !['queued', 'requested', 'claimed', 'provisioning', 'waiting'].includes(existing.phase)
         ) {
           return { dispatchId: existing.id, status: 'duplicate' };
         }

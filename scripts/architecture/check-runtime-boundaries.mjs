@@ -45,11 +45,12 @@ export function inspectRuntimeSource(file, text) {
     }
     if (
       ts.isIdentifier(node) &&
-      /^(?:window|document|localStorage|sessionStorage|navigator)$/.test(node.text)
-     && // A property in an interface is a host capability, not global access.
-      !ts.isPropertySignature(node.parent) && !ts.isPropertyAssignment(node.parent)) {
-        report(node, `browser global ${node.text}`);
-      }
+      /^(?:window|document|localStorage|sessionStorage|navigator)$/.test(node.text) && // A property in an interface is a host capability, not global access.
+      !ts.isPropertySignature(node.parent) &&
+      !ts.isPropertyAssignment(node.parent)
+    ) {
+      report(node, `browser global ${node.text}`);
+    }
     ts.forEachChild(node, visit);
   }
   visit(source);

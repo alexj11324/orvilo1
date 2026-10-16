@@ -6,7 +6,6 @@ import {
   ChevronsUpDown,
   ExternalLink,
   RotateCcw,
-  Trash,
 } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -28,18 +27,13 @@ import {
   useAcceptanceBundle,
   useAcceptanceBySubject,
 } from '@/features/Acceptance';
-import { openAcceptanceDeleteConfirm } from '@/features/Acceptance/AcceptanceDeleteConfirm';
 import {
   AcceptanceBundleGate,
   AcceptanceScope,
 } from '@/features/Acceptance/Viewer/AcceptanceScope';
 import AcceptanceCheckInventory from '@/features/Acceptance/Viewer/Checks/AcceptanceCheckInventory';
-import AcceptanceDecision from '@/features/Acceptance/Viewer/Review/AcceptanceDecision';
-import { usePermission } from '@/hooks/usePermission';
-import { verifyService } from '@/services/verify';
 import { useChatStore } from '@/store/chat';
 import { useGlobalStore } from '@/store/global';
-import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
@@ -47,8 +41,8 @@ import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import GoalRoundTimeline from './GoalRoundTimeline';
 import { resolveTaskAcceptanceRequirement } from './resolveTaskAcceptanceProjection';
 import { TaskAcceptanceHeader } from './TaskAcceptanceHeader';
-import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
-import TaskVerifyConfig from './TaskVerifyConfig';
+import { useTaskDetailSelector } from './TaskDetailScope';
+import TaskReviewerProperty from './TaskReviewerProperty';
 
 const LoadingStatusIcon = EXECUTION_STATUS_VISUALS.running.icon;
 
@@ -91,13 +85,25 @@ const CompactCheckRow = memo<CompactCheckRowProps>(({ check, onOpen }) => {
   const meta = checkHeadMeta(check);
 
   return (
-    <CriterionRow
-      data-task-acceptance-check={check.id}
-      icon={<meta.icon className="flex-none size-4" color={meta.color} size={16} />}
-      seq={check.seq}
-      title={checkDisplayTitle(check.title, t('acceptance.checks.holisticTitle'))}
-      onOpen={onOpen}
-    />
+    <div>
+      <CriterionRow
+        data-task-acceptance-check={check.id}
+        icon={<meta.icon className="flex-none size-4" color={meta.color} size={16} />}
+        seq={check.seq}
+        title={checkDisplayTitle(check.title, t('acceptance.checks.holisticTitle'))}
+        onOpen={onOpen}
+      />
+      {typeof check.result?.metadata?.waitingReason === 'string' && (
+        <p className="px-3 text-xs text-warning-text" role="status">
+          {t('acceptance.checks.waitingDevice')}
+        </p>
+      )}
+      {check.result?.status === 'errored' && check.result.toulmin?.limitation && (
+        <p className="px-3 text-xs text-warning-text" role="status">
+          {check.result.toulmin.limitation}
+        </p>
+      )}
+    </div>
   );
 });
 
@@ -122,10 +128,7 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
   const openAcceptance = useChatStore((state) => state.openAcceptance);
   const openAcceptanceCheck = useChatStore((state) => state.openAcceptanceCheck);
   const showTaskAgentPanel = useGlobalStore((state) => state.toggleTaskAgentPanel);
-  const { allowed: canEditTask } = usePermission('create_content');
-  const taskId = useTaskDetailTaskId();
   const taskDatabaseId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
-  const taskName = useTaskDetailSelector(taskDetailSelectors.taskName);
   const automationMode = useTaskDetailSelector(taskDetailSelectors.taskAutomationMode);
   const verify = useTaskDetailSelector(taskDetailSelectors.taskVerifyConfig);
   const [sectionExpanded, setSectionExpanded] = useState(true);
@@ -190,54 +193,14 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
     ) : (
       <NeuralNetworkLoading size={28} />
     );
-  // Before the first Acceptance round exists, the configured criteria ARE the
-  // delivery acceptance. Keep them in this single slot; once a round exists,
-  // replace the definitions with their live/result projection below.
-  if (!acceptanceSubject && !subjectError) return <TaskVerifyConfig />;
+  if (!acceptanceSubject && !subjectError) return null;
 
-  // Removing the acceptance drops the aggregate (round reports detach) AND
-  // clears the task's verify config — otherwise the section would fall back to
-  // the configured-criteria view and the next run would recreate the aggregate.
-  // Ordering makes the two writes safe without a server transaction: the config
-  // is cleared FIRST (a failure aborts before anything is destroyed), and only
-  // then is the aggregate deleted (a failure there leaves it intact for retry).
-  // The inverse order could delete the record while the stale config survives
-  // to recreate it on the next run.
-  const handleRemoveAcceptance = () => {
-    if (!acceptanceSubject || !taskId) return;
-    openAcceptanceDeleteConfirm({
-      description: t('taskDetail.acceptance.removeConfirm.content'),
-      ids: [acceptanceSubject.id],
-      title: taskName || requirement || t('taskDetail.acceptance.untitled'),
-      onDelete: async (purge) => {
-        await useTaskStore.getState().updateVerifyConfig(taskId, {
-          enabled: false,
-          requirement: null,
-          verifyCriteriaIds: null,
-        });
-        await verifyService.deleteAcceptance(acceptanceSubject.id, purge);
-        await mutateSubject();
-      },
-    });
-  };
-
-  // `acceptance.remove` only authorizes the acceptance creator (or a workspace
-  // owner, cloud-side), not everyone who can edit the task — so the affordance
-  // follows the bundle's isOwner rather than dead-ending in FORBIDDEN.
   const reportButton = acceptanceSubject && (
     <div className="flex items-center gap-1">
       <Button size="compact" variant="ghost" onClick={() => openReport(acceptanceSubject.id)}>
         {<ExternalLink />}
         {t('taskDetail.acceptance.openReport')}
       </Button>
-      {canEditTask && bundle?.isOwner && (
-        <ActionIcon
-          icon={Trash}
-          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-          title={t('taskDetail.acceptance.remove')}
-          onClick={handleRemoveAcceptance}
-        />
-      )}
     </div>
   );
 
@@ -250,8 +213,8 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
       <AcceptanceScope embedded acceptanceId={acceptanceSubject.id}>
         <AcceptanceBundleGate height={160}>
           <div className="flex flex-col gap-4">
+            <TaskReviewerProperty />
             <AcceptanceCheckInventory toolbar={reportButton} />
-            <AcceptanceDecision />
           </div>
         </AcceptanceBundleGate>
       </AcceptanceScope>
@@ -274,6 +237,7 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
     return (
       <div className="flex flex-col gap-2">
         {header}
+        <TaskReviewerProperty />
         <div className={`flex flex-col ${styles.body}`}>
           <AcceptanceError onRetry={() => void mutateSubject()} />
         </div>
@@ -284,6 +248,7 @@ const TaskAcceptance = memo<TaskAcceptanceProps>(({ variant = 'default' }) => {
   return (
     <div className="flex flex-col gap-2">
       {header}
+      <TaskReviewerProperty />
       <Collapsible open={sectionExpanded}>
         <CollapsibleContent>
           <div className={`flex flex-col gap-3.5 ${styles.body}`}>

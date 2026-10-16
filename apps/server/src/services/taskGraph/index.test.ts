@@ -9,6 +9,19 @@ const node = (identifier: string, status: string, dependsOn: string[] = []): Sub
 });
 
 describe('planSubtaskLayers', () => {
+  it('releases C from both reviewed unmerged A/B deliveries without requiring completed status', () => {
+    const nodes = [
+      node('A', 'in_review'),
+      node('B', 'in_review'),
+      node('C', 'backlog', ['A', 'B']),
+    ];
+    expect(planSubtaskLayers(nodes, new Set(['A', 'B'])).layers).toEqual([['C']]);
+    expect(planSubtaskLayers(nodes, new Set(['A'])).blockedExternally).toEqual(['C']);
+    expect(planSubtaskLayers([node('A', 'completed'), node('C', 'backlog', ['A'])]).layers).toEqual(
+      [],
+    );
+  });
+
   it('returns an empty plan when there are no nodes', () => {
     const plan = planSubtaskLayers([]);
     expect(plan.layers).toEqual([]);
@@ -46,11 +59,10 @@ describe('planSubtaskLayers', () => {
   });
 
   it('skips already-completed tasks and treats their dependents as roots', () => {
-    const plan = planSubtaskLayers([
-      node('T-1', 'completed'),
-      node('T-2', 'backlog', ['T-1']),
-      node('T-3', 'backlog', ['T-2']),
-    ]);
+    const plan = planSubtaskLayers(
+      [node('T-1', 'completed'), node('T-2', 'backlog', ['T-1']), node('T-3', 'backlog', ['T-2'])],
+      new Set(['T-1']),
+    );
     expect(plan.layers).toEqual([['T-2'], ['T-3']]);
     expect(plan.alreadyDone).toEqual(['T-1']);
   });
@@ -134,19 +146,13 @@ describe('planSubtaskLayers', () => {
   });
 
   it('treats an out-of-scope upstream that is still running as a blocker', () => {
-    const plan = planSubtaskLayers(
-      [node('T-2', 'backlog', ['EXT-1'])],
-      new Map([['EXT-1', 'running']]),
-    );
+    const plan = planSubtaskLayers([node('T-2', 'backlog', ['EXT-1'])], new Set());
     expect(plan.layers).toEqual([]);
     expect(plan.blockedExternally).toEqual(['T-2']);
   });
 
   it('treats an out-of-scope upstream as satisfied when it is completed', () => {
-    const plan = planSubtaskLayers(
-      [node('T-2', 'backlog', ['EXT-1'])],
-      new Map([['EXT-1', 'completed']]),
-    );
+    const plan = planSubtaskLayers([node('T-2', 'backlog', ['EXT-1'])], new Set(['EXT-1']));
     expect(plan.layers).toEqual([['T-2']]);
     expect(plan.blockedExternally).toEqual([]);
   });
@@ -165,7 +171,7 @@ describe('planSubtaskLayers', () => {
         node('T-2', 'backlog'),
         node('T-3', 'backlog', ['T-1', 'T-2', 'EXT-1']),
       ],
-      new Map([['EXT-1', 'running']]),
+      new Set(),
     );
     // T-3 has T-1 (done) + T-2 (in-batch) + EXT-1 (external blocker) — overall blocked.
     expect(plan.layers).toEqual([['T-2']]);

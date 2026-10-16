@@ -163,33 +163,24 @@ describe('acceptanceRouter purge', () => {
   });
 
   describe('remove', () => {
-    it('detaches the rounds without purging by default', async () => {
+    it('does not detach or purge archived rounds even for the creator', async () => {
       const [run] = await serverDB
         .insert(verifyRuns)
         .values({ acceptanceId: workspaceRowId, roundIndex: 1, userId: ownerId, workspaceId })
         .returning();
-
-      await caller(ownerId).remove({ id: workspaceRowId });
-
+      await expect(caller(ownerId).remove({ id: workspaceRowId })).rejects.toMatchObject({
+        code: 'PRECONDITION_FAILED',
+      });
+      await expect(
+        caller(ownerId).remove({ id: workspaceRowId, purge: true }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
       expect(purgeMocks.purgeAcceptance).not.toHaveBeenCalled();
       expect(
         await serverDB.query.acceptances.findFirst({ where: eq(acceptances.id, workspaceRowId) }),
-      ).toBeUndefined();
+      ).toBeDefined();
       expect(
         await serverDB.query.verifyRuns.findFirst({ where: eq(verifyRuns.id, run.id) }),
-      ).toMatchObject({ acceptanceId: null });
-    });
-
-    it('purges through the acceptance scope when asked', async () => {
-      await caller(ownerId).remove({ id: workspaceRowId, purge: true });
-
-      expect(purgeMocks.purgeAcceptance).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.anything(),
-        ownerId,
-        workspaceId,
-        workspaceRowId,
-      );
+      ).toMatchObject({ acceptanceId: workspaceRowId });
     });
 
     // The batch delete belonged to the standalone acceptance list's

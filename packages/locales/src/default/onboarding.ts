@@ -1,7 +1,8 @@
 export default {
   'setup.orchestrator.title': 'Choose your Orchestrator',
   'setup.orchestrator.description':
-    'Your Orchestrator coordinates your projects. Use the Agent you just created or choose another configured Agent.',
+    'Choose a public workspace Agent or create one to coordinate projects for everyone. Your first private Agent stays private.',
+  'setup.orchestrator.create': 'Create a workspace Orchestrator',
   'setup.orchestrator.finish': 'Finish setup',
 
   'agentPicker.allCategories': 'All',

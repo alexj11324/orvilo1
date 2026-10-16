@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import type { CreateAgentParams } from '@/services/agent';
 import type { FirstAgentCreationCheckpoint } from '@/services/agentOnboarding';
 import { useAgentStore } from '@/store/agent';
@@ -50,12 +51,11 @@ const CreateAgentPanel = ({
   const { t } = useTranslation(['chat', 'common']);
   const workspaceId = useActiveWorkspaceId();
   const fieldId = useId();
-  const [selectedVisibility, setSelectedVisibility] = useState<'private' | 'public'>(
-    lockVisibility ? 'private' : visibility,
-  );
+  const [selectedVisibility, setSelectedVisibility] = useState<'private' | 'public'>(visibility);
   const form = useAgentRuntimeForm({ builtinOnly, initialType, visibility: selectedVisibility });
   const createAgent = useAgentStore((s) => s.createAgent);
   const [name, setName] = useState('');
+  const [instructions, setInstructions] = useState('');
   const [nameTouched, setNameTouched] = useState(false);
   useEffect(() => {
     if (!nameTouched)
@@ -65,11 +65,30 @@ const CreateAgentPanel = ({
     checkpoint: creationCheckpoint,
     createAgent,
     ready: !!name.trim() && form.ready,
-    prepare: async () => ({
-      config: { ...(await form.prepare()), name: name.trim(), title: name.trim() },
-      groupId,
-      visibility: selectedVisibility,
-    }),
+    prepare: async () => {
+      const runtime = await form.prepare();
+      const provider = runtime.agencyConfig?.heterogeneousProvider;
+      const agentInstructions = instructions.trim();
+      return {
+        config: {
+          ...runtime,
+          name: name.trim(),
+          title: name.trim(),
+          ...(agentInstructions
+            ? provider && provider.type !== 'orvilo'
+              ? {
+                  agencyConfig: {
+                    ...runtime.agencyConfig,
+                    heterogeneousProvider: { ...provider, systemContext: agentInstructions },
+                  },
+                }
+              : { systemRole: agentInstructions }
+            : {}),
+        },
+        groupId,
+        visibility: selectedVisibility,
+      };
+    },
     onCreated: async (result) => {
       form.setApiKey('');
       await onCreated?.(result.agentId, result.config);
@@ -121,7 +140,9 @@ const CreateAgentPanel = ({
                 {t('createAgent.visibility.label')}
               </FieldLabel>
               {lockVisibility ? (
-                <span className="text-muted-foreground">{t('createAgent.visibility.private')}</span>
+                <span className="text-muted-foreground">
+                  {t(`createAgent.visibility.${selectedVisibility}`)}
+                </span>
               ) : (
                 <Select
                   disabled={locked || !!groupId}
@@ -155,6 +176,26 @@ const CreateAgentPanel = ({
           ) : (
             <span className="text-muted-foreground">{t('createAgent.visibility.personal')}</span>
           )}
+          <Field>
+            <FieldLabel htmlFor={`${fieldId}-instructions`}>
+              {t('createAgent.instructions')}
+            </FieldLabel>
+            <Button
+              disabled={locked}
+              size="sm"
+              type="button"
+              variant="ghost"
+              onClick={() => setInstructions(t('createAgent.reviewerStarter'))}
+            >
+              {t('createAgent.useReviewerStarter')}
+            </Button>
+            <Textarea
+              disabled={locked}
+              id={`${fieldId}-instructions`}
+              value={instructions}
+              onChange={(event) => setInstructions(event.target.value)}
+            />
+          </Field>
           {groupId && <p className="text-muted-foreground">{t('createAgent.categoryPreserved')}</p>}
         </CollapsibleContent>
       </Collapsible>

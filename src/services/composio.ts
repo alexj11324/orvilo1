@@ -1,4 +1,4 @@
-import { lambdaClient,toolsClient  } from '@/libs/trpc/client';
+import { lambdaClient, toolsClient } from '@/libs/trpc/client';
 
 class ComposioService {
   getConnection = (...args: Parameters<typeof lambdaClient.composio.getConnection.query>) =>
@@ -7,8 +7,9 @@ class ComposioService {
   listActions = (...args: Parameters<typeof toolsClient.composio.listActions.query>) =>
     toolsClient.composio.listActions.query(...args);
 
-  updateComposioPlugin = (...args: Parameters<typeof lambdaClient.composio.updateComposioPlugin.mutate>) =>
-    lambdaClient.composio.updateComposioPlugin.mutate(...args);
+  updateComposioPlugin = (
+    ...args: Parameters<typeof lambdaClient.composio.updateComposioPlugin.mutate>
+  ) => lambdaClient.composio.updateComposioPlugin.mutate(...args);
 
   createConnection = (...args: Parameters<typeof lambdaClient.composio.createConnection.mutate>) =>
     lambdaClient.composio.createConnection.mutate(...args);
@@ -22,9 +23,9 @@ class ComposioService {
   getActions = (...args: Parameters<typeof toolsClient.composio.getActions.query>) =>
     toolsClient.composio.getActions.query(...args);
 
-  getComposioPlugins = (...args: Parameters<typeof lambdaClient.composio.getComposioPlugins.query>) =>
-    lambdaClient.composio.getComposioPlugins.query(...args);
-
+  getComposioPlugins = (
+    ...args: Parameters<typeof lambdaClient.composio.getComposioPlugins.query>
+  ) => lambdaClient.composio.getComposioPlugins.query(...args);
 }
 
 export const composioService = new ComposioService();

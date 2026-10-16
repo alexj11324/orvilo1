@@ -4,6 +4,8 @@ import { ChatErrorType, RequestTrigger } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { NotifyAgentInterventionRequiredParams } from '@/business/server/agent-run/agentInterventionReview';
+import { AgentOperationModel } from '@/database/models/agentOperation';
+import { TaskModel } from '@/database/models/task';
 import * as agentSignalService from '@/server/services/agentSignal';
 import * as verifyServices from '@/server/services/verify';
 import { registerWorksForOperation } from '@/server/services/workRegistration';
@@ -58,6 +60,14 @@ vi.mock('@/server/services/workRegistration', () => ({
 const flushMicrotasks = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const buildLifecycle = () => new CompletionLifecycle({} as any, 'user-1');
+
+beforeEach(() => {
+  vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(null);
+  vi.spyOn(TaskModel.prototype, 'findById').mockResolvedValue({
+    automationMode: 'heartbeat',
+  } as never);
+});
+afterEach(() => vi.restoreAllMocks());
 
 describe('isSuccessLikeCompletionReason', () => {
   // Regression: file-Work registration was gated on `reason === 'done'` alone,
@@ -625,41 +635,35 @@ describe('CompletionLifecycle.dispatchHooks — verify plan race', () => {
     vi.restoreAllMocks();
   });
 
-  it('awaits the start-time verify-plan instantiation before running the completion gate', async () => {
+  it('starts and completes ordinary work without instantiating or scheduling Verify', async () => {
     const lifecycle = buildLifecycle();
     vi.spyOn(lifecycle as any, 'persistCompletion').mockResolvedValue(undefined);
-    vi.spyOn(lifecycle as any, 'createVerifyMessage').mockResolvedValue(undefined);
-    vi.spyOn(hookDispatcher, 'dispatch').mockResolvedValue(undefined as any);
+    const dispatchSpy = vi.spyOn(hookDispatcher, 'dispatch').mockResolvedValue(undefined as any);
     vi.spyOn(hookDispatcher, 'unregister').mockImplementation(function () {});
-
-    // Control exactly when the fire-and-forget instantiation settles.
-    let settle: () => void = () => {};
-    const instantiation = new Promise<void>((resolve) => {
-      settle = resolve;
-    });
     const instantiateSpy = vi
       .spyOn(verifyServices, 'instantiateVerifyPlanOnStart')
-      .mockReturnValue(instantiation);
+      .mockResolvedValue(undefined);
     const runVerifySpy = vi
       .spyOn(verifyServices, 'runVerifyOnCompletion')
       .mockResolvedValue(undefined);
-
-    // A top-level task op registers the (still-pending) instantiation at start.
     await lifecycle.recordStart({ operationId: 'op-1', taskId: 'task-1' } as any);
-    expect(instantiateSpy).toHaveBeenCalledTimes(1);
-
-    // Completion fires while the plan instantiation is still in flight.
-    const doneState = { host: { hooks: [] }, origin: { agentId: 'a' }, status: 'done' };
-    const dispatch = lifecycle.dispatchHooks('op-1', doneState, 'done');
-
-    // The gate must stay blocked on the pending instantiation, not race past it.
-    await flushMicrotasks();
+    await lifecycle.dispatchHooks(
+      'op-1',
+      { host: { hooks: [] }, origin: { agentId: 'a' }, status: 'done' },
+      'done',
+    );
+    expect(dispatchSpy).toHaveBeenCalled();
+    expect(instantiateSpy).not.toHaveBeenCalled();
     expect(runVerifySpy).not.toHaveBeenCalled();
+  });
 
-    // Once the plan lands, the gate proceeds against the now-confirmed plan.
-    settle();
-    await dispatch;
-    expect(runVerifySpy).toHaveBeenCalledTimes(1);
+  it('does not instantiate the old acceptance plan for an ordinary Issue', async () => {
+    vi.spyOn(TaskModel.prototype, 'findById').mockResolvedValue({ automationMode: null } as never);
+    const instantiateSpy = vi
+      .spyOn(verifyServices, 'instantiateVerifyPlanOnStart')
+      .mockResolvedValue(undefined);
+    await buildLifecycle().recordStart({ operationId: 'issue-op', taskId: 'task-1' });
+    expect(instantiateSpy).not.toHaveBeenCalled();
   });
 
   it('does not register an instantiation for a repair / verifier sub-op (parentOperationId set)', async () => {
@@ -739,7 +743,6 @@ describe('CompletionLifecycle.dispatchHooks — completion notification', () => 
 
   const stubSideEffects = (lifecycle: CompletionLifecycle) => {
     vi.spyOn(lifecycle as any, 'persistCompletion').mockResolvedValue(undefined);
-    vi.spyOn(lifecycle as any, 'createVerifyMessage').mockResolvedValue(undefined);
     vi.spyOn(hookDispatcher, 'dispatch').mockResolvedValue(undefined as any);
     vi.spyOn(hookDispatcher, 'unregister').mockImplementation(function () {});
     vi.spyOn(verifyServices, 'runVerifyOnCompletion').mockResolvedValue(undefined);
@@ -1204,7 +1207,6 @@ describe('CompletionLifecycle.dispatchHooks — lastAssistantContent DB recovery
 
   const setupSpies = (lifecycle: CompletionLifecycle) => {
     vi.spyOn(lifecycle as any, 'persistCompletion').mockResolvedValue(undefined);
-    vi.spyOn(lifecycle as any, 'createVerifyMessage').mockResolvedValue(undefined);
     vi.spyOn(verifyServices, 'runVerifyOnCompletion').mockResolvedValue(undefined);
     vi.spyOn(hookDispatcher, 'unregister').mockImplementation(function () {});
     vi.spyOn(console, 'warn').mockImplementation(function () {});

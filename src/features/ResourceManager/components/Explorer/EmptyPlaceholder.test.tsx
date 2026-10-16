@@ -36,6 +36,11 @@ vi.mock('@/store/file', () => ({
     selector({ pushDockFileList: mockPushDockFileList }),
 }));
 
+vi.mock('@lobehub/ui', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  FileTypeIcon: () => <span />,
+}));
+
 describe('EmptyPlaceholder', () => {
   beforeEach(() => {
     canCreate = true;
@@ -64,7 +69,9 @@ describe('EmptyPlaceholder', () => {
   it('should render create actions when the user can create resources', () => {
     render(<EmptyPlaceholder />);
 
-    expect(screen.getByText('FileManager.emptyStatus.actions.knowledgeBase')).toBeInTheDocument();
+    expect(
+      screen.queryByText('FileManager.emptyStatus.actions.knowledgeBase'),
+    ).not.toBeInTheDocument();
     expect(screen.getByText('FileManager.emptyStatus.actions.file')).toBeInTheDocument();
     expect(screen.getByText('FileManager.emptyStatus.actions.folder')).toBeInTheDocument();
   });

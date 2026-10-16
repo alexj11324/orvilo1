@@ -1,4 +1,3 @@
-import { McpIcon } from '@lobehub/ui/icons';
 import {
   Bot,
   Brain,
@@ -162,10 +161,6 @@ export const useCategory = (): CategoryGroup[] => {
       }),
     ].filter((item): item is CategoryItem => Boolean(item));
 
-    const tools: CategoryItem[] = [
-      makeItem({ icon: McpIcon, key: SettingsTabs.Connector, label: t('setting:tab.connector') }),
-    ].filter((item): item is CategoryItem => Boolean(item));
-
     // The API Key entry used to appear twice — once here under dev mode and once
     // under `showApiKeyManage` — so a user who met both gates saw two rows for
     // one page.
@@ -203,7 +198,6 @@ export const useCategory = (): CategoryGroup[] => {
         title: t('setting:group.usageAndCost'),
       },
       { items: agent, key: SettingsGroupKey.Agent, title: t('setting:group.aiConfig') },
-      { items: tools, key: SettingsGroupKey.Tools, title: t('setting:group.tools') },
       { items: security, key: SettingsGroupKey.Security, title: t('setting:group.security') },
       { items: data, key: SettingsGroupKey.Data, title: t('setting:group.data') },
       {

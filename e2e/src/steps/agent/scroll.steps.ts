@@ -12,6 +12,10 @@
 import { After, Given, Then, When } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 
+import {
+  AI_RUNTIME_OPERATION_TYPES,
+  INPUT_LOADING_OPERATION_TYPES,
+} from '../../../../src/store/chat/slices/operation/types';
 import { llmMockManager, presetResponses } from '../../mocks/llm';
 import {
   classifyScrollTrace,
@@ -101,41 +105,76 @@ async function getScrollDiag(world: CustomWorld): Promise<string[]> {
 // dump can tell a held queued send from a dispatched-but-starved one.
 async function getChatQueueSnapshot(world: CustomWorld): Promise<unknown> {
   return world.page
-    .evaluate(() => {
-      const stores = (globalThis as { __ORVILO_STORES?: Record<string, () => unknown> })
-        .__ORVILO_STORES;
-      const state = stores?.chat?.() as
-        | {
-            queuedMessages?: Record<string, unknown[]>;
-            operationsByContext?: Record<string, string[]>;
-            operations?: Record<
-              string,
-              { metadata?: { serverOperationId?: string }; status?: string; type?: string }
-            >;
-            creatingTopicIds?: string[];
-          }
-        | undefined;
-      if (!state) return null;
-      return {
-        creatingTopicIds: state.creatingTopicIds,
-        operations: Object.fromEntries(
-          Object.entries(state.operations ?? {}).map(([id, op]) => [
-            id,
-            {
-              serverOperationId: op.metadata?.serverOperationId,
-              status: op.status,
-              type: op.type,
-            },
-          ]),
-        ),
-        operationsByContext: Object.fromEntries(
-          Object.entries(state.operationsByContext ?? {}).map(([key, ids]) => [key, ids.length]),
-        ),
-        queuedMessages: Object.fromEntries(
-          Object.entries(state.queuedMessages ?? {}).map(([key, msgs]) => [key, msgs.length]),
-        ),
-      };
-    })
+    .evaluate(
+      ({ runtimeTypes, loadingTypes }) => {
+        const stores = (globalThis as { __ORVILO_STORES?: Record<string, () => unknown> })
+          .__ORVILO_STORES;
+        const state = stores?.chat?.() as
+          | {
+              queuedMessages?: Record<string, unknown[]>;
+              operationsByContext?: Record<string, string[]>;
+              operations?: Record<
+                string,
+                {
+                  metadata?: {
+                    isAborting?: boolean;
+                    serverOperationId?: string;
+                    visibleLoadingDone?: boolean;
+                  };
+                  status?: string;
+                  type?: string;
+                }
+              >;
+              creatingTopicIds?: string[];
+            }
+          | undefined;
+        if (!state) return null;
+        return {
+          creatingTopicIds: state.creatingTopicIds,
+          operations: Object.fromEntries(
+            Object.entries(state.operations ?? {}).map(([id, op]) => [
+              id,
+              {
+                serverOperationId: op.metadata?.serverOperationId,
+                status: op.status,
+                type: op.type,
+              },
+            ]),
+          ),
+          operationsByContext: Object.fromEntries(
+            Object.entries(state.operationsByContext ?? {}).map(([key, ids]) => {
+              const operations = ids.map((id) => state.operations?.[id]).filter((op) => !!op);
+              return [
+                key,
+                {
+                  count: ids.length,
+                  isAIGenerating: operations.some(
+                    (op) =>
+                      runtimeTypes.includes(op.type ?? '') &&
+                      op.status === 'running' &&
+                      !op.metadata?.isAborting &&
+                      !op.metadata?.visibleLoadingDone,
+                  ),
+                  isInputLoading: operations.some(
+                    (op) =>
+                      loadingTypes.includes(op.type ?? '') &&
+                      op.status === 'running' &&
+                      !op.metadata?.isAborting,
+                  ),
+                },
+              ];
+            }),
+          ),
+          queuedMessages: Object.fromEntries(
+            Object.entries(state.queuedMessages ?? {}).map(([key, msgs]) => [key, msgs.length]),
+          ),
+        };
+      },
+      {
+        runtimeTypes: AI_RUNTIME_OPERATION_TYPES as string[],
+        loadingTypes: INPUT_LOADING_OPERATION_TYPES as string[],
+      },
+    )
     .catch(() => null);
 }
 
@@ -179,7 +218,10 @@ async function getAutoScrollSettingsSnapshot(
     .catch(() => null);
 }
 
-async function dumpScrollDiagnostics(world: CustomWorld): Promise<void> {
+async function dumpScrollDiagnostics(
+  world: CustomWorld,
+  includeGatewayDiagnostics = true,
+): Promise<void> {
   console.log(`   📍 pin failure dump: ${JSON.stringify(await getScrollSnapshot(world))}`);
   console.log(
     `   📍 auto-scroll settings: ${JSON.stringify(await getAutoScrollSettingsSnapshot(world))}`,
@@ -190,6 +232,26 @@ async function dumpScrollDiagnostics(world: CustomWorld): Promise<void> {
   const queue = await getChatQueueSnapshot(world);
   if (queue) {
     console.log(`   📍 chat queue: ${JSON.stringify(queue)}`);
+  }
+  if (!includeGatewayDiagnostics) {
+    const lastSent = world.testContext.lastSentUserMessageId;
+    const client = await getScrollPgClient(world);
+    if (client && lastSent) {
+      try {
+        const { rows } = await client.query(
+          `select id, status from agent_operations
+           where topic_id = (select topic_id from messages where id = $1)
+           order by started_at desc nulls last limit 1`,
+          [lastSent],
+        );
+        console.log(`   📍 last server operation: ${JSON.stringify(rows[0] ?? null)}`);
+      } catch {
+        console.log('   📍 last server operation: unavailable');
+      }
+    }
+    return;
+  }
+  if (queue) {
     // For each client op still `running`, ask the fake gateway what it
     // recorded for the matching server op — proves whether the server pushed
     // `agent_runtime_end` at all (a dropped push strands the op).
@@ -647,8 +709,17 @@ Then('视口应贴近聊天列表底部', { timeout: 60_000 }, async function (t
     .toBeLessThanOrEqual(AT_BOTTOM_EPSILON)
     .catch(() => {});
   const snap = await getScrollSnapshot(this);
-  expect(snap, 'failed to locate scroll container').not.toBeNull();
-  expect(snap!.distanceToBottom).toBeLessThanOrEqual(AT_BOTTOM_EPSILON);
+  try {
+    expect(snap, 'failed to locate scroll container').not.toBeNull();
+    expect(snap!.distanceToBottom).toBeLessThanOrEqual(AT_BOTTOM_EPSILON);
+  } catch (error) {
+    try {
+      await dumpScrollDiagnostics(this, false);
+    } catch {
+      console.log('   📍 scroll completion diagnostics: unavailable');
+    }
+    throw error;
+  }
 });
 
 Then('视口不应贴近聊天列表底部', { timeout: 90_000 }, async function (this: CustomWorld) {

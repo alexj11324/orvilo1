@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as WorkspaceModelModule from '@/database/models/workspace';
 import { knowledgeBaseRouter } from '@/server/routers/lambda/knowledgeBase';
-import { TransferErrorCode } from '@/types/transferError';
 
 const routerMocks = vi.hoisted(() => ({
   assertContentsNotInRestrictedKnowledgeBase: vi.fn(),
@@ -27,7 +27,7 @@ const mockFileModelFindByIds = vi.fn();
 // Workspace membership is verified for real — callers carrying workspaceId
 // resolve through this model seam, so tests stub an active member row.
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  ...(await importOriginal<typeof WorkspaceModelModule>()),
   getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
 }));
 
@@ -128,249 +128,42 @@ describe('knowledgeBaseRouter', () => {
     mockKnowledgeBaseModelUpdate.mockResolvedValue({ id: 'kb-1' });
   });
 
-  describe('updateKnowledgeBase', () => {
-    it("lets a member update another member's visible shared library", async () => {
-      mockKnowledgeBaseModelFindById.mockResolvedValue({
-        id: 'kb-1',
-        userId: 'another-member',
-        visibility: 'public',
-        workspaceId: 'workspace-active',
-      });
-
-      await caller.updateKnowledgeBase({ id: 'kb-1', value: { name: 'Updated library' } });
-
-      expect(routerMocks.assertKnowledgeBaseBrowsable).toHaveBeenCalledWith(
-        expect.anything(),
-        'kb-1',
-        expect.objectContaining({ userId: 'another-member', visibility: 'public' }),
-      );
-      expect(mockKnowledgeBaseModelUpdate).toHaveBeenCalledWith('kb-1', {
-        name: 'Updated library',
-      });
-    });
-
-    // Regression: the input used to be `insertKnowledgeBasesSchema.partial()`,
-    // so a member with collaborative `edit` access could reassign the row, move
-    // it to another workspace, or take it private through the rename endpoint.
-    it('drops identity and scope fields from the update payload', async () => {
-      mockKnowledgeBaseModelFindById.mockResolvedValue({
-        id: 'kb-1',
-        userId: 'another-member',
-        visibility: 'public',
-        workspaceId: 'workspace-active',
-      });
-
-      await caller.updateKnowledgeBase({
-        id: 'kb-1',
-        value: {
-          description: 'New description',
-          id: 'hijacked-id',
-          name: 'Updated library',
-          userId: 'test-user',
-          visibility: 'private',
-          workspaceId: 'other-workspace',
-        },
-      } as Parameters<typeof caller.updateKnowledgeBase>[0]);
-
-      expect(mockKnowledgeBaseModelUpdate).toHaveBeenCalledWith('kb-1', {
-        description: 'New description',
-        name: 'Updated library',
-      });
-    });
-
-    it('does not update a restricted library that the member cannot browse', async () => {
-      routerMocks.assertKnowledgeBaseBrowsable.mockRejectedValue(new Error('denied'));
-
-      await expect(
-        caller.updateKnowledgeBase({ id: 'kb-1', value: { name: 'Updated library' } }),
-      ).rejects.toThrow('denied');
-
-      expect(mockKnowledgeBaseModelUpdate).not.toHaveBeenCalled();
-    });
+  it('retired membership writes reject before touching stored resources', async () => {
+    await expect(
+      caller.addFilesToKnowledgeBase({ knowledgeBaseId: 'kb-1', ids: ['file-1'] }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN', message: 'Platform knowledge bases are retired' });
+    expect(mockKnowledgeBaseModelAddFiles).not.toHaveBeenCalled();
   });
 
-  describe('addFilesToKnowledgeBase', () => {
-    it("lets a member add another creator's visible resource", async () => {
-      mockFileModelFindByIds.mockResolvedValue([{ id: 'file-1', visibility: 'public' }]);
-      mockDocumentModelFindByIds.mockResolvedValue([]);
-      mockKnowledgeBaseModelAddFiles.mockResolvedValue([{ fileId: 'file-1' }]);
-
-      await caller.addFilesToKnowledgeBase({ ids: ['file-1'], knowledgeBaseId: 'kb-1' });
-
-      expect(mockKnowledgeBaseModelAddFiles).toHaveBeenCalledWith('kb-1', ['file-1']);
-    });
-
-    it('files a private resource into a shared library', async () => {
-      // A library is a directory of references, so it does not force its rows
-      // to share its visibility: filing a draft now and sharing it when it is
-      // ready is the ordinary move. Who sees the row is still decided by the
-      // row's own `visibility`, which every listing filters on.
-      mockFileModelFindByIds.mockResolvedValue([{ id: 'file-1', visibility: 'private' }]);
-      mockDocumentModelFindByIds.mockResolvedValue([]);
-
-      await caller.addFilesToKnowledgeBase({ ids: ['file-1'], knowledgeBaseId: 'kb-1' });
-
-      expect(mockKnowledgeBaseModelAddFiles).toHaveBeenCalledWith('kb-1', ['file-1']);
-    });
-
-    it('fails the whole batch when any resource is inaccessible', async () => {
-      mockFileModelFindByIds.mockResolvedValue([{ id: 'file-1', visibility: 'public' }]);
-      mockDocumentModelFindByIds.mockResolvedValue([]);
-
-      await expect(
-        caller.addFilesToKnowledgeBase({
-          ids: ['file-1', 'private-file'],
-          knowledgeBaseId: 'kb-1',
-        }),
-      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
-
-      expect(mockKnowledgeBaseModelAddFiles).not.toHaveBeenCalled();
-    });
+  it('denies every legacy KB producer without deleting or changing content', async () => {
+    const writes = [
+      () => caller.createKnowledgeBase({ name: 'New' }),
+      () => caller.copyKnowledgeBaseToWorkspace({ id: 'kb-1', targetWorkspaceId: 'ws-2' }),
+      () => caller.publishKnowledgeBaseToWorkspace({ id: 'kb-1' }),
+      () => caller.setKnowledgeBaseVisibility({ id: 'kb-1', visibility: 'public' }),
+      () => caller.transferKnowledgeBase({ id: 'kb-1', targetWorkspaceId: null }),
+      () => caller.updateKnowledgeBase({ id: 'kb-1', value: { name: 'Changed' } }),
+      () => caller.removeFilesFromKnowledgeBase({ knowledgeBaseId: 'kb-1', ids: ['file-1'] }),
+      () => caller.removeKnowledgeBase({ id: 'kb-1' }),
+      () => caller.removeAllKnowledgeBases(),
+    ];
+    for (const write of writes) {
+      await expect(write()).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+        message: 'Platform knowledge bases are retired',
+      });
+    }
+    expect(mockKnowledgeBaseModelCopyToWorkspace).not.toHaveBeenCalled();
+    expect(mockKnowledgeBaseModelUpdate).not.toHaveBeenCalled();
+    expect(mockKnowledgeBaseModelRemoveFiles).not.toHaveBeenCalled();
+    expect(mockKnowledgeBaseModelDeleteWithFiles).not.toHaveBeenCalled();
+    expect(mockKnowledgeBaseModelTransferTo).not.toHaveBeenCalled();
   });
 
-  describe('removeKnowledgeBase', () => {
-    it("lets a member delete another creator's visible library", async () => {
-      mockKnowledgeBaseModelFindById.mockResolvedValue({
-        id: 'kb-1',
-        userId: 'another-member',
-        visibility: 'public',
-        workspaceId: 'workspace-active',
-      });
-
-      await caller.removeKnowledgeBase({ id: 'kb-1' });
-
-      expect(mockKnowledgeBaseModelDeleteWithFiles).toHaveBeenCalledWith(
-        'kb-1',
-        expect.any(Boolean),
-      );
+  it('retains authorized historical detail reads', async () => {
+    await expect(caller.getKnowledgeBaseById({ id: 'kb-1' })).resolves.toMatchObject({
+      id: 'kb-1',
     });
-  });
-
-  describe('transferKnowledgeBase', () => {
-    it('checks target storage before transferring a library', async () => {
-      await caller.transferKnowledgeBase({
-        id: 'kb-1',
-        targetWorkspaceId: null,
-      });
-
-      expect(mockKnowledgeBaseModelCountFileUsage).toHaveBeenCalledWith('kb-1');
-      expect(routerMocks.businessFileTransferStorageCheck).toHaveBeenCalledWith({
-        additionalSize: 4096,
-        targetUserId: 'test-user',
-        targetWorkspaceId: null,
-      });
-      expect(mockKnowledgeBaseModelTransferTo).toHaveBeenCalledWith(
-        'kb-1',
-        null,
-        'test-user',
-        undefined,
-      );
-    });
-
-    it('returns a stable error code when the library no longer exists', async () => {
-      mockKnowledgeBaseModelFindById.mockResolvedValue(undefined);
-
-      await expect(
-        caller.transferKnowledgeBase({
-          id: 'missing-kb',
-          targetWorkspaceId: null,
-        }),
-      ).rejects.toMatchObject({
-        cause: {
-          data: {
-            code: TransferErrorCode.ResourceNotFound,
-          },
-        },
-      });
-    });
-  });
-
-  describe('transferKnowledgeBase permission rows', () => {
-    it('removes the source-workspace row and seeds the default level in a public target', async () => {
-      await caller.transferKnowledgeBase({
-        id: 'kb-1',
-        targetVisibility: 'public',
-        targetWorkspaceId: 'workspace-target',
-      });
-
-      expect(mockPermissionRemoveAll).toHaveBeenCalledWith('knowledgeBase', 'kb-1');
-      expect(mockPermissionSetAccessLevel).toHaveBeenCalledWith(
-        'knowledgeBase',
-        'kb-1',
-        'edit',
-        'test-user',
-      );
-    });
-
-    it('only clears the source row when moving to personal scope', async () => {
-      await caller.transferKnowledgeBase({
-        id: 'kb-1',
-        targetWorkspaceId: null,
-      });
-
-      expect(mockPermissionRemoveAll).toHaveBeenCalledWith('knowledgeBase', 'kb-1');
-      expect(mockPermissionSetAccessLevel).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('copyKnowledgeBaseToWorkspace', () => {
-    it('checks target storage before copying a library', async () => {
-      await caller.copyKnowledgeBaseToWorkspace({
-        id: 'kb-1',
-        targetWorkspaceId: null,
-      });
-
-      expect(mockKnowledgeBaseModelCountFileUsage).toHaveBeenCalledWith('kb-1');
-      expect(routerMocks.businessFileTransferStorageCheck).toHaveBeenCalledWith({
-        additionalSize: 4096,
-        targetUserId: 'test-user',
-        targetWorkspaceId: null,
-      });
-      expect(mockKnowledgeBaseModelCopyToWorkspace).toHaveBeenCalledWith(
-        'kb-1',
-        null,
-        'test-user',
-        undefined,
-      );
-    });
-
-    it("rejects copying another member's library before any target or storage side effects", async () => {
-      mockKnowledgeBaseModelFindById.mockResolvedValue({
-        id: 'kb-1',
-        userId: 'another-member',
-      });
-
-      await expect(
-        caller.copyKnowledgeBaseToWorkspace({
-          id: 'kb-1',
-          targetWorkspaceId: 'workspace-target',
-        }),
-      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
-
-      expect(routerMocks.hasWorkspaceScopedPermission).not.toHaveBeenCalled();
-      expect(mockKnowledgeBaseModelCountFileUsage).not.toHaveBeenCalled();
-      expect(routerMocks.businessFileTransferStorageCheck).not.toHaveBeenCalled();
-      expect(mockKnowledgeBaseModelCopyToWorkspace).not.toHaveBeenCalled();
-    });
-
-    it('rejects target workspace copy when RBAC denies knowledge base creation', async () => {
-      routerMocks.hasWorkspaceScopedPermission.mockResolvedValue(false);
-
-      await expect(
-        caller.copyKnowledgeBaseToWorkspace({
-          id: 'kb-1',
-          targetWorkspaceId: 'workspace-target',
-        }),
-      ).rejects.toMatchObject({
-        cause: {
-          data: {
-            code: TransferErrorCode.TargetNoWriteAccess,
-          },
-        },
-      });
-
-      expect(routerMocks.businessFileTransferStorageCheck).not.toHaveBeenCalled();
-      expect(mockKnowledgeBaseModelCopyToWorkspace).not.toHaveBeenCalled();
-    });
+    expect(routerMocks.assertKnowledgeBaseBrowsable).toHaveBeenCalled();
   });
 });

@@ -1,49 +1,9 @@
-import { type OrviloTool, type ToolManifest } from '@orvilo/types';
+import { type OrviloTool } from '@orvilo/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
-import { type OrviloToolCustomPlugin } from '@/types/tool/plugin';
-
-export interface InstallPluginParams {
-  customParams?: Record<string, any>;
-  identifier: string;
-  manifest: ToolManifest;
-  settings?: Record<string, any>;
-  type: 'plugin' | 'customPlugin';
-}
 
 export class PluginService {
-  installPlugin = async (plugin: InstallPluginParams): Promise<void> => {
-    await lambdaClient.plugin.createOrInstallPlugin.mutate(plugin);
-  };
-
-  getInstalledPlugins = (): Promise<OrviloTool[]> => {
-    return lambdaClient.plugin.getPlugins.query();
-  };
-
-  uninstallPlugin = async (identifier: string): Promise<void> => {
-    await lambdaClient.plugin.removePlugin.mutate({ id: identifier });
-  };
-
-  createCustomPlugin = async (customPlugin: OrviloToolCustomPlugin): Promise<void> => {
-    await lambdaClient.plugin.createPlugin.mutate({ ...customPlugin, type: 'customPlugin' });
-  };
-
-  updatePlugin = async (id: string, value: Partial<OrviloToolCustomPlugin>): Promise<void> => {
-    await lambdaClient.plugin.updatePlugin.mutate({
-      customParams: value.customParams,
-      id,
-      manifest: value.manifest,
-      settings: value.settings,
-    });
-  };
-
-  updatePluginManifest = async (id: string, manifest: ToolManifest): Promise<void> => {
-    await lambdaClient.plugin.updatePlugin.mutate({ id, manifest });
-  };
-
-  updatePluginSettings = async (id: string, settings: any, signal?: AbortSignal): Promise<void> => {
-    await lambdaClient.plugin.updatePlugin.mutate({ id, settings }, { signal });
-  };
+  getInstalledPlugins = (): Promise<OrviloTool[]> => lambdaClient.plugin.getPlugins.query();
 }
 
 export const pluginService = new PluginService();

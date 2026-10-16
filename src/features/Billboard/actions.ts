@@ -2,7 +2,6 @@ import { isDesktop, isOfficialCloudServer, OFFICIAL_URL } from '@orvilo/const';
 import urlJoin from 'url-join';
 
 import { openChangelogModal } from '@/components/ChangelogModal';
-import { openFeedbackModal } from '@/components/FeedbackModal';
 import { getHostPort } from '@/platform';
 import { getElectronStoreState } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
@@ -15,7 +14,7 @@ import { getUserStoreState } from '@/store/user';
  *
  * Keep in sync with the ops platform enum (`src/const/billboard.ts` in orvilo-ops).
  */
-export const BILLBOARD_ACTIONS = ['openChangelog', 'openFeedback', 'resetOnboarding'] as const;
+export const BILLBOARD_ACTIONS = ['openChangelog', 'resetOnboarding'] as const;
 
 export type BillboardAction = (typeof BILLBOARD_ACTIONS)[number];
 
@@ -61,9 +60,6 @@ export const resolveBillboardAction = (value: unknown): BillboardAction | null =
 const billboardActionHandlers: Record<BillboardAction, () => Promise<void> | void> = {
   openChangelog: () => {
     openChangelogModal();
-  },
-  openFeedback: () => {
-    openFeedbackModal();
   },
   resetOnboarding: async () => {
     await getUserStoreState().resetOnboarding();

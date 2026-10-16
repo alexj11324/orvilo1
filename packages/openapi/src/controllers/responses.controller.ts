@@ -18,6 +18,7 @@ export class ResponsesController extends BaseController {
     try {
       const body = await this.getBody<CreateResponseRequest>(c);
       const userId = this.getUserId(c);
+      if (!userId) return this.error(c, 'Authentication required', 401);
       const db = await this.getDatabase();
       const service = new ResponsesService(db, userId, this.getWorkspaceId(c));
 

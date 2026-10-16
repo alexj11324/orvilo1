@@ -85,6 +85,10 @@ export class TaskTopicModel {
       },
     );
 
+  /** Run history follows the parent Issue, including a private Project ceiling. */
+  private parentTaskReadable = () =>
+    buildTaskReadableWhere(this.db, { userId: this.userId, workspaceId: this.workspaceId });
+
   /** Issue reads follow the current parent and workspace, not historical topic flags. */
   private readable = () =>
     and(
@@ -764,7 +768,7 @@ export class TaskTopicModel {
     const completionReservationId = `${reservationPrefix}${randomUUID()}`;
     const leaseExpiresAt = new Date(now.getTime() + 30 * 60 * 1000);
     const claimed = await this.db.transaction(async (tx) => {
-      // The dispatch is already terminal when its topic completion starts.
+      // Execution has ended; root automation dispatches wait for delivery acceptance.
       // Lock and validate that exact owner instead of relying on the retired
       // running projection, which disappears as soon as the dispatch settles.
       if (dispatchClaim) {
@@ -793,7 +797,14 @@ export class TaskTopicModel {
           !dispatch ||
           dispatch.taskId !== taskId ||
           dispatch.operationId !== operationId ||
-          dispatch.phase !== phase ||
+          (dispatch.phase !== phase &&
+            !(
+              status === 'completed' &&
+              dispatch.phase === 'waiting' &&
+              dispatch.waitingReason === 'automation_delivery_pending' &&
+              dispatch.automationOccurrence &&
+              !dispatch.automationOccurrence.parentDispatchId
+            )) ||
           dispatch.fence !== dispatchClaim.fence ||
           dispatch.generation !== dispatchClaim.generation ||
           task.executionGeneration !== dispatchClaim.generation ||
@@ -1055,8 +1066,9 @@ export class TaskTopicModel {
         totalTokens: sql<string>`coalesce(sum(${topics.totalTokens}), 0)`,
       })
       .from(taskTopics)
+      .innerJoin(tasks, eq(taskTopics.taskId, tasks.id))
       .leftJoin(topics, eq(taskTopics.topicId, topics.id))
-      .where(and(inArray(taskTopics.taskId, taskIds), this.ownership()))
+      .where(and(inArray(taskTopics.taskId, taskIds), this.ownership(), this.parentTaskReadable()))
       .groupBy(taskTopics.taskId);
 
     const byTask = rows.map((row) => ({
@@ -1103,7 +1115,7 @@ export class TaskTopicModel {
       .from(taskTopics)
       .innerJoin(tasks, eq(taskTopics.taskId, tasks.id))
       .leftJoin(topics, eq(taskTopics.topicId, topics.id))
-      .where(and(inArray(taskTopics.taskId, taskIds), this.ownership()))
+      .where(and(inArray(taskTopics.taskId, taskIds), this.ownership(), this.parentTaskReadable()))
       .orderBy(desc(taskTopics.createdAt), desc(taskTopics.seq))
       .limit(limit);
   }
@@ -1125,7 +1137,11 @@ export class TaskTopicModel {
     search?: string;
     statuses?: string[];
   }) {
-    const conditions = [isNotNull(tasks.automationMode), this.ownership()];
+    const conditions = [
+      isNotNull(tasks.automationMode),
+      this.ownership(),
+      this.parentTaskReadable(),
+    ];
     if (options.createdByUserId) {
       conditions.push(eq(tasks.createdByUserId, options.createdByUserId));
     }
@@ -1192,6 +1208,7 @@ export class TaskTopicModel {
     const conditions = [
       isNotNull(tasks.automationMode),
       this.ownership(),
+      this.parentTaskReadable(),
       gte(taskTopics.createdAt, sql`now() - interval '7 days'`),
     ];
     if (options?.createdByUserId) {

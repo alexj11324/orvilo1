@@ -36,8 +36,6 @@ apps/desktop/src/main/
 │   ├── BrowserWindowsCtr.ts  // 浏览器窗口控制器
 │   ├── DevtoolsCtr.ts        // 开发工具控制器
 │   ├── LocalFileCtr.ts       // 本地文件控制器
-│   ├── McpCtr.ts             // MCP 控制器
-│   ├── McpInstallCtr.ts      // MCP 安装控制器
 │   ├── MenuCtr.ts            // 菜单控制器
 │   ├── NetworkProxyCtr.ts    // 网络代理控制器
 │   ├── NotificationCtr.ts   // 通知控制器

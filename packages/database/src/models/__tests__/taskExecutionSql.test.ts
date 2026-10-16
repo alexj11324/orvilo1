@@ -3,7 +3,7 @@ import { eq, type SQL } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { taskDispatches, tasks, users } from '../../schemas';
+import { agents, taskDispatches, tasks, users } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 import {
@@ -56,11 +56,13 @@ const setStaleStatus = async (id: string, status: string) => {
 };
 
 beforeEach(async () => {
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }]);
 });
 
 afterEach(async () => {
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
 });
 
@@ -75,6 +77,47 @@ describe('task execution SQL projection (tasks.status retired)', () => {
 
     await dispatch(task.id, 'running');
     expect(await derivedStatus(task.id)).toBe('running');
+  });
+
+  it('keeps an armed periodic issue scheduled while its round runs or is canceled', async () => {
+    const model = new TaskModel(serverDB, userId);
+    const periodic = await model.create({
+      automationMode: 'schedule',
+      instruction: 'Nightly',
+      schedulePattern: '0 9 * * *',
+    });
+    await model.updateContext(periodic.id, {
+      scheduler: { automationPaused: false, tickToken: 'round-token' },
+    });
+    await dispatch(periodic.id, 'running');
+    expect(await derivedStatus(periodic.id)).toBe('scheduled');
+    expect(await matchingIds(predicateForLegacyStatus('scheduled'))).toContain(periodic.id);
+    expect(await matchingIds(predicateForLegacyStatus('running'))).not.toContain(periodic.id);
+
+    const oneShot = await model.create({ instruction: 'Once' });
+    await dispatch(oneShot.id, 'running');
+    expect(await derivedStatus(oneShot.id)).toBe('running');
+    expect(await matchingIds(predicateForLegacyStatus('running'))).toContain(oneShot.id);
+
+    const canceledRound = await model.create({
+      automationMode: 'heartbeat',
+      heartbeatInterval: 600,
+      instruction: 'Pulse',
+    });
+    await model.updateContext(canceledRound.id, {
+      scheduler: { automationPaused: false, tickToken: 'pulse-token' },
+    });
+    await dispatch(canceledRound.id, 'canceled');
+    expect(await derivedStatus(canceledRound.id)).toBe('scheduled');
+    expect(await matchingIds(predicateForLegacyStatus('paused'))).not.toContain(canceledRound.id);
+
+    await model.updateContext(canceledRound.id, {
+      scheduler: { automationPaused: true, tickToken: 'pulse-token' },
+    });
+    expect(await derivedStatus(canceledRound.id)).toBe('paused');
+    expect(await matchingIds(predicateForLegacyStatus('scheduled'))).not.toContain(
+      canceledRound.id,
+    );
   });
 
   it('reads a waiting reservation as waiting without changing the execution ownership projection', async () => {
@@ -116,7 +159,9 @@ describe('task execution SQL projection (tasks.status retired)', () => {
 
   it('keeps an explicit workflowCategory over the transition default', async () => {
     const model = new TaskModel(serverDB, userId);
-    const task = await model.create({ instruction: 'Explicit wins' });
+    const reviewerAgentId = 'task-exec-sql-reviewer';
+    await serverDB.insert(agents).values({ id: reviewerAgentId, slug: reviewerAgentId, userId });
+    const task = await model.create({ instruction: 'Explicit wins', reviewerAgentId });
 
     await model.updateStatus(task.id, 'completed', { workflowCategory: 'in_review' });
 

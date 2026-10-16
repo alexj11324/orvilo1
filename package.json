@@ -132,6 +132,7 @@
     "tunnel:cloudflare": "cloudflared tunnel --url http://localhost:3010 --protocol http2",
     "tunnel:ngrok": "ngrok http http://localhost:3010",
     "type-check": "node scripts/type-check.mjs tsgo --noEmit",
+    "type-check:affected": "node scripts/type-check-affected.mjs",
     "type-check:tsc": "node scripts/type-check.mjs tsc --noEmit",
     "workflow:cdn": "tsx ./scripts/cdnWorkflow/index.ts",
     "workflow:changelog": "tsx ./scripts/changelogWorkflow/index.ts",
@@ -147,8 +148,7 @@
     "workflow:reset-onboarding": "tsx ./scripts/resetOnboarding/index.ts",
     "workflow:seed-linear-parity": "tsx ./scripts/seedLinearParity/index.ts",
     "workflow:seed-user-info": "tsx ./scripts/seedUserInfo/index.ts",
-    "workflow:set-desktop-version": "tsx ./scripts/electronWorkflow/setDesktopVersion.ts",
-    "type-check:affected": "node scripts/type-check-affected.mjs"
+    "workflow:set-desktop-version": "tsx ./scripts/electronWorkflow/setDesktopVersion.ts"
   },
   "lint-staged": {
     "*.md": "node scripts/lint-staged-skip-packet.mjs md",
@@ -201,6 +201,8 @@
     "@azure/core-auth": "^1.11.0",
     "@base-ui/react": "^1.8.0",
     "@cfworker/json-schema": "^4.1.1",
+    "@chat-adapter/slack": "4.42.0",
+    "@chat-adapter/state-ioredis": "4.42.0",
     "@codesandbox/sandpack-react": "^2.20.0",
     "@composio/core": "^0.10.0",
     "@copilotkit/channels-core": "0.11.0",
@@ -233,6 +235,7 @@
     "@opentelemetry/sdk-metrics": "^2.10.0",
     "@orvilo/agent-execution": "workspace:*",
     "@orvilo/agent-gateway-client": "workspace:*",
+    "@orvilo/agent-manager-runtime": "workspace:*",
     "@orvilo/agent-mock": "workspace:*",
     "@orvilo/agent-runtime": "workspace:*",
     "@orvilo/agent-signal": "workspace:*",
@@ -347,7 +350,7 @@
     "bot-avatars": "0.2.2",
     "brotli-wasm": "^3.0.1",
     "buffer.js": "npm:buffer@^6.0.3",
-    "chat": "~4.38.0",
+    "chat": "4.42.0",
     "chroma-js": "^3.2.0",
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
@@ -475,8 +478,7 @@
     "yaml": "^2.9.0",
     "zod": "^4.4.3",
     "zustand": "5.0.4",
-    "zustand-utils": "^2.1.1",
-    "@orvilo/agent-manager-runtime": "workspace:*"
+    "zustand-utils": "^2.1.1"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",

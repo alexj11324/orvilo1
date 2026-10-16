@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  elapsedScheduleOccurrences,
   isValidScheduleOccurrenceToken,
   latestScheduleOccurrence,
   scheduleOccurrenceToken,
@@ -107,5 +108,22 @@ describe('schedule occurrence identity', () => {
     expect(slot('0 9 * * 1,3', '2026-05-07T12:00:00Z')).toBe('2026-05-06T09:00:00.000Z');
     expect(slot('61 9 * * *', '2026-05-04T12:00:00Z')).toBeUndefined();
     expect(slot('0 9 * * *', '2026-05-04T12:00:00Z', 'Not/AZone')).toBeUndefined();
+  });
+  it('does not coalesce elapsed minutes or the repeated autumn wall-time slots', () => {
+    expect(
+      elapsedScheduleOccurrences({
+        pattern: '* * * * *',
+        after: new Date('2026-05-04T00:00:00Z'),
+        now: new Date('2026-05-04T00:03:30Z'),
+      }).map((date) => date.toISOString()),
+    ).toEqual(['2026-05-04T00:01:00.000Z', '2026-05-04T00:02:00.000Z', '2026-05-04T00:03:00.000Z']);
+    expect(
+      elapsedScheduleOccurrences({
+        pattern: '30 1 * * *',
+        timezone: 'America/New_York',
+        after: new Date('2026-11-01T04:00:00Z'),
+        now: new Date('2026-11-01T07:00:00Z'),
+      }).map((date) => date.toISOString()),
+    ).toEqual(['2026-11-01T05:30:00.000Z', '2026-11-01T06:30:00.000Z']);
   });
 });

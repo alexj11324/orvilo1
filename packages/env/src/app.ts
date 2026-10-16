@@ -29,10 +29,6 @@ const APP_URL =
 // Falls back to APP_URL if not set
 const INTERNAL_APP_URL = process.env.INTERNAL_APP_URL || APP_URL;
 
-const ASSISTANT_INDEX_URL = 'https://registry.npmmirror.com/@lobehub/agents-index/v1/files/public';
-
-const PLUGINS_INDEX_URL = 'https://registry.npmmirror.com/@lobehub/plugins-index/v1/files/public';
-
 export const getAppConfig = () => {
   return createEnv({
     clientPrefix: 'NEXT_PUBLIC_',
@@ -40,13 +36,8 @@ export const getAppConfig = () => {
       NEXT_PUBLIC_ENABLE_SENTRY: z.boolean(),
     },
     server: {
-      AGENTS_INDEX_URL: z.string().url(),
-
       DEFAULT_AGENT_CONFIG: z.string(),
       SYSTEM_AGENT: z.string().optional(),
-
-      PLUGINS_INDEX_URL: z.string().url(),
-      PLUGIN_SETTINGS: z.string().optional(),
 
       APP_URL: z.string(),
       INTERNAL_APP_URL: z.string().optional(),
@@ -91,18 +82,8 @@ export const getAppConfig = () => {
       // Sentry
       NEXT_PUBLIC_ENABLE_SENTRY: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-      AGENTS_INDEX_URL: !!process.env.AGENTS_INDEX_URL
-        ? process.env.AGENTS_INDEX_URL
-        : ASSISTANT_INDEX_URL,
-
       DEFAULT_AGENT_CONFIG: process.env.DEFAULT_AGENT_CONFIG || '',
       SYSTEM_AGENT: process.env.SYSTEM_AGENT,
-
-      PLUGINS_INDEX_URL: !!process.env.PLUGINS_INDEX_URL
-        ? process.env.PLUGINS_INDEX_URL
-        : PLUGINS_INDEX_URL,
-
-      PLUGIN_SETTINGS: process.env.PLUGIN_SETTINGS,
 
       VERCEL_EDGE_CONFIG: process.env.VERCEL_EDGE_CONFIG,
 

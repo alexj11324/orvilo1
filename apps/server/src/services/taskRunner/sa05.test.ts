@@ -156,6 +156,7 @@ const setupHappyPath = (task: TaskItem, topics: TaskTopicItem[] = []) => {
   vi.spyOn(TaskModel.prototype, 'updateStatus').mockResolvedValue(task);
   vi.spyOn(TaskModel.prototype, 'resolveTaskReviewRequirement').mockResolvedValue(false);
   vi.spyOn(TaskModel.prototype, 'areAllDependenciesCompleted').mockResolvedValue(true);
+  vi.spyOn(TaskModel.prototype, 'assertConfirmedIssuePlan').mockResolvedValue(undefined);
   vi.spyOn(TaskModel.prototype, 'claimRunKickoff').mockResolvedValue(true);
   vi.spyOn(TaskTopicModel.prototype, 'findByTaskId').mockResolvedValue(topics);
   vi.spyOn(TaskTopicModel.prototype, 'findByTopicId').mockResolvedValue(null);
@@ -219,6 +220,32 @@ const newRunner = () => {
   };
   return service;
 };
+
+describe('confirmed Issue artifact delivery', () => {
+  it('dispatches a repository-bound report without preparing a git delivery', async () => {
+    const task = baseTask({
+      config: { workspace: { provider: 'git', repo: 'acme/widget', baseBranch: 'main' } },
+      context: {
+        issuePlan: {
+          confirmedAt: '2026-10-14T18:00:00.000Z',
+          checklists: [{ taskId: 'task-1', deliveryKind: 'artifact' }],
+        },
+      },
+    });
+    const { execAgent } = setupHappyPath(task);
+    const provision = vi.fn().mockRejectedValue(new Error('A report must not prepare a PR'));
+    const runner = newRunner();
+    Object.assign(runner, { taskWorkspace: { provision } });
+
+    await runner.runTask({ taskId: task.id, idempotencyKey: 'confirmed-report' });
+
+    expect(provision).not.toHaveBeenCalled();
+    expect(execAgent).toHaveBeenCalled();
+    const persistedRun = vi.mocked(TaskTopicModel.prototype.startRun).mock.calls[0]?.[2];
+    expect(persistedRun).toBeDefined();
+    expect(persistedRun?.integration).toBeUndefined();
+  });
+});
 
 const runParams = {
   idempotencyKey: 'k-1',
@@ -321,7 +348,10 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
       const { execAgent, prepare } = setupHappyPath(
         baseTask({
           automationMode: trigger,
-          context: { execution: { parked: { at: new Date().toISOString(), reason: 'paused' } } },
+          context: {
+            scheduler: { automationPaused: true },
+            execution: { parked: { at: new Date().toISOString(), reason: 'paused' } },
+          },
         }),
       );
 
@@ -368,6 +398,42 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
         }),
       }),
     );
+  });
+
+  it('a server-confirmed new generation rebuilds the report contract instead of reusing old scope receipts', async () => {
+    const task = baseTask({
+      executionGeneration: 2,
+      context: {
+        issuePlan: {
+          checklists: [],
+          executionScopes: [{ taskId: 'task-1', minGeneration: 2 }],
+        },
+      },
+    });
+    setupHappyPath(task, [priorTopic({ executionGeneration: 1 })]);
+    await newRunner().runTask(runParams);
+    const contract = vi.mocked(TaskTopicModel.prototype.startRun).mock.calls[0]?.[2].contract;
+    expect(contract?.content?.instruction).toBe('EDITED LIVE instruction');
+    expect(contract?.content?.verify).toBeUndefined();
+    expect(contract?.sourceContractId).toBeUndefined();
+    expect(consumeApprovalMock).not.toHaveBeenCalled();
+  });
+
+  it('an old contract cannot be explicitly repaired across the approved generation boundary', async () => {
+    const task = baseTask({
+      executionGeneration: 2,
+      context: {
+        issuePlan: {
+          checklists: [],
+          executionScopes: [{ taskId: 'task-1', minGeneration: 2 }],
+        },
+      },
+    });
+    const { execAgent } = setupHappyPath(task, [priorTopic({ executionGeneration: 1 })]);
+    await expect(
+      newRunner().runTask({ ...runParams, intent: 'repair', sourceContractId: 'contract-0' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(execAgent).not.toHaveBeenCalled();
   });
 
   it('defaults to repair semantics when no intent is given', async () => {

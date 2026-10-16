@@ -24,57 +24,10 @@ export const AgentBuilderManifest: BuiltinToolManifest = {
         type: 'object',
       },
     },
-    {
-      description:
-        'Search for tools (MCP plugins) in the marketplace. Users can browse and install tools directly from the search results. Use this when users want to find new tools or capabilities.',
-      name: AgentBuilderApiName.searchMarketTools,
-      parameters: {
-        properties: {
-          category: {
-            description:
-              'Optional: filter by category. Available categories: developer, productivity, web-search, tools, media-generate, etc.',
-            type: 'string',
-          },
-          pageSize: {
-            description: 'Optional: number of results to return (default: 10, max: 20).',
-            type: 'number',
-          },
-          query: {
-            description:
-              'Optional: search keywords to find specific tools. Leave empty to browse all available tools.',
-            type: 'string',
-          },
-        },
-        required: [],
-        type: 'object',
-      },
-    },
     // Note: searchOfficialTools is removed because official tools are now
     // automatically injected into the conversation context
 
     // ==================== Write Operations ====================
-    {
-      description:
-        'Install a plugin for the agent. This tool ALWAYS REQUIRES user approval before installation, even in auto-run mode. For MCP marketplace plugins, it will install and enable the plugin. For Composio tools and OrviloSkill providers that need OAuth, it will initiate the connection flow and wait for user to complete authorization.',
-      name: AgentBuilderApiName.installPlugin,
-      parameters: {
-        properties: {
-          identifier: {
-            description:
-              'The plugin identifier to install (e.g., "mcp-tavily-search", "google-calendar")',
-            type: 'string',
-          },
-          source: {
-            description:
-              'Plugin source type: "market" for MCP marketplace plugins, "official" for builtin/Composio/OrviloSkill tools',
-            enum: ['market', 'official'],
-            type: 'string',
-          },
-        },
-        required: ['identifier', 'source'],
-        type: 'object',
-      },
-    },
     {
       description:
         'Update agent configuration and/or metadata. Use this to change model, provider, plugins, opening message, opening questions, chat settings, model parameters, name, title, description, avatar, tags, and toggle plugins. Only include fields you want to update. Use togglePlugin to enable/disable a specific plugin.',

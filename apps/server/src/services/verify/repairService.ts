@@ -12,6 +12,7 @@ import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
 
 import { AcceptanceService } from './acceptanceService';
+import { assertLegacyVerificationWritable } from './retirement';
 import { VerifyStatusService } from './statusService';
 
 const log = debug('orvilo-server:verify-repair');
@@ -85,15 +86,13 @@ export const createRepairRunner = (params: {
   agentId?: string | null;
   db: OrviloDatabase;
   maxRepairRounds: number;
-  model?: string | null;
-  provider?: string | null;
   taskId?: string | null;
   topicId?: string | null;
   userId: string;
   workspaceId?: string;
 }): RepairSpawner | undefined => {
-  const { agentId, db, maxRepairRounds, model, provider, taskId, topicId, userId, workspaceId } =
-    params;
+  assertLegacyVerificationWritable();
+  const { agentId, db, maxRepairRounds, taskId, topicId, userId, workspaceId } = params;
   if (!agentId || !topicId) return undefined;
 
   return async ({ instruction, operationId, verifyMessageId }) => {
@@ -114,11 +113,9 @@ export const createRepairRunner = (params: {
       agentId,
       appContext: { topicId },
       autoStart: true,
-      ...(model ? { model } : {}),
       ...(verifyMessageId ? { parentMessageId: verifyMessageId } : {}),
       parentOperationId: operationId,
       prompt: instruction,
-      ...(provider ? { provider } : {}),
       suppressUserMessage: true,
       ...(taskId ? { taskId } : {}),
       userInterventionConfig: { approvalMode: 'headless' },
@@ -169,6 +166,7 @@ export const maybeAutoRepair = async (
   operationId: string,
   workspaceId?: string,
 ): Promise<void> => {
+  assertLegacyVerificationWritable();
   const operationModel = new AgentOperationModel(db, userId, workspaceId);
   const run = await new VerifyRunModel(db, userId, workspaceId).findByOperation(operationId);
   const plan = (run?.plan ?? []) as VerifyCheckItem[];
@@ -203,8 +201,6 @@ export const maybeAutoRepair = async (
       run.metadata as VerifyRunMetadata | null,
       workspaceId,
     ),
-    model: op?.model,
-    provider: op?.provider,
     taskId: taskOperation?.taskId,
     topicId: op?.topicId,
     userId,
@@ -267,6 +263,7 @@ export class VerifyRepairService {
     operationId: string,
     spawner?: RepairSpawner,
   ): Promise<{ repairOperationId: string } | null> {
+    assertLegacyVerificationWritable();
     const failures = await this.collectRepairable(operationId);
     if (failures.length === 0) return null;
     if (!spawner) {

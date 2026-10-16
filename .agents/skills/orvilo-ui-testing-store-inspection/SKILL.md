@@ -53,11 +53,11 @@ transform; return new Response(JSON.stringify(j),{status:r.status,headers:r.head
   before/after. Use it to make a row honestly owned by a NAMED agent (e.g. the
   inbox "Orvilo AI") when no named agent owns a feed row — required for the
   agent-name secondary line, since `agentDisplayName` only reads
-  `name`/`title` (slug is ignored; builtin task-agent metas resolve '').
+  `name`/`title` (slug is ignored).
 - Inbox agents can't send without a bound device (send arrow disabled; "No
   device" chip's Cloud Sandbox option may not stick) — so a UI send can't
   produce an inbox-owned topic; the Move flow is the workaround.
-- Sending under the composer-picked Task Agent DOES create + bind the topic
+- Sending under the composer-picked normal Agent DOES create + bind the topic
   server-side even with "No device" — only the reply step fails.
 
 ## Feed triggering when SWR serves a persisted cache
@@ -102,10 +102,9 @@ transform; return new Response(JSON.stringify(j),{status:r.status,headers:r.head
 
 ## Agent-selector / cosmetic gotcha
 
-- The composer's agent chip may label the builtin task agent "Untitled Agent"
-  on a room where its meta lacks `title` and `builtinAgentSelectors.taskAgentId`
-  hasn't resolved yet — a label fallback, not a wrong agentId. Verify the
-  resolved agent via the store, not the chip text, when it says "Untitled Agent".
+- The task conversation panel uses the configured Orchestrator, or a normal Agent
+  explicitly selected by the user. Its label comes from that Agent's name/title.
+  Verify the persisted Agent id and saved runtime as well as the displayed label.
 
 ## Verifying NEW server input fields on prod (zod-strip detection)
 

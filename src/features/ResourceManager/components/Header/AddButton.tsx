@@ -331,6 +331,8 @@ const AddButton = ({ iconOnly, rootLevel }: AddButtonProps = {}) => {
     ],
   );
 
+  if (libraryId) return null;
+
   return (
     <>
       <SimpleTooltip title={canCreate ? undefined : reason}>

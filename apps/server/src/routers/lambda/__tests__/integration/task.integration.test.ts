@@ -1,24 +1,40 @@
 // @vitest-environment node
 import { type OrviloDatabase } from '@orvilo/database';
 import { getTestDB } from '@orvilo/database/test-utils';
+import type { TaskContext } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskDomainError } from '@/database/errors/task';
 import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
 import { AcceptanceModel } from '@/database/models/acceptance';
+import { IssueDeliveryModel } from '@/database/models/issueDelivery';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import { eventOutbox, projects, taskDispatches, tasks, taskTopics } from '@/database/schemas';
+import {
+  agentOperations,
+  eventOutbox,
+  projects,
+  taskDispatches,
+  tasks,
+  taskTopics,
+} from '@/database/schemas';
+import { acceptances, verifyCheckResults, verifyRuns } from '@/database/schemas/verify';
 import { TaskService } from '@/server/services/task';
+import { IssueChecklistService } from '@/server/services/task/checklist';
 import { TaskMutationService } from '@/server/services/task/mutations';
 import { TaskDispatchService } from '@/server/services/taskDispatch';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
 import { createTaskRuntime } from '@/server/services/toolExecution/serverRuntimes/task';
 
+import {
+  seedConfirmedIssuePlan,
+  seedReviewedIssueDelivery,
+} from '../../../../../../../packages/database/tests/fixtures/issueDelivery';
 import { taskRouter } from '../../task';
 import { workAttentionRouter } from '../../workAttention';
 import {
@@ -147,10 +163,155 @@ describe('Task Router Integration', () => {
   });
 
   afterEach(async () => {
+    // Remove Issues before reviewer Agents: the in-review constraint forbids a null Reviewer.
+    await serverDB.delete(tasks).where(eq(tasks.createdByUserId, userId));
+    if (otherUserId) await serverDB.delete(tasks).where(eq(tasks.createdByUserId, otherUserId));
     await cleanupTestUser(serverDB, userId);
     if (otherUserId) await cleanupTestUser(serverDB, otherUserId);
     otherUserId = undefined;
   });
+
+  it('keeps plan confirmation server-owned when editing Issue context', async () => {
+    const model = new TaskModel(serverDB, userId);
+    const task = await model.create({ instruction: 'Scope' });
+    await expect(
+      caller.update({
+        id: task.id,
+        context: {
+          issuePlan: { confirmedAt: 'forged', confirmedBy: userId },
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    const issuePlan = { confirmedAt: 'recorded', confirmedBy: userId };
+    await serverDB.update(tasks).set({ context: { issuePlan } }).where(eq(tasks.id, task.id));
+    await caller.update({ id: task.id, context: { note: 'Discussion' } });
+    expect((await model.findById(task.id))?.context).toMatchObject({
+      issuePlan,
+      note: 'Discussion',
+    });
+  });
+
+  it('pauses future automation while preserving the current round and both queued occurrences', async () => {
+    const taskModel = new TaskModel(serverDB, userId);
+    const topicModel = new TaskTopicModel(serverDB, userId);
+    const dispatchModel = new TaskDispatchModel(serverDB);
+    const task = await taskModel.create({
+      instruction: 'Finish the current round',
+      assigneeAgentId: testAgentId,
+      automationMode: 'heartbeat',
+      heartbeatInterval: 600,
+      workflowCategory: 'in_progress',
+    });
+    await seedConfirmedIssuePlan(serverDB, task.id);
+    const request = (key: string) =>
+      dispatchModel.request({
+        taskId: task.id,
+        trigger: 'heartbeat',
+        requestedBy: userId,
+        initiator: userId,
+        idempotencyKey: key,
+      });
+    const first = await request('pause-first');
+    if (first.state === 'busy') throw new Error('First occurrence was not retained');
+    const operationId = 'pause-current-operation';
+    const [dispatch] = await serverDB
+      .update(taskDispatches)
+      .set({ operationId, phase: 'running', fence: 1 })
+      .where(eq(taskDispatches.id, first.dispatch.id))
+      .returning();
+    await taskModel.updateCurrentTopic(task.id, testTopicId);
+    await topicModel.startRun(task.id, testTopicId, {
+      dispatch,
+      operationId,
+      seq: 1,
+      integration: {
+        role: 'task',
+        state: 'pending',
+        attempts: 0,
+        branch: 'task/current',
+        baseBranch: 'canary',
+        expectedHeadSha: 'a'.repeat(40),
+        expectedBaseSha: 'b'.repeat(40),
+      },
+    });
+    await dispatchModel.settle({
+      dispatchId: dispatch.id,
+      expected: ['running'],
+      fence: 1,
+      generation: dispatch.generation,
+      operationId,
+      phase: 'succeeded',
+    });
+    const second = await request('pause-second');
+    const third = await request('pause-third');
+    if (second.state === 'busy' || third.state === 'busy')
+      throw new Error('Queued occurrence lost');
+    expect([second.dispatch.phase, third.dispatch.phase]).toEqual(['queued', 'queued']);
+    await serverDB
+      .update(tasks)
+      .set({
+        runReservationId: 'current-round-reservation',
+        runReservationExpiresAt: new Date(Date.now() + 60_000),
+      })
+      .where(eq(tasks.id, task.id));
+    const before = (await taskModel.findById(task.id))!;
+    const beforeTopic = await topicModel.findByTopicId(testTopicId);
+    const dispatchIds = [dispatch.id, second.dispatch.id, third.dispatch.id];
+    const beforeDispatches = await Promise.all(dispatchIds.map((id) => dispatchModel.findById(id)));
+
+    const response = await new TaskService(serverDB, userId).updateStatus(
+      { id: task.id, status: 'paused' },
+      { userId },
+    );
+    const paused = (await taskModel.findById(task.id))!;
+    expect(response.task.context).toMatchObject({ scheduler: { automationPaused: true } });
+    expect(response.task).toEqual(paused);
+    expect(paused.context).not.toHaveProperty('execution.parked');
+    expect(paused).toMatchObject({
+      executionGeneration: before.executionGeneration,
+      domainRevision: before.domainRevision,
+      requirementRevision: before.requirementRevision,
+      policyRevision: before.policyRevision,
+      currentTopicId: before.currentTopicId,
+      runReservationId: before.runReservationId,
+      runReservationExpiresAt: before.runReservationExpiresAt,
+      workflowCategory: before.workflowCategory,
+    });
+    expect((paused.context as TaskContext)?.issuePlan).toEqual(
+      (before.context as TaskContext)?.issuePlan,
+    );
+    expect(await topicModel.findByTopicId(testTopicId)).toEqual(beforeTopic);
+    expect(await Promise.all(dispatchIds.map((id) => dispatchModel.findById(id)))).toEqual(
+      beforeDispatches,
+    );
+    expect(mockExecAgent).not.toHaveBeenCalled();
+    expect(mockInterruptTask).not.toHaveBeenCalled();
+    expect(
+      await topicModel.settleIfRunning(task.id, testTopicId, operationId, 'completed', 'done', {
+        dispatchId: dispatch.id,
+        fence: 1,
+        generation: dispatch.generation,
+      }),
+    ).toMatch(/^completion:/);
+    expect(await dispatchModel.findById(dispatch.id)).toMatchObject({
+      phase: 'waiting',
+      waitingReason: 'automation_delivery_pending',
+    });
+    expect((await dispatchModel.findById(second.dispatch.id))?.phase).toBe('queued');
+    expect((await dispatchModel.findById(third.dispatch.id))?.phase).toBe('queued');
+  });
+
+  it.each([undefined, 'heartbeat'] as const)(
+    'keeps idle %s pause as an execution park',
+    async (automationMode) => {
+      const model = new TaskModel(serverDB, userId);
+      const task = await model.create({ instruction: 'Idle', automationMode });
+      await new TaskService(serverDB, userId).updateStatus({ id: task.id, status: 'paused' });
+      const context = (await model.findById(task.id))?.context as TaskContext;
+      expect(context).toHaveProperty('execution.parked');
+      expect((await model.derivedStatusByIds([task.id]))[task.id]).toBe('paused');
+    },
+  );
 
   describe('automation result outputs', () => {
     // Output metadata is editable on disabled drafts without arming native automation.
@@ -877,6 +1038,7 @@ describe('Task Router Integration', () => {
         });
       try {
         const generationBefore = created.data.executionGeneration;
+        await seedConfirmedIssuePlan(serverDB, created.data.id);
         const result = await memberCaller.run({ id: created.data.id }).then(
           () => 'started',
           (error) => error,
@@ -1845,6 +2007,7 @@ describe('Task Router Integration', () => {
             : { context: { execution: { parked: { reason: 'outcome_unknown' } } } }),
         })
         .where(eq(tasks.id, created.data.id));
+      await seedConfirmedIssuePlan(serverDB, created.data.id);
       // Execution truth is a live dispatch row, not the status column.
       await serverDB.insert(taskDispatches).values({
         agentId: incumbent,
@@ -1877,22 +2040,16 @@ describe('Task Router Integration', () => {
       }
     });
 
-    it('lets the creator take the Issue over, to an agent the creator may use only', async () => {
-      const { creatorAgent, creatorId, handoff, memberAgent, memberId, taskId } = await setup();
+    it('refuses the creator who cannot use the incumbent, including a successor they can use', async () => {
+      const { creatorAgent, creatorId, handoff, memberId } = await setup();
       try {
-        await expect(handoff(creatorId, memberAgent)).rejects.toMatchObject({ code: 'FORBIDDEN' });
-        await handoff(creatorId, creatorAgent);
-        const [row] = await serverDB
-          .select({ assigneeAgentId: tasks.assigneeAgentId })
-          .from(tasks)
-          .where(eq(tasks.id, taskId));
-        expect(row.assigneeAgentId).toBe(creatorAgent);
+        await expect(handoff(creatorId, creatorAgent)).rejects.toMatchObject({ code: 'FORBIDDEN' });
       } finally {
         await cleanupTestUser(serverDB, memberId);
       }
     });
 
-    it('lets the creator, and not another member, stop a run of an agent neither may use', async () => {
+    it('refuses a stop when neither the member nor the creator can use the incumbent', async () => {
       const { creatorId, memberId, taskId } = await setup('outcome_unknown');
       const workspaceId = 'task-handoff-takeover-workspace';
       const topicId = await createTestTopic(serverDB, creatorId, 'tpc_takeover_stop');
@@ -1905,30 +2062,175 @@ describe('Task Router Integration', () => {
       const callerFor = (id: string) =>
         taskRouter.createCaller({ ...createTestContext(id), workspaceId });
       try {
-        await expect(callerFor(memberId).cancelTopic({ topicId })).rejects.toMatchObject({
-          code: 'FORBIDDEN',
-        });
-        await callerFor(creatorId).cancelTopic({ topicId });
-        const [row] = await serverDB
+        const [before] = await serverDB
           .select({ status: taskTopics.status })
           .from(taskTopics)
           .where(eq(taskTopics.topicId, topicId));
-        expect(row.status).toBe('canceled');
+        await expect(callerFor(memberId).cancelTopic({ topicId })).rejects.toMatchObject({
+          code: 'FORBIDDEN',
+        });
+        await expect(callerFor(creatorId).cancelTopic({ topicId })).rejects.toMatchObject({
+          code: 'FORBIDDEN',
+        });
+        const [after] = await serverDB
+          .select({ status: taskTopics.status })
+          .from(taskTopics)
+          .where(eq(taskTopics.topicId, topicId));
+        expect(after).toEqual(before);
       } finally {
         await cleanupTestUser(serverDB, memberId);
       }
     });
 
     it('says the last run is unconfirmed when there is no running process to fence', async () => {
-      const { creatorAgent, creatorId, handoff, memberId } = await setup('outcome_unknown');
+      const { memberId, taskId } = await setup('outcome_unknown');
+      const callerFor = (id: string) =>
+        taskRouter.createCaller({
+          ...createTestContext(id),
+          workspaceId: 'task-handoff-takeover-workspace',
+        });
       try {
-        await expect(handoff(creatorId, creatorAgent)).rejects.toMatchObject({
+        await expect(
+          callerFor(userId).handoff({
+            expectedDomainRevision: (await revisionOf(taskId))!,
+            taskId,
+            toAgentId: null,
+          }),
+        ).rejects.toMatchObject({
           code: 'CONFLICT',
           message: expect.stringMatching(/^EXECUTION_UNSETTLED/),
         });
       } finally {
         await cleanupTestUser(serverDB, memberId);
       }
+    });
+  });
+
+  it.each([
+    [
+      { execution: { parked: { at: '2026-10-13T12:34:00Z', reason: 'review_required' } } },
+      'review_required',
+    ],
+    [{ execution: { parked: { at: '2026-10-13T12:34:00Z' } } }, 'paused'],
+    [{}, null],
+  ])(
+    'detail exposes the canonical parked execution reason from persisted context %j',
+    async (context, reason) => {
+      const task = await caller.create({ instruction: 'Delivered waiting state' });
+      await serverDB
+        .update(tasks)
+        .set({
+          context,
+          workflowCategory: 'in_progress',
+          error: 'Reviewer runtime cannot mount submitVerifyResult',
+        })
+        .where(eq(tasks.id, task.data.id));
+      const detail = await caller.detail({ id: task.data.id });
+      expect(detail.data).toMatchObject({
+        workflowCategory: 'in_progress',
+        parkedReason: reason,
+        error: 'Reviewer runtime cannot mount submitVerifyResult',
+      });
+    },
+  );
+
+  describe('reviewer Agent admission', () => {
+    it('exposes saved-runtime verification eligibility without hiding an unsupported reviewer', async () => {
+      const { agents } = await import('@/database/schemas');
+      const piAgentId = await createTestAgent(serverDB, userId, `agt_pi_${userId}`);
+      await serverDB
+        .update(agents)
+        .set({ agencyConfig: { heterogeneousProvider: { type: 'opencode' } }, model: 'opencode' })
+        .where(eq(agents.id, testAgentId));
+      await serverDB
+        .update(agents)
+        .set({ agencyConfig: { heterogeneousProvider: { type: 'pi' } }, model: 'pi' })
+        .where(eq(agents.id, piAgentId));
+      const choices = await caller.listReviewerAgents();
+      expect(choices.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: testAgentId, canReviewIssues: true }),
+          expect.objectContaining({ id: piAgentId, canReviewIssues: false }),
+        ]),
+      );
+      const task = await caller.create({ instruction: 'Manual reviewer selection' });
+      await new TaskModel(serverDB, userId).updateWithLog(
+        task.data.id,
+        {
+          status: 'paused',
+          workflowCategory: 'in_progress',
+          parkedReason: 'review_required',
+          error: 'Delivery is waiting for a reviewer Agent',
+        },
+        {},
+      );
+      await expect(
+        caller.update({
+          id: task.data.id,
+          reviewerAgentId: piAgentId,
+          expectedDomainRevision: await revisionOf(task.data.id),
+        }),
+      ).rejects.toMatchObject({
+        code: 'PRECONDITION_FAILED',
+        message: 'Reviewer runtime cannot mount submitTaskReview.',
+      });
+      expect((await caller.detail({ id: task.data.id })).data).toMatchObject({
+        reviewerAgentId: null,
+        workflowCategory: 'in_progress',
+        parkedReason: 'review_required',
+        error: 'Delivery is waiting for a reviewer Agent',
+      });
+      expect(mockExecAgent).not.toHaveBeenCalled();
+    });
+    it('reports a readable reviewer requirement, then allows review with an Agent', async () => {
+      const { agents } = await import('@/database/schemas');
+      await serverDB
+        .update(agents)
+        .set({ agencyConfig: { heterogeneousProvider: { type: 'opencode' } }, model: 'opencode' })
+        .where(eq(agents.id, testAgentId));
+      const task = await caller.create({ instruction: 'Review delivery' });
+      await expect(
+        caller.update({ id: task.data.id, workflowCategory: 'in_review' }),
+      ).rejects.toMatchObject({
+        code: 'PRECONDITION_FAILED',
+        message: expect.stringContaining('TASK_REVIEWER_REQUIRED'),
+      });
+      const assigned = await caller.update({
+        id: task.data.id,
+        reviewerAgentId: testAgentId,
+        expectedDomainRevision: task.data.domainRevision,
+      });
+      const reviewed = await caller.update({ id: task.data.id, workflowCategory: 'in_review' });
+      expect(reviewed.data).toMatchObject({
+        reviewerAgentId: testAgentId,
+        workflowCategory: 'in_review',
+      });
+      await expect(
+        caller.update({
+          id: task.data.id,
+          reviewerAgentId: null,
+          expectedDomainRevision: reviewed.data.domainRevision,
+        }),
+      ).rejects.toMatchObject({
+        code: 'PRECONDITION_FAILED',
+        message: expect.stringContaining('TASK_REVIEWER_REQUIRED'),
+      });
+      expect(assigned.data.reviewerAgentId).toBe(testAgentId);
+      // Delete the reviewed Issue before fixture cleanup cascades its Agent.
+      await caller.delete({ id: task.data.id });
+    });
+    it('requires a revision fence and rejects an unavailable reviewer Agent before review', async () => {
+      const task = await caller.create({ instruction: 'Review delivery' });
+      await expect(
+        caller.update({ id: task.data.id, reviewerAgentId: testAgentId }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      await expect(
+        caller.update({
+          id: task.data.id,
+          reviewerAgentId: 'missing-reviewer',
+          expectedDomainRevision: task.data.domainRevision,
+        }),
+      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     });
   });
 
@@ -1999,6 +2301,8 @@ describe('Task Router Integration', () => {
       });
       const view = await runtime.viewTask({ identifier: task.data.identifier });
       expect(view.content).toContain(`Domain revision: ${before?.domainRevision}`);
+      expect(view.content).toContain(testAgentId);
+      expect(view.content).toContain('Set reviewerAgentId with editTask');
       await runtime.editTask({
         identifier: task.data.identifier,
         assigneeUserId: userId,
@@ -2424,23 +2728,18 @@ describe('Task Router Integration', () => {
         assigneeUserId: otherUserId!,
         expectedDomainRevision: await revisionOf(task.data.id),
         id: task.data.id,
-        reviewerUserId: otherUserId!,
       });
       expect((await subscriptionsOf(task.data.id))[otherUserId!]).toBe('unsubscribed');
       expect((await wsOtherCaller.detail({ id: task.data.id })).data?.isSubscribed).toBe(false);
 
-      // Assignee and reviewer are subscribed at creation and on change.
+      // The human assignee is subscribed; Agent reviewer assignment has no human recipient.
       const assigned = await wsCaller.create({
         assigneeUserId: otherUserId!,
         instruction: 'Yours',
         name: 'Yours',
       });
       expect(await subscriptionsOf(assigned.data.id)).toEqual({ [otherUserId!]: 'assigned' });
-      await wsCaller.update({ id: assigned.data.id, reviewerUserId: thirdUserId });
-      expect(await subscriptionsOf(assigned.data.id)).toEqual({
-        [otherUserId!]: 'assigned',
-        [thirdUserId]: 'reviewer',
-      });
+      expect(await subscriptionsOf(assigned.data.id)).toEqual({ [otherUserId!]: 'assigned' });
     });
 
     it('does not subscribe anyone for an agent-authored comment', async () => {
@@ -2686,165 +2985,85 @@ describe('Task Router Integration', () => {
     });
   });
 
-  describe('review config', () => {
-    it('should set and retrieve review rubrics', async () => {
+  describe('retired review and verify config', () => {
+    it('rejects legacy review writes while retaining saved rubric reads', async () => {
       const task = await caller.create({ instruction: 'Test' });
-
-      await caller.updateReview({
-        id: task.data.id,
-        review: {
-          autoRetry: true,
-          enabled: true,
-          maxIterations: 3,
-          rubrics: [
-            {
-              config: { criteria: '内容准确性' },
-              id: 'r1',
-              name: '准确性',
-              threshold: 0.8,
-              type: 'llm-rubric',
-              weight: 1,
-            },
-            {
-              config: { value: '```' },
-              id: 'r2',
-              name: '包含代码',
-              type: 'contains',
-              weight: 1,
-            },
-          ],
-        },
-      });
-
-      const review = await caller.getReview({ id: task.data.id });
-      expect(review.data!.enabled).toBe(true);
-      expect(review.data!.rubrics).toHaveLength(2);
-      expect(review.data!.rubrics[0].type).toBe('llm-rubric');
-    });
-  });
-
-  describe('verify config', () => {
-    it('moves verify config supplied at task creation into Acceptance', async () => {
-      const task = await caller.create({
-        config: {
-          model: 'test-model',
-          verify: { enabled: true, maxIterations: 2, requirement: 'Ship the artifact' },
-        },
-        instruction: 'Test',
-      });
-
-      const storedTask = await new TaskModel(serverDB, userId).findById(task.data.id);
-      const acceptance = await new AcceptanceModel(serverDB, userId).findBySubject(
-        'task',
-        task.data.id,
-      );
-
-      expect(storedTask?.config).toEqual({ model: 'test-model' });
-      expect(acceptance).toMatchObject({
-        config: { enabled: true, maxIterations: 2 },
-        requirement: 'Ship the artifact',
-      });
-    });
-
-    it('should set and retrieve verify config (round-trip)', async () => {
-      const task = await caller.create({ instruction: 'Test' });
-
-      await caller.updateVerifyConfig({
-        id: task.data.id,
-        verify: {
-          enabled: true,
-          maxIterations: 3,
-          verifierAgentId: 'agt_codex',
-          verifyCriteriaIds: ['c1', 'c2'],
-          verifyRubricId: 'rub_1',
-        },
-      });
-
-      const verify = await caller.getVerifyConfig({ id: task.data.id });
-      expect(verify.data).toEqual({
+      const review = {
+        autoRetry: true,
         enabled: true,
         maxIterations: 3,
-        verifierAgentId: 'agt_codex',
-        verifyCriteriaIds: ['c1', 'c2'],
-        verifyRubricId: 'rub_1',
-      });
+        rubrics: [
+          {
+            config: { criteria: 'Accuracy' },
+            id: 'r1',
+            name: 'Accuracy',
+            type: 'llm-rubric',
+            weight: 1,
+          },
+        ],
+      };
+      await serverDB.update(tasks).set({ config: { review } }).where(eq(tasks.id, task.data.id));
 
-      // task.detail must surface the saved verify config (not leave it undefined).
-      const detail = await caller.detail({ id: task.data.id });
-      expect(detail.data!.verify).toEqual({
+      await expect(
+        caller.updateReview({ id: task.data.id, review: { ...review, enabled: false } }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+      expect((await caller.getReview({ id: task.data.id })).data).toEqual(review);
+    });
+
+    it('rejects verify configuration supplied at task creation', async () => {
+      await expect(
+        caller.create({
+          config: { verify: { enabled: true, maxIterations: 2, requirement: 'Ship the artifact' } },
+          instruction: 'Test',
+        }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+    });
+
+    it('rejects verify patches while retaining historical policy and detail reads', async () => {
+      const task = await caller.create({ instruction: 'Test' });
+      const config = {
         enabled: true,
         maxIterations: 3,
-        verifierAgentId: 'agt_codex',
-        verifyCriteriaIds: ['c1', 'c2'],
+        verifyCriteriaIds: ['c1'],
         verifyRubricId: 'rub_1',
+      };
+      await serverDB.insert(acceptances).values({
+        userId,
+        subjectType: 'task',
+        subjectId: task.data.id,
+        config,
+        requirement: 'Historical delivery',
       });
 
-      const storedTask = await new TaskModel(serverDB, userId).findById(task.data.id);
-      const acceptance = await new AcceptanceModel(serverDB, userId).findBySubject(
-        'task',
-        task.data.id,
-      );
-      expect(storedTask?.config).not.toHaveProperty('verify');
-      expect(acceptance).toMatchObject({
-        config: {
-          enabled: true,
-          maxIterations: 3,
-          verifierAgentId: 'agt_codex',
-          verifyCriteriaIds: ['c1', 'c2'],
-          verifyRubricId: 'rub_1',
-        },
+      await expect(
+        caller.updateVerifyConfig({ id: task.data.id, verify: { verifyRubricId: null } }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+      expect((await caller.getVerifyConfig({ id: task.data.id })).data).toEqual({
+        ...config,
+        requirement: 'Historical delivery',
       });
+      expect((await caller.detail({ id: task.data.id })).data!.verify).toEqual({
+        ...config,
+        requirement: 'Historical delivery',
+      });
+      expect(
+        (await new AcceptanceModel(serverDB, userId).findBySubject('task', task.data.id))?.config,
+      ).toEqual(config);
     });
 
-    it('should clear a saved field when passed null', async () => {
+    it('does not materialize an Acceptance policy from legacy task configuration', async () => {
       const task = await caller.create({ instruction: 'Test' });
+      await serverDB
+        .update(tasks)
+        .set({
+          config: { review: { autoRetry: true, enabled: true, maxIterations: 4, rubrics: [] } },
+        })
+        .where(eq(tasks.id, task.data.id));
 
-      await caller.updateVerifyConfig({
-        id: task.data.id,
-        verify: { enabled: true, verifierAgentId: 'agt_codex', verifyRubricId: 'rub_1' },
-      });
-
-      // Switch the verifier back to default + drop the rubric.
-      await caller.updateVerifyConfig({
-        id: task.data.id,
-        verify: { verifierAgentId: null, verifyRubricId: null },
-      });
-
-      const verify = await caller.getVerifyConfig({ id: task.data.id });
-      expect(verify.data).toEqual({ enabled: true });
-    });
-
-    it('getVerifyConfig falls back to the legacy review key', async () => {
-      const task = await caller.create({ instruction: 'Test' });
-
-      await caller.updateReview({
-        id: task.data.id,
-        review: { autoRetry: true, enabled: true, maxIterations: 4, rubrics: [] },
-      });
-
-      const verify = await caller.getVerifyConfig({ id: task.data.id });
-      expect(verify.data).toEqual({ enabled: true, maxIterations: 4 });
-    });
-
-    it('preserves legacy verify fields when applying a partial Acceptance patch', async () => {
-      const task = await caller.create({ instruction: 'Test' });
-      await new TaskModel(serverDB, userId).updateVerifyConfig(task.data.id, {
-        enabled: true,
-        maxIterations: 4,
-        verifierAgentId: 'legacy-verifier',
-      });
-
-      await caller.updateVerifyConfig({
-        id: task.data.id,
-        verify: { maxIterations: 2 },
-      });
-
-      const verify = await caller.getVerifyConfig({ id: task.data.id });
-      expect(verify.data).toEqual({
-        enabled: true,
-        maxIterations: 2,
-        verifierAgentId: 'legacy-verifier',
-      });
+      expect((await caller.getVerifyConfig({ id: task.data.id })).data).toBeNull();
+      expect(
+        await new AcceptanceModel(serverDB, userId).findBySubject('task', task.data.id),
+      ).toBeUndefined();
     });
   });
 
@@ -2855,6 +3074,7 @@ describe('Task Router Integration', () => {
         instruction: 'Test',
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.identifier });
 
       const updated = await caller.detail({ id: task.data.id });
@@ -2868,6 +3088,7 @@ describe('Task Router Integration', () => {
       });
 
       // First run succeeds
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       // Second run should fail with CONFLICT
@@ -2880,7 +3101,17 @@ describe('Task Router Integration', () => {
         instruction: 'Test',
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
+      // The execution mock returns this ID; continuation authorizes its persisted identity.
+      await serverDB.insert(agentOperations).values({
+        id: 'op_test',
+        userId,
+        agentId: testAgentId,
+        topicId: testTopicId,
+        taskId: task.data.id,
+        status: 'running',
+      });
 
       await expect(caller.run({ continueTopicId: 'tpc_test', id: task.data.id })).rejects.toThrow(
         /active dispatch/,
@@ -2897,6 +3128,7 @@ describe('Task Router Integration', () => {
         instruction: 'Test',
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await expect(caller.run({ id: task.data.id })).rejects.toThrow();
 
       // Task should be rolled back to paused with error
@@ -2925,6 +3157,7 @@ describe('Task Router Integration', () => {
         instruction: 'Test',
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await expect(caller.run({ id: task.data.id })).rejects.toThrow();
 
       const found = await caller.find({ id: task.data.id });
@@ -3030,12 +3263,106 @@ describe('Task Router Integration', () => {
   });
 
   describe('cancelTopic', () => {
+    it.each([
+      ['schedule', false],
+      ['schedule', true],
+      ['heartbeat', false],
+      ['heartbeat', true],
+    ] as const)(
+      'cancels a manual %s run without changing future pause=%s',
+      async (mode, paused) => {
+        const taskModel = new TaskModel(serverDB, userId);
+        const topicModel = new TaskTopicModel(serverDB, userId);
+        const dispatchModel = new TaskDispatchModel(serverDB);
+        const task = await taskModel.create({
+          instruction: 'Manual periodic round',
+          assigneeAgentId: testAgentId,
+          automationMode: mode,
+          heartbeatInterval: 600,
+          schedulePattern: '0 * * * *',
+          workflowCategory: 'in_progress',
+        });
+        await seedConfirmedIssuePlan(serverDB, task.id);
+        const manual = await dispatchModel.request({
+          taskId: task.id,
+          trigger: 'manual',
+          requestedBy: userId,
+          initiator: userId,
+          idempotencyKey: 'manual-periodic',
+        });
+        if (manual.state === 'busy') throw new Error('Manual run was not retained');
+        const operationId = 'manual-periodic-operation';
+        const [dispatch] = await serverDB
+          .update(taskDispatches)
+          .set({
+            phase: 'running',
+            operationId,
+            fence: 1,
+          })
+          .where(eq(taskDispatches.id, manual.dispatch.id))
+          .returning();
+        expect(dispatch.automationOccurrence).toBeNull();
+        await topicModel.startRun(task.id, testTopicId, { dispatch, operationId, seq: 1 });
+        const futureRequest = {
+          taskId: task.id,
+          trigger: mode,
+          requestedBy: userId,
+          initiator: userId,
+          idempotencyKey: 'future-periodic',
+        };
+        const future = await dispatchModel.request(futureRequest);
+        if (future.state === 'busy') throw new Error('Future occurrence was not retained');
+        expect(future.dispatch.phase).toBe('queued');
+        const scheduler = {
+          automationPaused: paused,
+          scheduledAt: '2026-10-15T12:00:00.000Z',
+          tickToken: 'future-tick',
+          tickMessageId: 'future-message',
+        };
+        const before = (await taskModel.findById(task.id))!;
+        await serverDB
+          .update(tasks)
+          .set({ context: { ...(before.context as TaskContext), scheduler } })
+          .where(eq(tasks.id, task.id));
+        const service = new TaskService(serverDB, userId);
+        mockInterruptTask.mockImplementationOnce(async () => {
+          expect((await topicModel.findByTopicId(testTopicId))?.status).toBe('running');
+          expect((await dispatchModel.findById(dispatch.id))?.phase).toBe('cancel_requested');
+          return { success: true, cancelState: 'requested' };
+        });
+        await expect(service.cancelTopic(testTopicId, task.id)).rejects.toThrow('STOP_UNCONFIRMED');
+        expect((await topicModel.findByTopicId(testTopicId))?.status).toBe('running');
+        expect((await dispatchModel.findById(dispatch.id))?.phase).toBe('cancel_requested');
+        expect((await taskModel.findById(task.id))?.context).not.toHaveProperty('execution.parked');
+        mockInterruptTask.mockImplementationOnce(async () => {
+          expect((await topicModel.findByTopicId(testTopicId))?.status).toBe('running');
+          expect((await dispatchModel.findById(dispatch.id))?.phase).toBe('cancel_requested');
+          return { success: true, cancelState: 'confirmed' };
+        });
+        await service.cancelTopic(testTopicId, task.id);
+        expect((await topicModel.findByTopicId(testTopicId))?.status).toBe('canceled');
+        expect((await dispatchModel.findById(dispatch.id))?.phase).toBe('canceled');
+        const after = (await taskModel.findById(task.id))!;
+        expect((after.context as TaskContext)?.scheduler).toEqual(scheduler);
+        expect(after.context).not.toHaveProperty('execution.parked');
+        const next = await dispatchModel.request(futureRequest);
+        if (next.state === 'busy') throw new Error('Future occurrence was lost');
+        expect(next.dispatch.id).toBe(future.dispatch.id);
+        expect(next.dispatch.phase).toBe(paused ? 'queued' : 'requested');
+        if (!paused)
+          expect(
+            await dispatchModel.claimForProvisioning(next.dispatch.id, 'test', 60_000),
+          ).not.toBeNull();
+      },
+    );
+
     it('should cancel a running topic and pause task', async () => {
       const task = await caller.create({
         assigneeAgentId: testAgentId,
         instruction: 'Test',
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       // Cancel the topic
@@ -3052,6 +3379,7 @@ describe('Task Router Integration', () => {
         instruction: 'Test',
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
       await caller.cancelTopic({ topicId: 'tpc_test' });
 
@@ -3116,6 +3444,7 @@ describe('Task Router Integration', () => {
       });
 
       // Start running — creates a running topic
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       // Transition task from running → paused via updateStatus
@@ -3156,6 +3485,7 @@ describe('Task Router Integration', () => {
         instruction: 'Test interrupt failure',
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       // Make interruptTask fail
@@ -3169,6 +3499,46 @@ describe('Task Router Integration', () => {
       expect(runningTopics.some((topic) => topic.status === 'running')).toBe(true);
     });
   });
+
+  const seedMergedIssueDelivery = async (taskId: string, seq = 1) => {
+    const delivery = await seedReviewedIssueDelivery(serverDB, taskId, { seq });
+    await seedConfirmedIssuePlan(serverDB, taskId);
+    const ledger = new IssueDeliveryModel(serverDB, userId);
+    expect((await ledger.readCurrentDeliveryProof([taskId]))[taskId]).toMatchObject({
+      availableForDependents: true,
+      deliveryAccepted: false,
+      merged: false,
+    });
+    await serverDB
+      .update(verifyCheckResults)
+      .set({ userDecision: 'accepted' })
+      .where(eq(verifyCheckResults.id, delivery.result.id));
+    await serverDB
+      .update(verifyRuns)
+      .set({ userDecision: 'accept' })
+      .where(eq(verifyRuns.id, delivery.run.id));
+    await serverDB
+      .update(taskTopics)
+      .set({
+        integration: {
+          ...delivery.topic.integration!,
+          state: 'integrated',
+          prNumber: 9,
+          prUrl: 'https://github.com/org/repo/pull/9',
+          pushedToRemote: true,
+          mergedTargetBranch: 'canary',
+          integratedSha: 'c'.repeat(40),
+        },
+      })
+      .where(eq(taskTopics.id, delivery.topic.id));
+    expect((await ledger.readCurrentDeliveryProof([taskId]))[taskId]).toMatchObject({
+      reviewerPassed: true,
+      necessaryChecksPassed: true,
+      itemsAccepted: true,
+      deliveryAccepted: true,
+      merged: true,
+    });
+  };
 
   describe('updateStatusCascade', () => {
     it('updates the task family atomically without rewriting failed subtasks', async () => {
@@ -3231,6 +3601,9 @@ describe('Task Router Integration', () => {
       await caller.addDependency({ dependsOnId: sub.data.id, taskId: external.data.id });
       mockExecAgent.mockClear();
 
+      await seedMergedIssueDelivery(sub.data.id);
+      await seedConfirmedIssuePlan(serverDB, external.data.id);
+
       const result = await caller.updateStatusCascade({ id: parent.data.id, status: 'completed' });
 
       expect(result.data.unlocked).toEqual([external.data.identifier]);
@@ -3263,6 +3636,8 @@ describe('Task Router Integration', () => {
         success: true,
         topicId: topicB,
       });
+      await seedConfirmedIssuePlan(serverDB, subA.data.id);
+      await seedConfirmedIssuePlan(serverDB, subB.data.id);
       await caller.run({ id: subA.data.id });
       await caller.run({ id: subB.data.id });
 
@@ -3275,10 +3650,12 @@ describe('Task Router Integration', () => {
         caller.updateStatusCascade({ id: parent.data.id, status: 'canceled' }),
       ).rejects.toThrow('Failed to update task family status');
 
-      // No status was cascaded — the family is untouched.
+      // The parent workflow is not cascaded, and the unconfirmed child stays
+      // running. The acknowledged child leaves running: its dispatch is settled,
+      // so the derived status is paused.
       expect((await caller.find({ id: parent.data.id })).data.status).toBe('backlog');
       expect((await caller.find({ id: subA.data.id })).data.status).toBe('running');
-      expect((await caller.find({ id: subB.data.id })).data.status).toBe('running');
+      expect((await caller.find({ id: subB.data.id })).data.status).toBe('paused');
 
       // But the interrupt that did succeed is persisted: B's topic is no
       // longer recorded as running, while A's (failed interrupt) still is.
@@ -3337,6 +3714,7 @@ describe('Task Router Integration', () => {
         id: task.data.id,
       });
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       // Wait for timeout
@@ -3421,6 +3799,8 @@ describe('Task Router Integration', () => {
       await caller.addDependency({ dependsOnId: ch1.data.id, taskId: ch3.data.id });
       await caller.addDependency({ dependsOnId: ch2.data.id, taskId: ch3.data.id });
 
+      for (const child of [ch1, ch2, ch3]) await seedConfirmedIssuePlan(serverDB, child.data.id);
+
       const result = await caller.runReadySubtasks({ id: parent.data.id });
       expect(result.success).toBe(true);
       expect(result.data.kickedOff?.sort()).toEqual([ch1.data.identifier, ch2.data.identifier]);
@@ -3455,6 +3835,7 @@ describe('Task Router Integration', () => {
       await caller.addDependency({ dependsOnId: ch1.data.id, taskId: ch2.data.id });
 
       // Kick ch1 off — now in `running` state
+      await seedConfirmedIssuePlan(serverDB, ch1.data.id);
       await caller.run({ id: ch1.data.id });
 
       const result = await caller.previewSubtaskLayers({ id: parent.data.id });
@@ -3479,6 +3860,7 @@ describe('Task Router Integration', () => {
       });
       await caller.addDependency({ dependsOnId: ch1.data.id, taskId: ch2.data.id });
 
+      await seedConfirmedIssuePlan(serverDB, ch1.data.id);
       await caller.run({ id: ch1.data.id });
       mockExecAgent.mockClear();
 
@@ -3513,6 +3895,8 @@ describe('Task Router Integration', () => {
       // Mark external completed → cascade fires → ch1 is auto-kicked off.
       // This proves the blocker classification *and* the existing cascade hook
       // co-operate end-to-end across the scope boundary.
+      await seedMergedIssueDelivery(externalBlocker.data.id);
+      await seedConfirmedIssuePlan(serverDB, ch1.data.id);
       await caller.updateStatus({ id: externalBlocker.data.id, status: 'completed' });
       const ch1After = await caller.find({ id: ch1.data.id });
       expect(ch1After.data.status).toBe('running');
@@ -3532,10 +3916,22 @@ describe('Task Router Integration', () => {
       });
       await caller.addDependency({ dependsOnId: ch1.data.id, taskId: ch2.data.id });
 
+      // Freeze the code delivery contract before execution starts.
+      await new IssueChecklistService(serverDB, userId).confirmChecklist({
+        taskId: ch1.data.id,
+        expectedRevision: 0,
+        deliveryKind: 'code',
+        repo: 'org/repo',
+        targetBranch: 'canary',
+        items: [{ id: 'outcome', title: 'Outcome', required: true }],
+      });
       // Kick off layer 1 (just ch1)
+      await seedConfirmedIssuePlan(serverDB, ch1.data.id);
       await caller.run({ id: ch1.data.id });
 
       // Mark ch1 completed → ch2 should auto-run (status 'running' + topic created)
+      await seedMergedIssueDelivery(ch1.data.id, 2);
+      await seedConfirmedIssuePlan(serverDB, ch2.data.id);
       const completed = await caller.updateStatus({ id: ch1.data.id, status: 'completed' });
       expect(completed.unlocked).toEqual([ch2.data.identifier]);
 
@@ -3596,6 +3992,7 @@ describe('Task Router Integration', () => {
       // The saved Agent model changes after the task was created.
       await setAgentModel('gpt-5.4-pro', 'openai');
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       const [execution] = mockExecAgent.mock.calls.at(-1)!;
@@ -3616,6 +4013,7 @@ describe('Task Router Integration', () => {
       // User later configures the agent model.
       await setAgentModel('claude-sonnet-4-6', 'anthropic');
 
+      await seedConfirmedIssuePlan(serverDB, task.data.id);
       await caller.run({ id: task.data.id });
 
       const after = await caller.find({ id: task.data.id });
@@ -4095,6 +4493,7 @@ describe('Task Router Integration', () => {
         assigneeUserId: userId,
         instruction: 'Human-assigned task',
       });
+      await seedConfirmedIssuePlan(serverDB, humanTask.data.id);
       await caller.run({ id: humanTask.data.id });
 
       const afterHumanRun = await caller.find({ id: humanTask.data.id });
@@ -4113,6 +4512,7 @@ describe('Task Router Integration', () => {
         expectedDomainRevision: await revisionOf(dualAssignedTask.data.id),
         id: dualAssignedTask.data.id,
       });
+      await seedConfirmedIssuePlan(serverDB, dualAssignedTask.data.id);
       await caller.run({ id: dualAssignedTask.data.id });
 
       const afterDualAssignedRun = await caller.find({ id: dualAssignedTask.data.id });
@@ -4121,6 +4521,7 @@ describe('Task Router Integration', () => {
 
       // Control: a fully unassigned task still gets the fallback persisted.
       const unassignedTask = await caller.create({ instruction: 'Unassigned task' });
+      await seedConfirmedIssuePlan(serverDB, unassignedTask.data.id);
       await caller.run({ id: unassignedTask.data.id });
 
       const afterUnassignedRun = await caller.find({ id: unassignedTask.data.id });

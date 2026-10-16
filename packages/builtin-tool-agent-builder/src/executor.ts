@@ -11,14 +11,11 @@ import { pickNonEmptyString, toRecord } from '@orvilo/utils/object';
 
 import { agentService } from '@/services/agent';
 import { createClientAgentManagerCapabilities } from '@/services/agentManagerRuntime';
-import { discoverService } from '@/services/discover';
 import { getAgentStoreState } from '@/store/agent';
 
 import { normalizeUpdateConfigParams } from './normalizeUpdateConfigParams';
 import type {
   GetAvailableModelsParams,
-  InstallPluginParams,
-  SearchMarketToolsParams,
   UpdateAgentConfigParams,
   UpdatePromptParams,
 } from './types';
@@ -28,7 +25,6 @@ import { AgentBuilderApiName, AgentBuilderIdentifier } from './types';
 const WRITE_APIS = new Set<string>([
   AgentBuilderApiName.updateAgentConfig,
   AgentBuilderApiName.updatePrompt,
-  AgentBuilderApiName.installPlugin,
 ]);
 
 const runtime = new AgentManagerRuntime({
@@ -44,7 +40,6 @@ const runtime = new AgentManagerRuntime({
     queryAgents: agentService.queryAgents,
     removeAgent: agentService.removeAgent,
   },
-  discoverService,
 });
 
 const getResultAgentId = (state: unknown): string | undefined =>
@@ -58,10 +53,6 @@ class AgentBuilderExecutor extends BaseExecutor<typeof AgentBuilderApiName> {
 
   getAvailableModels = async (params: GetAvailableModelsParams): Promise<BuiltinToolResult> => {
     return runtime.getAvailableModels(params);
-  };
-
-  searchMarketTools = async (params: SearchMarketToolsParams): Promise<BuiltinToolResult> => {
-    return runtime.searchMarketTools(params);
   };
 
   // ==================== Write Operations ====================
@@ -101,23 +92,6 @@ class AgentBuilderExecutor extends BaseExecutor<typeof AgentBuilderApiName> {
       streaming: true,
       ...params,
     });
-  };
-
-  installPlugin = async (
-    params: InstallPluginParams,
-    ctx: BuiltinToolContext,
-  ): Promise<BuiltinToolResult> => {
-    const agentId = ctx.agentId;
-
-    if (!agentId) {
-      return {
-        content: 'No active agent found',
-        error: { message: 'No active agent found', type: 'NoAgentContext' },
-        success: false,
-      };
-    }
-
-    return runtime.installPlugin(agentId, params);
   };
 
   // ==================== Hooks ====================

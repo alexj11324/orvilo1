@@ -8,7 +8,6 @@ describe('searchAgentsResultsPrompt', () => {
       agents: [{ description: 'My CC machine', id: 'agt_1', title: 'CC 2号机' }],
       hasMore: false,
       offset: 0,
-      source: 'user',
       userTotal: 1,
     });
 
@@ -23,7 +22,6 @@ describe('searchAgentsResultsPrompt', () => {
   it('marks heterogeneous agents and appends a plain Note: guidance line', () => {
     const content = searchAgentsResultsPrompt({
       agents: [{ heteroType: 'claude-code', id: 'agt_cc', title: 'CC 2号机' }],
-      source: 'user',
       userTotal: 1,
     });
 
@@ -33,19 +31,8 @@ describe('searchAgentsResultsPrompt', () => {
     expect(content).toContain('heterogeneous agents');
   });
 
-  it('tags marketplace agents with market origin', () => {
-    const content = searchAgentsResultsPrompt({
-      agents: [{ id: 'mkt_1', isMarket: true, title: 'Market Agent' }],
-      marketTotal: 5,
-      source: 'market',
-    });
-
-    expect(content).toContain('Found 5 agents in the marketplace, showing the first 1:');
-    expect(content).toContain('origin="market"');
-  });
-
   it('returns a plain empty hint when there are no agents', () => {
-    const content = searchAgentsResultsPrompt({ agents: [], source: 'user', userTotal: 0 });
+    const content = searchAgentsResultsPrompt({ agents: [], userTotal: 0 });
 
     expect(content).toContain('No agents matched');
     expect(content).not.toContain('<agent');
@@ -55,7 +42,6 @@ describe('searchAgentsResultsPrompt', () => {
     const content = searchAgentsResultsPrompt({
       agents: [],
       offset: 200,
-      source: 'user',
       userTotal: 37,
     });
 
@@ -67,7 +53,6 @@ describe('searchAgentsResultsPrompt', () => {
       agents: Array.from({ length: 20 }, (_, i) => ({ id: `agt_${i}`, title: `Agent ${i}` })),
       hasMore: true,
       offset: 0,
-      source: 'user',
       userTotal: 137,
     });
 
@@ -79,7 +64,6 @@ describe('searchAgentsResultsPrompt', () => {
       agents: [{ id: 'agt_1', title: 'Agent One' }],
       maxLimit: 20,
       requestedLimit: 50,
-      source: 'user',
       userTotal: 1,
     });
 

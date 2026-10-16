@@ -46,7 +46,6 @@ export type IFeatureFlagsState = {
   showApiKeyManage: boolean | undefined;
   showChangelog: boolean | undefined;
   showCloudPromotion: boolean | undefined;
-  showMarket: boolean | undefined;
   showOpenAIApiKey: boolean | undefined;
   showOpenAIProxyUrl: boolean | undefined;
   showProvider: boolean | undefined;
@@ -111,7 +110,6 @@ export interface GlobalServerConfig {
   defaultAgent?: PartialDeep<UserDefaultAgent>;
   disableEmailPassword?: boolean;
   enableBusinessFeatures?: boolean;
-  enableComposio?: boolean;
   /**
    * @deprecated
    */
@@ -122,9 +120,7 @@ export interface GlobalServerConfig {
    */
   enableGatewayMode?: boolean;
   enableMagicLink?: boolean;
-  enableMarketTrustedClient?: boolean;
   enableMultimodalUnderstanding?: boolean;
-  enableOrviloSkill?: boolean;
   enableUploadFileToServer?: boolean;
   memory?: GlobalMemoryConfig;
   multimodalUnderstanding?: MultimodalUnderstandingConfig;

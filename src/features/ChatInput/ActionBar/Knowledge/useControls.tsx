@@ -45,10 +45,7 @@ export const useControls = ({
     isEqual,
   );
 
-  const [toggleFile, toggleKnowledgeBase] = useAgentStore((s) => [
-    s.toggleFile,
-    s.toggleKnowledgeBase,
-  ]);
+  const toggleFile = useAgentStore((s) => s.toggleFile);
   const enabledCount =
     files.filter((item) => item.enabled).length +
     knowledgeBases.filter((item) => item.enabled).length;
@@ -56,18 +53,7 @@ export const useControls = ({
   const libraryItems = knowledgeBases.map((item) => ({
     icon: <RepoIcon />,
     key: item.id,
-    label: (
-      <CheckboxItem
-        checked={item.enabled}
-        hasPadding={false}
-        id={item.id}
-        label={item.name}
-        labelMaxWidth={labelMaxWidth}
-        onUpdate={async (id, enabled) => {
-          await toggleKnowledgeBase(id, enabled);
-        }}
-      />
-    ),
+    label: item.name,
   }));
 
   const fileItems = files.map((item) => ({

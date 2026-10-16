@@ -105,33 +105,33 @@ const ProjectSelect = memo(() => {
 
 const AutomationStatusSwitch = memo(() => {
   const { allowed: canEdit, reason } = usePermission('create_content');
-  const status = useTaskDetailSelector(taskDetailSelectors.taskStatus);
+  const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
   const mode = useTaskDetailSelector(
     (s, id) => taskDetailSelectors.taskDetail(s, id)?.automationMode,
   );
   const taskId = useTaskDetailTaskId();
   const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus);
-  const active = status ? automationStatusOf(status) === 'active' : true;
+  const active = detail ? automationStatusOf(detail) === 'active' : true;
 
   if (mode === 'event') return null;
   return (
     <div className="flex items-center gap-2" title={canEdit ? undefined : reason}>
       <Switch
         checked={active}
-        disabled={!canEdit || !taskId || status === 'running'}
+        disabled={!canEdit || !taskId}
         onCheckedChange={(checked) => {
           if (!taskId) return;
           void updateTaskStatus(taskId, checked ? 'scheduled' : 'paused');
         }}
       />
-      {status ? <AutomationStatusBadge status={automationStatusOf(status)} /> : null}
+      {detail ? <AutomationStatusBadge status={automationStatusOf(detail)} /> : null}
     </div>
   );
 });
 
 const AgentChip = memo(() => {
   const { t } = useTranslation('automation');
-  const agentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
+  const agentId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeAgentId);
   const taskIdentifier = useTaskDetailTaskId();
   const visibility = useTaskDetailSelector(taskDetailSelectors.taskVisibility);
   const meta = useAgentDisplayMeta(agentId ?? undefined);

@@ -28,15 +28,12 @@ export type GlobalSearchWorkType = (typeof GLOBAL_SEARCH_WORK_TYPES)[number];
 export const GLOBAL_SEARCH_FTS_TYPES = [
   'agent',
   'chatGroup',
-  'communityAgent',
   'file',
   'folder',
   'knowledgeBase',
-  'mcp',
   'memory',
   'message',
   'page',
-  'plugin',
   'topic',
 ] as const;
 export type GlobalSearchFtsType = (typeof GLOBAL_SEARCH_FTS_TYPES)[number];
@@ -135,12 +132,7 @@ class GlobalSearchService {
       sources.includeFts
         ? lambdaClient.search.query.query({
             agentId: input.agentId,
-            // Marketplace round-trips used to gate every keystroke; the palette
-            // opts out for the same reason, and a product search surface must
-            // never block on remote marketplace availability.
-            includeMarketplace: false,
             limitPerType,
-            locale: input.locale,
             query,
             type: sources.ftsType,
           })

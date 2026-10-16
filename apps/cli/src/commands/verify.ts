@@ -2,17 +2,8 @@ import type { Command } from 'commander';
 import pc from 'picocolors';
 
 import { getTrpcClient } from '../api/client';
-import { confirm, outputJson, printTable, timeAgo, truncate } from '../utils/format';
+import { outputJson, printTable, timeAgo, truncate } from '../utils/format';
 import { log } from '../utils/logger';
-import {
-  assertEnum,
-  ON_FAIL,
-  type OnFail,
-  parseConfig,
-  printResults,
-  VERIFIER_TYPES,
-  type VerifierType,
-} from './verifyHelpers';
 
 // Re-export the report/ingest helpers so existing importers keep resolving them
 // from './verify' (tests, and callers predating the verifyHelpers split).
@@ -23,13 +14,12 @@ export * from './verifyHelpers';
 export function registerVerifyCommand(program: Command) {
   const verify = program
     .command('verify')
-    .description('Agent Run verification machinery — criteria, rubrics, and per-run check plans');
+    .description('Read archived verification criteria, rubrics, and run state');
 
   // The `orvilo acceptance …` group and its `orvilo verify` spellings (acceptance,
   // init/install, ingest-report, run/result/decision/evidence/report) were
   // retired with the standalone Acceptance / Verify platform. What stays is the
-  // criterion / rubric / plan machinery the task runtime actually reads —
-  // `orvilo verify plan state` is quoted to the agent by the task prompt.
+  // criterion / rubric / plan history stays readable through the same commands.
   // ════════════ criteria ════════════
   const criterion = verify.command('criterion').description('Reusable pass/fail standards');
 
@@ -59,51 +49,6 @@ export function registerVerifyCommand(program: Command) {
       );
     });
 
-  criterion
-    .command('create')
-    .description('Create a criterion')
-    .requiredOption('-t, --title <title>', 'Criterion title')
-    .requiredOption('--type <type>', `Verifier type (${VERIFIER_TYPES.join('|')})`)
-    .option('--on-fail <strategy>', `Action on failure (${ON_FAIL.join('|')})`)
-    .option('--soft', 'Non-blocking (required=false); defaults to blocking')
-    .option('--config <json>', 'Verifier config as JSON')
-    .option('--doc <id>', 'Linked guidance document id')
-    .action(
-      async (options: {
-        config?: string;
-        doc?: string;
-        onFail?: OnFail;
-        soft?: boolean;
-        title: string;
-        type: VerifierType;
-      }) => {
-        assertEnum(options.type, VERIFIER_TYPES, '--type');
-        assertEnum(options.onFail, ON_FAIL, '--on-fail');
-        const client = await getTrpcClient();
-        const result = await client.verify.createCriterion.mutate({
-          documentId: options.doc,
-          onFail: options.onFail,
-          required: options.soft ? false : undefined,
-          title: options.title,
-          verifierConfig: parseConfig(options.config),
-          verifierType: options.type,
-        });
-        console.log(`${pc.green('✓')} Created criterion ${pc.bold((result as any).id)}`);
-      },
-    );
-
-  criterion
-    .command('delete <id>')
-    .description('Delete a criterion')
-    .option('--yes', 'Skip confirmation')
-    .action(async (id: string, options: { yes?: boolean }) => {
-      if (!options.yes && !(await confirm(`Delete criterion ${id}?`)))
-        return void console.log('Cancelled.');
-      const client = await getTrpcClient();
-      await client.verify.deleteCriterion.mutate({ id });
-      console.log(`${pc.green('✓')} Deleted criterion ${pc.bold(id)}`);
-    });
-
   // ════════════ rubrics ════════════
   const rubric = verify.command('rubric').description('Named groups of criteria');
 
@@ -131,25 +76,6 @@ export function registerVerifyCommand(program: Command) {
     });
 
   rubric
-    .command('create')
-    .description('Create a rubric')
-    .requiredOption('-t, --title <title>', 'Rubric title')
-    .option('-d, --description <text>', 'Rubric description')
-    .option('--max-repair-rounds <n>', 'Cap on automatic repair rounds (0-5)')
-    .action(async (options: { description?: string; maxRepairRounds?: string; title: string }) => {
-      const client = await getTrpcClient();
-      const result = await client.verify.createRubric.mutate({
-        config:
-          options.maxRepairRounds !== undefined
-            ? { maxRepairRounds: Number(options.maxRepairRounds) }
-            : undefined,
-        description: options.description,
-        title: options.title,
-      });
-      console.log(`${pc.green('✓')} Created rubric ${pc.bold((result as any).id)}`);
-    });
-
-  rubric
     .command('view <id>')
     .description('Show a rubric and its run-policy config')
     .option('--json [fields]', 'Output JSON')
@@ -166,44 +92,6 @@ export function registerVerifyCommand(program: Command) {
       if (item.description) console.log(`${pc.bold('Description')}   ${item.description}`);
       const maxRepairRounds = (item.config as { maxRepairRounds?: number } | null)?.maxRepairRounds;
       console.log(`${pc.bold('Repair rounds')} ${maxRepairRounds ?? pc.dim('default')}`);
-    });
-
-  rubric
-    .command('update <id>')
-    .description('Update a rubric (title / description / run-policy config)')
-    .option('-t, --title <title>', 'New title')
-    .option('-d, --description <text>', 'New description')
-    .option('--max-repair-rounds <n>', 'Cap on automatic repair rounds (0-5)')
-    .action(
-      async (
-        id: string,
-        options: { description?: string; maxRepairRounds?: string; title?: string },
-      ) => {
-        const client = await getTrpcClient();
-        const value: {
-          config?: { maxRepairRounds?: number };
-          description?: string;
-          title?: string;
-        } = {};
-        if (options.title !== undefined) value.title = options.title;
-        if (options.description !== undefined) value.description = options.description;
-        if (options.maxRepairRounds !== undefined)
-          value.config = { maxRepairRounds: Number(options.maxRepairRounds) };
-        await client.verify.updateRubric.mutate({ id, value });
-        console.log(`${pc.green('✓')} Updated rubric ${pc.bold(id)}`);
-      },
-    );
-
-  rubric
-    .command('delete <id>')
-    .description('Delete a rubric')
-    .option('--yes', 'Skip confirmation')
-    .action(async (id: string, options: { yes?: boolean }) => {
-      if (!options.yes && !(await confirm(`Delete rubric ${id}?`)))
-        return void console.log('Cancelled.');
-      const client = await getTrpcClient();
-      await client.verify.deleteRubric.mutate({ id });
-      console.log(`${pc.green('✓')} Deleted rubric ${pc.bold(id)}`);
     });
 
   rubric
@@ -229,87 +117,8 @@ export function registerVerifyCommand(program: Command) {
       );
     });
 
-  rubric
-    .command('set-criteria <rubricId> <criterionIds...>')
-    .description('Set the criteria a rubric aggregates (order preserved)')
-    .action(async (rubricId: string, criterionIds: string[]) => {
-      const client = await getTrpcClient();
-      await client.verify.setRubricCriteria.mutate({
-        criteria: criterionIds.map((criterionId, i) => ({ criterionId, sortOrder: i })),
-        rubricId,
-      });
-      console.log(
-        `${pc.green('✓')} Rubric ${pc.bold(rubricId)} now has ${criterionIds.length} criterion(s)`,
-      );
-    });
-
   // ════════════ per-run plan ════════════
   const plan = verify.command('plan').description('Per-run check plan lifecycle');
-
-  plan
-    .command('generate <operationId>')
-    .description('Generate a draft check plan for a run')
-    .requiredOption('--goal <goal>', "The run's task/instruction the plan must satisfy")
-    .option('--rubric <id>', 'Mounted rubric id')
-    .option('--criteria <ids>', 'Ad-hoc criterion ids (comma-separated)')
-    .option('--ai', 'Let the LLM propose additional criteria')
-    .option('--max-ai <n>', 'Max AI-proposed criteria')
-    .option('--model <model>', 'Model (required with --ai)')
-    .option('--provider <provider>', 'Provider (required with --ai)')
-    .option('--context <text>', 'Extra context for the AI prompt')
-    .option('--json [fields]', 'Output JSON')
-    .action(
-      async (
-        operationId: string,
-        options: {
-          ai?: boolean;
-          context?: string;
-          criteria?: string;
-          goal: string;
-          json?: boolean | string;
-          maxAi?: string;
-          model?: string;
-          provider?: string;
-          rubric?: string;
-        },
-      ) => {
-        if (options.ai && (!options.model || !options.provider)) {
-          log.error('--ai requires --model and --provider');
-          process.exit(1);
-        }
-        const client = await getTrpcClient();
-        const items = await client.verify.generateDraftPlan.mutate({
-          context: options.context,
-          enableAiGeneration: options.ai,
-          goal: options.goal,
-          maxAiCriteria: options.maxAi ? Number.parseInt(options.maxAi, 10) : undefined,
-          modelConfig:
-            options.model && options.provider
-              ? { model: options.model, provider: options.provider }
-              : undefined,
-          operationId,
-          verifyCriteriaIds: options.criteria
-            ?.split(',')
-            .map((s) => s.trim())
-            .filter(Boolean),
-          verifyRubricId: options.rubric ?? null,
-        });
-        if (options.json !== undefined) {
-          outputJson(items, typeof options.json === 'string' ? options.json : undefined);
-          return;
-        }
-        console.log(`${pc.green('✓')} Draft plan: ${pc.bold(String(items.length))} item(s)`);
-        printTable(
-          items.map((i: any) => [
-            String(i.index),
-            truncate(i.title, 60),
-            i.verifierType,
-            i.required ? 'gate' : 'soft',
-          ]),
-          ['#', 'TITLE', 'TYPE', 'BLOCK'],
-        );
-      },
-    );
 
   plan
     .command('state <operationId>')
@@ -340,60 +149,4 @@ export function registerVerifyCommand(program: Command) {
           ['#', 'TITLE', 'TYPE', 'BLOCK'],
         );
     });
-
-  plan
-    .command('confirm <operationId>')
-    .description('Freeze (confirm) the draft plan')
-    .action(async (operationId: string) => {
-      const client = await getTrpcClient();
-      await client.verify.confirmPlan.mutate({ operationId });
-      console.log(`${pc.green('✓')} Confirmed plan for run ${pc.bold(operationId)}`);
-    });
-
-  plan
-    .command('skip <operationId>')
-    .description('Skip verification for a run')
-    .action(async (operationId: string) => {
-      const client = await getTrpcClient();
-      await client.verify.skipPlan.mutate({ operationId });
-      console.log(`${pc.green('✓')} Skipped verification for run ${pc.bold(operationId)}`);
-    });
-
-  // ════════════ execute (agent path) ════════════
-  verify
-    .command('execute <operationId>')
-    .description('Execute the confirmed plan against a deliverable (LLM judge)')
-    .requiredOption('--goal <goal>', "The run's task")
-    .requiredOption('--deliverable <text>', 'The output to judge')
-    .requiredOption('--model <model>', 'Judge model')
-    .requiredOption('--provider <provider>', 'Judge provider')
-    .option('--no-batch', 'Judge each item separately instead of one batched call')
-    .option('--json [fields]', 'Output JSON')
-    .action(
-      async (
-        operationId: string,
-        options: {
-          batch?: boolean;
-          deliverable: string;
-          goal: string;
-          json?: boolean | string;
-          model: string;
-          provider: string;
-        },
-      ) => {
-        const client = await getTrpcClient();
-        const results = await client.verify.executeVerify.mutate({
-          batchLlm: options.batch,
-          deliverable: options.deliverable,
-          goal: options.goal,
-          modelConfig: { model: options.model, provider: options.provider },
-          operationId,
-        });
-        if (options.json !== undefined) {
-          outputJson(results, typeof options.json === 'string' ? options.json : undefined);
-          return;
-        }
-        printResults(results);
-      },
-    );
 }

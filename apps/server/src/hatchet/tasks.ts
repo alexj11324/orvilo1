@@ -4,18 +4,14 @@ import {
   type InputType,
   type JsonObject,
 } from '@hatchet-dev/typescript-sdk/v1/index.js';
-import type { GoalAdvanceTrigger } from '@orvilo/agent-tracing';
 import type { Context as HonoContext } from 'hono';
 import { z } from 'zod';
 
 import { runScheduleNightlyReview } from '@/server/router-hono/workflows/agent-signal/handlers/scheduleNightlyReview';
-import { runGoalSweep } from '@/server/router-hono/workflows/goal/handlers/sweep';
 import { sweep as linearSyncSweepHandler } from '@/server/router-hono/workflows/linear-sync/handlers/sweep';
 import { runScheduleDispatch } from '@/server/router-hono/workflows/task/handlers/scheduleDispatch';
 import { scheduledTopicDispatch } from '@/server/router-hono/workflows/task/handlers/scheduledTopicDispatch';
 import { watchdog } from '@/server/router-hono/workflows/task/handlers/watchdog';
-import { sweep as verifySweepHandler } from '@/server/router-hono/workflows/verify/handlers/sweep';
-import { advanceGoal } from '@/server/services/goal/advanceGoal';
 import { HATCHET_TASK_NAMES } from '@/server/services/hatchet/taskNames';
 import { runMcpEventInboxSweep } from '@/server/services/mcpEvents/runtime';
 import {
@@ -28,25 +24,11 @@ import { runHeartbeatTick } from '@/server/services/taskRunner/heartbeatTick';
 import { runScheduleTick } from '@/server/services/taskRunner/scheduleTick';
 import { TASK_WATCHDOG_CRON } from '@/server/services/taskWatchdogSchedule';
 
-interface GoalAdvanceInput {
-  goalId: string;
-  trigger?: GoalAdvanceTrigger;
-  userId: string;
-  workspaceId?: string;
-}
-
 interface TaskHeartbeatInput {
   taskId: string;
   tickToken?: string;
   userId: string;
 }
-
-const goalAdvanceInput = z.object({
-  goalId: z.string().min(1),
-  trigger: z.string().optional(),
-  userId: z.string().min(1),
-  workspaceId: z.string().optional(),
-});
 
 const taskHeartbeatInput = z.object({
   taskId: z.string().min(1),
@@ -74,8 +56,8 @@ const readResponseBody = async (response: Response): Promise<JsonObject> => {
 export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
   const slackIntegrationEvent = hatchet.task({
     name: HATCHET_TASK_NAMES.slackIntegrationEvent,
-    // Channels' serial handler is process-local. Queue the whole conversation
-    // across workers before its durable delivery dedup marks the next event.
+    // Serialize the whole Slack conversation across workers before SDK deduplication.
+    // Keep every human input rather than collapsing messages with SDK queue/debounce.
     concurrency: {
       expression: 'input.conversationKey',
       limitStrategy: ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
@@ -92,23 +74,6 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     fn: async () => runScheduleNightlyReview(),
     onCrons: ['0 * * * *'],
     retries: 3,
-  });
-
-  const goalAdvance = hatchet.task({
-    name: HATCHET_TASK_NAMES.goalAdvance,
-    backoff: { factor: 2, maxSeconds: 300 },
-    concurrency: {
-      expression: 'input.goalId',
-      limitStrategy: ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
-      maxRuns: 1,
-    },
-    executionTimeout: '15m',
-    fn: async (input: GoalAdvanceInput & InputType) => {
-      await advanceGoal(input);
-      return { success: true };
-    },
-    inputValidator: goalAdvanceInput,
-    retries: 5,
   });
 
   const taskHeartbeat = hatchet.task({
@@ -178,22 +143,6 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     retries: 3,
   });
 
-  const verifySweep = hatchet.task({
-    name: HATCHET_TASK_NAMES.verifySweep,
-    executionTimeout: '15m',
-    fn: async () => runInternalHandler(verifySweepHandler),
-    onCrons: ['*/5 * * * *'],
-    retries: 3,
-  });
-
-  const goalSweep = hatchet.task({
-    name: HATCHET_TASK_NAMES.goalSweep,
-    executionTimeout: '15m',
-    fn: async () => runGoalSweep(),
-    onCrons: ['*/5 * * * *'],
-    retries: 3,
-  });
-
   const linearSyncSweep = hatchet.task({
     name: HATCHET_TASK_NAMES.linearSyncSweep,
     executionTimeout: '15m',
@@ -218,8 +167,6 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
 
   return [
     agentSignalNightlySchedule,
-    goalAdvance,
-    goalSweep,
     linearSyncSweep,
     mcpEventInboxSweep,
     slackIntegrationEvent,
@@ -229,6 +176,5 @@ export const createCoreHatchetTasks = (hatchet: HatchetClient) => {
     taskScheduleExecute,
     taskScheduledTopicDispatch,
     taskWatchdog,
-    verifySweep,
   ];
 };

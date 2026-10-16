@@ -6,6 +6,7 @@ import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { OrviloDatabase } from '@/database/type';
 
 import { AcceptanceService } from './acceptanceService';
+import { assertLegacyVerificationWritable } from './retirement';
 
 const log = debug('orvilo-server:verify-status');
 
@@ -42,8 +43,14 @@ export class VerifyStatusService {
    * execution gap and rolls up as `errored`; only optional checks may skip.
    */
   async recompute(operationId: string): Promise<VerifyRunStatus | null> {
+    assertLegacyVerificationWritable();
     const run = await this.runModel.findByOperation(operationId);
     if (!run) return null;
+    if (run.userDecision === 'accept' || run.userDecision === 'reject') {
+      const status = run.userDecision === 'accept' ? 'passed' : 'failed';
+      if (run.status !== status) await this.setStatus(operationId, status);
+      return status;
+    }
 
     const plan = (run.plan ?? []) as VerifyCheckItem[];
     if (plan.length === 0) {
@@ -62,6 +69,12 @@ export class VerifyStatusService {
     let anyErrored = false;
     for (const item of requiredItems) {
       const result = byItem.get(item.id);
+      // A person can decide while the machine check is still queued or running.
+      if (result?.userDecision === 'accepted' || result?.userDecision === 'overridden') continue;
+      if (result?.userDecision === 'rejected') {
+        anyFailed = true;
+        continue;
+      }
       // A required item without a result yet is still pending.
       if (!result || result.status === 'pending' || result.status === 'running') {
         anyPending = true;
@@ -103,6 +116,7 @@ export class VerifyStatusService {
    * @returns false when someone else holds the verification.
    */
   async claimVerifying(operationId: string, staleBefore: Date): Promise<boolean> {
+    assertLegacyVerificationWritable();
     const run = await this.runModel.findByOperation(operationId);
     if (!run) return false;
 
@@ -130,6 +144,7 @@ export class VerifyStatusService {
 
   /** Resolve the session for an Agent Run and write its rollup status. */
   private async setStatus(operationId: string, status: VerifyRunStatus): Promise<void> {
+    assertLegacyVerificationWritable();
     const run = await this.runModel.findByOperation(operationId);
     if (!run) {
       log('setStatus: no verify run for op %s, skipping %s', operationId, status);

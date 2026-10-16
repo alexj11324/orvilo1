@@ -44,19 +44,19 @@ describe('featureFlagOverride slice', () => {
     });
 
     it('merges valid persisted overrides into featureFlags after snapshot', () => {
-      writeStorage({ enableAgentOnboarding: true, showMarket: true });
+      writeStorage({ enableAgentOnboarding: true, enableVoiceDictation: true });
 
       const store = createStore();
       act(() => store.getState().syncDevFlagOverrides());
 
       expect(store.getState().featureFlags.enableAgentOnboarding).toBe(true);
-      expect(store.getState().featureFlags.showMarket).toBe(true);
+      expect(store.getState().featureFlags.enableVoiceDictation).toBe(true);
       expect(store.getState()._featureFlagOverrides).toEqual({
         enableAgentOnboarding: true,
-        showMarket: true,
+        enableVoiceDictation: true,
       });
       // original snapshot stays untouched by the override merge
-      expect(store.getState()._originalFeatureFlags?.showMarket).toBe(false);
+      expect(store.getState()._originalFeatureFlags?.enableVoiceDictation).toBe(false);
     });
 
     it('drops unknown keys from persisted overrides with a warning', () => {
@@ -72,7 +72,10 @@ describe('featureFlagOverride slice', () => {
 
     it('drops non-boolean values from persisted overrides', () => {
       vi.spyOn(console, 'warn').mockImplementation(() => {});
-      writeStorage({ enableAgentOnboarding: true, showMarket: 'yes' as unknown as boolean });
+      writeStorage({
+        enableAgentOnboarding: true,
+        enableVoiceDictation: 'yes' as unknown as boolean,
+      });
 
       const store = createStore();
       act(() => store.getState().syncDevFlagOverrides());
@@ -108,36 +111,39 @@ describe('featureFlagOverride slice', () => {
     it('re-snapshots when called again with fresh server flags', () => {
       const store = createStore();
       act(() => store.getState().syncDevFlagOverrides());
-      act(() => store.getState().setFlagOverride('showMarket', false));
+      act(() => store.getState().setFlagOverride('enableVoiceDictation', false));
 
-      const fresher = { ...baseFeatureFlags, showMarket: false } as typeof baseFeatureFlags;
+      const fresher = {
+        ...baseFeatureFlags,
+        enableVoiceDictation: false,
+      } as typeof baseFeatureFlags;
       act(() => store.setState({ featureFlags: fresher }));
       act(() => store.getState().syncDevFlagOverrides());
 
-      expect(store.getState()._originalFeatureFlags?.showMarket).toBe(false);
+      expect(store.getState()._originalFeatureFlags?.enableVoiceDictation).toBe(false);
       // Override still applied on top of new server truth
-      expect(store.getState()._featureFlagOverrides.showMarket).toBe(false);
+      expect(store.getState()._featureFlagOverrides.enableVoiceDictation).toBe(false);
     });
 
     it('hydrates overrides in production for an authorized DevDock session', () => {
       vi.stubEnv('NODE_ENV', 'production');
-      writeStorage({ showMarket: false });
+      writeStorage({ enableVoiceDictation: false });
       const store = createStore();
 
       act(() => store.getState().syncDevFlagOverrides());
 
       expect(store.getState()._originalFeatureFlags).toEqual(baseFeatureFlags);
-      expect(store.getState().featureFlags.showMarket).toBe(false);
+      expect(store.getState().featureFlags.enableVoiceDictation).toBe(false);
     });
 
     it('drops persisted attempts to override DevDock authorization', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      writeStorage({ enableDevDock: false, showMarket: false });
+      writeStorage({ enableDevDock: false, enableVoiceDictation: false });
       const store = createStore();
 
       act(() => store.getState().syncDevFlagOverrides());
 
-      expect(store.getState()._featureFlagOverrides).toEqual({ showMarket: false });
+      expect(store.getState()._featureFlagOverrides).toEqual({ enableVoiceDictation: false });
       expect(warn).toHaveBeenCalledWith(
         '[DevFlagOverride] dropping unknown override key: enableDevDock',
       );
@@ -160,28 +166,30 @@ describe('featureFlagOverride slice', () => {
       const store = createStore();
       act(() => store.getState().syncDevFlagOverrides());
 
-      act(() => store.getState().setFlagOverride('showMarket', false));
+      act(() => store.getState().setFlagOverride('enableVoiceDictation', false));
 
-      expect(store.getState()._featureFlagOverrides.showMarket).toBe(false);
-      expect(store.getState().featureFlags.showMarket).toBe(false);
+      expect(store.getState()._featureFlagOverrides.enableVoiceDictation).toBe(false);
+      expect(store.getState().featureFlags.enableVoiceDictation).toBe(false);
     });
 
     it('clears an override and restores featureFlags from snapshot', () => {
       const store = createStore();
       act(() => store.getState().syncDevFlagOverrides());
-      act(() => store.getState().setFlagOverride('showMarket', false));
+      act(() => store.getState().setFlagOverride('enableVoiceDictation', false));
 
-      act(() => store.getState().setFlagOverride('showMarket', undefined));
+      act(() => store.getState().setFlagOverride('enableVoiceDictation', undefined));
 
-      expect(store.getState()._featureFlagOverrides.showMarket).toBeUndefined();
-      expect(store.getState().featureFlags.showMarket).toBe(baseFeatureFlags.showMarket);
+      expect(store.getState()._featureFlagOverrides.enableVoiceDictation).toBeUndefined();
+      expect(store.getState().featureFlags.enableVoiceDictation).toBe(
+        baseFeatureFlags.enableVoiceDictation,
+      );
       expect(readStorage()).toBeNull();
     });
 
     it('is a no-op before sync (original snapshot missing)', () => {
       const store = createStore();
 
-      act(() => store.getState().setFlagOverride('showMarket', false));
+      act(() => store.getState().setFlagOverride('enableVoiceDictation', false));
 
       expect(store.getState()._featureFlagOverrides).toEqual({});
       expect(readStorage()).toBeNull();
@@ -192,9 +200,9 @@ describe('featureFlagOverride slice', () => {
       act(() => store.getState().syncDevFlagOverrides());
 
       vi.stubEnv('NODE_ENV', 'production');
-      act(() => store.getState().setFlagOverride('showMarket', false));
+      act(() => store.getState().setFlagOverride('enableVoiceDictation', false));
 
-      expect(store.getState()._featureFlagOverrides).toEqual({ showMarket: false });
+      expect(store.getState()._featureFlagOverrides).toEqual({ enableVoiceDictation: false });
     });
   });
 
@@ -202,7 +210,7 @@ describe('featureFlagOverride slice', () => {
     it('clears overrides and restores featureFlags from snapshot', () => {
       const store = createStore();
       act(() => store.getState().syncDevFlagOverrides());
-      act(() => store.getState().setFlagOverride('showMarket', false));
+      act(() => store.getState().setFlagOverride('enableVoiceDictation', false));
       act(() => store.getState().setFlagOverride('enableAgentOnboarding', true));
 
       act(() => store.getState().resetFlagOverrides());
@@ -215,7 +223,7 @@ describe('featureFlagOverride slice', () => {
     it('resets overrides in production for an authorized DevDock session', () => {
       const store = createStore();
       act(() => store.getState().syncDevFlagOverrides());
-      act(() => store.getState().setFlagOverride('showMarket', false));
+      act(() => store.getState().setFlagOverride('enableVoiceDictation', false));
 
       vi.stubEnv('NODE_ENV', 'production');
       act(() => store.getState().resetFlagOverrides());

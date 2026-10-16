@@ -27,7 +27,7 @@ const isRuntimeError = (error: TRPCError) => {
  *
  * The X-Auth-Required header allows the desktop app (BackendProxyProtocolManager)
  * to distinguish between real Orvilo session failures (e.g., token expired)
- * and other 401 errors (e.g., invalid API keys, Market OAuth expiry).
+ * and other 401 errors (e.g., invalid API keys or remote sandbox credentials).
  */
 export function createResponseMeta({ ctx, errors }: ResponseMetaParams): {
   headers: Headers | undefined;
@@ -38,9 +38,7 @@ export function createResponseMeta({ ctx, errors }: ResponseMetaParams): {
       : undefined;
   const headers = resHeaders ? new Headers(resHeaders) : new Headers();
 
-  // Only set X-Auth-Required for Orvilo session failures, not for Market OAuth failures.
-  // Market auth errors use MARKET_AUTH_REQUIRED_MESSAGE and are handled by the market-unauthorized
-  // event flow (MarketAuthProvider) rather than the desktop re-login modal.
+  // Remote sandbox credential expiry must not expire the Orvilo application session.
   const hasUnauthorizedError = errors.some(
     (error) =>
       error.code === TRPC_ERROR_CODE_UNAUTHORIZED &&

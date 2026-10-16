@@ -23,14 +23,7 @@ const AUTH_PATH_PREFIXES = ['/oauth', '/login', '/sign-in'];
 
 // The portal is the only sign-in surface — the inherited lobehub-style pages
 // all fold into /login (Cordy parity).
-const LEGACY_AUTH_PATHS = [
-  '/signin',
-  '/signup',
-  '/verify-email',
-  '/reset-password',
-  '/auth-error',
-  '/market-auth-callback',
-];
+const LEGACY_AUTH_PATHS = ['/signin', '/signup', '/verify-email', '/reset-password', '/auth-error'];
 
 const HEALTH_PATHS = ['/healthz', '/readyz'];
 

@@ -11,7 +11,6 @@ import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { hasActiveExecution, isExecutionParked } from '@/database/models/taskExecutionSql';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { IntegrationLeaseItem } from '@/database/schemas';
 import { integrationLeases } from '@/database/schemas';
 import type { RepoRefLeaseOutcomeContext } from '@/database/schemas/integrationLease';
@@ -29,7 +28,6 @@ import {
 import { TaskRunnerService } from '@/server/services/taskRunner';
 import { taskRunIdempotencyKey } from '@/server/services/taskRunner/idempotency';
 import { TaskWorkspaceService } from '@/server/services/taskWorkspace';
-import { runVerifyOnCompletion } from '@/server/services/verify';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
 const log = debug('task-integration');
@@ -1280,7 +1278,7 @@ export class TaskIntegrationService {
     }
     if (check.merged) {
       await this.landRemoteMerge(task.id, topicId, record, check);
-      return (await this.scheduleDeferredVerify(task, record)) ? 'hold' : 'settled';
+      return 'settled';
     }
     if (check.error) {
       await this.updateIntegrationOrThrow(task.id, topicId, {
@@ -1292,7 +1290,8 @@ export class TaskIntegrationService {
       ...historyPatch,
       state: 'verification_pending',
     });
-    return 'hold';
+    // The run can enter Reviewer now; the PR waits for final human acceptance.
+    return 'settled';
   }
 
   /** Check the remote merge state after an integrator run returned. */
@@ -1316,7 +1315,7 @@ export class TaskIntegrationService {
 
     if (check.merged) {
       await this.landRemoteMerge(task.id, topicId, record, check);
-      return (await this.scheduleDeferredVerify(task, record)) ? 'hold' : 'settled';
+      return 'settled';
     }
 
     if (check.error) {
@@ -1360,10 +1359,9 @@ export class TaskIntegrationService {
   }
 
   /**
-   * Verify on the remote that `record.branch` landed on `record.baseBranch`:
-   * a merged PR for the branch wins (covers squash merges that leave no
-   * ancestry), otherwise an ancestry compare decides. API failures report
-   * `merged: false` + `error` — the caller treats them as "not landed yet".
+   * Observe the delivery's remote PR identity. A merged PR proves completion;
+   * a matching unmerged PR with fresh head/base reads can proceed to Reviewer.
+   * Unverifiable remote state reports `merged: false` + `error`.
    */
   private async verifyRemoteMerge(
     record: TaskTopicIntegration,
@@ -1443,6 +1441,16 @@ export class TaskIntegrationService {
         };
       }
       return { ...identity, merged: true, sha: pr.sha };
+    }
+
+    if (
+      pr &&
+      pr.headSha === expectedHeadSha &&
+      pr.baseBranch === record.baseBranch &&
+      currentHeadSha === expectedHeadSha &&
+      currentBaseSha
+    ) {
+      return { ...identity, merged: false };
     }
 
     const state = await isBranchMergedInto({
@@ -1608,7 +1616,7 @@ export class TaskIntegrationService {
     });
     const outcome = await this.publishAndCleanup(task.id, record, sha, lease);
     if (outcome !== 'settled') return outcome;
-    return (await this.scheduleDeferredVerify(task, record)) ? 'hold' : outcome;
+    return outcome;
   }
 
   /**
@@ -2008,48 +2016,6 @@ export class TaskIntegrationService {
   }
 
   /**
-   * A completion whose integration previously held never reached the runtime's
-   * normal verify scheduler. Once recovery or a corrective run publishes the
-   * branch, resume the original run's confirmed Verify plan and keep this
-   * lifecycle invocation from settling the Task independently.
-   */
-  private async scheduleDeferredVerify(
-    task: TaskItem,
-    record: TaskTopicIntegration,
-  ): Promise<boolean> {
-    const rows = await this.taskTopicModel.findByTaskId(task.id);
-    const originalRun = rows.find(
-      (row) =>
-        row.operationId &&
-        row.integration?.branch === record.branch &&
-        row.integration.role === 'task',
-    );
-    if (!originalRun?.operationId) return false;
-
-    const verifyRun = await new VerifyRunModel(
-      this.db,
-      this.userId,
-      this.workspaceId,
-    ).findByOperation(originalRun.operationId);
-    if (!verifyRun?.planConfirmedAt) return false;
-
-    const handoff = originalRun.handoff as { content?: string } | null;
-    after(() =>
-      runVerifyOnCompletion(
-        this.db,
-        this.userId,
-        {
-          deliverable: handoff?.content ?? '',
-          goal: task.instruction,
-          operationId: originalRun.operationId!,
-        },
-        this.workspaceId,
-      ),
-    );
-    return true;
-  }
-
-  /**
    * Durable re-driver for completions that were held behind a repo/ref lease
    * or lost it mid-flight: the deferred `after()` re-entry is only the fast
    * path, so this sweep (run by the task watchdog) guarantees a stranded
@@ -2147,13 +2113,8 @@ export class TaskIntegrationService {
    */
   private async completeDeferredIntegration(
     task: TaskItem,
-    record: TaskTopicIntegration,
+    _record: TaskTopicIntegration,
   ): Promise<void> {
-    if (record.verifyOperationId) {
-      const { driveTaskFromVerify } = await import('../verify/settle');
-      await driveTaskFromVerify(this.db, this.userId, record.verifyOperationId, this.workspaceId);
-      return;
-    }
     // TaskService statically imports this service — keep the edge dynamic so
     // module initialization stays acyclic.
     const { TaskService } = await import('../task');

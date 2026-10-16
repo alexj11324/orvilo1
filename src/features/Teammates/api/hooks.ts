@@ -163,8 +163,7 @@ export const useTeammateActions = () => {
   const changeRole = useCallback(
     (userId: string, role: WorkspaceRole, expectedAuthzVersion?: number) =>
       report(
-        () =>
-          teammatesService.workspaceMember.changeRole({ expectedAuthzVersion, role, userId }),
+        () => teammatesService.workspaceMember.changeRole({ expectedAuthzVersion, role, userId }),
         refreshMembers,
       ),
     [report, refreshMembers],
@@ -228,10 +227,7 @@ export const useTeammateActions = () => {
 
   const cancelOwnershipTransfer = useCallback(
     () =>
-      report(
-        () => teammatesService.workspace.cancelOwnershipTransfer(),
-        refreshOwnershipTransfer,
-      ),
+      report(() => teammatesService.workspace.cancelOwnershipTransfer(), refreshOwnershipTransfer),
     [report, refreshOwnershipTransfer],
   );
 

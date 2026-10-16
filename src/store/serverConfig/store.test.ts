@@ -22,7 +22,7 @@ describe('createServerConfigStore', () => {
   it('should initialize store with default state', () => {
     const store = createServerConfigStore();
 
-    expect(store.getState().featureFlags).toHaveProperty('showMarket');
+    expect(store.getState().featureFlags).toHaveProperty('enableVoiceDictation');
     expect(store.getState()).toMatchObject({
       serverConfig: { telemetry: {}, aiProvider: {} },
     });
@@ -53,11 +53,11 @@ describe('createServerConfigStore', () => {
       store.setState({
         featureFlags: {
           ...store.getState().featureFlags,
-          showMarket: false,
+          enableVoiceDictation: false,
         },
       });
     });
 
-    expect(store.getState().featureFlags.showMarket).toBeFalsy();
+    expect(store.getState().featureFlags.enableVoiceDictation).toBeFalsy();
   });
 });

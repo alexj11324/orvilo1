@@ -4,7 +4,6 @@ import { WORKSPACE_LIST_KEY } from '@/business/client/hooks/useFetchWorkspaces';
 import { mutate } from '@/libs/swr';
 import { workspaceService } from '@/services/workspace';
 
-
 let inflight: Promise<WorkspaceListItem> | null = null;
 
 /**

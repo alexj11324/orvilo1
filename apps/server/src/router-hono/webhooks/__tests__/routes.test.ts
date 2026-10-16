@@ -12,7 +12,6 @@ import app from '../index';
  * the db clients, which is far more than a routing assertion needs.
  */
 vi.mock('../handlers/githubEvents', () => ({ githubEventsWebhook: vi.fn() }));
-vi.mock('../handlers/mcpEvents', () => ({ mcpEventsWebhook: vi.fn() }));
 vi.mock('../handlers/casdoor', () => ({ casdoorWebhook: vi.fn() }));
 vi.mock('../handlers/logto', () => ({ logtoWebhook: vi.fn() }));
 vi.mock('../handlers/linear', () => ({ linearWebhook: vi.fn() }));
@@ -30,7 +29,7 @@ vi.mock('../handlers/memoryUserMemoryPersonaUpdateWriting', () => ({
 vi.mock('../handlers/video', () => ({ videoWebhook: vi.fn() }));
 
 describe('webhooks hono routes', () => {
-  it('serves every migrated webhook at its original URL', () => {
+  it('serves every retained webhook at its original URL', () => {
     const paths = app.routes.filter((route) => route.method === 'POST').map((route) => route.path);
 
     expect([...new Set(paths)].sort()).toEqual([
@@ -38,7 +37,6 @@ describe('webhooks hono routes', () => {
       '/api/webhooks/github-events/:callbackToken',
       '/api/webhooks/linear/:workspaceId',
       '/api/webhooks/logto',
-      '/api/webhooks/mcp-events/:callbackToken',
       '/api/webhooks/memory-extraction',
       '/api/webhooks/memory-extraction/benchmark-locomo',
       '/api/webhooks/memory-user-memory/persona/update-writing',

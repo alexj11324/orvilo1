@@ -1,5 +1,4 @@
 import type {
-  AgentMarketplaceRuntimeConfig,
   ExecAgentAppContext,
   ExecAgentResult,
   RuntimeMentionedAgent,
@@ -68,14 +67,6 @@ export type AgentInterventionSourceAction =
   | { reason?: string; type: 'reject_continue' }
   | { scope: 'operation'; type: 'stop' }
   | { result: Record<string, string | string[]>; type: 'submit_answers' }
-  | {
-      result: {
-        kind: 'agent_marketplace';
-        runtimeConfig: AgentMarketplaceRuntimeConfig;
-        selectedTemplateIds: string[];
-      };
-      type: 'submit_custom';
-    }
   | { type: 'skip_interaction' }
   | { type: 'cancel_interaction' };
 
@@ -245,14 +236,16 @@ export interface UpdateClientTaskThreadStatusParams {
 }
 
 class AiAgentService {
-  submitHeteroIntervention = (...args: Parameters<typeof lambdaClient.aiAgent.submitHeteroIntervention.mutate>) =>
-    lambdaClient.aiAgent.submitHeteroIntervention.mutate(...args);
+  submitHeteroIntervention = (
+    ...args: Parameters<typeof lambdaClient.aiAgent.submitHeteroIntervention.mutate>
+  ) => lambdaClient.aiAgent.submitHeteroIntervention.mutate(...args);
 
   execGroupAgent = (...args: Parameters<typeof lambdaClient.aiAgent.execGroupAgent.mutate>) =>
     lambdaClient.aiAgent.execGroupAgent.mutate(...args);
 
-  processHumanIntervention = (...args: Parameters<typeof lambdaClient.aiAgent.processHumanIntervention.mutate>) =>
-    lambdaClient.aiAgent.processHumanIntervention.mutate(...args);
+  processHumanIntervention = (
+    ...args: Parameters<typeof lambdaClient.aiAgent.processHumanIntervention.mutate>
+  ) => lambdaClient.aiAgent.processHumanIntervention.mutate(...args);
 
   async getServerDefaultHeterogeneousCapability() {
     return await lambdaClient.aiAgent.getServerDefaultHeterogeneousCapability.query();

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { TaskReviewService } from './index';
 
@@ -26,31 +26,10 @@ vi.mock('@/server/services/aiGeneration', () => ({
   },
 }));
 
-describe('agent-owned task review', () => {
-  it('runs a rubric using the assignee without reading retired topic settings', async () => {
-    const result = await new TaskReviewService({} as never, 'user', 'workspace').review({
-      content: 'implemented',
-      judge: {},
-      judgeAgentId: 'agent-owner',
-      taskName: 'Implement feature',
-      rubrics: [
-        {
-          id: 'rubric',
-          type: 'llm-rubric',
-          config: { criteria: 'Correct implementation' },
-          weight: 1,
-        } as never,
-      ],
-    });
-    expect(result.passed).toBe(true);
-    expect(mocks.getUserSettings).not.toHaveBeenCalled();
-    expect(mocks.getAgentModelConfig).toHaveBeenCalledWith('agent-owner');
-    expect(mocks.generateObject).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'owner-model', provider: 'owner-provider' }),
-      expect.objectContaining({
-        kind: 'judgment',
-        judgment: { binding: { agentId: 'agent-owner' }, purpose: 'task.review' },
-      }),
-    );
-  });
+it('does not execute the retired rubric review service', async () => {
+  await expect(
+    new TaskReviewService({} as never, 'user', 'workspace').review({} as never),
+  ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+  expect(mocks.getAgentModelConfig).not.toHaveBeenCalled();
+  expect(mocks.generateObject).not.toHaveBeenCalled();
 });

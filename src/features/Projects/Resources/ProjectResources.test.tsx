@@ -191,40 +191,11 @@ describe('project resources', () => {
     expect(mocks.navigate).toHaveBeenCalledWith('/project/prj_1/library/kb_1');
   });
 
-  it('asks before removing, then drops the binding and refreshes', async () => {
-    const onRefresh = renderPage([link('kb_1', 'Alpha')]);
-
-    fireEvent.click(screen.getByText('resources.remove'));
-    // Nothing is sent until the confirmation is accepted.
-    expect(mocks.removeKnowledgeBase).not.toHaveBeenCalled();
-
-    await mocks.onOk?.();
-
-    expect(mocks.removeKnowledgeBase).toHaveBeenCalledWith('prj_1', 'kb_1');
-    await waitFor(() => expect(onRefresh).toHaveBeenCalledTimes(1));
-  });
-
-  it('keeps the list and reports the failure when removing fails', async () => {
-    mocks.removeKnowledgeBase.mockRejectedValue(new Error('nope'));
-    const onRefresh = renderPage([link('kb_1', 'Alpha')]);
-
-    fireEvent.click(screen.getByText('resources.remove'));
-    await mocks.onOk?.();
-
-    await waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('resources.removeError'));
-    // A failed removal must not read as a success: no refresh that would imply
-    // the binding is gone.
-    expect(onRefresh).not.toHaveBeenCalled();
-    expect(mocks.removeKnowledgeBase).toHaveBeenCalledTimes(1);
-  });
-
-  it('hands the picker the ids already referenced', () => {
+  it('preserves historical resources without offering platform KB writes', () => {
     renderPage([link('kb_1', 'Alpha')]);
-
-    fireEvent.click(screen.getByText('resources.add'));
-
-    expect(mocks.openAddResourceModal).toHaveBeenCalledWith(
-      expect.objectContaining({ projectId: 'prj_1', linkedIds: new Set(['kb_1']) }),
-    );
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    expect(screen.queryByText('resources.add')).not.toBeInTheDocument();
+    expect(screen.queryByText('resources.remove')).not.toBeInTheDocument();
+    expect(mocks.removeKnowledgeBase).not.toHaveBeenCalled();
   });
 });

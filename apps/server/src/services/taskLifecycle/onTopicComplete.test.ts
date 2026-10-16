@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vite
 import { TaskModel } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskTopicModel } from '@/database/models/taskTopic';
+import { AiGenerationService } from '@/server/services/aiGeneration';
 
 import { TaskLifecycleService } from './index';
 
@@ -27,6 +28,12 @@ const {
   integrateOnComplete: vi.fn().mockResolvedValue('settled'),
   runTaskMock: vi.fn().mockResolvedValue({ success: true }),
   settleDispatch: vi.fn().mockResolvedValue({ currentContract: true, currentGeneration: true }),
+}));
+
+vi.mock('@/server/services/task/reviewerAssignment', () => ({
+  requestReviewerAssignment: vi.fn(),
+  isWaitingForReviewer: () => false,
+  WAITING_FOR_REVIEWER: 'Delivery is waiting for a reviewer Agent',
 }));
 
 vi.mock('@/database/models/taskDispatch', () => ({
@@ -267,6 +274,73 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     vi.restoreAllMocks();
   });
 
+  it('releases completion for Verify while administrative handoff generation is blocked', async () => {
+    findById.mockResolvedValue(baseTask({ automationMode: null }));
+    verifyFindByOperation.mockResolvedValue({ planConfirmedAt: new Date(), status: 'planned' });
+    let release!: () => void;
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const handoff = vi.spyOn(service as any, 'generateHandoff').mockReturnValue(blocked);
+    const brief = vi.spyOn(service as any, 'synthesizeTopicBrief').mockResolvedValue(undefined);
+    const persistContent = vi.fn().mockResolvedValue(undefined);
+    (service as any).taskTopicModel.updateHandoffContent = persistContent;
+    let completed = false;
+    const completion = service
+      .onTopicComplete({
+        taskId: 'task-1',
+        taskIdentifier: 'TASK-1',
+        topicId: 'topic-1',
+        operationId: 'op-1',
+        reason: 'done',
+        lastAssistantContent: 'Delivered the report',
+      })
+      .then(() => {
+        completed = true;
+      });
+    try {
+      await vi.waitFor(() => expect(completed).toBe(true), { timeout: 1000 });
+      expect(persistContent).toHaveBeenCalledWith('task-1', 'topic-1', 'Delivered the report');
+      expect(handoff).toHaveBeenCalledOnce();
+      expect(brief).not.toHaveBeenCalled();
+    } finally {
+      release();
+      await completion;
+    }
+    await vi.waitFor(() => expect(brief).toHaveBeenCalledOnce());
+  });
+
+  it('preserves raw output after deferred handoff replaces the summary', async () => {
+    findById.mockResolvedValue(baseTask({ automationMode: null }));
+    verifyFindByOperation.mockResolvedValue({ planConfirmedAt: new Date(), status: 'planned' });
+    vi.spyOn(AiGenerationService.prototype, 'generateObject').mockResolvedValue({
+      summary: 'Analyzed',
+    });
+    vi.spyOn(service as any, 'synthesizeTopicBrief').mockResolvedValue(undefined);
+    let stored: Record<string, unknown> = {};
+    (service as any).taskTopicModel.updateHandoffContent.mockImplementation(
+      async (_taskId: string, _topicId: string, content: string) => {
+        stored.content = content;
+      },
+    );
+    const updateHandoff = vi.fn(
+      async (_taskId: string, _topicId: string, handoff: Record<string, unknown>) => {
+        stored = handoff;
+      },
+    );
+    (service as any).taskTopicModel.updateHandoff = updateHandoff;
+    await service.onTopicComplete({
+      taskId: 'task-1',
+      taskIdentifier: 'TASK-1',
+      topicId: 'topic-1',
+      operationId: 'op-1',
+      reason: 'done',
+      lastAssistantContent: 'Delivered the full report',
+    });
+    await vi.waitFor(() => expect(updateHandoff).toHaveBeenCalledOnce());
+    expect(stored).toMatchObject({ summary: 'Analyzed', content: 'Delivered the full report' });
+  });
+
   it('does not publish a result until handoff and integration have both finished', async () => {
     findById.mockResolvedValue(baseTask({ automationMode: 'event' }));
     const topic = {
@@ -432,6 +506,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     it('settles a successful dispatch through its immutable contract after legacy status becomes backlog', async () => {
       const task = baseTask({
         automationMode: null,
+        reviewerAgentId: 'reviewer-1',
         status: 'backlog',
         workflowCategory: 'in_progress',
         assigneeAgentId: 'agent-1',
@@ -681,7 +756,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     it('retains the completion lease when lifecycle processing throws so delivery can retry', async () => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);
-      vi.spyOn(service as any, 'generateHandoff').mockRejectedValue(new Error('process crashed'));
+      integrateOnComplete.mockRejectedValueOnce(new Error('process crashed'));
 
       await expect(
         service.onTopicComplete({
@@ -802,7 +877,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'scheduled', expect.anything());
     });
 
-    it('keeps a capped schedule task pending until its confirmed Verify run settles', async () => {
+    it('settles a capped schedule without waiting on archived Verify state', async () => {
       const task = baseTask({
         automationMode: 'schedule',
         config: { schedule: { maxExecutions: 1 } } as any,
@@ -823,9 +898,13 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      expect(updateStatus).toHaveBeenCalledWith('task-1', 'scheduled', { error: null });
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'completed', expect.anything());
-      expect((service as any).taskModel.releaseRunReservation).not.toHaveBeenCalled();
+      expect(updateStatus).toHaveBeenCalledWith(
+        'task-1',
+        'completed',
+        expect.objectContaining({ error: null, workflowCategory: 'done' }),
+      );
+      expect(verifyFindByOperation).not.toHaveBeenCalled();
+      expect((service as any).taskModel.releaseRunReservation).toHaveBeenCalled();
     });
 
     it('schedule-mode task with no scheduleStartedAt (pre-PR) still parks at "scheduled"', async () => {
@@ -852,7 +931,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatus).toHaveBeenCalledWith('task-1', 'scheduled', { error: null });
     });
 
-    it('non-automation task with no explicit review gate → status="completed"', async () => {
+    it('non-automation task with no explicit review gate → waits for a reviewer', async () => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);
 
@@ -864,18 +943,15 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      // Settlement killed the default-pause: with no explicit review gate a
-      // successful run settles the issue to done.
+      // Delivery still requires a reviewer even without a configured verify gate.
       expect(updateStatus).toHaveBeenCalledWith(
         'task-1',
-        'completed',
+        'paused',
         expect.objectContaining({
-          completedAt: expect.any(Date),
-          error: null,
-          workflowCategory: 'done',
+          error: 'Delivery is waiting for a reviewer Agent',
+          workflowCategory: 'in_progress',
         }),
       );
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
       expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'scheduled', expect.anything());
     });
 
@@ -897,17 +973,15 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatusIfCurrent).toHaveBeenCalledWith(
         'task-1',
         'running',
-        'completed',
+        'paused',
         expect.objectContaining({
-          completedAt: expect.any(Date),
-          error: null,
-          workflowCategory: 'done',
+          error: 'Delivery is waiting for a reviewer Agent',
+          workflowCategory: 'in_progress',
         }),
       );
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
     });
 
-    it('successful subtask → completes and unlocks downstream tasks instead of pausing', async () => {
+    it('successful subtask → waits for a reviewer before unlocking downstream tasks', async () => {
       const task = baseTask({ automationMode: null, parentTaskId: 'parent-task' });
       const parentTask = baseTask({ id: 'parent-task', identifier: 'TASK-0' });
       findById.mockImplementation(async (id) => (id === 'parent-task' ? parentTask : task));
@@ -924,18 +998,16 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatusIfCurrent).toHaveBeenCalledWith(
         'task-1',
         'running',
-        'completed',
+        'paused',
         expect.objectContaining({
-          completedAt: expect.any(Date),
-          error: null,
-          workflowCategory: 'done',
+          error: 'Delivery is waiting for a reviewer Agent',
+          workflowCategory: 'in_progress',
         }),
       );
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
-      expect(cascadeOnCompletion).toHaveBeenCalledWith('task-1');
+      expect(cascadeOnCompletion).not.toHaveBeenCalled();
     });
 
-    it('successful subtask still honors an explicit parent after-completion checkpoint', async () => {
+    it('successful subtask waits for its own reviewer before the parent checkpoint', async () => {
       const task = baseTask({ automationMode: null, parentTaskId: 'parent-task' });
       const parentTask = baseTask({ id: 'parent-task', identifier: 'TASK-0' });
       findById.mockImplementation(async (id) => (id === 'parent-task' ? parentTask : task));
@@ -952,19 +1024,22 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatusIfCurrent).toHaveBeenCalledWith(
         'task-1',
         'running',
-        'completed',
+        'paused',
         expect.objectContaining({
-          completedAt: expect.any(Date),
-          error: null,
-          workflowCategory: 'done',
+          error: 'Delivery is waiting for a reviewer Agent',
+          workflowCategory: 'in_progress',
         }),
       );
-      expect(updateStatus).toHaveBeenCalledWith('parent-task', 'paused');
-      expect(cascadeOnCompletion).toHaveBeenCalledWith('task-1');
+      expect(updateStatus).not.toHaveBeenCalledWith('parent-task', 'paused');
+      expect(cascadeOnCompletion).not.toHaveBeenCalled();
     });
 
     it('successful subtask with an explicit topic-after checkpoint → pauses for review', async () => {
-      const task = baseTask({ automationMode: null, parentTaskId: 'parent-task' });
+      const task = baseTask({
+        automationMode: null,
+        reviewerAgentId: 'reviewer-1',
+        parentTaskId: 'parent-task',
+      });
       findById.mockResolvedValue(task);
       (service as any).taskModel.getCheckpointConfig = vi
         .fn()
@@ -1003,11 +1078,10 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatusIfCurrent).toHaveBeenCalledWith(
         'task-1',
         'running',
-        'completed',
+        'paused',
         expect.objectContaining({
-          completedAt: expect.any(Date),
-          error: null,
-          workflowCategory: 'done',
+          error: 'Delivery is waiting for a reviewer Agent',
+          workflowCategory: 'in_progress',
         }),
       );
       expect(cascadeOnCompletion).not.toHaveBeenCalled();
@@ -1054,7 +1128,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatus).not.toHaveBeenCalled();
     });
 
-    it('non-automation task with no review gate → completes instead of pausing', async () => {
+    it('non-automation task with no review gate → waits for a reviewer', async () => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);
 
@@ -1066,14 +1140,12 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      // The retired default-pause left the task 'running' forever; settlement
-      // now settles a gateless success straight to done.
+      // A delivered Issue waits for reviewer assignment.
       expect(updateStatus).toHaveBeenCalledWith(
         'task-1',
-        'completed',
-        expect.objectContaining({ workflowCategory: 'done' }),
+        'paused',
+        expect.objectContaining({ workflowCategory: 'in_progress' }),
       );
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
     });
 
     it('goal-owned root task completes instead of remaining running', async () => {
@@ -1093,14 +1165,12 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(updateStatusIfCurrent).toHaveBeenCalledWith(
         'task-1',
         'running',
-        'completed',
+        'paused',
         expect.objectContaining({
-          completedAt: expect.any(Date),
-          error: null,
-          workflowCategory: 'done',
+          error: 'Delivery is waiting for a reviewer Agent',
+          workflowCategory: 'in_progress',
         }),
       );
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
     });
   });
 
@@ -1149,7 +1219,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(synthesize).not.toHaveBeenCalled();
     });
 
-    it('verify-bound task → does NOT pause-for-review (lets Verify drive completion async)', async () => {
+    it('ordinary Issue bypasses the old Verify gate and waits for its reviewer', async () => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);
       // A confirmed verify run exists for this op → onTopicComplete "lets go".
@@ -1167,15 +1237,22 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      // Did not pause — driveTaskFromVerify will complete/pause the task on settle.
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
+      // A confirmed plan cannot enter review until an Issue reviewer is selected.
+      expect(updateStatus).toHaveBeenCalledWith(
+        'task-1',
+        'paused',
+        expect.objectContaining({
+          workflowCategory: 'in_progress',
+          error: 'Delivery is waiting for a reviewer Agent',
+        }),
+      );
       // The creator callback is DEFERRED to the verify settle path, not fired here.
       expect(bridge).not.toHaveBeenCalled();
-      // The completion lease fences this generation until Verify settles.
-      expect((service as any).taskModel.releaseRunReservation).not.toHaveBeenCalled();
+      // Ordinary review has its own cycle; release the finished delivery lease.
+      expect((service as any).taskModel.releaseRunReservation).toHaveBeenCalled();
     });
 
-    it('does not re-arm a verify-bound heartbeat before Verify releases the lease', async () => {
+    it('re-arms normal heartbeat without consulting the retired Verify engine', async () => {
       const task = baseTask({ automationMode: 'heartbeat', status: 'running' });
       findById.mockResolvedValue(task);
       verifyFindByOperation.mockResolvedValue({ planConfirmedAt: new Date(), status: 'running' });
@@ -1190,16 +1267,9 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       });
 
       expect(updateStatus).toHaveBeenCalledWith('task-1', 'scheduled', { error: null });
-      expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
-      expect((service as any).taskModel.releaseRunReservation).not.toHaveBeenCalled();
-    });
-
-    it('does not re-arm a heartbeat that a user paused while Verify settled', async () => {
-      findById.mockResolvedValue(baseTask({ automationMode: 'heartbeat', status: 'paused' }));
-
-      await service.rearmHeartbeatAfterVerify('task-1');
-
-      expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
+      expect(fakeScheduler.scheduleNextTopic).toHaveBeenCalledTimes(1);
+      expect((service as any).taskModel.releaseRunReservation).toHaveBeenCalled();
+      expect(verifyFindByOperation).not.toHaveBeenCalled();
     });
 
     it('stops lifecycle side effects when a user supersedes the completion lease', async () => {
@@ -1220,8 +1290,8 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
     });
 
-    it('drives a Verify verdict that settled before the topic callback', async () => {
-      const task = baseTask({ automationMode: null });
+    it('does not drive an archived Verify verdict from a topic callback', async () => {
+      const task = baseTask({ automationMode: 'heartbeat' });
       findById.mockResolvedValue(task);
       verifyFindByOperation.mockResolvedValue({
         planConfirmedAt: new Date(),
@@ -1238,15 +1308,11 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      expect(deferredVerifyDrive).toHaveBeenCalledWith(
-        expect.anything(),
-        'user-1',
-        'op-1',
-        undefined,
-      );
+      expect(deferredVerifyDrive).not.toHaveBeenCalled();
+      expect(verifyFindByOperation).not.toHaveBeenCalled();
     });
 
-    it('non-verify-bound task → fires the creator callback at onTopicComplete', async () => {
+    it('ordinary Issue defers its creator callback until the reviewer passes', async () => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);
       verifyFindByOperation.mockResolvedValue(undefined); // no verify run
@@ -1263,10 +1329,10 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-1',
       });
 
-      expect(bridge).toHaveBeenCalledTimes(1);
+      expect(bridge).not.toHaveBeenCalled();
     });
 
-    it('re-drives the original Verify run after a corrective integration settles', async () => {
+    it('does not revive old Verify after corrective integration', async () => {
       const task = baseTask({ automationMode: null });
       findById.mockResolvedValue(task);
       vi.spyOn(service as any, 'generateHandoff').mockResolvedValue(undefined);
@@ -1283,13 +1349,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-corrective',
       });
 
-      expect(deferredVerifyDrive).toHaveBeenCalledWith(
-        expect.anything(),
-        'user-1',
-        'op-original',
-        undefined,
-      );
-      expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'paused', expect.anything());
+      expect(deferredVerifyDrive).not.toHaveBeenCalled();
     });
   });
 

@@ -17,6 +17,7 @@ import { goals } from '@/database/schemas/goal';
 import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
 
+import { assertGoalExecutionAvailable } from './retirement';
 import { scheduleGoalAdvance } from './scheduler';
 import { recoveryEligibility } from './supervisor/policy';
 
@@ -241,6 +242,7 @@ export class GoalManagerService {
   };
 
   stop = async (graph: GoalGraphSnapshot) => {
+    assertGoalExecutionAvailable();
     const state = graph.goal.config?.managerState;
     if (!state || state.consumed) return;
     const operations = new AgentOperationModel(this.db, this.userId, this.workspaceId);
@@ -277,6 +279,7 @@ export class GoalManagerService {
     graph: GoalGraphSnapshot,
     options?: { mayStartTurn?: boolean },
   ): Promise<GoalTickResult | null> => {
+    assertGoalExecutionAvailable();
     if (!this.eligible(graph)) return null;
     const settled = await this.settleInFlight(graph);
     if (settled) return settled;
@@ -299,6 +302,7 @@ export class GoalManagerService {
     graph: GoalGraphSnapshot,
     problem: { reason: string; taskId?: string },
   ): Promise<GoalTickResult | null> => {
+    assertGoalExecutionAvailable();
     if (!this.eligible(graph)) return null;
     // Already answered: a takeover turn that ran for THIS problem has had its say,
     // so handing it over again would buy the same plan instead of asking a person.
@@ -516,6 +520,7 @@ export class GoalManagerService {
   };
 
   submit = async (goalId: string, token: string, operationId: string, input: GoalPlan) => {
+    assertGoalExecutionAvailable();
     const plan = goalPlanSchema.parse(input);
     return this.db.transaction(async (db) => {
       const model = new GoalModel(db, this.userId, this.workspaceId);

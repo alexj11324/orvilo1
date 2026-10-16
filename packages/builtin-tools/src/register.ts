@@ -40,7 +40,6 @@ import {
 } from '@orvilo/builtin-tool-cloud-sandbox/client';
 import {
   GoalInspectors,
-  GoalInterventions,
   GoalManifest,
   GoalRenders,
   GoalSupervisorInspectors,
@@ -413,7 +412,6 @@ export const registerBuiltinToolSurfaces = (): void => {
       string,
       BuiltinIntervention
     >,
-    [GoalManifest.identifier]: GoalInterventions as Record<string, BuiltinIntervention>,
     [OrviloAgentManifest.identifier]: OrviloAgentInterventions as Record<
       string,
       BuiltinIntervention

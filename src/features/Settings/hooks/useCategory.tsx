@@ -1,4 +1,3 @@
-import { McpIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
   BellIcon,
@@ -237,20 +236,6 @@ export const useCategory = () => {
         ].filter(Boolean) as CategoryItem[],
         key: SettingsGroupKey.Agent,
         title: t('group.aiConfig'),
-      },
-
-      // 工具与连接器 — the platform's own skill marketplace was retired, so the
-      // group no longer carries a Skill row. Connector stays.
-      {
-        items: [
-          {
-            icon: McpIcon,
-            key: SettingsTabs.Connector,
-            label: t('tab.connector'),
-          },
-        ].filter(Boolean) as CategoryItem[],
-        key: SettingsGroupKey.Tools,
-        title: t('group.tools'),
       },
 
       // 此应用·此设备 — host-scoped pages (this install's proxy, OS-level

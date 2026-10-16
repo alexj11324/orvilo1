@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import type { AutomationDefinitionSnapshot, TaskItem } from '@orvilo/types';
+import type { AutomationDefinitionSnapshot, TaskContext, TaskItem } from '@orvilo/types';
 
 import { stableStringify } from '../repositories/ftsSearchDocument/fingerprint';
 
@@ -8,6 +8,9 @@ import { stableStringify } from '../repositories/ftsSearchDocument/fingerprint';
 export const snapshotAutomationDefinition = (task: TaskItem): AutomationDefinitionSnapshot => {
   const definition = {
     assigneeAgentId: task.assigneeAgentId,
+    issuePlan: (task.context as TaskContext | null)?.issuePlan?.confirmedAt
+      ? (task.context as TaskContext).issuePlan
+      : undefined,
     automationMode: task.automationMode,
     heartbeatInterval: task.heartbeatInterval,
     schedulePattern: task.schedulePattern,

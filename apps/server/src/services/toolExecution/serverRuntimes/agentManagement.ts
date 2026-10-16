@@ -5,26 +5,18 @@ import {
   type DeleteAgentParams,
   type DuplicateAgentParams,
   type GetAgentDetailParams,
-  type InstallPluginParams,
   type SearchAgentParams,
   type UpdateAgentParams,
   type UpdatePromptParams,
 } from '@orvilo/builtin-tool-agent-management';
 import { searchAgentsResultsPrompt } from '@orvilo/prompts';
-import {
-  getPluginMode,
-  type HeterogeneousProviderConfig,
-  parsePluginEntry,
-  upsertPluginMode,
-} from '@orvilo/types';
+import { parsePluginEntry } from '@orvilo/types';
 
 import { AgentModel } from '@/database/models/agent';
-import { PluginModel } from '@/database/models/plugin';
 import {
   getResourceConfigAccess,
   redactAgentConfig,
 } from '@/server/routers/lambda/_helpers/resourceConfigGuard';
-import { DiscoverService } from '@/server/services/discover';
 
 import { type ToolExecutionContext, type ToolExecutionResult } from '../types';
 import { type ServerRuntimeRegistration } from './types';
@@ -45,14 +37,6 @@ export const agentManagementRuntime: ServerRuntimeRegistration = {
 
     const { serverDB, userId, workspaceId } = context;
     const agentModel = new AgentModel(context.serverDB, context.userId, context.workspaceId);
-    const pluginModel = new PluginModel(context.serverDB, context.userId, context.workspaceId);
-    // Same identity requirement as the Agent Builder runtime: built without an
-    // identity, DiscoverService sends no credentials and every market read fails
-    // as `unauthorized`.
-    const discoverService = new DiscoverService({
-      userInfo: { userId: context.userId, workspaceId: context.workspaceId },
-    });
-
     return {
       callAgent: async (
         params: CallAgentParams,
@@ -262,113 +246,28 @@ export const agentManagementRuntime: ServerRuntimeRegistration = {
         }
       },
 
-      installPlugin: async (params: InstallPluginParams): Promise<ToolExecutionResult> => {
-        try {
-          const { agentId, identifier } = params;
-          const agent = await agentModel.getAgentConfigById(agentId);
-          if (!agent) {
-            return { content: `Agent "${agentId}" not found.`, success: false };
-          }
-
-          // Ensure the plugin is registered in user_installed_plugins so that
-          // PluginModel.query() can resolve its manifest during agent execution.
-          const existing = await pluginModel.findById(identifier);
-          if (!existing) {
-            await pluginModel.create({ identifier, type: 'plugin' });
-          }
-
-          // upsertPluginMode preserves an already-pinned entry (string or
-          // object) as-is and flips a disabled entry back to pinned in place,
-          // instead of blindly pushing a duplicate bare-string identifier.
-          if (getPluginMode(agent.plugins ?? undefined, identifier) !== 'pinned') {
-            await agentModel.updateConfig(agentId, {
-              plugins: upsertPluginMode(
-                agent.plugins ?? undefined,
-                identifier,
-                'pinned',
-              ) as unknown as string[],
-            });
-          }
-
-          return {
-            content: `Successfully enabled plugin "${identifier}" for agent "${agentId}"`,
-            state: { installed: true, pluginId: identifier, success: true },
-            success: true,
-          };
-        } catch (error) {
-          return handleError(error, 'Failed to install plugin');
-        }
-      },
-
       searchAgent: async (params: SearchAgentParams): Promise<ToolExecutionResult> => {
         try {
-          const source = params.source || 'all';
           const limit = Math.min(params.limit || 10, MAX_SEARCH_AGENT_LIMIT);
           const offset = Math.max(params.offset || 0, 0);
-          const results: Array<{
-            avatar?: string | null;
-            backgroundColor?: string | null;
-            description?: string | null;
-            heteroType?: HeterogeneousProviderConfig['type'];
-            id: string;
-            isMarket?: boolean;
-            title?: string | null;
-          }> = [];
-
-          let userTotal = 0;
-          let marketTotal = 0;
-
-          if (source === 'user' || source === 'all') {
-            const [userAgents, total] = await Promise.all([
-              agentModel.queryAgents({ keyword: params.keyword, limit, offset }),
-              agentModel.countAgents({ keyword: params.keyword }),
-            ]);
-            userTotal = total;
-            results.push(...userAgents.map((a) => ({ ...a, isMarket: false })));
-          }
-
-          // Marketplace search returns the first page only — offset does not apply
-          if (source === 'market' || source === 'all') {
-            const marketResult = await discoverService.getAssistantList({
-              pageSize: limit,
-              q: params.keyword,
-              ...(params.category && { category: params.category }),
-            });
-            marketTotal = marketResult.totalCount ?? marketResult.items.length;
-            results.push(
-              ...marketResult.items.map((a) => ({
-                avatar: a.avatar,
-                backgroundColor: a.backgroundColor,
-                description: a.description,
-                id: a.identifier,
-                isMarket: true,
-                title: a.title,
-              })),
-            );
-          }
-
-          const sliced = results.slice(0, limit);
-          const totalCount = userTotal + marketTotal;
-
-          // hasMore tracks workspace agents only: marketplace results are not offset-paged
-          const shownUserCount = sliced.filter((a) => !a.isMarket).length;
-          const hasMore = offset + shownUserCount < userTotal;
+          const [sliced, totalCount] = await Promise.all([
+            agentModel.queryAgents({ keyword: params.keyword, limit, offset }),
+            agentModel.countAgents({ keyword: params.keyword }),
+          ]);
+          const hasMore = offset + sliced.length < totalCount;
 
           const content = searchAgentsResultsPrompt({
             agents: sliced.map((a) => ({
               description: a.description ?? undefined,
               heteroType: a.heteroType,
               id: a.id,
-              isMarket: a.isMarket,
               title: a.title ?? undefined,
             })),
             hasMore,
-            marketTotal,
             maxLimit: MAX_SEARCH_AGENT_LIMIT,
             offset,
             requestedLimit: params.limit,
-            source,
-            userTotal,
+            userTotal: totalCount,
           });
 
           return {
@@ -378,7 +277,6 @@ export const agentManagementRuntime: ServerRuntimeRegistration = {
               hasMore,
               keyword: params.keyword,
               offset,
-              source,
               totalCount,
             },
             success: true,

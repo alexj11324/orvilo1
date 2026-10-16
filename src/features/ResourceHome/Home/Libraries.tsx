@@ -1,6 +1,5 @@
 'use client';
 
-import { PlusIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,10 +9,8 @@ import {
   RESOURCE_HOME_SECTIONS,
   ResourceSectionSkeleton,
 } from '@/components/Skeleton/ResourceHome';
-import { useCreateNewModal } from '@/features/LibraryModal';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import { usePermission } from '@/hooks/usePermission';
 import { useKnowledgeBaseStore } from '@/store/library';
 import { getLibraryListAsyncState } from '@/utils/libraryListAsyncState';
 
@@ -41,7 +38,6 @@ const MAX_LIBRARIES = 9;
 const Libraries = memo(() => {
   const { t } = useTranslation('file');
   const navigate = useWorkspaceAwareNavigate();
-  const { allowed: canCreate } = usePermission('create_content');
 
   const listVisibility = useResourceManagerStore((s) => s.listVisibility);
   const visibility = listVisibility === 'private' ? ('private' as const) : ('public' as const);
@@ -57,17 +53,6 @@ const Libraries = memo(() => {
   });
 
   const setLibraryId = useResourceManagerStore((s) => s.setLibraryId);
-  const { open: openCreateLibrary } = useCreateNewModal();
-
-  const handleCreate = () => {
-    if (!canCreate) return;
-    openCreateLibrary({
-      onSuccess: (id) => {
-        navigate(`/resource/library/${id}`);
-      },
-    });
-  };
-
   return (
     <div className="flex flex-col gap-3">
       <SectionTitle title={t('home.libraries')} />
@@ -95,17 +80,6 @@ const Libraries = memo(() => {
               <span className={styles.name}>{item.name}</span>
             </button>
           ))}
-          <button
-            className={styles.createChip}
-            disabled={!canCreate}
-            type={'button'}
-            onClick={handleCreate}
-          >
-            <span className="anticon" role="img">
-              <PlusIcon fill={'transparent'} height={16} size={16} width={16} />
-            </span>
-            {t('home.uploadEntries.library.title')}
-          </button>
         </div>
       )}
     </div>

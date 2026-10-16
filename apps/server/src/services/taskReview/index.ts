@@ -8,6 +8,7 @@ import debug from 'debug';
 import { AgentModel } from '@/database/models/agent';
 import type { OrviloDatabase } from '@/database/type';
 import { AiGenerationService } from '@/server/services/aiGeneration';
+import { assertLegacyVerificationWritable } from '@/server/services/verify/retirement';
 
 const log = debug('task-review');
 
@@ -53,6 +54,7 @@ export class TaskReviewService {
     rubrics: EvalBenchmarkRubric[];
     taskName: string;
   }): Promise<ReviewResult> {
+    assertLegacyVerificationWritable();
     const { content, rubrics, judge, taskName, iteration = 1 } = params;
 
     // The rubric library needs a model hint; execution still uses the bound

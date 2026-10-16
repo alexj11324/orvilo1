@@ -29,10 +29,7 @@ export const useWorkQueryGroupTitle = (input: {
     .join('\u001F');
   const { data: cyclePages } = useClientDataSWR(
     cycleKey ? ['work-query-cycle-names', cycleKey] : null,
-    () =>
-      Promise.all(
-        cycleKey.split('\u001F').map((teamId) => workTeamService.team({ teamId })),
-      ),
+    () => Promise.all(cycleKey.split('\u001F').map((teamId) => workTeamService.team({ teamId }))),
   );
 
   const projectName = useCallback(

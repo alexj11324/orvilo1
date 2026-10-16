@@ -902,6 +902,9 @@ importers:
       '@orvilo/agent-gateway-client':
         specifier: workspace:*
         version: link:../agent-gateway-client
+      '@orvilo/local-file-shell':
+        specifier: workspace:*
+        version: link:../local-file-shell
       '@orvilo/prime-harness':
         specifier: workspace:*
         version: link:../prime-harness

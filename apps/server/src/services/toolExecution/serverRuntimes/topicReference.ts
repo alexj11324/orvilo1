@@ -4,7 +4,7 @@ import { escapeXml } from '@orvilo/prompts';
 import type { BuiltinServerRuntimeOutput } from '@orvilo/types';
 
 import { MessageModel } from '@/database/models/message';
-import { TopicModel } from '@/database/models/topic';
+import { resolveReadableTopicReference } from '@/server/services/heterogeneousAgent/topicReference';
 
 import type { ServerRuntimeRegistration } from './types';
 
@@ -19,7 +19,12 @@ class TopicReferenceExecutionRuntime {
   private userId: string;
   private workspaceId?: string;
 
-  constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
+  constructor(
+    db: OrviloDatabase,
+    userId: string,
+    workspaceId?: string,
+    private readonly sourceTopicId?: string,
+  ) {
     this.db = db;
     this.userId = userId;
     this.workspaceId = workspaceId;
@@ -33,15 +38,16 @@ class TopicReferenceExecutionRuntime {
     }
 
     try {
-      const topicModel = new TopicModel(this.db, this.userId, this.workspaceId);
-      // `findOwnTopicById`: this tool runs under the account owner's identity,
-      // so a raw topic id must never resolve to an agent-share visitor topic
-      // (those are stored under the creator's userId).
-      const topic = await topicModel.findOwnTopicById(topicId);
-
-      if (!topic) {
-        return { content: `Topic not found: ${topicId}`, success: false };
-      }
+      const readable = await resolveReadableTopicReference({
+        db: this.db,
+        sourceTopicId: this.sourceTopicId,
+        topicId,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+      if (readable.error) return { content: readable.error, success: false };
+      const topic = readable.topic;
+      if (!topic) return { content: `Topic not found: ${topicId}`, success: false };
 
       // If topic has a summary, prefer it
       if (topic.historySummary) {
@@ -102,6 +108,7 @@ export const topicReferenceRuntime: ServerRuntimeRegistration = {
       context.serverDB,
       context.userId,
       context.workspaceId,
+      context.topicId,
     );
   },
   identifier: TopicReferenceIdentifier,

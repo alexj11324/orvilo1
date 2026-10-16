@@ -2,12 +2,10 @@ import type { GoalSpend } from '@orvilo/types';
 import { formatAbsoluteDateTime } from '@orvilo/utils/time';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
-import { memo, type ReactNode, useMemo, useState } from 'react';
+import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import InputNumber from '@/components/InputNumber';
 import { Badge } from '@/components/reui/badge';
-import { toast } from '@/components/toast';
 import { formatSpan, formatUsd } from '@/features/AgentGoals/goalPresentation';
 import {
   buildGoalGraphView,
@@ -16,7 +14,6 @@ import {
 import { KindDot } from '@/features/AgentGoals/ProcessControl/shared';
 import RunIntegrationTag from '@/features/AgentTasks/AgentTaskDetail/RunIntegrationTag';
 import PortalBodyState from '@/features/Portal/components/PortalBodyState';
-import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 import { goalSelectors, useGoalStore } from '@/store/goal';
@@ -176,112 +173,30 @@ const Findings = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
 
 Findings.displayName = 'GoalMetricFindings';
 
-/**
- * One budget dimension as `spent / cap`, where the cap IS the input — the
- * number you read and the number you change are the same number, so raising a
- * budget needs no separate edit mode.
- *
- * The draft is local and commits on blur / Enter: the goal graph polls while
- * the goal runs, and binding the field straight to the snapshot would wipe
- * half-typed digits on every refresh.
- *
- * `BUDGET_FIELDS` mirrors the router's zod contract per dimension, so a value
- * the form accepts cannot be one the server rejects. `null` clears a cap;
- * parallelism falls back to the coordinator's default rather than becoming
- * unbounded, which is why its blank label differs.
- */
-const BUDGET_FIELDS = {
-  maxConcurrentTasks: { max: 10, min: 1 },
-  maxRounds: { min: 0 },
-  maxTotalCost: { min: 0, money: true },
-} as const;
-
+/** Original budget and spend remain facts in the historical graph. */
 const BudgetField = memo<{
   cap: number | null;
-  field: keyof typeof BUDGET_FIELDS;
+  field: 'maxConcurrentTasks' | 'maxRounds' | 'maxTotalCost';
   goalId: string;
   label: string;
-  /** Blank input meaning — 'uncapped' for budgets, 'auto' for parallelism. */
   placeholder?: string;
   used: number;
-}>(({ cap, field, goalId, label, placeholder, used }) => {
+}>(({ cap, field, label, used }) => {
   const { t } = useTranslation('chat');
-  const { allowed: canEdit } = usePermission('create_content');
-  const setGoalBudget = useGoalStore((s) => s.setGoalBudget);
-  const [draft, setDraft] = useState<number | null>(cap);
-  const [saving, setSaving] = useState(false);
-  const meta = BUDGET_FIELDS[field];
-  const money = 'money' in meta && meta.money;
-
-  // Re-seed from the server whenever it disagrees and the user is not mid-edit.
-  const [committed, setCommitted] = useState(cap);
-  if (committed !== cap && !saving) {
-    setCommitted(cap);
-    setDraft(cap);
-  }
-
-  const commit = async () => {
-    if (!canEdit || draft === cap) return;
-    // A cap below what the goal already spent would park it immediately; that
-    // is a legitimate way to stop a goal, so it is allowed — only nonsense
-    // (below the field's floor) is refused, matching the router's bounds.
-    if (draft !== null && (draft < meta.min || ('max' in meta && draft > meta.max))) {
-      setDraft(cap);
-      return;
-    }
-
-    try {
-      setSaving(true);
-      // Only the field that changed is sent: `setBudget` treats an omitted
-      // dimension as untouched, so editing the cost cap keeps the round cap.
-      await setGoalBudget(
-        goalId,
-        field === 'maxTotalCost'
-          ? { maxTotalCost: draft }
-          : field === 'maxRounds'
-            ? { maxRounds: draft }
-            : { maxConcurrentTasks: draft },
-      );
-    } catch (error) {
-      console.error('[GoalMetricBudget] Failed to save:', error);
-      toast.error(t('goalProcess.metricDetail.budget.saveFailed'));
-      setDraft(cap);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-0.5">
       <span className={styles.label}>{label}</span>
-      <div className="flex flex-row items-center gap-2">
-        <div className={cn('text-xl leading-7 font-semibold', styles.mono)}>
-          {money ? formatUsd(used) : used}
-        </div>
-        <div className={cn('text-xl leading-7 text-muted-foreground', styles.mono)}>/</div>
-        <div
-          onBlur={() => void commit()}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void commit();
-          }}
-        >
-          <InputNumber
-            className={cn('w-30', styles.mono)}
-            controls={false}
-            disabled={!canEdit || saving}
-            min={meta.min}
-            placeholder={placeholder ?? t('goalProcess.metricDetail.budget.uncapped')}
-            prefix={money ? <div className="text-xs text-muted-foreground">$</div> : undefined}
-            size="sm"
-            value={draft}
-            onChange={setDraft}
-          />
-        </div>
+      <div className={cn('text-xl font-semibold', styles.mono)}>
+        {field === 'maxTotalCost' ? formatUsd(used) : used} /{' '}
+        {cap === null
+          ? t('goalProcess.metricDetail.budget.uncapped')
+          : field === 'maxTotalCost'
+            ? formatUsd(cap)
+            : cap}
       </div>
     </div>
   );
 });
-
 BudgetField.displayName = 'GoalMetricBudgetField';
 
 /** `12.4k` — token counts are read for magnitude, not audited digit by digit. */

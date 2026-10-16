@@ -1,4 +1,10 @@
-import type { EditTaskParams, ListWorkspaceMembersParams } from '@orvilo/builtin-tool-task';
+import type {
+  EditTaskParams,
+  IntakeIssueParams,
+  ListWorkspaceMembersParams,
+  RefineIssuePlanParams,
+  SubmitTaskReviewParams,
+} from '@orvilo/builtin-tool-task';
 import {
   normalizeListTasksParams,
   normalizeListWorkspaceMembersParams,
@@ -27,6 +33,7 @@ import { notifyTaskAssigned } from '@/business/server/task/notifyTaskAssigned';
 import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
+import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { WorkspaceModel } from '@/database/models/workspace';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
@@ -34,6 +41,8 @@ import { tasks } from '@/database/schemas';
 import { appEnv } from '@/envs/app';
 import { taskRouter } from '@/server/routers/lambda/task';
 import { TaskService } from '@/server/services/task';
+import { TaskPlanService } from '@/server/services/task/plan';
+import { readIssueReview, submitIssueReview } from '@/server/services/task/review';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
@@ -79,6 +88,7 @@ export interface TaskRuntimeDeps {
   taskCaller: ReturnType<typeof taskRouter.createCaller>;
   taskId?: string;
   taskModel: TaskModel;
+  taskPlanService?: TaskPlanService;
   taskService: TaskService;
   threadId?: string | null;
   toolCallId?: string;
@@ -231,6 +241,8 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       parentTaskId,
       priority: args.priority,
       sortOrder: args.sortOrder,
+      triageStatus: 'untriaged',
+      workflowCategory: 'triage',
     });
 
     notifyMemberAssigned(task);
@@ -258,6 +270,88 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
   };
 
   return {
+    refineIssuePlan: async (args: RefineIssuePlanParams) => {
+      if (!deps.taskPlanService || !operationId)
+        return {
+          content: 'Refinement requires a live server-bound Orchestrator operation.',
+          success: false,
+        };
+      try {
+        const result = await deps.taskPlanService.refineIssuePlan(args, operationId);
+        return {
+          content: `Implementation refined within original confirmed plan ${result.plan!.revision}. Added: ${result.added.map((task) => task.identifier).join(', ') || 'none'}. Ready tasks are dispatched as the original requester.`,
+          state: {
+            success: true,
+            revision: result.plan!.revision,
+            refinementRevision: result.plan!.refinement!.revision,
+            added: result.added.map((task) => ({ id: task.id, identifier: task.identifier })),
+          },
+          success: true,
+        };
+      } catch (error) {
+        return { content: error instanceof Error ? error.message : String(error), success: false };
+      }
+    },
+    intakeIssue: async (args: IntakeIssueParams) => {
+      if (!args.name.trim() || !args.instruction.trim()) {
+        return {
+          content: 'Ask for the missing Issue title or delivery requirements before intake.',
+          success: false,
+        };
+      }
+      if (!deps.taskPlanService) {
+        return { content: 'Issue planning is unavailable in this runtime.', success: false };
+      }
+      const origin =
+        agentId && topicId
+          ? {
+              agentId,
+              topicId,
+              messageId: assistantMessageId,
+              operationId: rootOperationId ?? operationId,
+              toolCallId,
+            }
+          : undefined;
+      const source =
+        deps.db && deps.userId && topicId
+          ? await new TopicModel(deps.db, deps.userId, deps.workspaceId).findOwnTopicById(topicId)
+          : null;
+      const defaults = source?.trigger === 'slack' ? source.metadata?.slackContext : undefined;
+      if (
+        source?.trigger === 'slack' &&
+        !args.issueId &&
+        !args.projectId &&
+        !args.repositoryId &&
+        !defaults?.projectId &&
+        !defaults?.repositoryId
+      ) {
+        return {
+          content:
+            'Which Issue, project or repository is this delivery for? Please specify the target before creating its plan.',
+          success: false,
+        };
+      }
+      const task = await deps.taskPlanService.intake({
+        ...args,
+        projectId:
+          args.projectId ?? (args.issueId ? undefined : (defaults?.projectId ?? undefined)),
+        repositoryId:
+          args.repositoryId ??
+          (args.issueId || args.projectId ? undefined : (defaults?.repositoryId ?? undefined)),
+        origin,
+      });
+      return {
+        content: `${formatTaskCreated({ baseUrl: await taskLinkBaseUrl(), identifier: task.identifier, name: task.name, instruction: args.instruction, priority: task.priority, status: deriveLegacyTaskStatus(task) })}\nIssue Checklist drafted. Await human confirmation before delivery.`,
+        state: {
+          identifier: task.identifier,
+          taskId: task.id,
+          name: task.name,
+          workflowCategory: task.workflowCategory,
+          success: true,
+        },
+        success: true,
+      };
+    },
     addTaskComment: async (args: { content: string; identifier?: string }) => {
       const id = args.identifier?.trim() || taskId;
       if (!id) {
@@ -386,6 +480,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       const updateData: {
         assigneeAgentId?: string | null;
         assigneeUserId?: string | null;
+        reviewerAgentId?: string | null;
         description?: string;
         instruction?: string;
         name?: string;
@@ -416,6 +511,12 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
           args.assigneeUserId
             ? `assignee member → ${await resolveMemberLabel(args.assigneeUserId)}`
             : 'assignee member cleared',
+        );
+      }
+      if (args.reviewerAgentId !== undefined) {
+        updateData.reviewerAgentId = args.reviewerAgentId;
+        changes.push(
+          args.reviewerAgentId ? `reviewer agent → ${args.reviewerAgentId}` : 'reviewer cleared',
         );
       }
       if (args.instruction !== undefined) {
@@ -683,12 +784,68 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       return { content: formatTaskEdited(task.identifier, changes), success: true };
     },
 
+    submitTaskReview: async (args: SubmitTaskReviewParams) => {
+      if (!deps.db || !deps.userId || !agentId || !operationId || !taskId)
+        return { content: 'No authenticated reviewer Agent run.', success: false };
+      const { submitIssueChecklistReviewSchema } =
+        await import('@/server/routers/lambda/_schema/issueChecklist');
+      const parsed = submitIssueChecklistReviewSchema.safeParse(args);
+      if (!parsed.success) return { content: parsed.error.message, success: false };
+      args = parsed.data;
+      if (
+        !['pass', 'fail'].includes(args.verdict) ||
+        (args.verdict === 'fail' && !args.comment?.trim())
+      )
+        return {
+          content: 'A failed review requires a comment explaining what is missing.',
+          success: false,
+        };
+      const task = await taskModel().resolve(args.identifier);
+      const review = task && readIssueReview(task);
+      if (!task || task.id !== taskId || !review)
+        return { content: 'This reviewer run cannot judge the requested Issue.', success: false };
+      try {
+        const result = await submitIssueReview(
+          deps.db,
+          deps.userId,
+          {
+            actorAgentId: agentId,
+            comment: args.comment,
+            cycleId: review.cycleId,
+            operationId,
+            taskId: task.id,
+            verdict: args.verdict,
+            runId: args.runId,
+            proof: args.proof,
+            items: args.items,
+          },
+          deps.workspaceId,
+        );
+        return {
+          content: `Issue ${task.identifier} review recorded. Status: ${result.task.workflowCategory}.`,
+          state: {
+            commentId: result.commentId,
+            identifier: task.identifier,
+            stopped: result.stopped,
+            success: true,
+            workflowCategory: result.task.workflowCategory,
+          },
+          success: true,
+        };
+      } catch (error) {
+        console.error('[task-runtime] Issue review verdict was not applied', error);
+        return {
+          content: error instanceof Error ? error.message : 'Issue review verdict was not applied.',
+          success: false,
+        };
+      }
+    },
+
     setTaskVerify: async (args: {
       enabled?: boolean | null;
       identifier: string;
       maxIterations?: number | null;
       requirement?: string | null;
-      verifierAgentId?: string | null;
       verifyCriteriaIds?: string[] | null;
       verifyRubricId?: string | null;
     }) => {
@@ -703,7 +860,6 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
         enabled?: boolean | null;
         maxIterations?: number | null;
         requirement?: string | null;
-        verifierAgentId?: string | null;
         verifyCriteriaIds?: string[] | null;
         verifyRubricId?: string | null;
       } = {};
@@ -731,14 +887,7 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
             : `max iterations → ${args.maxIterations}`,
         );
       }
-      if (args.verifierAgentId !== undefined) {
-        verify.verifierAgentId = args.verifierAgentId;
-        changes.push(
-          args.verifierAgentId
-            ? `verifier agent → ${args.verifierAgentId}`
-            : 'verifier agent cleared',
-        );
-      }
+
       if (args.verifyRubricId !== undefined) {
         verify.verifyRubricId = args.verifyRubricId;
         changes.push(
@@ -951,8 +1100,9 @@ export const createTaskRuntime = (deps: TaskRuntimeDeps) => {
       const detail = await taskService().getTaskDetail(id);
       if (!detail) return { content: `Task not found: ${id}`, success: false };
 
+      const reviewers = await taskCaller().listReviewerAgents();
       return {
-        content: formatTaskDetail(detail),
+        content: `${formatTaskDetail(detail)}\nConfirmed plan: ${JSON.stringify((detail.context as { issuePlan?: unknown } | null)?.issuePlan ?? null)}\nUsable reviewer Agents: ${JSON.stringify(reviewers.data)}. Set reviewerAgentId with editTask before this delivered Issue enters review. Choose canReviewIssues=true; unsupported runtimes cannot be assigned as reviewer.`,
         state: {
           domainRevision: detail.domainRevision,
           identifier: detail.identifier,
@@ -1023,6 +1173,7 @@ export const taskRuntime: ServerRuntimeRegistration = {
       agentModel: new AgentModel(db, userId),
       taskModel: new TaskModel(db, userId),
       taskService: new TaskService(db, userId),
+      taskPlanService: new TaskPlanService(db, userId),
       // `actingAgentId` names the agent for durable attribution (task
       // reassignment activity). Server-side only by contract — it must never
       // reach the router through a client-supplied field.
@@ -1042,6 +1193,7 @@ export const taskRuntime: ServerRuntimeRegistration = {
       deps.agentModel = new AgentModel(db, userId, wsId);
       deps.taskModel = new TaskModel(db, userId, wsId);
       deps.taskService = new TaskService(db, userId, wsId);
+      deps.taskPlanService = new TaskPlanService(db, userId, wsId);
       // MUST keep `actingAgentId`: this replaces the caller built above, and
       // every exported method awaits `ensureModels()` first — dropping it here
       // silently attributes every agent-driven task edit to the session user.

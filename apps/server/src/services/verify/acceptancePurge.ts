@@ -12,6 +12,8 @@ import type { OrviloDatabase } from '@/database/type';
 import { buildWorkspaceWhere } from '@/database/utils/workspace';
 import type { FileService } from '@/server/services/file';
 
+import { assertLegacyVerificationWritable } from './retirement';
+
 export interface PurgePreview {
   bytes: number;
   fileCount: number;
@@ -173,6 +175,7 @@ export const purgeAcceptance = async (
   workspaceId: string | undefined,
   acceptanceId: string,
 ): Promise<{ deletedFiles: number; deletedRuns: number }> => {
+  assertLegacyVerificationWritable();
   const runIds = await listRunIds(db, userId, workspaceId, [acceptanceId]);
   const fileIds = await listExclusiveEvidenceFileIds(db, runIds);
   const deletedFiles = await purgeFiles(db, fileService, userId, workspaceId, fileIds);
@@ -201,6 +204,7 @@ export const purgeVerifyRun = async (
   workspaceId: string | undefined,
   verifyRunId: string,
 ): Promise<{ deletedFiles: number }> => {
+  assertLegacyVerificationWritable();
   const runModel = new VerifyRunModel(db, userId, workspaceId);
   const run = await runModel.findById(verifyRunId);
   if (!run) return { deletedFiles: 0 };

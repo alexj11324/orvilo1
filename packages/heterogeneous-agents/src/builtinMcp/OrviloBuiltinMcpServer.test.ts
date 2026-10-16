@@ -1,6 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { afterEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 
 import { AskUserBridge } from '../askUser/AskUserBridge';
 import {
@@ -17,6 +18,73 @@ afterEach(async () => {
 });
 
 describe('OrviloBuiltinMcpServer', () => {
+  it('records only allowed native MCP metadata and the served tool names', async () => {
+    const records: Record<string, unknown>[] = [];
+    server = new OrviloBuiltinMcpServer({
+      includeAskUserTool: false,
+      onMcpMetadata: (record) => records.push(record),
+      extraTools: [
+        {
+          name: 'orvilo-task__intakeIssue',
+          description: 'BODY_SECRET',
+          inputSchema: { value: z.string().describe('SCHEMA_SECRET') },
+          handler: async () => ({ content: [{ type: 'text', text: 'RESULT_SECRET' }] }),
+        },
+      ],
+    });
+    await server.start();
+    server.registerOperation('op-metadata');
+    const url = new URL(server.urlForOperation('op-metadata'));
+    url.searchParams.set('secret', 'URL_SECRET');
+    const client = new Client({ name: 'BODY_SECRET', version: '1' });
+    const transport = new StreamableHTTPClientTransport(url, {
+      requestInit: { headers: { authorization: 'HEADER_SECRET' } },
+    });
+    try {
+      await client.connect(transport);
+      await client.listTools();
+      await client.listTools();
+      // Tool arguments/results and non-allowlisted methods never enter this stream.
+      await client.callTool({
+        name: 'orvilo-task__intakeIssue',
+        arguments: { value: 'ARGS_SECRET' },
+      });
+      expect(records).toEqual([
+        {
+          operationId: 'op-metadata',
+          toolNames: ['orvilo-task__intakeIssue'],
+          type: 'mcp_host_extra_tools',
+        },
+        {
+          httpStatus: 200,
+          method: 'initialize',
+          operationId: 'op-metadata',
+          success: true,
+          type: 'mcp_http_response',
+        },
+        {
+          httpStatus: 202,
+          method: 'notifications/initialized',
+          operationId: 'op-metadata',
+          success: true,
+          type: 'mcp_http_response',
+        },
+        ...Array.from({ length: 2 }, () => ({
+          httpStatus: 200,
+          method: 'tools/list',
+          operationId: 'op-metadata',
+          success: true,
+          toolCount: 1,
+          toolNames: ['orvilo-task__intakeIssue'],
+          type: 'mcp_http_response',
+        })),
+      ]);
+      expect(JSON.stringify(records)).not.toContain('SECRET');
+    } finally {
+      await client.close();
+    }
+  });
+
   describe('lifecycle', () => {
     it('starts on port=0 (auto-assigned), exposes a localhost URL, stops cleanly', async () => {
       server = new OrviloBuiltinMcpServer();

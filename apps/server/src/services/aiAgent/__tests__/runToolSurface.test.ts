@@ -136,7 +136,7 @@ describe('resolveRunToolSurface', () => {
       expect(outcomeFor(surface, 'custom-plugin-xyz')).toEqual({
         identifier: 'custom-plugin-xyz',
         kind: 'tool',
-        reason: 'plugin-not-installed',
+        reason: 'native-harness-tool',
         status: 'unsupported',
       });
     });
@@ -285,68 +285,22 @@ describe('resolveRunToolSurface', () => {
     });
   });
 
-  describe('external tool surface (F04)', () => {
-    const connectorEntry = {
-      apis: [{ description: 'Do a thing', name: 'do_thing' }],
-      callable: true,
-      source: 'connector' as const,
+  it('ignores a persisted third-party mount while preserving internal tools', () => {
+    const legacyInput = {
+      externalTools: {
+        'old-tool': {
+          apis: [{ name: 'query' }],
+          callable: true,
+          source: 'mcp-plugin' as const,
+        },
+      },
+      selectedToolIds: ['old-tool', 'orvilo-task'],
     };
-
-    it('mounts a resolved connector tool onto the per-run spec surface', () => {
-      const surface = resolveRunToolSurface({
-        externalTools: { 'my-conn': connectorEntry },
-        selectedToolIds: ['my-conn'],
-      });
-
-      const spec = surface.builtinToolSpecs.find((s) => s.identifier === 'my-conn');
-      expect(spec?.apis.map((a) => a.name)).toEqual(['do_thing']);
-      expect(surface.externalTools?.['my-conn']).toEqual(connectorEntry);
-      expect(surface.outcomes.find((o) => o.identifier === 'my-conn')?.status).toBe('mounted');
-    });
-
-    it('marks a callable:false external entry as no-server-executor', () => {
-      const surface = resolveRunToolSurface({
-        externalTools: { 'my-conn': { ...connectorEntry, callable: false } },
-        selectedToolIds: ['my-conn'],
-      });
-      expect(surface.outcomes.find((o) => o.identifier === 'my-conn')).toEqual({
-        identifier: 'my-conn',
-        kind: 'tool',
-        reason: 'no-server-executor',
-        status: 'unsupported',
-      });
-      expect(surface.externalTools).toBeUndefined();
-    });
-
-    it('marks a non-resolvable id as plugin-not-installed', () => {
-      const surface = resolveRunToolSurface({ selectedToolIds: ['unknown-tool'] });
-      expect(surface.outcomes.find((o) => o.identifier === 'unknown-tool')).toEqual({
-        identifier: 'unknown-tool',
-        kind: 'tool',
-        reason: 'plugin-not-installed',
-        status: 'unsupported',
-      });
-    });
-
-    it('does not mount external tools on a harness that cannot mount MCP', () => {
-      const surface = resolveRunToolSurface({
-        externalTools: { 'my-conn': connectorEntry },
-        selectedToolIds: ['my-conn'],
-        supportsBuiltinToolMount: false,
-      });
-      expect(surface.outcomes.find((o) => o.identifier === 'my-conn')?.reason).toBe(
-        'harness-cannot-mount-mcp',
-      );
-      expect(surface.builtinToolSpecs).toHaveLength(0);
-    });
-
-    it('blocks the run when a required external tool fails to mount', () => {
-      expect(() =>
-        resolveRunToolSurface({
-          externalTools: { 'my-conn': connectorEntry },
-          requiredToolIds: ['my-conn', 'missing-conn'],
-        }),
-      ).toThrow(/missing-conn \(unsupported: plugin-not-installed\)/);
+    const surface = resolveRunToolSurface(legacyInput);
+    expect(surface.builtinToolSpecs.map((tool) => tool.identifier)).toEqual(['orvilo-task']);
+    expect(surface.outcomes.find((outcome) => outcome.identifier === 'old-tool')).toMatchObject({
+      status: 'unsupported',
+      reason: 'native-harness-tool',
     });
   });
 });

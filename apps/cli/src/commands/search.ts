@@ -13,9 +13,6 @@ const SEARCH_TYPES = [
   'message',
   'page',
   'memory',
-  'mcp',
-  'plugin',
-  'communityAgent',
   'knowledgeBase',
 ] as const;
 

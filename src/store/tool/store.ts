@@ -13,37 +13,22 @@ import {
 } from './slices/agentDocumentSkills';
 import { type AgentSkillsAction, createAgentSkillsSlice } from './slices/agentSkills';
 import { type BuiltinToolAction, createBuiltinToolSlice } from './slices/builtin';
-import { type ComposioStoreAction, createComposioStoreSlice } from './slices/composioStore';
 import { type ConnectorAction, createConnectorSlice } from './slices/connector';
-import { createCustomPluginSlice, type CustomPluginAction } from './slices/customPlugin';
-import { createMCPPluginStoreSlice, type PluginMCPStoreAction } from './slices/mcpStore';
-import {
-  createOrviloSkillStoreSlice,
-  type OrviloSkillStoreAction,
-} from './slices/orviloSkillStore';
 import { createPluginSlice, type PluginAction } from './slices/plugin';
 
 //  ===============  Aggregate createStoreFn ============ //
 
 export type ToolStore = ToolStoreState &
   ConnectorAction &
-  CustomPluginAction &
   PluginAction &
   BuiltinToolAction &
-  PluginMCPStoreAction &
-  ComposioStoreAction &
-  OrviloSkillStoreAction &
   AgentSkillsAction &
   AgentDocumentSkillsAction &
   ResetableStore;
 
 type ToolStoreAction = ConnectorAction &
-  CustomPluginAction &
   PluginAction &
   BuiltinToolAction &
-  PluginMCPStoreAction &
-  ComposioStoreAction &
-  OrviloSkillStoreAction &
   AgentSkillsAction &
   AgentDocumentSkillsAction &
   ResetableStore;
@@ -59,11 +44,7 @@ const createStore: StateCreator<ToolStore, [['zustand/devtools', never]]> = (
   ...flattenActions<ToolStoreAction>([
     createConnectorSlice(...parameters),
     createPluginSlice(...parameters),
-    createCustomPluginSlice(...parameters),
     createBuiltinToolSlice(...parameters),
-    createMCPPluginStoreSlice(...parameters),
-    createComposioStoreSlice(...parameters),
-    createOrviloSkillStoreSlice(...parameters),
     createAgentSkillsSlice(...parameters),
     createAgentDocumentSkillsSlice(...parameters),
     new ToolStoreResetAction(...parameters),

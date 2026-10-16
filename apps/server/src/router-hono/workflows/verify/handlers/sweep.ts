@@ -1,33 +1,6 @@
-import debug from 'debug';
 import type { Context } from 'hono';
 
-import { getServerDB } from '@/database/server';
-import { sweepStuckVerifyRuns } from '@/server/services/verify';
-
-const log = debug('orvilo-server:workflows:verify:sweep');
-
-/**
- * Cron-style sweep for verification runs stranded in `verifying` — see
- * {@link sweepStuckVerifyRuns} for what strands them and how each shape is
- * recovered.
- *
- * No per-user authentication: this is a global scan registered as a Hatchet
- * cron task and invoked directly by the worker.
- */
+/** Acknowledge stale legacy jobs without ledger writes or retrying the retired engine. */
 export async function sweep(c: Context) {
-  try {
-    const db = await getServerDB();
-    const outcome = await sweepStuckVerifyRuns(db);
-
-    log(
-      'Verify sweep: settled=%d abandoned=%d skipped=%d',
-      outcome.settled.length,
-      outcome.abandoned.length,
-      outcome.skipped,
-    );
-    return c.json({ ...outcome, success: true });
-  } catch (error) {
-    console.error('[verify/sweep] Error:', error);
-    return c.json({ error: error instanceof Error ? error.message : 'Internal error' }, 500);
-  }
+  return c.json({ success: true, skipped: 'legacy_verify_retired' });
 }

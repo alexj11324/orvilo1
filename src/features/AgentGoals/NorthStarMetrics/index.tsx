@@ -2,20 +2,16 @@
 
 import { cn } from 'cn';
 import dayjs from 'dayjs';
-import { Check, Plus, Target } from 'lucide-react';
+import { Check, Target } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import { Badge } from '@/components/reui/badge';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { goalSelectors, useGoalStore } from '@/store/goal';
 
-import { openDeclareMetricModal } from './DeclareMetricModal';
 import { buildNorthStarCards, formatMetricValue, type NorthStarCard } from './northStar';
-import { openRecordObservationModal } from './RecordObservationModal';
 import Sparkline from './Sparkline';
 
 /**
@@ -34,85 +30,65 @@ const styles = {
   track: 'overflow-hidden h-1 rounded-full bg-selected',
 };
 
-const MetricCard = memo<{ canEdit: boolean; card: NorthStarCard; goalId: string }>(
-  ({ canEdit, card, goalId }) => {
-    const { t } = useTranslation('chat');
+const MetricCard = memo<{ card: NorthStarCard }>(({ card }) => {
+  const { t } = useTranslation('chat');
 
-    const freshness =
-      card.latestAt == null
-        ? t('goalProcess.northStar.unmeasured')
-        : t('goalProcess.northStar.lastObserved', { time: dayjs(card.latestAt).fromNow() });
+  const freshness =
+    card.latestAt == null
+      ? t('goalProcess.northStar.unmeasured')
+      : t('goalProcess.northStar.lastObserved', { time: dayjs(card.latestAt).fromNow() });
 
-    return (
-      <div className={`flex flex-col gap-1.5 ${styles.card}`}>
-        <div className="flex items-center gap-2 justify-between">
-          <div className="truncate min-w-0 text-xs text-muted-foreground">{card.label}</div>
-          <div className="flex items-center gap-1">
-            {card.met && (
-              <Badge size="sm" variant="success">
-                <Check className="size-4" size={16} /> {t('goalProcess.northStar.met')}
-              </Badge>
-            )}
-            {/* Recording stays available after the target is met: the world
+  return (
+    <div className={`flex flex-col gap-1.5 ${styles.card}`}>
+      <div className="flex items-center gap-2 justify-between">
+        <div className="truncate min-w-0 text-xs text-muted-foreground">{card.label}</div>
+        <div className="flex items-center gap-1">
+          {card.met && (
+            <Badge size="sm" variant="success">
+              <Check className="size-4" size={16} /> {t('goalProcess.northStar.met')}
+            </Badge>
+          )}
+          {/* Recording stays available after the target is met: the world
                 can regress, and a card whose only refresh path disappeared
                 would stay falsely met forever. */}
-            {canEdit && (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => openRecordObservationModal(goalId, card.key, card.label)}
-                    >
-                      <Plus className="size-4" size={16} />
-                    </Button>
-                  }
-                />
-                <TooltipContent>{t('goalProcess.northStar.record.title')}</TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 justify-between">
-          <div className="flex items-baseline gap-1.5">
-            <div className={cn('text-xl font-semibold', card.met ? styles.metValue : '')}>
-              {formatMetricValue(card.current)}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {t(`goalProcess.northStar.op.${card.op}` as const)} {formatMetricValue(card.target)}
-              {card.unit ? ` ${card.unit}` : ''}
-            </div>
-          </div>
-          <Sparkline met={card.met} values={card.trend} />
-        </div>
-        <div className={styles.track}>
-          <div
-            className="h-full rounded-full"
-            style={{
-              background: card.met ? 'var(--success)' : 'var(--info)',
-              width: `${card.percent}%`,
-            }}
-          />
-        </div>
-        <div className={cn('text-xs text-muted-foreground', card.stale ? styles.stale : '')}>
-          {freshness}
-          {card.stale ? ` · ${t('goalProcess.northStar.staleWarning')}` : ''}
         </div>
       </div>
-    );
-  },
-);
+      <div className="flex items-center gap-2 justify-between">
+        <div className="flex items-baseline gap-1.5">
+          <div className={cn('text-xl font-semibold', card.met ? styles.metValue : '')}>
+            {formatMetricValue(card.current)}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {t(`goalProcess.northStar.op.${card.op}` as const)} {formatMetricValue(card.target)}
+            {card.unit ? ` ${card.unit}` : ''}
+          </div>
+        </div>
+        <Sparkline met={card.met} values={card.trend} />
+      </div>
+      <div className={styles.track}>
+        <div
+          className="h-full rounded-full"
+          style={{
+            background: card.met ? 'var(--success)' : 'var(--info)',
+            width: `${card.percent}%`,
+          }}
+        />
+      </div>
+      <div className={cn('text-xs text-muted-foreground', card.stale ? styles.stale : '')}>
+        {freshness}
+        {card.stale ? ` · ${t('goalProcess.northStar.staleWarning')}` : ''}
+      </div>
+    </div>
+  );
+});
 
 MetricCard.displayName = 'NorthStarMetricCard';
 
 interface NorthStarMetricsProps {
-  canEdit: boolean;
   goalId: string;
 }
 
-const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
+const NorthStarMetrics = memo<NorthStarMetricsProps>(({ goalId }) => {
   const { t } = useTranslation('chat');
 
   const snapshot = useGoalStore(goalSelectors.goalGraph(goalId));
@@ -136,16 +112,6 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
       <div className="flex items-center gap-3" style={{ paddingBlock: 4 }}>
         <Target color={'var(--foreground-quaternary)'} size={16} />
         <div className="text-sm text-muted-foreground">{t('goalProcess.northStar.emptyHint')}</div>
-        {canEdit && (
-          <Button
-            className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
-            size="sm"
-            variant="ghost"
-            onClick={() => openDeclareMetricModal(goalId)}
-          >
-            {t('goalProcess.northStar.declare.title')}
-          </Button>
-        )}
       </div>
     );
 
@@ -174,26 +140,8 @@ const NorthStarMetrics = memo<NorthStarMetricsProps>(({ canEdit, goalId }) => {
   return (
     <div className="flex gap-2.5 flex-wrap">
       {cards.map((card) => (
-        <MetricCard canEdit={canEdit} card={card} goalId={goalId} key={card.key} />
+        <MetricCard card={card} key={card.key} />
       ))}
-      {canEdit && (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                className="[@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
-                size="compact"
-                style={{ alignSelf: 'center' }}
-                variant="ghost"
-                onClick={() => openDeclareMetricModal(goalId)}
-              >
-                <Plus className="size-4" size={16} />
-              </Button>
-            }
-          />
-          <TooltipContent>{t('goalProcess.northStar.declare.title')}</TooltipContent>
-        </Tooltip>
-      )}
     </div>
   );
 });

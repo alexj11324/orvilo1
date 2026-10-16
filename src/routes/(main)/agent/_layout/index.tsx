@@ -2,10 +2,8 @@ import { cn } from 'cn';
 import { type FC } from 'react';
 import { Outlet } from 'react-router';
 
-import { isDesktop } from '@/const/version';
 import { AgentNotFoundGuard, AgentRuntimeWithheldGuard } from '@/features/AgentNotFound';
 import AgentSidebar from '@/features/AgentSidebar';
-import ProtocolUrlHandler from '@/features/ProtocolUrlHandler';
 import { TopicNotFoundGuard } from '@/features/TopicNotFound';
 import AgentIdSync from '@/routes/(main)/agent/_layout/AgentIdSync';
 
@@ -31,7 +29,6 @@ const Layout: FC = () => {
         </AgentNotFoundGuard>
       </div>
       <RegisterHotkeys />
-      {isDesktop && <ProtocolUrlHandler />}
       <AgentIdSync />
     </>
   );

@@ -528,8 +528,8 @@ describe('serverMessagesEngine', () => {
     });
   });
 
-  describe('user memory injection', () => {
-    it('should inject user memories when provided', async () => {
+  describe('retired platform memory injection', () => {
+    it('does not inject provided platform memories and preserves conversation messages', async () => {
       const messages = createBasicMessages();
 
       const result = await serverMessagesEngine({
@@ -552,13 +552,15 @@ describe('serverMessagesEngine', () => {
         },
       });
 
-      // User memories are injected as a consolidated user message before the first user message
-      // Note: meta/id fields are removed by the engine cleanup step, so assert via content.
+      // Cached platform memory must not enter the prompt; explicit messages remain available.
       const injection = result.find(
         (m: any) => m.role === 'user' && String(m.content).includes('<user_memory>'),
       );
-      expect(injection).toBeDefined();
-      expect(injection!.role).toBe('user');
+      expect(injection).toBeUndefined();
+      expect(
+        result.filter((message) => message.role === 'user').map((message) => message.content),
+      ).toEqual(['Hello']);
+      expect(result.find((message) => message.role === 'assistant')?.content).toBe('Hi there!');
     });
 
     it('should skip user memory when memories is undefined', async () => {

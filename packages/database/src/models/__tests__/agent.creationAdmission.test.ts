@@ -92,7 +92,7 @@ describe('Agent creation admission', () => {
     ).rejects.toThrow('ORCHESTRATOR_SETUP_REQUIRED');
   });
 
-  it('keeps personal and workspace/member defaults separate and snapshots only chosen runtime', async () => {
+  it('keeps personal and shared workspace defaults separate and snapshots only chosen runtime', async () => {
     const source = await model.create({
       agencyConfig: {
         boundDeviceId: 'saved-host',
@@ -136,12 +136,11 @@ describe('Agent creation admission', () => {
     await expect(
       workspaceModel.getOrchestratorRuntimeForCreation({ visibility: 'private' }),
     ).rejects.toThrow('ORCHESTRATOR_SETUP_REQUIRED');
-    await new WorkspaceUserSettingsModel(db, userId, workspaceId).updatePreference({
-      orchestratorAgentId: source.id,
-    });
     await expect(
-      workspaceModel.getOrchestratorRuntimeForCreation({ visibility: 'private' }),
-    ).rejects.toThrow('ORCHESTRATOR_SCOPE_MISMATCH');
+      new WorkspaceUserSettingsModel(db, userId, workspaceId).updatePreference({
+        orchestratorAgentId: source.id,
+      }),
+    ).rejects.toThrow('ORCHESTRATOR_SOURCE_PRIVATE');
     await expect(
       new AgentModel(db, otherUserId, workspaceId).getOrchestratorRuntimeForCreation({
         visibility: 'private',

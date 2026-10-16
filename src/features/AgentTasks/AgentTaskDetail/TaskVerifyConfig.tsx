@@ -1,6 +1,5 @@
 'use client';
 
-import { AgentRuntimeErrorType } from '@orvilo/model-runtime';
 import { cn } from 'cn';
 import {
   ChevronRight,
@@ -46,7 +45,6 @@ import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 import { resolveTaskAcceptanceGoal } from './resolveTaskAcceptanceGoal';
 import { TaskAcceptanceHeader } from './TaskAcceptanceHeader';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
-import { useTaskVerifyModel } from './useTaskVerifyModel';
 
 const LoadingStatusIcon = EXECUTION_STATUS_VISUALS.running.icon;
 
@@ -78,23 +76,6 @@ const toDraftItem = (draft: VerifyCriterionDraft, criterionId?: string): DraftIt
   id: nextUid(),
 });
 
-export const isInvalidProviderApiKeyError = (error: unknown): boolean => {
-  if (!error || typeof error !== 'object') return false;
-
-  const errorRecord = error as {
-    data?: { errorData?: { errorType?: unknown }; errorType?: unknown };
-    errorType?: unknown;
-    message?: unknown;
-  };
-
-  return [
-    errorRecord.errorType,
-    errorRecord.message,
-    errorRecord.data?.errorType,
-    errorRecord.data?.errorData?.errorType,
-  ].includes(AgentRuntimeErrorType.InvalidProviderAPIKey);
-};
-
 /** Snapshot task-owned criteria into independent rows before mounting them on a reusable rubric. */
 export const toTemplateCriterionDrafts = (drafts: DraftItem[]): VerifyCriterionDraft[] =>
   drafts
@@ -113,23 +94,14 @@ const TaskVerifyConfig = memo(() => {
   const { allowed: canEditTask } = usePermission('create_content');
 
   const taskId = useTaskDetailTaskId();
+  const taskDatabaseId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
   const taskDescription = useTaskDetailSelector(taskDetailSelectors.taskDescription);
   const taskInstruction = useTaskDetailSelector(taskDetailSelectors.taskInstruction);
   const taskName = useTaskDetailSelector(taskDetailSelectors.taskName);
   const verify = useTaskDetailSelector(taskDetailSelectors.taskVerifyConfig);
-  const taskModel = useTaskDetailSelector(taskDetailSelectors.taskModel);
-  const taskProvider = useTaskDetailSelector(taskDetailSelectors.taskProvider);
-  const assigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
-
-  const {
-    isLoading: generationModelLoading,
-    isReady: generationModelReady,
-    model,
-    provider,
-  } = useTaskVerifyModel({ assigneeAgentId, taskModel, taskProvider });
-  const generationHint = generationModelReady
-    ? undefined
-    : t(generationModelLoading ? 'verifyConfig.modelLoading' : 'verifyConfig.modelUnavailable');
+  const reviewerAgentId = useTaskDetailSelector(taskDetailSelectors.taskReviewerAgentId);
+  const generationReady = !!taskDatabaseId && !!reviewerAgentId;
+  const generationHint = generationReady ? undefined : t('taskDetail.reviewerRequired');
   const taskAcceptanceGoal = resolveTaskAcceptanceGoal({
     description: taskDescription,
     instruction: taskInstruction,
@@ -336,7 +308,7 @@ const TaskVerifyConfig = memo(() => {
   // ---- actions ----
   const generateCriteria = useCallback(
     async (goal: string) => {
-      if (!goal || generating || !model || !provider) return;
+      if (!goal || generating || !generationReady) return;
       setExpanded(true);
       setRequirement(goal);
       setGenerating(true);
@@ -345,38 +317,34 @@ const TaskVerifyConfig = memo(() => {
           context: taskName?.trim() ? `Task: ${taskName.trim()}` : undefined,
           goal,
           maxCriteria: 8,
-          modelConfig: { model, provider },
+          taskId: taskDatabaseId!,
         });
         if (generated.length === 0) throw new Error('No acceptance criteria were generated.');
         const items = generated.map((draft) => toDraftItem(draft));
         commit(items, { enabled: true, requirement: goal });
       } catch (error) {
         console.error('[TaskVerifyConfig] generate failed:', error);
-        toast.error(
-          isInvalidProviderApiKeyError(error)
-            ? t('verifyConfig.generateInvalidProviderAPIKey', { model, provider })
-            : t('verifyConfig.generateFailed'),
-        );
+        toast.error(t('verifyConfig.generateFailed'));
       } finally {
         setGenerating(false);
       }
     },
-    [commit, generating, model, provider, t, taskName],
+    [commit, generating, generationReady, t, taskName, taskDatabaseId],
   );
 
   const handleGenerate = useCallback(async () => {
     const goal = requirement.trim();
-    if (!goal || generating || !model || !provider) return;
+    if (!goal || generating || !generationReady) return;
     await generateCriteria(goal);
-  }, [generateCriteria, generating, model, provider, requirement]);
+  }, [generateCriteria, generating, generationReady, requirement]);
 
   const handleCollapsedClick = useCallback(() => {
-    if (savedCount > 0 || requirement.trim() || !generationModelReady) {
+    if (savedCount > 0 || requirement.trim() || !generationReady) {
       setExpanded(true);
       return;
     }
     void generateCriteria(taskAcceptanceGoal);
-  }, [generateCriteria, generationModelReady, requirement, savedCount, taskAcceptanceGoal]);
+  }, [generateCriteria, generationReady, requirement, savedCount, taskAcceptanceGoal]);
 
   const handleRemove = useCallback(
     (id: string) => {
@@ -404,7 +372,7 @@ const TaskVerifyConfig = memo(() => {
   // so a half-typed criterion never leaks into the read-only preview.
   const handleManualAdd = useCallback(() => {
     openCriterionEditModal({
-      criterion: { required: true, title: '', verifierType: 'llm' },
+      criterion: { required: true, title: '', verifierType: 'agent' },
       isNew: true,
       onSubmit: (next) => commit([...drafts, toDraftItem(next)]),
     });
@@ -584,8 +552,7 @@ const TaskVerifyConfig = memo(() => {
                 requirement input that is the empty state's primary focus. */}
             <div className="flex items-center gap-1">
               <Button
-                disabled={!requirement.trim() || !generationModelReady}
-                loading={generationModelLoading}
+                disabled={!requirement.trim() || !generationReady}
                 size="normal"
                 title={generationHint}
                 onClick={handleGenerate}
@@ -665,7 +632,7 @@ const TaskVerifyConfig = memo(() => {
       type: 'checkbox',
     },
     {
-      disabled: !requirementText || !generationModelReady,
+      disabled: !requirementText || !generationReady,
       icon: <RotateCcw size={16} />,
       key: 'regenerate',
       label: t('verifyConfig.regenerate'),
@@ -756,7 +723,7 @@ const TaskVerifyConfig = memo(() => {
               }
               onOpen={() => openCriterionDetail(item)}
             >
-              {item.verifierType ? (
+              {item.verifierType === 'program' ? (
                 <Tag>
                   {t(`criterion.verifierType.${item.verifierType}` as const, { ns: 'verify' })}
                 </Tag>

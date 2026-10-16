@@ -14,6 +14,7 @@ import {
 } from '../schemas';
 import type { OrviloDatabase } from '../type';
 import { buildDocumentReadableWhere, buildDocumentWritableWhere } from '../utils/documentAccess';
+import { buildOptionalFileTopicCeiling } from '../utils/fileTopicCeiling';
 import { buildWorkspacePayload, buildWorkspaceWhere } from '../utils/workspace';
 import { TeamModel } from './team';
 import { hasActiveWorkspaceMembership } from './workspace';
@@ -69,6 +70,12 @@ export class DocumentModel {
   });
 
   private ownership = () => buildDocumentReadableWhere(this.db, this.accessContext());
+  /** Reads. A parsed file follows the private Project ceiling of that file. */
+  private readable = () =>
+    and(
+      this.ownership(),
+      buildOptionalFileTopicCeiling(this.db, this.accessContext(), documents.fileId),
+    );
   private writeOwnership = () => buildDocumentWritableWhere(this.db, this.accessContext());
 
   findOrCreateFolder = async (name: string, parentId?: string): Promise<DocumentItem> => {
@@ -185,7 +192,7 @@ export class DocumentModel {
     total: number;
   }> => {
     const offset = current * pageSize;
-    const conditions = [this.ownership()];
+    const conditions = [this.readable()];
     if (excludeTeamDocuments) conditions.push(ne(documents.visibility, 'team'));
 
     if (fileTypes?.length) {
@@ -279,7 +286,7 @@ export class DocumentModel {
 
   findById = async (id: string): Promise<DocumentItem | undefined> => {
     return this.db.query.documents.findFirst({
-      where: and(this.ownership(), eq(documents.id, id)),
+      where: and(this.readable(), eq(documents.id, id)),
     });
   };
 
@@ -292,7 +299,7 @@ export class DocumentModel {
   findByIds = async (ids: string[]): Promise<DocumentItem[]> => {
     if (ids.length === 0) return [];
     return this.db.query.documents.findMany({
-      where: and(this.ownership(), inArray(documents.id, ids)),
+      where: and(this.readable(), inArray(documents.id, ids)),
     });
   };
 
@@ -304,13 +311,13 @@ export class DocumentModel {
       // query plan, so repeated lookups keep returning the same content.
       // `created_at` carries no uniqueness guarantee, so `id` breaks ties.
       orderBy: [asc(documents.createdAt), asc(documents.id)],
-      where: and(this.ownership(), eq(documents.fileId, fileId)),
+      where: and(this.readable(), eq(documents.fileId, fileId)),
     });
   };
 
   findBySlug = async (slug: string): Promise<DocumentItem | undefined> => {
     return this.db.query.documents.findFirst({
-      where: and(this.ownership(), eq(documents.slug, slug)),
+      where: and(this.readable(), eq(documents.slug, slug)),
     });
   };
 
@@ -327,7 +334,7 @@ export class DocumentModel {
   ): Promise<DocumentItem | undefined> => {
     return this.db.query.documents.findFirst({
       where: and(
-        this.ownership(),
+        this.readable(),
         eq(documents.source, source),
         eq(documents.sourceType, sourceType),
       ),
@@ -437,14 +444,14 @@ export class DocumentModel {
 
   /**
    * Collect a document and all its descendants (folders + leaves) via BFS.
-   * Honors the current ownership scope.
+   * Honors the current read scope, including a private Project file ceiling.
    */
   private collectSubtree = async (
     rootId: string,
     runner: OrviloDatabase = this.db,
   ): Promise<DocumentItem[]> => {
     const root = await runner.query.documents.findFirst({
-      where: and(this.ownership(), eq(documents.id, rootId)),
+      where: and(this.readable(), eq(documents.id, rootId)),
     });
     if (!root) return [];
 
@@ -453,7 +460,7 @@ export class DocumentModel {
 
     while (frontier.length > 0) {
       const children = await runner.query.documents.findMany({
-        where: and(this.ownership(), inArray(documents.parentId, frontier)),
+        where: and(this.readable(), inArray(documents.parentId, frontier)),
       });
       if (children.length === 0) break;
       collected.push(...children);

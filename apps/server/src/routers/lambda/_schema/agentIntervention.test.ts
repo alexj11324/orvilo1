@@ -44,6 +44,15 @@ describe('ResolveAgentInterventionSchema', () => {
     ).toMatchObject(wrapper);
   });
 
+  it('accepts native question answers', () => {
+    expect(
+      ResolveAgentInterventionSchema.safeParse({
+        ...wrapper,
+        action: { itemId: 'item-1', result: { question: 'answer' }, type: 'submit_answers' },
+      }).success,
+    ).toBe(true);
+  });
+
   it('strictly rejects the removed skip reason and any client operation/tool authority', () => {
     expect(
       ResolveAgentInterventionSchema.safeParse({
@@ -124,7 +133,7 @@ describe('ResolveAgentInterventionSchema', () => {
     expect(parse({ content: 'bounded' })).toBe(true);
   });
 
-  it('rejects marketplace submission without an explicit runtime', () => {
+  it('rejects retired marketplace submission without an explicit runtime', () => {
     expect(
       ResolveAgentInterventionSchema.safeParse({
         ...wrapper,
@@ -137,7 +146,7 @@ describe('ResolveAgentInterventionSchema', () => {
     ).toBe(false);
   });
 
-  it('keeps the marketplace external result discriminator exact', () => {
+  it('rejects retired marketplace submission with any runtime configuration', () => {
     expect(
       ResolveAgentInterventionSchema.safeParse({
         ...wrapper,
@@ -157,9 +166,7 @@ describe('ResolveAgentInterventionSchema', () => {
           type: 'submit_custom',
         },
       }).success,
-    ).toBe(true);
-    // Imported CLI runtimes may carry no selected model — the picker must be
-    // able to submit them (Devin Review: model-less runtimes were rejected).
+    ).toBe(false);
     expect(
       ResolveAgentInterventionSchema.safeParse({
         ...wrapper,
@@ -173,7 +180,7 @@ describe('ResolveAgentInterventionSchema', () => {
           type: 'submit_custom',
         },
       }).success,
-    ).toBe(true);
+    ).toBe(false);
   });
 });
 
@@ -195,12 +202,21 @@ describe('ResolveAgentInterventionBySourceSchema', () => {
     expect(
       ResolveAgentInterventionBySourceSchema.safeParse({
         ...source,
+        action: { result: { question: 'answer' }, type: 'submit_answers' },
+      }).success,
+    ).toBe(true);
+  });
+
+  it('rejects retired marketplace submission by source', () => {
+    expect(
+      ResolveAgentInterventionBySourceSchema.safeParse({
+        ...source,
         action: {
           result: { kind: 'agent_marketplace', selectedTemplateIds: ['template-1'], runtimeConfig },
           type: 'submit_custom',
         },
       }).success,
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('accepts only operation-scoped source Stop', () => {

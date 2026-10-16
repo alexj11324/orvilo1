@@ -27,6 +27,7 @@ import { ProjectModel } from '../project';
 import { ProviderBindingModel } from '../providerBinding';
 import { TaskModel } from '../task';
 import { UserModel } from '../user';
+import { hasWorkspaceAdminAccess } from '../workspace';
 import { WorkspaceUserSettingsModel } from '../workspaceUserSettings';
 
 const serverDB: OrviloDatabase = await getTestDB();
@@ -151,6 +152,12 @@ describe('ProjectModel', () => {
           orchestratorAgentId: `runtime-fixture-${actor.id}-${scope ?? 'personal'}`,
         };
         if (scope) {
+          if (
+            (await serverDB.query.workspaces.findFirst({ where: eq(workspaces.id, scope) }))
+              ?.primaryOwnerId !== actor.id ||
+            !(await hasWorkspaceAdminAccess(serverDB, { userId: actor.id, workspaceId: scope }))
+          )
+            continue;
           await new WorkspaceUserSettingsModel(serverDB, actor.id, scope).updatePreference(
             preference,
           );
@@ -280,7 +287,6 @@ describe('ProjectModel', () => {
       primaryOwnerId: userId,
       slug: workspaceId,
     });
-    await seedRuntimeFixtures();
     // project create validates the lead is an active workspace member.
     await serverDB.insert(workspaceMembers).values([
       { role: 'owner', userId, workspaceId },
@@ -288,6 +294,7 @@ describe('ProjectModel', () => {
       { role: 'member', userId: memberId, workspaceId },
       { role: 'admin', userId: otherUserId, workspaceId },
     ]);
+    await seedRuntimeFixtures();
     const owner = new ProjectModel(serverDB, userId, workspaceId);
     const lead = new ProjectModel(serverDB, leadId, workspaceId);
     const member = new ProjectModel(serverDB, memberId, workspaceId);
@@ -396,8 +403,8 @@ describe('ProjectModel', () => {
     const secondId = 'project-links-scope-b';
     for (const id of [firstId, secondId]) {
       await serverDB.insert(workspaces).values({ id, name: id, slug: id, primaryOwnerId: userId });
-      await seedRuntimeFixtures();
       await serverDB.insert(workspaceMembers).values({ workspaceId: id, userId, role: 'owner' });
+      await seedRuntimeFixtures();
     }
     const first = new ProjectModel(serverDB, userId, firstId);
     const second = new ProjectModel(serverDB, userId, secondId);
@@ -484,8 +491,8 @@ describe('ProjectModel', () => {
     await serverDB
       .insert(workspaces)
       .values({ id: workspaceId, name: 'Planning', slug: workspaceId, primaryOwnerId: userId });
-    await seedRuntimeFixtures();
     await serverDB.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    await seedRuntimeFixtures();
     const scoped = new ProjectModel(serverDB, userId, workspaceId);
     const predecessor = await createProject(scoped, { name: 'Predecessor' });
     const project = await createProject(scoped, {
@@ -553,8 +560,8 @@ describe('ProjectModel', () => {
       { id: workspaceId, name: 'Planning', slug: workspaceId, primaryOwnerId: userId },
       { id: otherWorkspaceId, name: 'Other', slug: otherWorkspaceId, primaryOwnerId: otherUserId },
     ]);
-    await seedRuntimeFixtures();
     await serverDB.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    await seedRuntimeFixtures();
     await serverDB.insert(teams).values([
       { id: 'planning-team', workspaceId, name: 'Design', key: 'DSN' },
       { id: 'other-planning-team', workspaceId: otherWorkspaceId, name: 'Other', key: 'OTH' },
@@ -646,8 +653,8 @@ describe('ProjectModel', () => {
     await serverDB
       .insert(workspaces)
       .values({ id: workspaceId, name: 'Labels', slug: workspaceId, primaryOwnerId: userId });
-    await seedRuntimeFixtures();
     await serverDB.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    await seedRuntimeFixtures();
     const scoped = new ProjectModel(serverDB, userId, workspaceId);
     const project = await createProject(scoped, {
       name: 'Labels',
@@ -667,10 +674,10 @@ describe('ProjectModel', () => {
       slug: foreignWorkspaceId,
       primaryOwnerId: otherUserId,
     });
-    await seedRuntimeFixtures();
     await serverDB
       .insert(workspaceMembers)
       .values({ workspaceId: foreignWorkspaceId, userId: otherUserId, role: 'owner' });
+    await seedRuntimeFixtures();
     const foreign = new ProjectModel(serverDB, otherUserId, foreignWorkspaceId);
     await createProject(foreign, { name: 'Foreign', newLabelNames: ['Foreign label'] });
     const [foreignLabel] = await foreign.listLabels();
@@ -701,8 +708,8 @@ describe('ProjectModel', () => {
       primaryOwnerId: userId,
       slug: workspaceId,
     });
-    await seedRuntimeFixtures();
     await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+    await seedRuntimeFixtures();
     const owner = new ProjectModel(serverDB, userId, workspaceId);
     const project = await createProject(owner, { name: 'Lead editing' });
     await expect(owner.update(project.id, { leadUserId: otherUserId })).rejects.toThrow(
@@ -813,11 +820,11 @@ describe('ProjectModel', () => {
       primaryOwnerId: userId,
       slug: workspaceId,
     });
-    await seedRuntimeFixtures();
     await serverDB.insert(workspaceMembers).values([
       { role: 'owner', userId, workspaceId },
       { role: 'member', userId: otherUserId, workspaceId },
     ]);
+    await seedRuntimeFixtures();
     await serverDB.insert(teams).values({
       createdByUserId: userId,
       id: 'project-count-private-team',
@@ -935,13 +942,13 @@ describe('ProjectModel', () => {
       primaryOwnerId: userId,
       slug: workspaceId,
     });
-    await seedRuntimeFixtures();
     // project_members carries a composite FK to workspace_members.
     await serverDB.insert(workspaceMembers).values([
       { role: 'owner', userId, workspaceId },
       { role: 'member', userId: otherUserId, workspaceId },
       { role: 'member', userId: granteeId, workspaceId },
     ]);
+    await seedRuntimeFixtures();
     const owner = new ProjectModel(serverDB, userId, workspaceId);
     const member = new ProjectModel(serverDB, otherUserId, workspaceId);
     const outsider = new ProjectModel(serverDB, granteeId, workspaceId);

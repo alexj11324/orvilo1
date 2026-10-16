@@ -7,7 +7,6 @@ export default [
   route('verify-email', 'routes/verifyEmail.tsx'),
   route('reset-password', 'routes/resetPassword.tsx'),
   route('auth-error', 'routes/authError.tsx'),
-  route('market-auth-callback', 'routes/marketAuthCallback.tsx'),
   route('oauth/consent/:uid', 'routes/oauthConsent.tsx'),
   route('oauth/device', 'routes/oauthDevice.tsx'),
   route('oauth/device/confirm', 'routes/oauthDeviceConfirm.tsx'),

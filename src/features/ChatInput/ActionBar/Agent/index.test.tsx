@@ -234,9 +234,8 @@ describe('Agent action', () => {
     expect(icon?.getAttribute('src')).toBe('/app-icons/icon-512x512.png');
     expect(getByTestId('popover-trigger').textContent).toContain('Current Agent');
     expect(mocks.fetchAgentList).toHaveBeenCalledOnce();
-    // The dropdown must offer the builtin task agent as a conversation target.
     expect(mocks.listSelect).toHaveBeenCalledWith(
-      expect.objectContaining({ activeAgentId: 'agt_current', includeTaskAgent: true }),
+      expect.objectContaining({ activeAgentId: 'agt_current' }),
     );
   });
 

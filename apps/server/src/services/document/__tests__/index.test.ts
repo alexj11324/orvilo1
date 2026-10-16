@@ -13,14 +13,15 @@ import { publishResourceEvent } from '../../resourceEvents';
 import { DocumentHistoryService } from '../history';
 import { DocumentService } from '../index';
 
+vi.mock('@orvilo/database', async () => import('@/database/utils/workspace'));
 vi.mock('@/server/modules/AgentExecution/redis', () => ({
   getAgentRuntimeRedisClient: () => null,
 }));
-vi.mock('@/database/models/document');
-vi.mock('@/database/models/file');
-vi.mock('@/database/models/knowledgeBase');
-vi.mock('../../file');
-vi.mock('../history');
+vi.mock('@/database/models/document', () => ({ DocumentModel: vi.fn() }));
+vi.mock('@/database/models/file', () => ({ FileModel: vi.fn() }));
+vi.mock('@/database/models/knowledgeBase', () => ({ KnowledgeBaseModel: vi.fn() }));
+vi.mock('../../file', () => ({ FileService: vi.fn() }));
+vi.mock('../history', () => ({ DocumentHistoryService: vi.fn() }));
 // Spy on the realtime broadcast so we can assert lock.changed is published only
 // on a genuine state change (holder edge / actual release).
 vi.mock('../../resourceEvents', () => ({ publishResourceEvent: vi.fn() }));
@@ -230,94 +231,27 @@ describe('DocumentService', () => {
       );
     });
 
-    it('should create a file record when knowledgeBaseId is provided and fileType is not folder', async () => {
-      const mockFile = { id: 'file-1' };
-      const mockDoc = { id: 'doc-1', title: 'Test' };
-      mockFileModel.create.mockResolvedValue(mockFile);
-      mockDocumentModel.create.mockResolvedValue(mockDoc);
-
-      const result = await service.createDocument({
-        title: 'Test',
-        editorData: {},
-        content: 'Content',
-        knowledgeBaseId: 'kb-1',
-      });
-
-      expect(mockFileModel.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: 'Test',
-          knowledgeBaseId: 'kb-1',
-          fileType: 'custom/document',
-          url: 'internal://document/placeholder',
-          size: 'Content'.length,
-        }),
-        false,
-      );
-      expect(mockDocumentModel.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          fileId: 'file-1',
-          knowledgeBaseId: 'kb-1',
-        }),
-      );
-      expect(result).toEqual(mockDoc);
-    });
-
-    it('should NOT create a file record when fileType is custom/folder', async () => {
-      const mockDoc = { id: 'doc-1', title: 'My Folder' };
-      mockDocumentModel.create.mockResolvedValue(mockDoc);
-
-      await service.createDocument({
-        title: 'My Folder',
-        editorData: {},
-        knowledgeBaseId: 'kb-1',
-        fileType: 'custom/folder',
-      });
-
-      expect(mockFileModel.create).not.toHaveBeenCalled();
-      expect(mockDocumentModel.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          fileId: null,
-          fileType: 'custom/folder',
-          // folders store knowledgeBaseId in metadata
-          metadata: { knowledgeBaseId: 'kb-1' },
-        }),
-      );
-    });
-
-    it('should store knowledgeBaseId in metadata for folders', async () => {
-      mockDocumentModel.create.mockResolvedValue({ id: 'doc-1' });
-
-      await service.createDocument({
-        title: 'Folder',
-        editorData: {},
-        knowledgeBaseId: 'kb-1',
-        fileType: 'custom/folder',
-        metadata: { existingKey: 'value' },
-      });
-
-      expect(mockDocumentModel.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          metadata: { existingKey: 'value', knowledgeBaseId: 'kb-1' },
-        }),
-      );
-    });
-
-    it('should use custom fileType when provided', async () => {
-      mockDocumentModel.create.mockResolvedValue({ id: 'doc-1' });
-      mockFileModel.create.mockResolvedValue({ id: 'file-1' });
-
-      await service.createDocument({
-        title: 'PDF Doc',
-        editorData: {},
-        knowledgeBaseId: 'kb-1',
-        fileType: 'application/pdf',
-      });
-
-      expect(mockFileModel.create).toHaveBeenCalledWith(
-        expect.objectContaining({ fileType: 'application/pdf' }),
-        false,
-      );
-    });
+    it.each(['custom/document', 'custom/folder', 'application/pdf'])(
+      'rejects new %s membership in historical KBs in personal and workspace scopes',
+      async (fileType) => {
+        for (const workspaceId of [undefined, 'workspace-1']) {
+          const scopedService = new DocumentService(mockDb, userId, workspaceId);
+          await expect(
+            scopedService.createDocument({
+              title: 'New',
+              editorData: {},
+              fileType,
+              knowledgeBaseId: 'kb-1',
+            }),
+          ).rejects.toMatchObject({
+            code: 'FORBIDDEN',
+            message: 'Platform knowledge bases are retired',
+          });
+        }
+        expect(mockFileModel.create).not.toHaveBeenCalled();
+        expect(mockDocumentModel.create).not.toHaveBeenCalled();
+      },
+    );
 
     it('should pass slug and parentId to document model', async () => {
       mockDocumentModel.create.mockResolvedValue({ id: 'doc-1' });
@@ -335,142 +269,6 @@ describe('DocumentService', () => {
           parentId: 'parent-doc-id',
         }),
       );
-    });
-
-    describe('workspace visibility propagation to KB mirror file', () => {
-      const workspaceId = 'workspace-1';
-
-      beforeEach(() => {
-        service = new DocumentService(mockDb, userId, workspaceId);
-        mockFileModel.create.mockResolvedValue({ id: 'file-1' });
-        mockDocumentModel.create.mockResolvedValue({ id: 'doc-1' });
-      });
-
-      it('uses private knowledge-base visibility over an explicit public value', async () => {
-        mockKnowledgeBaseModel.findById.mockResolvedValue({
-          id: 'kb-1',
-          visibility: 'private',
-        });
-
-        await service.createDocument({
-          title: 'Private Doc',
-          editorData: {},
-          knowledgeBaseId: 'kb-1',
-          visibility: 'public',
-        });
-
-        expect(mockFileModel.create).toHaveBeenCalledWith(
-          expect.objectContaining({ visibility: 'private' }),
-          false,
-        );
-        expect(mockDocumentModel.create).toHaveBeenCalledWith(
-          expect.objectContaining({ visibility: 'private' }),
-        );
-      });
-
-      it('inherits public visibility from the workspace knowledge base', async () => {
-        await service.createDocument({
-          title: 'Draft',
-          editorData: {},
-          knowledgeBaseId: 'kb-1',
-        });
-
-        expect(mockFileModel.create).toHaveBeenCalledWith(
-          expect.objectContaining({ visibility: 'public' }),
-          false,
-        );
-        expect(mockDocumentModel.create).toHaveBeenCalledWith(
-          expect.objectContaining({ visibility: 'public' }),
-        );
-        expect(mockKnowledgeBaseModel.findById).toHaveBeenCalledWith('kb-1', undefined);
-      });
-
-      it('inherits library visibility without consulting the navigation parent', async () => {
-        mockDocumentModel.findById.mockResolvedValue({ id: 'parent-1', visibility: 'public' });
-
-        await service.createDocument({
-          title: 'Child',
-          editorData: {},
-          knowledgeBaseId: 'kb-1',
-          parentId: 'parent-1',
-        });
-
-        expect(mockDocumentModel.findById).not.toHaveBeenCalled();
-        expect(mockFileModel.create).toHaveBeenCalledWith(
-          expect.objectContaining({ visibility: 'public' }),
-          false,
-        );
-        expect(mockDocumentModel.create).toHaveBeenCalledWith(
-          expect.objectContaining({ visibility: 'public' }),
-        );
-      });
-
-      it('uses the library visibility when the navigation parent is missing', async () => {
-        mockDocumentModel.findById.mockResolvedValue(undefined);
-
-        await service.createDocument({
-          title: 'Orphaned Child',
-          editorData: {},
-          knowledgeBaseId: 'kb-1',
-          parentId: 'missing-parent',
-        });
-
-        expect(mockFileModel.create).toHaveBeenCalledWith(
-          expect.objectContaining({ visibility: 'public' }),
-          false,
-        );
-      });
-
-      it('inherits private visibility from a private knowledge base', async () => {
-        mockKnowledgeBaseModel.findById.mockResolvedValue({
-          id: 'kb-private',
-          visibility: 'private',
-        });
-
-        await service.createDocument({
-          title: 'Private Library Doc',
-          editorData: {},
-          knowledgeBaseId: 'kb-private',
-        });
-
-        expect(mockFileModel.create).toHaveBeenCalledWith(
-          expect.objectContaining({ visibility: 'private' }),
-          false,
-        );
-        expect(mockDocumentModel.create).toHaveBeenCalledWith(
-          expect.objectContaining({ visibility: 'private' }),
-        );
-      });
-
-      it('rejects creation when the knowledge base is not accessible', async () => {
-        mockKnowledgeBaseModel.findById.mockResolvedValue(undefined);
-
-        await expect(
-          service.createDocument({
-            title: 'Missing Library Doc',
-            editorData: {},
-            knowledgeBaseId: 'missing-kb',
-          }),
-        ).rejects.toMatchObject({ code: 'NOT_FOUND' });
-
-        expect(mockFileModel.create).not.toHaveBeenCalled();
-        expect(mockDocumentModel.create).not.toHaveBeenCalled();
-      });
-    });
-
-    it('omits visibility on the KB mirror file in personal mode', async () => {
-      mockFileModel.create.mockResolvedValue({ id: 'file-1' });
-      mockDocumentModel.create.mockResolvedValue({ id: 'doc-1' });
-
-      await service.createDocument({
-        title: 'Personal Doc',
-        editorData: {},
-        knowledgeBaseId: 'kb-1',
-      });
-
-      const fileCall = mockFileModel.create.mock.calls[0]?.[0];
-      expect(fileCall).toBeDefined();
-      expect(fileCall).not.toHaveProperty('visibility');
     });
   });
 
@@ -759,6 +557,32 @@ describe('DocumentService', () => {
       id: 'doc-1',
       updatedAt: new Date('2026-04-11T00:00:00.000Z'),
       ...overrides,
+    });
+
+    it.each(['skills/index', 'skills/bundle'])(
+      'rejects retired managed skill edits through the document editor: %s',
+      async (fileType) => {
+        mockDocumentModel.findById.mockResolvedValue(createCurrentDocument({ fileType }));
+        await expect(
+          service.updateDocument('doc-1', { content: '# Changed skill' }),
+        ).rejects.toMatchObject({
+          code: 'FORBIDDEN',
+          message: 'Platform skill production has been retired',
+        });
+        expect(mockDocumentModel.update).not.toHaveBeenCalled();
+        expect(mockDocumentHistoryService.createHistory).not.toHaveBeenCalled();
+      },
+    );
+
+    it('keeps editing a historical KB document available', async () => {
+      mockDocumentModel.findById.mockResolvedValue(
+        createCurrentDocument({ knowledgeBaseId: 'kb-1' }),
+      );
+      mockDocumentModel.update.mockResolvedValue({ id: 'doc-1' });
+      await expect(
+        service.updateDocument('doc-1', { content: 'Updated archived document' }),
+      ).resolves.toMatchObject({ id: 'doc-1' });
+      expect(mockDocumentModel.update).toHaveBeenCalled();
     });
 
     it('should update content and recalculate char/line counts', async () => {

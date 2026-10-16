@@ -93,34 +93,22 @@ describe('Skill Router Integration Tests', () => {
     return row;
   };
 
-  const getManagedSkillBindingId = async ({
-    agentId,
-    skillName,
-  }: {
-    agentId: string;
-    skillName: string;
-  }) => {
-    const documents = await agentDocumentModel.findByAgent(agentId);
-    const bundle = documents.find(
-      (item) =>
-        item.fileType === SKILL_BUNDLE_FILE_TYPE &&
-        item.filename === skillName &&
-        item.parentId === null &&
-        item.templateId === AGENT_SKILL_TEMPLATE_ID,
+  const seedManagedSkill = async (agentId: string, name = 'historical-skill') => {
+    const bundle = await agentDocumentModel.create(agentId, name, '', {
+      fileType: SKILL_BUNDLE_FILE_TYPE,
+      templateId: AGENT_SKILL_TEMPLATE_ID,
+    });
+    const index = await agentDocumentModel.create(
+      agentId,
+      SKILL_INDEX_FILENAME,
+      '# Historical skill',
+      {
+        fileType: SKILL_INDEX_FILE_TYPE,
+        templateId: AGENT_SKILL_TEMPLATE_ID,
+        parentId: bundle.documentId,
+      },
     );
-    const document = documents.find(
-      (item) =>
-        item.fileType === SKILL_INDEX_FILE_TYPE &&
-        item.filename === SKILL_INDEX_FILENAME &&
-        item.parentId === bundle?.documentId &&
-        item.templateId === AGENT_SKILL_TEMPLATE_ID,
-    );
-
-    if (!document) {
-      throw new Error(`Expected managed skill document agent:${skillName} to exist`);
-    }
-
-    return document.id;
+    return { bundle, index, path: `./orvilo/skills/agent/skills/${name}/SKILL.md` };
   };
 
   describe('list', () => {
@@ -302,288 +290,72 @@ describe('Skill Router Integration Tests', () => {
     });
   });
 
-  describe('VFS write APIs', () => {
-    it('should create an agent skill through the VFS API', async () => {
+  describe('retired platform skill writers', () => {
+    it('rejects VFS skill creation without persisting documents', async () => {
       const caller = agentDocumentRouter.createCaller(createTestContext(userId));
       const agentId = await createTestAgent(serverDB, userId);
-
-      const result = await caller.createSkillByPath({
-        agentId,
-        content: '# Research Helper\n\nUse this skill for research.',
-        skillName: 'research-helper',
-        targetNamespace: 'agent',
-      });
-
-      if (!result) {
-        throw new Error('Expected createSkill to return a skill file node');
-      }
-
-      expect(result.mount?.namespace).toBe('agent');
-      expect(result.path).toBe('./orvilo/skills/agent/skills/research-helper/SKILL.md');
-
-      const fileNode = await caller.readDocumentByPath({
-        agentId,
-        path: './orvilo/skills/agent/skills/research-helper/SKILL.md',
-      });
-
-      if (!fileNode) {
-        throw new Error('Expected created agent skill file to exist');
-      }
-
-      expect(fileNode.content?.trimEnd()).toBe('# Research Helper\n\nUse this skill for research.');
-    });
-
-    it('should delete an agent skill through the VFS API', async () => {
-      const caller = agentDocumentRouter.createCaller(createTestContext(userId));
-      const agentId = await createTestAgent(serverDB, userId);
-
-      const created = await caller.createSkillByPath({
-        agentId,
-        content: '# Disposable Skill\n\nTemporary content.',
-        skillName: 'disposable-skill',
-        targetNamespace: 'agent',
-      });
-
-      if (!created) {
-        throw new Error('Expected createSkill to return a disposable skill file node');
-      }
-
-      await caller.deleteSkillByPath({
-        agentId,
-        path: created.path,
-      });
-
-      await expect(
-        caller.readDocumentByPath({
-          agentId,
-          path: created.path,
-        }),
-      ).rejects.toThrow();
-    });
-
-    it('should surface CONFLICT when creating a duplicate VFS skill', async () => {
-      const caller = agentDocumentRouter.createCaller(createTestContext(userId));
-      const agentId = await createTestAgent(serverDB, userId);
-
-      await caller.createSkillByPath({
-        agentId,
-        content: '# Research Helper\n\nUse this skill for research.',
-        skillName: 'research-helper',
-        targetNamespace: 'agent',
-      });
-
       await expect(
         caller.createSkillByPath({
           agentId,
-          content: '# Research Helper\n\nDuplicate content.',
-          skillName: 'research-helper',
+          content: '# New skill',
+          skillName: 'new-skill',
           targetNamespace: 'agent',
         }),
-      ).rejects.toMatchObject({ code: 'CONFLICT' });
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      expect(await agentDocumentModel.findByAgent(agentId)).toEqual([]);
     });
 
-    it('should surface NOT_FOUND when deleting a missing VFS skill', async () => {
+    it('keeps historical VFS skills readable while refusing update and deletion', async () => {
       const caller = agentDocumentRouter.createCaller(createTestContext(userId));
       const agentId = await createTestAgent(serverDB, userId);
-
+      const { path, index } = await seedManagedSkill(agentId);
       await expect(
-        caller.deleteSkillByPath({
-          agentId,
-          path: './orvilo/skills/agent/skills/missing-skill/SKILL.md',
-        }),
-      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+        caller.updateSkillByPath({ agentId, path, content: '# Changed' }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(caller.deleteSkillByPath({ agentId, path })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+      expect(await caller.readDocumentByPath({ agentId, path })).toMatchObject({
+        content: '# Historical skill',
+      });
+      expect(await agentDocumentModel.findById(index.id)).toMatchObject({
+        content: '# Historical skill',
+        deletedAt: null,
+      });
     });
 
-    it('should surface BAD_REQUEST for invalid skill names', async () => {
+    it('refuses conversion and preserves the ordinary source document', async () => {
       const caller = agentDocumentRouter.createCaller(createTestContext(userId));
       const agentId = await createTestAgent(serverDB, userId);
-
-      await expect(
-        caller.createSkillByPath({
-          agentId,
-          content: '# Invalid',
-          skillName: 'bad/name',
-          targetNamespace: 'agent',
-        }),
-      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-    });
-
-    it('should surface BAD_REQUEST for unsupported VFS file paths on update', async () => {
-      const caller = agentDocumentRouter.createCaller(createTestContext(userId));
-      const agentId = await createTestAgent(serverDB, userId);
-
-      await expect(
-        caller.updateSkillByPath({
-          agentId,
-          content: '# Updated',
-          path: './orvilo/skills/agent/skills/research-helper/notes.md',
-        }),
-      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-    });
-
-    it('should surface METHOD_NOT_SUPPORTED when renaming a skill-managed document through agentDocument', async () => {
-      const skillCaller = agentDocumentRouter.createCaller(createTestContext(userId));
-      const documentCaller = agentDocumentRouter.createCaller(createTestContext(userId));
-      const agentId = await createTestAgent(serverDB, userId);
-
-      await skillCaller.createSkillByPath({
-        agentId,
-        content: '# Research Helper\n\nUse this skill for research.',
-        skillName: 'research-helper',
-        targetNamespace: 'agent',
-      });
-
-      const id = await getManagedSkillBindingId({
-        agentId,
-        skillName: 'research-helper',
-      });
-
-      await expect(
-        documentCaller.renameDocument({
-          agentId,
-          id,
-          newTitle: 'Renamed Skill',
-        }),
-      ).rejects.toMatchObject({ code: 'METHOD_NOT_SUPPORTED' });
-    });
-
-    it('should surface METHOD_NOT_SUPPORTED when copying a skill-managed document through agentDocument', async () => {
-      const skillCaller = agentDocumentRouter.createCaller(createTestContext(userId));
-      const documentCaller = agentDocumentRouter.createCaller(createTestContext(userId));
-      const agentId = await createTestAgent(serverDB, userId);
-
-      await skillCaller.createSkillByPath({
-        agentId,
-        content: '# Research Helper\n\nUse this skill for research.',
-        skillName: 'research-helper',
-        targetNamespace: 'agent',
-      });
-
-      const id = await getManagedSkillBindingId({
-        agentId,
-        skillName: 'research-helper',
-      });
-
-      await expect(
-        documentCaller.copyDocument({
-          agentId,
-          id,
-          newTitle: 'Copied Skill',
-        }),
-      ).rejects.toMatchObject({ code: 'METHOD_NOT_SUPPORTED' });
-    });
-  });
-
-  describe('convertDocumentToSkill', () => {
-    it('should migrate an existing document into a managed skill in place', async () => {
-      const caller = agentDocumentRouter.createCaller(createTestContext(userId));
-      const agentId = await createTestAgent(serverDB, userId);
-
       const doc = await caller.createDocument({
         agentId,
-        content: '# Weekly Report\n\nSummarize the week.',
-        title: 'Weekly Report',
+        content: '# Report\n\nBody.',
+        title: 'Report',
       });
-
-      const sourceAgentDocumentId = doc!.id;
-
-      const skill = await caller.convertDocumentToSkill({
-        agentId,
-        description: 'Generate the weekly report.',
-        name: 'weekly-report',
-        sourceAgentDocumentId,
-        title: 'Weekly Report',
-      });
-
-      expect(skill.name).toBe('weekly-report');
-      expect(skill.content).toContain('name: weekly-report');
-      expect(skill.content).toContain('description: Generate the weekly report.');
-      expect(skill.content).toContain('Summarize the week.');
-
-      // The original document row is reused as the SKILL.md index (id preserved).
-      expect(skill.index.agentDocumentId).toBe(sourceAgentDocumentId);
-
-      const indexRow = await new AgentDocumentModel(serverDB, userId).findById(
-        sourceAgentDocumentId,
-      );
-      expect(indexRow?.fileType).toBe(SKILL_INDEX_FILE_TYPE);
-      expect(indexRow?.filename).toBe(SKILL_INDEX_FILENAME);
-      expect(indexRow?.templateId).toBe(AGENT_SKILL_TEMPLATE_ID);
-
-      // A bundle parent was created to hold the index.
-      const bundleRow = await new AgentDocumentModel(serverDB, userId).findById(
-        skill.bundle.agentDocumentId,
-      );
-      expect(bundleRow?.fileType).toBe(SKILL_BUNDLE_FILE_TYPE);
-      expect(bundleRow?.filename).toBe('weekly-report');
-      expect(indexRow?.parentId).toBe(bundleRow?.documentId);
-    });
-
-    it('should surface NOT_FOUND when the source document does not exist', async () => {
-      const caller = agentDocumentRouter.createCaller(createTestContext(userId));
-      const agentId = await createTestAgent(serverDB, userId);
-
+      const before = await agentDocumentModel.findById(doc!.id);
       await expect(
         caller.convertDocumentToSkill({
           agentId,
-          description: 'desc',
-          name: 'missing-doc',
-          sourceAgentDocumentId: '00000000-0000-0000-0000-000000000000',
-          title: 'Missing',
-        }),
-      ).rejects.toMatchObject({ code: 'NOT_FOUND' });
-    });
-
-    it('should surface BAD_REQUEST for an invalid skill name', async () => {
-      const caller = agentDocumentRouter.createCaller(createTestContext(userId));
-      const agentId = await createTestAgent(serverDB, userId);
-
-      const doc = await caller.createDocument({
-        agentId,
-        content: '# Doc\n\nBody.',
-        title: 'Doc',
-      });
-
-      await expect(
-        caller.convertDocumentToSkill({
-          agentId,
-          description: 'desc',
-          name: 'Bad Name',
+          description: 'Report skill',
+          name: 'report',
           sourceAgentDocumentId: doc!.id,
-          title: 'Doc',
+          title: 'Report',
         }),
-      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      ).rejects.toThrow('Platform skill production has been retired');
+      expect(await agentDocumentModel.findById(doc!.id)).toEqual(before);
+      expect(await agentDocumentModel.findByAgent(agentId)).toHaveLength(1);
     });
 
-    it('should reject converting an existing managed skill index', async () => {
+    it('preserves the ordinary API guards for historical skill identity', async () => {
       const caller = agentDocumentRouter.createCaller(createTestContext(userId));
       const agentId = await createTestAgent(serverDB, userId);
-
-      const doc = await caller.createDocument({
-        agentId,
-        content: '# Existing Skill\n\nBody.',
-        title: 'Existing Skill',
-      });
-
-      const skill = await caller.convertDocumentToSkill({
-        agentId,
-        description: 'An existing skill.',
-        name: 'existing-skill',
-        sourceAgentDocumentId: doc!.id,
-        title: 'Existing Skill',
-      });
-
-      // Converting the managed skill index again would reparent it under a new
-      // bundle and strip the original bundle of its SKILL.md, corrupting it.
+      const { index } = await seedManagedSkill(agentId);
       await expect(
-        caller.convertDocumentToSkill({
-          agentId,
-          description: 'desc',
-          name: 'another-skill',
-          sourceAgentDocumentId: skill.index.agentDocumentId,
-          title: 'Another Skill',
-        }),
-      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+        caller.renameDocument({ agentId, id: index.id, newTitle: 'Renamed' }),
+      ).rejects.toMatchObject({ code: 'METHOD_NOT_SUPPORTED' });
+      await expect(
+        caller.copyDocument({ agentId, id: index.id, newTitle: 'Copied' }),
+      ).rejects.toMatchObject({ code: 'METHOD_NOT_SUPPORTED' });
     });
   });
 
@@ -604,26 +376,14 @@ describe('Skill Router Integration Tests', () => {
       const caller = agentDocumentRouter.createCaller(createTestContext(userId));
       const agentId = await createTestAgent(serverDB, userId);
 
-      const doc = await caller.createDocument({
-        agentId,
-        content: '# Existing Skill\n\nBody.',
-        title: 'Existing Skill',
-      });
-
-      const skill = await caller.convertDocumentToSkill({
-        agentId,
-        description: 'An existing skill.',
-        name: 'existing-skill',
-        sourceAgentDocumentId: doc!.id,
-        title: 'Existing Skill',
-      });
+      const skill = await seedManagedSkill(agentId);
 
       // Shares the convert guard: managed skill rows are not convertible, so
       // meta generation must reject before reaching the model.
       await expect(
         caller.generateSkillMeta({
           agentId,
-          sourceAgentDocumentId: skill.index.agentDocumentId,
+          sourceAgentDocumentId: skill.index.id,
         }),
       ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     });

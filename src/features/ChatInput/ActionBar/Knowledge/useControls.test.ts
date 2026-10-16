@@ -56,6 +56,7 @@ describe('useControls', () => {
 
     expect(result.current.items).toHaveLength(1);
     expect(result.current.enabledCount).toBe(1);
+    expect(result.current.items[0].label).toBe('Handbook');
 
     render(result.current.footer as ReactElement);
     fireEvent.click(screen.getByRole('button', { name: 'knowledgeBase.viewMore' }));

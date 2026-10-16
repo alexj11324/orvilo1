@@ -3,7 +3,6 @@ import { createNanoId } from '@orvilo/utils';
 import { type OnboardingFormValues } from '@/components/blocks/onboarding-2/components/onboarding';
 import { workspaceService } from '@/services/workspace';
 
-
 /**
  * Resolve the onboarding workspace without ever minting a duplicate: reuse the
  * in-memory ref for same-mount retries, then the server-side onboarding
@@ -33,9 +32,7 @@ export const resolveOnboardingWorkspace = async (
   const candidateId = persistedWorkspaceId ?? createNanoId(16)();
 
   if (persistedWorkspaceId) {
-    const mine = (await workspaceService.list()).find(
-      (w) => w.id === persistedWorkspaceId,
-    );
+    const mine = (await workspaceService.list()).find((w) => w.id === persistedWorkspaceId);
     if (mine) return { id: mine.id, slug: mine.slug };
     // Checkpointed workspace vanished (deleted between attempts) — create under
     // the same candidate id below.
@@ -53,9 +50,7 @@ export const resolveOnboardingWorkspace = async (
     // The create may have committed while its response was lost, or a second
     // tab raced the same checkpointed id — either way the committed row, if
     // ours, is the one carrying OUR candidate id in the caller's own list.
-    const mine = (await workspaceService.list().catch(() => [])).find(
-      (w) => w.id === candidateId,
-    );
+    const mine = (await workspaceService.list().catch(() => [])).find((w) => w.id === candidateId);
     if (mine) return { id: mine.id, slug: mine.slug };
     throw error;
   }
@@ -70,9 +65,7 @@ export const findOnboardingWorkspace = async (
   persistedWorkspaceId: string,
 ): Promise<{ id: string; name: string; slug: string } | undefined> => {
   try {
-    const mine = (await workspaceService.list()).find(
-      (w) => w.id === persistedWorkspaceId,
-    );
+    const mine = (await workspaceService.list()).find((w) => w.id === persistedWorkspaceId);
     return mine ? { id: mine.id, name: mine.name, slug: mine.slug } : undefined;
   } catch {
     // Not knowing is safe: the create form below resolves the same id idempotently.

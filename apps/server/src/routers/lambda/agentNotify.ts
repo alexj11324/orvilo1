@@ -22,7 +22,6 @@ import {
   remoteRunGenerationMatches,
   resolveRemoteCancel,
 } from '@/server/services/heterogeneousAgent/runAdmission';
-import { instantiateVerifyPlanOnStart } from '@/server/services/verify';
 
 // Module-level singleton so we don't create a new Redis connection per request.
 let _streamManager: ReturnType<typeof createStreamEventManager> | undefined;
@@ -298,48 +297,6 @@ export const agentNotifyRouter = router({
             const msg = await ctx.messageModel.findById(writtenMessageId).catch(() => undefined);
             lastAssistantContent = (msg?.content as string | undefined) ?? undefined;
           }
-          // Mirror heteroFinish's done-path prep (this is the openclaw/hermes
-          // equivalent terminal funnel). Only needed for successful completion
-          // (verify is done-only). Each step is self-guarded so a failure degrades instead
-          // of aborting the terminal funnel.
-          let goal: unknown = '';
-          if (completionReason === 'done') {
-            // Guarantee the task's verify plan is DURABLY persisted before the gate
-            // (completeOperation → runVerifyOnCompletion) reads it. The start-side
-            // instantiation in execAgent is fire-and-forget on a SEPARATE
-            // CompletionLifecycle instance, so its in-memory await can't bridge to
-            // THIS notify request — a fast remote task could otherwise reach the
-            // gate before the plan lands and silently skip verify (and the
-            // verify-bound task deferral). instantiateVerifyPlanOnStart is
-            // idempotent, so awaiting it here creates the plan only when the start
-            // side hasn't yet, and is a no-op once it has.
-            try {
-              const op = await new AgentOperationModel(
-                ctx.serverDB,
-                ctx.userId,
-                ctx.workspaceId ?? undefined,
-              ).findById(remoteOperationId);
-              if (op?.taskId && !op.parentOperationId) {
-                await instantiateVerifyPlanOnStart(
-                  ctx.serverDB,
-                  ctx.userId,
-                  { operationId: remoteOperationId, taskId: op.taskId },
-                  ctx.workspaceId ?? undefined,
-                );
-              }
-            } catch (err) {
-              log('notify: ensure verify plan failed (non-fatal): %O', err);
-            }
-            // Resolve the run goal (first user turn) — the verify gate judges the
-            // deliverable against it. Wrapped in try/catch (not just a promise
-            // `.catch`) so a throwing/absent query degrades to an empty goal.
-            try {
-              const history = await ctx.messageModel.query({ pageSize: 50, topicId });
-              goal = history.find((m) => m.role === 'user')?.content ?? '';
-            } catch (err) {
-              log('notify: failed to resolve verify goal (non-fatal): %O', err);
-            }
-          }
           if (!terminalRetry) {
             await new CompletionLifecycle(
               ctx.serverDB,
@@ -351,7 +308,6 @@ export const agentNotifyRouter = router({
                 assistantMessageId: writtenMessageId,
                 deliverable: lastAssistantContent,
                 error: terminalError ?? undefined,
-                goal,
                 operationId: remoteOperationId,
                 orchestrationRole: terminalOperation?.orchestrationRole,
                 serializedHooks,

@@ -1,10 +1,15 @@
 // @vitest-environment node
-import type { ProjectOrchestrationPolicy } from '@orvilo/types';
+import type { ProjectOrchestrationPolicy, TaskConfig } from '@orvilo/types';
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import {
+  seedConfirmedIssuePlan,
+  seedReviewedIssueDelivery,
+} from '../../../tests/fixtures/issueDelivery';
 import { getTestDB } from '../../core/getTestDB';
 import {
+  agentOperations,
   agents,
   goalNodes,
   goals,
@@ -24,8 +29,10 @@ import {
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
+import { IssueDeliveryModel } from '../issueDelivery';
 import { TaskModel } from '../task';
 import {
+  TaskAutomationQuotaReachedError,
   TaskDispatchIdempotencyConflictError,
   TaskDispatchModel,
   TaskDispatchNotFoundError,
@@ -98,6 +105,51 @@ const createTask = async (identifier: string, seq: number, targetWorkspaceId = w
     })
     .returning();
   return task;
+};
+
+const reviewedTaskWithActiveReviewer = async () => {
+  await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+  const initial = await createTask('REVIEW-1', 1);
+  await db.update(tasks).set({ executionGeneration: 2 }).where(eq(tasks.id, initial.id));
+  await db.insert(taskDispatches).values({
+    id: 'delivered-generation-two',
+    taskId: initial.id,
+    workspaceId,
+    generation: 2,
+    taskRevision: initial.domainRevision,
+    requirementRevision: initial.requirementRevision,
+    policyRevision: initial.policyRevision,
+    requestedBy: userId,
+    idempotencyKey: 'original-delivery',
+    phase: 'succeeded',
+  });
+  const delivery = await seedReviewedIssueDelivery(db, initial.id, {
+    dispatchId: 'delivered-generation-two',
+  });
+  await seedConfirmedIssuePlan(db, initial.id);
+  const taskModel = new TaskModel(db, userId, workspaceId);
+  const task = (await taskModel.findById(initial.id))!;
+  const config = task.config as TaskConfig;
+  await db
+    .update(tasks)
+    .set({
+      assigneeAgentId: task.reviewerAgentId,
+      config: { ...config, issueReview: { ...config.issueReview!, state: 'running' } },
+    })
+    .where(eq(tasks.id, task.id));
+  await db
+    .update(taskDispatches)
+    .set({ agentId: task.reviewerAgentId, operationId: delivery.proof.deliveryOperationId })
+    .where(eq(taskDispatches.id, delivery.proof.dispatchId!));
+  const reviewerOperationId = delivery.result.verifierOperationId!;
+  await db
+    .update(agentOperations)
+    .set({
+      status: 'running',
+      appContext: { issueReviewCycleId: config.issueReview!.cycleId },
+    })
+    .where(eq(agentOperations.id, reviewerOperationId));
+  return { task: (await taskModel.findById(task.id))!, delivery, reviewerOperationId };
 };
 
 const createPersonalTask = async (id: string, identifier: string, seq: number) => {
@@ -250,7 +302,172 @@ const seedEventEvidence = async (taskId: string) => {
   };
 };
 
+describe('dispatch admission while an Issue Reviewer is active', () => {
+  it.each(['manual', 'orchestrator'] as const)(
+    'refuses %s before advancing the reviewed generation, then permits the verified repair after Reviewer completion',
+    async (trigger) => {
+      const f = await reviewedTaskWithActiveReviewer();
+      const model = new TaskDispatchModel(db, workspaceId);
+      const proofModel = new IssueDeliveryModel(db, userId, workspaceId);
+      const before = (await proofModel.readCurrentDeliveryProof([f.task.id]))[f.task.id];
+      expect(before.proof?.executionGeneration).toBe(2);
+      expect(before.runId).toBe(f.delivery.run.id);
+      await expect(
+        model.request({
+          taskId: f.task.id,
+          trigger,
+          idempotencyKey: `duplicate-during-review:${trigger}`,
+          requestedBy: userId,
+          executionUserId: userId,
+          origin: 'external',
+        }),
+      ).rejects.toBeInstanceOf(TaskDispatchIdempotencyConflictError);
+      expect(
+        (await new TaskModel(db, userId, workspaceId).findById(f.task.id))?.executionGeneration,
+      ).toBe(2);
+      expect(
+        await db.select().from(taskDispatches).where(eq(taskDispatches.taskId, f.task.id)),
+      ).toHaveLength(1);
+      expect((await proofModel.readCurrentDeliveryProof([f.task.id]))[f.task.id]).toMatchObject({
+        proof: before.proof,
+        runId: before.runId,
+      });
+      await db
+        .update(agentOperations)
+        .set({ status: 'done' })
+        .where(eq(agentOperations.id, f.reviewerOperationId));
+      const repair = await model.request({
+        taskId: f.task.id,
+        trigger: 'manual',
+        idempotencyKey: 'verified-review-repair',
+        requestedBy: userId,
+        executionUserId: userId,
+        origin: 'internal',
+        sourceDispatchId: f.delivery.proof.dispatchId,
+        settlementGrant: {
+          kind: 'parent_operation',
+          workspaceId,
+          sourceDispatchId: f.delivery.proof.dispatchId,
+          sourceGeneration: 2,
+          sourceOperationId: f.delivery.proof.deliveryOperationId,
+          sourceTopicId: f.delivery.proof.topicId,
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          allowedIntents: ['repair'],
+        },
+      });
+      expect(repair).toMatchObject({
+        state: 'created',
+        dispatch: { generation: 3, origin: 'internal' },
+      });
+    },
+  );
+
+  it('durably queues automation triggers during Review without advancing or skipping FIFO', async () => {
+    const f = await reviewedTaskWithActiveReviewer();
+    await db
+      .update(tasks)
+      .set({ automationMode: 'heartbeat', heartbeatInterval: 60 })
+      .where(eq(tasks.id, f.task.id));
+    const model = new TaskDispatchModel(db, workspaceId);
+    const first = {
+      taskId: f.task.id,
+      trigger: 'heartbeat' as const,
+      idempotencyKey: 'review-heartbeat-first',
+      requestedBy: userId,
+      executionUserId: userId,
+      origin: 'external' as const,
+    };
+    const second = { ...first, idempotencyKey: 'review-heartbeat-second' };
+    expect(await model.request(first)).toMatchObject({
+      state: 'created',
+      dispatch: { phase: 'queued', automationOccurrence: { occurrenceId: first.idempotencyKey } },
+    });
+    expect(await model.request(second)).toMatchObject({
+      state: 'created',
+      dispatch: { phase: 'queued', automationOccurrence: { occurrenceId: second.idempotencyKey } },
+    });
+    expect(await model.request(first)).toMatchObject({
+      state: 'existing',
+      dispatch: { phase: 'queued' },
+    });
+    expect(
+      (await new TaskModel(db, userId, workspaceId).findById(f.task.id))?.executionGeneration,
+    ).toBe(2);
+    await db
+      .update(agentOperations)
+      .set({ status: 'done' })
+      .where(eq(agentOperations.id, f.reviewerOperationId));
+    expect(await model.request(second)).toMatchObject({
+      state: 'existing',
+      dispatch: { phase: 'queued' },
+    });
+    expect(await model.request(first)).toMatchObject({
+      state: 'existing',
+      dispatch: { phase: 'requested', generation: 3 },
+    });
+    expect(
+      (await new TaskModel(db, userId, workspaceId).findById(f.task.id))?.executionGeneration,
+    ).toBe(3);
+  });
+});
+
 describe('TaskDispatchModel', () => {
+  it('keeps missing and JSON-null parent occurrences distinct from present parent IDs', async () => {
+    const task = await createTask('JSON-1', 1);
+    const occurrences = [
+      { occurrenceId: 'missing' },
+      { occurrenceId: 'null', parentDispatchId: null },
+      { occurrenceId: 'empty', parentDispatchId: '' },
+      { occurrenceId: 'child', parentDispatchId: 'parent-dispatch' },
+    ];
+    await db.insert(taskDispatches).values(
+      occurrences.map((occurrence, index) => ({
+        id: `json-parent-${index}`,
+        taskId: task.id,
+        workspaceId,
+        generation: index,
+        taskRevision: 1,
+        requirementRevision: 1,
+        policyRevision: 1,
+        idempotencyKey: occurrence.occurrenceId,
+        requestedBy: userId,
+        phase: 'succeeded' as const,
+        automationOccurrence: sql`${JSON.stringify(occurrence)}::jsonb`,
+      })),
+    );
+    const model = new TaskDispatchModel(db, workspaceId);
+    expect((await model.automationQueueSummary(task.id)).recent.map(({ id }) => id).sort()).toEqual(
+      ['json-parent-0', 'json-parent-1'],
+    );
+    expect(await model.countAutomationOccurrencesSince(task.id, new Date(0))).toBe(2);
+  });
+
+  it.each([
+    [{}, false],
+    [{ executionGeneration: null, dispatchId: null }, false],
+    [{ executionGeneration: 0 }, true],
+    [{ dispatchId: '' }, true],
+  ] as const)(
+    'preserves writer fencing for stored control context %j',
+    async (appContext, blocked) => {
+      const task = await createTask('JSON-2', 2);
+      await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+      await db.insert(agentOperations).values({
+        id: 'json-control',
+        taskId: task.id,
+        userId,
+        workspaceId,
+        status: 'running',
+        appContext: sql`${JSON.stringify(appContext)}::jsonb`,
+      });
+      const stopped = new TaskModel(db, userId, workspaceId).assertStoppedIssueWriters(
+        [task.id],
+        'json-control',
+      );
+      if (blocked) await expect(stopped).rejects.toMatchObject({ code: 'CONFLICT' });
+      else await expect(stopped).resolves.toBeUndefined();
+    },
+  );
   it('authorizes the current executor as the runner user, honoring delegation over assignee', async () => {
     const task = await createTask('AUTH-1', 1);
     await db.insert(agents).values([
@@ -816,10 +1033,13 @@ describe('TaskDispatchModel', () => {
       trigger: 'event' as const,
     };
     expect(await model.request(input)).toMatchObject({
-      active: { id: first.dispatch.id },
-      state: 'busy',
+      dispatch: {
+        phase: 'queued',
+        automationOccurrence: { input: { data: { reportId: 'FIRST-REPORT-731' } } },
+      },
+      state: 'created',
     });
-    expect(await db.select().from(taskDispatches)).toHaveLength(1);
+    expect(await db.select().from(taskDispatches)).toHaveLength(2);
     const taskModel = new TaskModel(db, userId, workspaceId);
     const current = await taskModel.findById(task.id);
     expect(current).toMatchObject({
@@ -847,6 +1067,138 @@ describe('TaskDispatchModel', () => {
     const resumed = await model.request(input);
     if (resumed.state === 'busy') throw new Error('completed lease still held the next event');
     expect(resumed.dispatch.generation).toBe(first.dispatch.generation + 1);
+  });
+
+  it('retains three ordered occurrences through execution, review, pause and final-delivery CAS', async () => {
+    const task = await createTask('FIFO-1', 108);
+    await db
+      .update(tasks)
+      .set({ automationMode: 'schedule', instruction: 'First immutable input' })
+      .where(eq(tasks.id, task.id));
+    const model = new TaskDispatchModel(db, workspaceId);
+    const request = (key: string) =>
+      model.request({
+        taskId: task.id,
+        trigger: 'schedule',
+        idempotencyKey: key,
+        requestedBy: userId,
+        initiator: userId,
+      });
+    const first = await request('fifo:first');
+    if (first.state === 'busy') throw new Error('unexpected busy');
+    await db
+      .update(tasks)
+      .set({ instruction: 'Second immutable input' })
+      .where(eq(tasks.id, task.id));
+    const second = await request('fifo:second');
+    if (second.state === 'busy') throw new Error('unexpected busy');
+    await db
+      .update(taskDispatches)
+      .set({ createdAt: new Date(Date.now() - 1000) })
+      .where(eq(taskDispatches.id, second.dispatch.id));
+    await db
+      .update(tasks)
+      .set({ instruction: 'Third immutable input' })
+      .where(eq(tasks.id, task.id));
+    const third = await request('fifo:third');
+    if (third.state === 'busy') throw new Error('unexpected busy');
+    expect(second.dispatch.phase).toBe('queued');
+    expect(third.dispatch.phase).toBe('queued');
+    expect(
+      (await db.select().from(tasks).where(eq(tasks.id, task.id)))[0].executionGeneration,
+    ).toBe(1);
+    expect(await request('fifo:second')).toMatchObject({
+      dispatch: { id: second.dispatch.id, phase: 'queued' },
+    });
+    expect(
+      (await model.findById(second.dispatch.id))?.automationOccurrence?.definition.instruction,
+    ).toBe('Second immutable input');
+    await model.settle({
+      dispatchId: first.dispatch.id,
+      expected: ['requested'],
+      fence: first.dispatch.fence,
+      generation: first.dispatch.generation,
+      phase: 'succeeded',
+    });
+    expect(await model.findActiveByTaskId(task.id)).toMatchObject({
+      id: first.dispatch.id,
+      phase: 'waiting',
+      waitingReason: 'automation_delivery_pending',
+    });
+    expect(await request('fifo:third')).toMatchObject({ dispatch: { phase: 'queued' } });
+    await db.insert(topics).values({ id: 'fifo-first-topic', userId });
+    await db.insert(taskTopics).values({
+      taskId: task.id,
+      topicId: 'fifo-first-topic',
+      userId,
+      workspaceId,
+      seq: 1,
+      status: 'completed',
+      executionGeneration: 1,
+      dispatchId: first.dispatch.id,
+    });
+    await db
+      .update(tasks)
+      .set({
+        currentTopicId: 'fifo-first-topic',
+        context: { scheduler: { automationPaused: true } },
+      })
+      .where(eq(tasks.id, task.id));
+    const proof = {
+      taskId: task.id,
+      topicId: 'fifo-first-topic',
+      dispatchId: first.dispatch.id,
+      executionGeneration: 1,
+    };
+    expect(await model.completeAutomationDelivery({ ...proof, executionGeneration: 9 })).toBe(
+      false,
+    );
+    expect(await model.completeAutomationDelivery(proof)).toBe(true);
+    expect(await model.completeAutomationDelivery(proof)).toBe(false);
+    // Paused automation preserves the queue; completing its current delivery does not consume another occurrence.
+    expect((await model.findOldestQueued(task.id))?.id).toBe(second.dispatch.id);
+    await db
+      .update(tasks)
+      .set({ context: { scheduler: { automationPaused: false } } })
+      .where(eq(tasks.id, task.id));
+    // Out-of-order retries cannot pass the oldest queued occurrence even when the slot is free.
+    expect(await request('fifo:third')).toMatchObject({ dispatch: { phase: 'queued' } });
+    expect(await request('fifo:second')).toMatchObject({
+      dispatch: { id: second.dispatch.id, phase: 'requested', generation: 2 },
+    });
+    expect(await model.findActiveByTaskId(task.id)).toMatchObject({ id: second.dispatch.id });
+    expect(
+      (await model.findById(third.dispatch.id))?.automationOccurrence?.definition.instruction,
+    ).toBe('Third immutable input');
+    expect(await db.select().from(taskTopics)).toHaveLength(1);
+  });
+
+  it('does not let another requester adopt a queued occurrence or claim it in another workspace', async () => {
+    const task = await createTask('FIFO-SCOPE', 109);
+    await db.update(tasks).set({ automationMode: 'heartbeat' }).where(eq(tasks.id, task.id));
+    const model = new TaskDispatchModel(db, workspaceId);
+    await model.request({
+      taskId: task.id,
+      trigger: 'heartbeat',
+      idempotencyKey: 'scope-first',
+      requestedBy: userId,
+      initiator: userId,
+    });
+    const input = {
+      taskId: task.id,
+      trigger: 'heartbeat' as const,
+      idempotencyKey: 'scope-second',
+      requestedBy: userId,
+      initiator: userId,
+    };
+    await model.request(input);
+    await expect(model.request({ ...input, executionUserId: otherUserId })).rejects.toThrow(
+      'Occurrence requester changed',
+    );
+    await expect(new TaskDispatchModel(db, otherWorkspaceId).request(input)).rejects.toThrow(
+      'Task not found',
+    );
+    expect((await model.findOldestQueued(task.id))?.initiator).toBe(userId);
   });
 
   it('identifies a late completion from an old execution generation', async () => {
@@ -1666,6 +2018,107 @@ describe('persisted dispatch origin + final admission re-check (SA05-B)', () => 
     });
 
     expect(parked?.waitingReason).toBe('caid_dispatch_disabled');
+  });
+});
+
+describe('confirmed periodic Issue admission', () => {
+  it('admits confirmed scope despite legacy project flags and fences the captured-occurrence quota', async () => {
+    const task = await createTask('SCOPE-1', 901);
+    await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    const [project] = await db
+      .insert(projects)
+      .values({
+        identifier: 'QUOTA',
+        name: 'Manual project',
+        userId,
+        workspaceId,
+        orchestrationPolicy: {
+          autoDispatch: false,
+          requireHumanReview: true,
+          replanMode: 'disabled',
+        },
+      })
+      .returning();
+    await db
+      .update(tasks)
+      .set({
+        projectId: project.id,
+        automationMode: 'schedule',
+        workflowCategory: 'backlog',
+        config: { schedule: { maxExecutions: 1 } },
+        context: { scheduler: { scheduleStartedAt: new Date(Date.now() - 1000).toISOString() } },
+      })
+      .where(eq(tasks.id, task.id));
+    await seedConfirmedIssuePlan(db, task.id);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const input = {
+      taskId: task.id,
+      trigger: 'schedule' as const,
+      origin: 'external' as const,
+      idempotencyKey: 'scope:first',
+      initiator: userId,
+      requestedBy: userId,
+      executionUserId: userId,
+    };
+    const first = await model.request(input);
+    if (first.state === 'busy') throw new Error('confirmed scope unexpectedly busy');
+    expect(first.dispatch.phase).toBe('requested');
+    expect(first.dispatch.waitingReason).toBeNull();
+    await db.insert(taskDispatches).values({
+      ...first.dispatch,
+      id: 'quota-repair-copy',
+      idempotencyKey: 'scope:repair',
+      phase: 'succeeded',
+    });
+    expect(await model.countAutomationOccurrencesSince(task.id, new Date(Date.now() - 2000))).toBe(
+      1,
+    );
+    await expect(
+      model.request({ ...input, idempotencyKey: 'scope:second' }),
+    ).rejects.toBeInstanceOf(TaskAutomationQuotaReachedError);
+    expect((await model.request(input)).state).toBe('existing');
+  });
+
+  it('keeps the next occurrence fenced while a parent native Reviewer still writes', async () => {
+    const task = await createTask('WRITER-1', 903);
+    await db.insert(agentOperations).values({
+      id: 'fifo-parent-review',
+      taskId: task.id,
+      userId,
+      workspaceId,
+      status: 'running',
+    });
+    const model = new TaskDispatchModel(db, workspaceId);
+    expect(await model.automationPlanHasWriters(undefined, task.id)).toBe(true);
+    await db
+      .update(agentOperations)
+      .set({ status: 'done' })
+      .where(eq(agentOperations.id, 'fifo-parent-review'));
+    expect(await model.automationPlanHasWriters(undefined, task.id)).toBe(false);
+  });
+
+  it('rejects a confirmation marker without its real confirmed Checklist ledger', async () => {
+    const task = await createTask('SCOPE-2', 902);
+    await db.insert(workspaceMembers).values({ workspaceId, userId, role: 'owner' });
+    await db
+      .update(tasks)
+      .set({
+        context: {
+          issuePlan: { confirmedAt: 'marker', parentTaskId: task.id, revision: 1, checklists: [] },
+        },
+      })
+      .where(eq(tasks.id, task.id));
+    await expect(
+      new TaskDispatchModel(db, workspaceId).request({
+        taskId: task.id,
+        trigger: 'orchestrator',
+        origin: 'external',
+        idempotencyKey: 'marker:first',
+        initiator: userId,
+        requestedBy: userId,
+        executionUserId: userId,
+      }),
+    ).rejects.toBeDefined();
   });
 });
 

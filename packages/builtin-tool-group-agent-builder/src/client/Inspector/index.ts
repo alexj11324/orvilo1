@@ -1,8 +1,6 @@
 // Import shared inspectors from agent-builder
 import {
   GetAvailableModelsInspector,
-  InstallPluginInspector,
-  SearchMarketToolsInspector,
   UpdateConfigInspector,
 } from '@orvilo/builtin-tool-agent-builder/client';
 import type { BuiltinInspector } from '@orvilo/types';
@@ -40,8 +38,6 @@ export const GroupAgentBuilderInspectors: Record<string, BuiltinInspector> = {
 
   // Shared inspectors from agent-builder (reused for group context)
   [GroupAgentBuilderApiName.getAvailableModels]: GetAvailableModelsInspector as BuiltinInspector,
-  [GroupAgentBuilderApiName.installPlugin]: InstallPluginInspector as BuiltinInspector,
-  [GroupAgentBuilderApiName.searchMarketTools]: SearchMarketToolsInspector as BuiltinInspector,
   [GroupAgentBuilderApiName.updateAgentConfig]: UpdateConfigInspector as BuiltinInspector,
 };
 

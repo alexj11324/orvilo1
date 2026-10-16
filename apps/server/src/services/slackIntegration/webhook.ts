@@ -1,6 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-import { slackCodec } from '@copilotkit/channels-slack/codec';
 import { isRecord } from '@orvilo/utils';
 
 /** Slack signs the untouched request body and a five-minute timestamp window. */
@@ -44,15 +43,20 @@ export const parseSlackWebhookBody = (raw: string, contentType: string) => {
 /** A mention and every reply to it share one durable worker lane. */
 export const slackConversationLane = (teamId: string, body: Record<string, unknown>) => {
   const event = isRecord(body.event) ? body.event : undefined;
-  // Reuse the same pure codec as the Slack adapter: edits/deletes carry a nested
-  // logical message, and unthreaded DMs share one conversation per channel.
-  const normalized = slackCodec.normalizeIngress({ event });
-  if (normalized?.kind === 'turn') {
-    return JSON.stringify([teamId, normalized.channel, normalized.threadTs ?? null]);
-  }
   const channel = isRecord(body.channel) ? body.channel.id : event?.channel;
-  const message = isRecord(body.message) ? body.message : event;
-  const thread = message?.thread_ts ?? message?.ts;
+  // Edits/deletes use the logical message, not the delivery envelope timestamp.
+  const message = isRecord(body.message)
+    ? body.message
+    : event?.subtype === 'message_changed' && isRecord(event.message)
+      ? event.message
+      : event?.subtype === 'message_deleted' && isRecord(event.previous_message)
+        ? event.previous_message
+        : event;
+  const isDM =
+    event?.channel_type === 'im' || (typeof channel === 'string' && channel.startsWith('D'));
+  const messageTs =
+    event?.subtype === 'message_deleted' ? (event.deleted_ts ?? message?.ts) : message?.ts;
+  const thread = message?.thread_ts ?? (isDM ? undefined : messageTs);
   return JSON.stringify([
     teamId,
     typeof channel === 'string' ? channel : null,

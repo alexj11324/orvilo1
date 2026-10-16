@@ -1,8 +1,7 @@
+import { AgentManagementManifest } from '@orvilo/builtin-tool-agent-management';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentModel } from '@/database/models/agent';
-import { PluginModel } from '@/database/models/plugin';
-import { DiscoverService } from '@/server/services/discover';
 
 import { agentManagementRuntime } from '../agentManagement';
 
@@ -10,20 +9,14 @@ const {
   mockCreateAgent,
   mockInheritRuntime,
   mockCountAgents,
-  mockGetAssistantList,
   mockQueryAgents,
   mockGetAgentConfigById,
   mockUpdateConfig,
-  mockFindById,
-  mockCreatePlugin,
 } = vi.hoisted(() => ({
   mockCreateAgent: vi.fn(),
   mockInheritRuntime: vi.fn(),
   mockCountAgents: vi.fn(),
-  mockCreatePlugin: vi.fn(),
-  mockFindById: vi.fn(),
   mockGetAgentConfigById: vi.fn(),
-  mockGetAssistantList: vi.fn(),
   mockQueryAgents: vi.fn(),
   mockUpdateConfig: vi.fn(),
 }));
@@ -37,23 +30,6 @@ vi.mock('@/database/models/agent', () => ({
       getAgentConfigById: mockGetAgentConfigById,
       queryAgents: mockQueryAgents,
       updateConfig: mockUpdateConfig,
-    };
-  }),
-}));
-
-vi.mock('@/database/models/plugin', () => ({
-  PluginModel: vi.fn(function () {
-    return {
-      create: mockCreatePlugin,
-      findById: mockFindById,
-    };
-  }),
-}));
-
-vi.mock('@/server/services/discover', () => ({
-  DiscoverService: vi.fn(function () {
-    return {
-      getAssistantList: mockGetAssistantList,
     };
   }),
 }));
@@ -99,11 +75,10 @@ describe('agentManagementRuntime', () => {
     );
   });
 
-  it('scopes agent and plugin models to workspace context', () => {
+  it('scopes the agent model to workspace context', () => {
     createWorkspaceRuntime();
 
     expect(AgentModel).toHaveBeenCalledWith(expect.anything(), 'user-1', 'workspace-1');
-    expect(PluginModel).toHaveBeenCalledWith(expect.anything(), 'user-1', 'workspace-1');
   });
 
   describe('createAgent admission', () => {
@@ -288,7 +263,7 @@ describe('agentManagementRuntime', () => {
       mockCountAgents.mockResolvedValue(137);
 
       const runtime = createRuntime();
-      const result = await runtime.searchAgent({ limit: 20, source: 'user' });
+      const result = await runtime.searchAgent({ limit: 20 });
 
       expect(mockQueryAgents).toHaveBeenCalledWith({ keyword: undefined, limit: 20, offset: 0 });
       expect(result.success).toBe(true);
@@ -302,7 +277,7 @@ describe('agentManagementRuntime', () => {
       mockCountAgents.mockResolvedValue(50);
 
       const runtime = createRuntime();
-      const result = await runtime.searchAgent({ limit: 20, offset: 20, source: 'user' });
+      const result = await runtime.searchAgent({ limit: 20, offset: 20 });
 
       expect(mockQueryAgents).toHaveBeenCalledWith({ keyword: undefined, limit: 20, offset: 20 });
       expect(result.content).toContain('Found 50 agents in your workspace, showing 21-40');
@@ -315,7 +290,7 @@ describe('agentManagementRuntime', () => {
       mockCountAgents.mockResolvedValue(1);
 
       const runtime = createRuntime();
-      const result = await runtime.searchAgent({ limit: 50, source: 'user' });
+      const result = await runtime.searchAgent({ limit: 50 });
 
       expect(mockQueryAgents).toHaveBeenCalledWith({ keyword: undefined, limit: 20, offset: 0 });
       expect(result.content).toContain(
@@ -329,7 +304,7 @@ describe('agentManagementRuntime', () => {
       mockCountAgents.mockResolvedValue(0);
 
       const runtime = createRuntime();
-      const result = await runtime.searchAgent({ keyword: 'nonexistent', source: 'user' });
+      const result = await runtime.searchAgent({ keyword: 'nonexistent' });
 
       expect(result.success).toBe(true);
       expect(result.content).toContain('No agents matched');
@@ -340,7 +315,7 @@ describe('agentManagementRuntime', () => {
       mockCountAgents.mockResolvedValue(37);
 
       const runtime = createRuntime();
-      const result = await runtime.searchAgent({ offset: 200, source: 'user' });
+      const result = await runtime.searchAgent({ offset: 200 });
 
       expect(result.success).toBe(true);
       expect(result.content).toContain('No agents at offset 200; only 37 match');
@@ -360,7 +335,7 @@ describe('agentManagementRuntime', () => {
       mockCountAgents.mockResolvedValue(1);
 
       const runtime = createRuntime();
-      const result = await runtime.searchAgent({ source: 'user' });
+      const result = await runtime.searchAgent({});
 
       expect(result.success).toBe(true);
       expect(result.content).toContain('heteroType="claude-code"');
@@ -370,56 +345,17 @@ describe('agentManagementRuntime', () => {
       });
     });
 
-    it('searches the marketplace without counting workspace agents', async () => {
-      mockGetAssistantList.mockResolvedValue({
-        items: [{ identifier: 'market-agent-1', title: 'Market Agent' }],
-        totalCount: 42,
-      });
-
-      const runtime = createRuntime();
-      const result = await runtime.searchAgent({ keyword: 'market', source: 'market' });
-
-      expect(mockCountAgents).not.toHaveBeenCalled();
-      expect(result.content).toContain('Found 42 agents in the marketplace, showing the first 1');
-      expect(result.state).toMatchObject({
-        agents: [expect.objectContaining({ id: 'market-agent-1', isMarket: true })],
-        totalCount: 42,
-      });
-    });
-
-    it('combines workspace and marketplace totals for source "all"', async () => {
+    it('searches workspace Agents through the workspace-scoped model', async () => {
       mockQueryAgents.mockResolvedValue(makeAgents(1));
-      mockCountAgents.mockResolvedValue(30);
-      mockGetAssistantList.mockResolvedValue({
-        items: [{ identifier: 'market-agent-1', title: 'Market Agent' }],
-        totalCount: 12,
-      });
+      mockCountAgents.mockResolvedValue(1);
 
-      const runtime = createRuntime();
-      const result = await runtime.searchAgent({ keyword: 'test' });
-
-      expect(result.content).toContain(
-        'Found 30 agents in your workspace and 12 in the marketplace, showing 2',
-      );
-      // next-page hint should direct the model back to workspace-only pagination
-      expect(result.content).toContain('call searchAgent with offset=1 and source="user"');
-      expect(result.state).toMatchObject({ hasMore: true, totalCount: 42 });
-    });
-
-    it('falls back to item count when marketplace omits totalCount', async () => {
-      mockGetAssistantList.mockResolvedValue({
-        items: [
-          { identifier: 'market-agent-1', title: 'Market Agent' },
-          { identifier: 'market-agent-2', title: 'Another Agent' },
-        ],
-        totalCount: undefined,
-      });
-
-      const runtime = createRuntime();
-      const result = await runtime.searchAgent({ source: 'market' });
+      const result = await createWorkspaceRuntime().searchAgent({ keyword: 'Agent' });
 
       expect(result.success).toBe(true);
-      expect(result.state).toMatchObject({ totalCount: 2 });
+      expect(result.state).toMatchObject({
+        agents: [expect.objectContaining({ id: 'agent-0' })],
+        totalCount: 1,
+      });
     });
 
     it('handles search failure', async () => {
@@ -427,78 +363,20 @@ describe('agentManagementRuntime', () => {
       mockCountAgents.mockResolvedValue(0);
 
       const runtime = createRuntime();
-      const result = await runtime.searchAgent({ source: 'user' });
+      const result = await runtime.searchAgent({});
 
       expect(result.success).toBe(false);
       expect(result.content).toContain('Failed to search agents');
     });
   });
 
-  describe('installPlugin', () => {
-    it('appends a new pinned entry when the identifier is absent', async () => {
-      mockGetAgentConfigById.mockResolvedValue({ id: 'agent-1', plugins: ['plugin-a'] });
-      mockFindById.mockResolvedValue(undefined);
+  it('does not advertise or execute retired Marketplace tools', () => {
+    const runtime = createRuntime();
+    const apiNames = AgentManagementManifest.api.map((api) => api.name);
 
-      const runtime = createRuntime();
-      const result = await runtime.installPlugin({ agentId: 'agent-1', identifier: 'plugin-b' });
-
-      expect(result.success).toBe(true);
-      expect(mockCreatePlugin).toHaveBeenCalledWith({ identifier: 'plugin-b', type: 'plugin' });
-      expect(mockUpdateConfig).toHaveBeenCalledWith('agent-1', {
-        plugins: ['plugin-a', { identifier: 'plugin-b', mode: 'pinned' }],
-      });
-    });
-
-    it('flips an existing disabled object entry back to pinned in place, without duplicating it', async () => {
-      mockGetAgentConfigById.mockResolvedValue({
-        id: 'agent-1',
-        plugins: ['plugin-a', { identifier: 'plugin-b', mode: 'disabled' }],
-      });
-      mockFindById.mockResolvedValue({ identifier: 'plugin-b' });
-
-      const runtime = createRuntime();
-      const result = await runtime.installPlugin({ agentId: 'agent-1', identifier: 'plugin-b' });
-
-      expect(result.success).toBe(true);
-      expect(mockUpdateConfig).toHaveBeenCalledWith('agent-1', {
-        plugins: ['plugin-a', { identifier: 'plugin-b', mode: 'pinned' }],
-      });
-    });
-
-    it('is a no-op write when the identifier is already pinned', async () => {
-      mockGetAgentConfigById.mockResolvedValue({
-        id: 'agent-1',
-        plugins: ['plugin-a', 'plugin-b'],
-      });
-      mockFindById.mockResolvedValue({ identifier: 'plugin-b' });
-
-      const runtime = createRuntime();
-      const result = await runtime.installPlugin({ agentId: 'agent-1', identifier: 'plugin-b' });
-
-      expect(result.success).toBe(true);
-      expect(mockUpdateConfig).not.toHaveBeenCalled();
-    });
-  });
-
-  // Regression guard: built without an identity, DiscoverService sends no
-  // credentials at all, so every market read from this runtime failed as
-  // `unauthorized` while the client-side path — which signs a trusted-client
-  // token — kept working.
-  describe('market identity', () => {
-    it('passes the run identity to DiscoverService', () => {
-      createRuntime();
-
-      expect(DiscoverService).toHaveBeenCalledWith({
-        userInfo: { userId: 'user-1', workspaceId: undefined },
-      });
-    });
-
-    it('scopes the market identity to the run workspace', () => {
-      createWorkspaceRuntime();
-
-      expect(DiscoverService).toHaveBeenCalledWith({
-        userInfo: { userId: 'user-1', workspaceId: 'workspace-1' },
-      });
-    });
+    for (const name of ['searchMarketTools', 'installPlugin']) {
+      expect(apiNames).not.toContain(name);
+      expect(runtime[name]).toBeUndefined();
+    }
   });
 });

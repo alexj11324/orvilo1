@@ -18,7 +18,7 @@ import type {
   TaskWorkflowCategory,
   WorkspaceData,
 } from '@orvilo/types';
-import { deriveLegacyTaskStatus } from '@orvilo/types';
+import { deriveLegacyTaskStatus, executionParkedReason } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import { TRPCError } from '@trpc/server';
 
@@ -48,7 +48,7 @@ import {
   workflowStatePayload,
 } from '@/database/models/workflowMove';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
-import type { TaskDispatchItem } from '@/database/schemas/task';
+import type { TaskDispatchItem, TaskTopicItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import { findUsableAgentExecutionBinding } from '@/database/utils/agent-access';
 import {
@@ -57,6 +57,7 @@ import {
 } from '@/database/utils/taskDependencyLock';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 import { resolveDeviceWorkingDirectory } from '@/server/services/aiAgent/resolveDeviceWorkingDirectory';
+import { assertLegacyVerificationWritable } from '@/server/services/verify/retirement';
 
 import { AiAgentService } from '../aiAgent';
 import { extractFileIdsFromEditorData } from '../file/extractFileIdsFromEditorData';
@@ -137,6 +138,7 @@ export interface CreateTaskInput {
   parentTaskId?: string;
   priority?: number | null;
   projectId?: string;
+  reviewerAgentId?: string | null;
   schedulePattern?: string;
   scheduleTimezone?: string;
   sortOrder?: number;
@@ -223,7 +225,22 @@ export class TaskService {
    * default model don't silently affect this task.
    */
   async createTask(input: CreateTaskInput, mutation: TaskMutationContext = {}): Promise<TaskItem> {
+    if (
+      input.config &&
+      (Object.hasOwn(input.config, 'verify') || Object.hasOwn(input.config, 'review'))
+    )
+      assertLegacyVerificationWritable();
     await this.assertAssigneeAgentBelongsToUser(input.assigneeAgentId);
+    if (input.reviewerAgentId) {
+      await this.assertReviewerCanReview(input.reviewerAgentId);
+      await this.assertAssigneeAgentBelongsToUser(input.reviewerAgentId);
+      await assertCanUseWorkspaceAgent({
+        agentId: input.reviewerAgentId,
+        db: this.db,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+    }
 
     const taskInput = input;
     const createData: CreateTaskInput & { config?: Record<string, unknown> } = {
@@ -298,6 +315,10 @@ export class TaskService {
       }
     }
 
+    if (task.workflowCategory === 'in_review') {
+      const { startIssueReview } = await import('./review');
+      await startIssueReview(this.db, this.userId, task.id, {}, this.workspaceId);
+    }
     return task;
   }
 
@@ -321,19 +342,91 @@ export class TaskService {
 
   private interruptTaskOperations = async (
     service: AiAgentService,
-    operationIds: Array<string | null | undefined>,
+    topics: TaskTopicItem[],
   ): Promise<Map<string, PromiseSettledResult<void>>> => {
-    const uniqueOperationIds = [...new Set(operationIds.filter((id): id is string => Boolean(id)))];
+    const operations = [
+      ...new Map(
+        topics.flatMap((topic) => (topic.operationId ? [[topic.operationId, topic] as const] : [])),
+      ),
+    ];
+    const dispatchModel = new TaskDispatchModel(this.db, this.workspaceId);
     const settled = await Promise.allSettled(
-      uniqueOperationIds.map((operationId) => this.interruptTaskOperation(service, operationId)),
+      operations.map(async ([operationId, topic]) => {
+        let stoppingDispatch;
+        if (
+          topic.dispatchId &&
+          topic.dispatchFence !== null &&
+          topic.executionGeneration !== null
+        ) {
+          stoppingDispatch = await dispatchModel.requestStop({
+            dispatchId: topic.dispatchId,
+            fence: topic.dispatchFence,
+            generation: topic.executionGeneration,
+            operationId,
+            reason: 'task_family_status',
+          });
+          if (!stoppingDispatch)
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Task dispatch changed before cancellation.',
+            });
+        }
+        await this.interruptTaskOperation(service, operationId);
+        if (stoppingDispatch) {
+          // task_topics.topic_id is nullable. Settling the dispatch without a
+          // topic would leave a canceled run that cancelIfRunning cannot record.
+          if (!topic.topicId) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Acknowledged task cancellation has no topic identity.',
+            });
+          }
+          const topicId = topic.topicId;
+          const stopped = stoppingDispatch;
+          // Keep the acknowledged execution consistent even if the later
+          // family status transaction rejects (for example, unaccepted Done).
+          await this.db.transaction(async (tx) => {
+            if (
+              !(await new TaskDispatchModel(tx, this.workspaceId).settle({
+                dispatchId: stopped.id,
+                expected: ['cancel_requested'],
+                fence: stopped.fence,
+                generation: stopped.generation,
+                operationId,
+                phase: 'canceled',
+              }))
+            )
+              throw new TRPCError({
+                code: 'CONFLICT',
+                message: 'Task cancellation lost dispatch ownership.',
+              });
+            // The Issue authorizes the stop; historical topic privacy must
+            // not prevent recording it on the exact execution owner's row.
+            await new TaskTopicModel(tx, topic.userId, this.workspaceId).cancelIfRunning(
+              topic.taskId,
+              topicId,
+            );
+          });
+        }
+      }),
     );
-    return new Map(uniqueOperationIds.map((operationId, index) => [operationId, settled[index]!]));
+    return new Map(operations.map(([operationId], index) => [operationId, settled[index]!]));
   };
 
   /**
    * Cancel a running topic: interrupt the remote operation (if any), then
    * mark the topic as `canceled` and pause its parent task.
    */
+  async cancelAutomationOccurrence(id: string) {
+    const task = await this.resolveOrThrow(id);
+    return (await import('../taskAutomationQueue')).cancelAutomationOccurrence(
+      this.db,
+      this.userId,
+      this.workspaceId,
+      task.id,
+    );
+  }
+
   async cancelTopic(topicId: string, authorizedIssueId?: string): Promise<void> {
     const target = authorizedIssueId
       ? await this.taskTopicModel.findIssueTopicById(topicId)
@@ -381,7 +474,15 @@ export class TaskService {
           message: 'Issue topic changed before cancellation.',
         });
     } else await this.taskTopicModel.updateStatus(target.taskId, topicId, 'canceled');
-    await this.taskModel.updateStatus(target.taskId, 'paused');
+    const occurrence = stoppingDispatch?.automationOccurrence;
+    const task =
+      !occurrence && stoppingDispatch?.requestedBy.startsWith('manual:')
+        ? await this.taskModel.findById(target.taskId)
+        : null;
+    const manualPeriodicRun =
+      task?.automationMode === 'schedule' || task?.automationMode === 'heartbeat';
+    if ((!occurrence || occurrence.parentDispatchId) && !manualPeriodicRun)
+      await this.taskModel.updateStatus(target.taskId, 'paused');
 
     if (stoppingDispatch) {
       const settled = await new TaskDispatchModel(this.db, this.workspaceId).settle({
@@ -400,6 +501,11 @@ export class TaskService {
       }
     }
 
+    if (occurrence && !occurrence.parentDispatchId && stoppingDispatch)
+      await (
+        await import('../taskAutomationQueue')
+      ).advanceCanceledAutomation(this.db, stoppingDispatch.id, this.workspaceId);
+
     // The canceled run's provisioned worktrees are abandoned — tear them down
     // best-effort; a cleanup failure must not break the cancel.
     await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
@@ -409,10 +515,11 @@ export class TaskService {
 
   /**
    * Delete a topic: interrupt if still running, then remove the task-topic
-   * link and delete the underlying topic.
+   * link and delete the underlying topic. Visibility follows the parent Issue,
+   * including a private Project ceiling.
    */
   async deleteTopic(topicId: string): Promise<void> {
-    const target = await this.taskTopicModel.findByTopicId(topicId);
+    const target = await this.taskTopicModel.findIssueTopicById(topicId);
     if (!target) throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Topic not found.' });
 
     if (target.status === 'running' && target.operationId) {
@@ -456,6 +563,7 @@ export class TaskService {
     id: string;
     topicId?: string;
   }): Promise<ReviewResult> {
+    assertLegacyVerificationWritable();
     const task = await this.resolveOrThrow(input.id);
 
     const reviewConfig = this.taskModel.getReviewConfig(task);
@@ -613,7 +721,25 @@ export class TaskService {
       });
     }
 
-    if (resolvedStatus === 'running' && status !== 'running') {
+    const automationControl = Boolean(
+      resolved.automationMode && ['paused', 'scheduled'].includes(status) && !guard,
+    );
+    // Pausing future ticks must leave the current round's execution claim intact.
+    if (
+      automationControl &&
+      status === 'paused' &&
+      resolvedStatus === 'running' &&
+      input.workflow === undefined &&
+      !expectedContract
+    ) {
+      const task = await this.taskModel.updateContext(resolved.id, {
+        scheduler: { automationPaused: true },
+      });
+      if (!task) throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      options?.onStatusCommitted?.();
+      return { paused: [], task, unlocked: [] };
+    }
+    if (resolvedStatus === 'running' && status !== 'running' && !automationControl) {
       const topics = await this.taskTopicModel.findByTaskId(resolved.id);
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
@@ -695,12 +821,17 @@ export class TaskService {
         }
       }
     }
+    if (automationControl && input.workflow === undefined && resolved.workflowCategory) {
+      extra.workflowCategory = resolved.workflowCategory;
+      extra.workflowStateId = resolved.workflowStateId;
+      extra.workflowStateRefId = resolved.workflowStateRefId;
+    }
     if (status === 'running') extra.startedAt = new Date();
     // A person changing state owns the generation boundary. Clear any dispatch
     // or completion lease so a crashed callback cannot reclaim after their
     // pause/restart. System-driven scheduled transitions keep the lease until
     // lifecycle side effects (bridge/re-arm) finish.
-    if (status !== 'running' && (actor || status !== 'scheduled')) {
+    if (!automationControl && status !== 'running' && (actor || status !== 'scheduled')) {
       extra.runReservationExpiresAt = null;
       extra.runReservationId = null;
     }
@@ -743,7 +874,32 @@ export class TaskService {
           : 'Task not found',
       });
     }
+    if (
+      resolved.automationMode &&
+      !guard &&
+      (status === 'paused' ||
+        (status === 'scheduled' &&
+          (resolvedStatus !== 'running' ||
+            (resolved.context as TaskContext | null)?.scheduler?.automationPaused)))
+    ) {
+      await this.taskModel.updateContext(task.id, {
+        scheduler: {
+          automationPaused: status === 'paused',
+          ...(status === 'scheduled' && resolved.automationMode === 'schedule'
+            ? { lastPublishedScheduleAt: new Date().toISOString() }
+            : {}),
+        },
+      });
+    }
     options?.onStatusCommitted?.();
+    if (
+      task.workflowCategory === 'in_review' &&
+      resolved.workflowCategory !== 'in_review' &&
+      actor
+    ) {
+      const { startIssueReview } = await import('./review');
+      await startIssueReview(this.db, this.userId, task.id, {}, this.workspaceId);
+    }
 
     // A person's plain move is logged inside `updateWithLog`. Every other
     // write went through an unlogged writer: the system reacting to a run
@@ -761,10 +917,22 @@ export class TaskService {
       }
     }
 
+    if (status === 'scheduled' && resolved.automationMode && !guard) {
+      await (
+        await import('../taskAutomationQueue')
+      ).resumeAutomationQueue(this.db, task.id, this.workspaceId);
+    }
+
+    if (actor && ['completed', 'canceled'].includes(status)) {
+      await (
+        await import('@/database/models/taskDispatch')
+      ).TaskDispatchModel.cancelQueuedAutomationForTask(this.db, task.id, this.workspaceId);
+    }
+
     // A terminal transition abandons the task's merge pipeline — tear down
     // any provisioned worktrees its runs left behind. Best-effort: cleanup
     // must never break the status change itself.
-    if (TERMINAL_TASK_STATUSES.has(status)) {
+    if (status !== 'completed' && TERMINAL_TASK_STATUSES.has(status)) {
       await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
         task.id,
       );
@@ -846,32 +1014,42 @@ export class TaskService {
       }
     }
 
-    const unlocked: string[] = [];
-    const paused: string[] = [];
+    const completion =
+      status === 'completed'
+        ? await this.finalizeCompletedTask(task)
+        : status === 'canceled'
+          ? await new TaskRunnerService(this.db, this.userId, this.workspaceId)
+              .cascadeOnCompletion(task.id)
+              .then((cascade) => ({ paused: cascade.paused, unlocked: cascade.started }))
+          : { paused: [], unlocked: [] };
+    return { ...completion, task };
+  }
+
+  /** Finish a committed Done transition without issuing a second status mutation. */
+  async finalizeCompletedTask(task: TaskItem) {
+    const current = await this.taskModel.findById(task.id);
+    if (current?.workflowCategory !== 'done') return { paused: [], unlocked: [] };
+    await new TaskIntegrationService(this.db, this.userId, this.workspaceId).cleanupTaskWorktrees(
+      task.id,
+    );
     let allSubtasksDone = false;
     let checkpointTriggered = false;
-
-    if (status === 'completed' || status === 'canceled') {
-      if (status === 'completed' && task.parentTaskId) {
-        const parentTask = await this.taskModel.findById(task.parentTaskId);
-        if (parentTask && this.taskModel.shouldPauseAfterComplete(parentTask, task.identifier)) {
-          await this.taskModel.updateStatus(parentTask.id, 'paused');
-          checkpointTriggered = true;
-        }
-        allSubtasksDone = await this.taskModel.areAllSubtasksCompleted(task.parentTaskId);
+    if (task.parentTaskId) {
+      const parentTask = await this.taskModel.findById(task.parentTaskId);
+      if (parentTask && this.taskModel.shouldPauseAfterComplete(parentTask, task.identifier)) {
+        await this.taskModel.updateStatus(parentTask.id, 'paused');
+        checkpointTriggered = true;
       }
-
-      // Unlock blocked tasks and actually kick them off via the runner.
-      const runner = new TaskRunnerService(this.db, this.userId, this.workspaceId);
-      const cascade = await runner.cascadeOnCompletion(task.id);
-      unlocked.push(...cascade.started);
-      paused.push(...cascade.paused);
+      allSubtasksDone = await this.taskModel.areAllSubtasksCompleted(task.parentTaskId);
     }
-
+    const cascade = await new TaskRunnerService(
+      this.db,
+      this.userId,
+      this.workspaceId,
+    ).cascadeOnCompletion(task.id);
     return {
-      paused,
-      task,
-      unlocked,
+      paused: cascade.paused,
+      unlocked: cascade.started,
       ...(checkpointTriggered && { checkpointTriggered: true }),
       ...(allSubtasksDone && { allSubtasksDone: true, parentTaskId: task.parentTaskId }),
     };
@@ -926,7 +1104,44 @@ export class TaskService {
       workspaceId: this.workspaceId,
     });
 
-    const runningTopics = await this.taskTopicModel.findRunningByTaskIds(targetIds);
+    const dispatchModel = new TaskDispatchModel(this.db, this.workspaceId);
+    const activeDispatches = await Promise.all(
+      [resolved, ...subtasks].map((task) => dispatchModel.findActiveByTaskId(task.id)),
+    );
+    const dispatchTopics = await Promise.all(
+      activeDispatches
+        .flatMap((dispatch) => (dispatch ? [dispatch] : []))
+        .map(async (dispatch) => {
+          if (!dispatch.operationId)
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Active task dispatch has no operation identity.',
+            });
+          const topic = (await this.taskTopicModel.findByTaskId(dispatch.taskId)).find(
+            (candidate) => candidate.operationId === dispatch.operationId,
+          );
+          if (
+            !topic ||
+            topic.taskId !== dispatch.taskId ||
+            topic.dispatchId !== dispatch.id ||
+            topic.executionGeneration !== dispatch.generation ||
+            topic.dispatchFence === null
+          )
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: 'Task dispatch no longer matches its execution.',
+            });
+          return topic;
+        }),
+    );
+    // A previous acknowledged stop may have canceled its Topic before settling the dispatch.
+    const runningTopics = [
+      ...new Map(
+        [...(await this.taskTopicModel.findRunningByTaskIds(targetIds)), ...dispatchTopics].map(
+          (topic) => [topic.topicId, topic] as const,
+        ),
+      ).values(),
+    ];
     if (runningTopics.length > 0) {
       if (runningTopics.some((topic) => !topic.operationId)) {
         throw new TaskDomainError({
@@ -935,10 +1150,7 @@ export class TaskService {
             'Task interruption could not be confirmed because a running topic has no operation identity.',
         });
       }
-      const interruptionResults = await this.interruptTaskOperations(
-        aiAgentService,
-        runningTopics.map((topic) => topic.operationId),
-      );
+      const interruptionResults = await this.interruptTaskOperations(aiAgentService, runningTopics);
       const failure = [...interruptionResults.values()].find(
         (result) => result.status === 'rejected',
       );
@@ -977,9 +1189,7 @@ export class TaskService {
     }
     const resnapshotResults = await this.interruptTaskOperations(
       aiAgentService,
-      resnapshotTopics
-        .filter((topic) => !confirmedOperationIds.has(topic.operationId ?? ''))
-        .map((topic) => topic.operationId),
+      resnapshotTopics.filter((topic) => !confirmedOperationIds.has(topic.operationId ?? '')),
     );
     const resnapshotFailure = [...resnapshotResults.values()].find(
       (result) => result.status === 'rejected',
@@ -1126,6 +1336,10 @@ export class TaskService {
       }
     });
 
+    if (actor)
+      for (const ended of targetTasks)
+        await TaskDispatchModel.cancelQueuedAutomationForTask(this.db, ended.id, this.workspaceId);
+
     // Every cascaded task reached a terminal status — its merge pipeline is
     // abandoned, so tear down any provisioned worktrees it left behind.
     const integrationService = new TaskIntegrationService(this.db, this.userId, this.workspaceId);
@@ -1172,6 +1386,7 @@ export class TaskService {
   async runReadySubtasks(
     idOrIdentifier: string,
     requestId: string = randomUUID(),
+    nativeAutomationParentDispatchId?: string,
   ): Promise<RunReadySubtasksResult> {
     const parent = await this.resolveOrThrow(idOrIdentifier);
     const graph = new TaskGraphService(this.db, this.userId, this.workspaceId);
@@ -1198,6 +1413,10 @@ export class TaskService {
         const id = identifierToId.get(identifier);
         if (!id) throw new Error(`Subtask ${identifier} not found`);
         await runner.runTask({
+          nativeAutomationParentDispatchId,
+          ...(nativeAutomationParentDispatchId
+            ? { intent: 'fresh_occurrence' as const, trigger: 'manual' as const }
+            : {}),
           idempotencyKey: taskRunIdempotencyKey.readySubtask({
             parentTaskId: parent.id,
             requestId,
@@ -1223,7 +1442,7 @@ export class TaskService {
     return { failed, kickedOff, plan };
   }
 
-  /** Disabled drafts remain editable; arming a recurring Issue requires native full access. */
+  /** Disabled drafts remain editable; arming a recurring Issue requires an advertised unattended mode. */
   async assertNativeAutomationConfiguration(task: {
     assigneeAgentId?: string | null;
     automationMode?: string | null;
@@ -1241,7 +1460,7 @@ export class TaskService {
       new TRPCError({
         code: 'PRECONDITION_FAILED',
         message:
-          'NATIVE_FULL_ACCESS_UNAVAILABLE: The device could not confirm a native full-access permission mode for this Agent.',
+          'NATIVE_FULL_ACCESS_UNAVAILABLE: The device could not confirm a native unattended permission mode for this Agent.',
       });
     if (!task.assigneeAgentId) throw unavailable();
     const binding = await findUsableAgentExecutionBinding(this.db, task.assigneeAgentId, {
@@ -1283,6 +1502,18 @@ export class TaskService {
     });
     if (observed?.installed !== true || observed.unattended !== true || !observed.nativePermission)
       throw unavailable();
+  }
+
+  private async assertReviewerCanReview(agentId: string): Promise<void> {
+    const agent = await this.agentModel.getAgentConfigForExecution(agentId);
+    const { agentCanMountBuiltinToolSurface } =
+      await import('../aiAgent/pipeline/resolveExecutionBinding');
+    if (!agent || !agentCanMountBuiltinToolSurface(agent, agent.model)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Reviewer runtime cannot mount submitTaskReview.',
+      });
+    }
   }
 
   private async assertAssigneeAgentBelongsToUser(assigneeAgentId?: string | null): Promise<void> {
@@ -1410,6 +1641,21 @@ export class TaskService {
     actor: { agentId?: string | null; userId?: string | null } = {},
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
+    if (
+      data.config &&
+      (Object.hasOwn(data.config, 'verify') || Object.hasOwn(data.config, 'review'))
+    )
+      assertLegacyVerificationWritable();
+    if (data.reviewerAgentId) {
+      await this.assertReviewerCanReview(data.reviewerAgentId);
+      await this.assertAssigneeAgentBelongsToUser(data.reviewerAgentId);
+      await assertCanUseWorkspaceAgent({
+        agentId: data.reviewerAgentId,
+        db: this.db,
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+    }
     if (data.projectId) {
       const project = await this.projectModel.findManageableById(data.projectId);
       if (!project) throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Project not found' });
@@ -1450,7 +1696,7 @@ export class TaskService {
       ? { ...data, runReservationExpiresAt: null, runReservationId: null }
       : data;
 
-    return this.withAssigneeUserLock(data.assigneeUserId, (db) =>
+    const result = await this.withAssigneeUserLock(data.assigneeUserId, (db) =>
       new TaskModel(db, this.userId, this.workspaceId).updateWithLog(
         taskId,
         guardedData,
@@ -1458,6 +1704,14 @@ export class TaskService {
         mutation,
       ),
     );
+    if (
+      result?.workflowCategory === 'in_review' &&
+      (data.workflowCategory === 'in_review' || data.reviewerAgentId)
+    ) {
+      const { startIssueReview } = await import('./review');
+      await startIssueReview(this.db, this.userId, result.id, {}, this.workspaceId);
+    }
+    return result;
   }
 
   /**
@@ -1839,17 +2093,17 @@ export class TaskService {
       ),
     ];
     const issueTaskIds = [task.id, ...allDescendantIds];
-    const subtaskAgents =
+    const childAgents =
       subtaskAssigneeIds.length > 0
         ? await this.agentModel.getAgentAvatarsByIds(subtaskAssigneeIds, issueTaskIds)
         : [];
-    const subtaskAgentMap = new Map(subtaskAgents.map((a) => [a.id, a]));
+    const childAgentMap = new Map(childAgents.map((a) => [a.id, a]));
 
     const buildSubtaskTree = (parentId: string): TaskDetailSubtask[] | undefined => {
       const children = childrenMap.get(parentId);
       if (!children || children.length === 0) return undefined;
       return children.map((s) => {
-        const agent = s.assigneeAgentId ? subtaskAgentMap.get(s.assigneeAgentId) : undefined;
+        const agent = s.assigneeAgentId ? childAgentMap.get(s.assigneeAgentId) : undefined;
         const runningTopic = runningTopicByTaskId.get(s.id);
         return {
           ...(agent
@@ -1872,7 +2126,7 @@ export class TaskService {
           identifier: s.identifier,
           name: s.name,
           priority: s.priority,
-          reviewerUserId: s.reviewerUserId,
+          reviewerAgentId: s.reviewerAgentId,
           ...(runningTopic?.topicId
             ? {
                 runningTopic: {
@@ -2002,7 +2256,7 @@ export class TaskService {
       // Property events carry values, not participant ids.
       if (log.type !== 'assignee_agent' && log.type !== 'assignee_user' && log.type !== 'reviewer')
         continue;
-      const target = log.type === 'assignee_agent' ? agentIds : userIds;
+      const target = log.type === 'assignee_user' ? userIds : agentIds;
       for (const id of [log.payload?.fromId, log.payload?.toId]) if (id) target.add(id);
     }
 
@@ -2156,6 +2410,18 @@ export class TaskService {
               : // Genuinely nobody: the runner's system fallback.
                 undefined;
 
+        if (log.type === 'review_waiting' && typeof log.payload?.reason === 'string') {
+          return [
+            {
+              author,
+              id: log.id,
+              time: toISO(log.createdAt),
+              type: 'review_waiting',
+              reviewWaiting: { reason: log.payload.reason },
+            },
+          ];
+        }
+
         const propertyChange = activityLogPropertyChange(
           withReadableContainerNames(log, readableContainers),
           activityIssueRefs,
@@ -2190,7 +2456,7 @@ export class TaskService {
         // actor reads as the system (falsely crediting it for an agent's work).
         const resolveSide = (id?: string | null): TaskDetailActivityAuthor | null => {
           if (!id) return null;
-          return authorMap.get(id) ?? stub(id, kind === 'agent' ? 'agent' : 'user');
+          return authorMap.get(id) ?? stub(id, kind === 'member' ? 'user' : 'agent');
         };
         return [
           {
@@ -2236,6 +2502,9 @@ export class TaskService {
       automationMode: task.automationMode ?? null,
       checkpoint: this.taskModel.getCheckpointConfig(task),
       config: taskConfig,
+      context: taskContext
+        ? { issuePlan: taskContext.issuePlan, scheduler: taskContext.scheduler }
+        : undefined,
       createdAt: task.createdAt ? new Date(task.createdAt).toISOString() : undefined,
       createdByUserId: task.createdByUserId,
       dependencies: dependencies.map((d): NonNullable<TaskDetailData['dependencies']>[number] => {
@@ -2277,6 +2546,8 @@ export class TaskService {
       labels: taskLabels.map(toTaskLabelSummary),
       name: task.name,
       parent,
+      parentTaskId: parent ? task.parentTaskId : null,
+      parkedReason: executionParkedReason(task.context),
       priority: task.priority,
       projectId: task.projectId,
       schedule:
@@ -2287,7 +2558,7 @@ export class TaskService {
               timezone: task.scheduleTimezone,
             }
           : undefined,
-      reviewerUserId: task.reviewerUserId,
+      reviewerAgentId: task.reviewerAgentId,
       startedAt: task.startedAt ? new Date(task.startedAt).toISOString() : undefined,
       status: heartbeatStatus ?? task.status,
       dispatchPhase: task.dispatchPhase,

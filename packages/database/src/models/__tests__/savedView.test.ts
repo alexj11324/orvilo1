@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { tasks, users, workspaceMembers, workspaces } from '../../schemas';
+import { agents, tasks, users, workspaceMembers, workspaces } from '../../schemas';
 import { projects } from '../../schemas/project';
 import { teamCycles, teamMembers, teams } from '../../schemas/team';
 import type { OrviloDatabase } from '../../type';
@@ -21,6 +21,7 @@ const visitorId = 'view-visitor';
 const workspaceId = 'view-ws';
 
 beforeEach(async () => {
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: ownerId }, { id: visitorId }]);
   await serverDB.insert(workspaces).values({
@@ -29,6 +30,12 @@ beforeEach(async () => {
     primaryOwnerId: ownerId,
     slug: 'view-ws',
   });
+  await serverDB.insert(agents).values({
+    id: 'view-reviewer-agent',
+    slug: 'view-reviewer-agent',
+    userId: visitorId,
+    workspaceId,
+  });
   await serverDB.insert(workspaceMembers).values([
     { role: 'owner', userId: ownerId, workspaceId },
     { role: 'member', userId: visitorId, workspaceId },
@@ -36,6 +43,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await serverDB.delete(tasks);
   await serverDB.delete(users);
 });
 
@@ -363,18 +371,18 @@ describe('SavedViewModel', () => {
 
     const review = await visitorViews.findById('builtin:review');
     expect(review?.queryAst.filter).toEqual({
-      all: [{ field: 'reviewerUserId', op: 'eq', value: { ref: 'currentUser' } }],
+      all: [{ field: 'workflowCategory', op: 'eq', value: 'in_review' }],
     });
 
     const visitorTask = await new TaskModel(serverDB, visitorId, workspaceId).create({
       instruction: 'Needs a look',
       name: 'Visitor review',
-      reviewerUserId: visitorId,
+      reviewerAgentId: 'view-reviewer-agent',
+      workflowCategory: 'in_review',
     });
     await new TaskModel(serverDB, ownerId, workspaceId).create({
       instruction: 'Owner review',
       name: 'Owner review',
-      reviewerUserId: ownerId,
     });
     const asVisitor = await visitorViews.evaluate(review!);
     expect(asVisitor.tasks?.map((row) => row.id)).toEqual([visitorTask.id]);

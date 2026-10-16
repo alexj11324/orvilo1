@@ -23,5 +23,9 @@ export const STATUS_META: Record<TaskStatus, StatusMeta> = {
   failed: { ...TASK_STATUS_VISUALS.failed, label: 'Failed', labelKey: 'status.failed' },
   paused: { ...TASK_STATUS_VISUALS.paused, label: 'Pending review', labelKey: 'status.paused' },
   running: { ...TASK_STATUS_VISUALS.running, label: 'Running', labelKey: 'status.running' },
-  scheduled: { ...TASK_STATUS_VISUALS.scheduled, label: 'Scheduled', labelKey: 'status.scheduled' },
+  scheduled: {
+    ...TASK_STATUS_VISUALS.scheduled,
+    label: 'Automation on',
+    labelKey: 'status.scheduled',
+  },
 };

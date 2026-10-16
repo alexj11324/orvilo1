@@ -33,7 +33,10 @@ vi.mock('@/database/models/linearSync', () => ({
   linearSyncRetryDelayMs: vi.fn(() => 1_000),
 }));
 vi.mock('@/database/models/project', () => ({ ProjectModel: class {} }));
-vi.mock('@/database/models/task', () => ({ TaskModel: class {} }));
+vi.mock('@/database/models/task', () => ({
+  TaskModel: class {},
+  TaskReviewerRequiredError: class extends Error {},
+}));
 vi.mock('@/database/models/team', () => ({ TeamModel: class {} }));
 vi.mock('@/database/schemas/task', () => ({ tasks: { id: 'id', workspaceId: 'workspaceId' } }));
 vi.mock('@/server/services/task', () => ({ TaskService: class {} }));

@@ -8,8 +8,6 @@ import { createElement, memo, useMemo } from 'react';
 import Avatar from '@/components/Avatar';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import { Badge } from '@/components/reui/badge';
-import { useDiscoverStore } from '@/store/discover';
-import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useToolStore } from '@/store/tool';
 import {
   builtinToolSelectors,
@@ -60,15 +58,11 @@ const ToolTag = memo<ToolTagProps>(({ identifier, variant = 'default' }) => {
 
   // Composio related state
   const allComposioServers = useToolStore(composioStoreSelectors.getServers, isEqual);
-  const isComposioEnabledInEnv = useServerConfigStore(serverConfigSelectors.enableComposio);
-
-  // Check if plugin is installed
-  const isInstalled = useToolStore(pluginSelectors.isPluginInstalled(identifier));
 
   // Try to find in local lists first (including Composio)
   const localMeta = useMemo(() => {
     // Check if it's a Composio server type
-    if (isComposioEnabledInEnv) {
+    if (allComposioServers.some((server) => server.identifier === identifier)) {
       const composioType = COMPOSIO_APP_TYPES.find((type) => type.identifier === identifier);
       if (composioType) {
         const connectedServer = allComposioServers.find((s) => s.identifier === identifier);
@@ -103,24 +97,17 @@ const ToolTag = memo<ToolTagProps>(({ identifier, variant = 'default' }) => {
     }
 
     return null;
-  }, [identifier, builtinList, installedPluginList, isComposioEnabledInEnv, allComposioServers]);
+  }, [identifier, builtinList, installedPluginList, allComposioServers]);
 
-  // Fetch from remote if not found locally
-  const usePluginDetail = useDiscoverStore((s) => s.usePluginDetail);
-  const { data: remoteData, isLoading } = usePluginDetail({
-    identifier: !localMeta && !isInstalled ? identifier : undefined,
-    withManifest: false,
-  });
-
-  // Determine final metadata
+  // Historical metadata comes from saved local records.
   const meta = localMeta || {
-    avatar: remoteData?.avatar,
+    avatar: undefined,
     isInstalled: false,
-    title: remoteData?.title || identifier,
+    title: identifier,
     type: 'plugin' as const,
   };
 
-  const displayTitle = isLoading ? 'Loading...' : meta.title;
+  const displayTitle = meta.title;
 
   // Render icon based on type
   const renderIcon = () => {

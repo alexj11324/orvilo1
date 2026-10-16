@@ -12,8 +12,6 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { resolveGoalDispatchNotice } from '@/features/AgentTasks/shared/dispatchNotice';
-import { usePermission } from '@/hooks/usePermission';
-import { goalService } from '@/services/goal';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 import { goalSelectors, useGoalStore } from '@/store/goal';
@@ -23,7 +21,7 @@ import GoalAcceptanceCriteria from '../GoalAcceptanceCriteria';
 import Activity from './Activity';
 import Deliverables from './Deliverables';
 import Findings from './Findings';
-import Frontier, { type FrontierActions } from './Frontier';
+import Frontier from './Frontier';
 import { buildGoalGraphView, opensOnResultSurface } from './goalGraphViewModel';
 import Graph from './Graph';
 
@@ -49,14 +47,11 @@ interface ProcessControlProps {
 const ProcessControl = memo<ProcessControlProps>(
   ({ goalId, graphFullscreen, onGraphFullscreenChange }) => {
     const { t } = useTranslation('chat');
-    const { allowed: canEdit } = usePermission('create_content');
     const [lastSelectedId, setSelectedId] = useState<string>();
     const nodePortal = useChatStore(chatPortalSelectors.goalNodeView);
     const selectedId = nodePortal?.goalId === goalId ? nodePortal.nodeId : lastSelectedId;
 
     const useFetchGoalGraph = useGoalStore((s) => s.useFetchGoalGraph);
-    const decideGoal = useGoalStore((s) => s.decideGoal);
-    const refreshGoalGraph = useGoalStore((s) => s.refreshGoalGraph);
     const openTaskResult = useChatStore((s) => s.openTaskResult);
     const openTaskDetail = useChatStore((s) => s.openTaskDetail);
     const openGoalNode = useChatStore((s) => s.openGoalNode);
@@ -64,18 +59,6 @@ const ProcessControl = memo<ProcessControlProps>(
     const snapshot = useGoalStore(goalSelectors.goalGraph(goalId));
 
     const graph = useMemo(() => (snapshot ? buildGoalGraphView(snapshot) : undefined), [snapshot]);
-
-    const actions: FrontierActions = useMemo(
-      () => ({
-        addTask: async (title: string, description?: string) => {
-          await goalService.addNode({ description, id: goalId, kind: 'task', title });
-          await refreshGoalGraph(goalId);
-        },
-        decide: (decisionId, optionId, resolution) =>
-          void decideGoal(goalId, { decisionId, optionId, resolution }),
-      }),
-      [decideGoal, goalId, refreshGoalGraph],
-    );
 
     // Every click funnels here: keep the map highlight (spatial continuity) and
     // open the drill-down. A Task with a delivery to read, or a healthy run in
@@ -126,8 +109,6 @@ const ProcessControl = memo<ProcessControlProps>(
     // and a Task added here would sit `proposed` forever. Stop offering actions
     // that cannot land. The goal otherwise advances entirely on its own — the
     // only legitimate human control over its pace is pause/resume.
-    const closed = ['achieved', 'canceled', 'failed'].includes(graph.goal.status);
-    const canAct = canEdit && !closed;
     const hasExperiments = graph.nodes.some((view) => view.node.kind === 'experiment');
 
     const map = (
@@ -147,8 +128,6 @@ const ProcessControl = memo<ProcessControlProps>(
         {hasExperiments && map}
         <div className="flex flex-col gap-3">
           <Frontier
-            actions={actions}
-            canEdit={canAct}
             graph={graph}
             planning={planning}
             notice={resolveGoalDispatchNotice({

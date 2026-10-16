@@ -24,7 +24,7 @@ describe('isCollaborativeBuiltinAgentRow', () => {
 
   it('rejects a builtin members are not meant to configure together', () => {
     expect(
-      isCollaborativeBuiltinAgentRow({ ...builder, slug: BUILTIN_AGENT_SLUGS.taskAgent }),
+      isCollaborativeBuiltinAgentRow({ ...builder, slug: BUILTIN_AGENT_SLUGS.nightlyReview }),
     ).toBe(false);
   });
 

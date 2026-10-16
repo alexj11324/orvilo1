@@ -10,7 +10,6 @@ const mockEnv = vi.hoisted(() => ({
 }));
 
 const mockClient = vi.hoisted(() => ({
-  executeMcpCall: vi.fn(),
   executeToolCall: vi.fn(),
   getDeviceSystemInfo: vi.fn(),
   invokeRpc: vi.fn(),
@@ -69,6 +68,24 @@ describe('DeviceGateway', () => {
     expect(await new DeviceGateway().queryDeviceStatus('user-1')).toMatchObject({
       errorCode: 'GATEWAY_NOT_CONFIGURED',
     });
+  });
+
+  it('distinguishes confirmed device absence from a failed queue presence probe', async () => {
+    mockEnv.DEVICE_GATEWAY_URL = 'https://gateway.example.com';
+    mockEnv.DEVICE_GATEWAY_SERVICE_TOKEN = 'token';
+    const proxy = new DeviceGateway();
+    mockClient.queryDeviceList.mockResolvedValue([]);
+    await expect(proxy.queryDevicePresence('user', 'saved-device', 'workspace')).resolves.toBe(
+      false,
+    );
+    mockClient.queryDeviceList.mockResolvedValue([{ deviceId: 'saved-device' }]);
+    await expect(proxy.queryDevicePresence('user', 'saved-device', 'workspace')).resolves.toBe(
+      true,
+    );
+    mockClient.queryDeviceList.mockRejectedValue(new Error('gateway unavailable'));
+    await expect(proxy.queryDevicePresence('user', 'saved-device', 'workspace')).rejects.toThrow(
+      'gateway unavailable',
+    );
   });
 
   describe('isConfigured', () => {
@@ -406,73 +423,6 @@ describe('DeviceGateway', () => {
       expect(result.success).toBe(false);
       expect(result.content).toContain('unclear whether the device ran it');
       expect(result.error).toBe('DEVICE_GATEWAY_ERROR: string error');
-    });
-  });
-
-  describe('executeMcpCall', () => {
-    const mcpCall = {
-      apiName: 'getStock',
-      arguments: '{"symbol":"AAPL"}',
-      deviceId: 'dev-1',
-      identifier: 'kimi-datasource',
-      params: {
-        args: ['stock-mcp'],
-        command: 'npx',
-        env: { TOKEN: 'secret' },
-        name: 'kimi-datasource',
-        type: 'stdio' as const,
-      },
-      userId: 'user-1',
-    };
-
-    it('should return error when not configured', async () => {
-      const proxy = new DeviceGateway();
-      const result = await proxy.executeMcpCall(mcpCall);
-
-      expect(result).toEqual({
-        content: 'Device Gateway is not configured',
-        error: 'GATEWAY_NOT_CONFIGURED',
-        errorCode: 'GATEWAY_NOT_CONFIGURED',
-        success: false,
-      });
-    });
-
-    it('should forward the mcp call with default timeout', async () => {
-      mockEnv.DEVICE_GATEWAY_URL = 'https://gateway.example.com';
-      mockEnv.DEVICE_GATEWAY_SERVICE_TOKEN = 'token';
-      const expected = { content: 'stock data', state: { rows: 3 }, success: true };
-      mockClient.executeMcpCall.mockResolvedValue(expected);
-
-      const proxy = new DeviceGateway();
-      const result = await proxy.executeMcpCall(mcpCall);
-
-      expect(result).toEqual(expected);
-      expect(mockClient.executeMcpCall).toHaveBeenCalledWith({ ...mcpCall, timeout: 30_000 });
-    });
-
-    it('should use custom timeout', async () => {
-      mockEnv.DEVICE_GATEWAY_URL = 'https://gateway.example.com';
-      mockEnv.DEVICE_GATEWAY_SERVICE_TOKEN = 'token';
-      mockClient.executeMcpCall.mockResolvedValue({ content: 'ok', success: true });
-
-      const proxy = new DeviceGateway();
-      await proxy.executeMcpCall(mcpCall, 60_000);
-
-      expect(mockClient.executeMcpCall).toHaveBeenCalledWith({ ...mcpCall, timeout: 60_000 });
-    });
-
-    it('should return error result on exception', async () => {
-      mockEnv.DEVICE_GATEWAY_URL = 'https://gateway.example.com';
-      mockEnv.DEVICE_GATEWAY_SERVICE_TOKEN = 'token';
-      mockClient.executeMcpCall.mockRejectedValue(new Error('connection refused'));
-
-      const proxy = new DeviceGateway();
-      const result = await proxy.executeMcpCall(mcpCall);
-
-      // Tunneled MCP calls ride the same relay, so they get the same phrasing.
-      expect(result.success).toBe(false);
-      expect(result.content).toContain('Could not reach the device gateway');
-      expect(result.error).toBe('DEVICE_GATEWAY_UNREACHABLE: connection refused');
     });
   });
 

@@ -18,7 +18,11 @@ export type {
   CreateGoalState,
   EditTaskParams,
   GoalCriterionDraft,
+  IntakeIssueParams,
   ListWorkspaceMembersParams,
   ListWorkspaceMembersState,
+  RefineIssuePlanParams,
+  SubmitTaskReviewParams,
+  SubmitTaskReviewState,
 } from './types';
 export { TaskApiName } from './types';

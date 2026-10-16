@@ -43,45 +43,13 @@ const result = (
   }) as VerifyCheckResultItem;
 
 describe('buildAcceptanceCheckUnion', () => {
-  it('rejects unknown checks and ambiguous group membership before storing organization', async () => {
+  it('does not regroup archived checks', async () => {
     const service = new AcceptanceService({} as never, 'owner');
-    vi.spyOn(service.acceptanceModel, 'findById').mockResolvedValue({ id: 'acceptance' } as never);
-    vi.spyOn(service, 'loadRounds').mockResolvedValue({
-      runs: [run('r1', 1, [planItem('known')])],
-      results: [],
-      evidence: [],
-      reports: [],
-    });
-    const save = vi
-      .spyOn(service.acceptanceModel, 'setCheckGroups')
-      .mockResolvedValue({ groups: [], version: 1 });
+    const save = vi.spyOn(service.acceptanceModel, 'setCheckGroups');
     await expect(
-      service.regroupChecks('acceptance', [{ title: 'A', checkItemIds: ['foreign'] }], 0),
-    ).rejects.toThrow('Unknown check item');
-    await expect(
-      service.regroupChecks(
-        'acceptance',
-        [
-          { title: 'A', checkItemIds: ['known'] },
-          { title: 'B', checkItemIds: ['known'] },
-        ],
-        0,
-      ),
-    ).rejects.toThrow('multiple groups');
-    await expect(
-      service.regroupChecks('acceptance', [{ title: ' ', checkItemIds: ['known'] }], 0),
-    ).rejects.toThrow('unique, non-empty');
+      service.regroupChecks('acceptance', [{ title: 'A', checkItemIds: ['known'] }], 0),
+    ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
     expect(save).not.toHaveBeenCalled();
-    await service.regroupChecks(
-      'acceptance',
-      [{ title: ' Reassignment ', checkItemIds: ['known'] }],
-      0,
-    );
-    expect(save).toHaveBeenCalledWith(
-      'acceptance',
-      [{ title: 'Reassignment', checkItemIds: ['known'] }],
-      0,
-    );
   });
 
   it('regroups existing flow checks without changing identity, verdict, review or history', () => {

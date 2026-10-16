@@ -1,3 +1,8 @@
+import { mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import path from 'node:path';
+
+import { withRepoFileMutex } from '@orvilo/local-file-shell/fileMutex';
 import type { HeterogeneousAgentModel } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 
@@ -110,8 +115,10 @@ export interface StandardAcpSessionOptions extends AcpAgentSessionOptions {
   inputOptions?: BuildAgentInputOptions;
   /** `session/new` `mcpServers` entries (ACP shape). */
   mcpServers?: Record<string, unknown>[];
-  /** Automation requires the session to advertise a native full-access option. */
+  /** Automation requires the session to advertise a native unattended option. */
   nativeFullAccess?: boolean;
+  /** Safe MCP boundary metadata; supplied only by opted-in diagnostic hosts. */
+  onMcpMetadata?: (metadata: Record<string, unknown>) => void;
   onModel?: (model: string) => void;
   /**
    * Localized strings for the interactive permission card. English defaults
@@ -245,6 +252,25 @@ export class StandardAcpSession extends AcpAgentSession<
     });
   }
 
+  protected override async initializeConnection(): Promise<StandardAcpInitializeResult> {
+    if (this.sessionConfig.agentType !== 'opencode') return super.initializeConnection();
+
+    // ponytail: serialize only Orvilo's OpenCode startup while native WAL setup
+    // precedes busy_timeout; remove when upstream fixes that initialization order.
+    const target = path.join(homedir(), '.cache', 'orvilo', 'opencode-startup', 'initialize');
+    await mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
+    return withRepoFileMutex(target, async () => {
+      try {
+        return await super.initializeConnection();
+      } catch (error) {
+        this.client.close('SIGKILL');
+        this.client.signal('SIGKILL');
+        await this.client.exited;
+        throw error;
+      }
+    });
+  }
+
   /** The agent-native session id (for resume). */
   get nativeSessionId(): string | undefined {
     return this.acpSessionId;
@@ -347,19 +373,28 @@ export class StandardAcpSession extends AcpAgentSession<
       throw new Error(`${spec.label} agent does not support loading sessions`);
     }
 
-    const sessionResult = await this.client.request<StandardAcpSessionResult>(
-      this.options.resumeSessionId ? 'session/load' : 'session/new',
-      {
-        cwd: this.options.cwd,
-        mcpServers: (this.options.mcpServers ?? []).map((server) =>
-          (server.type === 'http' || server.type === 'sse') && server.headers === undefined
-            ? { ...server, headers: [] }
-            : server,
-        ),
-        ...(this.options.resumeSessionId ? { sessionId: this.options.resumeSessionId } : {}),
-        ...(this.sessionConfig.sessionMeta ? { _meta: this.sessionConfig.sessionMeta } : {}),
-      },
-    );
+    const method = this.options.resumeSessionId ? 'session/load' : 'session/new';
+    // Prepared RPC metadata only; the native response proves it crossed the wire.
+    this.options.onMcpMetadata?.({
+      method,
+      operationId: this.options.operationId,
+      resume: !!this.options.resumeSessionId,
+      servers: (this.options.mcpServers ?? []).map(({ name, type }) => ({
+        name: typeof name === 'string' ? name : undefined,
+        type: typeof type === 'string' ? type : 'stdio',
+      })),
+      type: 'acp_session_request_attempt',
+    });
+    const sessionResult = await this.client.request<StandardAcpSessionResult>(method, {
+      cwd: this.options.cwd,
+      mcpServers: (this.options.mcpServers ?? []).map((server) =>
+        (server.type === 'http' || server.type === 'sse') && server.headers === undefined
+          ? { ...server, headers: [] }
+          : server,
+      ),
+      ...(this.options.resumeSessionId ? { sessionId: this.options.resumeSessionId } : {}),
+      ...(this.sessionConfig.sessionMeta ? { _meta: this.sessionConfig.sessionMeta } : {}),
+    });
     const sessionId = sessionResult?.sessionId ?? this.options.resumeSessionId;
     if (!sessionId) throw new Error(`${spec.label} returned no session id`);
     this.options.onSessionId(sessionId);
@@ -548,7 +583,7 @@ export class StandardAcpSession extends AcpAgentSession<
       ? resolveNativeFullAccessPermission(this.permissionCatalogs)
       : this.options.initialPermission;
     if (this.options.nativeFullAccess && !selected)
-      throw new Error(`${this.sessionConfig.spec.label} has no advertised native full-access mode`);
+      throw new Error(`${this.sessionConfig.spec.label} has no advertised native unattended mode`);
     if (!selected) return;
     if (this.options.nativeFullAccess) this.automationPermissionConfigId = selected.configId;
     const catalog = this.permissionCatalogs.find(({ configId }) => configId === selected.configId);
@@ -570,7 +605,9 @@ export class StandardAcpSession extends AcpAgentSession<
           },
         ])
       )
-        throw new Error(`${this.sessionConfig.spec.label} did not enable native full access`);
+        throw new Error(
+          `${this.sessionConfig.spec.label} did not enable its native unattended mode`,
+        );
     } else {
       const response = await this.client.request<StandardAcpSetConfigOptionResult>(
         'session/set_config_option',
@@ -585,7 +622,9 @@ export class StandardAcpSession extends AcpAgentSession<
       }).find(({ configId }) => configId === selected.configId);
       if (reported && reported.currentValue !== selected.value) {
         if (this.options.nativeFullAccess)
-          throw new Error(`${this.sessionConfig.spec.label} did not enable native full access`);
+          throw new Error(
+            `${this.sessionConfig.spec.label} did not enable its native unattended mode`,
+          );
         if (effective) await this.noteEffectivePermission(effective);
       } else if (effective) effective.currentValue = selected.value;
     }
@@ -612,7 +651,9 @@ export class StandardAcpSession extends AcpAgentSession<
         },
       ])
     )
-      throw new Error(`${this.sessionConfig.spec.label} native full access is no longer active`);
+      throw new Error(
+        `${this.sessionConfig.spec.label} native unattended mode is no longer active`,
+      );
   }
 
   /**

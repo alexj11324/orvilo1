@@ -81,7 +81,7 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
           },
         ]
       : []),
-    ...(onEdit
+    ...(onEdit && cred.type !== 'oauth'
       ? [
           {
             icon: <Pencil className="shrink-0" />,
@@ -92,7 +92,7 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
           },
         ]
       : []),
-    ...(onDelete
+    ...(onDelete && cred.type !== 'oauth'
       ? [
           {
             danger: true,

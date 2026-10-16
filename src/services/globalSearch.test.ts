@@ -43,6 +43,19 @@ beforeEach(() => {
 });
 
 describe('resolveGlobalSearchSources', () => {
+  it.each(['mcp', 'plugin', 'communityAgent'])(
+    'rejects retired catalog type %s without querying either backend',
+    async (type) => {
+      const result = await globalSearchService.searchAll({
+        query: 'helper',
+        type,
+        workspaceId: 'ws-1',
+      });
+      expect(result).toEqual({ items: [], workFailed: false });
+      expect(ftsQuery).not.toHaveBeenCalled();
+      expect(workSearch).not.toHaveBeenCalled();
+    },
+  );
   it('fans out to both backends when no type is given', () => {
     expect(resolveGlobalSearchSources(undefined, 'ws-1')).toEqual({
       ftsType: undefined,
@@ -122,9 +135,7 @@ describe('globalSearchService.searchAll', () => {
     });
     expect(ftsQuery).toHaveBeenCalledWith({
       agentId: 'a-1',
-      includeMarketplace: false,
       limitPerType: 8,
-      locale: 'zh-CN',
       query: 'ship it',
       type: undefined,
     });

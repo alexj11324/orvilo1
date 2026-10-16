@@ -31,8 +31,6 @@ export const serverConfig = {
   enableBusinessFeatures: false,
   enableGatewayMode: false,
   enableUploadFileToServer: false,
-  enableComposio: false,
-  enableOrviloSkill: false,
 };
 export const featureFlags = {
   ...DEFAULT_FEATURE_FLAGS,
@@ -126,7 +124,7 @@ export function createInitialDatabase() {
     assigneeUserId: i % 3 === 1 ? PREVIEW_USER_ID : null,
     assigneeAgent: i % 3 === 0 ? agents[0] : null,
     assigneeUser: i % 3 === 1 ? { ...previewUser, fullName: previewUser.name, avatar: null } : null,
-    reviewerUserId: workflowCategory === 'in_review' ? PREVIEW_USER_ID : null,
+    reviewerAgentId: workflowCategory === 'in_review' ? 'preview-agent-b' : null,
     projectId: i < 6 ? 'preview-project' : null,
     project: null,
     workspaceId: 'preview-workspace',

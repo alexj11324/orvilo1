@@ -1,16 +1,17 @@
 import { randomUUID } from 'node:crypto';
 
+import type { TaskContext } from '@orvilo/types';
 import { deriveLegacyTaskStatus } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { and, eq } from 'drizzle-orm';
 
 import { TaskDomainError } from '@/database/errors/task';
-import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
 import { tasks } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
+import { TaskDispatchQueuedError } from '@/server/services/taskDispatch';
 import {
   createTaskSchedulerModule,
   setTaskSchedulerExecutionCallback,
@@ -28,6 +29,7 @@ export type HeartbeatTickOutcome =
   { ran: true; taskIdentifier: string } | { ran: false; reason: HeartbeatTickSkipReason };
 
 export type HeartbeatTickSkipReason =
+  | 'queued'
   | 'dependencies-blocked'
   | 'paused'
   | 'human-waiting'
@@ -85,7 +87,8 @@ export async function runHeartbeatTick(
     return { ran: false, reason: 'no-interval' };
   }
 
-  if (taskStatus === 'paused') return { ran: false, reason: 'paused' };
+  if ((task.context as TaskContext | null)?.scheduler?.automationPaused)
+    return { ran: false, reason: 'paused' };
 
   // A queue redelivery must name its persisted pending tick. Tokenless legacy
   // requests cannot adopt today's pending token: a late old request would then
@@ -93,15 +96,7 @@ export async function runHeartbeatTick(
   if (!tickToken || !activeTickToken) return { ran: false, reason: 'stale-tick' };
 
   const wsId = task.workspaceId ?? undefined;
-  const briefModel = new BriefModel(db, userId, wsId);
-  if (await briefModel.hasUnresolvedUrgentByTask(taskId, { excludeTypes: ['error'] })) {
-    log('skip task=%s reason=human-waiting', taskId);
-    return { ran: false, reason: 'human-waiting' };
-  }
-
   const rearmBlockedHeartbeat = async () => {
-    if (taskStatus !== 'scheduled') return;
-
     const scheduler = createTaskSchedulerModule();
     const nextToken = randomUUID();
     const tickMessageId = await scheduler.scheduleNextTopic({
@@ -137,6 +132,7 @@ export async function runHeartbeatTick(
       taskId,
       trigger: 'heartbeat',
     });
+    await rearmBlockedHeartbeat();
   } catch (e) {
     if (isTaskDependencyBlocked(e)) {
       await rearmBlockedHeartbeat();
@@ -145,6 +141,10 @@ export async function runHeartbeatTick(
     // Concurrent tick / manual run already running this task — treat as a
     // graceful skip. runTask's own rollback only fires when *it* set running,
     // so the in-flight run keeps its 'running' status untouched.
+    if (e instanceof TRPCError && e.cause instanceof TaskDispatchQueuedError) {
+      await rearmBlockedHeartbeat();
+      return { ran: false, reason: 'queued' };
+    }
     if ((e instanceof TRPCError || e instanceof TaskDomainError) && e.code === 'CONFLICT') {
       log('skip task=%s reason=in-flight', taskId);
       return { ran: false, reason: 'in-flight' };

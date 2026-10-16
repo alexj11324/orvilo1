@@ -167,7 +167,8 @@ describe('the platform Skill management chain stays retired', () => {
 
     it('no longer serves the market skill router', () => {
       expect(exists('apps/server/src/routers/lambda/market/skill.ts')).toBe(false);
-      expect(read('apps/server/src/routers/lambda/market/index.ts')).not.toContain('skillRouter');
+      if (exists('apps/server/src/routers/lambda/market/index.ts'))
+        expect(read('apps/server/src/routers/lambda/market/index.ts')).not.toContain('skillRouter');
     });
 
     it('no longer ships the market skill catalogue service methods', () => {
@@ -200,51 +201,6 @@ describe('the platform Skill management chain stays retired', () => {
     it('no longer ships the orvilo skill command group', () => {
       expect(exists('apps/cli/src/commands/skill.ts')).toBe(false);
       expect(exists('apps/cli/src/commands/skill.test.ts')).toBe(false);
-    });
-  });
-
-  describe('the Connector chain is untouched', () => {
-    it('keeps the connector settings surface it was split out of', () => {
-      expect(exists('src/features/Settings/connector/ConnectorSettings.tsx')).toBe(true);
-      expect(exists('src/features/Settings/connector/features/ConnectorDetail/index.tsx')).toBe(
-        true,
-      );
-      expect(exists('src/features/Settings/connector/features/ConnectorList.tsx')).toBe(true);
-    });
-
-    it('keeps the agent-scoped Composio connector store', () => {
-      // Mis-filed in the inventory as "another skill store": it is the
-      // agent-scoped Composio connector picker and has no skill-market content.
-      for (const file of [
-        'src/features/AgentSkillStore/index.tsx',
-        'src/features/AgentSkillStore/Content.tsx',
-        'src/features/AgentSkillStore/Item.tsx',
-        'src/features/AgentSkillStore/useAgentComposioConnect.ts',
-      ]) {
-        expect(exists(file), `${file} is gone`).toBe(true);
-      }
-    });
-
-    it('keeps the Orvilo / Composio OAuth connect hook', () => {
-      expect(exists('src/features/Connectors/useSkillConnect.ts')).toBe(true);
-    });
-
-    it('keeps the MCP plugin detail agents panel and its relocated presentational pieces', () => {
-      for (const file of [
-        'src/features/MCPPluginDetail/Agents.tsx',
-        'src/features/MCPPluginDetail/AgentItem.tsx',
-        'src/features/MCPPluginDetail/VirtuosoLoading.tsx',
-      ]) {
-        expect(exists(file), `${file} is gone`).toBe(true);
-      }
-      expect(read('src/features/MCPPluginDetail/Agents.tsx')).not.toContain('SkillStore');
-    });
-
-    it('keeps the connector store slice', () => {
-      expect(exists('src/store/tool/slices/connector/action.ts')).toBe(true);
-      expect(read('src/store/tool/slices/connector/action.ts')).toContain(
-        'fetchAgentBoundConnectors',
-      );
     });
   });
 

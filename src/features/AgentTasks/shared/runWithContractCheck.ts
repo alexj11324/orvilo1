@@ -3,7 +3,6 @@ import { t } from 'i18next';
 import { confirmModal } from '@/components/Modal';
 import { taskService } from '@/services/task';
 
-
 /** `canceled`: the reader declined the pending-contract-edits confirmation. */
 export type RunWithContractCheckResult = 'canceled' | 'failed' | 'started';
 

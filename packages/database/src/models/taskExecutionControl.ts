@@ -1,6 +1,8 @@
 import type { RunSubject } from '@orvilo/types';
+import { toRecord } from '@orvilo/utils/object';
 import { and, eq } from 'drizzle-orm';
 
+import { agentOperations } from '../schemas/agentOperations';
 import { executionGrants } from '../schemas/executionGrant';
 import { taskDispatches, tasks, taskTopics } from '../schemas/task';
 import {
@@ -264,6 +266,59 @@ export class TaskExecutionControlModel {
         })
         .where(eq(taskTopics.id, topic.id));
       return control;
+    });
+  }
+
+  /** A proven offline-before-launch retry renews its original registration, never an activated owner. */
+  async renewQueuedRegistration(binding: RuntimeRunBinding, leaseMs: number) {
+    if (!bounded(leaseMs)) fail('Invalid runtime lease');
+    return this.db.transaction(async (tx) => {
+      const { topic, grant } = await this.load(tx, binding);
+      const control = topic.executionControl;
+      const [operation] = await tx
+        .select()
+        .from(agentOperations)
+        .where(
+          and(
+            eq(agentOperations.id, binding.operationId),
+            eq(agentOperations.userId, this.userId),
+            eq(agentOperations.workspaceId, this.workspaceId),
+          ),
+        )
+        .for('update', { noWait: true })
+        .limit(1);
+      const queue = toRecord(operation?.metadata?.deviceQueue);
+      const registration = toRecord(toRecord(queue?.payload)?.primeRegistration);
+      const admission = toRecord(operation?.metadata?.remoteAdmission);
+      if (
+        !this.owns(control, binding) ||
+        control!.state !== 'registering' ||
+        control!.treeId ||
+        control!.sessionId ||
+        control!.supervisorId ||
+        control!.activeHandoffId ||
+        operation?.status !== 'running' ||
+        queue?.state !== 'launching' ||
+        admission?.state !== 'pending' ||
+        registration?.operationId !== binding.operationId ||
+        registration?.runtimeRegistrationId !== binding.runtimeRegistrationId ||
+        registration?.runtimeLeaseId !== binding.runtimeLeaseId ||
+        registration?.runtimeOwnerId !== binding.runtimeOwnerId
+      ) {
+        fail('Runtime is not an unactivated queued registration');
+      }
+      const next = {
+        ...control!,
+        leaseExpiresAt: Math.min(Date.now() + leaseMs, grant.expiresAt!.getTime()),
+      };
+      await tx
+        .update(taskTopics)
+        .set({
+          executionControl: next,
+          executionControlRevision: topic.executionControlRevision + 1,
+        })
+        .where(eq(taskTopics.id, topic.id));
+      return next;
     });
   }
 

@@ -117,9 +117,9 @@ describe('GroupAgentBuilderContextInjector', () => {
 
       // The consolidated message should contain BOTH user memory AND group context
       const injectedMessage = afterGroup.messages[1];
-      expect(injectedMessage.content).toContain('<user_memory>'); // From UserMemoryInjector
+      expect(injectedMessage.content).not.toContain('<user_memory>'); // From UserMemoryInjector
       expect(injectedMessage.content).toContain('<current_group_context>'); // From GroupAgentBuilderContextInjector
-      expect(injectedMessage.content).toContain('User is a developer');
+      expect(injectedMessage.content).not.toContain('User is a developer');
       expect(injectedMessage.content).toContain('grp_123');
       expect(injectedMessage.content).toContain('Dev Team');
     });
@@ -158,8 +158,8 @@ describe('GroupAgentBuilderContextInjector', () => {
 
       const result = await memoryInjector.process(context);
 
-      expect(result.messages).toHaveLength(3);
-      expect(result.messages[1].content).toContain('<user_memory>');
+      expect(result.messages).toHaveLength(2);
+      expect(result.messages[1].content).not.toContain('<user_memory>');
     });
 
     it('should NOT create duplicate user messages when injectors run in sequence', async () => {
@@ -203,7 +203,7 @@ describe('GroupAgentBuilderContextInjector', () => {
       expect(userMessages).toHaveLength(3);
 
       // The first user message should be the consolidated injection
-      expect(userMessages[0].content).toContain('<user_memory>');
+      expect(userMessages[0].content).not.toContain('<user_memory>');
       expect(userMessages[0].content).toContain('<current_group_context>');
 
       // Original messages should remain unchanged
@@ -240,7 +240,8 @@ describe('GroupAgentBuilderContextInjector', () => {
       const memoryIndex = injectedContent.indexOf('<user_memory>');
       const groupIndex = injectedContent.indexOf('<current_group_context>');
 
-      expect(memoryIndex).toBeLessThan(groupIndex);
+      expect(memoryIndex).toBe(-1);
+      expect(groupIndex).toBeGreaterThanOrEqual(0);
     });
   });
 

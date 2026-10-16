@@ -2,6 +2,8 @@ import { pgTable, text, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 
 import { timestamps } from './_helpers';
 import { agents } from './agent';
+import { projects } from './project';
+import { repositories } from './repository';
 import { users } from './user';
 import { workspaces } from './workspace';
 
@@ -67,6 +69,8 @@ export const slackChannelBindings = pgTable(
     agentId: text('agent_id')
       .references(() => agents.id, { onDelete: 'cascade' })
       .notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
+    repositoryId: text('repository_id').references(() => repositories.id, { onDelete: 'set null' }),
     ...timestamps,
   },
   (t) => [

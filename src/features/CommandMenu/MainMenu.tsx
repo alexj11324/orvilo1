@@ -1,20 +1,11 @@
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
 import { Command } from 'cmdk';
-import {
-  FeatherIcon,
-  LayersIcon,
-  LibraryBig,
-  ListTodo,
-  MessageSquarePlusIcon,
-  Monitor,
-  Star,
-} from 'lucide-react';
+import { LayersIcon, ListTodo, MessageSquarePlusIcon, Monitor, Star } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
-import { openFeedbackModal } from '@/components/FeedbackModal';
 import { getNavigableRoutes, getRouteById } from '@/config/routes';
 import { FEEDBACK } from '@/const/url';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
@@ -30,7 +21,7 @@ import { useCommandMenu } from './useCommandMenu';
 import { routeSearchKeywords } from './utils/routeKeywords';
 
 const MainMenu = memo(() => {
-  const { pathname, menuContext, setPages, pages, onClose, onCreateView } = useCommandMenuContext();
+  const { pathname, menuContext, setPages, pages, onCreateView } = useCommandMenuContext();
   const { t } = useTranslation('common');
   const workspaceId = useActiveWorkspaceId();
   const { allowed: canCreate } = usePermission('create_content');
@@ -42,7 +33,6 @@ const MainMenu = memo(() => {
   const {
     handleCreateConversation,
     handleCreateTopic,
-    handleCreateLibrary,
     handleCreateProject,
     handleCreateTask,
     handleNavigate,
@@ -102,16 +92,6 @@ const MainMenu = memo(() => {
           </CommandItem>
         )}
 
-        <CommandItem
-          disabled={!canCreate}
-          icon={<LibraryBig />}
-          unpinned={menuContext !== 'resource'}
-          value="create new library"
-          onSelect={handleCreateLibrary}
-        >
-          {t('cmdk.newLibrary')}
-        </CommandItem>
-
         {menuContext !== 'settings' &&
           (() => {
             const settingsRoute = getRouteById('settings');
@@ -167,21 +147,6 @@ const MainMenu = memo(() => {
       </Command.Group>
 
       <Command.Group heading={t('cmdk.about')}>
-        <CommandItem
-          icon={<FeatherIcon />}
-          keywords={t('cmdk.keywords.contactUs').split(' ')}
-          value="contact-via-email"
-          onSelect={() => {
-            // Close the palette through the context handler (which runs the exit
-            // animation and clears the local `isVisible` state) before opening the
-            // modal. `openFeedbackModal` only flips the store flag, which alone
-            // doesn't unmount the palette — so without this it stays on screen.
-            onClose();
-            openFeedbackModal();
-          }}
-        >
-          {t('cmdk.contactUs')}
-        </CommandItem>
         <CommandItem
           icon={<GithubIcon />}
           keywords={t('cmdk.keywords.submitIssue').split(' ')}

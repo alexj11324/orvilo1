@@ -10,6 +10,7 @@ const { mockTrpcClient } = vi.hoisted(() => ({
       batchDelete: { mutate: vi.fn() },
       createTopic: { mutate: vi.fn() },
       getTopicTranscript: { query: vi.fn() },
+      getReferencedTopicTranscript: { query: vi.fn() },
       getTopics: { query: vi.fn() },
       recentTopics: { query: vi.fn() },
       removeTopic: { mutate: vi.fn() },
@@ -19,20 +20,30 @@ const { mockTrpcClient } = vi.hoisted(() => ({
   },
 }));
 
-const { getTrpcClient: mockGetTrpcClient } = vi.hoisted(() => ({
-  getTrpcClient: vi.fn(),
-}));
+const { getTrpcClient: mockGetTrpcClient, createLambdaClient: mockCreateLambdaClient } = vi.hoisted(
+  () => ({
+    getTrpcClient: vi.fn(),
+    createLambdaClient: vi.fn(),
+  }),
+);
 
-vi.mock('../api/client', () => ({ getTrpcClient: mockGetTrpcClient }));
+vi.mock('../api/client', () => ({
+  getTrpcClient: mockGetTrpcClient,
+  createLambdaClient: mockCreateLambdaClient,
+}));
+vi.mock('../settings', () => ({ resolveServerUrl: () => 'https://native-reference.test' }));
 describe('topic command', () => {
   let exitSpy: ReturnType<typeof vi.spyOn>;
   let consoleSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('ORVILO_OPERATION_ID', '');
+    vi.stubEnv('ORVILO_OPERATION_JWT', '');
     exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any);
     consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     mockGetTrpcClient.mockResolvedValue(mockTrpcClient);
+    mockCreateLambdaClient.mockReturnValue(mockTrpcClient);
     for (const method of Object.values(mockTrpcClient.topic)) {
       for (const fn of Object.values(method)) {
         (fn as ReturnType<typeof vi.fn>).mockReset();
@@ -53,6 +64,7 @@ describe('topic command', () => {
   afterEach(() => {
     exitSpy.mockRestore();
     consoleSpy.mockRestore();
+    vi.unstubAllEnvs();
   });
 
   function createProgram() {
@@ -61,6 +73,97 @@ describe('topic command', () => {
     registerTopicCommand(program);
     return program;
   }
+
+  describe('native operation reference view', () => {
+    beforeEach(() => {
+      vi.stubEnv('ORVILO_OPERATION_ID', 'op-native');
+      vi.stubEnv('ORVILO_OPERATION_JWT', 'operation-token');
+      vi.stubEnv('ORVILO_JWT', 'user-token-must-not-be-used');
+      vi.stubEnv('ORVILO_WORKSPACE_ID', 'workspace-native');
+      mockTrpcClient.topic.getReferencedTopicTranscript.query.mockResolvedValue({
+        items: [{ content: 'Latest source text', id: 'm1', role: 'user' }],
+        topic: { id: 'source', title: 'Source' },
+        total: 51,
+      });
+    });
+
+    it('uses the dedicated operation principal for native transcript pagination', async () => {
+      await createProgram().parseAsync([
+        'node',
+        'test',
+        'topic',
+        'view',
+        'source',
+        '--from',
+        '51',
+        '-L',
+        '1',
+      ]);
+      expect(mockCreateLambdaClient).toHaveBeenCalledWith(
+        {
+          serverUrl: 'https://native-reference.test',
+          token: 'operation-token',
+          tokenType: 'jwt',
+        },
+        'workspace-native',
+      );
+      expect(mockTrpcClient.topic.getReferencedTopicTranscript.query).toHaveBeenCalledWith({
+        includeMessages: true,
+        limit: 1,
+        offset: 50,
+        operationId: 'op-native',
+        topicId: 'source',
+      });
+      expect(mockGetTrpcClient).not.toHaveBeenCalled();
+      expect(mockTrpcClient.topic.getTopicTranscript.query).not.toHaveBeenCalled();
+    });
+
+    it('keeps metadata-only reads on the same explicit-reference route', async () => {
+      await createProgram().parseAsync([
+        'node',
+        'test',
+        'topic',
+        'view',
+        'source',
+        '--no-messages',
+      ]);
+      expect(mockTrpcClient.topic.getReferencedTopicTranscript.query).toHaveBeenCalledWith({
+        includeMessages: false,
+        limit: 50,
+        offset: 0,
+        operationId: 'op-native',
+        topicId: 'source',
+      });
+    });
+
+    it('never retries denied operation reads with user credentials', async () => {
+      mockTrpcClient.topic.getReferencedTopicTranscript.query.mockRejectedValue(
+        new Error('Reference not granted'),
+      );
+      await expect(
+        createProgram().parseAsync(['node', 'test', 'topic', 'view', 'source']),
+      ).rejects.toThrow('Reference not granted');
+      expect(mockGetTrpcClient).not.toHaveBeenCalled();
+      expect(mockTrpcClient.topic.getTopicTranscript.query).not.toHaveBeenCalled();
+    });
+
+    it('requires the operation token even when a user JWT is available', async () => {
+      vi.stubEnv('ORVILO_OPERATION_JWT', '');
+      await expect(
+        createProgram().parseAsync(['node', 'test', 'topic', 'view', 'source']),
+      ).rejects.toThrow('operation ID and token');
+      expect(mockCreateLambdaClient).not.toHaveBeenCalled();
+      expect(mockGetTrpcClient).not.toHaveBeenCalled();
+    });
+
+    it('rejects an incomplete operation context without credential fallback', async () => {
+      vi.stubEnv('ORVILO_OPERATION_ID', '');
+      await expect(
+        createProgram().parseAsync(['node', 'test', 'topic', 'view', 'source']),
+      ).rejects.toThrow('operation ID and token');
+      expect(mockGetTrpcClient).not.toHaveBeenCalled();
+    });
+  });
 
   describe('list', () => {
     it('should display topics', async () => {

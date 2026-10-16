@@ -1,13 +1,6 @@
 export const AUTH_I18N_SCRIPT_ID = 'auth-i18n';
 
-export const AUTH_NAMESPACES = [
-  'auth',
-  'authError',
-  'common',
-  'error',
-  'marketAuth',
-  'oauth',
-] as const;
+export const AUTH_NAMESPACES = ['auth', 'authError', 'common', 'error', 'oauth'] as const;
 
 export type AuthNamespace = (typeof AUTH_NAMESPACES)[number];
 

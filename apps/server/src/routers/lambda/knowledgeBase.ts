@@ -13,6 +13,7 @@ import { DEFAULT_RESOURCE_ACCESS_LEVELS } from '@/database/schemas';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { FileService } from '@/server/services/file';
+import { rejectPlatformKnowledgeBaseWrite } from '@/server/services/knowledgeBase/retirement';
 import {
   getWorkspaceScopedPermissionMatches,
   hasWorkspaceScopedPermission,
@@ -76,6 +77,7 @@ const assertKnowledgeItemsAccessible = async (
 };
 
 const knowledgeBaseProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
+  if (opts.type === 'mutation') rejectPlatformKnowledgeBaseWrite();
   const { ctx } = opts;
   const wsId = ctx.workspaceId ?? undefined;
 

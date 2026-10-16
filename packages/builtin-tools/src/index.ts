@@ -1,4 +1,3 @@
-import { AcceptanceEvidenceManifest } from '@orvilo/builtin-tool-acceptance-evidence';
 import { OrviloActivatorManifest } from '@orvilo/builtin-tool-activator';
 import { AgentBuilderManifest } from '@orvilo/builtin-tool-agent-builder';
 import { AgentDocumentsManifest } from '@orvilo/builtin-tool-agent-documents';
@@ -10,14 +9,12 @@ import {
   agentSignalFeedbackIntentManifest,
   agentSignalReflectionManifest,
   agentSignalReviewManifest,
-  agentSignalSkillManagementManifest,
 } from '@orvilo/builtin-tool-agent-signal';
 import { AuvManifest } from '@orvilo/builtin-tool-auv';
 import { BriefManifest } from '@orvilo/builtin-tool-brief';
 import { CalculatorManifest } from '@orvilo/builtin-tool-calculator/manifest';
 import { CloudSandboxManifest } from '@orvilo/builtin-tool-cloud-sandbox';
 import { CredsManifest } from '@orvilo/builtin-tool-creds';
-import { GoalManifest, GoalSupervisorManifest } from '@orvilo/builtin-tool-goal';
 import { GroupAgentBuilderManifest } from '@orvilo/builtin-tool-group-agent-builder';
 import { GroupManagementManifest } from '@orvilo/builtin-tool-group-management';
 import { KnowledgeBaseManifest } from '@orvilo/builtin-tool-knowledge-base';
@@ -27,12 +24,10 @@ import { OrviloAgentManifest, resolveOrviloAgentManifest } from '@orvilo/builtin
 import { PageAgentManifest } from '@orvilo/builtin-tool-page-agent';
 import { RemoteDeviceManifest } from '@orvilo/builtin-tool-remote-device';
 import { selfFeedbackIntentManifest } from '@orvilo/builtin-tool-self-iteration';
-import { SkillMaintainerManifest } from '@orvilo/builtin-tool-skill-maintainer';
 import { resolveSkillsManifest, SkillsManifest } from '@orvilo/builtin-tool-skills';
 import { TaskManifest } from '@orvilo/builtin-tool-task';
 import { TopicReferenceManifest } from '@orvilo/builtin-tool-topic-reference';
 import { UserInteractionManifest } from '@orvilo/builtin-tool-user-interaction';
-import { VerifyToolManifest } from '@orvilo/builtin-tool-verify';
 import { WebBrowsingManifest } from '@orvilo/builtin-tool-web-browsing';
 import { WebOnboardingManifest } from '@orvilo/builtin-tool-web-onboarding';
 import { isDesktop, RECOMMENDED_SKILLS, RecommendedSkillType } from '@orvilo/const';
@@ -203,8 +198,6 @@ export const runtimeManagedToolIds = [
 export const AGENT_SHARE_ALLOWED_BUILTIN_IDENTIFIERS = new Set<string>([
   CalculatorManifest.identifier,
   WebBrowsingManifest.identifier,
-  VerifyToolManifest.identifier,
-  AcceptanceEvidenceManifest.identifier,
   OrviloAgentManifest.identifier,
   // `orvilo-cloud-sandbox`: allowed because a share-visitor run gets its own
   // fresh per-topic sandbox session, not the creator's. The `orvilo` CLI JWT
@@ -253,20 +246,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
   {
     discoverable: false,
     hidden: true,
-    identifier: AcceptanceEvidenceManifest.identifier,
-    manifest: AcceptanceEvidenceManifest,
-    type: 'builtin',
-  },
-  {
-    discoverable: false,
-    hidden: true,
-    identifier: VerifyToolManifest.identifier,
-    manifest: VerifyToolManifest,
-    type: 'builtin',
-  },
-  {
-    discoverable: false,
-    hidden: true,
     identifier: OrviloActivatorManifest.identifier,
     manifest: OrviloActivatorManifest,
     type: 'builtin',
@@ -280,13 +259,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
     // actual execution environment (cloud sandbox as fallback / offline
     // degradation), so the model never assumes they run on the user's machine.
     resolveManifest: resolveSkillsManifest,
-    type: 'builtin',
-  },
-  {
-    discoverable: false,
-    hidden: true,
-    identifier: SkillMaintainerManifest.identifier,
-    manifest: SkillMaintainerManifest,
     type: 'builtin',
   },
   {
@@ -315,13 +287,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
     hidden: true,
     identifier: agentSignalFeedbackIntentManifest.identifier,
     manifest: agentSignalFeedbackIntentManifest,
-    type: 'builtin',
-  },
-  {
-    discoverable: false,
-    hidden: true,
-    identifier: agentSignalSkillManagementManifest.identifier,
-    manifest: agentSignalSkillManagementManifest,
     type: 'builtin',
   },
   {
@@ -439,20 +404,6 @@ const builtinToolRegistry: OrviloBuiltinTool[] = [
     hidden: true,
     identifier: UserInteractionManifest.identifier,
     manifest: UserInteractionManifest,
-    type: 'builtin',
-  },
-  {
-    discoverable: false,
-    hidden: true,
-    identifier: GoalSupervisorManifest.identifier,
-    manifest: GoalSupervisorManifest,
-    type: 'builtin',
-  },
-  {
-    discoverable: false,
-    hidden: true,
-    identifier: GoalManifest.identifier,
-    manifest: GoalManifest,
     type: 'builtin',
   },
   {

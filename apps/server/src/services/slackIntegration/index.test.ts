@@ -233,27 +233,93 @@ describe('Slack final write authorization', () => {
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 
-  it.each(['admin', 'agent use', 'membership'])(
-    'rejects late %s revocation before saving a channel binding',
-    async (revoked) => {
-      mocks.installation.mockResolvedValue({ id: 'install', tokenRevision: 'revision-a' });
-      vi.spyOn(service, 'getBotToken').mockResolvedValueOnce('bot-token');
-      mocks.api.mockImplementation(async () => {
-        if (revoked === 'admin') mocks.admin.mockResolvedValue(false);
-        if (revoked === 'agent use')
-          mocks.agentUse.mockRejectedValue(new Error('Agent use denied'));
-        if (revoked === 'membership') mocks.memberLock.mockResolvedValue(undefined);
-        return { channel: { id: 'C1', name: 'general' } };
-      });
-      await expect(
-        service.saveBinding({
-          workspaceId: 'workspace',
-          userId: 'user',
-          agentId: 'agent',
-          slackChannelId: 'C1',
-        }),
-      ).rejects.toThrow(revoked === 'agent use' ? 'Agent use denied' : 'access denied');
-      expect(mocks.bindingWrite).not.toHaveBeenCalled();
-    },
-  );
+  it.each(
+    ['C1', 'D1'].flatMap((channelId) =>
+      ['admin', 'agent use', 'membership'].map((revoked) => ({ channelId, revoked })),
+    ),
+  )('rejects late $revoked revocation before saving $channelId', async ({ channelId, revoked }) => {
+    mocks.installation.mockResolvedValue({ id: 'install', tokenRevision: 'revision-a' });
+    vi.spyOn(service, 'getBotToken').mockResolvedValueOnce('bot-token');
+    mocks.api.mockImplementation(async () => {
+      if (revoked === 'admin') mocks.admin.mockResolvedValue(false);
+      if (revoked === 'agent use') mocks.agentUse.mockRejectedValue(new Error('Agent use denied'));
+      if (revoked === 'membership') mocks.memberLock.mockResolvedValue(undefined);
+      return { channel: { id: channelId, name: 'general', is_im: channelId.startsWith('D') } };
+    });
+    await expect(
+      service.saveBinding({
+        workspaceId: 'workspace',
+        userId: 'user',
+        agentId: 'agent',
+        slackChannelId: channelId,
+      }),
+    ).rejects.toThrow(revoked === 'agent use' ? 'Agent use denied' : 'access denied');
+    expect(mocks.bindingWrite).not.toHaveBeenCalled();
+  });
+});
+
+describe('Slack DM binding setup', () => {
+  beforeEach(() => {
+    mocks.installation.mockResolvedValue({ id: 'install', tokenRevision: 'revision-a' });
+    vi.spyOn(service, 'getBotToken').mockResolvedValue('bot-token');
+  });
+  it('lists DMs alongside channels with stable labels and cursor paging', async () => {
+    mocks.api.mockImplementation(async (_method, _token, params) => ({
+      channels: params.types.includes('im')
+        ? [
+            { id: 'C1', name: 'general', is_private: false },
+            { id: 'D1', is_im: true, user: 'U1' },
+            { id: 'D2', is_im: true },
+          ]
+        : [{ id: 'C1', name: 'general', is_private: false }],
+      response_metadata: { next_cursor: 'next' },
+    }));
+    await expect(service.channels('workspace', 'cursor')).resolves.toEqual({
+      channels: [
+        { id: 'C1', name: 'general', isPrivate: false },
+        { id: 'D1', name: 'U1', isPrivate: false },
+        { id: 'D2', name: 'D2', isPrivate: false },
+      ],
+      nextCursor: 'next',
+    });
+  });
+  it('requests the DM permissions used for conversation listing and thread history', async () => {
+    const url = new URL(await service.startOAuth(payload));
+    expect(url.searchParams.get('scope')?.split(',')).toEqual(
+      expect.arrayContaining(['im:read', 'im:history']),
+    );
+  });
+  it('saves a provider-verified DM with a stable label', async () => {
+    mocks.api.mockResolvedValue({ channel: { id: 'D1', is_im: true, user: 'U1' } });
+    mocks.bindingWrite.mockImplementation(async (input) => ({ id: 'binding', ...input }));
+    await expect(
+      service.saveBinding({
+        workspaceId: 'workspace',
+        userId: 'user',
+        slackChannelId: 'D1',
+        agentId: 'agent',
+      }),
+    ).resolves.toMatchObject({
+      id: 'binding',
+      slackChannelId: 'D1',
+      slackChannelName: 'U1',
+      agentId: 'agent',
+    });
+  });
+  it.each([
+    { id: 'D1', is_mpim: true },
+    { id: 'D1', is_im: true, is_archived: true },
+    { id: 'D2', is_im: true },
+  ])('rejects unsupported or mismatched provider conversation $id', async (channel) => {
+    mocks.api.mockResolvedValue({ channel });
+    await expect(
+      service.saveBinding({
+        workspaceId: 'workspace',
+        userId: 'user',
+        slackChannelId: 'D1',
+        agentId: 'agent',
+      }),
+    ).rejects.toThrow('slack_channel_invalid');
+    expect(mocks.bindingWrite).not.toHaveBeenCalled();
+  });
 });

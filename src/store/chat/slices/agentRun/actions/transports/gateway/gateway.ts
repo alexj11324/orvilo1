@@ -241,6 +241,16 @@ export class GatewayActionImpl {
     this.#get = get;
   }
 
+  #findReusableGatewayOperation = (serverOperationId: string) =>
+    Object.values(this.#get().operations ?? {}).find(
+      (op) =>
+        op.type === 'execServerAgentRuntime' &&
+        op.metadata?.serverOperationId === serverOperationId &&
+        (op.status === 'pending' || op.status === 'paused' || op.status === 'running') &&
+        !op.metadata?.isAborting &&
+        !op.abortController?.signal.aborted,
+    );
+
   /**
    * Connect to the Agent Gateway for a specific operation.
    * Creates an AgentStreamClient, manages its lifecycle, and wires up event callbacks.
@@ -968,12 +978,15 @@ export class GatewayActionImpl {
     // Stash the server operation id in metadata so human-intervention flows
     // (approve/reject/reject_continue) can look it up and call the server
     // without needing an out-of-band lookup.
-    const { operationId: gatewayOpId } = this.#get().startOperation({
-      context: resolvedMessageContext,
-      metadata: { serverOperationId: result.operationId },
-      parentOperationId,
-      type: 'execServerAgentRuntime',
-    });
+    // A reconnect may already own this run while dispatch or topic synchronization awaited.
+    const gatewayOpId =
+      this.#findReusableGatewayOperation(result.operationId)?.id ??
+      this.#get().startOperation({
+        context: resolvedMessageContext,
+        metadata: { serverOperationId: result.operationId },
+        parentOperationId,
+        type: 'execServerAgentRuntime',
+      }).operationId;
 
     // Associate the server-created assistant message with the gateway operation
     this.#get().associateMessageWithOperation(result.assistantMessageId, gatewayOpId);
@@ -1279,12 +1292,7 @@ export class GatewayActionImpl {
     // sever the first op's socket mid-flight and leave it `running` forever —
     // observed on e2e as two ops sharing `serverOperationId` (one completed,
     // one stuck) with the input queue blocked behind the zombie.
-    const existingLocalOp = Object.values(this.#get().operations ?? {}).find(
-      (op) =>
-        op.type === 'execServerAgentRuntime' &&
-        op.metadata?.serverOperationId === operationId &&
-        (op.status === 'pending' || op.status === 'paused' || op.status === 'running'),
-    );
+    const existingLocalOp = this.#findReusableGatewayOperation(operationId);
 
     // Create a local operation for UI loading state, stashing the server op id
     // so intervention flows can find it after reconnect as well.

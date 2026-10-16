@@ -5,7 +5,6 @@ import { LOADING_FLAT } from '@orvilo/const';
 import { isFullAccessApiKey } from '@orvilo/const/apiKeyScope';
 import { parse } from '@orvilo/conversation-flow';
 import type {
-  AgentMarketplaceRuntimeConfig,
   ExecAgentResult,
   HeterogeneousReasoningEffort,
   TaskCurrentActivity,
@@ -45,7 +44,6 @@ import {
   type ResolveAgentInterventionResult,
   rollbackAgentInterventionResolution,
 } from '@/business/server/agent-run/agentInterventionReview';
-import { executeAgentMarketplaceIntervention } from '@/business/server/agent-run/executeCustomIntervention';
 import {
   getHeteroInterventionReview,
   onHeteroInterventionResolutionPublished,
@@ -60,18 +58,8 @@ import { HumanApprovalAlreadyResolvedError, MessageModel } from '@/database/mode
 import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
-import {
-  agentInterventions,
-  agentOperations,
-  messagePlugins,
-  messages,
-  tasks,
-  taskTopics,
-  topics,
-  workspaceMembers,
-} from '@/database/schemas';
+import { agentInterventions, agentOperations, topics, workspaceMembers } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
-import { assertAgentRuntimeCreation } from '@/database/utils/agentRuntimeCreation';
 import { notShareVisitorTopicRef } from '@/database/utils/shareVisitor';
 import { heteroAuthedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -130,7 +118,10 @@ import {
   resolveActiveHeteroOperationPrincipal,
 } from '@/server/services/heterogeneousAgent/operationPrincipal';
 
-import { assertIssueExecutionInput } from './_helpers/issueExecutionInput';
+import {
+  assertCanUseOperationAgent,
+  assertPendingNativeInterventionCard,
+} from './_helpers/nativeInterventionInput';
 
 const log = debug('orvilo-server:ai-agent-router');
 
@@ -150,13 +141,6 @@ const publishedStatusForRuntimeAction = (
   runtimeAction: AgentInterventionRuntimeAction,
 ): AgentInterventionReviewStatus => {
   switch (runtimeAction.type) {
-    case 'execute_custom_interaction': {
-      return runtimeAction.input.action.type === 'cancelled'
-        ? 'cancelled'
-        : runtimeAction.input.action.type === 'skipped'
-          ? 'skipped'
-          : 'resolved';
-    }
     case 'heterogeneous_response': {
       return 'resolving';
     }
@@ -194,17 +178,12 @@ const continuationRuntimeAction = (
   runtimeAction: AgentInterventionRuntimeAction,
 ): Extract<
   AgentInterventionRuntimeAction,
-  { type: 'execute_custom_interaction' | 'resume_approval' | 'resume_tool_result' }
+  { type: 'resume_approval' | 'resume_tool_result' }
 > | null => {
   if (runtimeAction.type === 'resume_approval' || runtimeAction.type === 'resume_tool_result') {
     return runtimeAction;
   }
-  if (
-    runtimeAction.type === 'execute_custom_interaction' &&
-    runtimeAction.input.action.type !== 'cancelled'
-  ) {
-    return runtimeAction;
-  }
+
   return null;
 };
 
@@ -222,20 +201,6 @@ const probeRuntimeActionDispatch = async (
   const expected: Array<{ messageId: string; skipped?: true; status: string }> = [];
 
   switch (runtimeAction.type) {
-    case 'execute_custom_interaction': {
-      if (runtimeAction.input.action.type === 'cancelled') {
-        expected.push(
-          ...runtimeAction.toolMessageIds.map((messageId) => ({ messageId, status: 'aborted' })),
-        );
-      } else {
-        expected.push({
-          messageId: runtimeAction.parentMessageId,
-          ...(runtimeAction.input.action.type === 'skipped' && { skipped: true as const }),
-          status: runtimeAction.input.action.type === 'skipped' ? 'rejected' : 'approved',
-        });
-      }
-      break;
-    }
     case 'heterogeneous_response': {
       // The producer de-duplicates the stable resolutionRequestId. There is no
       // runtime message claim that can prove whether XADD happened before a
@@ -294,19 +259,14 @@ const probeRuntimeActionDispatch = async (
   // Stop and current custom-cancel semantics settle the parked operation
   // itself. The message claim is only complete when that exact operation is
   // durably interrupted; a crash between the two is retryable preparation.
-  if (
-    runtimeAction.type === 'stop' ||
-    (runtimeAction.type === 'execute_custom_interaction' &&
-      runtimeAction.input.action.type === 'cancelled')
-  ) {
+  if (runtimeAction.type === 'stop') {
     const operationModel = new AgentOperationModel(
       ctx.serverDB,
       resolution.ownerUserId,
       resolution.workspaceId ?? ctx.workspaceId ?? undefined,
     );
     const operation = await operationModel.findById(runtimeAction.operationId);
-    const topicId =
-      runtimeAction.type === 'stop' ? runtimeAction.topicId : runtimeAction.appContext.topicId;
+    const topicId = runtimeAction.topicId;
     if (!operation || operation.topicId !== topicId) return { state: 'conflict' };
     if (operation.status === 'interrupted') return { state: 'dispatched' };
     return operation.status === 'waiting_for_human'
@@ -457,12 +417,6 @@ const retireRuntimeActionSourceOperation = async (
   ctx: AgentInterventionDispatchContext,
 ): Promise<void> => {
   switch (runtimeAction.type) {
-    case 'execute_custom_interaction': {
-      if (runtimeAction.input.action.type !== 'cancelled') {
-        await ctx.aiAgentService.retirePendingApprovalOperation(runtimeAction.operationId);
-      }
-      return;
-    }
     case 'resume_approval':
     case 'resume_tool_result': {
       await ctx.aiAgentService.retirePendingApprovalOperation(runtimeAction.operationId);
@@ -520,7 +474,6 @@ const dispatchClaimedAgentIntervention = async (
   }
   const { runtimeAction } = resolution;
   let execution: ExecAgentResult | undefined;
-  let durableCustomSideEffect = false;
   const publishedStatus = publishedStatusForRuntimeAction(runtimeAction);
   const dispatchProbe = await probeRuntimeActionDispatch(resolution, ctx);
   const deterministicContinuationOperationId = continuationRuntimeAction(runtimeAction)
@@ -563,61 +516,6 @@ const dispatchClaimedAgentIntervention = async (
 
     if (dispatchProbe.state !== 'dispatched' && shouldDispatchRuntimeAction) {
       switch (runtimeAction.type) {
-        case 'execute_custom_interaction': {
-          const customAction = runtimeAction.input.action;
-          if (customAction.type === 'submitted') {
-            await assertAgentRuntimeCreation(
-              ctx.serverDB,
-              {
-                userId: resolution.ownerUserId,
-                workspaceId: resolution.workspaceId ?? ctx.workspaceId ?? undefined,
-              },
-              customAction.runtimeConfig,
-            );
-          }
-          const customResult = await executeAgentMarketplaceIntervention({
-            action: customAction,
-            actorUserId: ctx.userId,
-            categoryHints: runtimeAction.input.categoryHints,
-            requestId: runtimeAction.input.requestId,
-            resolutionRequestId: resolution.resolutionRequestId,
-            topicId: runtimeAction.appContext.topicId,
-            userId: resolution.ownerUserId,
-            workspaceId: resolution.workspaceId ?? ctx.workspaceId ?? undefined,
-          });
-          durableCustomSideEffect = true;
-          if (customAction.type === 'cancelled') {
-            await ctx.aiAgentService.stopPendingApproval({
-              approvalResolutionRequestId: resolution.resolutionRequestId,
-              batchId: runtimeAction.batchId,
-              operationId: runtimeAction.operationId,
-              toolMessageIds: runtimeAction.toolMessageIds,
-              topicId: runtimeAction.appContext.topicId,
-            });
-          } else {
-            const skipped = customAction.type === 'skipped';
-            execution = await ctx.aiAgentService.execAgent({
-              agentId: runtimeAction.agentId,
-              approvalResolutionRequestId: resolution.resolutionRequestId,
-              approvalSourceOperationId: runtimeAction.operationId,
-              appContext: runtimeAction.appContext,
-              parentMessageId: runtimeAction.parentMessageId,
-              prompt: '',
-              replacesOperationId: runtimeAction.operationId,
-              resume: true,
-              taskId: runtimeAction.appContext.taskId ?? undefined,
-              resumeToolResult: {
-                content: customResult.content,
-                outcome: skipped ? 'skipped' : 'submitted',
-                parentMessageId: runtimeAction.parentMessageId,
-                pluginState: customResult.pluginState,
-                toolCallId: runtimeAction.toolCallId,
-              },
-              topicStartReservationId: deterministicContinuationOperationId,
-            });
-          }
-          break;
-        }
         case 'heterogeneous_response': {
           await createStreamEventManager().publishStreamEvent(runtimeAction.operationId, {
             data: runtimeAction.response,
@@ -700,7 +598,7 @@ const dispatchClaimedAgentIntervention = async (
       // the tool/result side effect is authoritatively visible.
       await repairRuntimeActionContinuationAnchor(resolution, ctx);
       await retireRuntimeActionSourceOperation(runtimeAction, ctx);
-    } else if (retryProbe.state === 'unclaimed' && !durableCustomSideEffect) {
+    } else if (retryProbe.state === 'unclaimed') {
       await rollbackAgentInterventionResolution({
         actorUserId: ctx.userId,
         claimId: resolution.claimId,
@@ -782,70 +680,6 @@ const resolveHeteroTopicWorkspace = async (params: {
   }
 
   return topic.workspaceId;
-};
-
-/** Issue input follows the current assignee; private Chat input stays owner-scoped. */
-const assertCanUseOperationAgent = async (params: {
-  db: OrviloDatabase;
-  operationId: string;
-  topicId?: string;
-  userId: string;
-  workspaceId?: string | null;
-}) => {
-  const { db, operationId, topicId, userId, workspaceId } = params;
-  const [row] = await db
-    .select({
-      agentId: agentOperations.agentId,
-      groupId: agentOperations.chatGroupId,
-      status: agentOperations.status,
-      topicId: agentOperations.topicId,
-      userId: agentOperations.userId,
-      workspaceId: agentOperations.workspaceId,
-    })
-    .from(agentOperations)
-    .where(eq(agentOperations.id, operationId))
-    .limit(1);
-  if (!row) throw new TRPCError({ code: 'NOT_FOUND', message: 'Operation not found' });
-  if (row.workspaceId !== (workspaceId ?? null)) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation is outside the caller scope' });
-  }
-  if (topicId && row.topicId !== topicId) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation does not belong to this topic' });
-  }
-  const [issue] =
-    row.topicId && row.workspaceId
-      ? await db
-          .select({ assigneeAgentId: tasks.assigneeAgentId, assigneeUserId: tasks.assigneeUserId })
-          .from(taskTopics)
-          .innerJoin(tasks, eq(tasks.id, taskTopics.taskId))
-          .where(
-            and(
-              eq(taskTopics.topicId, row.topicId),
-              eq(taskTopics.workspaceId, row.workspaceId),
-              eq(tasks.workspaceId, row.workspaceId),
-              eq(tasks.currentTopicId, row.topicId),
-              eq(taskTopics.operationId, operationId),
-            ),
-          )
-          .limit(1)
-      : [];
-  if (issue) {
-    await assertIssueExecutionInput({ serverDB: db, userId, workspaceId }, issue, row.agentId);
-  } else if (row.userId !== userId) {
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation is outside the caller scope' });
-  }
-  if (row.workspaceId) {
-    if (!row.agentId)
-      throw new TRPCError({ code: 'FORBIDDEN', message: 'Operation has no authorized Agent' });
-    await assertCanUseWorkspaceAgent({
-      agentId: row.agentId,
-      db,
-      groupId: row.groupId,
-      userId,
-      workspaceId: row.workspaceId,
-    });
-  }
-  return row;
 };
 
 /**
@@ -2281,8 +2115,6 @@ export const aiAgentRouter = router({
               const pluginState = resumeToolResult.pluginState as
                 | {
                     askUserAnswers?: Record<string, unknown>;
-                    selectedAgentIds?: unknown;
-                    runtimeConfig?: AgentMarketplaceRuntimeConfig;
                   }
                 | undefined;
               const answers = pluginState?.askUserAnswers;
@@ -2298,30 +2130,6 @@ export const aiAgentRouter = router({
                 sourceAction = {
                   result: answers as Record<string, string | string[]>,
                   type: 'submit_answers',
-                };
-              } else if (
-                plugins[0]?.identifier === 'orvilo-web-onboarding' &&
-                plugins[0]?.apiName === 'showAgentMarketplace' &&
-                Array.isArray(pluginState?.selectedAgentIds) &&
-                pluginState.selectedAgentIds.every((id) => typeof id === 'string')
-              ) {
-                if (!pluginState.runtimeConfig)
-                  throw new TRPCError({
-                    code: 'PRECONDITION_FAILED',
-                    message: 'AGENT_RUNTIME_REQUIRED',
-                  });
-                await assertAgentRuntimeCreation(
-                  ctx.serverDB,
-                  { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
-                  pluginState.runtimeConfig,
-                );
-                sourceAction = {
-                  result: {
-                    kind: 'agent_marketplace',
-                    selectedTemplateIds: pluginState.selectedAgentIds as string[],
-                    runtimeConfig: pluginState.runtimeConfig,
-                  },
-                  type: 'submit_custom',
                 };
               }
             }
@@ -3658,14 +3466,6 @@ export const aiAgentRouter = router({
         workspaceId: ctx.workspaceId,
       });
 
-      if (input.action.type === 'submit_custom') {
-        await assertAgentRuntimeCreation(
-          ctx.serverDB,
-          { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
-          input.action.result.runtimeConfig,
-        );
-      }
-
       // A rejected resolution describes the submitted response, not a server
       // fault, so map the contract failure instead of letting it become a 500.
       const resolution = await resolveAgentInterventionBySource({
@@ -3717,13 +3517,6 @@ export const aiAgentRouter = router({
   resolveAgentIntervention: aiAgentUseProcedure
     .input(ResolveAgentInterventionSchema)
     .mutation(async ({ input, ctx }) => {
-      if (input.action.type === 'submit_custom') {
-        await assertAgentRuntimeCreation(
-          ctx.serverDB,
-          { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
-          input.action.result.runtimeConfig,
-        );
-      }
       const resolution = await resolveAgentIntervention({
         action: input.action,
         expectedBatchVersion: input.expectedBatchVersion,
@@ -3982,36 +3775,12 @@ export const aiAgentRouter = router({
       });
 
       if (input.toolMessageId) {
-        const [source] = await ctx.serverDB
-          .select({ intervention: messagePlugins.intervention })
-          .from(messagePlugins)
-          .innerJoin(messages, eq(messages.id, messagePlugins.id))
-          .where(
-            and(
-              eq(messagePlugins.id, input.toolMessageId),
-              eq(messagePlugins.userId, operation.userId),
-              eq(messages.userId, operation.userId),
-              eq(messages.role, 'tool'),
-              operation.topicId
-                ? eq(messages.topicId, operation.topicId)
-                : isNull(messages.topicId),
-              eq(messagePlugins.toolCallId, toolCallId),
-            ),
-          )
-          .limit(1);
-        if (
-          !['running', 'waiting_for_human'].includes(operation.status) ||
-          source?.intervention?.operationId !== operationId ||
-          source.intervention.status !== 'pending'
-        ) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'This Agent question is no longer pending.',
-          });
-        }
-        await assertCanUseAgentRunConversation({
+        await assertPendingNativeInterventionCard({
           db: ctx.serverDB,
-          messageIds: [input.toolMessageId],
+          operation,
+          operationId,
+          toolCallId,
+          toolMessageId: input.toolMessageId,
           userId: ctx.userId,
           workspaceId: ctx.workspaceId,
         });

@@ -1,7 +1,6 @@
 import type { AgentState } from '@orvilo/agent-execution';
 import { BUILTIN_AGENT_SLUGS, isBuiltinAgentAvailable } from '@orvilo/builtin-agents';
-import { builtinSkills } from '@orvilo/builtin-skills';
-import { groupSupervisorToolIds, isBuiltinToolIdentifier } from '@orvilo/builtin-tools';
+import { groupSupervisorToolIds } from '@orvilo/builtin-tools';
 import type { OrviloDatabase } from '@orvilo/database';
 import { canRunGroupSupervisorRuntime } from '@orvilo/heterogeneous-agents';
 import type {
@@ -15,7 +14,7 @@ import type {
   ScheduleAgentRunResult,
   WorkingDirConfig,
 } from '@orvilo/types';
-import { getActivePluginIds, getWorkingDirEffectivePath, RequestTrigger } from '@orvilo/types';
+import { getWorkingDirEffectivePath, RequestTrigger } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
@@ -26,10 +25,7 @@ import {
 } from '@/business/server/agent-run/agentInterventionIdentity';
 import { AgentModel } from '@/database/models/agent';
 import { AgentOperationModel } from '@/database/models/agentOperation';
-import { ConnectorModel } from '@/database/models/connector';
-import { ConnectorToolModel } from '@/database/models/connectorTool';
 import { MessageModel } from '@/database/models/message';
-import { PluginModel } from '@/database/models/plugin';
 import { TaskModel } from '@/database/models/task';
 import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
@@ -48,7 +44,6 @@ import type {
   SubAgentBridgeParams,
 } from '@/server/services/agentExecution/types';
 import { AgentStartError } from '@/server/services/agentExecution/types';
-import { ComposioService } from '@/server/services/composio';
 import { MarketService } from '@/server/services/market';
 import { markdownToTxt } from '@/utils/markdownToTxt';
 
@@ -58,7 +53,6 @@ import { InterventionController } from './intervention/InterventionController';
 import type { ApprovalClaimState } from './pipeline/approvalResume';
 import { claimApprovalResume, tryReuseInterventionContinuation } from './pipeline/approvalResume';
 import { dispatchHeteroAgent } from './pipeline/heteroDispatch';
-import { resolveExternalToolSurface } from './pipeline/resolveExternalToolSurface';
 import { resolveRunAgentConfig } from './pipeline/resolveRunAgentConfig';
 import { resolveRunToolSurface } from './pipeline/runToolSurface';
 import { setupTurn } from './pipeline/turnSetup';
@@ -85,16 +79,12 @@ export class AiAgentService {
   private readonly agentOperationModel: AgentOperationModel;
   private readonly agentService: AgentService;
   private readonly messageModel: MessageModel;
-  private readonly connectorModel: ConnectorModel;
-  private readonly connectorToolModel: ConnectorToolModel;
-  private readonly pluginModel: PluginModel;
   private readonly taskModel: TaskModel;
   private readonly threadModel: ThreadModel;
   private readonly topicModel: TopicModel;
   private readonly agentRuntimeService: AgentRuntimeService;
   private readonly interventionController: InterventionController;
   private _marketService?: MarketService;
-  private readonly composioService: ComposioService;
 
   private readonly workspaceId?: string;
   /**
@@ -140,9 +130,6 @@ export class AiAgentService {
     this.agentOperationModel = new AgentOperationModel(db, userId, wsId);
     this.agentService = new AgentService(db, userId, wsId);
     this.messageModel = new MessageModel(db, userId, wsId, undefined, messageModelOptions);
-    this.connectorModel = new ConnectorModel(db, userId, wsId);
-    this.connectorToolModel = new ConnectorToolModel(db, userId, wsId);
-    this.pluginModel = new PluginModel(db, userId, wsId);
     this.taskModel = new TaskModel(db, userId, wsId);
     this.threadModel = new ThreadModel(db, userId, wsId);
     this.topicModel = new TopicModel(db, userId, wsId, undefined, topicModelOptions);
@@ -156,7 +143,6 @@ export class AiAgentService {
         userInfo: { userId },
       });
     }
-    this.composioService = new ComposioService({ db, userId, workspaceId: wsId });
     this.interventionController = new InterventionController({
       agentOperationModel: this.agentOperationModel,
       agentRuntimeService: this.agentRuntimeService,
@@ -975,29 +961,6 @@ export class AiAgentService {
     // The retired loop mounted Orvilo builtin tools/skills directly; ACP runs
     // receive them as a per-run MCP surface (`builtinToolSpecs`) plus inline
     // capability instructions (`capabilityContext`) — see `runToolSurface`.
-    // Non-builtin ids (connectors, installed MCP plugins) are resolved against
-    // the caller's own rows first; mounts carry no credentials — the exec
-    // callback re-resolves the connection at call time.
-    const externalCandidates = [
-      ...new Set([
-        ...(additionalPluginIds ?? []),
-        ...(exclusivePluginIds ?? []),
-        ...(effectiveRequiredToolIds ?? []),
-        ...(selectedToolIds ?? []),
-        ...getActivePluginIds(agentConfig.plugins),
-      ]),
-    ].filter(
-      (identifier) =>
-        !isBuiltinToolIdentifier(identifier) &&
-        !builtinSkills.some((skill) => skill.identifier === identifier),
-    );
-    const externalTools = await resolveExternalToolSurface({
-      agentId: resolvedAgentId,
-      candidateIds: externalCandidates,
-      db: this.db,
-      userId: this.userId,
-      workspaceId: this.workspaceId,
-    });
     const toolSurface = resolveRunToolSurface({
       additionalPluginIds,
       agentPlugins: agentConfig.plugins,
@@ -1006,7 +969,6 @@ export class AiAgentService {
       disableTools,
       enableAgentMode: agentConfig.chatConfig?.enableAgentMode,
       exclusivePluginIds,
-      externalTools,
       requiredToolIds: effectiveRequiredToolIds,
       selectedToolIds,
       // MCP-mountable harnesses are the standard-ACP runtimes whose adapter
@@ -1035,7 +997,6 @@ export class AiAgentService {
       {
         beforeOperationStart,
         builtinToolSpecs: toolSurface.builtinToolSpecs,
-        externalToolMounts: toolSurface.externalTools,
         toolSurfaceOutcomes: toolSurface.outcomes,
         clientIp,
         // Skill content, mounted-tool usage guidance and eval env prompts all

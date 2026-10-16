@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-import { isLocalOrPrivateUrl } from '@orvilo/utils';
 import { isRecord } from '@orvilo/utils/object';
 import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
@@ -12,7 +11,7 @@ import {
 } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { ConnectorModel } from '@/database/models/connector';
 import { TaskModel } from '@/database/models/task';
-import { ConnectorMcpConnectionType, ConnectorStatus } from '@/database/schemas';
+import { ConnectorStatus } from '@/database/schemas';
 import { tasks } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import { snapshotAutomationDefinition } from '@/database/utils/automationOccurrence';
@@ -108,43 +107,22 @@ export const mcpEventsRouter = router({
           message: 'This task already has an event trigger',
         });
       }
-      const adapter = createConnectorEventsAdapter(input.connectorId, ctx);
-      const nativeGithub = isGitHubMcpConnector(connector);
-      const service = new McpEventSubscriptionService({
-        repository: ctx.eventBindings,
-        minimumRefreshWindowMs: MCP_EVENT_RENEWAL_LEAD_MS,
-        adapterFor: async () => adapter,
-        callbackUrl: (token) =>
-          new URL(`/api/webhooks/mcp-events/${token}`, appEnv.APP_URL).toString(),
-      });
+      if (!isGitHubMcpConnector(connector))
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Configure third-party MCP in the Agent native harness',
+        });
       try {
-        const binding = await (async () => {
-          if (nativeGithub)
-            return createGithubEventBinding({
-              arguments: input.arguments,
-              callbackUrl: (token) =>
-                new URL(`/api/webhooks/github-events/${token}`, appEnv.APP_URL).toString(),
-              connector,
-              db: ctx.serverDB,
-              eventName: input.eventName,
-              repository: ctx.eventBindings,
-              tenantId: scope.tenantId,
-            });
-          const discovery = await adapter.discover();
-          const event = discovery.events.find(
-            (definition) =>
-              definition.name === input.eventName && definition.delivery.includes('webhook'),
-          );
-          if (!discovery.supported || !event)
-            throw new TRPCError({ code: 'BAD_REQUEST', message: 'Event unavailable' });
-          return service.create({
-            ...scope,
-            connectorId: input.connectorId,
-            event,
-            arguments: input.arguments,
-            schemaId: `${input.connectorId}:${event.name}`,
-          });
-        })();
+        const binding = await createGithubEventBinding({
+          arguments: input.arguments,
+          callbackUrl: (token) =>
+            new URL(`/api/webhooks/github-events/${token}`, appEnv.APP_URL).toString(),
+          connector,
+          db: ctx.serverDB,
+          eventName: input.eventName,
+          repository: ctx.eventBindings,
+          tenantId: scope.tenantId,
+        });
         try {
           const trigger = await ctx.eventTriggers.save(
             {
@@ -178,8 +156,7 @@ export const mcpEventsRouter = router({
           return { data: trigger, success: true as const };
         } catch (error) {
           const bindingScope = { tenantId: scope.tenantId, connectorId: input.connectorId };
-          if (nativeGithub) await ctx.eventBindings.revoke(bindingScope, binding.id);
-          else await service.stop(bindingScope, binding.id);
+          await ctx.eventBindings.revoke(bindingScope, binding.id);
           throw error;
         }
       } catch (error) {
@@ -401,8 +378,10 @@ export const mcpEventsRouter = router({
             },
             success: true as const,
           };
-        const discovery = await createConnectorEventsAdapter(input.connectorId, ctx).discover();
-        return { data: { ...discovery, sourceType: 'mcp' as const }, success: true as const };
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Configure third-party MCP in the Agent native harness',
+        });
       } catch {
         // Remote errors may contain provider tokens or headers. Never return them to the client.
         throw new TRPCError({ code: 'BAD_GATEWAY', message: 'Event discovery is unavailable' });
@@ -468,10 +447,7 @@ export const mcpEventsRouter = router({
             connector.isEnabled &&
             connector.status === ConnectorStatus.connected &&
             !connector.agentId &&
-            (isGitHubMcpConnector(connector) ||
-              (connector.mcpConnectionType !== ConnectorMcpConnectionType.stdio &&
-                connector.mcpServerUrl &&
-                !isLocalOrPrivateUrl(connector.mcpServerUrl))),
+            isGitHubMcpConnector(connector),
         )
         .map(({ id, name }) => ({ id, name })),
       success: true as const,

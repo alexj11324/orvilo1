@@ -67,9 +67,6 @@ export const componentMap = {
   [SettingsTabs.Creds]: dynamic(() => import('../creds'), {
     loading: loading('Settings > Creds'),
   }),
-  [SettingsTabs.Connector]: dynamic(() => import('../connector'), {
-    loading: loading('Settings > Connector'),
-  }),
 
   [SettingsTabs.Plans]: dynamic(() => import('@/business/client/BusinessSettingPages/Plans'), {
     loading: loading('Settings > Plans'),

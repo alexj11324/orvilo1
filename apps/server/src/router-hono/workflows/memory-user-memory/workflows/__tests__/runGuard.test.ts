@@ -3,9 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createStepRunner } from '@/server/workflows/testing/stepContext';
 
 const mocks = vi.hoisted(() => ({
+  isUserMemoryExtractionEnabled: vi.fn(),
   assertWorkflowRunAllowed: vi.fn(),
   initializeRedis: vi.fn(),
   isRedisEnabled: vi.fn(),
+}));
+
+vi.mock('@/server/services/memory/userMemory/gate', () => ({
+  isUserMemoryExtractionEnabled: mocks.isUserMemoryExtractionEnabled,
 }));
 
 vi.mock('@/libs/redis', () => ({
@@ -36,12 +41,22 @@ const createContext = (payload: unknown, workflowRunId = 'wfr_context') => ({
 
 describe('memory workflow run guard helper', () => {
   beforeEach(() => {
+    mocks.isUserMemoryExtractionEnabled.mockResolvedValue(true);
     mocks.assertWorkflowRunAllowed.mockReset();
     mocks.initializeRedis.mockReset();
     mocks.isRedisEnabled.mockReset();
     mocks.isRedisEnabled.mockReturnValue(true);
     mocks.initializeRedis.mockResolvedValue({ get: vi.fn() });
     mocks.assertWorkflowRunAllowed.mockResolvedValue(undefined);
+  });
+
+  it('terminates retired workflows normally before Redis or child work', async () => {
+    mocks.isUserMemoryExtractionEnabled.mockResolvedValue(false);
+    const result = await checkGuard(createContext({ userId: 'user-1' }) as never, 'memory/hourly', {
+      response: { processedUsers: 0 },
+    });
+    expect(result).toMatchObject({ result: false, response: { skipped: true, processedUsers: 0 } });
+    expect(mocks.initializeRedis).not.toHaveBeenCalled();
   });
 
   it('records an initial no-op step before entry guard work can fail', async () => {

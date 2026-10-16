@@ -15,10 +15,12 @@ import type {
   VerifyRunDecisionDetail,
   VerifySurface,
 } from '@orvilo/types';
+import { pickTrimmedString } from '@orvilo/utils/object';
 import debug from 'debug';
 
 import { AcceptanceModel } from '@/database/models/acceptance';
 import { AgentModel } from '@/database/models/agent';
+import { AgentOperationModel } from '@/database/models/agentOperation';
 import { DocumentModel } from '@/database/models/document';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
@@ -35,10 +37,14 @@ import type {
   VerifyRunItem,
 } from '@/database/schemas/verify';
 import type { OrviloDatabase } from '@/database/type';
-import { TaskService } from '@/server/services/task';
+import {
+  cancelQueuedDeviceOperation,
+  finishQueuedDeviceOperation,
+} from '@/server/services/aiAgent/deviceQueue';
 
 import { type AcceptanceMergeSummary, mergeAcceptanceRounds } from './acceptanceMerge';
 import { computeFalseFlags } from './feedbackService';
+import { assertLegacyVerificationWritable } from './retirement';
 
 const log = debug('orvilo-server:verify-acceptance');
 
@@ -528,6 +534,7 @@ export class AcceptanceService {
     subjectId: string,
     defaults?: { config?: AcceptanceConfig; requirement?: string; title?: string },
   ): Promise<AcceptanceItem> => {
+    assertLegacyVerificationWritable();
     await this.assertSubjectExists(subjectType, subjectId);
     const projectId = await this.resolveSubjectProjectId(subjectType, subjectId);
     return this.acceptanceModel.ensureForSubject(subjectType, subjectId, {
@@ -570,6 +577,7 @@ export class AcceptanceService {
    * aggregate status (a new round re-opens a rejected loop).
    */
   attachRun = async (runId: string, acceptanceId: string): Promise<VerifyRunItem> => {
+    assertLegacyVerificationWritable();
     const acceptance = await this.acceptanceModel.findById(acceptanceId);
     if (!acceptance) throw new Error(`Acceptance "${acceptanceId}" not found`);
 
@@ -578,6 +586,7 @@ export class AcceptanceService {
 
   /** Attach a Task run using policy scope while preserving report visibility. */
   attachPolicyRun = async (runId: string, acceptanceId: string): Promise<VerifyRunItem> => {
+    assertLegacyVerificationWritable();
     const acceptance = await this.acceptanceModel.findPolicyById(acceptanceId);
     if (!acceptance) throw new Error(`Acceptance "${acceptanceId}" not found`);
 
@@ -724,6 +733,7 @@ export class AcceptanceService {
    * was promoted into. Merging is what makes them one review surface again.
    */
   merge = async (sourceId: string, targetId: string): Promise<AcceptanceMergeSummary> => {
+    assertLegacyVerificationWritable();
     if (sourceId === targetId) throw new Error('An acceptance cannot be merged into itself');
 
     const source = await this.acceptanceModel.findById(sourceId);
@@ -768,6 +778,7 @@ export class AcceptanceService {
    * round newer than the decision arrives.
    */
   recomputeStatus = async (acceptanceId: string): Promise<AcceptanceStatus | null> => {
+    assertLegacyVerificationWritable();
     const acceptance = await this.acceptanceModel.findPolicyById(acceptanceId);
     if (!acceptance) return null;
     if (acceptance.status === 'accepted' || acceptance.status === 'closed') {
@@ -775,7 +786,7 @@ export class AcceptanceService {
     }
 
     const runs = await this.runModel.listByAcceptance(acceptanceId);
-    const current = runs.at(-1);
+    const { current } = await this.resolveDecisionBinding(acceptance, runs);
     if (!current) return acceptance.status as AcceptanceStatus;
 
     // The rejected round stays rejected; only a NEWER round re-opens the loop.
@@ -793,7 +804,44 @@ export class AcceptanceService {
   /** Latest round of an aggregate — the row `stampDecision` would write to. */
   latestRound = async (acceptanceId: string) => {
     const runs = await this.runModel.listByAcceptance(acceptanceId);
-    return runs.at(-1) ?? null;
+    const acceptance = await this.acceptanceModel.findById(acceptanceId);
+    return acceptance
+      ? ((await this.resolveDecisionBinding(acceptance, runs)).current ?? null)
+      : (runs.at(-1) ?? null);
+  };
+
+  private resolveDecisionBinding = async (acceptance: AcceptanceItem, runs: VerifyRunItem[]) => {
+    const latest = runs.at(-1);
+    if (acceptance.subjectType !== 'task')
+      return { current: latest, operationId: latest?.operationId };
+    const task = await new TaskModel(this.db, this.userId, this.workspaceId).resolve(
+      acceptance.subjectId,
+    );
+    if (!task?.currentTopicId) return { current: latest, operationId: latest?.operationId };
+    const topic = await new TaskTopicModel(this.db, this.userId, this.workspaceId).findByTopicId(
+      task.currentTopicId,
+    );
+    const deliveryOperationId = topic?.integration?.verifyOperationId ?? topic?.operationId;
+    const operationModel = new AgentOperationModel(this.db, this.userId, this.workspaceId);
+    const deliveryTopicId = topic?.integration?.verifyOperationId
+      ? (await operationModel.findById(deliveryOperationId!))?.topicId
+      : task.currentTopicId;
+    for (const run of [...runs].reverse()) {
+      if (!deliveryOperationId || !run.operationId) continue;
+      if (run.operationId === deliveryOperationId)
+        return { current: run, operationId: topic?.operationId };
+      let operation = await operationModel.findById(run.operationId);
+      if (operation?.topicId !== deliveryTopicId) continue;
+      const visited = new Set<string>();
+      while (operation?.parentOperationId && visited.size < 32) {
+        if (operation.parentOperationId === deliveryOperationId)
+          return { current: run, operationId: topic?.operationId };
+        if (visited.has(operation.parentOperationId)) break;
+        visited.add(operation.parentOperationId);
+        operation = await operationModel.findById(operation.parentOperationId);
+      }
+    }
+    return { current: undefined, operationId: topic?.operationId };
   };
 
   regroupChecks = async (
@@ -801,6 +849,7 @@ export class AcceptanceService {
     groups: AcceptanceCheckGroup[],
     expectedVersion: number,
   ) => {
+    assertLegacyVerificationWritable();
     const acceptance = await this.acceptanceModel.findById(acceptanceId);
     if (!acceptance) throw new Error('Acceptance not found');
     const { results, runs } = await this.loadRounds(acceptanceId);
@@ -837,21 +886,15 @@ export class AcceptanceService {
    * completes a task subject that verification alone didn't settle.
    */
   accept = async (acceptanceId: string, comment?: string): Promise<AcceptanceItem> => {
+    assertLegacyVerificationWritable();
     const acceptance = await this.requireDecidableAcceptance(acceptanceId);
 
-    let operationId: string | null | undefined;
-    if (acceptance.subjectType === 'task') {
-      const runs = await this.runModel.listByAcceptance(acceptanceId);
-      operationId = runs.at(-1)?.operationId;
-      await this.assertTaskIntegrationSettled(operationId);
-    }
+    if (acceptance.subjectType === 'task')
+      throw new Error('Accept Issue delivery through its current Checklist and confirmed plan');
 
-    await this.stampDecision(acceptanceId, 'accept', comment);
-    await this.acceptanceModel.updateStatus(acceptanceId, 'accepted');
-
-    if (acceptance.subjectType === 'task') {
-      await this.completeTaskSubject(acceptance.subjectId, operationId);
-    }
+    const runs = await this.runModel.listByAcceptance(acceptanceId);
+    const { current } = await this.resolveDecisionBinding(acceptance, runs);
+    await this.stampDecision(acceptance, runs, current, 'accept', comment);
 
     return (await this.acceptanceModel.findById(acceptanceId))!;
   };
@@ -868,10 +911,12 @@ export class AcceptanceService {
    * decision detail through the prompt builder.
    */
   reject = async (acceptanceId: string, comment: string): Promise<AcceptanceItem> => {
-    await this.requireDecidableAcceptance(acceptanceId);
+    assertLegacyVerificationWritable();
+    const acceptance = await this.requireDecidableAcceptance(acceptanceId);
+    const runs = await this.runModel.listByAcceptance(acceptanceId);
+    const { current } = await this.resolveDecisionBinding(acceptance, runs);
 
-    await this.stampDecision(acceptanceId, 'reject', comment);
-    await this.acceptanceModel.updateStatus(acceptanceId, 'rejected');
+    await this.stampDecision(acceptance, runs, current, 'reject', comment);
 
     return (await this.acceptanceModel.findById(acceptanceId))!;
   };
@@ -898,6 +943,7 @@ export class AcceptanceService {
       rejectIntent?: AcceptanceRejectIntent;
     },
   ): Promise<{ resultIds: string[] }> => {
+    assertLegacyVerificationWritable();
     const acceptance = await this.acceptanceModel.findById(acceptanceId);
     if (!acceptance) throw new Error(`Acceptance "${acceptanceId}" not found`);
 
@@ -966,8 +1012,21 @@ export class AcceptanceService {
     // prediction stayed unanswered — and the decision then HIDES the proposal,
     // so nothing could ever reconcile the pair again. Agreement analysis reads
     // those two rows as a matched set; a durable split is worse than failing.
+    const canceledQueuedOperations: string[] = [];
     await this.db.transaction(async (tx) => {
       const resultModel = new VerifyCheckResultModel(tx, this.userId, this.workspaceId);
+
+      // A manual verdict retires unlaunched checks under the same CAS as reconnect claims.
+      for (const result of targets.values()) {
+        const operationId =
+          result.verifierOperationId ?? pickTrimmedString(result.metadata?.reviewerOperationId);
+        if (
+          operationId &&
+          (await cancelQueuedDeviceOperation(tx, this.userId, operationId, this.workspaceId))
+        ) {
+          canceledQueuedOperations.push(operationId);
+        }
+      }
 
       await Promise.all(
         [...targets.values()].map((result) => {
@@ -997,18 +1056,13 @@ export class AcceptanceService {
       }
     });
 
+    await this.finishCanceledReviewers(canceledQueuedOperations);
+
     log('acceptance %s: %d check result(s) marked %s', acceptanceId, targets.size, decision);
     return { resultIds: [...targets.keys()] };
   };
 
-  /**
-   * A user decision needs a SETTLED round to judge (`delivered`, or `errored`
-   * — the verifier could not run, the user may still take or refuse the
-   * delivery). Deciding mid-flight would stamp a terminal state (and possibly
-   * complete a task) before any report/verdict exists, and `recomputeStatus`
-   * treats `accepted` as sticky, so a premature accept could never be
-   * corrected by the pipeline.
-   */
+  /** A person may decide while review is queued or running; their decision wins. */
   private requireDecidableAcceptance = async (acceptanceId: string): Promise<AcceptanceItem> => {
     const acceptance = await this.acceptanceModel.findById(acceptanceId);
     if (!acceptance) throw new Error(`Acceptance "${acceptanceId}" not found`);
@@ -1021,21 +1075,16 @@ export class AcceptanceService {
     if (acceptance.status === 'rejected') {
       throw new Error('This delivery was rejected — the next verification round re-opens it');
     }
-    if (acceptance.status !== 'delivered' && acceptance.status !== 'errored') {
-      throw new Error(
-        `Verification is still in progress (${acceptance.status}) — the decision comes once the round settles`,
-      );
-    }
     return acceptance;
   };
 
   private stampDecision = async (
-    acceptanceId: string,
+    acceptance: AcceptanceItem,
+    runs: VerifyRunItem[],
+    current: VerifyRunItem | undefined,
     decision: 'accept' | 'reject',
     comment?: string,
   ): Promise<void> => {
-    const runs = await this.runModel.listByAcceptance(acceptanceId);
-    const current = runs.at(-1);
     if (!current) throw new Error('This acceptance has no verification round to decide on');
 
     const detail: VerifyRunDecisionDetail = {
@@ -1043,64 +1092,62 @@ export class AcceptanceService {
       decidedBy: this.actorUserId,
       ...(comment ? { comment } : {}),
     };
-    await this.runModel.setDecision(current.id, decision, detail);
+    const canceled: string[] = [];
+    await this.db.transaction(async (tx) => {
+      const results = new VerifyCheckResultModel(tx, this.userId, this.workspaceId);
+      const pendingRuns =
+        acceptance.subjectType === 'task'
+          ? runs.filter(
+              (run) =>
+                run.id === current.id ||
+                (!run.userDecision &&
+                  (!run.status ||
+                    ['pending', 'planned', 'verifying', 'repairing'].includes(run.status))),
+            )
+          : [current];
+      const runModel = new VerifyRunModel(tx, this.userId, this.workspaceId);
+      for (const run of pendingRuns) {
+        for (const result of await results.listByRun(run.id)) {
+          if (
+            result.userDecision ||
+            !['pending', 'running', 'errored', 'skipped'].includes(result.status)
+          )
+            continue;
+          const operationId =
+            result.verifierOperationId ?? pickTrimmedString(result.metadata?.reviewerOperationId);
+          if (
+            operationId &&
+            (await cancelQueuedDeviceOperation(tx, this.userId, operationId, this.workspaceId))
+          )
+            canceled.push(operationId);
+          await results.update(result.id, {
+            userDecision: decision === 'accept' ? 'accepted' : 'rejected',
+            userDecisionDetail: detail,
+          });
+        }
+        await runModel.setDecision(run.id, decision, detail);
+      }
+      await new AcceptanceModel(tx, this.userId, this.workspaceId).updateStatus(
+        acceptance.id,
+        decision === 'accept' ? 'accepted' : 'rejected',
+      );
+    });
+    await this.finishCanceledReviewers(canceled);
   };
 
-  /**
-   * Accepting a task subject completes the task when verification didn't
-   * already (e.g. the round failed but the user accepted anyway). Best-effort:
-   * a task error must not undo the recorded acceptance.
-   */
-  private completeTaskSubject = async (
-    subjectId: string,
-    operationId?: string | null,
-  ): Promise<void> => {
-    try {
-      const taskModel = new TaskModel(this.db, this.userId, this.workspaceId);
-      const task = await taskModel.resolve(subjectId);
-      if (!task || ['canceled', 'completed', 'failed'].includes(task.status)) return;
-      if (operationId) {
-        const taskTopic = await new TaskTopicModel(
+  private finishCanceledReviewers = async (operationIds: string[]): Promise<void> => {
+    for (const operationId of operationIds) {
+      try {
+        const operation = await new AgentOperationModel(
           this.db,
           this.userId,
           this.workspaceId,
-        ).findByOperationId(operationId);
-        const integration = taskTopic?.integration;
-        if (integration && integration.state !== 'integrated' && integration.state !== 'skipped') {
-          log(
-            'acceptance accepted for task %s but workspace integration is %s; task remains open',
-            task.id,
-            integration.state,
-          );
-          return;
-        }
+        ).findById(operationId);
+        if (operation) await finishQueuedDeviceOperation(this.db, operation);
+      } catch (error) {
+        // Decisions and cancellation are committed; the watchdog retries terminal hooks.
+        console.error('[acceptance] Queued verifier cleanup deferred', { operationId, error });
       }
-
-      // TaskService cascades checkpoint / sibling rollup / downstream unlock —
-      // the same completion path settle.ts drives on a passed verify.
-      await new TaskService(this.db, this.userId, this.workspaceId).updateStatus({
-        id: task.id,
-        status: 'completed',
-      });
-      log('acceptance accepted → task %s completed', task.id);
-    } catch (error) {
-      log('completeTaskSubject failed (non-fatal): %O', error);
-    }
-  };
-
-  /** Keep a manual acceptance retryable until its task branch is delivered. */
-  private assertTaskIntegrationSettled = async (operationId?: string | null): Promise<void> => {
-    if (!operationId) return;
-    const taskTopic = await new TaskTopicModel(
-      this.db,
-      this.userId,
-      this.workspaceId,
-    ).findByOperationId(operationId);
-    const integration = taskTopic?.integration;
-    if (integration && integration.state !== 'integrated' && integration.state !== 'skipped') {
-      throw new Error(
-        `Workspace integration is still ${integration.state}; retry acceptance after delivery completes`,
-      );
     }
   };
 

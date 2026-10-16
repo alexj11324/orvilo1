@@ -146,7 +146,6 @@ describe('credsRuntime', () => {
 
 describe('ServerCredsService.injectCreds', () => {
   const buildOwnCredsService = (inject = vi.fn()) => ({ inject }) as unknown as OwnCredsService;
-  const marketService = { market: {} } as unknown as MarketService;
 
   // Regression test: the inject response is already masked for safe display —
   // the real values are written into ~/.creds/env inside the sandbox by the
@@ -160,11 +159,7 @@ describe('ServerCredsService.injectCreds', () => {
       success: true,
     };
     const inject = vi.fn().mockResolvedValue(injectResult);
-    const service = new ServerCredsService(
-      buildOwnCredsService(inject),
-      marketService,
-      'workspace-1',
-    );
+    const service = new ServerCredsService(buildOwnCredsService(inject), 'workspace-1');
 
     const result = await service.injectCreds({
       keys: ['dc-cli-token'],

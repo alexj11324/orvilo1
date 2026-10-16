@@ -16,6 +16,7 @@ import { KnowledgeBaseModel } from '@/database/models/knowledgeBase';
 import { buildWorkspaceWhere } from '@/database/utils/workspace';
 import { isValidEditorData } from '@/libs/editor/isValidEditorData';
 import { normalizeEditorDataDiffNodes } from '@/libs/editor/normalizeDiffNodes';
+import { rejectPlatformKnowledgeBaseWrite } from '@/server/services/knowledgeBase/retirement';
 import { diffAddedMentionUserIds } from '@/server/utils/documentMentions';
 import { type OrviloDocument } from '@/types/document';
 
@@ -134,6 +135,7 @@ export class DocumentService {
     teamId?: string;
     visibility?: 'private' | 'public' | 'team';
   }): Promise<DocumentItem> {
+    if (params.knowledgeBaseId) rejectPlatformKnowledgeBaseWrite();
     const {
       content,
       editorData,
@@ -667,6 +669,15 @@ export class DocumentService {
       const currentDocument = await documentModel.findWritableById(id);
       if (!currentDocument) {
         throw new Error(`Document not found: ${id}`);
+      }
+      if (
+        currentDocument.fileType === 'skills/index' ||
+        currentDocument.fileType === 'skills/bundle'
+      ) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Platform skill production has been retired',
+        });
       }
       if (currentDocument.visibility === 'team' && params.parentId) {
         throw new TRPCError({

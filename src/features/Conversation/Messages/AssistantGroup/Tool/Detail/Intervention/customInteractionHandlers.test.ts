@@ -3,169 +3,41 @@ import {
   UserInteractionApiName,
   UserInteractionIdentifier,
 } from '@orvilo/builtin-tool-user-interaction';
-import { WebOnboardingApiName, WebOnboardingIdentifier } from '@orvilo/builtin-tool-web-onboarding';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { requestAgentRuntime } from '@/features/CreateAgent';
-import { installMarketplaceAgents } from '@/services/installMarketplaceAgents';
+import { describe, expect, it } from 'vitest';
 
 import {
   isCustomInteractionIdentifier,
   prepareCustomInteractionSubmit,
-  recordCustomInteractionResolution,
 } from './customInteractionHandlers';
 
-vi.mock('@/features/CreateAgent', () => ({ requestAgentRuntime: vi.fn() }));
-
-vi.mock('@/services/installMarketplaceAgents', () => ({
-  installMarketplaceAgents: vi.fn(),
-}));
-
 describe('customInteractionHandlers', () => {
-  const updateTopicMetadata = vi.fn();
-
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-04-29T10:00:00.000Z'));
-    vi.mocked(requestAgentRuntime).mockResolvedValue({
-      agencyConfig: {
-        executionTarget: 'device',
-        boundDeviceId: 'host-1',
-        heterogeneousProvider: { type: 'orvilo', model: 'prime-model' },
-      },
-      model: 'prime-model',
-      provider: 'openai',
-      title: 'Orvilo AI',
-    });
-    vi.mocked(installMarketplaceAgents).mockReset();
-    updateTopicMetadata.mockReset();
-    updateTopicMetadata.mockResolvedValue(undefined);
-  });
-
-  it('keeps marketplace picks pending and performs no install when runtime selection is cancelled', async () => {
-    vi.mocked(requestAgentRuntime).mockResolvedValue(undefined);
-    await expect(
-      prepareCustomInteractionSubmit(
-        WebOnboardingIdentifier,
-        { selectedTemplateIds: ['template-1'] },
-        { apiName: WebOnboardingApiName.showAgentMarketplace },
-      ),
-    ).rejects.toThrow('AGENT_RUNTIME_SELECTION_CANCELLED');
-    expect(installMarketplaceAgents).not.toHaveBeenCalled();
-    expect(updateTopicMetadata).not.toHaveBeenCalled();
-  });
-
-  it('persists submitted marketplace picks to onboardingSession metadata', async () => {
-    vi.mocked(installMarketplaceAgents).mockResolvedValue({
-      installedAgentIds: ['agent-1'],
-      skippedAgentIds: ['template-existing'],
-      summaries: [
-        {
-          category: 'engineering',
-          description: 'A pair programmer',
-          installedAgentId: 'agent-1',
-          skipped: false,
-          templateId: 'template-1',
-          title: 'Pair Programmer',
-        },
-        { skipped: true, templateId: 'template-existing' },
-      ],
-    });
-
-    const result = await prepareCustomInteractionSubmit(
-      WebOnboardingIdentifier,
-      {
-        categoryHints: ['engineering'],
-        requestId: 'req-1',
-        selectedTemplateIds: ['template-1', 'template-existing'],
-      },
-      {
-        apiName: WebOnboardingApiName.showAgentMarketplace,
-        topicId: 'topic-1',
-        updateTopicMetadata,
-      },
+  it('does not resolve historical Marketplace picks as an install interaction', async () => {
+    const payload = { selectedTemplateIds: ['old-template'] };
+    expect(isCustomInteractionIdentifier('orvilo-web-onboarding', 'showAgentMarketplace')).toBe(
+      false,
     );
-
-    expect(updateTopicMetadata).toHaveBeenCalledWith('topic-1', {
-      onboardingSession: {
-        agentMarketplacePick: {
-          categoryHints: ['engineering'],
-          installedAgentIds: ['agent-1'],
-          requestId: 'req-1',
-          resolvedAt: '2026-04-29T10:00:00.000Z',
-          selectedTemplateIds: ['template-1', 'template-existing'],
-          skippedAgentIds: ['template-existing'],
-          status: 'submitted',
-        },
-        lastActiveAt: '2026-04-29T10:00:00.000Z',
-      },
-    });
-    expect(result.payload).toMatchObject({
-      installedAgentIds: ['agent-1'],
-      skippedAgentIds: ['template-existing'],
-    });
-    expect(result.options?.createUserMessage).toBe(false);
-    expect(result.options?.pluginState?.runtimeConfig).toEqual(
-      await vi.mocked(requestAgentRuntime).mock.results[0].value,
-    );
+    expect(
+      await prepareCustomInteractionSubmit('orvilo-web-onboarding', payload, {
+        apiName: 'showAgentMarketplace',
+      }),
+    ).toEqual({ payload });
   });
 
   it.each([
     [OrviloAgentIdentifier, OrviloAgentApiName.askUserQuestion],
     [UserInteractionIdentifier, UserInteractionApiName.askUserQuestion],
   ])('persists structured ask-user answers for %s', async (identifier, apiName) => {
-    const payload = {
-      'How broad should this pass be?': 'Focused',
-      'Which surfaces?': ['Chat', 'Settings'],
-      '__supplement__': 'Keep the existing behavior.',
-    };
-
-    const result = await prepareCustomInteractionSubmit(identifier, payload, { apiName });
-
-    expect(result).toEqual({
-      // createUserMessage must stay false: the completed tool card already
-      // renders the answers, so a synthetic user message would duplicate them
-      // in the client runtime.
+    const payload = { 'Which surfaces?': ['Chat', 'Settings'] };
+    expect(await prepareCustomInteractionSubmit(identifier, payload, { apiName })).toEqual({
       options: { createUserMessage: false, pluginState: { askUserAnswers: payload } },
       payload,
     });
   });
 
-  it.each(['devin', 'droid', 'qoder', 'grok-build', 'trae'])(
-    'routes %s tools through the heterogeneous custom flow',
+  it.each(['devin', 'droid', 'qoder', 'grok-build', 'trae', 'codex', 'opencode'])(
+    'keeps %s native questions and permission responses',
     (type) => {
       expect(isCustomInteractionIdentifier(type, 'askUserQuestion')).toBe(true);
     },
   );
-
-  it('persists skipped marketplace picks from the original tool arguments', async () => {
-    await recordCustomInteractionResolution(
-      WebOnboardingIdentifier,
-      'skipped',
-      undefined,
-      {
-        apiName: WebOnboardingApiName.showAgentMarketplace,
-        requestArgs: {
-          categoryHints: ['design-creative'],
-          requestId: 'req-2',
-        },
-        topicId: 'topic-1',
-        updateTopicMetadata,
-      },
-      'not now',
-    );
-
-    expect(updateTopicMetadata).toHaveBeenCalledWith('topic-1', {
-      onboardingSession: {
-        agentMarketplacePick: {
-          categoryHints: ['design-creative'],
-          requestId: 'req-2',
-          resolvedAt: '2026-04-29T10:00:00.000Z',
-          skipReason: 'not now',
-          status: 'skipped',
-        },
-        lastActiveAt: '2026-04-29T10:00:00.000Z',
-      },
-    });
-  });
 });

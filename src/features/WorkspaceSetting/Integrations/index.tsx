@@ -1,6 +1,17 @@
 'use client';
 
-import { ArrowLeft, ArrowRight, Bot, Cable, Check, Hash, Pencil, Plus, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bot,
+  Cable,
+  Check,
+  Hash,
+  MessageCircle,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
@@ -373,8 +384,18 @@ export const IntegrationsSettings = ({ detail = false }: { detail?: boolean }) =
                       >
                         <div className="flex flex-wrap items-center gap-3 text-sm">
                           <span className="flex min-w-0 flex-1 items-center gap-2 rounded-(--radius-card) bg-secondary p-3">
-                            <Hash className="size-4 shrink-0" />
-                            <span className="break-all">{binding.slackChannelName}</span>
+                            {binding.slackChannelId.startsWith('D') ? (
+                              <MessageCircle aria-hidden className="size-4 shrink-0" />
+                            ) : (
+                              <Hash aria-hidden className="size-4 shrink-0" />
+                            )}
+                            <span className="break-all">
+                              {binding.slackChannelId.startsWith('D')
+                                ? t('integrations.slack.directMessage', {
+                                    name: binding.slackChannelName,
+                                  })
+                                : binding.slackChannelName}
+                            </span>
                           </span>
                           <ArrowRight size={16} />
                           <span className="flex min-w-0 flex-1 items-center gap-2 rounded-(--radius-card) bg-secondary p-3">

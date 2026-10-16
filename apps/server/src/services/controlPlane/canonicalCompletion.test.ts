@@ -233,16 +233,23 @@ describe('canonical completion admission', () => {
       ).toBe('running');
     },
   );
-  it('invokes the actual Verify convergence for a passed mapped completed run', async () => {
+  it('retains passed mapped evidence without completing through retired Verify settlement', async () => {
     const mapped = await acceptedEvidence();
+    const task = await new TaskModel(db, binding.userId, binding.workspaceId).findById(
+      fixtureTaskId(binding),
+    );
+    await db
+      .update(tasks)
+      .set({ reviewerAgentId: task!.assigneeAgentId })
+      .where(eq(tasks.id, fixtureTaskId(binding)));
     await db
       .update(taskTopics)
       .set({ status: 'completed' })
       .where(eq(taskTopics.topicId, binding.topicId));
     expect(await new CanonicalVerifyCompletion(db).reconcile(binding, mapped)).toMatchObject({
       state: 'observed',
-      taskStatus: 'completed',
-      completed: true,
+      taskStatus: 'backlog',
+      completed: false,
     });
   }, 30_000);
 
@@ -275,7 +282,7 @@ describe('canonical completion admission', () => {
   }, 30_000);
 
   it.each([false, true])(
-    'capped recurring completion uses the atomic Core guard (revoked=%s)',
+    'retired Verify settlement leaves capped recurring delivery pending (revoked=%s)',
     async (revoked) => {
       const mapped = await acceptedEvidence();
       await db
@@ -305,8 +312,8 @@ describe('canonical completion admission', () => {
       const result = await new CanonicalVerifyCompletion(db).reconcile(binding, mapped);
       expect(result).toMatchObject({
         state: 'observed',
-        taskStatus: revoked ? 'scheduled' : 'completed',
-        completed: !revoked,
+        taskStatus: 'scheduled',
+        completed: false,
       });
     },
     30_000,

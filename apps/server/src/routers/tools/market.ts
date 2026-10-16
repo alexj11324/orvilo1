@@ -7,31 +7,13 @@ import {
   requireWorkspaceRoleWhenScoped,
   wsCompatProcedure,
 } from '@/business/server/trpc-middlewares/workspaceAuth';
-import { AgentSkillModel } from '@/database/models/agentSkill';
-import { FileModel } from '@/database/models/file';
 import { UserModel } from '@/database/models/user';
-import { type ToolCallContent } from '@/libs/mcp';
-import { authedProcedure, router } from '@/libs/trpc/lambda';
+import { router } from '@/libs/trpc/lambda';
 import { marketUserInfo, serverDatabase, telemetry } from '@/libs/trpc/lambda/middleware';
-import { marketSDK, requireMarketAuth } from '@/libs/trpc/lambda/middleware/marketSDK';
-import { isTrustedClientEnabled } from '@/libs/trusted-client';
-import { DiscoverService } from '@/server/services/discover';
 import { FileService } from '@/server/services/file';
 import { MarketService } from '@/server/services/market';
-import { listSkillToolsWithLiveFallback } from '@/server/services/market/listSkillToolsWithLiveFallback';
-import {
-  contentBlocksToString,
-  processContentBlocks,
-} from '@/server/services/mcp/contentProcessor';
 import { createSandboxService } from '@/server/services/sandbox';
 import { preprocessLhCommand } from '@/server/services/toolExecution/preprocessLhCommand';
-
-import { scheduleToolCallReport } from './_helpers';
-import {
-  isMarketConnectionsTimeoutError,
-  listOptionalMarketConnectionsWithTimeout,
-  MARKET_CONNECTIONS_REQUEST_TIMEOUT_MS,
-} from './_helpers/marketConnections';
 
 const log = debug('orvilo-server:tools:market');
 
@@ -70,10 +52,6 @@ const marketToolProcedure = wsCompatProcedure
     // middleware). Falls back to the personal account when there's no workspace.
     return next({
       ctx: {
-        discoverService: new DiscoverService({
-          accessToken: ctx.marketAccessToken,
-          userInfo: ctx.marketUserInfo,
-        }),
         fileService: new FileService(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined),
         marketService: new MarketService({
           accessToken: ctx.marketAccessToken,
@@ -90,42 +68,6 @@ const marketToolProcedure = wsCompatProcedure
 // personal mode passes through unrestricted.
 const marketToolWriteProcedure = marketToolProcedure.use(requireWorkspaceRoleWhenScoped('member'));
 
-// ============================== Orvilo Skill Procedures ==============================
-/**
- * Orvilo Skill procedure with SDK and optional auth
- * Used for routes that may work without auth (like listing providers)
- */
-const orviloSkillBaseProcedure = authedProcedure
-  .use(serverDatabase)
-  .use(telemetry)
-  .use(marketUserInfo)
-  .use(marketSDK);
-
-/**
- * Orvilo Skill procedure with required auth
- * Used for routes that require user authentication
- */
-const orviloSkillAuthProcedure = orviloSkillBaseProcedure.use(requireMarketAuth);
-
-// ============================== Schema Definitions ==============================
-
-// Schema for metadata that frontend needs to pass (for cloud MCP reporting)
-const metaSchema = z
-  .object({
-    customPluginInfo: z
-      .object({
-        avatar: z.string().optional(),
-        description: z.string().optional(),
-        name: z.string().optional(),
-      })
-      .optional(),
-    isCustomPlugin: z.boolean().optional(),
-    sessionId: z.string().optional(),
-    version: z.string().optional(),
-  })
-  .optional();
-
-// Schema for sandbox tool execution request
 const execInSandboxSchema = z.object({
   params: z.record(z.string(), z.any()),
   toolName: z.string(),
@@ -153,20 +95,10 @@ const exportAndUploadFileSchema = z.object({
   topicId: z.string(),
 });
 
-// Schema for cloud MCP endpoint call
-const callCloudMcpEndpointSchema = z.object({
-  apiParams: z.record(z.string(), z.any()),
-  identifier: z.string(),
-  meta: metaSchema,
-  toolName: z.string(),
-});
-
-// ============================== Type Exports ==============================
 export type ExecInSandboxInput = z.infer<typeof execInSandboxSchema>;
-/** @deprecated Use ExecInSandboxInput */
-export type CallCodeInterpreterToolInput = ExecInSandboxInput;
 export type ExportAndUploadFileInput = z.infer<typeof exportAndUploadFileSchema>;
 
+// Schema for cloud MCP endpoint call
 export interface CallToolResult {
   error?: {
     message: string;
@@ -251,41 +183,6 @@ const execInSandboxHandler = async ({
       }
     }
 
-    // For execScript tool, look up skill zipUrls from activatedSkills
-    if (toolName === 'execScript' && enhancedParams.activatedSkills?.length) {
-      const wsId = ctx.workspaceId ?? undefined;
-      const agentSkillModel = new AgentSkillModel(ctx.serverDB, userId, wsId);
-      const fileModel = new FileModel(ctx.serverDB, userId, wsId);
-
-      // Resolve zipUrls for all activated skills
-      const skillZipUrls: Record<string, string> = {};
-
-      for (const activatedSkill of enhancedParams.activatedSkills) {
-        if (!activatedSkill.name) continue;
-
-        const skill = await agentSkillModel.findByName(activatedSkill.name);
-        if (!skill?.zipFileHash) continue;
-
-        const fileInfo = await fileModel.checkHash(skill.zipFileHash);
-        if (!fileInfo.isExist || !fileInfo.url) continue;
-
-        const fullUrl = await ctx.fileService.getFullFileUrl(fileInfo.url);
-        if (fullUrl) {
-          skillZipUrls[activatedSkill.name] = fullUrl;
-          log('Resolved zipUrl for skill %s', activatedSkill.name);
-        }
-      }
-
-      // Add skillZipUrls to params if any were resolved
-      if (Object.keys(skillZipUrls).length > 0) {
-        enhancedParams = {
-          ...enhancedParams,
-          skillZipUrls,
-        };
-        log('Added skillZipUrls to execScript params: %O', Object.keys(skillZipUrls));
-      }
-    }
-
     const sandboxService = createSandboxService({
       fileService: ctx.fileService,
       marketService: ctx.marketService,
@@ -339,97 +236,6 @@ const execInSandboxHandler = async ({
 
 // ============================== Router ==============================
 export const marketRouter = router({
-  // ============================== Cloud MCP Gateway ==============================
-  callCloudMcpEndpoint: marketToolWriteProcedure
-    .input(callCloudMcpEndpointSchema)
-    .mutation(async ({ input, ctx }) => {
-      log('callCloudMcpEndpoint input: %O', input);
-
-      const startTime = Date.now();
-      let success = true;
-      let errorCode: string | undefined;
-      let errorMessage: string | undefined;
-      let result: { content: string; state: any; success: boolean } | undefined;
-
-      try {
-        // Check if trusted client is enabled - if so, we don't need user's accessToken
-        const trustedClientEnabled = isTrustedClientEnabled();
-
-        let userAccessToken: string | undefined;
-
-        if (!trustedClientEnabled) {
-          // Query user_settings to get market.accessToken only if trusted client is not enabled
-          const userState = await ctx.userModel.getUserState(async () => ({}));
-          userAccessToken = userState.settings?.market?.accessToken;
-
-          log('callCloudMcpEndpoint: userAccessToken exists=%s', !!userAccessToken);
-
-          if (!userAccessToken) {
-            throw new TRPCError({
-              code: 'UNAUTHORIZED',
-              message: 'User access token not found. Please sign in to Market first.',
-            });
-          }
-        } else {
-          log('callCloudMcpEndpoint: using trusted client authentication');
-        }
-
-        const cloudResult = await ctx.discoverService.callCloudMcpEndpoint({
-          apiParams: input.apiParams,
-          identifier: input.identifier,
-          toolName: input.toolName,
-          userAccessToken,
-        });
-        const cloudResultContent = (cloudResult?.content ?? []) as ToolCallContent[];
-
-        // Format the cloud result to MCPToolCallResult format
-        // Process content blocks (upload images, etc.)
-        const newContent =
-          cloudResult?.isError || !ctx.fileService
-            ? cloudResultContent
-            : await processContentBlocks(cloudResultContent, ctx.fileService);
-
-        // Convert content blocks to string
-        const content = contentBlocksToString(newContent);
-        const state = { ...cloudResult, content: newContent };
-
-        result = { content, state, success: true };
-        return result;
-      } catch (error) {
-        success = false;
-        const err = error as Error;
-        errorCode = 'CALL_FAILED';
-        errorMessage = err.message;
-
-        log('Error calling cloud MCP endpoint: %O', error);
-
-        // Re-throw TRPCError as-is
-        if (error instanceof TRPCError) {
-          throw error;
-        }
-
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to call cloud MCP endpoint',
-        });
-      } finally {
-        scheduleToolCallReport({
-          errorCode,
-          errorMessage,
-          identifier: input.identifier,
-          marketAccessToken: ctx.marketAccessToken,
-          mcpType: 'cloud',
-          meta: input.meta,
-          requestPayload: input.apiParams,
-          result,
-          startTime,
-          success,
-          telemetryEnabled: ctx.telemetryEnabled,
-          toolName: input.toolName,
-        });
-      }
-    }),
-
   /** @deprecated Use execInSandbox instead. Will be removed in a future version. */
   callCodeInterpreterTool: marketToolWriteProcedure
     .input(execInSandboxSchema)
@@ -439,271 +245,6 @@ export const marketRouter = router({
   execInSandbox: marketToolWriteProcedure
     .input(execInSandboxSchema)
     .mutation(({ input, ctx }) => execInSandboxHandler({ ctx, input })),
-
-  // ============================== Orvilo Skill ==============================
-  /**
-   * Call a Orvilo Skill tool
-   */
-  connectCallTool: orviloSkillAuthProcedure
-    .input(
-      z.object({
-        args: z.record(z.string(), z.any()).optional(),
-        provider: z.string(),
-        toolName: z.string(),
-        topicId: z.string().optional(),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      const { provider, toolName, args, topicId } = input;
-      log('connectCallTool: provider=%s, tool=%s, topicId=%s', provider, toolName, topicId);
-      try {
-        const response = await ctx.marketSDK.skills.callTool(provider, {
-          args: args || {},
-          tool: toolName,
-          // @ts-ignore
-          topicId,
-        });
-
-        log('connectCallTool response: %O', response);
-
-        return {
-          data: response.data,
-          error: (response as any).error,
-          success: response.success,
-        };
-      } catch (error) {
-        const errorMessage = (error as Error).message;
-        log('connectCallTool error: %s', errorMessage);
-
-        if (errorMessage.includes('NOT_CONNECTED')) {
-          throw new TRPCError({
-            code: 'UNAUTHORIZED',
-            message: 'Provider not connected. Please authorize first.',
-          });
-        }
-
-        if (errorMessage.includes('TOKEN_EXPIRED')) {
-          throw new TRPCError({
-            code: 'UNAUTHORIZED',
-            message: 'Token expired. Please re-authorize.',
-          });
-        }
-
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to call tool: ${errorMessage}`,
-        });
-      }
-    }),
-
-  /**
-   * Get all connections health status
-   */
-  connectGetAllHealth: orviloSkillAuthProcedure.query(async ({ ctx }) => {
-    log('connectGetAllHealth');
-
-    try {
-      const response = await ctx.marketSDK.connect.getAllHealth();
-      return {
-        connections: response.connections || [],
-        summary: response.summary,
-      };
-    } catch (error) {
-      log('connectGetAllHealth error: %O', error);
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: `Failed to get connections health: ${(error as Error).message}`,
-      });
-    }
-  }),
-
-  /**
-   * Get authorize URL for a provider
-   * This calls the SDK's authorize method which generates a secure authorization URL
-   */
-  connectGetAuthorizeUrl: orviloSkillAuthProcedure
-    .input(
-      z.object({
-        provider: z.string(),
-        redirectUri: z.string().optional(),
-        scopes: z.array(z.string()).optional(),
-      }),
-    )
-    .query(async ({ input, ctx }) => {
-      log('connectGetAuthorizeUrl: provider=%s', input.provider);
-
-      try {
-        const response = await ctx.marketSDK.connect.authorize(input.provider, {
-          redirect_uri: input.redirectUri,
-          scopes: input.scopes,
-        });
-
-        return {
-          authorizeUrl: response.authorize_url,
-          code: response.code,
-          expiresIn: response.expires_in,
-        };
-      } catch (error) {
-        log('connectGetAuthorizeUrl error: %O', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to get authorize URL: ${(error as Error).message}`,
-        });
-      }
-    }),
-
-  /**
-   * Get connection status for a provider
-   */
-  connectGetStatus: orviloSkillAuthProcedure
-    .input(z.object({ provider: z.string() }))
-    .query(async ({ input, ctx }) => {
-      log('connectGetStatus: provider=%s', input.provider);
-
-      try {
-        const response = await ctx.marketSDK.connect.getStatus(input.provider);
-        return {
-          connected: response.connected,
-          connection: response.connection,
-          icon: (response as any).icon,
-          providerName: (response as any).providerName,
-        };
-      } catch (error) {
-        log('connectGetStatus error: %O', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to get status: ${(error as Error).message}`,
-        });
-      }
-    }),
-
-  /**
-   * List all user connections
-   */
-  connectListConnections: orviloSkillBaseProcedure.query(async ({ ctx }) => {
-    log('connectListConnections');
-
-    try {
-      const response = await listOptionalMarketConnectionsWithTimeout(ctx.marketSDK.connect);
-      // Debug logging
-      log('connectListConnections raw response: %O', response);
-      log('connectListConnections connections: %O', response.connections);
-      return {
-        connections: response.connections || [],
-      };
-    } catch (error) {
-      log('connectListConnections error: %O', error);
-      if (isMarketConnectionsTimeoutError(error)) {
-        throw new TRPCError({
-          cause: error,
-          code: 'TIMEOUT',
-          message: `Market connections request timed out after ${MARKET_CONNECTIONS_REQUEST_TIMEOUT_MS / 1000}s`,
-        });
-      }
-
-      throw new TRPCError({
-        cause: error,
-        code: 'INTERNAL_SERVER_ERROR',
-        message: `Failed to list connections: ${(error as Error).message}`,
-      });
-    }
-  }),
-
-  /**
-   * List available providers (public, no auth required)
-   */
-  connectListProviders: orviloSkillBaseProcedure.query(async ({ ctx }) => {
-    log('connectListProviders');
-
-    try {
-      const response = await ctx.marketSDK.skills.listProviders();
-      return {
-        providers: response.providers || [],
-      };
-    } catch (error) {
-      log('connectListProviders error: %O', error);
-      throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: `Failed to list providers: ${(error as Error).message}`,
-      });
-    }
-  }),
-
-  /**
-   * List tools for a provider
-   */
-  connectListTools: orviloSkillBaseProcedure
-    .input(z.object({ provider: z.string() }))
-    .query(async ({ input, ctx }) => {
-      log('connectListTools: provider=%s', input.provider);
-
-      try {
-        const response = await listSkillToolsWithLiveFallback(
-          ctx.marketSDK.skills,
-          input.provider,
-          (error) => {
-            log(
-              'listSkillToolsWithLiveFallback: live discovery failed for %s, falling back to static tools: %O',
-              input.provider,
-              error,
-            );
-          },
-        );
-        return {
-          provider: input.provider,
-          tools: response.tools || [],
-        };
-      } catch (error) {
-        log('connectListTools error: %O', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to list tools: ${(error as Error).message}`,
-        });
-      }
-    }),
-
-  /**
-   * Refresh token for a provider
-   */
-  connectRefresh: orviloSkillAuthProcedure
-    .input(z.object({ provider: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      log('connectRefresh: provider=%s', input.provider);
-
-      try {
-        const response = await ctx.marketSDK.connect.refresh(input.provider);
-        return {
-          connection: response.connection,
-          refreshed: response.refreshed,
-        };
-      } catch (error) {
-        log('connectRefresh error: %O', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to refresh token: ${(error as Error).message}`,
-        });
-      }
-    }),
-
-  /**
-   * Revoke connection for a provider
-   */
-  connectRevoke: orviloSkillAuthProcedure
-    .input(z.object({ provider: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      log('connectRevoke: provider=%s', input.provider);
-
-      try {
-        await ctx.marketSDK.connect.revoke(input.provider);
-        return { success: true };
-      } catch (error) {
-        log('connectRevoke error: %O', error);
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: `Failed to revoke connection: ${(error as Error).message}`,
-        });
-      }
-    }),
 
   /**
    * Export a file from sandbox and upload to S3, then create a persistent file record

@@ -1,199 +1,55 @@
-import { Command } from 'commander';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { log } from '../utils/logger';
-import { registerPluginCommand } from './plugin';
+import { createProgram } from '../program';
 
-const { mockTrpcClient } = vi.hoisted(() => ({
-  mockTrpcClient: {
-    plugin: {
-      createOrInstallPlugin: { mutate: vi.fn() },
-      createPlugin: { mutate: vi.fn() },
-      getPlugins: { query: vi.fn() },
-      removePlugin: { mutate: vi.fn() },
-      updatePlugin: { mutate: vi.fn() },
-    },
-  },
-}));
+vi.mock('../api/client', () => ({ getTrpcClient: vi.fn() }));
+vi.mock('../tools', () => ({ executeToolCall: vi.fn() }));
+vi.mock('./agent', () => ({ registerAgentCommand: () => {} }));
+vi.mock('./agent-group', () => ({ registerAgentGroupCommand: () => {} }));
+vi.mock('./agent-signal', () => ({ registerAgentSignalCommand: () => {} }));
+vi.mock('./artifact', () => ({ registerArtifactCommand: () => {} }));
+vi.mock('./completion', () => ({ registerCompletionCommand: () => {} }));
+vi.mock('./config', () => ({ registerConfigCommand: () => {} }));
+vi.mock('./connect', () => ({ registerConnectCommand: () => {} }));
+vi.mock('./device', () => ({ registerDeviceCommand: () => {} }));
+vi.mock('./doc', () => ({ registerDocCommand: () => {} }));
+vi.mock('./eval', () => ({ registerEvalCommand: () => {} }));
+vi.mock('./file', () => ({ registerFileCommand: () => {} }));
+vi.mock('./generate', () => ({ registerGenerateCommand: () => {} }));
+vi.mock('./goal', () => ({ registerGoalCommand: () => {} }));
+vi.mock('./hetero', () => ({ registerHeteroCommand: () => {} }));
+vi.mock('./kb', () => ({ registerKbCommand: () => {} }));
+vi.mock('./login', () => ({ registerLoginCommand: () => {} }));
+vi.mock('./logout', () => ({ registerLogoutCommand: () => {} }));
+vi.mock('./man', () => ({ registerManCommand: () => {} }));
+vi.mock('./memory', () => ({ registerMemoryCommand: () => {} }));
+vi.mock('./message', () => ({ registerMessageCommand: () => {} }));
+vi.mock('./migrate', () => ({ registerMigrateCommand: () => {} }));
+vi.mock('./notify', () => ({ registerNotifyCommand: () => {} }));
+vi.mock('./primeExec', () => ({ registerPrimeCommand: () => {} }));
+vi.mock('./project', () => ({ registerProjectCommand: () => {} }));
+vi.mock('./search', () => ({ registerSearchCommand: () => {} }));
+vi.mock('./session-group', () => ({ registerSessionGroupCommand: () => {} }));
+vi.mock('./status', () => ({ registerStatusCommand: () => {} }));
+vi.mock('./task', () => ({ registerTaskCommand: () => {} }));
+vi.mock('./thread', () => ({ registerThreadCommand: () => {} }));
+vi.mock('./topic', () => ({ registerTopicCommand: () => {} }));
+vi.mock('./trace', () => ({ registerTraceCommand: () => {} }));
+vi.mock('./update', () => ({ registerUpdateCommand: () => {} }));
+vi.mock('./user', () => ({ registerUserCommand: () => {} }));
+vi.mock('./verify', () => ({ registerVerifyCommand: () => {} }));
+vi.mock('./workspace', () => ({ registerWorkspaceCommand: () => {} }));
 
-const { getTrpcClient: mockGetTrpcClient } = vi.hoisted(() => ({
-  getTrpcClient: vi.fn(),
-}));
-
-vi.mock('../api/client', () => ({ getTrpcClient: mockGetTrpcClient }));
-describe('plugin command', () => {
-  let exitSpy: ReturnType<typeof vi.spyOn>;
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any);
-    consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    mockGetTrpcClient.mockResolvedValue(mockTrpcClient);
-    for (const method of Object.values(mockTrpcClient.plugin)) {
-      for (const fn of Object.values(method)) {
-        (fn as ReturnType<typeof vi.fn>).mockReset();
-      }
-    }
-  });
-
-  afterEach(() => {
-    exitSpy.mockRestore();
-    consoleSpy.mockRestore();
-  });
-
-  function createProgram() {
-    const program = new Command();
+describe('retired plugin command', () => {
+  it('rejects plugin commands and omits them from CLI help', async () => {
+    const program = createProgram();
     program.exitOverride();
-    registerPluginCommand(program);
-    return program;
-  }
+    program.configureOutput({ writeErr: () => {} });
 
-  describe('list', () => {
-    it('should list plugins', async () => {
-      mockTrpcClient.plugin.getPlugins.query.mockResolvedValue([
-        { id: 'p1', identifier: 'search', type: 'plugin' },
-      ]);
-
-      const program = createProgram();
-      await program.parseAsync(['node', 'test', 'plugin', 'list']);
-
-      expect(consoleSpy).toHaveBeenCalledTimes(2);
-    });
-
-    it('should output JSON', async () => {
-      const plugins = [{ id: 'p1', identifier: 'search' }];
-      mockTrpcClient.plugin.getPlugins.query.mockResolvedValue(plugins);
-
-      const program = createProgram();
-      await program.parseAsync(['node', 'test', 'plugin', 'list', '--json']);
-
-      expect(consoleSpy).toHaveBeenCalledWith(JSON.stringify(plugins, null, 2));
-    });
-  });
-
-  describe('create', () => {
-    it('should create a plugin', async () => {
-      mockTrpcClient.plugin.createPlugin.mutate.mockResolvedValue({ identifier: 'my-plugin' });
-
-      const program = createProgram();
-      await program.parseAsync([
-        'node',
-        'test',
-        'plugin',
-        'create',
-        '-i',
-        'my-plugin',
-        '--manifest',
-        '{"name":"test"}',
-      ]);
-
-      expect(mockTrpcClient.plugin.createPlugin.mutate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          identifier: 'my-plugin',
-          manifest: { name: 'test' },
-          type: 'plugin',
-        }),
-      );
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Created plugin'));
-    });
-
-    it('should reject invalid manifest JSON', async () => {
-      const program = createProgram();
-      await program.parseAsync([
-        'node',
-        'test',
-        'plugin',
-        'create',
-        '-i',
-        'my-plugin',
-        '--manifest',
-        'not-json',
-      ]);
-
-      expect(log.error).toHaveBeenCalledWith('Invalid manifest JSON.');
-      expect(exitSpy).toHaveBeenCalledWith(1);
-    });
-  });
-
-  describe('install', () => {
-    it('should install a plugin', async () => {
-      mockTrpcClient.plugin.createOrInstallPlugin.mutate.mockResolvedValue({});
-
-      const program = createProgram();
-      await program.parseAsync([
-        'node',
-        'test',
-        'plugin',
-        'install',
-        '-i',
-        'my-plugin',
-        '--manifest',
-        '{"name":"test"}',
-      ]);
-
-      expect(mockTrpcClient.plugin.createOrInstallPlugin.mutate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          identifier: 'my-plugin',
-          manifest: { name: 'test' },
-        }),
-      );
-    });
-
-    it('should reject invalid manifest JSON', async () => {
-      const program = createProgram();
-      await program.parseAsync([
-        'node',
-        'test',
-        'plugin',
-        'install',
-        '-i',
-        'my-plugin',
-        '--manifest',
-        'not-json',
-      ]);
-
-      expect(log.error).toHaveBeenCalledWith('Invalid manifest JSON.');
-      expect(exitSpy).toHaveBeenCalledWith(1);
-    });
-  });
-
-  describe('uninstall', () => {
-    it('should uninstall with --yes', async () => {
-      mockTrpcClient.plugin.removePlugin.mutate.mockResolvedValue({});
-
-      const program = createProgram();
-      await program.parseAsync(['node', 'test', 'plugin', 'uninstall', 'p1', '--yes']);
-
-      expect(mockTrpcClient.plugin.removePlugin.mutate).toHaveBeenCalledWith({ id: 'p1' });
-    });
-  });
-
-  describe('update', () => {
-    it('should update plugin settings', async () => {
-      mockTrpcClient.plugin.updatePlugin.mutate.mockResolvedValue({});
-
-      const program = createProgram();
-      await program.parseAsync([
-        'node',
-        'test',
-        'plugin',
-        'update',
-        'p1',
-        '--settings',
-        '{"key":"value"}',
-      ]);
-
-      expect(mockTrpcClient.plugin.updatePlugin.mutate).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'p1', settings: { key: 'value' } }),
-      );
-    });
-
-    it('should exit when no changes', async () => {
-      const program = createProgram();
-      await program.parseAsync(['node', 'test', 'plugin', 'update', 'p1']);
-
-      expect(log.error).toHaveBeenCalledWith(expect.stringContaining('No changes'));
-      expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(program.commands.map((command) => command.name())).not.toContain('plugin');
+    expect(program.helpInformation()).not.toMatch(/\bplugin\b/);
+    await expect(program.parseAsync(['node', 'orvilo', 'plugin', 'list'])).rejects.toMatchObject({
+      code: 'commander.unknownCommand',
     });
   });
 });

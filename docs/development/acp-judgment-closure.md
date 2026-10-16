@@ -29,7 +29,7 @@ exception table below, and `apps/server/src/acpJudgmentGuards.test.ts`.
 ## The ACP judgment contract (`runAcpJudgment`)
 
 1. **Binding** (`AcpJudgmentBinding`): `{ agentId? }` pins a user agent;
-   `{ slug? }` names a builtin (BUILTIN\_AGENT\_SLUGS). Resolution order:
+   `{ slug? }` names a builtin (BUILTIN_AGENT_SLUGS). Resolution order:
    `agentId` exists → `slug` resolves → `ACP_JUDGMENT_AGENT_ID` env (agent id
    or builtin slug) unless `allowEnvFallback: false` → `undefined`. `undefined`
    → `AcpJudgmentBindingError`. A pinned `agentId` that no longer exists is a
@@ -80,14 +80,14 @@ Judgment consumers (all `kind: 'judgment'`; binding → purpose):
 
 | Consumer                                                             | File                                      | Binding                                             | Purpose                                                           |
 | -------------------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------- |
-| Verify llm-item judge                                                | `services/verify/executor.ts`             | `verifierAgentId` → `verify-agent` slug             | `verify.judge`                                                    |
-| Verify narrative report                                              | `services/verify/reporter.ts`             | `verifierAgentId` → `verify-agent`                  | `verify.report`                                                   |
-| Review predictor                                                     | `services/verify/reviewPredictor.ts`      | `judgmentAgentId` → `verify-agent`                  | `verify.reviewPredict`                                            |
-| Criteria/plan generator                                              | `services/verify/planGenerator.ts`        | `verifierAgentId` → `verify-agent`                  | `verify.planGen`                                                  |
-| Goal criteria draft                                                  | `services/goal/criteriaGenerator.ts`      | `agentId` → `verify-agent`                          | `goal.criteriaDraft`                                              |
+| Verify llm-item judge                                                | `services/verify/executor.ts`             | Issue `reviewerAgentId`                             | `verify.judge`                                                    |
+| Verify narrative report                                              | `services/verify/reporter.ts`             | Issue `reviewerAgentId`                             | `verify.report`                                                   |
+| Review predictor                                                     | `services/verify/reviewPredictor.ts`      | Issue `reviewerAgentId`                             | `verify.reviewPredict`                                            |
+| Criteria/plan generator                                              | `services/verify/planGenerator.ts`        | Issue `reviewerAgentId`                             | `verify.planGen`                                                  |
+| Goal criteria draft                                                  | `services/goal/criteriaGenerator.ts`      | selected Agent `agentId`                            | `goal.criteriaDraft`                                              |
 | Goal decompose                                                       | `services/goal/criteriaGenerator.ts`      | goal `agentId`                                      | `goal.decompose`                                                  |
 | Goal exploration planner                                             | `services/goal/explorationPlanner.ts`     | goal `agentId`                                      | `goal.explore`                                                    |
-| Task intent/instruction                                              | `services/task/intent.ts`                 | `taskAgent` slug                                    | `task.intent` / `task.instruction`                                |
+| Task intent/instruction                                              | `services/task/intent.ts`                 | selected Agent / configured Orchestrator            | `task.intent` / `task.instruction`                                |
 | Task review judge                                                    | `services/taskReview/index.ts`            | `judgeAgentId` (task assignee)                      | `task.review`                                                     |
 | Task lifecycle (handoff/brief)                                       | `services/taskLifecycle/index.ts`         | `task.assigneeAgentId`                              | `task.handoff` / `task.briefJudge` / `task.brief`                 |
 | Linear coordinator planning                                          | `services/linearSync/coordinator.ts`      | `project.coordinatorAgentId`                        | `linearSync.coordinatorPlan`                                      |

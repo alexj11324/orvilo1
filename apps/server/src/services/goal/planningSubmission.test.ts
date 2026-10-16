@@ -37,64 +37,17 @@ afterEach(async () => {
   await db.delete(users).where(eq(users.id, userId));
 });
 
-describe('planning result submission', () => {
-  it('requires exact actor and scope even when workspace visibility permits reading the row', async () => {
-    await expect(submitPlanningResult(db, userId, workspaceId, input)).rejects.toMatchObject({
-      code: 'FORBIDDEN',
-    });
-    await db
-      .update(agentOperations)
-      .set({ workspaceId })
+describe('retired planning result submission', () => {
+  it('rejects even a valid live operation token without changing operation metadata', async () => {
+    const before = await db
+      .select()
+      .from(agentOperations)
       .where(eq(agentOperations.id, operationId));
-    await expect(submitPlanningResult(db, 'other-user', workspaceId, input)).rejects.toMatchObject({
-      code: 'FORBIDDEN',
-    });
-    await expect(submitPlanningResult(db, userId, workspaceId, input)).resolves.toEqual({
-      success: true,
-    });
-  });
-  it('records one validated result without losing operation metadata', async () => {
-    await expect(submitPlanningResult(db, userId, undefined, input)).resolves.toEqual({
-      success: true,
-    });
-    const op = await new AgentOperationModel(db, userId).findById(operationId);
-    expect(op?.metadata).toEqual({ keep: 'existing', planningResult: input.result });
     await expect(submitPlanningResult(db, userId, undefined, input)).rejects.toMatchObject({
-      message: 'ACP_PLANNING_ALREADY_SUBMITTED',
+      code: 'METHOD_NOT_SUPPORTED',
     });
-  });
-  it('rejects a different owner and a stale turn token', async () => {
-    for (const [owner, token] of [
-      ['other-user', 'turn'],
-      [userId, 'other-turn'],
-    ]) {
-      await expect(
-        submitPlanningResult(db, owner, undefined, { ...input, token }),
-      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
-    }
-  });
-  it('rejects invalid results before writing', async () => {
-    await expect(
-      submitPlanningResult(db, userId, undefined, {
-        ...input,
-        result: { title: 'Missing fields' },
-      }),
-    ).rejects.toMatchObject({ message: 'ACP_PLANNING_SCHEMA_MISMATCH' });
-    expect((await new AgentOperationModel(db, userId).findById(operationId))?.metadata).toEqual({
-      keep: 'existing',
-    });
-  });
-  it('rejects a finished operation', async () => {
-    await new AgentOperationModel(db, userId).recordCompletion(operationId, { status: 'done' });
-    await expect(submitPlanningResult(db, userId, undefined, input)).rejects.toMatchObject({
-      message: 'ACP_PLANNING_TURN_ENDED',
-    });
-  });
-  it('only accepts one concurrent submission', async () => {
-    const outcomes = await Promise.allSettled([
-      submitPlanningResult(db, userId, undefined, input),
-      submitPlanningResult(db, userId, undefined, input),
-    ]);
-    expect(outcomes.filter((item) => item.status === 'fulfilled')).toHaveLength(1);
+    expect(
+      await db.select().from(agentOperations).where(eq(agentOperations.id, operationId)),
+    ).toEqual(before);
   });
 });

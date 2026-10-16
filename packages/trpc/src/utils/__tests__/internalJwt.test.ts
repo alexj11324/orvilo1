@@ -217,6 +217,8 @@ describe('internalJwt', () => {
     it('accepts the typed operation contract', async () => {
       const { validateHeteroOperationClaims } = await import('../internalJwt');
       expect(validateHeteroOperationClaims(validClaims)).toEqual(validClaims);
+      const referenceRead = { ...validClaims, capabilities: ['topic:reference:read'] };
+      expect(validateHeteroOperationClaims(referenceRead)).toEqual(referenceRead);
     });
 
     it.each(['aud', 'iss', 'purpose', 'operation_id', 'capabilities'])(

@@ -25,6 +25,8 @@ import { resolveRuntimeAgentConfig } from '@/server/services/memory/userMemory/e
 import { LayersEnum } from '@/types/userMemory';
 import { trimBasedOnBatchProbe } from '@/utils/chunkers';
 
+import { isUserMemoryExtractionEnabled } from '../gate';
+
 interface UserPersonaAgentPayload {
   existingPersona?: string | null;
   language?: string;
@@ -91,6 +93,9 @@ export class UserPersonaService {
   }
 
   async composeWriting(payload: UserPersonaAgentPayload): Promise<UserPersonaAgentResult> {
+    if (!(await isUserMemoryExtractionEnabled(payload.userId, this.db))) {
+      throw new Error('Platform memory persona writing is unavailable.');
+    }
     const agentConfig = await this.resolveAgentConfig(payload.userId);
     // workspace-audit: intentionally personal-scoped (no workspaceId). Persona is a
     // purely user-level feature with no workspace concept; the payload carries no

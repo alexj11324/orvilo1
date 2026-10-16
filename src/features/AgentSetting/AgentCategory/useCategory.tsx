@@ -1,4 +1,4 @@
-import { Activity, LinkIcon, NotebookText } from 'lucide-react';
+import { Activity, NotebookText } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -27,11 +27,6 @@ export const useCategory = ({ mobile }: UseCategoryOptions = {}) => {
           icon: <Activity size={iconSize} />,
           key: ChatSettingsTabs.SelfIteration,
           label: t('agentTab.selfIteration'),
-        },
-        {
-          icon: <LinkIcon size={iconSize} />,
-          key: ChatSettingsTabs.Connector,
-          label: t('agentTab.connector', 'Connectors'),
         },
       ].filter(Boolean) as MenuProps['items'],
     [t, iconSize, enableAgentSelfIteration],

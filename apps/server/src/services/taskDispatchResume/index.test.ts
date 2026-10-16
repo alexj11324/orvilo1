@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   claimForResume: vi.fn(),
   findStaleStartCandidates: vi.fn(),
   findWaitingResumeCandidates: vi.fn(),
+  findQueuedAutomationTasks: vi.fn().mockResolvedValue([]),
   requestStop: vi.fn(),
   runTask: vi.fn(),
 }));
@@ -30,6 +31,7 @@ vi.mock('@/database/models/taskDispatch', () => ({
     {
       findStaleStartCandidates: mocks.findStaleStartCandidates,
       findWaitingResumeCandidates: mocks.findWaitingResumeCandidates,
+      findQueuedAutomationTasks: mocks.findQueuedAutomationTasks,
     },
   ),
 }));

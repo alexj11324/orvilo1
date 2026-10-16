@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 /**
  * Cross-module parity gate (P19): the retirements must not take down the
  * consumers that were meant to survive — stream/tool/approval/cancel wiring,
- * the acceptance evidence tool, connector routes, task evidence. And the
+ * historical evidence readers, connector routes, task evidence. And the
  * retired client-side control surfaces must stay gone.
  *
  * These read wiring as text (same convention as
@@ -68,13 +68,13 @@ describe('retired client control surfaces stay gone', () => {
 });
 
 describe('retained consumers keep their wiring', () => {
-  it('the run-scoped acceptance evidence tool stays registered', () => {
-    // HS-14: deleting this makes requiredEvidence tasks un-gateable forever.
+  it('retains historical evidence without registering the retired executable tool', () => {
     const identifiers = readRepo('packages/builtin-tools/src/identifiers.ts');
-    expect(identifiers).toContain('builtin-tool-acceptance-evidence');
-    expect(identifiers).toContain('AcceptanceEvidenceManifest.identifier');
+    expect(identifiers).not.toContain('AcceptanceEvidenceManifest');
     const manifest = readRepo('packages/builtin-tool-acceptance-evidence/src/manifest.ts');
     expect(manifest).toContain("'orvilo-acceptance-evidence'");
+    const renders = readRepo('packages/builtin-tools/src/register.ts');
+    expect(renders).toContain('GoalRenders');
   });
 
   it('keeps the ACP stream/tool lifecycle vocabulary', () => {

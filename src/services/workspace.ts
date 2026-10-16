@@ -9,7 +9,6 @@ class WorkspaceService {
 
   ensureDefault = (...args: Parameters<typeof lambdaClient.workspace.ensureDefault.mutate>) =>
     lambdaClient.workspace.ensureDefault.mutate(...args);
-
 }
 
 export const workspaceService = new WorkspaceService();

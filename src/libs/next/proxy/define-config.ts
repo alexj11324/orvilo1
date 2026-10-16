@@ -57,12 +57,11 @@ export function defineConfig() {
     '/trpc',
     '/webapi',
     '/oidc',
-    '/oauth/connector',
     '/oauth/github',
     '/oauth/linear',
+    '/oauth/slack',
     // The whole `(backend)/market` subtree is Bearer-token API, not SPA. The
-    // trailing slash matters: `/market-auth-callback` is an auth SPA page that
-    // shares the `/market` prefix and must still be rewritten. The matcher's
+    // matcher's
     // workspace-slug lookahead already keeps `/market/*` unmatched; this is
     // the safety net so the Bearer API survives a matcher regression.
     '/market/',
@@ -235,7 +234,6 @@ export function defineConfig() {
     // Composio OAuth callback — hit via a cross-site redirect from the provider
     // after Composio-managed auth; only renders a popup-closing page, so it must
     // not be session-gated.
-    '/api/composio/oauth/callback',
     // sign-in bounces (each forwards to the accounts portal)
     '/signin',
     '/signup',
@@ -247,7 +245,6 @@ export function defineConfig() {
     '/oauth/consent/(.*)',
     // Custom connector OAuth callback — hit via a cross-site redirect from the
     // provider, carries its own code+state, so it must not be session-gated.
-    '/oauth/connector/callback',
     // The GitHub App redirects from another origin with a one-time state.
     // The callback handler verifies the initiating Orvilo session itself.
     '/oauth/github/callback',
@@ -255,6 +252,8 @@ export function defineConfig() {
     // verifier, so the provider can redirect here before a browser session is
     // re-established.
     '/oauth/linear/callback',
+    // Slack verifies its one-use state and initiating Orvilo session in the handler.
+    '/oauth/slack/callback',
     // The handler validates the interaction cookie before recovering an expired web session.
     '/oidc/consent',
     '/oidc/handoff',
@@ -266,7 +265,6 @@ export function defineConfig() {
     // before the user has a session, so it cannot be session-gated.
     '/oidc/interaction/(.*)',
     // market
-    '/market-auth-callback',
     // `(backend)/market` API subtree — auth is Bearer/trusted-client-token in
     // the handlers (`MarketService.createFromRequest`), never the session
     // cookie, so session-gating would 302 API clients to /signin. The

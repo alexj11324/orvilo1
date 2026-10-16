@@ -12,7 +12,6 @@ import {
 } from '@/features/AgentTransferMigration';
 import ChatbotPage from '@/features/AIChatbot/Page';
 import { ConversationProvider } from '@/features/Conversation';
-import ToolAuthAlert from '@/features/Conversation/AgentWelcome/ToolAuthAlert';
 import { useMessageDeepLink } from '@/features/Conversation/ChatList/hooks/useMessageDeepLink';
 import ComposerDraftReceiver from '@/features/Conversation/ComposerDraftReceiver';
 import {
@@ -138,7 +137,6 @@ const Conversation = memo(() => {
     >
       <ChatbotPage
         composer={chatInput}
-        header={<ToolAuthAlert />}
         messageDeepLink={messageDeepLink}
         resolving={isInboxResolving}
         footer={

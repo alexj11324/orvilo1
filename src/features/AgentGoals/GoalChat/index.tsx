@@ -1,72 +1,12 @@
 'use client';
 
-import { memo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { memo, useCallback } from 'react';
 
-import DragUploadZone, { useUploadFiles } from '@/components/DragUploadZone';
-import {
-  COMPACT_ACTION_BAR_STYLE,
-  COMPACT_SEND_BUTTON_PROPS,
-} from '@/features/ChatInput/compactPreset';
-import {
-  ChatInput,
-  ChatList,
-  conversationSelectors,
-  useConversationStore,
-} from '@/features/Conversation';
-import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors } from '@/store/agent/selectors';
+import { ChatList } from '@/features/Conversation';
+import MessageItem from '@/features/Conversation/Messages';
 
 import { GoalChatProvider } from './GoalChatProvider';
 import Toolbar from './Toolbar';
-
-const EMPTY_LEFT_ACTIONS: [] = [];
-
-const Welcome = memo(() => {
-  const { t } = useTranslation('chat');
-  return (
-    <div className="flex flex-col items-center flex-1 justify-center" style={{ padding: 24 }}>
-      <div className="text-muted-foreground" style={{ fontSize: 14, textAlign: 'center' }}>
-        {t('goalChat.welcome')}
-      </div>
-    </div>
-  );
-});
-
-Welcome.displayName = 'GoalChatWelcome';
-
-const Conversation = memo<{ onCollapse: () => void }>(({ onCollapse }) => {
-  const useFetchAgentConfig = useAgentStore((s) => s.useFetchAgentConfig);
-  const currentAgentId = useConversationStore(conversationSelectors.agentId);
-
-  useFetchAgentConfig(true, currentAgentId);
-
-  const model = useAgentStore((s) => agentByIdSelectors.getAgentModelById(currentAgentId)(s));
-  const provider = useAgentStore((s) =>
-    agentByIdSelectors.getAgentModelProviderById(currentAgentId)(s),
-  );
-  const { handleUploadFiles } = useUploadFiles({ agentId: currentAgentId, model, provider });
-
-  return (
-    <DragUploadZone style={{ flex: 1, height: '100%' }} onUploadFiles={handleUploadFiles}>
-      <div className="flex flex-col flex-1 h-full" style={{ overflow: 'hidden' }}>
-        <Toolbar onCollapse={onCollapse} />
-        <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
-          <ChatList welcome={<Welcome />} />
-        </div>
-        <ChatInput
-          actionBarStyle={COMPACT_ACTION_BAR_STYLE}
-          allowExpand={false}
-          leftActions={EMPTY_LEFT_ACTIONS}
-          sendButtonProps={COMPACT_SEND_BUTTON_PROPS}
-          showControlBar={false}
-        />
-      </div>
-    </DragUploadZone>
-  );
-});
-
-Conversation.displayName = 'GoalChatConversation';
 
 interface GoalChatProps {
   agentId: string;
@@ -75,17 +15,21 @@ interface GoalChatProps {
   onCollapse: () => void;
 }
 
-/**
- * The goal page's side conversation with the goal's responsible agent. The
- * provider tags the context with `viewedGoal`, so every question is answered
- * with the current goal overview injected — "how is this going?" just works.
- */
-const GoalChat = memo<GoalChatProps>(({ agentId, goalId, initialTopicId, onCollapse }) => (
-  <GoalChatProvider agentId={agentId} goalId={goalId} initialTopicId={initialTopicId}>
-    <Conversation onCollapse={onCollapse} />
-  </GoalChatProvider>
-));
-
+const GoalChat = memo<GoalChatProps>(({ agentId, goalId, initialTopicId, onCollapse }) => {
+  const itemContent = useCallback(
+    (index: number, id: string) => <MessageItem disableEditing id={id} index={index} />,
+    [],
+  );
+  return (
+    <GoalChatProvider agentId={agentId} goalId={goalId} initialTopicId={initialTopicId}>
+      <div className="flex flex-col flex-1 h-full overflow-hidden">
+        <Toolbar onCollapse={onCollapse} />
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <ChatList disableActionsBar itemContent={itemContent} />
+        </div>
+      </div>
+    </GoalChatProvider>
+  );
+});
 GoalChat.displayName = 'GoalChat';
-
 export default GoalChat;

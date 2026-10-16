@@ -262,12 +262,14 @@ describe('linear parity seed', () => {
       userId: foreignUserId,
       workspaceId: workspace.id,
     });
-    await seedPrimeRuntime(db, { userId: foreignUserId, workspaceId: workspace.id });
-    await new ProjectModel(db, foreignUserId, workspace.id).create({
+    // Persist a foreign historical row; collision detection does not require a new coordinator.
+    await db.insert(projects).values({
       identifier: 'FPR',
       name: LINEAR_PARITY_PROJECT.name,
       slug: LINEAR_PARITY_PROJECT.slug,
+      userId: foreignUserId,
       visibility: 'public',
+      workspaceId: workspace.id,
     });
 
     const countsBefore = {

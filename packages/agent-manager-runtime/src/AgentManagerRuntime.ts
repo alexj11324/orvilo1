@@ -6,23 +6,17 @@
  *
  * This runtime provides:
  * - Agent CRUD operations (create, update, delete)
- * - Agent search (user agents + marketplace)
+ * - Workspace Agent search
  * - Model/Provider listing
- * - Plugin/Tool search and installation
  * - Prompt updates with streaming support
  *
  * Services must be injected via constructor for runtime-agnostic usage
  * (e.g., server-side services vs client-side services).
  */
-import {
-  marketToolsResultsPrompt,
-  modelsResultsPrompt,
-  searchAgentsResultsPrompt,
-} from '@orvilo/prompts';
+import { modelsResultsPrompt, searchAgentsResultsPrompt } from '@orvilo/prompts';
 import {
   type BuiltinToolResult,
   getPluginMode,
-  type HeterogeneousProviderConfig,
   parsePluginEntry,
   upsertPluginMode,
 } from '@orvilo/types';
@@ -39,14 +33,8 @@ import type {
   GetAvailableModelsParams,
   GetAvailableModelsState,
   IAgentService,
-  IDiscoverService,
-  InstallPluginParams,
-  InstallPluginState,
-  MarketToolItem,
   SearchAgentParams,
   SearchAgentState,
-  SearchMarketToolsParams,
-  SearchMarketToolsState,
   UpdateAgentConfigParams,
   UpdateAgentConfigState,
   UpdatePromptParams,
@@ -65,7 +53,6 @@ export class AgentManagerRuntime {
 
   private capabilities: AgentManagerCapabilities;
   private agentService: IAgentService;
-  private discoverService: IDiscoverService;
 
   /**
    * Create an AgentManagerRuntime instance
@@ -74,7 +61,6 @@ export class AgentManagerRuntime {
   constructor(services: AgentManagerRuntimeServices) {
     this.capabilities = services.capabilities;
     this.agentService = services.agentService;
-    this.discoverService = services.discoverService;
   }
 
   // ==================== Agent CRUD ====================
@@ -411,95 +397,41 @@ export class AgentManagerRuntime {
   // ==================== Search ====================
 
   /**
-   * Search agents (user's own and marketplace)
+   * Search workspace agents
    */
   async searchAgents(params: SearchAgentParams): Promise<BuiltinToolResult> {
     try {
-      const source = params.source || 'all';
       const limit = Math.min(params.limit || 10, MAX_SEARCH_AGENT_LIMIT);
       const offset = Math.max(params.offset || 0, 0);
-      const agents: AgentSearchItem[] = [];
-
-      let userTotal = 0;
-      let marketTotal = 0;
-
-      // Search user's agents
-      if (source === 'user' || source === 'all') {
-        const [userAgents, total] = await Promise.all([
-          this.agentService.queryAgents({ keyword: params.keyword, limit, offset }),
-          this.agentService.countAgents({ keyword: params.keyword }),
-        ]);
-        userTotal = total;
-
-        agents.push(
-          ...userAgents.map(
-            (agent: {
-              avatar?: string | null;
-              backgroundColor?: string | null;
-              description?: string | null;
-              heteroType?: HeterogeneousProviderConfig['type'];
-              id: string;
-              title?: string | null;
-            }) => ({
-              avatar: agent.avatar ?? undefined,
-              backgroundColor: agent.backgroundColor ?? undefined,
-              description: agent.description ?? undefined,
-              heteroType: agent.heteroType,
-              id: agent.id,
-              isMarket: false,
-              title: agent.title ?? undefined,
-            }),
-          ),
-        );
-      }
-
-      // Search marketplace agents (first page only — offset does not apply)
-      if (source === 'market' || source === 'all') {
-        const marketAgents = await this.discoverService.getAssistantList({
-          pageSize: limit,
-          q: params.keyword,
-          ...(params.category && { category: params.category }),
-        });
-        marketTotal = marketAgents.totalCount ?? marketAgents.items.length;
-
-        agents.push(
-          ...marketAgents.items.map((agent) => ({
-            avatar: agent.avatar,
-            backgroundColor: agent.backgroundColor,
-            description: agent.description,
-            id: agent.identifier,
-            isMarket: true,
-            title: agent.title,
-          })),
-        );
-      }
-
-      const uniqueAgents = agents.slice(0, limit);
-      const totalCount = userTotal + marketTotal;
-
-      // hasMore tracks workspace agents only: marketplace results are not offset-paged
-      const shownUserCount = uniqueAgents.filter((a) => !a.isMarket).length;
-      const hasMore = offset + shownUserCount < userTotal;
+      const [userAgents, totalCount] = await Promise.all([
+        this.agentService.queryAgents({ keyword: params.keyword, limit, offset }),
+        this.agentService.countAgents({ keyword: params.keyword }),
+      ]);
+      const agents: AgentSearchItem[] = userAgents.map((agent) => ({
+        ...agent,
+        avatar: agent.avatar ?? undefined,
+        backgroundColor: agent.backgroundColor ?? undefined,
+        description: agent.description ?? undefined,
+        title: agent.title ?? undefined,
+      }));
+      const hasMore = offset + agents.length < totalCount;
 
       const content = searchAgentsResultsPrompt({
-        agents: uniqueAgents,
+        agents,
         hasMore,
-        marketTotal,
         maxLimit: MAX_SEARCH_AGENT_LIMIT,
         offset,
         requestedLimit: params.limit,
-        source,
-        userTotal,
+        userTotal: totalCount,
       });
 
       return {
         content,
         state: {
-          agents: uniqueAgents,
+          agents,
           hasMore,
           keyword: params.keyword,
           offset,
-          source,
           totalCount,
         } as SearchAgentState,
         success: true,
@@ -633,85 +565,6 @@ export class AgentManagerRuntime {
       });
     } finally {
       await this.capabilities.agents.finishStreamingSystemRole(agentId, generation);
-    }
-  }
-
-  // ==================== Plugin/Tools ====================
-
-  /**
-   * Search for tools in the marketplace
-   */
-  async searchMarketTools(params: SearchMarketToolsParams): Promise<BuiltinToolResult> {
-    try {
-      const response = await this.discoverService.getMcpList({
-        category: params.category,
-        pageSize: params.pageSize || 10,
-        q: params.query,
-      });
-
-      const tools: MarketToolItem[] = response.items.map((item) => {
-        const installed = this.capabilities.isPluginInstalled(item.identifier);
-        return {
-          author: item.author,
-          cloudEndPoint: (item as any).cloudEndPoint,
-          description: item.description,
-          haveCloudEndpoint: (item as any).haveCloudEndpoint,
-          icon: item.icon,
-          identifier: item.identifier,
-          installed,
-          name: item.name,
-          tags: item.tags,
-        };
-      });
-
-      const installedCount = tools.filter((t) => t.installed).length;
-      const notInstalledCount = tools.length - installedCount;
-
-      let summary = `Found ${response.totalCount} tool(s) in the marketplace.`;
-      if (params.query) {
-        summary = `Found ${response.totalCount} tool(s) matching "${params.query}".`;
-      }
-      if (installedCount > 0) {
-        summary += ` ${installedCount} already installed, ${notInstalledCount} available to install.`;
-      }
-
-      const xmlContent = marketToolsResultsPrompt(tools);
-      const content = `${summary}\n\n${xmlContent}`;
-
-      return {
-        content,
-        state: {
-          query: params.query,
-          tools,
-          totalCount: response.totalCount,
-        } as SearchMarketToolsState,
-        success: true,
-      };
-    } catch (error) {
-      return this.handleError(error, 'Failed to search market tools');
-    }
-  }
-
-  /**
-   * Install a plugin
-   */
-  async installPlugin(agentId: string, params: InstallPluginParams): Promise<BuiltinToolResult> {
-    try {
-      return await this.capabilities.installPlugin(agentId, params, async (pluginId) => {
-        await this.ensureAgentLoaded(agentId);
-        const plugins = this.capabilities.agents.getConfig(agentId)?.plugins;
-        if (getPluginMode(plugins, pluginId) !== 'pinned') {
-          await this.capabilities.agents.updateConfig(agentId, {
-            plugins: upsertPluginMode(plugins, pluginId, 'pinned'),
-          });
-        }
-      });
-    } catch (error) {
-      return this.handleErrorWithState(error, 'Failed to install plugin', {
-        installed: false,
-        pluginId: params.identifier,
-        success: false,
-      } as InstallPluginState);
     }
   }
 

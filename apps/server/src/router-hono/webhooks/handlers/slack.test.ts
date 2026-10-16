@@ -14,7 +14,7 @@ vi.mock('@/server/services/slackIntegration', () => ({
 vi.mock('@/libs/hatchet', () => ({ enqueueHatchetTask: mocks.enqueue }));
 
 const app = new Hono().post('/slack', slackWebhook);
-const deliver = (body: object, signatureOverride?: string) => {
+const deliver = async (body: object, signatureOverride?: string) => {
   const raw = JSON.stringify(body);
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const signature = `v0=${createHmac('sha256', 'test-secret').update(`v0:${timestamp}:${raw}`).digest('hex')}`;
@@ -75,5 +75,28 @@ describe('Slack ingress', () => {
   it('returns a retryable failure when the queue did not accept delivery', async () => {
     mocks.enqueue.mockRejectedValueOnce(new Error('queue unavailable'));
     expect((await deliver({ team_id: 'T123', type: 'event_callback' })).status).toBe(503);
+  });
+
+  it('waits for durable queue acceptance before acknowledging Slack', async () => {
+    let accept!: () => void;
+    let started!: () => void;
+    const queued = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    mocks.enqueue.mockImplementationOnce(() => {
+      started();
+      return new Promise<void>((resolve) => {
+        accept = resolve;
+      });
+    });
+    let responded = false;
+    const response = deliver({ team_id: 'T123', type: 'event_callback' }).then((result) => {
+      responded = true;
+      return result;
+    });
+    await queued;
+    expect(responded).toBe(false);
+    accept();
+    expect((await response).status).toBe(200);
   });
 });

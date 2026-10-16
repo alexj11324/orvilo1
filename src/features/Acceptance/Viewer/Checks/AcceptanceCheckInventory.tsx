@@ -8,7 +8,6 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import ActionIcon from '@/components/ActionIcon';
-import { toast } from '@/components/toast';
 import {
   Select,
   SelectContent,
@@ -17,7 +16,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useSingleton } from '@/hooks/useSingleton';
-import { verifyService } from '@/services/verify';
 
 import { useAcceptanceScope } from '../AcceptanceScope';
 import { hasVisualEvidence } from '../Evidence/evidence';
@@ -25,7 +23,6 @@ import AcceptanceInteractionCost from '../History/AcceptanceInteractionCost';
 import { checksForTurn } from '../turnChecks';
 import { useAcceptanceBundle } from '../useAcceptanceBundle';
 import { useAcceptanceTurn } from '../useAcceptanceTurn';
-import { canReviewAcceptance } from '../visibility';
 import CheckList from './CheckList';
 import {
   type CheckFilter,
@@ -58,7 +55,7 @@ const AcceptanceCheckInventory = ({
 }: AcceptanceCheckInventoryProps) => {
   const { t } = useTranslation('verify');
   const { acceptanceId, embedded } = useAcceptanceScope();
-  const { data, mutate } = useAcceptanceBundle(acceptanceId);
+  const { data } = useAcceptanceBundle(acceptanceId);
   const [searchParams, setSearchParams] = useSearchParams();
   const [localFilter, setLocalFilter] = useState<CheckFilter>('all');
   const urlFilterRaw = searchParams.get('filter');
@@ -153,30 +150,8 @@ const AcceptanceCheckInventory = ({
 
   if (!data) return null;
 
-  const canReview =
-    canReviewAcceptance(data) &&
-    (roundFilter === null || roundFilter === data.rounds.at(-1)?.run.roundIndex);
   const checks = checksForTurn(data, roundFilter);
 
-  /**
-   * Every mutation the checklist fires goes through here.
-   *
-   * A rejected promise handed back to CheckList would escape as an unhandled
-   * rejection AND strand the row's own pending flag — the row that raised it
-   * spins forever, with the reason only in the console. Failing loudly and
-   * returning `false` lets the row settle and say what happened.
-   */
-  const runReviewMutation = async (action: () => Promise<unknown>) => {
-    try {
-      await action();
-      await mutate();
-      return true;
-    } catch (cause) {
-      console.error('[acceptance:review]', cause);
-      toast.error(cause instanceof Error ? cause.message : t('acceptance.actionError'));
-      return false;
-    }
-  };
   const counts = {
     accepted: checks.filter((check) => checkFilterState(check) === 'accepted').length,
     ignored: checks.filter((check) => checkFilterState(check) === 'ignored').length,
@@ -296,7 +271,7 @@ const AcceptanceCheckInventory = ({
       </div>
       {children}
       <CheckList
-        canReview={canReview}
+        canReview={false}
         checks={checks}
         collapsedGroups={collapsedGroups}
         currentRound={currentRound}
@@ -304,38 +279,10 @@ const AcceptanceCheckInventory = ({
         filter={filter}
         groupFeedback={groupFeedback}
         reviewPending={false}
+        onGroupFeedback={async () => false}
         onOpenTrace={onOpenTrace}
+        onReview={async () => false}
         onRound={setRoundFilter}
-        onDismissProposal={
-          canReview
-            ? async (input) => {
-                await runReviewMutation(() =>
-                  verifyService.adjudicateProposal({
-                    adjudication: input.adjudication,
-                    id: data.acceptance.id,
-                    predictionId: input.predictionId,
-                  }),
-                );
-              }
-            : undefined
-        }
-        onGroupFeedback={async (category, comment, fileIds) => {
-          if (!canReview) return false;
-          return runReviewMutation(() =>
-            verifyService.addGroupFeedback({
-              category,
-              comment,
-              fileIds: fileIds.length > 0 ? fileIds : undefined,
-              id: data.acceptance.id,
-            }),
-          );
-        }}
-        onReview={async (input) => {
-          if (!canReview) return false;
-          return runReviewMutation(() =>
-            verifyService.reviewChecks({ id: data.acceptance.id, ...input }),
-          );
-        }}
         onToggleGroup={(key) =>
           setCollapsedGroups((previous) => {
             const next = new Set(previous);

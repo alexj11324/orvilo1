@@ -16,9 +16,9 @@ import {
 } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AcceptanceFlowModel } from '@/database/models/acceptanceFlow';
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import { TaskModel } from '@/database/models/task';
 import { VerifyReviewPredictionModel } from '@/database/models/verifyReviewPrediction';
 import { VerifyRunModel } from '@/database/models/verifyRun';
-import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import { users } from '@/database/schemas';
 import type { AcceptanceItem } from '@/database/schemas/verify';
 import { acceptances } from '@/database/schemas/verify';
@@ -37,10 +37,12 @@ import {
   previewAcceptancePurge,
   purgeAcceptance,
   REVIEW_PREDICT_CONCURRENCY,
-  REVIEW_PREDICT_MODEL_CONFIG,
   shouldSurfaceProposal,
   VerifyReviewPredictorService,
 } from '@/server/services/verify';
+import { canReadAcceptanceArchive } from '@/server/services/verify/archiveAccess';
+import { assertLegacyVerificationWritable } from '@/server/services/verify/retirement';
+import { resolveIssueReviewer } from '@/server/services/verify/reviewerAgent';
 import { after } from '@/server/utils/scheduleAfterResponse';
 
 import { canManageAcceptance } from './_helpers/acceptanceWriteScope';
@@ -65,7 +67,12 @@ const acceptanceProcedure = wsCompatProcedure.use(serverDatabase).use(async (opt
 
 // Writes: workspace mode requires at least the member role (viewers are
 // read-only); personal mode passes through unrestricted.
-const acceptanceWriteProcedure = acceptanceProcedure.use(requireWorkspaceRoleWhenScoped('member'));
+const acceptanceWriteProcedure = acceptanceProcedure
+  .use(requireWorkspaceRoleWhenScoped('member'))
+  .use(({ next }) => {
+    assertLegacyVerificationWritable();
+    return next();
+  });
 
 /**
  * Resolve an acceptance for WRITING, with a service bound to the scope the row
@@ -107,21 +114,7 @@ const resolveAcceptanceForWrite = async (
   };
 };
 
-const canReadAcceptance = async (
-  ctx: { serverDB: OrviloDatabase; userId?: string | null },
-  acceptance: AcceptanceItem,
-) => {
-  if (ctx.userId && ctx.userId === acceptance.userId) return true;
-  if (acceptance.visibility === 'public') return true;
-  if (!ctx.userId || !acceptance.workspaceId) return false;
-  // Membership in the acceptance's OWN workspace — not the viewer's currently
-  // active one, which may be a different workspace entirely.
-  const member = await new WorkspaceMemberModel(ctx.serverDB, ctx.userId).getMember(
-    acceptance.workspaceId,
-    ctx.userId,
-  );
-  return Boolean(member);
-};
+const canReadAcceptance = canReadAcceptanceArchive;
 
 /** Max rows one multi-select sweep may touch — the list itself is capped at 200. */
 const PURGE_PREVIEW_LIMIT = 20;
@@ -241,7 +234,7 @@ export const acceptanceRouter = router({
         input.subjectType,
         input.subjectId,
       );
-      if (!acceptance) return null;
+      if (!acceptance || !(await canReadAcceptance(ctx, acceptance))) return null;
 
       // `delivered` alone is ambiguous for the subject's status surface: a
       // converged delivery waiting for sign-off and a failed one waiting for a
@@ -352,13 +345,13 @@ export const acceptanceRouter = router({
       }
 
       const isOwner = Boolean(ctx.userId) && ctx.userId === acceptance.userId;
-      if (!isOwner && !(await canReadAcceptance(ctx, acceptance))) {
+      if (!(await canReadAcceptance(ctx, acceptance))) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Acceptance not found' });
       }
 
       // The one rule the write path enforces — same helper, so the page can
       // never advertise an action the mutation would refuse.
-      const canReview = await canManageAcceptance(ctx, acceptance);
+      const canReview = false;
 
       // Sub-reads (rounds / results / evidence) are ownership-scoped models, so
       // read them AS the aggregate's owner — same pattern as the evidence file
@@ -537,25 +530,23 @@ export const acceptanceRouter = router({
       // the result it judged. Keying on the logical id silently misses every
       // plan that uses a distinct snapshot id: generation reports success and
       // no card ever renders.
+      const reviewerAgentId =
+        acceptance.subjectType === 'task'
+          ? ((
+              await new TaskModel(
+                ctx.serverDB,
+                acceptance.userId,
+                acceptance.workspaceId ?? undefined,
+              ).findById(acceptance.subjectId)
+            )?.reviewerAgentId ?? '')
+          : '';
       const predictionByResult = new Map<string, (typeof predictions)[number]>();
-      // Goal reviews may use the owner's configured model. Their persisted ids
-      // identify the actual automatic decision without admitting unrelated rows.
-      const automaticPredictionIds = new Set(
-        runs.flatMap((run) => run.metadata?.goalReview?.predictionIds ?? []),
-      );
       // Newest-first from the model, so the first write per check item wins and
       // later (older) rows are ignored.
       for (const prediction of predictions) {
         // Rows from an earlier pin (another model / prompt version) stay in
         // the table for the comparison set but are not this page's reviewer.
-        if (
-          !isCurrentReviewPrediction(
-            prediction,
-            REVIEW_PREDICT_MODEL_CONFIG,
-            automaticPredictionIds,
-          )
-        )
-          continue;
+        if (!isCurrentReviewPrediction(prediction, reviewerAgentId)) continue;
         if (!predictionByResult.has(prediction.checkResultId)) {
           predictionByResult.set(prediction.checkResultId, prediction);
         }
@@ -823,7 +814,12 @@ export const acceptanceRouter = router({
 
       // Pinned, never the verifier's own model: the predictor reads screenshots,
       // and a text-only verifier model silently judges frames it cannot see.
-      const modelConfig = REVIEW_PREDICT_MODEL_CONFIG;
+      const reviewerAgentId = await resolveIssueReviewer(
+        ctx.serverDB,
+        ctx.userId,
+        acceptance.subjectType === 'task' ? acceptance.subjectId : undefined,
+        acceptance.workspaceId ?? undefined,
+      );
 
       const predictor = new VerifyReviewPredictorService(
         ctx.serverDB,
@@ -841,7 +837,7 @@ export const acceptanceRouter = router({
       // poll — before a single new judgement has landed.
       await predictor.resetPending(
         pending.map((check) => check.result!.id),
-        modelConfig,
+        reviewerAgentId,
       );
 
       // Dispatched AFTER the response, with a ceiling on how many model calls
@@ -865,8 +861,7 @@ export const acceptanceRouter = router({
               instructionDocumentId: check.planItem?.documentId,
               // The Acceptance's pinned verifier is the authorized judgment
               // binding (builtin verify agent + env are the fallbacks).
-              judgmentAgentId: acceptance.config?.verifierAgentId,
-              modelConfig,
+              reviewerAgentId,
               requirement: acceptance.requirement,
               surface: check.surface,
             }),

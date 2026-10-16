@@ -13,6 +13,7 @@ import { GoalExplorationModel, goalExplorationSnapshot } from '@/database/models
 import type { OrviloDatabase } from '@/database/type';
 
 import { GoalExplorationPlanner } from './explorationPlanner';
+import { assertGoalExecutionAvailable } from './retirement';
 
 export const experimentResults = (graph: GoalGraphSnapshot, nodeId: string): string[] => {
   const members = experimentScope(graph, nodeId);
@@ -33,6 +34,7 @@ export async function exploreGraph(params: {
   graph: GoalGraphSnapshot;
   effects: GoalAdvanceEffect[];
 }): Promise<GoalTickResult> {
+  assertGoalExecutionAvailable();
   const { db, userId, workspaceId, graph, effects } = params;
   const goalId = graph.goal.id;
   const policy = graph.goal.config!.exploration!;

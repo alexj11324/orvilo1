@@ -452,7 +452,13 @@ export const workQueryKeyForKanbanColumn = (columnKey: string): string =>
 export const externalTaskColumnKey = (
   task: Pick<
     TaskListItem,
-    'assigneeAgentId' | 'assigneeUserId' | 'priority' | 'projectId' | 'status' | 'workflowCategory'
+    | 'assigneeAgentId'
+    | 'assigneeUserId'
+    | 'priority'
+    | 'projectId'
+    | 'reviewerAgentId'
+    | 'status'
+    | 'workflowCategory'
   >,
   groupBy: WorkQueryBoardGroupBy,
 ): string => {
@@ -471,6 +477,9 @@ export const externalTaskColumnKey = (
     }
     case 'agent': {
       return prefixWorkQueryBoardKey('agent', task.assigneeAgentId ?? WORK_QUERY_BOARD_NONE_KEY);
+    }
+    case 'reviewer': {
+      return prefixWorkQueryBoardKey('reviewer', task.reviewerAgentId ?? WORK_QUERY_BOARD_NONE_KEY);
     }
     case 'project': {
       return prefixWorkQueryBoardKey('project', task.projectId ?? WORK_QUERY_BOARD_NONE_KEY);
@@ -507,6 +516,7 @@ export interface ExternalKanbanFieldPatch {
   assigneeUserId?: string | null;
   priority?: number;
   projectId?: string | null;
+  reviewerAgentId?: string | null;
   status?: TaskStatus;
   workflowCategory?: TaskWorkflowCategory;
 }
@@ -537,6 +547,9 @@ export const externalKanbanTaskPatch = (
     }
     case 'agent': {
       return { assigneeAgentId: raw === WORK_QUERY_BOARD_NONE_KEY ? null : raw };
+    }
+    case 'reviewer': {
+      return { reviewerAgentId: raw === WORK_QUERY_BOARD_NONE_KEY ? null : raw };
     }
     case 'project': {
       return { projectId: raw === WORK_QUERY_BOARD_NONE_KEY ? null : raw };

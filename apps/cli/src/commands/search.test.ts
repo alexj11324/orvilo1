@@ -58,7 +58,7 @@ describe('search command', () => {
     mockTrpcClient.search.query.query.mockResolvedValue([]);
 
     const program = createProgram();
-    await program.parseAsync(['node', 'test', 'search', 'hello']);
+    await program.parseAsync(['node', 'test', 'search', '-q', 'hello']);
 
     expect(mockTrpcClient.search.query.query).toHaveBeenCalledWith(
       expect.objectContaining({ query: 'hello' }),
@@ -69,7 +69,7 @@ describe('search command', () => {
     mockTrpcClient.search.query.query.mockResolvedValue([]);
 
     const program = createProgram();
-    await program.parseAsync(['node', 'test', 'search', 'test', '--type', 'agent']);
+    await program.parseAsync(['node', 'test', 'search', '-q', 'test', '--type', 'agent']);
 
     expect(mockTrpcClient.search.query.query).toHaveBeenCalledWith(
       expect.objectContaining({ query: 'test', type: 'agent' }),
@@ -80,7 +80,7 @@ describe('search command', () => {
     mockTrpcClient.search.query.query.mockResolvedValue([]);
 
     const program = createProgram();
-    await program.parseAsync(['node', 'test', 'search', 'test', '-L', '5']);
+    await program.parseAsync(['node', 'test', 'search', '-q', 'test', '-L', '5']);
 
     expect(mockTrpcClient.search.query.query).toHaveBeenCalledWith(
       expect.objectContaining({ limitPerType: 5 }),
@@ -92,7 +92,7 @@ describe('search command', () => {
     mockTrpcClient.search.query.query.mockResolvedValue(results);
 
     const program = createProgram();
-    await program.parseAsync(['node', 'test', 'search', 'test', '--json']);
+    await program.parseAsync(['node', 'test', 'search', '-q', 'test', '--json']);
 
     expect(consoleSpy).toHaveBeenCalledWith(JSON.stringify(results, null, 2));
   });
@@ -101,7 +101,7 @@ describe('search command', () => {
     mockTrpcClient.search.query.query.mockResolvedValue([]);
 
     const program = createProgram();
-    await program.parseAsync(['node', 'test', 'search', 'nothing']);
+    await program.parseAsync(['node', 'test', 'search', '-q', 'nothing']);
 
     expect(consoleSpy).toHaveBeenCalledWith('No results found.');
   });
@@ -113,7 +113,7 @@ describe('search command', () => {
     ]);
 
     const program = createProgram();
-    await program.parseAsync(['node', 'test', 'search', 'test']);
+    await program.parseAsync(['node', 'test', 'search', '-q', 'test']);
 
     // Should display group headers
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('agent'));
@@ -127,7 +127,7 @@ describe('search command', () => {
     });
 
     const program = createProgram();
-    await program.parseAsync(['node', 'test', 'search', 'test']);
+    await program.parseAsync(['node', 'test', 'search', '-q', 'test']);
 
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('agents'));
   });
@@ -135,11 +135,31 @@ describe('search command', () => {
   it('should reject invalid type', async () => {
     const program = createProgram();
     const stderrSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    await program.parseAsync(['node', 'test', 'search', 'test', '--type', 'invalid']);
+    await program.parseAsync(['node', 'test', 'search', '-q', 'test', '--type', 'invalid']);
 
     expect(exitSpy).toHaveBeenCalledWith(1);
     stderrSpy.mockRestore();
   });
+
+  it.each(['mcp', 'plugin', 'communityAgent'])(
+    'rejects retired type %s before opening an API client',
+    async (type) => {
+      exitSpy.mockImplementation((() => {
+        throw new Error('exit');
+      }) as never);
+      const stderrSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockGetTrpcClient.mockClear();
+      try {
+        await expect(
+          createProgram().parseAsync(['node', 'test', 'search', '-q', 'test', '--type', type]),
+        ).rejects.toThrow('exit');
+        expect(mockGetTrpcClient).not.toHaveBeenCalled();
+        expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining(`Invalid type: ${type}`));
+      } finally {
+        stderrSpy.mockRestore();
+      }
+    },
+  );
 
   it('should surface web search provider failures for non-JSON output', async () => {
     mockToolsTrpcClient.search.webSearch.query.mockResolvedValue({

@@ -38,7 +38,6 @@ describe('mobile workspace settings routes', () => {
     'devices',
     'credential',
     'apikey',
-    'connector',
     'integrations',
     'integrations/slack',
     'imports',

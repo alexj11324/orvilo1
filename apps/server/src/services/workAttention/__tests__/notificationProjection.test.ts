@@ -116,6 +116,7 @@ describe('real Issue notification producers and projection', () => {
   beforeEach(async () => {
     await db.delete(eventConsumerReceipts);
     await db.delete(eventOutbox);
+    await db.delete(tasks).where(eq(tasks.workspaceId, wsId));
     await db.delete(users);
     await db
       .insert(users)
@@ -148,6 +149,7 @@ describe('real Issue notification producers and projection', () => {
   afterEach(async () => {
     await db.delete(eventConsumerReceipts);
     await db.delete(eventOutbox);
+    await db.delete(tasks).where(eq(tasks.workspaceId, wsId));
     await db.delete(users);
   });
 
@@ -163,7 +165,7 @@ describe('real Issue notification producers and projection', () => {
   const feed = (userId: string) =>
     new NotificationModel(db, userId, { workspaceId: wsId }).listFeed();
 
-  it('retains status and review inbox records despite legacy personal and workspace switches', async () => {
+  it('retains status inbox records despite legacy personal and workspace switches', async () => {
     await db.insert(userSettings).values({
       id: subscriber,
       notification: { inbox: { items: { work: { task_status_changed: false } } } },
@@ -173,9 +175,10 @@ describe('real Issue notification producers and projection', () => {
       userId: author,
       preference: { notification: { inbox: { enabled: false } } },
     });
+    await db.insert(agents).values({ id: author, userId: owner, workspaceId: wsId });
     await db
       .update(tasks)
-      .set({ workflowCategory: 'in_review', reviewerUserId: author })
+      .set({ workflowCategory: 'in_review', reviewerAgentId: author })
       .where(eq(tasks.id, 'projection-issue'));
     await db.insert(eventOutbox).values({
       aggregateId: 'projection-issue',
@@ -190,9 +193,27 @@ describe('real Issue notification producers and projection', () => {
       expect.objectContaining({ type: 'task_status_changed' }),
     ]);
     expect(await feed(owner)).toHaveLength(0);
-    expect(await feed(author)).toEqual([expect.objectContaining({ type: 'task_review' })]);
+    expect(await feed(author)).toEqual([expect.objectContaining({ type: 'task_status_changed' })]);
     await project();
     expect(await feed(author)).toHaveLength(1);
+  });
+
+  it('does not send person review notifications for reviewer agent changes', async () => {
+    await db.insert(agents).values({ id: subscriber, userId: owner, workspaceId: wsId });
+    await db
+      .update(tasks)
+      .set({ workflowCategory: 'in_review', reviewerAgentId: subscriber })
+      .where(eq(tasks.id, 'projection-issue'));
+    await db.insert(eventOutbox).values({
+      aggregateId: 'projection-issue',
+      aggregateType: 'task',
+      eventId: 'agent-reviewer-changed',
+      eventType: 'task.updated',
+      workspaceId: wsId,
+      payload: { userId: owner, changedFields: ['reviewerAgentId'] },
+    });
+    await project();
+    expect(await feed(subscriber)).toEqual([]);
   });
 
   it('retains assignments despite legacy workspace inbox opt-out', async () => {
@@ -268,9 +289,13 @@ describe('real Issue notification producers and projection', () => {
     ['canceled', 'Canceled'],
     ['triage', 'Triage'],
   ] as const)('uses a readable fallback for %s', async (category, label) => {
+    await db.insert(agents).values({ id: 'status-reviewer', userId: owner, workspaceId: wsId });
     await db
       .update(tasks)
-      .set({ workflowCategory: category })
+      .set({
+        workflowCategory: category,
+        reviewerAgentId: category === 'in_review' ? 'status-reviewer' : null,
+      })
       .where(eq(tasks.id, 'projection-issue'));
     await db.insert(eventOutbox).values({
       aggregateId: 'projection-issue',

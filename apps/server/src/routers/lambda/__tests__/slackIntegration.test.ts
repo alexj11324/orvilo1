@@ -9,10 +9,21 @@ const mocks = vi.hoisted(() => ({
   availableAgents: vi.fn(),
   bindings: vi.fn(),
   installation: vi.fn(),
+  saveBinding: vi.fn(),
 }));
 vi.mock('@/libs/trpc/lambda/middleware', () => ({
   serverDatabase: (opts: { ctx: unknown; next: (args: unknown) => unknown }) =>
     opts.next({ ctx: opts.ctx }),
+}));
+vi.mock('@/database/models/project', () => ({
+  ProjectModel: class {
+    list = vi.fn().mockResolvedValue([]);
+  },
+}));
+vi.mock('@/database/models/repository', () => ({
+  RepositoryModel: class {
+    listByWorkspace = vi.fn().mockResolvedValue([]);
+  },
 }));
 vi.mock('@/database/models/workspace', () => ({ hasWorkspaceAdminAccess: async () => false }));
 vi.mock('@/database/models/slackIntegration', () => ({
@@ -25,10 +36,11 @@ vi.mock('@/server/services/slackIntegration', () => ({
   createSlackIntegrationService: () => ({
     assertMember: mocks.assertMember,
     availableAgents: mocks.availableAgents,
+    saveBinding: mocks.saveBinding,
   }),
 }));
-vi.mock('@/server/services/slackIntegration/channelsRuntime', () => ({
-  stopSlackChannelsRuntime: vi.fn(),
+vi.mock('@/server/services/slackIntegration/chatRuntime', () => ({
+  stopSlackChatRuntime: vi.fn(),
 }));
 vi.mock('@/server/services/slackIntegration/oauthState', () => ({ readOAuthResult: vi.fn() }));
 const caller = () => slackIntegrationRouter.createCaller({ userId: 'user', serverDB: {} } as never);
@@ -72,4 +84,21 @@ it('rejects unauthorized input workspace before querying installation', async ()
     code: 'FORBIDDEN',
   });
   expect(mocks.installation).not.toHaveBeenCalled();
+});
+
+it('saves an explicitly selected DM binding through the admin procedure', async () => {
+  mocks.saveBinding.mockResolvedValue({ id: 'binding', slackChannelId: 'D1' });
+  await expect(
+    caller().saveBinding({ workspaceId: 'workspace', slackChannelId: 'D1', agentId: 'allowed' }),
+  ).resolves.toEqual({ data: { id: 'binding', slackChannelId: 'D1' }, success: true });
+  expect(mocks.assertMember).toHaveBeenCalledWith('workspace', 'user', true);
+});
+it('rejects a non-admin DM binding before saving', async () => {
+  mocks.assertMember.mockImplementation(async (_workspace, _user, admin) => {
+    if (admin) throw new TRPCError({ code: 'FORBIDDEN' });
+  });
+  await expect(
+    caller().saveBinding({ workspaceId: 'workspace', slackChannelId: 'D1', agentId: 'allowed' }),
+  ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  expect(mocks.saveBinding).not.toHaveBeenCalled();
 });

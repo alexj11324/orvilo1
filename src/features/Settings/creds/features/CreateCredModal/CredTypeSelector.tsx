@@ -1,7 +1,7 @@
 'use client';
 
 import { type CredType } from '@orvilo/types';
-import { File, Globe, Key, TerminalSquare } from 'lucide-react';
+import { File, Globe, TerminalSquare } from 'lucide-react';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -26,11 +26,6 @@ const typeConfigs: Array<{
     description: 'creds.typeDesc.kv-header',
     icon: <Globe size={24} />,
     type: 'kv-header',
-  },
-  {
-    description: 'creds.typeDesc.oauth',
-    icon: <Key size={24} />,
-    type: 'oauth',
   },
   {
     description: 'creds.typeDesc.file',

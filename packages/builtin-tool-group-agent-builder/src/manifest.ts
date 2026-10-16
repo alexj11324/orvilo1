@@ -200,55 +200,8 @@ export const GroupAgentBuilderManifest: BuiltinToolManifest = {
         type: 'object',
       },
     },
-    {
-      description: 'Search for tools (MCP plugins) in the marketplace for the supervisor agent.',
-      name: GroupAgentBuilderApiName.searchMarketTools,
-      parameters: {
-        properties: {
-          category: {
-            description:
-              'Optional: filter by category. Available categories: developer, productivity, web-search, tools, media-generate, etc.',
-            type: 'string',
-          },
-          pageSize: {
-            description: 'Optional: number of results to return (default: 10, max: 20).',
-            type: 'number',
-          },
-          query: {
-            description:
-              'Optional: search keywords to find specific tools. Leave empty to browse all available tools.',
-            type: 'string',
-          },
-        },
-        required: [],
-        type: 'object',
-      },
-    },
 
     // ==================== Write Operations ====================
-    {
-      description:
-        'Install a plugin for the supervisor agent. This tool ALWAYS REQUIRES user approval before installation.',
-      humanIntervention: 'always',
-      name: GroupAgentBuilderApiName.installPlugin,
-      parameters: {
-        properties: {
-          identifier: {
-            description:
-              'The plugin identifier to install (e.g., "mcp-tavily-search", "google-calendar")',
-            type: 'string',
-          },
-          source: {
-            description:
-              'Plugin source type: "market" for MCP marketplace plugins, "official" for builtin/Composio tools',
-            enum: ['market', 'official'],
-            type: 'string',
-          },
-        },
-        required: ['identifier', 'source'],
-        type: 'object',
-      },
-    },
     {
       description:
         'Update agent configuration (model, provider, plugins, etc.). If agentId is not provided, updates the supervisor agent.',

@@ -4,7 +4,9 @@ import { AgentManagerRuntime } from '../AgentManagerRuntime';
 import type { AgentManagerCapabilities, AgentManagerRuntimeServices } from '../types';
 
 function fixture() {
-  const configs = new Map<string, { plugins: string[]; systemRole: string }>([['agent', { plugins: [], systemRole: 'before' }]]);
+  const configs = new Map<string, { plugins: string[]; systemRole: string }>([
+    ['agent', { plugins: [], systemRole: 'before' }],
+  ]);
   const agents: AgentManagerCapabilities['agents'] = {
     ensureLoaded: vi.fn(async () => {}),
     getConfig: (id) => configs.get(id) as ReturnType<typeof agents.getConfig>,
@@ -38,22 +40,17 @@ function fixture() {
       queryAgents: vi.fn(),
       removeAgent: vi.fn(),
     },
-    discoverService: { getAssistantList: vi.fn(), getMcpList: vi.fn() },
   };
   return { agents, configs, services, runtime: new AgentManagerRuntime(services) };
 }
 
 describe('host-independent runtime (Node, no application store mocks)', () => {
-  it('reads the injected model catalog and enables a connector on the explicit target', async () => {
+  it('reads the injected model catalog without an application store', async () => {
     expect(typeof window).toBe('undefined');
-    const { runtime, configs } = fixture();
+    const { runtime } = fixture();
     expect((await runtime.getAvailableModels({})).state).toMatchObject({
       providers: [{ id: 'host' }],
     });
-    expect(
-      (await runtime.installPlugin('agent', { identifier: 'plugin', source: 'market' })).success,
-    ).toBe(true);
-    expect(configs.get('agent')?.plugins).toEqual([{ identifier: 'plugin', mode: 'pinned' }]);
   });
 
   it('serializes streaming and immediate updates across instances without losing the final prompt', async () => {

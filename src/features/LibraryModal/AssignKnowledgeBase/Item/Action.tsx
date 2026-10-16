@@ -19,37 +19,24 @@ const Actions = memo<ActionsProps>(({ id, type, enabled }) => {
   const { t } = useTranslation('chat');
 
   const mobile = useServerConfigStore((s) => s.isMobile);
-  const [
-    addFilesToAgent,
-    addKnowledgeBasesToAgent,
-    removeFilesFromAgent,
-    removeKnowledgeBasesFromAgent,
-  ] = useAgentStore((s) => [
+  const [addFilesToAgent, removeFilesFromAgent] = useAgentStore((s) => [
     s.addFilesToAgent,
-    s.addKnowledgeBaseToAgent,
     s.removeFileFromAgent,
-    s.removeKnowledgeBaseFromAgent,
   ]);
 
   const [loading, setLoading] = useState(false);
 
+  if (type === KnowledgeType.KnowledgeBase) return null;
+
   const assignKnowledge = async () => {
     setLoading(true);
-    if (type === KnowledgeType.KnowledgeBase) {
-      await addKnowledgeBasesToAgent(id);
-    } else {
-      await addFilesToAgent([id], true);
-    }
+    await addFilesToAgent([id], true);
     setLoading(false);
   };
 
   const removeKnowledge = async () => {
     setLoading(true);
-    if (type === KnowledgeType.KnowledgeBase) {
-      await removeKnowledgeBasesFromAgent(id);
-    } else {
-      await removeFilesFromAgent(id);
-    }
+    await removeFilesFromAgent(id);
     setLoading(false);
   };
 
@@ -68,11 +55,6 @@ const Actions = memo<ActionsProps>(({ id, type, enabled }) => {
               key: 'detail',
               label: t('knowledgeBase.library.action.detail'),
               onClick: () => {
-                if (type === KnowledgeType.KnowledgeBase) {
-                  window.open(`/resource/library/${id}`);
-                  return;
-                }
-
                 window.open(`/resource?file=${id}`);
               },
             },

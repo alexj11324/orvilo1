@@ -7,8 +7,14 @@ import type { ToolExecutionContext } from '../types';
 const mocks = vi.hoisted(() => ({
   apiHandler: vi.fn(),
   executeOrviloSkill: vi.fn(),
+  sourceTopic: vi.fn(),
 }));
 const mockApiHandler = mocks.apiHandler;
+vi.mock('@/database/models/topic', () => ({
+  TopicModel: class {
+    findOwnTopicById = mocks.sourceTopic;
+  },
+}));
 
 vi.mock('../serverRuntimes', () => ({
   hasServerRuntime: vi.fn().mockReturnValue(true),
@@ -233,110 +239,22 @@ describe('BuiltinToolsExecutor truncated arguments', () => {
     expect(result.content).toContain('barApi');
   });
 
-  it('emits a Linear skill Work intent after a successful server-side Orvilo Skill tool call', async () => {
-    mocks.executeOrviloSkill.mockResolvedValueOnce({
-      content: JSON.stringify({
-        id: 'LINEAR-10966',
-        status: 'In Progress',
-        title: 'Linear Work issue',
-        url: 'https://linear.app/orvilo/issue/LINEAR-10966/linear-work-issue',
-      }),
-      success: true,
-    });
-
-    const result = await executor.execute(
-      {
-        apiName: 'save_issue',
-        arguments: '{"id":"LINEAR-10966","state":"In Progress"}',
-        id: 'tool-call-linear',
-        identifier: 'linear',
-        source: 'orviloSkill',
-        type: 'default' as any,
-      },
-      { ...context, executionTimeoutMs: 45_000, topicId: 'topic-1' },
-    );
-
-    expect(result.success).toBe(true);
-    expect(mocks.executeOrviloSkill).toHaveBeenCalledWith({
-      args: { id: 'LINEAR-10966', state: 'In Progress' },
-      context: { topicId: 'topic-1' },
-      provider: 'linear',
-      timeoutMs: 45_000,
-      toolName: 'save_issue',
-    });
-    // The executor no longer writes the Work — it hands the runtime an intent
-    // carrying the UNTRUNCATED payload; provenance + cost are stamped by the
-    // agent runtime at persist time.
-    expect(result.workRegistration).toEqual({
-      args: { id: 'LINEAR-10966', state: 'In Progress' },
-      data: {
-        id: 'LINEAR-10966',
-        status: 'In Progress',
-        title: 'Linear Work issue',
-        url: 'https://linear.app/orvilo/issue/LINEAR-10966/linear-work-issue',
-      },
-      provider: 'linear',
-      toolName: 'save_issue',
-      type: 'skill',
-    });
-  });
-
-  it('emits a GitHub skill Work intent after a successful server-side Orvilo Skill tool call', async () => {
-    mocks.executeOrviloSkill.mockResolvedValueOnce({
-      content: JSON.stringify({
-        html_url: 'https://github.com/alexj11324/orvilo1/issues/123',
-        node_id: 'I_kwDOJj1234',
-        number: 123,
-        state: 'open',
-        title: 'GitHub Work issue',
-      }),
-      success: true,
-    });
-
-    const result = await executor.execute(
-      {
-        apiName: 'create_issue',
-        arguments: '{"owner":"orvilo","repo":"orvilo","title":"GitHub Work issue"}',
-        id: 'tool-call-github',
-        identifier: 'github',
-        source: 'orviloSkill',
-        type: 'default' as any,
-      },
-      { ...context, topicId: 'topic-1' },
-    );
-
-    expect(result.success).toBe(true);
-    expect(result.workRegistration).toEqual(
-      expect.objectContaining({
-        data: expect.objectContaining({ number: 123 }),
-        provider: 'github',
-        toolName: 'create_issue',
-        type: 'skill',
-      }),
-    );
-  });
-
-  it('emits no Work intent for non-adapted skill providers', async () => {
-    mocks.executeOrviloSkill.mockResolvedValueOnce({
-      content: JSON.stringify({ id: 'msg-1' }),
-      success: true,
-    });
-
-    const result = await executor.execute(
-      {
-        apiName: 'send_message',
-        arguments: '{}',
-        id: 'tool-call-ms',
-        identifier: 'microsoft',
-        source: 'orviloSkill',
-        type: 'default' as any,
-      },
-      { ...context, topicId: 'topic-1' },
-    );
-
-    expect(result.success).toBe(true);
-    expect(result.workRegistration).toBeUndefined();
-  });
+  it.each(['orviloSkill', 'composio'] as const)(
+    'refuses a retired %s provider without contacting it',
+    async (source) => {
+      const result = await executor.execute(
+        {
+          ...buildPayload('{}'),
+          apiName: 'query',
+          identifier: 'old-third-party-provider',
+          source,
+        },
+        context,
+      );
+      expect(result.success).toBe(false);
+      expect(mocks.executeOrviloSkill).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe('BuiltinToolsExecutor manifest-driven Work registration', () => {
@@ -586,5 +504,32 @@ describe('BuiltinToolsExecutor share-visitor gate', () => {
       },
     });
     expect(write.error?.code).toBe('SHARE_GATE_BLOCKED');
+  });
+});
+
+describe('Slack external platform sources', () => {
+  const executor = new BuiltinToolsExecutor({} as never, 'user-1');
+  it('blocks private platform documents and memory at dispatch while ordinary Orvilo remains usable', async () => {
+    mocks.apiHandler.mockReset().mockResolvedValue({ content: 'private content', success: true });
+    mocks.sourceTopic.mockResolvedValue({ trigger: 'slack' });
+    const scoped = {
+      ...context,
+      topicId: 'source',
+      serverDB: {} as never,
+      workspaceId: 'workspace',
+    };
+    const denied = await executor.execute(buildPayload('{}'), scoped);
+    expect(denied.success).toBe(false);
+    expect(mocks.apiHandler).not.toHaveBeenCalled();
+    const memory = await executor.execute(
+      { ...buildPayload('{}'), identifier: 'orvilo-user-memory', apiName: 'searchUserMemory' },
+      scoped,
+    );
+    expect(memory.success).toBe(false);
+    expect(mocks.apiHandler).not.toHaveBeenCalled();
+    mocks.sourceTopic.mockResolvedValue(null);
+    expect((await executor.execute(buildPayload('{}'), scoped)).success).toBe(false);
+    mocks.sourceTopic.mockResolvedValue({ trigger: 'chat' });
+    expect((await executor.execute(buildPayload('{}'), scoped)).success).toBe(true);
   });
 });

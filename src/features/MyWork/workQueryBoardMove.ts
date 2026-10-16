@@ -9,6 +9,7 @@ import {
   type KanbanColumnDefinition,
   type TaskStatusChoice,
 } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
+import { pickReviewerAgent } from '@/features/AgentTasks/features/ReviewerAgentSelector';
 import {
   createTaskStatusCascadeModal,
   getOpenSubtasks,
@@ -38,9 +39,22 @@ export const moveBoardMaybePickingState = async (input: {
   taskId: string;
   teamId?: string | null;
 }): Promise<boolean> => {
+  let expectedDomainRevision = input.expectedDomainRevision;
+  if (input.groupBy === 'workflowCategory' && input.targetKey === 'in_review') {
+    const { data: task } = await taskService.find(input.taskId);
+    if (!task.reviewerAgentId) {
+      const reviewerAgentId = await pickReviewerAgent();
+      if (!reviewerAgentId) return false;
+      await taskService.update(input.taskId, {
+        reviewerAgentId,
+        expectedDomainRevision: task.domainRevision,
+      });
+      expectedDomainRevision = (await taskService.find(input.taskId)).data.domainRevision;
+    }
+  }
   try {
     await workAttentionService.moveBoard({
-      expectedDomainRevision: input.expectedDomainRevision,
+      expectedDomainRevision,
       groupBy: input.groupBy,
       targetKey: input.targetKey,
       targetWorkflowStateRefId: input.targetWorkflowStateRefId,
@@ -62,7 +76,7 @@ export const moveBoardMaybePickingState = async (input: {
     });
     if (!picked) return false;
     await workAttentionService.moveBoard({
-      expectedDomainRevision: input.expectedDomainRevision,
+      expectedDomainRevision,
       groupBy: input.groupBy,
       targetKey: input.targetKey,
       taskId: input.taskId,

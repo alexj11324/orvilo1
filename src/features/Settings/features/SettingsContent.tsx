@@ -51,7 +51,6 @@ const FULL_WIDTH_TABS: readonly string[] = [
   // profile page) — it owns its layout end to end.
   SettingsTabs.Agents,
   SettingsTabs.Provider,
-  SettingsTabs.Connector,
   SettingsTabs.Creds,
   SettingsTabs.Usage,
 ];

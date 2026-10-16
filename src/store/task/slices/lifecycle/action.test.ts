@@ -92,6 +92,47 @@ describe('TaskLifecycleSliceAction', () => {
   });
 
   describe('updateTaskStatus', () => {
+    it.each(['schedule', 'heartbeat'] as const)(
+      'preserves execution status and activity while changing future %s scheduling',
+      async (automationMode) => {
+        for (const target of ['paused', 'scheduled'] as const) {
+          const task = { ...mockDetail, activities: [], automationMode, status: 'running' };
+          useTaskStore.setState({
+            taskDetailMap: { 'T-1': task },
+            tasks: [task],
+            taskGroups: [{ key: 'started', tasks: [task], total: 1 }] as any,
+          });
+          vi.mocked(taskService.updateStatus).mockImplementation(async () => {
+            const state = useTaskStore.getState();
+            expect(state.taskDetailMap['T-1'].status).toBe('running');
+            expect(state.taskDetailMap['T-1'].activities).toEqual([]);
+            expect(state.tasks[0].status).toBe('running');
+            expect(state.taskGroups[0].tasks[0].status).toBe('running');
+            return { success: true } as any;
+          });
+
+          await useTaskStore.getState().updateTaskStatus('T-1', target);
+          expect(useTaskStore.getState().taskDetailMap['T-1'].status).toBe('running');
+        }
+      },
+    );
+
+    it('preserves execution and activity when a future pause fails', async () => {
+      useTaskStore.setState({
+        taskDetailMap: {
+          'T-1': { ...mockDetail, activities: [], automationMode: 'schedule', status: 'running' },
+        },
+      });
+      vi.mocked(taskService.updateStatus).mockRejectedValue(new Error('pause failed'));
+      await expect(useTaskStore.getState().updateTaskStatus('T-1', 'paused')).rejects.toThrow(
+        'pause failed',
+      );
+      expect(useTaskStore.getState().taskDetailMap['T-1']).toMatchObject({
+        activities: [],
+        status: 'running',
+      });
+    });
+
     it('should call updateStatus with paused', async () => {
       vi.mocked(taskService.updateStatus).mockResolvedValue({ success: true } as any);
 

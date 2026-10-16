@@ -1,5 +1,6 @@
 import type { TaskItem } from '@orvilo/types';
 
+import { IssueDeliveryModel } from '@/database/models/issueDelivery';
 import { TaskModel } from '@/database/models/task';
 import type { OrviloDatabase } from '@/database/type';
 
@@ -10,7 +11,7 @@ const RUNNABLE_STATUSES: ReadonlySet<string> = new Set<SubtaskRunnableStatus>([
   'paused',
   'failed',
 ]);
-/** Terminal tasks are skipped, but only completed tasks satisfy dependency edges. */
+/** Terminal tasks are skipped, but only reviewed deliveries satisfy dependency edges. */
 const TERMINAL_STATUSES: ReadonlySet<string> = new Set(['completed', 'canceled']);
 
 /** Sentinel status used when an upstream task referenced by a dependency edge
@@ -46,7 +47,7 @@ export interface SubtaskGraphPlan {
 }
 
 export interface SubtaskNode {
-  /** Tasks this one depends on (must be `completed` first). */
+  /** Tasks this one depends on (must have a current reviewed delivery first). */
   dependsOn: string[];
   identifier: string;
   status: string;
@@ -56,29 +57,25 @@ export interface SubtaskNode {
  * Group runnable subtasks into topological layers using Kahn's algorithm.
  *
  * Edge classification (per dependency):
- *   - upstream is `completed` → satisfied, edge dropped
+ *   - upstream delivery is available → satisfied, edge dropped
  *   - upstream is runnable AND in this batch → tracked as in-batch edge
  *   - anything else (in-flight descendant, out-of-scope task, unknown) →
  *     treated as an *external blocker*. The dependent is excluded from layers
  *     and surfaced via `blockedExternally`. Crucially we never silently drop
  *     such an edge — that would let the dependent run before its blocker.
  *
- * `externalStatuses` lets the caller pass in statuses for upstream identifiers
- * that aren't represented in `nodes` (e.g. dependencies on tasks outside the
- * current subtree). Identifiers missing from both `nodes` and `externalStatuses`
- * are treated as unknown / blocking.
+ * `availableDeliveries` contains identifiers with current reviewed delivery proof,
+ * including upstream Issues outside this subtree. Missing proof always blocks.
  */
 export const planSubtaskLayers = (
   nodes: SubtaskNode[],
-  externalStatuses: ReadonlyMap<string, string> = new Map(),
+  availableDeliveries: ReadonlySet<string> = new Set(),
 ): SubtaskGraphPlan => {
   const alreadyDone: string[] = [];
   const ineligible: string[] = [];
   const runnableSet = new Set<string>();
-  const statusByIdentifier = new Map<string, string>();
 
   for (const node of nodes) {
-    statusByIdentifier.set(node.identifier, node.status);
     if (TERMINAL_STATUSES.has(node.status)) {
       alreadyDone.push(node.identifier);
     } else if (RUNNABLE_STATUSES.has(node.status)) {
@@ -88,13 +85,9 @@ export const planSubtaskLayers = (
     }
   }
 
-  const resolveDepStatus = (depIdentifier: string): string =>
-    statusByIdentifier.get(depIdentifier) ?? externalStatuses.get(depIdentifier) ?? UNKNOWN_STATUS;
-
   type EdgeKind = 'satisfied' | 'in-batch' | 'external';
   const classifyEdge = (depIdentifier: string): EdgeKind => {
-    const status = resolveDepStatus(depIdentifier);
-    if (status === 'completed') return 'satisfied';
+    if (availableDeliveries.has(depIdentifier)) return 'satisfied';
     if (runnableSet.has(depIdentifier)) return 'in-batch';
     // Runnable status outside this batch, in-flight (running/scheduled), or
     // unknown — all block until something else completes them.
@@ -222,18 +215,19 @@ const findCycleMembers = (unplaced: string[], downstream: Map<string, string[]>)
 
 export class TaskGraphService {
   private taskModel: TaskModel;
+  private deliveryModel: IssueDeliveryModel;
 
   constructor(db: OrviloDatabase, userId: string, workspaceId?: string) {
     this.taskModel = new TaskModel(db, userId, workspaceId);
+    this.deliveryModel = new IssueDeliveryModel(db, userId, workspaceId);
   }
 
   /**
    * Build a layered execution plan for the descendants of a parent task.
    * Returns layers in dependency order plus diagnostics (cycles, skipped, etc.).
    *
-   * Cross-scope dependencies (a descendant depending on a task outside this
-   * subtree) are resolved by fetching the upstream's status; if it's not yet
-   * `completed` the dependent is recorded as `blockedExternally`
+   * Cross-scope dependencies are resolved from the same reviewed delivery proof
+   * as reservation; missing proof is recorded as `blockedExternally`
    * rather than placed in a layer.
    */
   async planForParent(parentTaskId: string): Promise<{
@@ -270,11 +264,9 @@ export class TaskGraphService {
     const externalUpstreams =
       externalUpstreamIds.size > 0 ? await this.taskModel.findByIds([...externalUpstreamIds]) : [];
     const allIdToIdentifier = new Map(idToIdentifier);
-    const externalStatusByIdentifier = new Map<string, string>();
     for (const upstream of externalUpstreams) {
       if (upstream.deletedAt || upstream.isDeleted) continue;
       allIdToIdentifier.set(upstream.id, upstream.identifier);
-      externalStatusByIdentifier.set(upstream.identifier, upstream.status);
     }
 
     const dependsOnByIdentifier = new Map<string, string[]>();
@@ -300,9 +292,24 @@ export class TaskGraphService {
     const nodes: SubtaskNode[] = descendants.map((d) => ({
       dependsOn: dependsOnByIdentifier.get(d.identifier) ?? [],
       identifier: d.identifier,
-      status: d.deletedAt || d.isDeleted ? UNKNOWN_STATUS : d.status,
+      status:
+        d.deletedAt || d.isDeleted
+          ? UNKNOWN_STATUS
+          : d.workflowCategory === 'in_review'
+            ? 'in_review'
+            : d.status,
     }));
 
-    return { descendants, plan: planSubtaskLayers(nodes, externalStatusByIdentifier) };
+    const deliveries = await this.deliveryModel.readCurrentDeliveryProof([
+      ...new Set(deps.filter((dep) => dep.type === 'blocks').map((dep) => dep.dependsOnId)),
+    ]);
+    const available = new Set(
+      Object.entries(deliveries).flatMap(([id, delivery]) =>
+        delivery.availableForDependents && allIdToIdentifier.has(id)
+          ? [allIdToIdentifier.get(id)!]
+          : [],
+      ),
+    );
+    return { descendants, plan: planSubtaskLayers(nodes, available) };
   }
 }

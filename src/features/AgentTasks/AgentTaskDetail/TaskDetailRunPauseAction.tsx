@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next';
 
 import { DropdownMenu } from '@/components/ItemsMenu';
 import StopLoadingIcon from '@/components/StopLoading';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
+import { automationStatusOf } from '@/features/Automations/shared';
+import { taskService } from '@/services/task';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
@@ -58,16 +61,52 @@ const TaskDetailRunPauseAction = memo(() => {
   const isRerun = status === 'completed';
   const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus);
   const setAutomationMode = useTaskStore((s) => s.setAutomationMode);
+  const refreshDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
+  const refreshList = useTaskStore((s) => s.refreshTaskList);
 
   const [isStarting, setIsStarting] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
   const [isCancellingSchedule, setIsCancellingSchedule] = useState(false);
   const [isRunningNow, setIsRunningNow] = useState(false);
 
   const handleRunOrPause = useCallback(async () => {
-    if (!canExecuteTask) return;
+    if (!canExecuteTask || isStopping) return;
     if (!taskId) return;
     if (canPause) {
-      await updateTaskStatus(taskId, 'paused');
+      if (automationMode === 'schedule' || automationMode === 'heartbeat') {
+        setIsStopping(true);
+        try {
+          const { data } = await taskService.getIssuePlan(taskId);
+          if (data.automationQueue?.activeDispatchId) {
+            await taskService.cancelAutomationOccurrence(taskId);
+          } else {
+            const runningTopics = detail?.activities?.filter(
+              (activity) =>
+                activity.type === 'topic' &&
+                activity.status === 'running' &&
+                (!activity.sourceTaskId || activity.sourceTaskId === detail.id),
+            );
+            const topicId = runningTopics?.length === 1 ? runningTopics[0].id : undefined;
+            if (!topicId) throw new Error('Current running Topic could not be identified');
+            await taskService.cancelTopic(topicId);
+          }
+          const refreshed = await Promise.allSettled([refreshDetail(taskId), refreshList()]);
+          for (const result of refreshed) {
+            if (result.status === 'rejected')
+              console.error(
+                '[TaskDetailRunPauseAction] Could not refresh after stop',
+                result.reason,
+              );
+          }
+        } catch (error) {
+          console.error('[TaskDetailRunPauseAction] Could not stop current round', error);
+          toast.error(t('taskDetail.plan.stopRoundError'));
+        } finally {
+          setIsStopping(false);
+        }
+      } else {
+        await updateTaskStatus(taskId, 'paused');
+      }
       return;
     }
     if (!canRun) return;
@@ -77,7 +116,20 @@ const TaskDetailRunPauseAction = memo(() => {
     } finally {
       setIsStarting(false);
     }
-  }, [taskId, canRun, canPause, runWithContractCheck, updateTaskStatus, canExecuteTask]);
+  }, [
+    taskId,
+    canRun,
+    canPause,
+    runWithContractCheck,
+    updateTaskStatus,
+    canExecuteTask,
+    isStopping,
+    automationMode,
+    detail,
+    refreshDetail,
+    refreshList,
+    t,
+  ]);
 
   const handleRunNow = useCallback(async () => {
     if (!canExecuteTask || isBlocked) return;
@@ -104,7 +156,12 @@ const TaskDetailRunPauseAction = memo(() => {
     }
   }, [canExecuteTask, taskId, setAutomationMode, updateTaskStatus, status]);
 
-  const isScheduled = status === 'scheduled';
+  const isScheduled =
+    !canPause &&
+    !!detail &&
+    (status === 'scheduled' || status === 'paused') &&
+    (automationMode === 'schedule' || automationMode === 'heartbeat') &&
+    automationStatusOf(detail) === 'active';
 
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
@@ -204,7 +261,13 @@ const TaskDetailRunPauseAction = memo(() => {
 
   if (canPause) {
     return (
-      <Button disabled={!canExecuteTask} size="compact" title={reason} onClick={handleRunOrPause}>
+      <Button
+        disabled={!canExecuteTask}
+        loading={isStopping}
+        size="compact"
+        title={reason}
+        onClick={handleRunOrPause}
+      >
         <StopLoadingIcon data-icon="inline-start" />
         {t('taskDetail.stopTask')}
       </Button>

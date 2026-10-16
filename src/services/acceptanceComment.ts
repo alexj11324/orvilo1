@@ -3,19 +3,37 @@ import type { AcceptanceCommentList, CreateAcceptanceCommentInput } from '@orvil
 import { lambdaClient } from '@/libs/trpc/client';
 
 class AcceptanceCommentService {
-  create = (input: CreateAcceptanceCommentInput) =>
-    lambdaClient.acceptanceComment.create.mutate(input);
+  create = (
+    _input: CreateAcceptanceCommentInput,
+  ): ReturnType<typeof lambdaClient.acceptanceComment.create.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
-  delete = (id: string) => lambdaClient.acceptanceComment.delete.mutate({ id });
+  delete = (_id: string): ReturnType<typeof lambdaClient.acceptanceComment.delete.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   list = (acceptanceId: string): Promise<AcceptanceCommentList> =>
     lambdaClient.acceptanceComment.list.query({ acceptanceId });
 
-  react = (id: string, emoji: string, on: boolean) =>
-    lambdaClient.acceptanceComment.react.mutate({ emoji, id, on });
+  react = (
+    _id: string,
+    _emoji: string,
+    _on: boolean,
+  ): ReturnType<typeof lambdaClient.acceptanceComment.react.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
-  setResolved = (id: string, resolved: boolean) =>
-    lambdaClient.acceptanceComment.setResolved.mutate({ id, resolved });
+  setResolved = (
+    _id: string,
+    _resolved: boolean,
+  ): ReturnType<typeof lambdaClient.acceptanceComment.setResolved.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 }
 
 export const acceptanceCommentService = new AcceptanceCommentService();

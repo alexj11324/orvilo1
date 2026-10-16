@@ -7,7 +7,6 @@ import { produce } from 'immer';
 // module imports `useChatStore`, which would close a cycle back into this store
 // and leave the action classes undefined at module-eval time.
 import { resolveEffectiveWorkingDirectory } from '@/helpers/effectiveWorkingDirectory';
-import { mcpService } from '@/services/mcp';
 import { type ChatStore } from '@/store/chat/store';
 import { hasExecutor, invokeExecutor } from '@/store/tool/slices/builtin/executors';
 import { type StoreSetter } from '@/store/types';
@@ -245,59 +244,13 @@ export class ClientToolExecutionActionImpl {
         return;
       }
 
-      // ─── MCP fallback — unified dispatch, mirrors invokeMCPTypePlugin shape ───
-      const mcpResult = await this.#raceAgainstDeadline(
-        () =>
-          mcpService
-            .invokeMcpToolCall(
-              {
-                apiName,
-                arguments: argsString,
-                id: toolCallId,
-                identifier,
-                type: 'default',
-              },
-              {
-                signal: operation?.abortController?.signal,
-                topicId: operation?.context?.topicId ?? undefined,
-              },
-            )
-            .catch((err) => {
-              log(
-                '[internal_executeClientTool] mcp invoke threw for %s/%s: %O',
-                identifier,
-                apiName,
-                err,
-              );
-              return undefined;
-            }),
-        executionTimeoutMs,
-        () => operation?.abortController?.abort(),
-      );
-
-      if (!mcpResult) {
-        send({
-          content: null,
-          error: {
-            message: `No client executor available for ${identifier}/${apiName}`,
-            type: 'executor_not_found',
-          },
-          success: false,
-          toolCallId,
-        });
-        return;
-      }
-
       send({
-        content: mcpResult.content ?? null,
-        error: mcpResult.success
-          ? undefined
-          : {
-              message: (mcpResult.error as any)?.message ?? 'MCP tool call failed',
-              type: (mcpResult.error as any)?.type,
-            },
-        state: mcpResult.state,
-        success: !!mcpResult.success,
+        content: null,
+        error: {
+          message: `No client executor available for ${identifier}/${apiName}`,
+          type: 'executor_not_found',
+        },
+        success: false,
         toolCallId,
       });
     } catch (error) {

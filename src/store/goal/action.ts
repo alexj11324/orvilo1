@@ -1,5 +1,4 @@
 import { type GoalStatus, goalStatuses } from '@orvilo/const/goal';
-import type { GoalMetricCriterion, GoalTickResult } from '@orvilo/types';
 
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { goalKeys, taskKeys } from '@/libs/swr/keys';
@@ -56,97 +55,8 @@ export class GoalActionImpl {
     this.#set = set;
   }
 
-  /**
-   * `agentId` is absent for a goal with no responsible agent — one created from
-   * a project page. There is no per-agent list to prune in that case, so only
-   * the scoped refetch happens, against the list scope the caller was rendering
-   * (`project:<id>` on a project page, the agent id otherwise).
-   */
-  deleteGoal = async (
-    agentId: string | undefined,
-    goalId: string,
-    scopeId?: string,
-  ): Promise<void> => {
-    await goalService.delete(goalId);
-    if (agentId) {
-      const current = this.#get().goalListByAgentId[agentId] ?? [];
-      this.#set(
-        ({ goalListByAgentId }) => ({
-          goalListByAgentId: {
-            ...goalListByAgentId,
-            [agentId]: current.filter(({ goal }) => goal.id !== goalId),
-          },
-        }),
-        false,
-        'deleteGoal/success',
-      );
-    }
-    const scope = scopeId ?? agentId;
-    if (scope) await this.refreshGoals(scope);
-  };
-
-  /**
-   * Resolve a pending decision gate. `goalId` is the `goals` row id.
-   *
-   * Resolving a gate does not advance the graph — the coordinator only moves on
-   * the next tick — so the caller decides whether to follow up with `tickGoal`.
-   */
-  decideGoal = async (
-    goalId: string,
-    params: { decisionId: string; optionId: string; resolution?: string },
-  ): Promise<void> => {
-    await goalService.decide({ id: goalId, ...params });
-    await this.refreshGoalGraph(goalId);
-  };
-
-  pauseGoal = async (goalId: string): Promise<void> => {
-    await goalService.pause(goalId);
-    await this.refreshGoalGraph(goalId);
-  };
-
   refreshGoalGraph = async (goalId: string): Promise<void> => {
     await mutate(goalKeys.graph(goalId));
-  };
-
-  resumeGoal = async (goalId: string): Promise<void> => {
-    await goalService.resume(goalId);
-    await this.refreshGoalGraph(goalId);
-  };
-
-  setGoalBudget = async (
-    goalId: string,
-    budget: {
-      deadline?: string | null;
-      maxConcurrentTasks?: number | null;
-      maxRounds?: number | null;
-      maxTotalCost?: number | null;
-    },
-  ): Promise<void> => {
-    await goalService.setBudget({ id: goalId, ...budget });
-    await this.refreshGoalGraph(goalId);
-  };
-
-  updateGoalRequirement = async (goalId: string, requirement: string): Promise<void> => {
-    await goalService.updateRequirement(goalId, requirement);
-    await this.refreshGoalGraph(goalId);
-  };
-
-  /**
-   * Ask the server to run the coordinator now. The goal keeps advancing on its
-   * own afterwards as its Work Tasks settle, so this is a nudge rather than the
-   * loop the surface used to hold open.
-   */
-  advanceGoal = async (goalId: string): Promise<GoalTickResult> => {
-    const result = await goalService.advance(goalId);
-    await this.refreshGoalGraph(goalId);
-    return result;
-  };
-
-  /** Exactly one coordinator step, for a caller that wants to inspect a single move. */
-  tickGoal = async (goalId: string): Promise<GoalTickResult> => {
-    const result = await goalService.tick(goalId);
-    await this.refreshGoalGraph(goalId);
-    return result;
   };
 
   /** The Goal Graph snapshot behind the process-control surface. */
@@ -207,30 +117,6 @@ export class GoalActionImpl {
 
   refreshGoalMetricSeries = async (goalId: string): Promise<void> => {
     await mutate(goalKeys.metricSeries(goalId));
-  };
-
-  /** Append one clause to the goal's measured acceptance and refresh both reads. */
-  declareGoalMetric = async (goalId: string, criterion: GoalMetricCriterion): Promise<void> => {
-    // Merged on the server against its current list — a replacement array
-    // built from this client's snapshot would silently drop whatever a
-    // concurrent editor or agent declared since the snapshot was read.
-    await goalService.setMetricCriteria(goalId, [criterion], 'merge');
-    await this.refreshGoalGraph(goalId);
-    await this.refreshGoalMetricSeries(goalId);
-  };
-
-  /**
-   * Record a measurement against the goal. The server schedules an advance
-   * when the observation clears the gate, so the graph refresh may come back
-   * already reopened.
-   */
-  recordGoalObservation = async (
-    goalId: string,
-    observation: { key: string; title?: string; value: number },
-  ): Promise<void> => {
-    await goalService.recordObservation(goalId, observation);
-    await this.refreshGoalMetricSeries(goalId);
-    await this.refreshGoalGraph(goalId);
   };
 
   loadMoreGoals = (): void => {

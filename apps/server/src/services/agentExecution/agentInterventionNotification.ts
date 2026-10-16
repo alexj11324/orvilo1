@@ -15,7 +15,6 @@ import type {
   NotifyAgentInterventionItem,
   NotifyAgentInterventionRequiredParams,
 } from '@/business/server/agent-run/agentInterventionReview';
-import { getAgentMarketplaceInterventionReview } from '@/business/server/agent-run/executeCustomIntervention';
 
 const MAX_SHORT_TEXT = 200;
 const MAX_LONG_TEXT = 1000;
@@ -34,14 +33,6 @@ const parseArguments = (value: string): Record<string, unknown> => {
   } catch {
     return {};
   }
-};
-
-const boundedStringList = (value: unknown, maxItems = 8): string[] => {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => boundedString(item))
-    .filter((item): item is string => Boolean(item))
-    .slice(0, maxItems);
 };
 
 const MESSAGE_MAP_SCOPES = new Set<MessageMapScope>([
@@ -155,10 +146,8 @@ const actionsFor = (
     return ['submit_answers', 'skip_interaction', 'stop'];
   }
 
-  // Web marketplace exposes Submit / Skip / Stop. Keep cancel_interaction in
-  // the reserved v2 union, but never advertise it until an operation-wide
-  // atomic cancel emitter exists across Web and Mobile.
-  return ['submit_custom', 'skip_interaction', 'stop'];
+  // Historical custom forms remain Review-only; no custom result writer remains.
+  return ['stop'];
 };
 
 /**
@@ -273,38 +262,6 @@ export const buildRuntimeInterventionNotification = async ({
 
     if (interactionKind === 'question') {
       item.detail = buildQuestionDetail(args);
-    } else if (
-      interactionKind === 'custom' &&
-      tool.identifier === 'orvilo-web-onboarding' &&
-      tool.apiName === 'showAgentMarketplace'
-    ) {
-      const requestId = boundedString(args.requestId) ?? tool.id;
-      const categoryHints = boundedStringList(args.categoryHints);
-      const agents = await getAgentMarketplaceInterventionReview({
-        categoryHints,
-        prompt: boundedString(args.prompt, MAX_LONG_TEXT),
-        requestId,
-        userId,
-        workspaceId,
-      });
-      item.detail = {
-        agents: agents
-          .map((agent) => ({
-            avatar: boundedString(agent.avatar, MAX_LONG_TEXT),
-            description: boundedString(agent.description, MAX_LONG_TEXT),
-            id: boundedString(agent.id),
-            title: boundedString(agent.title),
-          }))
-          .filter((agent): agent is typeof agent & { id: string; title: string } =>
-            Boolean(agent.id && agent.title),
-          )
-          .slice(0, 50),
-        kind: 'agent_marketplace',
-        multiple: true,
-        title: boundedString(args.prompt, MAX_LONG_TEXT) ?? 'Choose agents',
-        type: 'custom',
-      };
-      item.request = { categoryHints, kind: 'agent_marketplace', requestId };
     }
 
     items.push(item);

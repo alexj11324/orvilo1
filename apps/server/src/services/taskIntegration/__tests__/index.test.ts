@@ -508,7 +508,7 @@ describe('TaskIntegrationService', () => {
     );
   });
 
-  it('resumes a confirmed Verify plan after the initial clean merge publishes', async () => {
+  it('settles the clean merge without resuming a retired Verify plan', async () => {
     const record = seedRecord();
     mockTaskModel.findById.mockResolvedValue(baseTask({ instruction: 'ship it' }));
     mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(record));
@@ -532,19 +532,9 @@ describe('TaskIntegrationService', () => {
       taskTopicId: 'topic_1',
     });
 
-    expect(outcome).toBe('hold');
-    expect(mockAfter).toHaveBeenCalledTimes(1);
-    await mockAfter.mock.calls[0][0]();
-    expect(runVerifyOnCompletion).toHaveBeenCalledWith(
-      expect.anything(),
-      'user-1',
-      {
-        deliverable: 'delivered result',
-        goal: 'ship it',
-        operationId: 'op-original',
-      },
-      'ws-1',
-    );
+    expect(outcome).toBe('settled');
+    expect(mockAfter).not.toHaveBeenCalled();
+    expect(runVerifyOnCompletion).not.toHaveBeenCalled();
   });
 
   it('resumes publishing an already merged candidate after callback recovery', async () => {
@@ -776,7 +766,7 @@ describe('TaskIntegrationService', () => {
     );
   });
 
-  it('resumes the original Verify plan only after a corrective merge publishes', async () => {
+  it('settles a corrective merge without reviving its original Verify plan', async () => {
     const corrective = seedRecord({
       attempts: 1,
       expectedHeadSha: 'task123',
@@ -815,8 +805,9 @@ describe('TaskIntegrationService', () => {
       taskTopicId: 'topic_1',
     });
 
-    expect(outcome).toBe('hold');
-    expect(mockAfter).toHaveBeenCalledTimes(1);
+    expect(outcome).toBe('settled');
+    expect(mockAfter).not.toHaveBeenCalled();
+    expect(runVerifyOnCompletion).not.toHaveBeenCalled();
   });
 
   it('retries a local corrective conflict in its owned worktree without remote review', async () => {
@@ -1051,7 +1042,7 @@ describe('TaskIntegrationService', () => {
       expect(mockRunner.runTask).not.toHaveBeenCalled();
     });
 
-    it('hands a repository-bound ACP device delivery to deterministic review without a merge agent', async () => {
+    it('releases a repository-bound ACP completion for Reviewer before PR merge', async () => {
       const record = remoteRecord({
         deviceId: 'dev-1',
         repoPath: '/repos/widgets',
@@ -1062,7 +1053,7 @@ describe('TaskIntegrationService', () => {
         task: baseTask(),
         taskTopicId: 'topic_1',
       });
-      expect(outcome).toBe('hold');
+      expect(outcome).toBe('settled');
       expect(mockRunner.runTask).not.toHaveBeenCalled();
       expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
         'task_1',
@@ -1074,15 +1065,16 @@ describe('TaskIntegrationService', () => {
         }),
       );
       expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+      expect(mockTaskServiceUpdateStatus).not.toHaveBeenCalled();
     });
 
-    it('queues an unmerged sandbox delivery for deterministic review', async () => {
+    it('releases an unmerged sandbox completion for Reviewer with its frozen remote identity', async () => {
       mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(remoteRecord()));
       const outcome = await service.integrateOnComplete({
         task: baseTask(),
         taskTopicId: 'topic_1',
       });
-      expect(outcome).toBe('hold');
+      expect(outcome).toBe('settled');
       expect(mockRunner.runTask).not.toHaveBeenCalled();
       expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
         'task_1',
@@ -1095,12 +1087,98 @@ describe('TaskIntegrationService', () => {
       );
     });
 
+    it('releases a verified unmerged PR for Reviewer when PR-first comparison is unknown', async () => {
+      const record = remoteRecord({
+        expectedHeadSha: 'head123',
+        expectedBaseSha: 'base123',
+        prNumber: 7,
+      });
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(asTopic(record));
+      vi.mocked(findBranchPr).mockResolvedValue({
+        baseBranch: 'main',
+        headSha: 'head123',
+        merged: false,
+        number: 7,
+        url: 'https://github.com/acme/widgets/pull/7',
+      });
+      // The real helper intentionally returns unknown even for successful ancestry reads.
+      vi.mocked(isBranchMergedInto).mockResolvedValue('unknown');
+
+      expect(await service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' })).toBe(
+        'settled',
+      );
+      expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({
+          expectedBaseSha: 'base123',
+          expectedHeadSha: 'head123',
+          prNumber: 7,
+          state: 'verification_pending',
+        }),
+      );
+      expect(mockTaskTopicModel.updateIntegration).not.toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({ state: 'integrated' }),
+      );
+      expect(mockTaskTopicModel.updateIntegration).not.toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({ lastErrorCode: 'remote_verification_unavailable' }),
+      );
+      expect(mockRunner.runTask).not.toHaveBeenCalled();
+      expect(mockTaskServiceUpdateStatus).not.toHaveBeenCalled();
+      expect(mockTaskModel.updateStatus).not.toHaveBeenCalled();
+      expect(deviceGateway.mergeGitBranch).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      { unavailableBranch: 'task/T-1' },
+      { unavailableBranch: 'main' },
+      { prHead: 'stale-head' },
+      { prBase: 'wrong-base' },
+      { prNumber: 8 },
+    ])('holds an unverifiable unmerged PR despite stored commit pins: %j', async (invalid) => {
+      mockTaskTopicModel.findByTopicId.mockResolvedValue(
+        asTopic(
+          remoteRecord({ expectedHeadSha: 'head123', expectedBaseSha: 'base123', prNumber: 7 }),
+        ),
+      );
+      vi.mocked(getRemoteBranchSha).mockImplementation(async (_repo, branch) =>
+        branch === invalid.unavailableBranch
+          ? undefined
+          : branch === 'main'
+            ? 'base123'
+            : 'head123',
+      );
+      vi.mocked(findBranchPr).mockResolvedValue({
+        baseBranch: invalid.prBase ?? 'main',
+        headSha: invalid.prHead ?? 'head123',
+        merged: false,
+        number: invalid.prNumber ?? 7,
+        url: 'https://github.com/acme/widgets/pull/7',
+      });
+      vi.mocked(isBranchMergedInto).mockResolvedValue('unknown');
+
+      expect(await service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' })).toBe(
+        invalid.prNumber ? 'blocked' : 'hold',
+      );
+      expect(mockTaskTopicModel.updateIntegration).not.toHaveBeenCalledWith(
+        'task_1',
+        'topic_1',
+        expect.objectContaining({ state: 'integrated' }),
+      );
+      expect(mockRunner.runTask).not.toHaveBeenCalled();
+      expect(mockTaskServiceUpdateStatus).not.toHaveBeenCalled();
+    });
+
     it('adopts a replayed remote merging record without another merge agent', async () => {
       mockTaskTopicModel.findByTopicId.mockResolvedValue(
         asTopic(remoteRecord({ state: 'merging' })),
       );
       expect(await service.integrateOnComplete({ task: baseTask(), taskTopicId: 'topic_1' })).toBe(
-        'hold',
+        'settled',
       );
       expect(mockRunner.runTask).not.toHaveBeenCalled();
       expect(mockTaskTopicModel.updateIntegration).toHaveBeenCalledWith(

@@ -15,19 +15,29 @@ import {
 
 /**
  * Shared comment mention source. Mention metadata carries a stable `type`, so
- * Agent candidates can be merged here later without changing the editor JSON.
+ * Issue callers may add authorized Agent candidates without changing the editor JSON.
  */
-export const useWorkspaceCommentMentionOption = (): EditorProps['mentionOption'] => {
+export const useWorkspaceCommentMentionOption = (
+  agents?: Array<{ id: string; name: string; avatar?: string | null }>,
+): EditorProps['mentionOption'] => {
   useFetchWorkspaceMembers();
   const workspaceMembers = useWorkspaceMembers() as MentionableWorkspaceMember[];
 
   const mentionItems = useMemo<ISlashMenuOption[]>(
     () =>
-      createTopicCommentMentionItems(workspaceMembers).map(({ avatar, ...item }) => ({
+      [
+        ...createTopicCommentMentionItems(workspaceMembers),
+        ...(agents?.map((agent) => ({
+          key: `agent-${agent.id}`,
+          label: agent.name,
+          avatar: agent.avatar || agent.name,
+          metadata: { id: agent.id, type: 'agent', timestamp: 0 },
+        })) ?? []),
+      ].map(({ avatar, ...item }) => ({
         ...item,
         icon: <Avatar avatar={avatar} size={24} />,
       })),
-    [workspaceMembers],
+    [workspaceMembers, agents],
   );
 
   const handleMentionSelect = useCallback((editor: IEditor, option: ISlashMenuOption) => {

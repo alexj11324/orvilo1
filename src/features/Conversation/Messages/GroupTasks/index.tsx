@@ -71,7 +71,7 @@ const GroupTasksMessage = memo<GroupTasksMessageProps>(({ id }) => {
   const tasks = (item as UIChatMessage)?.tasks?.filter(Boolean) as UIChatMessage[] | undefined;
 
   // Get unique agent IDs from tasks
-  const taskAgentIds = useMemo(() => {
+  const assigneeAgentIds = useMemo(() => {
     if (!tasks) return [];
     const ids = tasks.map((task) => task.agentId).filter(Boolean) as string[];
     return [...new Set(ids)];
@@ -81,9 +81,9 @@ const GroupTasksMessage = memo<GroupTasksMessageProps>(({ id }) => {
   const activeGroupId = useAgentGroupStore(agentGroupSelectors.activeGroupId);
 
   // Get agent info (avatars and names) for all unique agents in tasks
-  const taskAgents = useAgentGroupStore((s) => {
-    if (!activeGroupId || taskAgentIds.length === 0) return [];
-    return taskAgentIds
+  const assignedAgents = useAgentGroupStore((s) => {
+    if (!activeGroupId || assigneeAgentIds.length === 0) return [];
+    return assigneeAgentIds
       .map((agentId) => {
         const agent = agentGroupSelectors.getAgentByIdFromGroup(activeGroupId, agentId)(s);
         return agent
@@ -95,7 +95,7 @@ const GroupTasksMessage = memo<GroupTasksMessageProps>(({ id }) => {
 
   // Build title: "Agent1 / Agent2 and N more agents tasks" (show max 2 agents)
   const title = useMemo(() => {
-    const agentNames = taskAgents.map((a) => a.title).filter(Boolean);
+    const agentNames = assignedAgents.map((a) => a.title).filter(Boolean);
     if (agentNames.length === 0) return '';
 
     const totalAgents = agentNames.length;
@@ -116,7 +116,7 @@ const GroupTasksMessage = memo<GroupTasksMessageProps>(({ id }) => {
       count: totalAgents,
       taskCount: tasks?.length || 0,
     });
-  }, [taskAgents, tasks?.length, t]);
+  }, [assignedAgents, tasks?.length, t]);
 
   if (!tasks || tasks.length === 0) {
     return null;
@@ -130,7 +130,7 @@ const GroupTasksMessage = memo<GroupTasksMessageProps>(({ id }) => {
       aboveMessage={null}
       actions={<AssistantActionsBar actionsConfig={actionsConfig} data={item} id={id} />}
       avatar={{ title }}
-      customAvatarRender={() => <GroupTasksAvatar avatars={taskAgents} />}
+      customAvatarRender={() => <GroupTasksAvatar avatars={assignedAgents} />}
       id={id}
       message=""
       placement="left"

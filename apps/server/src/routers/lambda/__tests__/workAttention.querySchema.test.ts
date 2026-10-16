@@ -52,6 +52,19 @@ describe('workQuerySchema', () => {
     expect(parsed.filter).toEqual(filter);
   });
 
+  it('accepts grouping a review queue by its reviewer Agent', () => {
+    const parsed = workQuerySchema.parse({
+      entityType: 'task',
+      groupBy: 'reviewer',
+      filter: { all: [{ field: 'reviewerAgentId', op: 'eq', value: 'agt-reviewer' }] },
+      schemaVersion: 2,
+    });
+    expect(parsed.groupBy).toBe('reviewer');
+    expect(parsed.filter).toEqual({
+      all: [{ field: 'reviewerAgentId', op: 'eq', value: 'agt-reviewer' }],
+    });
+  });
+
   it('still accepts pure filter nodes and rejects unknown predicates', () => {
     expect(
       workQuerySchema.safeParse({

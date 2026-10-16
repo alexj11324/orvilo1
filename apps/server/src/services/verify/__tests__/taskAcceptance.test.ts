@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   acceptanceFindPolicyBySubject: vi.fn(),
   acceptanceUpdatePolicy: vi.fn(),
   taskFindById: vi.fn(),
+  projectFindById: vi.fn(),
 }));
 
 vi.mock('@/database/models/acceptance', () => ({
@@ -18,6 +19,12 @@ vi.mock('@/database/models/acceptance', () => ({
       updatePolicy: mocks.acceptanceUpdatePolicy,
     };
   }),
+}));
+
+vi.mock('@/database/models/project', () => ({
+  ProjectModel: class {
+    findById = mocks.projectFindById;
+  },
 }));
 
 vi.mock('@/database/models/task', () => ({
@@ -38,7 +45,7 @@ describe('resolveTaskAcceptance', () => {
 
   it('uses Acceptance as the authoritative completion contract', async () => {
     mocks.acceptanceFindPolicyBySubject.mockResolvedValue({
-      config: { maxIterations: 3, verifierAgentId: 'acceptance-agent' },
+      config: { maxIterations: 3 },
       id: 'acceptance-1',
       requirement: 'Acceptance requirement',
     });
@@ -48,12 +55,12 @@ describe('resolveTaskAcceptance', () => {
 
     expect(resolved).toMatchObject({
       acceptance: { id: 'acceptance-1' },
-      config: { maxIterations: 3, verifierAgentId: 'acceptance-agent' },
+      config: { maxIterations: 3 },
       requirement: 'Acceptance requirement',
     });
   });
 
-  it('materializes legacy task verify config into an Acceptance once', async () => {
+  it('does not materialize legacy task verify config while reading', async () => {
     mocks.acceptanceFindPolicyBySubject.mockResolvedValue(null);
     mocks.taskFindById.mockResolvedValue({
       id: 'task-1',
@@ -72,41 +79,31 @@ describe('resolveTaskAcceptance', () => {
 
     const resolved = await resolveTaskAcceptance(db, 'user-1', 'task-1');
 
-    expect(mocks.acceptanceEnsure).toHaveBeenCalledWith('task', 'task-1', {
-      config: expect.objectContaining({
-        enabled: true,
-        maxIterations: 2,
-        verifyRubricId: 'rubric-1',
-      }),
-      projectId: undefined,
-      requirement: 'Legacy requirement',
-    });
-    expect(resolved?.acceptance.id).toBe('acceptance-1');
+    expect(mocks.acceptanceEnsure).not.toHaveBeenCalled();
+    expect(mocks.acceptanceUpdatePolicy).not.toHaveBeenCalled();
+    expect(resolved).toBeUndefined();
   });
 
-  it('inherits the nearest parent Acceptance and snapshots it onto the child', async () => {
+  it('reads an inherited Acceptance without snapshotting it onto the child', async () => {
     mocks.taskFindById
       .mockResolvedValueOnce({ id: 'child', parentTaskId: 'parent' })
       .mockResolvedValueOnce({ id: 'parent', parentTaskId: null });
     mocks.acceptanceFindPolicyBySubject.mockResolvedValueOnce(null).mockResolvedValueOnce({
-      config: { enabled: true, verifierAgentId: 'parent-verifier' },
+      config: { enabled: true },
       id: 'parent-acceptance',
       requirement: 'Parent contract',
     });
     mocks.acceptanceEnsure.mockResolvedValue({
-      config: { enabled: true, verifierAgentId: 'parent-verifier' },
+      config: { enabled: true },
       id: 'child-acceptance',
       requirement: 'Parent contract',
     });
 
     const resolved = await resolveTaskAcceptance(db, 'user-1', 'child', 'workspace-1');
 
-    expect(mocks.acceptanceEnsure).toHaveBeenCalledWith('task', 'child', {
-      config: { enabled: true, verifierAgentId: 'parent-verifier' },
-      projectId: undefined,
-      requirement: 'Parent contract',
-    });
-    expect(resolved?.acceptance.id).toBe('child-acceptance');
+    expect(mocks.acceptanceEnsure).not.toHaveBeenCalled();
+    expect(mocks.acceptanceUpdatePolicy).not.toHaveBeenCalled();
+    expect(resolved?.acceptance.id).toBe('parent-acceptance');
   });
 
   it('prefers a child legacy policy over a parent Acceptance', async () => {
@@ -124,6 +121,18 @@ describe('resolveTaskAcceptance', () => {
     const resolved = await resolveTaskAcceptance(db, 'user-1', 'child');
 
     expect(mocks.acceptanceFindPolicyBySubject).toHaveBeenCalledTimes(1);
-    expect(resolved?.config).toMatchObject({ enabled: true, maxIterations: 1 });
+    expect(resolved).toBeUndefined();
+    expect(mocks.acceptanceEnsure).not.toHaveBeenCalled();
   });
+});
+
+it('does not expose inherited historical policy across a private Project boundary', async () => {
+  mocks.taskFindById.mockResolvedValue({ id: 'task', projectId: 'private-project' });
+  mocks.acceptanceFindPolicyBySubject.mockResolvedValue({
+    id: 'policy',
+    config: { enabled: true },
+  });
+  mocks.projectFindById.mockResolvedValue(undefined);
+  await expect(resolveTaskAcceptance(db, 'teammate', 'task', 'workspace')).resolves.toBeUndefined();
+  expect(mocks.acceptanceEnsure).not.toHaveBeenCalled();
 });

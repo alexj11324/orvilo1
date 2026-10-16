@@ -36,6 +36,8 @@ vi.mock('../device/register', async (importOriginal) => {
   };
 });
 
+vi.mock('../auth/credentials', () => ({ loadCredentials: vi.fn() }));
+
 vi.mock('../auth/refresh', () => ({
   getValidToken: vi.fn().mockResolvedValue({
     credentials: { accessToken: 'test-token', expiresAt: undefined, refreshToken: 'test-refresh' },
@@ -285,6 +287,30 @@ describe('connect command', () => {
       },
     });
     expect(lastSentToolResponse.result.executionTimeMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('rejects retired MCP tool calls before builtin dispatch', async () => {
+    const program = createProgram();
+    await program.parseAsync(['node', 'test', 'connect']);
+    await clientEventHandlers['tool_call_request']?.({
+      requestId: 'retired-mcp',
+      toolCall: {
+        apiName: 'readLocalFile',
+        arguments: '{"path":"/private.txt"}',
+        identifier: 'arbitrary',
+        type: 'mcp',
+        params: { type: 'stdio', command: 'third-party-mcp', args: [], name: 'arbitrary' },
+      },
+      type: 'tool_call_request',
+    });
+    expect(executeToolCall).not.toHaveBeenCalled();
+    expect(lastSentToolResponse).toMatchObject({
+      requestId: 'retired-mcp',
+      result: {
+        error: 'Platform MCP execution is retired. Configure MCP in the Agent’s native harness.',
+        success: false,
+      },
+    });
   });
 
   it('should handle system info requests', async () => {

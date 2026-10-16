@@ -39,7 +39,7 @@ import RouteSegmentSkeleton from '@/components/Skeleton/RouteSegment';
 import { createSurfaceSkeleton } from '@/components/Skeleton/Surface';
 import { RESERVED_RETIRED_ROOTS } from '@/config/routes';
 import { agentDocumentRouteMeta } from '@/features/AgentDocumentPage/routeMeta';
-import { goalDetailRouteMeta, goalsRouteMeta } from '@/features/AgentGoals/routeMeta';
+import { goalDetailRouteMeta } from '@/features/AgentGoals/routeMeta';
 import { tasksRouteMeta } from '@/features/AgentTasks/routeMeta';
 import {
   automationDetailRouteMeta,
@@ -272,11 +272,7 @@ export const sharedMainAreaChildren: RouteObject[] = [
             path: 'docs',
           },
           {
-            element: dynamicElement(
-              () => import('@/routes/(main)/agent/goals'),
-              'Desktop > Chat > Goals',
-            ),
-            handle: { meta: goalsRouteMeta },
+            element: redirectElement('..'),
             path: 'goals',
           },
           {
@@ -766,11 +762,7 @@ export const sharedMainAreaChildren: RouteObject[] = [
         path: 'milestones',
       },
       {
-        element: dynamicElement(
-          () => import('@/routes/(main)/project/[projectId]/goals'),
-          'Desktop > Project Goals',
-        ),
-        handle: { meta: goalsRouteMeta },
+        element: redirectElement('../tasks'),
         path: 'goals',
       },
       {

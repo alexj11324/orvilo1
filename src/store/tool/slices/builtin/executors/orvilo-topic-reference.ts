@@ -3,8 +3,6 @@ import type { BuiltinToolResult } from '@orvilo/types';
 
 import { topicService } from '@/services/topic';
 
-
-
 interface GetTopicContextParams {
   topicId: string;
 }

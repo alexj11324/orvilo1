@@ -4,8 +4,9 @@ class ConnectorService {
   getRedirectUri = (...args: Parameters<typeof lambdaClient.connector.getRedirectUri.query>) =>
     lambdaClient.connector.getRedirectUri.query(...args);
 
-  githubMcpCapability = (...args: Parameters<typeof lambdaClient.connector.githubMcpCapability.query>) =>
-    lambdaClient.connector.githubMcpCapability.query(...args);
+  githubMcpCapability = (
+    ...args: Parameters<typeof lambdaClient.connector.githubMcpCapability.query>
+  ) => lambdaClient.connector.githubMcpCapability.query(...args);
 
   list = (...args: Parameters<typeof lambdaClient.connector.list.query>) =>
     lambdaClient.connector.list.query(...args);
@@ -46,14 +47,16 @@ class ConnectorService {
   syncTools = (...args: Parameters<typeof lambdaClient.connector.syncTools.mutate>) =>
     lambdaClient.connector.syncTools.mutate(...args);
 
-  syncToolsFromClientById = (...args: Parameters<typeof lambdaClient.connector.syncToolsFromClientById.mutate>) =>
-    lambdaClient.connector.syncToolsFromClientById.mutate(...args);
+  syncToolsFromClientById = (
+    ...args: Parameters<typeof lambdaClient.connector.syncToolsFromClientById.mutate>
+  ) => lambdaClient.connector.syncToolsFromClientById.mutate(...args);
 
   resetPermissions = (...args: Parameters<typeof lambdaClient.connector.resetPermissions.mutate>) =>
     lambdaClient.connector.resetPermissions.mutate(...args);
 
-  syncToolsFromClient = (...args: Parameters<typeof lambdaClient.connector.syncToolsFromClient.mutate>) =>
-    lambdaClient.connector.syncToolsFromClient.mutate(...args);
+  syncToolsFromClient = (
+    ...args: Parameters<typeof lambdaClient.connector.syncToolsFromClient.mutate>
+  ) => lambdaClient.connector.syncToolsFromClient.mutate(...args);
 
   syncBuiltinTool = (...args: Parameters<typeof lambdaClient.connector.syncBuiltinTool.mutate>) =>
     lambdaClient.connector.syncBuiltinTool.mutate(...args);
@@ -61,9 +64,9 @@ class ConnectorService {
   syncPluginTools = (...args: Parameters<typeof lambdaClient.connector.syncPluginTools.mutate>) =>
     lambdaClient.connector.syncPluginTools.mutate(...args);
 
-  updateToolPermission = (...args: Parameters<typeof lambdaClient.connector.updateToolPermission.mutate>) =>
-    lambdaClient.connector.updateToolPermission.mutate(...args);
-
+  updateToolPermission = (
+    ...args: Parameters<typeof lambdaClient.connector.updateToolPermission.mutate>
+  ) => lambdaClient.connector.updateToolPermission.mutate(...args);
 }
 
 export const connectorService = new ConnectorService();

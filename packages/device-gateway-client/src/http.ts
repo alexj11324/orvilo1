@@ -10,7 +10,6 @@ import {
 import type {
   DeviceSystemInfo,
   GatewayDevice,
-  GatewayMcpParams,
   GatewayToolCallType,
   PrimeRunDescriptor,
 } from './types';
@@ -132,32 +131,6 @@ export class GatewayHttpClient {
     return this.postToolCall(params, { ...toolCall, type: 'tool' });
   }
 
-  /**
-   * Tunnel an MCP tool call to the device. Rides the same
-   * `/api/device/tool-call` relay as {@link executeToolCall} — the gateway
-   * forwards `toolCall` opaquely — but carries `params` (the MCP connection
-   * params) so the device routes it to its local MCP client rather than the
-   * builtin local-system tool switch. Used when only the device can reach the
-   * MCP server: stdio (the cloud can't spawn the user's binary) and
-   * localhost / LAN HTTP endpoints (the cloud's fetch can't reach them).
-   */
-  async executeMcpCall(mcpCall: {
-    apiName: string;
-    arguments: string;
-    deviceId?: string;
-    identifier: string;
-    params: GatewayMcpParams;
-    timeout?: number;
-    userId: string;
-    workspaceId?: string;
-  }): Promise<DeviceToolCallResult> {
-    const { deviceId, timeout, userId, workspaceId, ...toolCall } = mcpCall;
-    return this.postToolCall(
-      { deviceId, timeout, userId, workspaceId },
-      { ...toolCall, type: 'mcp' },
-    );
-  }
-
   private async postToolCall(
     params: {
       deviceId?: string;
@@ -170,7 +143,6 @@ export class GatewayHttpClient {
       apiName: string;
       arguments: string;
       identifier: string;
-      params?: GatewayMcpParams;
       type?: GatewayToolCallType;
     },
   ): Promise<DeviceToolCallResult> {

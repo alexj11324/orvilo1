@@ -75,15 +75,25 @@ export const parseStandardAcpPermissionCatalogs = (session: {
     : [];
 };
 
-/** Select only a native full-access choice actually advertised by this ACP session. */
+/**
+ * An unattended mode this session actually advertised. Names stay verbatim:
+ * Bypass / Full access, Autonomous, Run Everything, and YOLO are the same
+ * kind of choice. Auto, Ask, Smart, Accept edits, and Allowlist are not.
+ */
+const ADVERTISED_UNATTENDED_PERMISSION =
+  /^(?:bypass(?: permissions|permissions)?|(?:agent-|danger-)?full[-_ ]access|(?:agent \()?full access\)?|autonomous|run[-_ ]everything|yolo)$/i;
+
+export const isAdvertisedUnattendedPermission = (label: string) =>
+  ADVERTISED_UNATTENDED_PERMISSION.test(label.trim());
+
+/** Select only an unattended choice actually advertised by this ACP session. */
 export const resolveNativeFullAccessPermission = (
   catalogs: HeterogeneousAgentPermissionCatalog[],
 ) => {
   for (const catalog of catalogs) {
     const option = catalog.options.find(
       ({ name, value }) =>
-        /^(?:bypass(?:permissions)?|(?:agent-|danger-)?full[-_ ]access)$/i.test(value) ||
-        /^(?:bypass(?: permissions)?|(?:Agent \()?full access\)?)$/i.test(name),
+        isAdvertisedUnattendedPermission(value) || isAdvertisedUnattendedPermission(name),
     );
     if (option) return { configId: catalog.configId, value: option.value };
   }

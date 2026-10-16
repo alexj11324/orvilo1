@@ -2,6 +2,10 @@
 import { and, eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import {
+  seedConfirmedIssuePlan,
+  seedReviewedIssueDelivery,
+} from '../../../tests/fixtures/issueDelivery';
 import { getTestDB } from '../../core/getTestDB';
 import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import {
@@ -49,10 +53,12 @@ const moveToForeignWorkspace = async (taskId: string) => {
 };
 
 beforeEach(async () => {
+  await db.delete(tasks);
   await db.delete(users);
   await db.insert(users).values([{ id: userId }, { id: otherUserId }]);
 });
 afterEach(async () => {
+  await db.delete(tasks);
   await db.delete(users);
 });
 
@@ -61,12 +67,14 @@ describe('task prerequisite invariants', () => {
     const a = await create('Task 1');
     const b = await create('Task 2');
     const dependent = await create('Task 4');
+    await seedConfirmedIssuePlan(db, dependent.id);
     await model.addDependency(dependent.id, a.id);
     await model.addDependency(dependent.id, b.id);
     await expect(model.reserveRun(dependent.id, 'run-1')).rejects.toBeInstanceOf(
       TaskDependencyError,
     );
     await model.updateStatus(a.id, 'completed');
+    await seedReviewedIssueDelivery(db, a.id);
     await expect(model.reserveRun(dependent.id, 'run-1')).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
     });
@@ -75,6 +83,7 @@ describe('task prerequisite invariants', () => {
       runReservationId: null,
     });
     await model.updateStatus(b.id, 'completed');
+    await seedReviewedIssueDelivery(db, b.id);
     await expect(model.reserveRun(dependent.id, 'run-1')).resolves.toBe(true);
   });
 
@@ -168,6 +177,7 @@ describe('task prerequisite invariants', () => {
   it('keeps a newly added related issue from blocking an unfinished task', async () => {
     const upstream = await create('Related issue');
     const task = await create('Current issue');
+    await seedConfirmedIssuePlan(db, task.id);
     await model.addDependency(task.id, upstream.id, 'relates');
     expect(await model.getDependencies(task.id)).toMatchObject([
       { dependsOnId: upstream.id, type: 'relates' },
@@ -335,10 +345,11 @@ describe('task prerequisite invariants', () => {
     const b = await create('B');
     await model.addDependency(b.id, a.id);
     await model.updateStatus(a.id, 'completed');
+    await seedReviewedIssueDelivery(db, a.id);
     await expect(model.areAllDependenciesCompleted(b.id)).resolves.toBe(true);
     await model.updateStatus(a.id, 'backlog');
     await expect(model.areAllDependenciesCompleted(b.id)).resolves.toBe(false);
-    await model.update(a.id, { status: 'completed', deletedAt: new Date(), isDeleted: true });
+    await model.update(a.id, { deletedAt: new Date(), isDeleted: true });
     await expect(model.areAllDependenciesCompleted(b.id)).resolves.toBe(false);
     await expect(model.delete(a.id)).rejects.toThrow('dependency links');
     await model.removeDependency(b.id, a.id);
@@ -398,6 +409,7 @@ describe('task prerequisite invariants', () => {
     expect(await scoped.getDependencies(dependent.id)).toHaveLength(1);
     expect(await scoped.areAllDependenciesCompleted(dependent.id)).toBe(false);
     await scoped.updateStatus(upstream.id, 'completed');
+    await seedReviewedIssueDelivery(db, upstream.id);
     expect(await scoped.areAllDependenciesCompleted(dependent.id)).toBe(true);
   });
 
@@ -412,7 +424,8 @@ describe('task prerequisite invariants', () => {
     await seedMembership(workspaceId, true);
     const owner = new TaskModel(db, userId, workspaceId);
     const member = new TaskModel(db, otherUserId, workspaceId);
-    const upstream = await owner.create({ instruction: 'Shared', status: 'completed' });
+    const upstream = await owner.create({ instruction: 'Shared' });
+    await seedReviewedIssueDelivery(db, upstream.id);
     const dependent = await member.create({ instruction: 'Dependent' });
     await member.addDependency(dependent.id, upstream.id);
     const privateTeamId = `${workspaceId}-private-team`;
@@ -576,8 +589,10 @@ describe('prerequisite review regressions', () => {
     await owner.addDependency(dependent.id, privateTask.id);
     await owner.addDependency(dependent.id, publicTask.id);
     await owner.updateStatus(privateTask.id, 'completed');
+    await seedReviewedIssueDelivery(db, privateTask.id);
     expect(await owner.getUnlockedTasks(privateTask.id)).toEqual([]);
     await member.updateStatus(publicTask.id, 'completed');
+    await seedReviewedIssueDelivery(db, publicTask.id);
     expect((await member.getUnlockedTasks(publicTask.id)).map(({ id }) => id)).toEqual([
       dependent.id,
     ]);
@@ -627,7 +642,7 @@ describe('prerequisite review regressions', () => {
     expect(await model.findById(child.id)).not.toBeNull();
   });
 
-  it('fences deferred heartbeat writes by token, status, mode and interval while preserving counters', async () => {
+  it('fences deferred heartbeat writes by token, automation pause, mode and interval while preserving counters', async () => {
     const task = await model.create({
       instruction: 'Heartbeat',
       status: 'scheduled',
@@ -647,9 +662,10 @@ describe('prerequisite review regressions', () => {
       scheduler: { ...patch, consecutiveFailures: 2 },
     });
     expect(await model.updateContextIfHeartbeatTick(task.id, 'old', 600, patch)).toBe(false);
-    await model.updateStatus(task.id, 'paused');
+    await model.updateContext(task.id, { scheduler: { automationPaused: true } });
     expect(await model.updateContextIfHeartbeatTick(task.id, 'next', 600, patch)).toBe(false);
-    await model.update(task.id, { status: 'scheduled', automationMode: 'schedule' });
+    await model.updateContext(task.id, { scheduler: { automationPaused: false } });
+    await model.update(task.id, { automationMode: 'schedule' });
     expect(await model.updateContextIfHeartbeatTick(task.id, 'next', 600, patch)).toBe(false);
   });
 });

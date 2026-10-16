@@ -3,7 +3,6 @@ export * from './agent-group.controller';
 export * from './api-key.controller';
 export * from './eval.controller';
 export * from './file.controller';
-export * from './mcp-server.controller';
 export * from './message.controller';
 export * from './message-translation.controller';
 export * from './model.controller';

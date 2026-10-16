@@ -1,7 +1,17 @@
-import type { TaskAutomationMode, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
+import type {
+  IssueChecklistReviewItem,
+  IssueDeliveryProof,
+  TaskAutomationMode,
+  TaskStatus,
+  TaskWorkflowCategory,
+} from '@orvilo/types';
 
 export const TaskApiName = {
   readAutomationInput: 'readAutomationInput',
+  /** Create or link an Issue draft and request Orchestrator planning. */
+  intakeIssue: 'intakeIssue',
+  /** Refine implementation using unchanged human-confirmed scope; server-bound Orchestrator only. */
+  refineIssuePlan: 'refineIssuePlan',
   /** Add a comment to a task */
   addTaskComment: 'addTaskComment',
 
@@ -41,6 +51,9 @@ export const TaskApiName = {
   /** Configure (or clear) the delivery-acceptance (verify) gate of a task */
   setTaskVerify: 'setTaskVerify',
 
+  /** Record the current reviewer Agent's verdict on an Issue. */
+  submitTaskReview: 'submitTaskReview',
+
   /** Update a task comment */
   updateTaskComment: 'updateTaskComment',
 
@@ -52,6 +65,33 @@ export const TaskApiName = {
 } as const;
 
 export type TaskApiNameType = (typeof TaskApiName)[keyof typeof TaskApiName];
+
+export interface IntakeIssueParams {
+  instruction: string;
+  issueId?: string;
+  name: string;
+  projectId?: string;
+  repositoryId?: string;
+  teamId?: string;
+}
+
+export interface RefineIssuePlanParams {
+  addTasks?: Array<{
+    sourceIdentifier: string;
+    name: string;
+    instruction: string;
+    assigneeAgentId?: string;
+    dependsOn?: string[];
+  }>;
+  dependencies?: Array<{
+    identifier: string;
+    dependsOnIdentifier: string;
+    action: 'add' | 'remove';
+  }>;
+  identifier: string;
+  refinementRevision: number;
+  revision: number;
+}
 
 // ==================== createTask ====================
 
@@ -239,6 +279,7 @@ export interface EditTaskParams {
   /** Existing project id; null removes the task from its project. */
   projectId?: string | null;
   removeDependencies?: string[];
+  reviewerAgentId?: string | null;
 }
 
 export interface EditTaskState {
@@ -315,7 +356,6 @@ export interface SetTaskVerifyParams {
   /** One-sentence acceptance requirement; the source criteria are synthesized from. Pass null to clear. */
   requirement?: string | null;
   /** Agent that executes the verify run. Pass null to fall back to the built-in verify agent. */
-  verifierAgentId?: string | null;
   /** Ad-hoc acceptance criteria ids (references verify_criteria.id). Pass null to clear. */
   verifyCriteriaIds?: string[] | null;
   /** Reuse a rubric template (references verify_rubrics.id). Pass null to clear. */
@@ -326,6 +366,23 @@ export interface SetTaskVerifyState {
   enabled?: boolean | null;
   identifier: string;
   success: boolean;
+}
+
+export interface SubmitTaskReviewParams {
+  comment?: string;
+  identifier: string;
+  items: IssueChecklistReviewItem[];
+  proof: IssueDeliveryProof;
+  runId: string;
+  verdict: 'pass' | 'fail';
+}
+
+export interface SubmitTaskReviewState {
+  commentId?: string;
+  identifier: string;
+  stopped: boolean;
+  success: boolean;
+  workflowCategory: TaskWorkflowCategory;
 }
 
 // ==================== updateTaskStatus ====================

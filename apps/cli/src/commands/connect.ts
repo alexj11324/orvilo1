@@ -606,7 +606,17 @@ function bindGatewayClientHandlers(client: GatewayClient, ctx: GatewayHandlerCon
     // round trip, so reporting this back is what separates a slow tool from
     // slow transport.
     const startedAt = performance.now();
-    const result = await executeToolCall(toolCall.apiName, toolCall.arguments, timeout);
+    const result =
+      toolCall.type && toolCall.type !== 'tool'
+        ? {
+            content:
+              'Platform MCP execution is retired. Configure MCP in the Agent’s native harness.',
+            error:
+              'Platform MCP execution is retired. Configure MCP in the Agent’s native harness.',
+            state: undefined,
+            success: false,
+          }
+        : await executeToolCall(toolCall.apiName, toolCall.arguments, timeout);
     const executionTimeMs = Math.round(performance.now() - startedAt);
 
     if (isDaemonChild) {

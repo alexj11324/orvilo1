@@ -611,6 +611,7 @@ describe('HeterogeneousAgentService', () => {
     });
 
     it('fires both onComplete and onError (reason=error) hooks on a failed run', async () => {
+      const findById = vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(null);
       const { service } = createService({ operationId: 'op-hook-error' });
       const { onComplete, onError } = registerHook('op-hook-error');
 
@@ -630,6 +631,7 @@ describe('HeterogeneousAgentService', () => {
         operationId: 'op-hook-error',
         reason: 'error',
       });
+      findById.mockRestore();
     });
 
     // Verify-lifecycle alignment: heteroFinish must route the terminal transition
@@ -708,12 +710,7 @@ describe('HeterogeneousAgentService', () => {
       completeOperationSpy.mockRestore();
     });
 
-    // Cross-instance race guard: recordStart's in-memory verify-plan promise lives
-    // on a DIFFERENT CompletionLifecycle (execAgent), so heteroFinish can't await
-    // it. A fast run could reach the gate before the plan persists. heteroFinish
-    // must therefore re-run the idempotent durable instantiation and AWAIT it
-    // before dispatching the gate.
-    it('awaits durable verify-plan instantiation before the completion gate for a task-bound run', async () => {
+    it('completes the heterogeneous task without instantiating a retired Verify plan', async () => {
       const { service } = createService({ operationId: 'op-race-guard' });
 
       const findByIdSpy = vi
@@ -733,17 +730,8 @@ describe('HeterogeneousAgentService', () => {
         topicId: 'topic-race-guard',
       });
 
-      expect(instantiateSpy).toHaveBeenCalledTimes(1);
-      // Ensured with the run's own task id (3rd arg is the params object).
-      expect(instantiateSpy.mock.calls[0][2]).toMatchObject({
-        operationId: 'op-race-guard',
-        taskId: 'task-1',
-      });
-      // The durable ensure is awaited BEFORE the gate — otherwise
-      // runVerifyOnCompletion could read an empty plan and skip verify.
-      expect(instantiateSpy.mock.invocationCallOrder[0]).toBeLessThan(
-        dispatchSpy.mock.invocationCallOrder[0],
-      );
+      expect(instantiateSpy).not.toHaveBeenCalled();
+      expect(dispatchSpy).toHaveBeenCalled();
 
       findByIdSpy.mockRestore();
       instantiateSpy.mockRestore();

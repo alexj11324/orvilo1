@@ -7,7 +7,6 @@ import defaultAuth from '@/locales/default/auth';
 import defaultAuthError from '@/locales/default/authError';
 import defaultCommon from '@/locales/default/common';
 import defaultError from '@/locales/default/error';
-import defaultMarketAuth from '@/locales/default/marketAuth';
 import defaultOauth from '@/locales/default/oauth';
 import { normalizeLocale } from '@/locales/resources';
 
@@ -16,7 +15,6 @@ const defaultResources = {
   authError: defaultAuthError,
   common: defaultCommon,
   error: defaultError,
-  marketAuth: defaultMarketAuth,
   oauth: defaultOauth,
 };
 
@@ -37,9 +35,6 @@ const loadZhNamespace = async (ns: AuthI18nNamespace) => {
     }
     case 'error': {
       return import('@/../locales/zh-CN/error.json');
-    }
-    case 'marketAuth': {
-      return import('@/../locales/zh-CN/marketAuth.json');
     }
     case 'oauth': {
       return import('@/../locales/zh-CN/oauth.json');

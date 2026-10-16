@@ -103,6 +103,7 @@ const DeviceItem = memo<DeviceItemProps>(({ device, isCurrent, onSelect, selecte
       },
       title: t('devices.remove.confirm'),
     });
+  };
 
   const deviceMenuItems: DeviceMenuItem[] = [
     {

@@ -1,4 +1,3 @@
-
 // Disable the auto sort key eslint rule to make the code more logic and readable
 import { type AgentRuntimeContext } from '@orvilo/agent-runtime';
 import { MESSAGE_CANCEL_FLAT } from '@orvilo/const';
@@ -947,10 +946,7 @@ export class ConversationControlActionImpl {
     response: Record<string, unknown>,
     context?: ConversationContext,
     options?: {
-      agentInterventionAction?: Extract<
-        AgentInterventionSourceAction,
-        { type: 'submit_answers' | 'submit_custom' }
-      >;
+      agentInterventionAction?: Extract<AgentInterventionSourceAction, { type: 'submit_answers' }>;
       createUserMessage?: boolean;
       prepareLegacyFallback?: () => Promise<{
         createUserMessage?: boolean;

@@ -192,31 +192,6 @@ export const AgentManagementManifest: BuiltinToolManifest = {
         type: 'object',
       },
     },
-    {
-      description:
-        "Install a plugin/tool for an agent. Use 'official' source for builtin tools, Composio integrations, and OrviloSkill providers. Use 'market' source for MCP marketplace plugins.",
-      name: AgentManagementApiName.installPlugin,
-      parameters: {
-        properties: {
-          agentId: {
-            description: 'The ID of the agent to install the plugin for',
-            type: 'string',
-          },
-          identifier: {
-            description: 'The plugin identifier to install',
-            type: 'string',
-          },
-          source: {
-            description:
-              "Plugin source: 'official' (builtin tools, Composio, OrviloSkill) or 'market' (MCP marketplace)",
-            enum: ['official', 'market'],
-            type: 'string',
-          },
-        },
-        required: ['agentId', 'identifier', 'source'],
-        type: 'object',
-      },
-    },
 
     // ==================== Prompt ====================
     {
@@ -242,23 +217,12 @@ export const AgentManagementManifest: BuiltinToolManifest = {
     // ==================== Search ====================
     {
       description:
-        "Search for agents in your workspace or the marketplace. Use 'user' source to find your own agents, 'market' for marketplace agents, or 'all' for both. Results are paginated: the response reports the real total, and you can page through workspace agents with 'offset'. Each result carries an `origin` (workspace/market) and, for heterogeneous agents, a `heteroType` (e.g. claude-code, codex) — those are backed by an external CLI/device runtime and can execute coding/agentic tasks directly, so you can hand a task to them without further setup.",
+        "Search for agents in your workspace. Results are paginated: the response reports the real total, and you can page through workspace agents with 'offset'. Each result carries an `origin` (workspace) and, for heterogeneous agents, a `heteroType` (e.g. claude-code, codex) — those are backed by an external CLI/device runtime and can execute coding/agentic tasks directly, so you can hand a task to them without further setup.",
       name: AgentManagementApiName.searchAgent,
       parameters: {
         properties: {
           keyword: {
             description: 'Search keywords to find agents by name or description',
-            type: 'string',
-          },
-          source: {
-            description:
-              "Where to search: 'user' (your agents), 'market' (marketplace), 'all' (both). Default: 'all'",
-            enum: ['user', 'market', 'all'],
-            type: 'string',
-          },
-          category: {
-            description:
-              'Category filter for marketplace search (e.g., "programming", "writing", "translation")',
             type: 'string',
           },
           limit: {
@@ -269,7 +233,7 @@ export const AgentManagementManifest: BuiltinToolManifest = {
           offset: {
             default: 0,
             description:
-              'Number of workspace agents to skip, for pagination (e.g. offset=20 with limit=20 returns agents 21-40). Not applied to marketplace results.',
+              'Number of workspace agents to skip, for pagination (e.g. offset=20 with limit=20 returns agents 21-40).',
             type: 'number',
           },
         },

@@ -1,13 +1,16 @@
+import { resolveHeteroAgentSystemContext } from '@orvilo/types';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { createElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AgentScanState } from '@/features/ConnectAgent/useAgentScan';
 
+import CreateAgentPanel from './CreateAgentPanel';
 import { RuntimeFields, useAgentRuntimeForm } from './RuntimeFields';
 
 const state = vi.hoisted(() => ({
   builtinOffered: true,
+  create: vi.fn(),
   host: { deviceId: 'local-device', isLocal: true, loading: false },
   scan: vi.fn().mockResolvedValue(undefined),
   reset: vi.fn(),
@@ -35,7 +38,11 @@ vi.mock('@/features/AgentOnboarding/availability', () => ({ isBuiltinAgentUsable
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
   useWorkspaceAwareNavigate: () => vi.fn(),
 }));
+vi.mock('@/store/agent', () => ({
+  useAgentStore: (selector: (store: unknown) => unknown) => selector({ createAgent: vi.fn() }),
+}));
 vi.mock('@/services/agentOnboarding', () => ({
+  createOnboardingAgentOnce: state.create,
   firstPrimeAgentConfig: vi.fn(),
   prepareFirstAgentProvider: vi.fn(),
 }));
@@ -45,12 +52,46 @@ vi.mock('@/services/providerBinding', () => ({
 }));
 
 beforeEach(() => {
+  state.create.mockReset().mockImplementation(async (_checkpoint, params) => ({
+    agentId: 'reviewer-1',
+    config: params.config,
+  }));
   state.builtinOffered = true;
   state.host = { deviceId: 'local-device', isLocal: true, loading: false };
   state.scanState = { agents: { codex: { available: true } }, status: 'success' };
 });
 
 describe('shared Agent runtime form', () => {
+  it.each(['private', 'public'] as const)(
+    'locks creation to the explicit %s visibility',
+    async (visibility) => {
+      render(
+        createElement(CreateAgentPanel, { initialType: 'codex', lockVisibility: true, visibility }),
+      );
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'createAgent.create' })).not.toBeDisabled(),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'createAgent.create' }));
+      await waitFor(() => expect(state.create).toHaveBeenCalled());
+      expect(state.create.mock.calls[0][1].visibility).toBe(visibility);
+    },
+  );
+  it('delivers edited reviewer instructions to the saved CLI runtime', async () => {
+    render(createElement(CreateAgentPanel, { initialType: 'codex' }));
+    fireEvent.click(screen.getByRole('button', { name: 'createAgent.moreSettings' }));
+    fireEvent.click(screen.getByRole('button', { name: 'createAgent.useReviewerStarter' }));
+    const instructions = screen.getByRole('textbox', { name: 'createAgent.instructions' });
+    fireEvent.change(instructions, { target: { value: 'Review only. Cite file and line.' } });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'createAgent.create' })).not.toBeDisabled(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'createAgent.create' }));
+    await waitFor(() => expect(state.create).toHaveBeenCalled());
+    const config = state.create.mock.calls[0][1].config;
+    expect(
+      resolveHeteroAgentSystemContext(config.agencyConfig.heterogeneousProvider, config.systemRole),
+    ).toBe('Review only. Cite file and line.');
+  });
   it.each([
     ['opencode', 'OpenCode', 'mimo-v2-pro', 'default'],
     ['codex', 'Codex', 'gpt-6-astra', 'max'],

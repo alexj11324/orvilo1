@@ -33,8 +33,6 @@ interface AgentListProps {
   bottomSection?: ReactNode;
   /** Thrown error from the agent-list SWR — surfaced as a failure state. */
   error?: unknown;
-  /** Also list the builtin task agent — the composer chip offers every conversation target. */
-  includeTaskAgent?: boolean;
   onConfigure?: (agentId: string) => void;
   onRetry?: () => void;
   onSelect: (agentId: string) => void;
@@ -46,13 +44,11 @@ const SectionHeader = memo<{ children: ReactNode }>(({ children }) => (
 ));
 
 const AgentList = memo<AgentListProps>(
-  ({ activeAgentId, bottomSection, error, includeTaskAgent, onConfigure, onRetry, onSelect }) => {
+  ({ activeAgentId, bottomSection, error, onConfigure, onRetry, onSelect }) => {
     const { t } = useTranslation('common');
 
     const isInit = useHomeStore(homeAgentListSelectors.isAgentListInit);
-    const { privateRows, showPrivateSection, workspaceRows } = useHomeAgentRows({
-      includeTaskAgent,
-    });
+    const { privateRows, showPrivateSection, workspaceRows } = useHomeAgentRows();
 
     const renderRow = (row: AgentRow) => {
       const isActive = row.id === activeAgentId;

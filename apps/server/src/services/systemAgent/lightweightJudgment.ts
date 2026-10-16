@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server';
 
 import { AgentModel } from '@/database/models/agent';
 import type { OrviloDatabase } from '@/database/type';
+import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { resolveOrviloProviderBinding } from '@/server/services/providerBinding/execution';
 
 import { resolveOwnedSystemAgentModelConfig } from './ownedModelConfig';
@@ -16,6 +17,13 @@ export const resolveLightweightJudgment = async (
   agentId?: string | null,
   workspaceId?: string,
 ) => {
+  if (key === 'goal') {
+    const agents = new AgentModel(db, userId, workspaceId);
+    const selectedAgentId = agentId ?? (await agents.getOrchestratorSourceAgentId());
+    if (!selectedAgentId || !(await agents.existsById(selectedAgentId))) return undefined;
+    await assertCanUseWorkspaceAgent({ agentId: selectedAgentId, db, userId, workspaceId });
+    return { binding: { agentId: selectedAgentId, allowEnvFallback: false } };
+  }
   if (!(await resolveOrviloProviderBinding(db, userId, 'sandbox'))) return undefined;
   const agent = agentId
     ? await new AgentModel(db, userId, workspaceId).getAgentConfig(agentId)
@@ -34,7 +42,7 @@ export const resolveLightweightJudgment = async (
     binding: builtinOwner
       ? { agentId: builtinOwner }
       : {
-          slug: key === 'goal' ? BUILTIN_AGENT_SLUGS.taskAgent : BUILTIN_AGENT_SLUGS.selfReflection,
+          slug: BUILTIN_AGENT_SLUGS.selfReflection,
         },
   };
 };

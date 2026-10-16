@@ -8,6 +8,7 @@ import { TaskRunnerService } from '@/server/services/taskRunner';
 import { taskRunIdempotencyKey } from '@/server/services/taskRunner/idempotency';
 
 import { resolveTaskAttemptBudget, resolveTaskMaxSteps } from './recoveryPolicy';
+import { assertGoalExecutionAvailable } from './retirement';
 import { statusAuthoredByActor } from './supervisor/policy';
 import { claimGoalTask } from './taskClaim';
 
@@ -49,6 +50,7 @@ export class TaskRecoveryCoordinator {
     spentCost?: number;
     task: TaskItem;
   }): Promise<TaskRecoveryResult> => {
+    assertGoalExecutionAvailable();
     const { goal, task } = params;
     const attempts = task.totalTopics || 0;
     const attemptBudget = resolveTaskAttemptBudget(goal);

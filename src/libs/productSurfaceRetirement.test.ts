@@ -9,17 +9,9 @@
  * surface back. It reads the wiring files as text, which is deliberate: it is
  * asserting on the *shape of the repository*, not on runtime behaviour.
  *
- * It is deliberately symmetric. Retiring a product surface means two things go
- * away (the entry points and the distribution chain) and two things stay (the
- * task-scoped capability and the engine behind it). A gate that only checked
- * the first half would happily pass a change that also destroyed the second,
- * so both halves are asserted here:
- *
- *   must be gone  — the standalone platform's entries and its install chain
- *   must stay     — the run-scoped evidence tool and the completion-gate engine
- *
- * See `docs/development/hidden-surface-retirement.md` for the inventory this
- * mirrors.
+ * It guards retired entry points and producers while retaining historical readers
+ * and the current Issue Checklist. The Issue #784 contract supersedes the former
+ * requirement to retain the legacy completion engine and evidence writer.
  */
 import { lstatSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -106,28 +98,20 @@ describe('retired product surfaces stay retired', () => {
     });
   });
 
-  describe('the task-scoped capability is untouched', () => {
-    // These are the two halves that a careless "delete everything named
-    // acceptance" pass would destroy. Both are load-bearing for the completion
-    // gate: `runStructuralGate` marks a check `uncertain` when a declared
-    // `requiredEvidence` artifact is missing, and the executing agent supplies
-    // that artifact through the builtin tool below.
-    it('keeps the run-scoped evidence tool', () => {
+  describe('Issue Checklist and historical inspection survive', () => {
+    it('keeps historical tool renderers without the executable evidence tool', () => {
       expect(exists('packages/builtin-tool-acceptance-evidence/src/manifest.ts')).toBe(true);
-      expect(read('packages/builtin-tools/src/identifiers.ts')).toContain(
+      expect(read('packages/builtin-tools/src/identifiers.ts')).not.toContain(
         'AcceptanceEvidenceManifest',
       );
+      expect(read('packages/builtin-tools/src/register.ts')).toContain('GoalRenders');
     });
 
-    it('keeps the completion-gate engine', () => {
-      for (const file of [
-        'apps/server/src/services/verify/acceptanceService.ts',
-        'apps/server/src/services/verify/executor.ts',
-        'apps/server/src/services/verify/settle.ts',
-        'apps/server/src/services/verify/statusService.ts',
-      ]) {
-        expect(exists(file), `${file} is gone`).toBe(true);
-      }
+    it('keeps the Issue Checklist and rejects legacy verification writers', () => {
+      expect(exists('apps/server/src/services/task/checklist.ts')).toBe(true);
+      expect(read('apps/server/src/services/verify/retirement.ts')).toContain(
+        "code: 'PRECONDITION_FAILED'",
+      );
     });
 
     it('keeps the task-side acceptance panel', () => {

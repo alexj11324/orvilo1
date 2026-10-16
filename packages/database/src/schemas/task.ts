@@ -94,11 +94,14 @@ export const tasks = pgTable(
     assigneeAgentId: text('assignee_agent_id').references(() => agents.id, {
       onDelete: 'set null',
     }),
-    // Reviewer — the human accountable while the issue is in review
-    // (`workflowCategory === 'in_review'` / a review-gate workflow state).
-    // Settlement stamps it when a run finishes and hands off for review;
-    // the assignees above stay the executors.
-    reviewerUserId: text('reviewer_user_id').references(() => users.id, { onDelete: 'set null' }),
+    /** The Agent responsible for review; required while the Issue is In Review. */
+    reviewerAgentId: text('reviewer_agent_id').references(() => agents.id, {
+      onDelete: 'set null',
+    }),
+    /** Historical human reviewer assignment; current review uses reviewerAgentId. */
+    legacyReviewerUserId: text('reviewer_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     /**
      * Team intake state. NULL means the task is not in triage (legacy and
      * already-accepted work). Existing backlog rows are never backfilled to
@@ -282,6 +285,10 @@ export const tasks = pgTable(
       .on(t.workspaceId, t.identifier)
       .where(isNotNull(t.workspaceId)),
     uniqueIndex('tasks_id_workspace_id_unique').on(t.id, t.workspaceId),
+    check(
+      'tasks_in_review_reviewer_required',
+      sql`${t.workflowCategory} <> 'in_review' OR ${t.reviewerAgentId} IS NOT NULL`,
+    ),
     check(
       'tasks_managed_creator_requires_workspace',
       sql`${t.createdBySubjectKind} NOT IN ('integration', 'system') OR ${t.workspaceId} IS NOT NULL`,

@@ -7,6 +7,7 @@ import { tasks } from '../../schemas/task';
 import { works } from '../../schemas/work';
 import type { OrviloDatabase } from '../../type';
 import { buildDocumentReadableWhere } from '../../utils/documentAccess';
+import { buildFileWorkTopicCeiling } from '../../utils/fileTopicCeiling';
 import { buildTaskReadableWhere } from '../../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 
@@ -124,6 +125,8 @@ export const workOwnership = (ctx: WorkContext) =>
     ),
     taskVisibilityGuard(ctx),
     documentVisibilityGuard(ctx),
+    // A private Project stays the ceiling for file cards, including the topic creator.
+    buildFileWorkTopicCeiling(ctx.db, ctx),
   ) as SQL;
 
 /** Match the Task metadata reader for registration and live summary joins. */

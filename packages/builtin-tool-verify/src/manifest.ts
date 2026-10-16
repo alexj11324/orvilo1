@@ -1,15 +1,15 @@
 import type { BuiltinToolManifest } from '@orvilo/types';
 
-import { systemPrompt } from './systemRole';
 import { VerifyToolApiName } from './types';
 
 export const VerifyToolIdentifier = 'orvilo-verify';
 
 export const VerifyToolManifest: BuiltinToolManifest = {
+  systemRole: '',
   api: [
     {
       description:
-        'Record the verdict for the delivery check you were asked to judge. Call this exactly once, after investigating, with the checkItemId you were given and your verdict. This is the only way to submit your judgement.',
+        'Record the verdict for the delivery check you were asked to judge. Call this exactly once, after investigating, with the checkItemId you were given and your verdict. Use the investigation tools available in your configured runtime. Pass evidence and reasoning as strings. A prose reply alone does not record your judgement.',
       name: VerifyToolApiName.submitVerifyResult,
       parameters: {
         properties: {
@@ -55,6 +55,5 @@ export const VerifyToolManifest: BuiltinToolManifest = {
     description: 'Submit the verdict for a single delivery check',
     title: 'Delivery Check Verifier',
   },
-  systemRole: systemPrompt,
   type: 'builtin',
 };

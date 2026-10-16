@@ -6,12 +6,17 @@ const mocks = vi.hoisted(() => ({
   getChatStoreState: vi.fn(),
   getTaskStoreState: vi.fn(),
   internalRefreshTaskDetail: vi.fn(),
+  intakeIssue: vi.fn(),
   openTaskDetail: vi.fn(),
   refreshConversation: vi.fn(),
   refreshTaskList: vi.fn(),
   refreshVersions: vi.fn(),
   registerTask: vi.fn(),
   updateVerifyConfig: vi.fn(),
+}));
+
+vi.mock('@/libs/trpc/client', () => ({
+  lambdaClient: { task: { intakeIssue: { mutate: mocks.intakeIssue } } },
 }));
 
 vi.mock('@/store/chat', () => ({
@@ -61,14 +66,61 @@ describe('TaskExecutor.onAfterCall — portal auto-open', () => {
     });
   });
 
-  it('opens the task detail portal after a successful createTask', async () => {
-    await taskExecutor.onAfterCall({
-      apiName: TaskApiName.createTask,
-      params: {},
-      result: { content: '', state: { identifier: 'task-123' }, success: true },
-    } as any);
+  it.each([TaskApiName.createTask, TaskApiName.intakeIssue])(
+    'opens the task detail portal after successful %s',
+    async (apiName) => {
+      await taskExecutor.onAfterCall({
+        apiName,
+        params: {},
+        result: { content: '', state: { identifier: 'task-123' }, success: true },
+      } as any);
 
-    expect(mocks.openTaskDetail).toHaveBeenCalledWith('task-123');
+      expect(mocks.openTaskDetail).toHaveBeenCalledWith('task-123');
+    },
+  );
+
+  it('keeps the source topic when linking an Issue and opens the returned Issue identity', async () => {
+    const params = {
+      instruction: 'Export the requested report',
+      issueId: 'ISSUE-784',
+      name: 'Report export',
+    };
+    mocks.intakeIssue.mockResolvedValue({
+      data: {
+        id: 'canonical-issue-id',
+        identifier: 'TEAM-42',
+        name: 'Report export',
+        workflowCategory: 'triage',
+      },
+      success: true,
+    });
+
+    const result = await taskExecutor.intakeIssue(params, {
+      messageId: 'source-message',
+      topicId: 'source-chat-topic',
+    });
+
+    expect(mocks.intakeIssue).toHaveBeenCalledWith({
+      ...params,
+      sourceTopicId: 'source-chat-topic',
+    });
+    expect(result).toMatchObject({
+      success: true,
+      state: {
+        taskId: 'canonical-issue-id',
+        identifier: 'TEAM-42',
+        workflowCategory: 'triage',
+      },
+    });
+    expect(result.content).toContain('await human confirmation');
+    await taskExecutor.onAfterCall({
+      apiName: TaskApiName.intakeIssue,
+      identifier: taskExecutor.identifier,
+      params,
+      result,
+    });
+    expect(mocks.openTaskDetail).toHaveBeenCalledWith('TEAM-42');
+    expect(mocks.internalRefreshTaskDetail).toHaveBeenCalledWith('TEAM-42');
   });
 
   it('does not open the portal for non-createTask APIs', async () => {

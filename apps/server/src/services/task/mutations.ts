@@ -9,6 +9,7 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TeamModel } from '@/database/models/team';
 import { tasks } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
+import { assertAgentVisibleTo } from '@/database/utils/agent-access';
 import {
   lockTaskDependencyGraphForRows,
   taskDependencyLockScopes,
@@ -17,6 +18,7 @@ import {
 } from '@/database/utils/taskDependencyLock';
 
 import { EditLockService } from '../editLock';
+import { assertCanUseWorkspaceAgent } from '../resourcePermission/workspaceAgentGuard';
 import { hasWorkspaceScopedPermission } from '../workspacePermission';
 import {
   assertAssigneeAgentVisibleToCaller,
@@ -105,12 +107,14 @@ export class TaskMutationService {
     // Every first-party caller resolves `expectedDomainRevision` before
     // writing; anything else must fetch the task and retry.
     if (
-      (data.assigneeAgentId !== undefined || data.assigneeUserId !== undefined) &&
+      (data.assigneeAgentId !== undefined ||
+        data.assigneeUserId !== undefined ||
+        data.reviewerAgentId !== undefined) &&
       expectedDomainRevision === undefined
     ) {
       throw new TaskDomainError({
         code: 'BAD_REQUEST',
-        message: 'expectedDomainRevision is required when changing a task assignee',
+        message: 'expectedDomainRevision is required when changing a task assignee or reviewer',
       });
     }
     const model = ctx.taskModel;
@@ -121,6 +125,12 @@ export class TaskMutationService {
       data.assigneeAgentId,
     );
     const resolved = await resolveOrThrow(model, id);
+    if (data.context) {
+      data.context = {
+        ...resolved.context,
+        ...data.context,
+      };
+    }
     if (status !== undefined) {
       await assertTaskExecutionUse(
         ctx,
@@ -231,6 +241,18 @@ export class TaskMutationService {
     }
 
     await ctx.taskService.assertAssigneeUserAssignable(data.reviewerUserId);
+    if (data.reviewerAgentId) {
+      await assertAgentVisibleTo(ctx.serverDB, data.reviewerAgentId, {
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId ?? undefined,
+      });
+      await assertCanUseWorkspaceAgent({
+        agentId: data.reviewerAgentId,
+        db: ctx.serverDB,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+      });
+    }
 
     const resolvedParentTaskId =
       parentTaskId === undefined
@@ -319,6 +341,15 @@ export class TaskMutationService {
         })
       : await commit(ctx.serverDB);
     if (!task) throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Task not found' });
+    if (data.reviewerAgentId && task.reviewerAgentId !== resolved.reviewerAgentId) {
+      const { resumeReviewerAssignment } = await import('./reviewerAssignment');
+      await resumeReviewerAssignment(
+        ctx.serverDB,
+        ctx.userId,
+        task.id,
+        ctx.workspaceId ?? task.workspaceId ?? undefined,
+      );
+    }
     return { task, previousAssigneeUserId: resolved.assigneeUserId };
   }
 

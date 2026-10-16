@@ -2717,6 +2717,10 @@ export default class HeterogeneousAgentCtr {
     });
   }
 
+  hasOrviloHeteroExec(params: { operationId: string }): boolean {
+    return this.orviloHeteroExecTasks.has(params.operationId);
+  }
+
   /**
    * Cancels a device-gateway `orvilo hetero exec` wrapper and waits for its native
    * writer to exit.

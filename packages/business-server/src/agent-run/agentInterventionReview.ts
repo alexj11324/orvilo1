@@ -1,4 +1,4 @@
-import type { AgentMarketplaceRuntimeConfig, MessageMapScope } from '@orvilo/types';
+import type { MessageMapScope } from '@orvilo/types';
 
 export type AgentInterventionReviewStatus =
   | 'approved'
@@ -23,8 +23,7 @@ export type AgentInterventionAllowedAction =
   | 'select_provider_option'
   | 'skip_interaction'
   | 'stop'
-  | 'submit_answers'
-  | 'submit_custom';
+  | 'submit_answers';
 
 export interface AgentInterventionRequestRevision {
   hash: string;
@@ -73,13 +72,6 @@ export interface AgentInterventionReviewQuestion {
   question: string;
 }
 
-export interface AgentMarketplaceReviewAgent {
-  avatar?: string;
-  description?: string;
-  id: string;
-  title: string;
-}
-
 export type AgentInterventionReviewDetail =
   | {
       /** Hydrated only after the context ACL succeeds; never copied into notification storage. */
@@ -105,14 +97,6 @@ export type AgentInterventionReviewDetail =
       options?: AgentInterventionReviewOption[];
       title: string;
       type: 'plan';
-    }
-  | {
-      agents: AgentMarketplaceReviewAgent[];
-      kind: 'agent_marketplace';
-      multiple: true;
-      selectedIds?: string[];
-      title: string;
-      type: 'custom';
     };
 
 export interface AgentInterventionRisk {
@@ -197,16 +181,6 @@ export type AgentInterventionResolutionAction =
     }
   | {
       itemId: string;
-      /** Validated fail-closed by the agent-marketplace server handler before claim. */
-      result: {
-        kind: 'agent_marketplace';
-        selectedTemplateIds: string[];
-        runtimeConfig: AgentMarketplaceRuntimeConfig;
-      };
-      type: 'submit_custom';
-    }
-  | {
-      itemId: string;
       type: 'skip_interaction';
     }
   | {
@@ -245,14 +219,6 @@ export type AgentInterventionSourceAction =
   | { reason?: string; type: 'reject_continue' }
   | { scope: 'operation'; type: 'stop' }
   | { result: Record<string, string | string[]>; type: 'submit_answers' }
-  | {
-      result: {
-        kind: 'agent_marketplace';
-        selectedTemplateIds: string[];
-        runtimeConfig: AgentMarketplaceRuntimeConfig;
-      };
-      type: 'submit_custom';
-    }
   | { type: 'skip_interaction' }
   | { type: 'cancel_interaction' };
 
@@ -315,29 +281,6 @@ export interface AgentInterventionRuntimeAppContext {
 }
 
 export type AgentInterventionRuntimeAction =
-  | {
-      agentId: string;
-      appContext: AgentInterventionRuntimeAppContext;
-      batchId: string;
-      handler: 'agent_marketplace';
-      input: {
-        action:
-          | {
-              selectedTemplateIds: string[];
-              runtimeConfig: AgentMarketplaceRuntimeConfig;
-              type: 'submitted';
-            }
-          | { type: 'skipped' }
-          | { type: 'cancelled' };
-        categoryHints: string[];
-        requestId: string;
-      };
-      operationId: string;
-      parentMessageId: string;
-      toolCallId: string;
-      toolMessageIds: string[];
-      type: 'execute_custom_interaction';
-    }
   | {
       agentId: string;
       appContext: AgentInterventionRuntimeAppContext;
@@ -458,16 +401,6 @@ export interface NotifyAgentInterventionItem {
   detail?: Exclude<AgentInterventionReviewDetail, { type: 'tool_approval' }>;
   interactionKind: AgentInterventionReviewItem['interactionKind'];
   provider?: string;
-  /**
-   * Strictly bounded server execution context. It is persisted for cold-start
-   * custom resolution but is not accepted back from, or necessarily exposed
-   * to, a Review client.
-   */
-  request?: {
-    categoryHints: string[];
-    kind: 'agent_marketplace';
-    requestId: string;
-  };
   requestRevision: AgentInterventionRequestRevision;
   risk?: AgentInterventionRisk;
   /** Canonical server locator. Cloud must not copy raw arguments into the durable row. */

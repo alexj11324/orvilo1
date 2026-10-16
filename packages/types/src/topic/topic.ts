@@ -349,6 +349,8 @@ export interface ChatTopicMetadata {
    * `runningOperation`); every reader treats a nullish value as "not scheduled".
    */
   scheduledRun?: TopicScheduledRun | null;
+  /** Server-authored Slack channel defaults; excluded from client metadata schemas. */
+  slackContext?: { projectId?: string | null; repositoryId?: string | null };
   /**
    * Short-lived ownership marker used while a task result is being appended
    * and its continuation is being dispatched. Callback deliveries acquire

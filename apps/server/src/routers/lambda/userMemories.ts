@@ -16,6 +16,7 @@ import {
 } from '@orvilo/memory-user-memory';
 import type { QueryTaxonomyOptionsResult, SearchMemoryResult } from '@orvilo/types';
 import { LayersEnum, queryTaxonomyOptionsSchema, searchMemorySchema } from '@orvilo/types';
+import { TRPCError } from '@trpc/server';
 import { type SQL } from 'drizzle-orm';
 import { and, asc, eq, gte, lte } from 'drizzle-orm';
 import pMap from 'p-map';
@@ -56,6 +57,7 @@ import {
 } from '@/server/services/ftsSearch/observability';
 import type { UserMemoryEmbeddingRuntime } from '@/server/services/memory/userMemory/embedding';
 import { embedUserMemoryTexts } from '@/server/services/memory/userMemory/embedding';
+import { isUserMemoryExtractionEnabled } from '@/server/services/memory/userMemory/gate';
 import { normalizeSearchMemoryParams } from '@/server/services/memory/userMemory/searchParams';
 
 const EMPTY_SEARCH_RESULT: SearchMemoryResult = {
@@ -289,7 +291,17 @@ const memorySearchProcedure = memoryProcedure.use(async (opts) => {
     },
   });
 });
-const memoryWriteProcedure = memoryProcedure.use(withScopedPermission('message:create'));
+const memoryWriteProcedure = memoryProcedure
+  .use(withScopedPermission('message:create'))
+  .use(async ({ ctx, next }) => {
+    if (!(await isUserMemoryExtractionEnabled(ctx.userId, ctx.serverDB))) {
+      throw new TRPCError({
+        code: 'METHOD_NOT_SUPPORTED',
+        message: 'Platform memory writing is unavailable.',
+      });
+    }
+    return next();
+  });
 
 export const userMemoriesRouter = router({
   getMemoryDetail: memoryProcedure
@@ -959,11 +971,8 @@ export const userMemoriesRouter = router({
   retrieveMemoryForTopic: memorySearchProcedure
     .input(z.object({ topicId: z.string() }))
     .query(async ({ ctx, input }) => {
-      // Dev-only escape hatch: skip the embedding + memory search triggered by topic
-      // load / switch, so chat debugging logs aren't drowned in `text-embedding-3-small`
-      // router-runtime output. Only honored in non-production builds.
-      if (process.env.NODE_ENV !== 'production' && process.env.DEV_DISABLE_AUTO_MEMORY === '1') {
-        console.info('[dev] skip retrieveMemoryForTopic (DEV_DISABLE_AUTO_MEMORY=1)');
+      // Retained endpoint for old clients; automatic platform retrieval is retired.
+      if (!(await isUserMemoryExtractionEnabled(ctx.userId, ctx.serverDB))) {
         return EMPTY_SEARCH_RESULT;
       }
 

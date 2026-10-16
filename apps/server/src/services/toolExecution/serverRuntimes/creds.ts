@@ -14,20 +14,16 @@ const log = debug('orvilo-server:creds-runtime');
 /**
  * Server-side Creds Service implementation
  * Wraps OwnCredsService (Orvilo's own credentials store) to provide the
- * ICredsService interface. The MarketService is still held for the pieces that
- * stay on Market by design: the OAuth connect broker and the sandbox runtime
- * `inject` writes into.
+ * ICredsService interface. OwnCredsService retains explicit sandbox injection.
  */
 export class ServerCredsService implements ICredsService {
   private credsService: OwnCredsService;
-  private marketService: MarketService;
   private workspaceId?: string;
 
   private isShareVisitor: boolean;
 
   constructor(
     credsService: OwnCredsService,
-    marketService: MarketService,
     workspaceId?: string,
     /**
      * Belt-and-braces guard: true for an Agent Share visitor's run
@@ -41,7 +37,6 @@ export class ServerCredsService implements ICredsService {
     isShareVisitor = false,
   ) {
     this.credsService = credsService;
-    this.marketService = marketService;
     this.workspaceId = workspaceId;
     this.isShareVisitor = isShareVisitor;
   }
@@ -72,35 +67,6 @@ export class ServerCredsService implements ICredsService {
       plaintext: result.plaintext,
       type: result.type,
       values: result.plaintext,
-    };
-  }
-
-  async getOAuthAuthorizeUrl(
-    provider: string,
-    redirectUri: string,
-  ): Promise<{
-    authorizeUrl: string;
-  }> {
-    log('getOAuthAuthorizeUrl: provider=%s', provider);
-
-    const response = await this.marketService.market.connect.authorize(provider, {
-      redirect_uri: redirectUri,
-    });
-
-    return {
-      authorizeUrl: response.authorize_url,
-    };
-  }
-
-  async getOAuthConnectionStatus(provider: string): Promise<{
-    connected: boolean;
-  }> {
-    log('getOAuthConnectionStatus: provider=%s', provider);
-
-    const response = await this.marketService.market.connect.getStatus(provider);
-
-    return {
-      connected: response.connected,
     };
   }
 
@@ -203,7 +169,7 @@ export const credsRuntime: ServerRuntimeRegistration = {
       context.workspaceId,
     );
 
-    // Read market accessToken from DB so the OAuth connect broker + the
+    // Read the historical cloud access token for the explicit
     // sandbox provider inside `inject` can authenticate; credential data
     // itself comes from the Orvilo DB.
     let accessToken: string | undefined;
@@ -229,7 +195,6 @@ export const credsRuntime: ServerRuntimeRegistration = {
 
     const credsService = new ServerCredsService(
       ownCredsService,
-      marketService,
       context.workspaceId,
       Boolean(context.agentShareVisitor),
     );

@@ -74,6 +74,8 @@ export interface ComposeDevicePrimeRunInput {
   /** Task's requested model route — narrows which binding may issue. */
   model?: string;
   operationId: string;
+  /** Exact unactivated registration retained by an offline operation queue. No credential is retained. */
+  queuedRegistration?: CanonicalRunBinding;
   /** Canonical task context when the run serves a task dispatch; absent for
    * conversation subjects (chat). */
   task?: EmbeddedDispatchContext;
@@ -212,7 +214,24 @@ export const composeDevicePrimeRun = async (
       }
     }
 
-    binding = {
+    const queued = input.queuedRegistration;
+    if (
+      queued &&
+      (queued.operationId !== input.operationId ||
+        queued.topicId !== input.topicId ||
+        queued.userId !== userId ||
+        queued.workspaceId !== taskWorkspaceId ||
+        queued.runtimeOwnerId !== deviceRuntimeOwnerId(input.deviceId) ||
+        queued.dispatchId !== input.task.dispatchId ||
+        queued.dispatchFence !== input.task.dispatchFence ||
+        queued.generation !== input.task.executionGeneration ||
+        queued.grantId !== grantId ||
+        queued.executionEpoch !== executionEpoch ||
+        queued.stateRevision !== task.domainRevision ||
+        queued.policyRevision !== dispatch.policyRevision)
+    )
+      return failure('stale_fence', 'Queued registration no longer matches the task contract');
+    binding = queued ?? {
       dispatchFence: input.task.dispatchFence,
       dispatchId: input.task.dispatchId,
       executionEpoch,
@@ -231,10 +250,9 @@ export const composeDevicePrimeRun = async (
     };
 
     try {
-      await new TaskExecutionControlModel(db, userId, taskWorkspaceId).register(
-        binding,
-        DEVICE_BROKER_LEASE_MS,
-      );
+      const control = new TaskExecutionControlModel(db, userId, taskWorkspaceId);
+      if (queued) await control.renewQueuedRegistration(binding, DEVICE_BROKER_LEASE_MS);
+      else await control.register(binding, DEVICE_BROKER_LEASE_MS);
     } catch (error) {
       return failure('policy_denied', `Device run registration failed: ${errorMessage(error)}`);
     }

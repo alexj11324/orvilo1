@@ -1,5 +1,6 @@
 import type { BriefArtifacts } from '../brief';
 import type { ChatFileItem } from '../message/ui/chat';
+import type { IssueChecklistItem, IssueDeliveryProof } from '../verify';
 import type { TaskAttentionReason } from './stateModel';
 
 export * from './activityLine';
@@ -72,6 +73,7 @@ export type TaskRunState =
   | 'outcome_unknown';
 
 export type TaskDispatchPhase =
+  | 'queued'
   | 'requested'
   | 'claimed'
   | 'provisioning'
@@ -169,6 +171,7 @@ export interface TaskExecutionEnvironmentSnapshot {
  */
 /** Evidence that a `blocks` dependency was satisfied at dispatch time. */
 export interface TaskDependencyReceipt {
+  checklistRunId?: string;
   /** Settled delivery the downstream run is built on, when known. */
   delivery?: {
     /** Dispatch identity that produced the delivery — binds the receipt to a
@@ -206,6 +209,8 @@ export interface TaskDependencyReceipt {
   evidenceKind?: 'delivery' | 'manual_completion';
   /** Upstream identifier rendered into the prompt. */
   identifier?: string;
+  /** Exact reviewed version consumed by this run. Historical receipts remain immutable. */
+  issueDelivery?: IssueDeliveryProof;
   /** Upstream task status observed at receipt time. */
   status?: string;
   type: string;
@@ -245,6 +250,7 @@ export interface AutomationDefinitionSnapshot {
   editorData?: unknown;
   heartbeatInterval?: number | null;
   instruction: string;
+  issuePlan?: IssuePlan;
   policyRevision: number;
   requirementRevision: number;
   schedulePattern?: string | null;
@@ -271,6 +277,10 @@ export interface AutomationOccurrenceSnapshot {
   input?: AutomationInputSnapshot;
   /** Stable scheduler identity or durable trigger-run id. */
   occurrenceId: string;
+  /** Trusted periodic DAG parent; business input cannot authorize this binding. */
+  parentDispatchId?: string;
+  /** Server marks the genuine periodic parent report after its children are ready. */
+  planExecutionStarted?: boolean;
 }
 
 /** Server evidence stored separately from the occurrence's untrusted business input. */
@@ -361,7 +371,7 @@ export interface TaskExecutionContract {
 export type TaskPriority = 0 | 1 | 2 | 3 | 4;
 
 export type TaskActivityType =
-  'assignment' | 'brief' | 'comment' | 'created' | 'property' | 'topic';
+  'review_waiting' | 'assignment' | 'brief' | 'comment' | 'created' | 'property' | 'topic';
 
 /**
  * Persisted event kinds in `task_activities`. Kept as a plain union (the column
@@ -386,6 +396,7 @@ export type TaskActivityLogType =
   | 'resource_added'
   | 'resource_removed'
   | 'reviewer'
+  | 'review_waiting'
   | 'status'
   | 'sub_issue_added'
   | 'sub_issue_removed'
@@ -425,6 +436,7 @@ export const TASK_ACTIVITY_LOG_BEHAVIOR: Record<TaskActivityLogType, TaskActivit
   resource_added: 'event',
   resource_removed: 'event',
   reviewer: 'value',
+  review_waiting: 'event',
   status: 'value',
   sub_issue_added: 'event',
   sub_issue_removed: 'event',
@@ -468,6 +480,7 @@ export interface TaskActivityLogPayload {
    * and history should keep saying what the person saw.
    */
   fromLabel?: string | null;
+  reason?: string;
   /** Relation events: how the Issue in `toId` relates to this one. */
   relation?: TaskActivityRelationKind;
   /** Resource events: which kind of attachment was added or removed. */
@@ -682,6 +695,8 @@ export interface TaskTopicIntegration {
    * integrate through the remote (`repo`) rather than a device worktree.
    */
   deviceId?: string;
+  /** Verified saved host owner used for global device git transport and immutable cleanup. */
+  deviceOwnerUserId?: string;
   /** Immutable base commit observed when the delivery run completed. */
   expectedBaseSha?: string;
   /** Immutable source commit accepted for this delivery. */
@@ -703,6 +718,8 @@ export interface TaskTopicIntegration {
     | 'remote_verification_unavailable'
     | 'workspace_unavailable'
     | null;
+  /** Actual provider merge destination; execution baseBranch remains immutable when retargeted. */
+  mergedTargetBranch?: string;
   /**
    * Set when GitHub accepted the merge request but the confirmation read has
    * not yet landed: later sweep passes reconcile (re-read the merged state)
@@ -747,6 +764,8 @@ export interface TaskTopicIntegration {
     | 'verification_pending'
     | 'blocked'
     | 'skipped';
+  /** Confirmed final delivery target; can differ from a stacked execution base. */
+  targetBranch?: string;
   /**
    * @deprecated Legacy pre-R07 scalar counter stored under this key, later
    * briefly written as an unversioned map. Kept for mixed-version reads: new
@@ -807,13 +826,6 @@ export interface TaskVerifyConfig {
    * offer "regenerate", distinct from the resolved criteria themselves.
    */
   requirement?: string;
-  /**
-   * Which agent executes the verify run (the Push-model review agent). When
-   * omitted, falls back to the built-in verify agent. The execution target /
-   * bound device is inherited from the chosen agent's `agencyConfig`, not
-   * written here.
-   */
-  verifierAgentId?: string;
   /** One-off ad-hoc criteria ids (references `verify_criteria.id`). */
   verifyCriteriaIds?: string[];
   /** Reuse a rubric template (references `verify_rubrics.id`). */
@@ -905,13 +917,17 @@ export interface TaskTopicHandoff {
 // ── Task context (runtime state pockets stored in tasks.context JSONB) ──
 
 export interface TaskSchedulerContext {
+  /** Explicit pause stops new occurrences without interrupting the current Run. */
+  automationPaused?: boolean;
   // Count of consecutive automation-tick 'error' reasons since the last 'done'.
   // When it hits the fuse threshold (currently 3) we pause the task / stop
   // re-arming until the user resolves the urgent brief. Manual "run now"
   // failures do NOT touch this counter.
   consecutiveFailures?: number;
+  lastPublishedScheduleAt?: string;
   // ISO timestamp when the latest tick was scheduled. Informational only.
   scheduledAt?: string;
+  scheduleStartedAt?: string;
   // Provider message id (or LocalScheduler scheduleId) for the next tick. Used
   // to cancel when the user wants an interval change to take effect immediately.
   tickMessageId?: string;
@@ -969,12 +985,48 @@ export interface TaskOriginContext {
   topicId?: string;
 }
 
+export interface IssuePlan {
+  checklists: Array<{
+    expectedRevision: number;
+    taskId: string;
+    items: IssueChecklistItem[];
+    deliveryKind: 'code' | 'artifact';
+    repo?: string;
+    targetBranch?: string;
+  }>;
+  confirmedAt?: string;
+  confirmedBy?: string;
+  conversationPlan?: { topicId: string; postedMessageId: string; postedAt: string };
+  /** Server-authored execution scope; physical checkout/device hydration is deliberately excluded. */
+  executionScopes?: Array<{
+    taskId: string;
+    instruction: string;
+    projectId: string | null;
+    parentTaskId: string | null;
+    minGeneration: number;
+  }>;
+  orchestratorAgentId: string;
+  parentTaskId: string;
+  plannedBy: string;
+  planningOperationId: string;
+  /** Implementation refinement retains the original human-confirmed revision and standards. */
+  refinement?: { revision: number; operationId: string; agentId: string; at: string };
+  requirement: string;
+  revision: number;
+  scope: { description: string; repositories: Array<{ repo: string; targetBranch: string }> };
+  scopeFingerprint: string;
+  summary: string;
+}
+
 export interface TaskContext {
+  /** Server binding to the active periodic parent occurrence. */
+  automationParentDispatchId?: string;
   completion?: {
     /** The running operation that asked to complete its own task. The lifecycle
      * finalizes the task only after that operation has finished cleanly. */
     requestedByOperationId?: string;
   };
+  issuePlan?: IssuePlan;
   lifecycle?: TaskLifecycleAudit;
   origin?: TaskOriginContext;
   scheduler?: TaskSchedulerContext;
@@ -1060,11 +1112,8 @@ export interface TaskItem {
   projectMilestoneId?: string | null;
   requirementLocked: boolean;
   requirementRevision: number;
-  /**
-   * The human accountable while the task sits in 'paused' ("pending review").
-   * Stamped when a run hands off for review; the assignees stay the executors.
-   */
-  reviewerUserId: string | null;
+  /** The Agent responsible for review; required while the Issue is In Review. */
+  reviewerAgentId: string | null;
   /** Expiry for the active run-generation fence, when one is present. */
   runReservationExpiresAt: Date | null;
   /** Active run-generation fence; null when no generation owns the task. */
@@ -1197,7 +1246,7 @@ export interface NewTask {
   projectId?: string | null;
   requirementLocked?: boolean;
   requirementRevision?: number;
-  reviewerUserId?: string | null;
+  reviewerAgentId?: string | null;
   schedulePattern?: string | null;
   scheduleTimezone?: string | null;
   seq: number;
@@ -1243,8 +1292,8 @@ export interface TaskDetailSubtask {
   identifier: string;
   name?: string | null;
   priority?: number | null;
-  /** Review-phase owner once the subtask pauses for review. */
-  reviewerUserId?: string | null;
+  /** The Agent responsible for reviewing this subtask. */
+  reviewerAgentId?: string | null;
   runningTopic?: TaskDetailSubtaskRunningTopic | null;
   schedule?: { pattern?: string | null; timezone?: string | null };
   /** @deprecated Legacy status projection — see {@link TaskItem.status}. */
@@ -1425,6 +1474,7 @@ export interface TaskDetailActivity {
   resolvedAction?: string | null;
   resolvedAt?: string | null;
   resolvedComment?: string | null;
+  reviewWaiting?: { reason: string };
   /**
    * Topic-only: currently running Gateway operation, mirrored from
    * `topics.metadata.runningOperation`. Lets the task topic drawer establish
@@ -1494,7 +1544,8 @@ export interface TaskDetailData {
   automationMode?: TaskAutomationMode | null;
   capabilities?: { canEdit: boolean; canDelete: boolean };
   checkpoint?: CheckpointConfig;
-  config?: Record<string, unknown>;
+  config?: Record<string, unknown> & TaskConfig;
+  context?: TaskContext | null;
   createdAt?: string;
   /** Creator of the task; used by the UI to gate creator-only actions (e.g. make private). */
   createdByUserId?: string | null;
@@ -1549,7 +1600,7 @@ export interface TaskDetailData {
   /**
    * Whether the requesting user has an active subscription to this Issue
    * (manual, or added when they commented / were mentioned / assigned / made
-   * reviewer). False after an explicit unsubscribe.
+   * participant). False after an explicit unsubscribe.
    */
   isSubscribed?: boolean;
   /** Labels assigned to the task (Linear-style issue labels). */
@@ -1560,11 +1611,14 @@ export interface TaskDetailData {
   /** Current admission gate reason, not the execution state of an existing run. */
   orchestrationAdmissionReason?: 'caid_dispatch_disabled' | null;
   parent?: { agentId?: string | null; identifier: string; name: string | null } | null;
+  parentTaskId?: string | null;
+  /** Durable reason why execution is parked. */
+  parkedReason?: string | null;
   priority?: number | null;
   /** Owning project; drives the automation detail's project picker. */
   projectId?: string | null;
-  /** The human accountable while the task sits in 'paused' ("pending review"). */
-  reviewerUserId?: string | null;
+  /** The Agent responsible for review. */
+  reviewerAgentId?: string | null;
   schedule?: {
     maxExecutions?: number | null;
     pattern?: string | null;
@@ -1594,4 +1648,23 @@ export interface TaskDetailData {
   workspace?: TaskDetailWorkspaceNode[];
   /** Owning workspace; null for personal (non-workspace) tasks. */
   workspaceId?: string | null;
+}
+
+export const MAX_CONSECUTIVE_REVIEW_FAILURES = 3;
+
+export interface IssueReviewState {
+  consecutiveFailures: number;
+  cycleId: string;
+  deliveryOperationId?: string;
+  lastFailureCommentId?: string;
+  repairPending?: boolean;
+  retryReason?: string;
+  reviewerAgentId: string;
+  reviewerOperationId?: string;
+  state: 'pending' | 'running' | 'submitted';
+  verdict?: 'pass' | 'fail';
+}
+
+export interface TaskConfig {
+  issueReview?: IssueReviewState;
 }

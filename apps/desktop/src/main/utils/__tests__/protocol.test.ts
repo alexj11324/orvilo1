@@ -1,124 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type { McpSchema } from '../../types/protocol';
-import { generateRFCProtocolUrl, parseProtocolUrl } from '../protocol';
+import { parseProtocolUrl } from '../protocol';
 
 describe('Protocol', () => {
-  describe('generateRFCProtocolUrl', () => {
-    it('should generate valid RFC protocol URL for stdio type', () => {
-      const schema: McpSchema = {
-        identifier: 'edgeone-mcp',
-        name: 'EdgeOne MCP',
-        author: 'Higress Team',
-        description: 'EdgeOne API integration for Orvilo',
-        version: '1.0.0',
-        homepage: 'https://github.com/higress/edgeone-mcp',
-        config: {
-          type: 'stdio',
-          command: 'npx',
-          args: ['-y', '@higress/edgeone-mcp'],
-          env: { NODE_ENV: 'production' },
-        },
-      };
-
-      const url = generateRFCProtocolUrl({
-        id: 'edgeone-mcp',
-        schema,
-        marketId: 'higress',
-      });
-
-      expect(url).toMatch(/^orvilo:\/\/plugin\/install\?/);
-      expect(url).toContain('id=edgeone-mcp');
-      expect(url).toContain('marketId=higress');
-
-      // Verify schema is URL encoded
-      const urlObj = new URL(url);
-      const schemaParam = urlObj.searchParams.get('schema');
-      expect(schemaParam).toBeTruthy();
-      // URLSearchParams.get() auto-decodes, so we get the decoded JSON here
-      expect(schemaParam).toContain('"'); // decoded quotes
-    });
-
-    it('should generate valid RFC protocol URL for http type', () => {
-      const schema: McpSchema = {
-        identifier: 'awesome-api',
-        name: 'Awesome API',
-        author: 'Smithery',
-        description: 'Awesome API integration',
-        version: '2.0.0',
-        config: {
-          type: 'http',
-          url: 'https://api.smithery.ai/v1/mcp',
-          headers: {
-            'Authorization': 'Bearer token123',
-            'X-Custom-Header': 'value',
-          },
-        },
-      };
-
-      const url = generateRFCProtocolUrl({
-        id: 'awesome-api',
-        schema,
-        marketId: 'smithery',
-      });
-
-      expect(url).toMatch(/^orvilo:\/\/plugin\/install\?/);
-      expect(url).toContain('id=awesome-api');
-      expect(url).toContain('marketId=smithery');
-    });
-
-    it('should throw error if schema identifier does not match id', () => {
-      const schema: McpSchema = {
-        identifier: 'wrong-id',
-        name: 'Test',
-        author: 'Test',
-        description: 'Test',
-        version: '1.0.0',
-        config: { type: 'stdio', command: 'test' },
-      };
-
-      expect(() => generateRFCProtocolUrl({ id: 'different-id', schema })).toThrowError(
-        'Schema identifier must match the id parameter',
-      );
-    });
-  });
-
   describe('parseProtocolUrl', () => {
-    it('should parse RFC protocol URL correctly', () => {
-      const schema: McpSchema = {
-        identifier: 'test-mcp',
-        name: 'Test MCP',
-        author: 'Test Author',
-        description: 'Test Description',
-        version: '1.0.0',
-        config: {
-          type: 'stdio',
-          command: 'test',
-          args: ['arg1', 'arg2'],
-        },
-      };
-
-      const url = generateRFCProtocolUrl({
-        id: 'test-mcp',
-        schema,
-        marketId: 'orvilo',
-      });
-
-      const parsed = parseProtocolUrl(url);
-
-      expect(parsed).toBeTruthy();
-      expect(parsed?.urlType).toBe('plugin');
-      expect(parsed?.action).toBe('install');
-      expect(parsed?.params.type).toBe('mcp');
-      expect(parsed?.params.id).toBe('test-mcp');
-      expect(parsed?.params.marketId).toBe('orvilo');
-      expect(parsed?.originalUrl).toBe(url);
-
-      // Verify that the schema can be parsed
-      const parsedSchema = JSON.parse(parsed?.params.schema || '{}');
-      expect(parsedSchema).toEqual(schema);
-    });
-
     it('should return null for invalid protocol', () => {
       const result = parseProtocolUrl('http://example.com');
       expect(result).toBeNull();
@@ -156,32 +41,6 @@ describe('Protocol', () => {
   });
 
   describe('URL encoding/decoding', () => {
-    it('should handle special characters correctly', () => {
-      const schema: McpSchema = {
-        identifier: 'special-chars',
-        name: '特殊字符 ñ 🚀',
-        author: 'Test <test@example.com>',
-        description: 'Description with "quotes" and \'apostrophes\'',
-        version: '1.0.0',
-        config: {
-          type: 'stdio',
-          command: 'cmd',
-          args: ['arg with spaces', 'arg/with/slashes'],
-        },
-      };
-
-      const url = generateRFCProtocolUrl({ id: 'special-chars', schema });
-      const parsed = parseProtocolUrl(url);
-
-      expect(parsed).toBeTruthy();
-      expect(parsed?.params.id).toBe('special-chars');
-      expect(parsed?.params.type).toBe('mcp');
-
-      // Verify that the schema can be parsed correctly
-      const parsedSchema = JSON.parse(parsed?.params.schema || '{}');
-      expect(parsedSchema).toEqual(schema);
-    });
-
     it('should handle different protocol schemes', () => {
       const testCases = [
         'orvilo://plugin/install?test=value',

@@ -28,11 +28,8 @@ export const AgentManagementApiName = {
   /** Get detailed configuration of an agent */
   getAgentDetail: 'getAgentDetail',
 
-  /** Install a plugin for an agent */
-  installPlugin: 'installPlugin',
-
   // ==================== Search ====================
-  /** Search agents (user's own and marketplace) */
+  /** Search workspace agents */
   searchAgent: 'searchAgent',
 
   /** Update an existing agent */
@@ -175,13 +172,7 @@ export interface DeleteAgentState {
 
 // ==================== Search Agent ====================
 
-export type SearchAgentSource = 'user' | 'market' | 'all';
-
 export interface SearchAgentParams {
-  /**
-   * Category filter for marketplace search
-   */
-  category?: string;
   /**
    * Search keywords
    */
@@ -194,10 +185,6 @@ export interface SearchAgentParams {
    * Number of workspace agents to skip, for paginating beyond the per-call limit
    */
   offset?: number;
-  /**
-   * Search source: 'user' (own agents), 'market' (marketplace), 'all' (both)
-   */
-  source?: SearchAgentSource;
 }
 
 export interface AgentSearchItem {
@@ -220,13 +207,9 @@ export interface AgentSearchItem {
    */
   heteroType?: HeterogeneousProviderConfig['type'];
   /**
-   * Agent ID (for user agents) or identifier (for market agents)
+   * Workspace agent ID
    */
   id: string;
-  /**
-   * Whether this is a marketplace agent
-   */
-  isMarket?: boolean;
   /**
    * Agent title
    */
@@ -251,11 +234,7 @@ export interface SearchAgentState {
    */
   offset?: number;
   /**
-   * The search source used
-   */
-  source: SearchAgentSource;
-  /**
-   * Real total of matching agents across the searched sources (not just the returned page)
+   * Real total of matching workspace agents (not just the returned page)
    */
   totalCount: number;
 }
@@ -374,44 +353,6 @@ export interface DuplicateAgentState {
   sourceAgentId: string;
   /**
    * Whether the duplication was successful
-   */
-  success: boolean;
-}
-
-// ==================== Install Plugin ====================
-
-export type InstallPluginSource = 'official' | 'market';
-
-export interface InstallPluginParams {
-  /**
-   * The agent ID to install the plugin for
-   */
-  agentId: string;
-  /**
-   * The plugin identifier to install
-   */
-  identifier: string;
-  /**
-   * Plugin source: 'official' (builtin/composio/orvilo-skill) or 'market' (MCP marketplace)
-   */
-  source: InstallPluginSource;
-}
-
-export interface InstallPluginState {
-  /**
-   * Whether the plugin was installed successfully
-   */
-  installed: boolean;
-  /**
-   * The plugin identifier
-   */
-  pluginId: string;
-  /**
-   * The plugin display name
-   */
-  pluginName?: string;
-  /**
-   * Whether the operation was successful
    */
   success: boolean;
 }

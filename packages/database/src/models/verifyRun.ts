@@ -53,6 +53,9 @@ const decodeCursor = (cursor?: string): { createdAt: Date; id: string } | null =
 /** Escape LIKE/ILIKE metacharacters (`\ % _`) so user input matches literally. */
 const escapeLike = (value: string): string => value.replaceAll(/[\\%_]/g, (c) => `\\${c}`);
 
+/** Issue-owned Checklist rounds settle through Task review and final delivery, never Verify. */
+const legacyVerifyRun = sql`NOT coalesce(jsonb_exists(${verifyRuns.metadata}, 'issueDelivery'), false)`;
+
 const toState = (run: VerifyRunItem | null | undefined): VerifyRunState | null =>
   run
     ? {
@@ -568,6 +571,7 @@ export class VerifyRunModel {
           sql`coalesce(${verifyRuns.metadata} ->> 'taskDrivenAt', '') = ''`,
           sql`coalesce((${verifyRuns.metadata} ->> 'taskDriveLeaseExpiresAt')::timestamptz, '-infinity'::timestamptz) <= ${claimedAt}::timestamptz`,
           this.ownership(),
+          legacyVerifyRun,
         ),
       )
       .returning({ id: verifyRuns.id });
@@ -677,6 +681,7 @@ export class VerifyRunModel {
       .where(
         and(
           eq(verifyRuns.id, runId),
+          legacyVerifyRun,
           or(
             or(eq(verifyRuns.status, 'planned'), eq(verifyRuns.status, 'collecting_evidence')),
             and(eq(verifyRuns.status, 'verifying'), lt(verifyRuns.updatedAt, staleBefore)),
@@ -694,7 +699,14 @@ export class VerifyRunModel {
     const claimed = await this.db
       .update(verifyRuns)
       .set({ status: 'collecting_evidence' })
-      .where(and(eq(verifyRuns.id, runId), eq(verifyRuns.status, 'planned'), this.ownership()))
+      .where(
+        and(
+          eq(verifyRuns.id, runId),
+          eq(verifyRuns.status, 'planned'),
+          this.ownership(),
+          legacyVerifyRun,
+        ),
+      )
       .returning({ id: verifyRuns.id });
 
     return claimed.length > 0;
@@ -736,6 +748,7 @@ export class VerifyRunModel {
     const updatedAtMs = sql`date_trunc('milliseconds', ${verifyRuns.updatedAt})`;
 
     const conditions = [
+      legacyVerifyRun,
       eq(verifyRuns.status, 'verifying'),
       lt(verifyRuns.updatedAt, olderThan),
       isNotNull(verifyRuns.operationId),

@@ -1,15 +1,17 @@
+import type { TaskContext } from '@orvilo/types';
 import { deriveLegacyTaskStatus } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { and, eq } from 'drizzle-orm';
 
 import { TaskDomainError } from '@/database/errors/task';
-import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { taskDispatches, tasks } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
+import { TaskDispatchQueuedError } from '@/server/services/taskDispatch';
 
 import { taskRunIdempotencyKey } from './idempotency';
 import { TaskRunnerService } from './index';
@@ -24,6 +26,7 @@ export type ScheduleTickOutcome =
   { ran: true; taskIdentifier: string } | { ran: false; reason: ScheduleTickSkipReason };
 
 export type ScheduleTickSkipReason =
+  | 'queued'
   | 'dependencies-blocked'
   | 'human-waiting'
   | 'in-flight'
@@ -76,7 +79,7 @@ export async function runScheduleTick(
     log('skip task=%s reason=terminal (status=%s)', taskId, taskStatus);
     return { ran: false, reason: 'terminal' };
   }
-  if (taskStatus === 'paused') {
+  if ((task.context as TaskContext | null)?.scheduler?.automationPaused) {
     log('skip task=%s reason=paused', taskId);
     return { ran: false, reason: 'paused' };
   }
@@ -103,7 +106,7 @@ export async function runScheduleTick(
       tickToken,
       pattern: frozenDefinition?.schedulePattern ?? task.schedulePattern,
       timezone: frozenDefinition ? frozenDefinition.scheduleTimezone : task.scheduleTimezone,
-      notBefore: startedAt ? new Date(startedAt) : null,
+      notBefore: frozenDefinition ? null : startedAt ? new Date(startedAt) : null,
     })
   )
     return { ran: false, reason: 'stale-tick' };
@@ -111,12 +114,6 @@ export async function runScheduleTick(
   // Edits apply to later occurrences. A queued occurrence keeps its original
   // stopping policy, while current mode/pause/identity/permission remain gates.
   const occurrenceConfig = frozenDefinition ? frozenDefinition.config : task.config;
-
-  const briefModel = new BriefModel(db, userId, wsId);
-  if (await briefModel.hasUnresolvedUrgentByTask(taskId, { excludeTypes: ['error'] })) {
-    log('skip task=%s reason=human-waiting', taskId);
-    return { ran: false, reason: 'human-waiting' };
-  }
 
   // Defense-in-depth cap check.
   //
@@ -143,17 +140,23 @@ export async function runScheduleTick(
       const topicModel = new TaskTopicModel(db, userId, wsId);
       // Only automation ticks count against the quota — ad-hoc manual runs must
       // not consume scheduled executions.
-      const runCount = await topicModel.countByTask(taskId, {
-        since: startedAt,
-        triggers: ['schedule'],
-      });
-      if (runCount >= maxExecutions) {
+      const confirmedIssue = Boolean((task.context as TaskContext | null)?.issuePlan?.confirmedAt);
+      const runCount = confirmedIssue
+        ? await new TaskDispatchModel(db, wsId).countAutomationOccurrencesSince(taskId, startedAt)
+        : await topicModel.countByTask(taskId, {
+            since: startedAt,
+            triggers: ['schedule'],
+          });
+      if (runCount >= maxExecutions && (!confirmedIssue || !persistedDispatch)) {
         log(
           'skip task=%s reason=max-executions-reached (%d/%d) — marking completed',
           taskId,
           runCount,
           maxExecutions,
         );
+        if (confirmedIssue) {
+          return { ran: false, reason: 'max-executions-reached' };
+        }
         const taskModel = new TaskModel(db, userId, wsId);
         try {
           await taskModel.updateStatus(taskId, 'completed', { completedAt: new Date() });
@@ -177,6 +180,8 @@ export async function runScheduleTick(
   } catch (e) {
     if (isTaskDependencyBlocked(e)) return { ran: false, reason: 'dependencies-blocked' };
     // Concurrent tick / manual run already running this task — graceful skip.
+    if (e instanceof TRPCError && e.cause instanceof TaskDispatchQueuedError)
+      return { ran: false, reason: 'queued' };
     if ((e instanceof TRPCError || e instanceof TaskDomainError) && e.code === 'CONFLICT') {
       log('skip task=%s reason=in-flight', taskId);
       return { ran: false, reason: 'in-flight' };

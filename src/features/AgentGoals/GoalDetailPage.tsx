@@ -1,16 +1,14 @@
 'use client';
 
-import { EyeIcon, PauseIcon, PlayIcon } from 'lucide-react';
+import { EyeIcon } from 'lucide-react';
 import { memo, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router';
 
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
 import GoalDetailSkeleton from '@/components/Skeleton/GoalDetail';
 import { Button } from '@/components/ui/button';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
-import { useAgentRoutePath } from '@/features/AgentBreadcrumb/useAgentRoutePath';
 import NavHeader from '@/features/NavHeader';
 import { PortalContent } from '@/features/Portal/router';
 import { usePortalPanelWidth } from '@/features/Portal/usePortalPanelWidth';
@@ -18,14 +16,12 @@ import RightPanel from '@/features/RightPanel';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useActivityTime } from '@/hooks/useActivityTime';
-import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 import { type GoalMetricKind } from '@/store/chat/slices/portal/initialState';
 import { goalSelectors, useGoalStore } from '@/store/goal';
 
 import GoalChat from './GoalChat';
-import GoalDetailActions from './GoalDetailActions';
 import {
   formatSpan,
   formatUsd,
@@ -41,9 +37,8 @@ import ProcessControl from './ProcessControl';
 import { useGoalChatPanel } from './useGoalChatPanel';
 
 /**
- * The goal detail page. A goal is a Goal Graph — it owns its own decomposition
- * and dispatches its own Tasks — so the page reads the graph snapshot directly and
- * the route is keyed by the `goals` row id.
+ * Historical Goal detail, keyed by the original `goals` row id.
+ * The graph, runs and causal facts remain inspectable after execution retires.
  *
  * Every header metric is a drill-down entry: clicking one opens its detail in
  * the right-hand Portal, the same panel the process-control band drills into
@@ -90,14 +85,9 @@ interface GoalDetailPageProps {
 
 const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
   const { t } = useTranslation('chat');
-  const { allowed: canEdit } = usePermission('create_content');
   const useFetchGoalGraph = useGoalStore((s) => s.useFetchGoalGraph);
   const { error, isLoading, mutate } = useFetchGoalGraph(goalId);
   const snapshot = useGoalStore(goalSelectors.goalGraph(goalId));
-  const pauseGoal = useGoalStore((s) => s.pauseGoal);
-  const resumeGoal = useGoalStore((s) => s.resumeGoal);
-
-  const buildAgentPath = useAgentRoutePath(agentId ?? '');
 
   const showPortal = useChatStore(chatPortalSelectors.showPortal);
   const currentViewType = useChatStore(chatPortalSelectors.currentViewType);
@@ -145,15 +135,6 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
   const panelExpandable = !!chat.agentId;
   const chatVisible = chat.open && panelExpandable;
 
-  const paused = goal.status === 'paused';
-  // Pace control exists only while the coordinator loop is actually moving (or
-  // explicitly paused). A goal in review awaits the human, and a closed goal
-  // cannot move — pausing either would be a dead or misleading button.
-  const canPause =
-    canEdit &&
-    nodes.length > 0 &&
-    ['paused', 'planning', 'running', 'verifying'].includes(goal.status);
-
   const durationText = goal.startedAt
     ? formatSpan((goal.completedAt ?? new Date()).getTime() - goal.startedAt.getTime())
     : '—';
@@ -187,16 +168,11 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
                 <AgentBreadcrumb
                   agentId={agentId}
                   extraItems={[goal.title]}
-                  // The goal title owns the last crumb, so this one is a way back
-                  // to the agent's goal list rather than a label for this page.
-                  title={<Link to={buildAgentPath('goals')}>{t('goalList.title')}</Link>}
+                  title={t('goalList.title')}
                 />
               ) : (
                 <div className="text-sm font-medium">{goal.title}</div>
               )}
-              {/* Not nested under the breadcrumb: an agent-less goal still has to
-                  be deletable, and this menu is the only place that can do it. */}
-              <GoalDetailActions agentId={agentId} goalId={goal.id} projectId={goal.projectId} />
             </div>
           }
           right={
@@ -271,28 +247,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
                   onClick={open('liveness')}
                 />
               </div>
-              {/* Pause/resume above the requirement document — its reviewed
-                  home. The status glyph keeps the "running" animation; this
-                  button is only the control. */}
-              {canPause && (
-                <div className="flex items-center gap-2.5" style={{ paddingBlock: '8px 0' }}>
-                  <Button
-                    size="compact"
-                    variant={paused ? 'default' : 'outline'}
-                    onClick={() => void (paused ? resumeGoal(goal.id) : pauseGoal(goal.id))}
-                  >
-                    {paused ? (
-                      <PlayIcon data-icon="inline-start" />
-                    ) : (
-                      <PauseIcon data-icon="inline-start" />
-                    )}
-                    {paused ? t('goalProcess.resume') : t('goalProcess.pause')}
-                  </Button>
-                  {paused && (
-                    <div className="text-xs text-muted-foreground">{t('goalProcess.paused')}</div>
-                  )}
-                </div>
-              )}
+
               {goal.requirement && (
                 <GoalRequirement goalId={goal.id} requirement={goal.requirement} />
               )}
@@ -300,7 +255,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
                   clauses ARE half of the acceptance contract, so they read
                   with it — not squeezed between the title and the execution
                   metrics (review feedback, r1). */}
-              <NorthStarMetrics canEdit={canEdit} goalId={goalId} />
+              <NorthStarMetrics goalId={goalId} />
             </div>
 
             <ProcessControl

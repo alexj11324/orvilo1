@@ -6,36 +6,52 @@ user-invocable: false
 
 # Chat SDK
 
-Unified TypeScript SDK for building chat bots across Slack, Teams, Google Chat, Discord, GitHub, and Linear. Write bot logic once, deploy everywhere.
+Vercel Chat SDK is an external TypeScript dependency. Orvilo uses Slack as its first IM channel; the SDK supports additional platforms without making them Orvilo product commitments. Read [the product contract](../../../docs/development/product-scope.md) before changing Slack behavior.
+
+Orvilo pins `chat`, `@chat-adapter/slack`, and `@chat-adapter/state-ioredis` to `4.42.0`. Use their supported public exports; do not patch SDK internals or import private implementation files.
 
 ## Critical: Read the bundled docs
 
 The `chat` package ships with full documentation in `node_modules/chat/docs/` and TypeScript source types. **Always read these before writing code:**
 
 ```
-node_modules/chat/docs/           # Full documentation (MDX files)
-node_modules/chat/dist/           # Built types (.d.ts files)
+node_modules/chat/docs/index.mdx # Documentation entry point
+node_modules/chat/docs/          # Core guides and API reference (MDX files)
+node_modules/chat/resources/     # Published integration guides and templates
+node_modules/chat/dist/          # Built types (.d.ts files)
+node_modules/@chat-adapter/slack/dist/
+node_modules/@chat-adapter/state-ioredis/dist/
 ```
 
 Key docs to read based on task:
 
+Paths below are relative to `node_modules/chat/`; verify them in the installed pinned package.
+
+- `docs/index.mdx` — documentation overview
 - `docs/getting-started.mdx` — setup guides
 - `docs/usage.mdx` — event handlers, threads, messages, channels
 - `docs/streaming.mdx` — AI streaming with AI SDK
 - `docs/cards.mdx` — JSX interactive cards
 - `docs/actions.mdx` — button/dropdown handlers
 - `docs/modals.mdx` — form dialogs (Slack only)
-- `docs/adapters/*.mdx` — platform-specific adapter setup
-- `docs/state/*.mdx` — state adapter config (Redis, ioredis, memory)
+- `docs/handling-events.mdx` — handler routing, including direct messages
+- `docs/platform-adapters.mdx` — platform capabilities
+- `docs/state-adapters.mdx` and `docs/concurrency.mdx` — persistence and locking
+- `docs/api/chat.mdx` and `docs/api/thread.mdx` — public Chat and Thread APIs
+- `resources/guides/how-to-build-a-slack-bot-with-next-js-and-redis.md` — Slack integration guide
+
+Platform-specific details also live in the installed adapter README and public types. The published core package has no `docs/adapters/` or `docs/state/` directories.
 
 Also read the TypeScript types from `node_modules/chat/dist/` to understand the full API surface.
 
 ## Quick start
 
+This SDK example omits Orvilo identity and Agent authorization. Production handlers must use the existing installation, member-link and conversation-binding checks before executing an Agent. Give each installation its own state key prefix.
+
 ```typescript
 import { Chat } from 'chat';
 import { createSlackAdapter } from '@chat-adapter/slack';
-import { createRedisState } from '@chat-adapter/state-redis';
+import { createIoRedisState } from '@chat-adapter/state-ioredis';
 
 const bot = new Chat({
   userName: 'mybot',
@@ -45,7 +61,10 @@ const bot = new Chat({
       signingSecret: process.env.SLACK_SIGNING_SECRET!,
     }),
   },
-  state: createRedisState({ url: process.env.REDIS_URL! }),
+  state: createIoRedisState({
+    url: process.env.REDIS_URL!,
+    keyPrefix: 'orvilo:slack:installation-id',
+  }),
 });
 
 bot.onNewMention(async (thread) => {
@@ -129,19 +148,12 @@ await thread.post(
 | `@chat-adapter/state-ioredis` | ioredis state (alternative)   |
 | `@chat-adapter/state-memory`  | In-memory state (development) |
 
-## Changesets (Release Flow)
+## Dependency updates
 
-This monorepo uses [Changesets](https://github.com/changesets/changesets) for versioning and changelogs. Every PR that changes a package's behavior must include a changeset.
-
-```bash
-pnpm changeset
-# → select affected package(s) (e.g. @chat-adapter/slack, chat)
-# → choose bump type: patch (fixes), minor (features), major (breaking)
-# → write a short summary for the CHANGELOG
-```
-
-This creates a file in `.changeset/` — commit it with the PR. When merged to `main`, the Changesets GitHub Action opens a "Version Packages" PR to bump versions and update CHANGELOGs. Merging that PR publishes to npm.
+Orvilo consumes the published SDK; this repository does not release `chat` or its adapters. Update the pinned dependency versions using pnpm, preserve this repository's `lockfile: false` policy, inspect the corresponding bundled docs/types, and run Orvilo's affected checks. Do not add an upstream SDK Changeset or apply its monorepo release workflow here.
 
 ## Webhook setup
 
-Each adapter exposes a webhook handler via `bot.webhooks.{platform}`. Wire these to your HTTP framework's routes (e.g. Next.js API routes, Hono, Express).
+Each adapter exposes an HTTP handler via `bot.webhooks.{platform}`. In Orvilo, the public Hono route verifies the untouched Slack signature and awaits durable Hatchet enqueue before ACK. The trusted worker rechecks the installation/token revision and uses public `adapter.parseMessage(rawEvent)` plus `bot.processMessage(adapter, threadId, message)`; never fabricate or re-sign a provider request. Keep Hatchet as the only delivery queue; SDK queue/debounce strategies collapse messages and do not preserve Orvilo's per-human ordered inputs.
+
+Use `bot.thread(threadId)` to reconstruct a thread outside a handler, then `thread.post()` and the returned message's `edit()` for delivery. `Chat.createThread` is private. Use only exported SDK APIs; no Bolt Receiver injection or private Chat runtime hooks are required.

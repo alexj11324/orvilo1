@@ -27,6 +27,7 @@ import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
 import { formatTaskItemDate } from '../features/formatTaskItemDate';
+import { ReviewerAgentSelector } from '../features/ReviewerAgentSelector';
 import TaskPriorityTag from '../features/TaskPriorityTag';
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
@@ -92,7 +93,6 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
     const { t, i18n } = useTranslation('common');
     const { t: tChat } = useTranslation('chat');
     const fetchTaskDetail = useTaskStore((s) => s.fetchTaskDetail);
-    const updateTask = useTaskStore((s) => s.updateTask);
     const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
     const taskDetail = useTaskStore((s) => s.taskDetailMap[task.identifier]);
     const { items: contextMenuItems, onContextMenu: handleContextMenuOpen } =
@@ -197,72 +197,43 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
     // Owner slot (meta row, left): who is accountable to a human reader. In
     // review the reviewer owns the review — not the executor assignee.
     const ownerNode =
-      task.workflowCategory === 'in_review'
-        ? shouldShowMemberAssignee(activeWorkspaceId, task.reviewerUserId) && (
-            <AssigneeMemberSelector
-              currentUserId={task.reviewerUserId}
-              taskCreatorId={task.createdByUserId}
-              taskIdentifier={task.identifier}
-              taskVisibility={task.visibility}
-              onChange={(userId) => void updateTask(task.identifier, { reviewerUserId: userId })}
-            >
-              {task.reviewerUserId ? (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <span>
-                          <AssigneeUserAvatar userId={task.reviewerUserId} />
-                        </span>
-                      }
-                    />
-                    <TooltipContent>{tChat('taskDetail.reviewer')}</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ) : (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <span className="inline-flex">
-                          <UnassignedAssigneeIcon kind={'human'} />
-                        </span>
-                      }
-                    />
-                    <TooltipContent>{tChat('taskDetail.reviewer')}</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </AssigneeMemberSelector>
-          )
-        : shouldShowMemberAssignee(activeWorkspaceId, task.assigneeUserId) && (
-            <AssigneeMemberSelector
-              currentUserId={task.assigneeUserId}
-              disabled={status === 'running'}
-              taskCreatorId={task.createdByUserId}
-              taskIdentifier={task.identifier}
-              taskVisibility={task.visibility}
-            >
-              {task.assigneeUserId ? (
-                <AssigneeUserAvatar tooltip={status !== 'running'} userId={task.assigneeUserId} />
-              ) : status === 'running' ? (
-                <UnassignedAssigneeIcon kind={'human'} />
-              ) : (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <span className="inline-flex">
-                          <UnassignedAssigneeIcon kind={'human'} />
-                        </span>
-                      }
-                    />
-                    <TooltipContent>{tChat('taskList.assignTo')}</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </AssigneeMemberSelector>
-          );
+      task.workflowCategory === 'in_review' ? (
+        <ReviewerAgentSelector
+          currentAgentId={task.reviewerAgentId}
+          taskIdentifier={task.identifier}
+        >
+          <AssigneeAvatar agentId={task.reviewerAgentId} />
+        </ReviewerAgentSelector>
+      ) : (
+        shouldShowMemberAssignee(activeWorkspaceId, task.assigneeUserId) && (
+          <AssigneeMemberSelector
+            currentUserId={task.assigneeUserId}
+            disabled={status === 'running'}
+            taskCreatorId={task.createdByUserId}
+            taskIdentifier={task.identifier}
+            taskVisibility={task.visibility}
+          >
+            {task.assigneeUserId ? (
+              <AssigneeUserAvatar tooltip={status !== 'running'} userId={task.assigneeUserId} />
+            ) : status === 'running' ? (
+              <UnassignedAssigneeIcon kind={'human'} />
+            ) : (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span className="inline-flex">
+                        <UnassignedAssigneeIcon kind={'human'} />
+                      </span>
+                    }
+                  />
+                  <TooltipContent>{tChat('taskList.assignTo')}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </AssigneeMemberSelector>
+        )
+      );
 
     const openRunNode =
       status === 'running' && task.currentTopicId ? (

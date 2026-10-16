@@ -1,9 +1,7 @@
 import { createHmac } from 'node:crypto';
 
 import type { SandboxCallToolResult } from '@orvilo/builtin-tool-cloud-sandbox';
-import { isRecord } from '@orvilo/utils';
 import debug from 'debug';
-import { sha256 } from 'js-sha256';
 
 import { appEnv } from '@/envs/app';
 import { sandboxEnv } from '@/envs/sandbox';
@@ -24,7 +22,6 @@ const DEFAULT_LEASE_TTL_SEC = 900;
 const DEFAULT_JIT_TTL_SEC = 1800;
 const JIT_TOKEN_PREFIX = 'obx_jit_v1.';
 const WRITE_FILE_CHUNK_BYTES = 48 * 1024;
-const SKILL_ARCHIVE_CACHE_DIR = '/tmp/orvilo-skills';
 
 interface OnlyboxesTaskResponse {
   error?: { code?: string; message?: string };
@@ -276,49 +273,10 @@ export class OnlyboxesSandboxProvider implements SandboxProvider {
       return this.errorResult('command is required');
     }
 
-    const skillZipUrls = this.resolveExecScriptZipUrls(params);
-    const timeoutMs = this.timeout(params);
-
-    if (Object.keys(skillZipUrls).length === 0) {
-      return this.runCommand({ command, timeout: timeoutMs });
+    if (params.skillZipUrls || params.zipUrl) {
+      return this.errorResult('Platform skill distribution has been retired');
     }
-
-    const defaultSkillName = this.resolveExecScriptSkillName(params, skillZipUrls);
-    const workspaceDir = this.skillWorkspaceDir(skillZipUrls);
-    const setupCommand = this.buildSkillSetupCommand({ skillZipUrls, workspaceDir });
-    const setup = await this.execTerminal(setupCommand, timeoutMs);
-
-    if (setup.exit_code !== 0) {
-      return {
-        error: { message: setup.stderr || setup.stdout || 'Failed to prepare skill resources' },
-        result: {
-          exitCode: setup.exit_code,
-          output: setup.stdout,
-          stderr: setup.stderr,
-        },
-        success: false,
-      };
-    }
-
-    const runDir = defaultSkillName
-      ? `${workspaceDir}/${this.safeSkillDirName(defaultSkillName)}`
-      : workspaceDir;
-    const result = await this.execTerminal(
-      `cd ${this.shellQuote(runDir)} && ${command}`,
-      timeoutMs,
-    );
-
-    return {
-      result: {
-        commandId: result.session_id,
-        exitCode: result.exit_code,
-        output: result.stdout,
-        stderr: result.stderr,
-        stdout: result.stdout,
-        success: result.exit_code === 0,
-      },
-      success: true,
-    };
+    return this.runCommand({ command, timeout: this.timeout(params) });
   }
 
   private async runCommand(params: Record<string, unknown>): Promise<SandboxCallToolResult> {
@@ -368,102 +326,6 @@ export class OnlyboxesSandboxProvider implements SandboxProvider {
       },
       success: true,
     };
-  }
-
-  private resolveExecScriptZipUrls(params: Record<string, unknown>) {
-    const zipUrl = typeof params.zipUrl === 'string' ? params.zipUrl : undefined;
-    if (zipUrl) return { [this.resolveLegacyExecScriptSkillName(params)]: zipUrl };
-
-    if (!isRecord(params.skillZipUrls)) return {};
-
-    const result: Record<string, string> = {};
-
-    for (const [name, value] of Object.entries(params.skillZipUrls)) {
-      if (typeof value === 'string' && value) {
-        result[name] = value;
-      }
-    }
-
-    return result;
-  }
-
-  private resolveLegacyExecScriptSkillName(params: Record<string, unknown>) {
-    const configName = isRecord(params.config) ? params.config.name : undefined;
-    if (typeof configName === 'string' && configName) return configName;
-
-    if (Array.isArray(params.activatedSkills)) {
-      for (const skill of [...params.activatedSkills].reverse()) {
-        if (!isRecord(skill)) continue;
-
-        const name = typeof skill.name === 'string' ? skill.name : undefined;
-        if (name) return name;
-      }
-    }
-
-    return 'default';
-  }
-
-  private resolveExecScriptSkillName(
-    params: Record<string, unknown>,
-    skillZipUrls: Record<string, string>,
-  ) {
-    const configName = isRecord(params.config) ? params.config.name : undefined;
-    if (typeof configName === 'string' && skillZipUrls[configName]) return configName;
-
-    if (Array.isArray(params.activatedSkills)) {
-      for (const skill of [...params.activatedSkills].reverse()) {
-        if (!isRecord(skill)) continue;
-
-        const name = typeof skill.name === 'string' ? skill.name : undefined;
-        if (name && skillZipUrls[name]) return name;
-      }
-    }
-
-    const [firstName] = Object.keys(skillZipUrls);
-    return firstName;
-  }
-
-  private skillWorkspaceDir(skillZipUrls: Record<string, string>) {
-    const entries = Object.entries(skillZipUrls).sort(([left], [right]) =>
-      left.localeCompare(right),
-    );
-    const cacheKey = sha256(JSON.stringify(entries)).slice(0, 32);
-    return `${SKILL_ARCHIVE_CACHE_DIR}/${cacheKey || 'default'}`;
-  }
-
-  private buildSkillSetupCommand({
-    skillZipUrls,
-    workspaceDir,
-  }: {
-    skillZipUrls: Record<string, string>;
-    workspaceDir: string;
-  }) {
-    const quotedWorkspaceDir = this.shellQuote(workspaceDir);
-    const setupCommands = Object.entries(skillZipUrls).map(([name, zipUrl]) => {
-      const skillDir = `${workspaceDir}/${this.safeSkillDirName(name)}`;
-      const markerPath = `${skillDir}/.prepared`;
-      const archivePath = `${skillDir}/skill.zip`;
-      const quotedArchivePath = this.shellQuote(archivePath);
-      const quotedDir = this.shellQuote(skillDir);
-      const quotedMarkerPath = this.shellQuote(markerPath);
-      const quotedUrl = this.shellQuote(zipUrl);
-
-      return `if [ ! -f ${quotedMarkerPath} ]; then rm -rf ${quotedDir} && mkdir -p ${quotedDir} && curl -fsSL ${quotedUrl} -o ${quotedArchivePath} && unzip -q ${quotedArchivePath} -d ${quotedDir} && printf prepared > ${quotedMarkerPath}; fi`;
-    });
-
-    return [
-      `mkdir -p ${this.shellQuote(SKILL_ARCHIVE_CACHE_DIR)}`,
-      `mkdir -p ${quotedWorkspaceDir}`,
-      ...setupCommands,
-    ].join(' && ');
-  }
-
-  private safeSkillDirName(name: string) {
-    return name.replaceAll(/[^\w.-]/g, '-');
-  }
-
-  private shellQuote(value: string) {
-    return `'${value.replaceAll("'", "'\\''")}'`;
   }
 
   private async writeLocalFile(params: Record<string, unknown>): Promise<SandboxCallToolResult> {

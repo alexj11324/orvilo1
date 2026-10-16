@@ -16,7 +16,7 @@ describe('virtual builtin saved views', () => {
     expect(views.every((view) => isBuiltinSavedViewId(view.id))).toBe(true);
     expect(views.every((view) => view.ownerUserId === 'system')).toBe(true);
     expect(views.find((view) => view.id === 'builtin:review')?.queryAst.filter).toEqual({
-      all: [{ field: 'reviewerUserId', op: 'eq', value: { ref: 'currentUser' } }],
+      all: [{ field: 'workflowCategory', op: 'eq', value: 'in_review' }],
     });
   });
 });

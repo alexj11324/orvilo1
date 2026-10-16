@@ -1,8 +1,10 @@
 import type {
   AgentTier,
   AutomationOccurrenceSnapshot,
+  IssuePlan,
   OrviloAgentAgencyConfig,
   ProjectOrchestrationPolicy,
+  TaskContext,
   TaskDispatchOrigin,
   TaskDispatchPhase,
   TaskDispatchSettlementGrant,
@@ -27,12 +29,14 @@ import {
   lt,
   ne,
   not,
+  notInArray,
   notLike,
   or,
   sql,
 } from 'drizzle-orm';
 
 import { agents } from '../schemas/agent';
+import { agentOperations } from '../schemas/agentOperations';
 import { goals } from '../schemas/goal';
 import { goalNodes } from '../schemas/goalGraph';
 import { mcpEventInbox, mcpEventTriggerRuns } from '../schemas/mcpEvents';
@@ -119,6 +123,7 @@ export const matchesDispatchAssignee = (task: TaskItem, dispatch: TaskDispatchIt
     task.createdBySubjectKind !== 'system');
 
 export class TaskDispatchNotFoundError extends Error {}
+export class TaskAutomationQuotaReachedError extends Error {}
 export class TaskDispatchIdempotencyConflictError extends Error {}
 
 /**
@@ -179,6 +184,7 @@ export interface RequestTaskDispatchInput {
     db: OrviloDatabase;
     userId: string;
   }) => Promise<void>;
+  automationParentDispatchId?: string;
   /** Validated delegation executor; otherwise use the locked task assignee. */
   delegatedAgentId?: string;
   dispatchId?: string;
@@ -199,6 +205,7 @@ export interface RequestTaskDispatchInput {
   origin?: TaskDispatchOrigin;
   planRevision?: number | null;
   requestedBy: string;
+  scheduledAt?: Date;
   /** Server-verified settlement evidence for `origin: 'internal'` rows. */
   settlementGrant?: TaskDispatchSettlementGrant;
   sourceDispatchId?: string;
@@ -360,12 +367,52 @@ export class TaskDispatchModel {
     return row?.tier ?? null;
   }
 
+  async automationPlanHasWriters(plan: IssuePlan | undefined, parentTaskId: string) {
+    const ids =
+      plan?.checklists.map((check) => check.taskId).filter((id) => id !== parentTaskId) ?? [];
+    const writerIds = [...new Set([parentTaskId, ...ids])];
+    const [dispatch] = await this.db
+      .select({ id: taskDispatches.id })
+      .from(taskDispatches)
+      .innerJoin(tasks, eq(tasks.id, taskDispatches.taskId))
+      .where(
+        and(
+          inArray(taskDispatches.taskId, ids),
+          this.scopeCondition(),
+          eq(taskDispatches.generation, tasks.executionGeneration),
+          inArray(taskDispatches.phase, [...ACTIVE_PHASES, 'abandoned']),
+        ),
+      )
+      .limit(1);
+    const [writer] = await this.db
+      .select({ id: agentOperations.id })
+      .from(agentOperations)
+      .where(
+        and(
+          inArray(agentOperations.taskId, writerIds),
+          notInArray(agentOperations.status, ['done', 'error', 'interrupted']),
+        ),
+      )
+      .limit(1);
+    return Boolean(dispatch || writer);
+  }
+
+  private async confirmedIssuePlanAdmission(db: OrviloDatabase, task: TaskItem) {
+    if (!(task.context as TaskContext | null)?.issuePlan?.confirmedAt) return false;
+    const { TaskModel } = await import('./task');
+    await new TaskModel(db, task.createdByUserId ?? '', this.workspaceId).assertConfirmedIssuePlan(
+      task.id,
+    );
+    return true;
+  }
+
   private async projectDispatchWaitingReason(
     db: OrviloDatabase,
     task: TaskItem,
     trigger: TaskRunTrigger,
     excludeDispatchId?: string,
   ): Promise<string | null> {
+    if (await this.confirmedIssuePlanAdmission(db, task)) return null;
     const appliesProjectPolicy =
       trigger === 'orchestrator' ||
       trigger === 'schedule' ||
@@ -462,7 +509,7 @@ export class TaskDispatchModel {
     task: TaskItem,
     trigger: TaskRunTrigger,
   ): Promise<string | null> {
-    if (trigger === 'manual') return null;
+    if (trigger === 'manual' || (await this.confirmedIssuePlanAdmission(db, task))) return null;
     const [blocked] = await db
       .select({ status: goals.status })
       .from(goalNodes)
@@ -596,6 +643,8 @@ export class TaskDispatchModel {
               notLike(taskDispatches.waitingReason, 'goal_%'),
               notLike(taskDispatches.waitingReason, 'superseded_%'),
               notLike(taskDispatches.waitingReason, 'settlement_%'),
+              ne(taskDispatches.waitingReason, 'automation_delivery_pending'),
+              ne(taskDispatches.waitingReason, 'automation_plan_running'),
               ne(taskDispatches.waitingReason, 'planning_resume_instruction_missing'),
             ),
           ),
@@ -833,6 +882,39 @@ export class TaskDispatchModel {
         }
       }
 
+      const [automationParent] = input.automationParentDispatchId
+        ? await tx
+            .select()
+            .from(taskDispatches)
+            .where(
+              and(
+                eq(taskDispatches.id, input.automationParentDispatchId),
+                this.scopeCondition(),
+                inArray(taskDispatches.phase, ACTIVE_PHASES),
+              ),
+            )
+            .limit(1)
+            .for('update')
+        : [];
+      if (input.automationParentDispatchId) {
+        const plan = automationParent?.automationOccurrence?.definition.issuePlan;
+        const [parentTask] = automationParent
+          ? await tx.select().from(tasks).where(eq(tasks.id, automationParent.taskId)).limit(1)
+          : [];
+        const context = task.context as TaskContext | null;
+        if (
+          !automationParent ||
+          automationParent.initiator !== input.executionUserId ||
+          !parentTask ||
+          parentTask.executionGeneration !== automationParent.generation ||
+          !plan?.confirmedAt ||
+          !plan.checklists.some((check) => check.taskId === task.id) ||
+          context?.automationParentDispatchId !== automationParent.id ||
+          context.issuePlan?.scopeFingerprint !== plan.scopeFingerprint
+        )
+          throw new TaskDispatchIdempotencyConflictError('Periodic parent occurrence changed');
+      }
+
       // The roster band the bound agent runs at — snapshotted once under the
       // task lock so every agentId write below records the tier the attempt
       // was made at (the escalation signal for the next dispatch).
@@ -848,7 +930,75 @@ export class TaskDispatchModel {
         .limit(1);
       if (existing) {
         this.assertIdempotencyTarget(existing, input.taskId);
-        if (input.trigger === 'event') {
+        if (
+          existing.initiator &&
+          input.executionUserId &&
+          existing.initiator !== input.executionUserId
+        ) {
+          throw new TaskDispatchIdempotencyConflictError('Occurrence requester changed');
+        }
+        if (existing.phase === 'queued') {
+          const [active] = await tx
+            .select()
+            .from(taskDispatches)
+            .where(
+              and(eq(taskDispatches.taskId, task.id), inArray(taskDispatches.phase, ACTIVE_PHASES)),
+            )
+            .limit(1);
+          const [first] = await tx
+            .select()
+            .from(taskDispatches)
+            .where(and(eq(taskDispatches.taskId, task.id), eq(taskDispatches.phase, 'queued')))
+            .orderBy(asc(taskDispatches.createdAt), asc(taskDispatches.id))
+            .limit(1);
+          const childBusy = await new TaskDispatchModel(
+            tx,
+            this.workspaceId,
+          ).automationPlanHasWriters(existing.automationOccurrence?.definition.issuePlan, task.id);
+          if (
+            childBusy ||
+            (task.runReservationId?.startsWith('completion:') &&
+              task.runReservationExpiresAt &&
+              task.runReservationExpiresAt > new Date()) ||
+            active ||
+            first?.id !== existing.id ||
+            (task.context as TaskContext | null)?.scheduler?.automationPaused ||
+            executionParkedReason(task.context) ||
+            ['done', 'canceled'].includes(task.workflowCategory)
+          )
+            return { dispatch: existing, state: 'existing' as const, task };
+          if (input.trigger === 'event') {
+            const invalid = await this.verifyEventEvidence(
+              tx,
+              task,
+              existing.eventEvidence ?? undefined,
+              existing.id,
+            );
+            if (invalid) throw invalid;
+          }
+          const generation = task.executionGeneration + 1;
+          const [promoted] = await tx
+            .update(taskDispatches)
+            .set({
+              generation,
+              phase: 'requested',
+              waitingReason: null,
+              taskRevision: task.domainRevision,
+              requirementRevision: task.requirementRevision,
+              policyRevision: task.policyRevision,
+            })
+            .where(eq(taskDispatches.id, existing.id))
+            .returning();
+          await tx
+            .update(tasks)
+            .set({ executionGeneration: generation })
+            .where(eq(tasks.id, task.id));
+          return { dispatch: promoted, state: 'existing' as const, task };
+        }
+        if (
+          input.trigger === 'event' &&
+          !automationParent?.automationOccurrence?.planExecutionStarted
+        ) {
           const invalid = await this.verifyEventEvidence(
             tx,
             task,
@@ -909,6 +1059,7 @@ export class TaskDispatchModel {
             // registration) parks the row here; the same idempotency key
             // resumes it so the bound approval re-enters via adopt.
             existing.waitingReason === 'dispatch_prepare_retryable' ||
+            existing.waitingReason === 'task_dependencies_blocked' ||
             resumedWaitingReason === null)
         ) {
           const [resumed] = await tx
@@ -929,6 +1080,30 @@ export class TaskDispatchModel {
           return { dispatch: resumed ?? existing, state: 'existing' as const, task };
         }
         return { dispatch: existing, state: 'existing' as const, task };
+      }
+
+      if (
+        ['event', 'schedule', 'heartbeat'].includes(input.trigger) &&
+        (task.context as TaskContext | null)?.scheduler?.automationPaused
+      )
+        throw new TaskDispatchIdempotencyConflictError('Automation is paused');
+
+      const scheduler = (task.context as TaskContext | null)?.scheduler;
+      const quota = (task.config as { schedule?: { maxExecutions?: number } } | null)?.schedule
+        ?.maxExecutions;
+      if (
+        input.trigger === 'schedule' &&
+        scheduler?.scheduleStartedAt &&
+        quota &&
+        quota > 0 &&
+        (task.context as TaskContext | null)?.issuePlan?.confirmedAt
+      ) {
+        const count = await new TaskDispatchModel(
+          tx,
+          this.workspaceId,
+        ).countAutomationOccurrencesSince(task.id, new Date(scheduler.scheduleStartedAt));
+        if (count >= quota)
+          throw new TaskAutomationQuotaReachedError('Automation occurrence cap reached');
       }
 
       if (
@@ -1006,7 +1181,63 @@ export class TaskDispatchModel {
           .returning();
         return { dispatch: resumed ?? active, state: 'existing' as const, task };
       }
-      if (active) return { active, state: 'busy' as const, task };
+      let repairTakesOccurrence = false;
+      if (
+        active?.automationOccurrence &&
+        active.waitingReason === 'automation_delivery_pending' &&
+        input.origin === 'internal' &&
+        input.settlementGrant?.sourceDispatchId === active.id
+      ) {
+        const invalid = await this.verifySettlementGrant(tx, task, {
+          expectedSourceGeneration: task.executionGeneration,
+          grant: input.settlementGrant,
+        });
+        if (invalid) throw new TaskDispatchSettlementGrantError(invalid);
+        await tx
+          .update(taskDispatches)
+          .set({ phase: 'succeeded', waitingReason: null })
+          .where(eq(taskDispatches.id, active.id));
+        repairTakesOccurrence = true;
+      }
+      const automation = ['event', 'schedule', 'heartbeat'].includes(input.trigger);
+      if (active && !automation && !repairTakesOccurrence)
+        return { active, state: 'busy' as const, task };
+      if (!automation) {
+        const [operation] = await tx
+          .select({ id: agentOperations.id })
+          .from(agentOperations)
+          .where(
+            and(
+              eq(agentOperations.taskId, task.id),
+              notInArray(agentOperations.status, ['abandoned', 'done', 'error', 'interrupted']),
+            ),
+          )
+          .limit(1);
+        if (operation)
+          throw new TaskDispatchIdempotencyConflictError('Task has an active operation');
+      }
+      const [olderQueued] = automation
+        ? await tx
+            .select({ id: taskDispatches.id })
+            .from(taskDispatches)
+            .where(and(eq(taskDispatches.taskId, task.id), eq(taskDispatches.phase, 'queued')))
+            .limit(1)
+        : [];
+      const childBusy =
+        automation &&
+        (await new TaskDispatchModel(tx, this.workspaceId).automationPlanHasWriters(
+          (task.context as TaskContext | null)?.issuePlan,
+          task.id,
+        ));
+      const queued =
+        automation &&
+        Boolean(
+          childBusy ||
+          (!repairTakesOccurrence && active) ||
+          olderQueued ||
+          (task.context as TaskContext | null)?.scheduler?.automationPaused ||
+          executionParkedReason(task.context),
+        );
 
       // Persisted-claim verification (SB09): an `internal` row exists only
       // while its grant is current and bounded — verify under the same task
@@ -1029,6 +1260,14 @@ export class TaskDispatchModel {
         if (evidenceStale) throw evidenceStale;
       }
 
+      const [settlementSource] =
+        input.origin === 'internal' && input.settlementGrant?.sourceDispatchId
+          ? await tx
+              .select()
+              .from(taskDispatches)
+              .where(eq(taskDispatches.id, input.settlementGrant.sourceDispatchId))
+              .limit(1)
+          : [];
       let automationOccurrence: AutomationOccurrenceSnapshot | undefined;
       if (input.trigger === 'event') {
         const evidence = input.eventEvidence!;
@@ -1061,6 +1300,15 @@ export class TaskDispatchModel {
           .update(mcpEventTriggerRuns)
           .set({ automationOccurrence })
           .where(eq(mcpEventTriggerRuns.id, savedRun.id));
+      } else if (settlementSource?.automationOccurrence) {
+        automationOccurrence = settlementSource.automationOccurrence;
+      } else if (automationParent?.automationOccurrence && automationParent.taskId !== task.id) {
+        automationOccurrence = {
+          definition: snapshotAutomationDefinition(task),
+          occurrenceId: automationParent.automationOccurrence.occurrenceId,
+          input: automationParent.automationOccurrence.input,
+          parentDispatchId: automationParent.id,
+        };
       } else if (input.trigger === 'schedule' || input.trigger === 'heartbeat') {
         automationOccurrence = {
           definition: snapshotAutomationDefinition(task),
@@ -1092,7 +1340,7 @@ export class TaskDispatchModel {
           idempotencyKey: input.idempotencyKey,
           initiator: input.initiator ?? null,
           origin: input.origin ?? null,
-          phase: waitingReason ? 'waiting' : 'requested',
+          phase: queued ? 'queued' : waitingReason ? 'waiting' : 'requested',
           planRevision: input.planRevision,
           policyRevision: task.policyRevision,
           projectId: task.projectId,
@@ -1108,7 +1356,21 @@ export class TaskDispatchModel {
         })
         .returning();
 
-      await tx.update(tasks).set({ executionGeneration: generation }).where(eq(tasks.id, task.id));
+      if (input.trigger === 'schedule' && input.scheduledAt) {
+        await tx
+          .update(tasks)
+          .set({
+            context: sql`jsonb_set(coalesce(${tasks.context}, '{}'::jsonb), '{scheduler}',
+          coalesce(${tasks.context}->'scheduler', '{}'::jsonb) || jsonb_build_object('lastPublishedScheduleAt',
+            greatest(${tasks.context} #>> '{scheduler,lastPublishedScheduleAt}', ${input.scheduledAt.toISOString()})))`,
+          })
+          .where(eq(tasks.id, task.id));
+      }
+      if (!queued)
+        await tx
+          .update(tasks)
+          .set({ executionGeneration: generation })
+          .where(eq(tasks.id, task.id));
 
       return { dispatch, state: 'created' as const, task };
     });
@@ -1418,7 +1680,11 @@ export class TaskDispatchModel {
           matchesDispatchAssignee(task, dispatch),
         );
         const requestedTrigger = dispatch.requestedBy.split(':', 1)[0];
-        if (requestedTrigger === 'event' && task) {
+        if (
+          requestedTrigger === 'event' &&
+          task &&
+          !dispatch.automationOccurrence?.planExecutionStarted
+        ) {
           const invalid = await this.verifyEventEvidence(
             tx,
             task,
@@ -1438,8 +1704,8 @@ export class TaskDispatchModel {
         const automationWaitingReason =
           task &&
           ['event', 'heartbeat', 'schedule'].includes(requestedTrigger) &&
-          (executionParkedReason(task.context) ||
-            task.automationMode !== requestedTrigger ||
+          ((!dispatch.automationOccurrence?.planExecutionStarted &&
+            (executionParkedReason(task.context) || task.automationMode !== requestedTrigger)) ||
             task.workflowCategory === 'done' ||
             task.workflowCategory === 'canceled')
             ? 'automation_inactive'
@@ -1691,7 +1957,7 @@ export class TaskDispatchModel {
     if (!evidence) return denied('invalid-event', 'Event admission evidence missing');
     if (
       task.automationMode !== 'event' ||
-      executionParkedReason(task.context) ||
+      (task.context as TaskContext | null)?.scheduler?.automationPaused ||
       ['done', 'canceled'].includes(task.workflowCategory)
     )
       return denied('admission-held', 'Event automation is paused or terminal');
@@ -2076,11 +2342,6 @@ export class TaskDispatchModel {
           .set({
             context: parkMarkerSet({ at: new Date().toISOString(), reason: 'canceled' }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
-            reviewerUserId: sql<string | null>`coalesce(
-              ${tasks.reviewerUserId},
-              ${tasks.assigneeUserId},
-              ${tasks.createdByUserId}
-            )`,
             updatedAt: new Date(),
           })
           .where(
@@ -2201,11 +2462,6 @@ export class TaskDispatchModel {
             context: parkMarkerSet({ at: new Date().toISOString(), reason: input.reason }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
             error: input.reason,
-            reviewerUserId: sql<string | null>`coalesce(
-              ${tasks.reviewerUserId},
-              ${tasks.assigneeUserId},
-              ${tasks.createdByUserId}
-            )`,
             updatedAt: new Date(),
           })
           .where(
@@ -2328,11 +2584,6 @@ export class TaskDispatchModel {
             context: parkMarkerSet({ at: new Date().toISOString(), reason: input.reason }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
             error: input.reason,
-            reviewerUserId: sql<string | null>`coalesce(
-              ${tasks.reviewerUserId},
-              ${tasks.assigneeUserId},
-              ${tasks.createdByUserId}
-            )`,
             updatedAt: new Date(),
           })
           .where(
@@ -2447,7 +2698,7 @@ export class TaskDispatchModel {
         dispatchPolicyRevision: taskDispatches.policyRevision,
         dispatchRequestedBy: taskDispatches.requestedBy,
         dispatchRequirementRevision: taskDispatches.requirementRevision,
-        taskAgentId: tasks.assigneeAgentId,
+        taskAssigneeAgentId: tasks.assigneeAgentId,
         taskAssigneeUserId: tasks.assigneeUserId,
         taskAssignmentMode: tasks.assignmentMode,
         taskCreatedBySubjectKind: tasks.createdBySubjectKind,
@@ -2474,10 +2725,10 @@ export class TaskDispatchModel {
       (owner.occurrence ||
         (owner.taskPolicyRevision === input.policyRevision &&
           owner.taskRequirementRevision === input.requirementRevision)) &&
-      (owner.taskAgentId === owner.dispatchAgentId ||
+      (owner.taskAssigneeAgentId === owner.dispatchAgentId ||
         (owner.dispatchAgentId !== null &&
           owner.dispatchRequestedBy.startsWith('manual:') &&
-          owner.taskAgentId === null &&
+          owner.taskAssigneeAgentId === null &&
           owner.taskAssigneeUserId !== null &&
           owner.taskAssignmentMode === 'manual' &&
           owner.taskOrchestrationOwner === 'manual' &&
@@ -2526,7 +2777,12 @@ export class TaskDispatchModel {
             task.policyRevision === dispatch.policyRevision)) &&
         matchesDispatchAssignee(task, dispatch);
 
-      if (['canceled', 'failed', 'succeeded'].includes(dispatch.phase)) {
+      if (
+        ['canceled', 'failed', 'succeeded'].includes(dispatch.phase) ||
+        (dispatch.phase === 'waiting' &&
+          dispatch.waitingReason === 'automation_delivery_pending' &&
+          input.phase === 'succeeded')
+      ) {
         return {
           currentContract,
           currentGeneration,
@@ -2538,7 +2794,22 @@ export class TaskDispatchModel {
 
       const [settled] = await tx
         .update(taskDispatches)
-        .set({ leaseExpiresAt: null, leaseOwner: null, phase: input.phase })
+        .set({
+          leaseExpiresAt: null,
+          leaseOwner: null,
+          phase:
+            dispatch.automationOccurrence &&
+            !dispatch.automationOccurrence.parentDispatchId &&
+            input.phase === 'succeeded'
+              ? 'waiting'
+              : input.phase,
+          waitingReason:
+            dispatch.automationOccurrence &&
+            !dispatch.automationOccurrence.parentDispatchId &&
+            input.phase === 'succeeded'
+              ? 'automation_delivery_pending'
+              : null,
+        })
         .where(
           and(
             eq(taskDispatches.id, dispatch.id),
@@ -2564,11 +2835,6 @@ export class TaskDispatchModel {
             }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
             error: 'Task changed while this run was active; review before retrying.',
-            reviewerUserId: sql<string | null>`coalesce(
-              ${tasks.reviewerUserId},
-              ${tasks.assigneeUserId},
-              ${tasks.createdByUserId}
-            )`,
             updatedAt: new Date(),
           })
           .where(
@@ -2603,6 +2869,179 @@ export class TaskDispatchModel {
         state: 'settled' as const,
       };
     });
+  }
+
+  /** Complete only the accepted current occurrence; a replay cannot release its successor. */
+  async completeAutomationDelivery(input: {
+    taskId: string;
+    dispatchId: string;
+    topicId: string;
+    executionGeneration: number;
+  }) {
+    return this.db.transaction(async (tx) => {
+      const [task] = await tx
+        .select()
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.id, input.taskId),
+            this.workspaceId ? eq(tasks.workspaceId, this.workspaceId) : isNull(tasks.workspaceId),
+          ),
+        )
+        .for('update');
+      if (!task || task.executionGeneration !== input.executionGeneration) return false;
+      const [topic] = await tx
+        .select()
+        .from(taskTopics)
+        .where(
+          and(
+            eq(taskTopics.taskId, task.id),
+            eq(taskTopics.topicId, input.topicId),
+            eq(taskTopics.dispatchId, input.dispatchId),
+            eq(taskTopics.executionGeneration, input.executionGeneration),
+          ),
+        )
+        .limit(1);
+      if (!topic || task.currentTopicId !== input.topicId || topic.status !== 'completed')
+        return false;
+      const [completed] = await tx
+        .update(taskDispatches)
+        .set({ phase: 'succeeded', waitingReason: null })
+        .where(
+          and(
+            eq(taskDispatches.id, input.dispatchId),
+            eq(taskDispatches.taskId, task.id),
+            eq(taskDispatches.generation, input.executionGeneration),
+            eq(taskDispatches.phase, 'waiting'),
+            eq(taskDispatches.waitingReason, 'automation_delivery_pending'),
+            isNotNull(taskDispatches.automationOccurrence),
+          ),
+        )
+        .returning({ id: taskDispatches.id });
+      if (!completed) return false;
+      await tx
+        .update(tasks)
+        .set({
+          workflowCategory: 'backlog',
+          workflowStateId: null,
+          workflowStateRefId: null,
+          completedAt: null,
+          runReservationId: null,
+          runReservationExpiresAt: null,
+          context: sql`CASE WHEN coalesce((${tasks.context} #>> '{scheduler,automationPaused}')::boolean, false)
+          THEN ${tasks.context} ELSE coalesce(${tasks.context}, '{}'::jsonb) #- '{execution,parked}' END`,
+        })
+        .where(eq(tasks.id, task.id));
+      return true;
+    });
+  }
+
+  static async cancelQueuedAutomationForTask(
+    db: OrviloDatabase,
+    taskId: string,
+    workspaceId?: string,
+  ) {
+    await db
+      .update(taskDispatches)
+      .set({ phase: 'canceled', waitingReason: 'automation_issue_closed' })
+      .where(
+        and(
+          eq(taskDispatches.taskId, taskId),
+          eq(taskDispatches.phase, 'queued'),
+          workspaceId
+            ? eq(taskDispatches.workspaceId, workspaceId)
+            : isNull(taskDispatches.workspaceId),
+        ),
+      );
+  }
+
+  static async findQueuedAutomationTasks(db: OrviloDatabase, limit = 20) {
+    return db
+      .selectDistinct({ taskId: taskDispatches.taskId, workspaceId: taskDispatches.workspaceId })
+      .from(taskDispatches)
+      .innerJoin(tasks, eq(tasks.id, taskDispatches.taskId))
+      .where(
+        and(
+          eq(taskDispatches.phase, 'queued'),
+          sql`NOT EXISTS (SELECT 1 FROM task_dispatches active WHERE active.task_id = ${tasks.id}
+          AND active.phase IN ('requested', 'claimed', 'provisioning', 'dispatched', 'running', 'waiting', 'cancel_requested', 'outcome_unknown'))`,
+          sql`NOT coalesce((${tasks.context} #>> '{scheduler,automationPaused}')::boolean, false)`,
+          not(isParked),
+          notInArray(tasks.workflowCategory, ['done', 'canceled']),
+        ),
+      )
+      .limit(limit);
+  }
+
+  async automationQueueSummary(taskId: string) {
+    const [count] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(taskDispatches)
+      .where(
+        and(
+          eq(taskDispatches.taskId, taskId),
+          eq(taskDispatches.phase, 'queued'),
+          this.scopeCondition(),
+        ),
+      );
+    const recent = await this.db
+      .select({
+        id: taskDispatches.id,
+        phase: taskDispatches.phase,
+        createdAt: taskDispatches.createdAt,
+        updatedAt: taskDispatches.updatedAt,
+      })
+      .from(taskDispatches)
+      .where(
+        and(
+          eq(taskDispatches.taskId, taskId),
+          isNotNull(taskDispatches.automationOccurrence),
+          sql`COALESCE(${taskDispatches.automationOccurrence}->'parentDispatchId', 'null'::jsonb) = 'null'::jsonb`,
+          this.scopeCondition(),
+        ),
+      )
+      .orderBy(desc(taskDispatches.createdAt), desc(taskDispatches.id))
+      .limit(10);
+    const active = await this.findActiveByTaskId(taskId);
+    return {
+      queued: Number(count?.count ?? 0),
+      recent,
+      activeDispatchId: active?.automationOccurrence ? active.id : undefined,
+    };
+  }
+
+  async countAutomationOccurrencesSince(taskId: string, since: Date) {
+    const [row] = await this.db
+      .select({
+        count: sql<number>`count(distinct ${taskDispatches.automationOccurrence}->>'occurrenceId')::int`,
+      })
+      .from(taskDispatches)
+      .where(
+        and(
+          eq(taskDispatches.taskId, taskId),
+          gt(taskDispatches.createdAt, since),
+          this.scopeCondition(),
+          sql`${taskDispatches.automationOccurrence} is not null`,
+          sql`COALESCE(${taskDispatches.automationOccurrence}->'parentDispatchId', 'null'::jsonb) = 'null'::jsonb`,
+        ),
+      );
+    return row?.count ?? 0;
+  }
+
+  async findOldestQueued(taskId: string) {
+    const [queued] = await this.db
+      .select()
+      .from(taskDispatches)
+      .where(
+        and(
+          eq(taskDispatches.taskId, taskId),
+          eq(taskDispatches.phase, 'queued'),
+          this.scopeCondition(),
+        ),
+      )
+      .orderBy(asc(taskDispatches.createdAt), asc(taskDispatches.id))
+      .limit(1);
+    return queued;
   }
 
   async findById(dispatchId: string): Promise<TaskDispatchItem | undefined> {

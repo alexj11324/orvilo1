@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
 import { TaskIdentifier as TaskSkillIdentifier } from '@orvilo/builtin-skills';
-import { AcceptanceEvidenceIdentifier } from '@orvilo/builtin-tool-acceptance-evidence';
 import { BriefIdentifier } from '@orvilo/builtin-tool-brief';
 import { TaskIdentifier as TaskToolIdentifier } from '@orvilo/builtin-tool-task';
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import type {
   ExecAgentResult,
+  TaskContext,
   TaskDispatchSettlementGrant,
   TaskExecutionContract,
   TaskExecutionEnvironmentSnapshot,
@@ -16,14 +16,16 @@ import type {
   TaskTopicIntegration,
   WorkingDirConfig,
 } from '@orvilo/types';
-import { executionParkedReason, isAutomationRunTrigger } from '@orvilo/types';
+import { isAutomationRunTrigger } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 
 import { TopicTrigger } from '@/const/topic';
 import { TaskDomainError } from '@/database/errors/task';
 import { AgentModel } from '@/database/models/agent';
+import { AgentOperationModel } from '@/database/models/agentOperation';
 import { BriefModel } from '@/database/models/brief';
+import { IssueDeliveryModel, sameIssueDeliveryProof } from '@/database/models/issueDelivery';
 import { TaskModel } from '@/database/models/task';
 import { isTaskDependencyBlocked, TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskDispatchEventEvidenceError } from '@/database/models/taskDispatch';
@@ -34,9 +36,11 @@ import { isBuiltinHarnessOffered } from '@/server/featureFlags/builtinHarness';
 import { assertCanUseWorkspaceAgent } from '@/server/routers/lambda/_helpers/workspaceAgentGuard';
 import { ActionApprovalService, AgentDelegationService } from '@/server/services/agentDelegation';
 import { AiAgentService } from '@/server/services/aiAgent';
+import { isQueuedDeviceOperation } from '@/server/services/aiAgent/deviceQueue';
 import type { EventDispatchEvidence, PreparedTaskDispatch } from '@/server/services/taskDispatch';
 import {
   TaskDispatchConflictError,
+  TaskDispatchQueuedError,
   TaskDispatchService,
   TaskDispatchWaitingError,
 } from '@/server/services/taskDispatch';
@@ -97,8 +101,12 @@ export interface RunTaskParams {
    * name the contract they mean instead of silently adopting old or new.
    */
   intent?: TaskRunIntent;
+  /** Internal reviewer feedback continuation; fenced again before operation dispatch. */
+  issueReviewRepairCycleId?: string;
   /** Optional per-operation cap. Omitted means the agent runtime remains uncapped. */
   maxSteps?: number;
+  /** Internal periodic DAG binding, verified against the persisted parent occurrence. */
+  nativeAutomationParentDispatchId?: string;
   /** Parent delivery operation for internal corrective runs. */
   parentOperationId?: string;
   planRevision?: number;
@@ -211,8 +219,10 @@ export class TaskRunnerService {
       extraPrompt,
       integrationSeed,
       idempotencyKey,
+      issueReviewRepairCycleId,
       intent,
       maxSteps,
+      nativeAutomationParentDispatchId,
       parentOperationId,
       planRevision,
       replaceReservationId,
@@ -252,6 +262,18 @@ export class TaskRunnerService {
         message: 'Assign an Agent to this Issue before running it',
       });
     }
+    const parentAutomationDispatch = nativeAutomationParentDispatchId
+      ? await (
+          await import('../taskAutomationQueue')
+        ).requireAutomationParent(
+          this.db,
+          this.userId,
+          this.workspaceId,
+          resolvedTask,
+          nativeAutomationParentDispatchId,
+        )
+      : undefined;
+
     // Reading a shared task does not grant use of its owner's personal Agent.
     // Validate the actual executor before mutating task policy or dispatch state.
     const fallbackAgent =
@@ -277,7 +299,7 @@ export class TaskRunnerService {
     let task: TaskItem = resolvedTask;
     if (
       intent === 'fresh_occurrence' &&
-      (!isAutomationRunTrigger(trigger) ||
+      ((!isAutomationRunTrigger(trigger) && !parentAutomationDispatch) ||
         continueTopicId ||
         sourceContractId ||
         replanApprovalId ||
@@ -296,6 +318,7 @@ export class TaskRunnerService {
       isAutomationRunTrigger(trigger) &&
       !parentOperationId &&
       !replaceReservationId &&
+      !parentAutomationDispatch &&
       task.automationMode !== trigger
     ) {
       throw new TRPCError({
@@ -308,7 +331,8 @@ export class TaskRunnerService {
       isAutomationRunTrigger(trigger) &&
       !parentOperationId &&
       !replaceReservationId &&
-      (executionParkedReason(task.context) ||
+      ((!parentAutomationDispatch &&
+        (task.context as TaskContext | null)?.scheduler?.automationPaused) ||
         task.workflowCategory === 'done' ||
         task.workflowCategory === 'canceled')
     ) {
@@ -344,11 +368,41 @@ export class TaskRunnerService {
       });
     }
 
+    await this.taskModel.assertConfirmedIssuePlan(task.id);
+    const issuePlan = (task.context as TaskContext | null)?.issuePlan;
+    const artifactDelivery =
+      issuePlan?.checklists.find((check) => check.taskId === task.id)?.deliveryKind === 'artifact';
+    if (
+      isAutomationRunTrigger(trigger) &&
+      !parentAutomationDispatch &&
+      issuePlan?.confirmedAt &&
+      issuePlan.parentTaskId === task.id &&
+      issuePlan.checklists.some((check) => check.taskId !== task.id)
+    ) {
+      try {
+        await (
+          await import('../taskAutomationQueue')
+        ).startAutomationPlan(this.db, this.userId, this.workspaceId, {
+          task,
+          trigger,
+          idempotencyKey: resolvedIdempotencyKey,
+          eventEvidence,
+        });
+      } catch (error) {
+        if (error instanceof TaskDispatchQueuedError)
+          throw new TRPCError({ code: 'CONFLICT', cause: error, message: error.message });
+        throw error;
+      }
+    }
+
     // Preflight before assignment/provisioning; reserveRun repeats this check
     // under the dependency graph lock so a concurrent edit cannot bypass it.
-    if (!(await this.taskModel.areAllDependenciesCompleted(task.id))) {
+    if (
+      !isAutomationRunTrigger(trigger) &&
+      !(await this.taskModel.areAllDependenciesCompleted(task.id))
+    ) {
       throw new TaskDependencyError(
-        'Complete all prerequisite tasks before starting this task.',
+        'Current reviewed prerequisite deliveries are required before starting this task.',
         'PRECONDITION_FAILED',
       );
     }
@@ -393,6 +447,7 @@ export class TaskRunnerService {
       try {
         preparedDispatch = await this.taskDispatch.prepare({
           delegatedAgentId: delegation?.agentId,
+          automationParentDispatchId: parentAutomationDispatch?.id,
           eventEvidence,
           executionUserId: this.userId,
           idempotencyKey: resolvedIdempotencyKey,
@@ -406,7 +461,7 @@ export class TaskRunnerService {
           // trigger is a new orchestrated writer and must pass the gate.
           origin: internalSettlement
             ? 'internal'
-            : trigger === 'orchestrator' || trigger === 'goal'
+            : !issuePlan?.confirmedAt && (trigger === 'orchestrator' || trigger === 'goal')
               ? 'caid'
               : 'external',
           planRevision,
@@ -417,6 +472,9 @@ export class TaskRunnerService {
           trigger,
         });
       } catch (error) {
+        if (error instanceof TaskDispatchQueuedError) {
+          throw new TRPCError({ code: 'CONFLICT', cause: error, message: error.message });
+        }
         if (error instanceof TaskDispatchConflictError) {
           throw new TRPCError({ code: 'CONFLICT', message: error.message });
         }
@@ -523,13 +581,29 @@ export class TaskRunnerService {
       }
 
       let existingTopics = await this.taskTopicModel.findByTaskId(task.id);
+      const heartbeatExpired =
+        task.lastHeartbeatAt &&
+        task.heartbeatTimeout &&
+        (Date.now() - new Date(task.lastHeartbeatAt).getTime()) / 1000 > task.heartbeatTimeout;
+      const queuedOperations = heartbeatExpired
+        ? await Promise.all(
+            existingTopics
+              .filter((topic) => topic.operationId)
+              .map((topic) =>
+                new AgentOperationModel(this.db, this.userId, this.workspaceId).findById(
+                  topic.operationId!,
+                ),
+              ),
+          )
+        : [];
+      const waitingForDevice = queuedOperations.some(isQueuedDeviceOperation);
 
       // Recover expired runs before deciding whether another run conflicts.
       // The previous ordering rejected every stale `running` topic first, so
       // the timeout cleanup below was unreachable for the case it existed to
       // repair. Re-read after the conditional update so concurrent callers all
       // make their decision from the persisted state.
-      if (task.lastHeartbeatAt && task.heartbeatTimeout) {
+      if (!waitingForDevice && task.lastHeartbeatAt && task.heartbeatTimeout) {
         const elapsed = (Date.now() - new Date(task.lastHeartbeatAt).getTime()) / 1000;
         if (elapsed > task.heartbeatTimeout) {
           await this.taskTopicModel.timeoutRunning(task.id);
@@ -540,7 +614,7 @@ export class TaskRunnerService {
       // Recover a dead generation before checking for an in-flight topic. The
       // old ordering rejected on the stale running row first, so timeout
       // cleanup below was unreachable precisely when it was needed.
-      if (task.lastHeartbeatAt && task.heartbeatTimeout) {
+      if (!waitingForDevice && task.lastHeartbeatAt && task.heartbeatTimeout) {
         const now = Date.now();
         const elapsed = (now - new Date(task.lastHeartbeatAt).getTime()) / 1000;
         const hasRunningTopic = existingTopics.some((topic) => topic.status === 'running');
@@ -595,12 +669,25 @@ export class TaskRunnerService {
       // contract for continuations; for repairs the caller may pin the exact
       // delivery being repaired, and only without a pin does the historical
       // latest-seq contract apply.
+      const minimumGeneration =
+        (task.context as TaskContext | null)?.issuePlan?.executionScopes?.find(
+          (scope) => scope.taskId === task.id,
+        )?.minGeneration ?? 0;
+      const eligibleTopics = existingTopics.filter(
+        (topic) => (topic.executionGeneration ?? 0) >= minimumGeneration,
+      );
+      if (continueTopicId && (continuedTopic?.executionGeneration ?? 0) < minimumGeneration)
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'This Run belongs to superseded scope; start a fresh Run under the current confirmed plan.',
+        });
       const priorContract = (
         continueTopicId
           ? continuedTopic?.contract
           : sourceContractId
-            ? existingTopics.find((t) => t.contract?.contractId === sourceContractId)?.contract
-            : [...existingTopics]
+            ? eligibleTopics.find((t) => t.contract?.contractId === sourceContractId)?.contract
+            : [...eligibleTopics]
                 .sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0))
                 .find((t) => t.contract)?.contract
       ) as TaskExecutionContract | undefined;
@@ -767,6 +854,7 @@ export class TaskRunnerService {
         new Date(),
         undefined,
         replaceReservationId,
+        issueReviewRepairCycleId,
       );
       if (!reserved) {
         throw new TRPCError({
@@ -782,7 +870,12 @@ export class TaskRunnerService {
         this.db,
         this.userId,
         {
-          context: { reservationId },
+          context: {
+            reservationId,
+            ...(issueReviewRepairCycleId
+              ? { expectedIssueReviewCycleId: issueReviewRepairCycleId }
+              : {}),
+          },
           runStarted: true,
           taskId: task.id,
         },
@@ -819,6 +912,7 @@ export class TaskRunnerService {
         extraPrompt,
         {
           contractContent: inheritedContractContent,
+          skipTaskVerification,
           ...(runIntent === 'fresh_occurrence'
             ? {
                 occurrence: preparedDispatch!.dispatch.automationOccurrence ?? undefined,
@@ -845,7 +939,7 @@ export class TaskRunnerService {
       // `workspaceOverride` (corrective merge runs) skips provisioning — the
       // caller already owns the workspace description. Runs before prompt
       // building so the contract can ride into the prompt via extraPrompt.
-      if (!workspaceOverride && !continueTopicId) {
+      if (!artifactDelivery && !workspaceOverride && !continueTopicId) {
         try {
           await this.taskDispatch.transition(preparedDispatch!, {
             expected: ['claimed'],
@@ -856,6 +950,7 @@ export class TaskRunnerService {
             generation: preparedDispatch!.dispatch.generation,
             seq: (task.totalTopics || 0) + 1,
             task,
+            dependencies: contractContent.dependencies,
           });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Workspace provisioning failed';
@@ -911,7 +1006,6 @@ export class TaskRunnerService {
       };
 
       const checkpoint = this.taskModel.getCheckpointConfig(task);
-      const reviewConfig = this.taskModel.getReviewConfig(task);
       // Default mode is 'auto' — brief synthesis happens programmatically in
       // TaskLifecycleService.synthesizeTopicBrief. 'agent' is an explicit
       // escape hatch that re-mounts the legacy createBrief tool surface.
@@ -920,24 +1014,13 @@ export class TaskRunnerService {
           ? 'agent'
           : 'auto'
       ) as 'agent' | 'auto';
-      const pluginIds = [TaskSkillIdentifier];
-      if (
-        preparedDispatch!.dispatch.automationOccurrence?.input ||
-        priorContract?.occurrence?.input
-      )
-        pluginIds.push(TaskToolIdentifier);
+      const pluginIds = [TaskSkillIdentifier, TaskToolIdentifier];
       // Mount BriefIdentifier (createBrief + requestCheckpoint) only in the
       // legacy 'agent' path; in 'auto' the agent must not also call
       // createBrief or we'd double up.
-      if (briefMode === 'agent' && !reviewConfig?.enabled && checkpoint.onAgentRequest !== false) {
+      if (briefMode === 'agent' && checkpoint.onAgentRequest !== false) {
         pluginIds.push(BriefIdentifier);
       }
-      // The Acceptance runs inside the Task, so the builder needs listCriteria +
-      // submitEvidence for the whole run — not only in the post-run evidence
-      // turn, which mounts this tool exclusively and therefore can only ever
-      // restate text it already wrote.
-      if (acceptanceEnabled) pluginIds.push(AcceptanceEvidenceIdentifier);
-
       const initialWorkingDirectory =
         workspaceOverride?.workingDirectory ?? provisioned?.workingDirectory;
       const initialWorkingDirectoryConfig =
@@ -1037,12 +1120,37 @@ export class TaskRunnerService {
         // dispatch instead of executing without them. Sourced from the
         // persisted contract so admission and the contract cannot diverge.
         requiredToolIds: executionContract.tools,
-        skipTaskVerification,
+        skipTaskVerification:
+          skipTaskVerification ?? Boolean(preparedDispatch!.dispatch.automationOccurrence),
         beforeOperationStart: async ({ operationId, topicId }) => {
+          if (nativeAutomationParentDispatchId)
+            await (
+              await import('../taskAutomationQueue')
+            ).requireAutomationParent(
+              this.db,
+              this.userId,
+              this.workspaceId,
+              task,
+              nativeAutomationParentDispatchId,
+            );
           await this.db.transaction(async (tx) => {
             const dispatch = new TaskDispatchService(tx, this.workspaceId);
             const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
             const taskTopicModel = new TaskTopicModel(tx, this.userId, this.workspaceId);
+
+            if (
+              issueReviewRepairCycleId &&
+              !(await taskModel.isIssueReviewRepairCurrent(
+                task.id,
+                { cycleId: issueReviewRepairCycleId },
+                tx,
+              ))
+            ) {
+              throw new TRPCError({
+                code: 'CONFLICT',
+                message: 'Issue review repair cycle changed before launch.',
+              });
+            }
 
             // Revalidate the task reservation in the same transaction that
             // publishes the running topic. A concurrent terminal cascade
@@ -1136,7 +1244,12 @@ export class TaskRunnerService {
         trigger: TopicTrigger.RunTask,
         userInterventionConfig: { approvalMode: 'headless' },
         appContext: {
-          ...(isAutomationRunTrigger(trigger) && { nativeFullAccess: true }),
+          ...((isAutomationRunTrigger(trigger) ||
+            parentAutomationDispatch ||
+            preparedDispatch!.dispatch.automationOccurrence) && {
+            nativeFullAccess: true,
+          }),
+          ...(issueReviewRepairCycleId ? { issueReviewRepairCycleId } : {}),
           dispatchFence: preparedDispatch!.fence,
           dispatchId: preparedDispatch!.dispatch.id,
           executionGeneration: preparedDispatch!.dispatch.generation,
@@ -1481,15 +1594,50 @@ export class TaskRunnerService {
    */
   async cascadeOnCompletionMany(completedTaskIds: string[]): Promise<CascadeResult> {
     await this.markStaleDependencyInputs(completedTaskIds);
-    const unlocked = await this.taskModel.getUnlockedTasksForMany(completedTaskIds);
-    if (unlocked.length === 0) return TaskRunnerService.cascadeEmpty();
-
     const result: CascadeResult = { failed: [], paused: [], started: [] };
+    const completed = await this.taskModel.findByIds(completedTaskIds);
+    const periodicParents = new Set(
+      completed.flatMap((task) => {
+        const id = (task.context as TaskContext | null)?.automationParentDispatchId;
+        return id ? [id] : [];
+      }),
+    );
+    for (const dispatchId of periodicParents) {
+      const dispatch = await new (await import('@/database/models/taskDispatch')).TaskDispatchModel(
+        this.db,
+        this.workspaceId,
+      ).findById(dispatchId);
+      if (!dispatch?.initiator || dispatch.waitingReason !== 'automation_plan_running') continue;
+      const parentRunner = new TaskRunnerService(this.db, dispatch.initiator, this.workspaceId);
+      const parent = await parentRunner.taskModel.findById(dispatch.taskId);
+      if (!parent || !(await parentRunner.taskModel.areAllDependenciesCompleted(parent.id)))
+        continue;
+      const resumed = await (
+        await import('../taskAutomationQueue')
+      ).resumeAutomationParentReport(
+        this.db,
+        dispatch.initiator,
+        this.workspaceId,
+        parent,
+        dispatchId,
+      );
+      if (resumed) result.started.push(parent.identifier);
+    }
+    const unlocked = await this.taskModel.getUnlockedTasksForMany(completedTaskIds);
+    if (unlocked.length === 0) return result;
 
     for (const task of unlocked) {
+      const automationParentId = (task.context as TaskContext | null)?.automationParentDispatchId;
+      const automationParent = automationParentId
+        ? await new (await import('@/database/models/taskDispatch')).TaskDispatchModel(
+            this.db,
+            this.workspaceId,
+          ).findById(automationParentId)
+        : undefined;
+      const executionUserId = automationParent?.initiator ?? task.createdByUserId;
       const runner =
-        task.createdByUserId && task.createdByUserId !== this.userId
-          ? new TaskRunnerService(this.db, task.createdByUserId, this.workspaceId)
+        executionUserId && executionUserId !== this.userId
+          ? new TaskRunnerService(this.db, executionUserId, this.workspaceId)
           : this;
       if (await runner.shouldHoldForCheckpoint(task)) {
         await runner.taskModel.updateStatusIfCurrent(task.id, 'backlog', 'paused');
@@ -1498,7 +1646,22 @@ export class TaskRunnerService {
       }
 
       try {
+        if (automationParentId && automationParent?.taskId === task.id) {
+          const resumed = await (
+            await import('../taskAutomationQueue')
+          ).resumeAutomationParentReport(
+            this.db,
+            executionUserId ?? this.userId,
+            this.workspaceId,
+            task,
+            automationParentId,
+          );
+          if (resumed) result.started.push(task.identifier);
+          continue;
+        }
         await runner.runTask({
+          nativeAutomationParentDispatchId: automationParentId,
+          ...(automationParentId ? { intent: 'fresh_occurrence' as const } : {}),
           idempotencyKey: taskRunIdempotencyKey.dependencyCascade({
             completedTaskIds,
             executionGeneration: task.executionGeneration ?? 0,
@@ -1506,7 +1669,7 @@ export class TaskRunnerService {
             taskRevision: task.domainRevision ?? 0,
           }),
           taskId: task.id,
-          trigger: 'orchestrator',
+          trigger: automationParentId ? 'manual' : 'orchestrator',
         });
         result.started.push(task.identifier);
       } catch (error) {
@@ -1657,18 +1820,19 @@ export class TaskRunnerService {
    */
   private async markStaleDependencyInputs(completedTaskIds: string[]): Promise<void> {
     for (const completedTaskId of completedTaskIds) {
-      const [upstreamTopics, dependents] = await Promise.all([
-        this.taskTopicModel.findByTaskId(completedTaskId).catch(() => []),
-        this.taskModel.getDependents(completedTaskId).catch(() => []),
+      const [deliveries, dependents] = await Promise.all([
+        new IssueDeliveryModel(this.db, this.userId, this.workspaceId).readCurrentDeliveryProof([
+          completedTaskId,
+        ]),
+        this.taskModel.getDependents(completedTaskId),
       ]);
-      const latestDelivery = upstreamTopics.find((topic) => topic.status === 'completed');
-      const observedDelivery = latestDelivery
+      const current = deliveries[completedTaskId];
+      const proof = current?.proof;
+      const observedDelivery = proof
         ? {
-            integratedSha: latestDelivery.integration?.integratedSha,
-            operationId: latestDelivery.operationId ?? undefined,
-            seq: latestDelivery.seq ?? undefined,
-            sourceSha: latestDelivery.integration?.expectedHeadSha,
-            topicId: latestDelivery.topicId,
+            operationId: proof.deliveryOperationId,
+            sourceSha: proof.sourceSha,
+            topicId: proof.topicId,
           }
         : undefined;
 
@@ -1687,10 +1851,11 @@ export class TaskRunnerService {
           // that now exists (redelivery), or the upstream has none at all
           // (rollback). A same-topic redelivery of identical SHAs is not stale.
           const sameDelivery =
-            recorded.delivery?.topicId === observedDelivery?.topicId &&
-            (!observedDelivery ||
-              (recorded.delivery?.sourceSha === observedDelivery.sourceSha &&
-                recorded.delivery?.integratedSha === observedDelivery.integratedSha));
+            current?.availableForDependents &&
+            proof &&
+            recorded.issueDelivery &&
+            current.runId === recorded.checklistRunId &&
+            sameIssueDeliveryProof(proof, recorded.issueDelivery);
           if (sameDelivery) continue;
           await this.taskTopicModel
             .markInputStale(dep.taskId, topic.topicId, {

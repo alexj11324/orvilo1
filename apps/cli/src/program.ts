@@ -22,7 +22,6 @@ import { registerMemoryCommand } from './commands/memory';
 import { registerMessageCommand } from './commands/message';
 import { registerMigrateCommand } from './commands/migrate';
 import { registerNotifyCommand } from './commands/notify';
-import { registerPluginCommand } from './commands/plugin';
 import { registerPrimeCommand } from './commands/primeExec';
 import { registerProjectCommand } from './commands/project';
 import { registerSearchCommand } from './commands/search';
@@ -96,7 +95,6 @@ export function createProgram() {
   registerMessageCommand(program);
   registerNotifyCommand(program);
   registerProjectCommand(program);
-  registerPluginCommand(program);
   registerPrimeCommand(program);
   registerWorkspaceCommand(program);
   registerUserCommand(program);

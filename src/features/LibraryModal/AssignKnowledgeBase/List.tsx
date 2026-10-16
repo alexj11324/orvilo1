@@ -8,6 +8,7 @@ import SimpleEmpty from '@/components/SimpleEmpty';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { useAgentStore } from '@/store/agent';
 import { useGlobalStore } from '@/store/global';
+import { KnowledgeType } from '@/types/knowledgeBase';
 
 import Item from './Item';
 import MasonryItemWrapper from './Item/MasonryItemWrapper';
@@ -36,10 +37,13 @@ export const List = memo(() => {
     mode,
   });
 
-  const { isLoading, error, data } = useFetchFilesAndKnowledgeBases(
-    activeAgentId,
-    effectiveVisibility,
-  );
+  const {
+    isLoading,
+    error,
+    data: resources,
+  } = useFetchFilesAndKnowledgeBases(activeAgentId, effectiveVisibility);
+
+  const data = resources?.filter((item) => item.type !== KnowledgeType.KnowledgeBase);
 
   const [columnCount, setColumnCount] = useState(2);
   const [isTransitioning, setIsTransitioning] = useState(false);

@@ -47,10 +47,12 @@ export class PluginPublicApiActionImpl {
     switch (payload.type) {
       // @ts-ignore
       case 'mcp': {
-        return await this.#get().invokeMCPTypePlugin(id, payload);
+        return {
+          content: 'Configure third-party MCP in the Agent native harness.',
+          success: false,
+        };
       }
 
-      case 'builtin':
       default: {
         // Pass stepContext to builtin tools for dynamic state access
         return await this.#get().invokeBuiltinTool(id, payload, stepContext);

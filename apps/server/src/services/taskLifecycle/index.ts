@@ -32,6 +32,7 @@ import {
   notifyScheduledTaskCompleted,
   notifyScheduledTaskFailed,
 } from '@/business/server/task/notifyScheduledTaskResult';
+import { AgentOperationModel } from '@/database/models/agentOperation';
 import { BriefModel } from '@/database/models/brief';
 import { GoalModel } from '@/database/models/goal';
 import { TaskModel } from '@/database/models/task';
@@ -39,7 +40,6 @@ import { isTaskDependencyBlocked } from '@/database/models/taskDependency';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
-import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import { translation } from '@/libs/i18n/serverTranslation';
@@ -52,6 +52,7 @@ import {
   settleTaskExecution,
   type SettleTaskExecutionInput,
 } from '@/server/services/taskSettlement';
+import { after } from '@/server/utils/scheduleAfterResponse';
 
 import {
   isTrivialAssistantContent,
@@ -237,6 +238,18 @@ export class TaskLifecycleService {
 
     const currentTask = await this.taskModel.findById(taskId);
     if (!currentTask) return;
+    const completionOperation = (currentTask.config as { issueReview?: unknown } | null)
+      ?.issueReview
+      ? await new AgentOperationModel(this.db, this.userId, this.workspaceId).findById(
+          params.operationId,
+        )
+      : null;
+    const repairCycleId = completionOperation?.appContext?.issueReviewRepairCycleId;
+    if (
+      typeof repairCycleId === 'string' &&
+      !(await this.taskModel.isIssueReviewRepairCurrent(taskId, { cycleId: repairCycleId }))
+    )
+      return;
 
     if (!topicId) {
       log('onTopicComplete: callback without topic ignored task=%s', taskIdentifier);
@@ -314,9 +327,13 @@ export class TaskLifecycleService {
           dispatchFence: params.dispatchFence,
           executionGeneration: params.executionGeneration,
           ...input,
-          context: completionContract
-            ? { ...input.context, expectedContract: completionContract }
-            : input.context,
+          context: {
+            ...input.context,
+            ...(completionContract ? { expectedContract: completionContract } : {}),
+            ...(typeof repairCycleId === 'string'
+              ? { expectedIssueReviewCycleId: repairCycleId }
+              : {}),
+          },
           operationId: params.operationId,
           taskId,
         },
@@ -328,18 +345,12 @@ export class TaskLifecycleService {
       return result;
     };
 
-    let verifyBound = false;
-    let verifySettled = false;
     let lifecycleFailed = false;
+    let enrichTopic: (() => Promise<void>) | undefined;
     try {
       const { TaskIntegrationService } = await import('@/server/services/taskIntegration');
       const integrationService = new TaskIntegrationService(this.db, this.userId, this.workspaceId);
 
-      // Whether a confirmed verify plan owns this run's delivery acceptance. Set in
-      // the 'done' branch; gates both the pause-for-review skip and (below) the
-      // creator callback — for verify-bound runs the callback is deferred to the
-      // verify settle path (driveTaskFromVerify) so the creator never consumes an
-      // output before verify has accepted it.
       if (reason === 'done') {
         try {
           if (!(await integrationService.captureRemoteIdentityOnComplete(currentTask, topicId))) {
@@ -371,7 +382,7 @@ export class TaskLifecycleService {
         }
 
         // 2. Generate handoff summary + topic title (best-effort LLM synthesis).
-        if (topicId && lastAssistantContent) {
+        if (currentTask?.automationMode && topicId && lastAssistantContent) {
           await this.generateHandoff(
             taskId,
             taskIdentifier,
@@ -381,10 +392,7 @@ export class TaskLifecycleService {
           );
         }
 
-        // 2b. Persist the raw last message as the run card's result.
-        //     Done independently of (and after) generateHandoff via a jsonb_set
-        //     patch, so `handoff.content` is written even when the summary LLM in
-        //     step 2 throws — otherwise a completed run would show no result.
+        // Persist the raw result before settlement; ACP enrichment may wait for an offline device.
         if (topicId && lastAssistantContent) {
           try {
             await this.taskTopicModel.updateHandoffContent(taskId, topicId, lastAssistantContent);
@@ -393,62 +401,18 @@ export class TaskLifecycleService {
           }
         }
 
-        // Resolve Verify ownership before any irreversible delivery action. A
-        // confirmed plan must judge the exact run before its branch is merged.
-        // A failed read is a gate failure, not evidence that verification is
-        // absent.
-        try {
-          const verifyRun = await new VerifyRunModel(
-            this.db,
-            this.userId,
-            this.workspaceId,
-          ).findByOperation(params.operationId);
-          verifyBound = Boolean(verifyRun?.planConfirmedAt);
-          verifySettled =
-            verifyRun?.status === 'passed' ||
-            verifyRun?.status === 'failed' ||
-            verifyRun?.status === 'errored';
-        } catch (error) {
-          log('verify-bound check failed for op=%s: %O', params.operationId, error);
-          await settleOwned({
-            context: {
-              blocked: true,
-              error: 'Could not determine the delivery verification state',
-              expectedStatus: claimedTaskStatus,
-              reservationId: claimed,
-              runTrigger: params.runTrigger,
-            },
-            outcome: 'succeeded',
-          });
-          return;
-        }
-
         // 2c. Workspace-integration gate (CAID merge-back): a provisioned run's
         //    task branch must land on its base before the task may settle. A
         //    merge conflict holds the transition open (task stays 'running')
         //    while a corrective run resolves it in the integration worktree;
         //    exhausted attempts park the task 'paused'. Unprovisioned runs pass
         //    straight through.
-        if (topicId && !verifyBound) {
+        if (topicId) {
           const integrationOutcome = await integrationService.integrateOnComplete({
             completionReservationId: claimed,
             task: currentTask,
             taskTopicId: topicId,
           });
-
-          if (integrationOutcome !== 'hold') {
-            const integration = (await this.taskTopicModel.findByTopicId(topicId))?.integration;
-            if (integration?.verifyOperationId) {
-              const { driveTaskFromVerify } = await import('../verify/settle');
-              await driveTaskFromVerify(
-                this.db,
-                this.userId,
-                integration.verifyOperationId,
-                this.workspaceId,
-              );
-              return;
-            }
-          }
 
           if (integrationOutcome === 'blocked') {
             await settleOwned({
@@ -466,41 +430,38 @@ export class TaskLifecycleService {
           if (integrationOutcome === 'hold' || integrationOutcome === 'stale') return;
         }
 
-        // 3. Delivery acceptance now runs through Verify: the verify
-        //    run settles asynchronously (agent verifier) and drives the task to its
-        //    terminal state via `driveTaskFromVerify`. The legacy eval-rubric
-        //    auto-review is removed; this branch only lets the task go on to the
-        //    brief + post-tick transition, and the verify-bound check below makes it
-        //    "let go" so verify owns the completion decision.
+        if (topicId && lastAssistantContent) {
+          enrichTopic = async () => {
+            if (!currentTask?.automationMode)
+              await this.generateHandoff(
+                taskId,
+                taskIdentifier,
+                topicId,
+                lastAssistantContent,
+                currentTask,
+              );
+            // Goal-loop rounds stay silent; retain handoff-before-brief ordering.
+            const isGoalLoopRound =
+              currentTask &&
+              (await new GoalModel(this.db, this.userId, this.workspaceId).findByGraphTask(
+                currentTask.id,
+              ));
+            if (!isGoalLoopRound && getBriefMode(currentTask) === 'auto' && currentTask) {
+              await this.synthesizeTopicBrief(
+                taskId,
+                taskIdentifier,
+                topicId,
+                lastAssistantContent,
+                reason,
+                currentTask,
+              );
+            }
+          };
+        }
 
-        // 4. Synthesize a programmatic brief for the user (auto mode only).
-        //    The agent-driven `createBrief` tool path stays the default until
-        //    the GrowthBook flag flips. See for the rollout plan.
-        //
-        //    Goal Task rounds are deliberately silent. The coordinator can run
-        //    many attempts on one Task before it converges, and a card per round
-        //    buries the one moment that actually needs the user — the decision
-        //    gate the coordinator opens when the attempt budget runs out.
-        const isGoalLoopRound =
-          !!currentTask &&
-          !!(await new GoalModel(this.db, this.userId, this.workspaceId).findByGraphTask(
-            currentTask.id,
-          ));
-        if (
-          !isGoalLoopRound &&
-          getBriefMode(currentTask) === 'auto' &&
-          currentTask &&
-          topicId &&
-          lastAssistantContent
-        ) {
-          await this.synthesizeTopicBrief(
-            taskId,
-            taskIdentifier,
-            topicId,
-            lastAssistantContent,
-            reason,
-            currentTask,
-          );
+        if (currentTask?.automationMode && enrichTopic) {
+          await enrichTopic();
+          enrichTopic = undefined;
         }
 
         // 5. Default post-tick transition.
@@ -524,10 +485,6 @@ export class TaskLifecycleService {
         //      the child also unlocks its downstream siblings.
         //    - Root non-automation tasks keep the legacy "pause for user review"
         //      behavior: their result is the user-facing delivery boundary.
-        // "Let go" for verify-bound runs: when a confirmed verify plan exists for
-        // this op, delivery acceptance is decided asynchronously by Verify
-        // (driveTaskFromVerify completes / pauses the task on settle), so we must
-        // NOT pause-for-review here — the task stays running until verify settles.
         if (currentTask) {
           const completionRequestedByCurrentOperation =
             (
@@ -537,7 +494,7 @@ export class TaskLifecycleService {
             )?.completion?.requestedByOperationId === params.operationId;
 
           const scheduleCapReached =
-            currentTask.automationMode === 'schedule' && !verifyBound
+            currentTask.automationMode === 'schedule'
               ? await this.scheduleCapReached(currentTask)
               : false;
           if (scheduleCapReached) {
@@ -549,13 +506,12 @@ export class TaskLifecycleService {
           // it, stamp a durable recovery marker + reset the failure fuse so the
           // recovery is auditable and a later query can still tell the task once
           // failed — the live `error` alone would silently self-heal.
-          if (currentTask.automationMode && !verifyBound && !scheduleCapReached) {
+          if (currentTask.automationMode && !scheduleCapReached) {
             await this.recordAutomationRecovery(currentTask, claimed);
           }
 
           // The settlement policy owns every 'done' transition now:
-          // verify-bound → hold (verify drives it later), capped schedule →
-          // complete, automation tick → keep_open at 'scheduled', agent /
+          // Capped schedule → complete, automation tick → keep_open at 'scheduled', agent /
           // goal self-complete → complete, explicit review gate → in_review,
           // otherwise → complete to 'done'. `resolveTaskReviewRequirement`
           // replaces the retired default-pause.
@@ -567,7 +523,6 @@ export class TaskLifecycleService {
               reservationId: claimed,
               runTrigger: params.runTrigger,
               scheduleCapReached,
-              verifyBound,
             },
             outcome: 'succeeded',
           });
@@ -855,25 +810,16 @@ export class TaskLifecycleService {
       // silently drop the only callback for automation tasks that become terminal
       // in this path (e.g. a scheduled task hitting its execution cap).
       //
-      // Verify-bound runs DEFER the callback to the verify settle path
-      // (driveTaskFromVerify): the delivery isn't accepted until verify settles, so
-      // the creator must not receive/act on the output here — if verify later fails,
-      // the unaccepted output would already have been consumed.
-      if (verifyBound && verifySettled) {
-        const { driveTaskFromVerify } = await import('../verify/settle');
-        await driveTaskFromVerify(this.db, this.userId, params.operationId, this.workspaceId);
-      }
-      if (!verifyBound) {
-        await this.markAutomationResultReady(params);
-        await this.persistAutomationResult(params);
-        await this.bridgeResultToCreator(params);
-      }
+      if (enrichTopic) after(enrichTopic);
+      await this.markAutomationResultReady(params);
+      await this.persistAutomationResult(params);
+      if (currentTask.automationMode || reason !== 'done') await this.bridgeResultToCreator(params);
 
       // Heartbeat re-arm: re-read task state (status / context may have just
       // been mutated by the branches above) and decide whether to publish the
       // next tick.
       const finalTask = await this.taskModel.findById(taskId);
-      if (finalTask && (!verifyBound || verifySettled)) {
+      if (finalTask && !completionDispatch?.automationOccurrence) {
         await this.maybeRearmHeartbeat(finalTask, reason, claimed);
       }
     } catch (error) {
@@ -896,7 +842,6 @@ export class TaskLifecycleService {
             },
             outcome: 'succeeded',
           });
-          verifyBound = false;
           return;
         } catch (recoveryError) {
           lifecycleFailed = true;
@@ -906,11 +851,7 @@ export class TaskLifecycleService {
       lifecycleFailed = true;
       throw error;
     } finally {
-      // A confirmed Verify plan still owns this generation after the topic
-      // callback returns. Keep its completion lease until the verdict drives
-      // the task; otherwise a manual run or the next automation tick can replace
-      // currentTopicId and permanently strand that verdict.
-      if (!verifyBound && !lifecycleFailed) {
+      if (!lifecycleFailed) {
         await this.taskModel.releaseRunReservation(taskId, claimed);
       }
     }
@@ -1217,12 +1158,6 @@ export class TaskLifecycleService {
     }
   }
 
-  /** Re-arm a Verify-bound heartbeat only after Verify releases its completion lease. */
-  async rearmHeartbeatAfterVerify(taskId: string): Promise<void> {
-    const task = await this.taskModel.findById(taskId);
-    if (task && task.status === 'scheduled') await this.maybeRearmHeartbeat(task, 'done');
-  }
-
   /**
    * Generate handoff summary and update topic title via LLM.
    * Writes to task_topics handoff fields + updates topic title.
@@ -1281,10 +1216,12 @@ export class TaskLifecycleService {
         await this.topicModel.update(topicId, { title: handoff.title });
       }
 
-      // Store handoff in task_topics dedicated fields. `handoff.content` (the raw
-      // last message) is persisted separately in onTopicComplete so it survives
-      // even when this LLM synthesis throws.
-      await this.taskTopicModel.updateHandoff(taskId, topicId, handoff);
+      // Preserve the raw result when deferred synthesis replaces the handoff JSONB.
+      // onTopicComplete also writes it before synthesis so it survives a failed judgment.
+      await this.taskTopicModel.updateHandoff(taskId, topicId, {
+        ...handoff,
+        content: lastAssistantContent,
+      });
 
       log('handoff generated for topic %s: title=%s', topicId, handoff.title);
     } catch (e) {
@@ -1328,9 +1265,8 @@ export class TaskLifecycleService {
     currentTask: TaskItem,
   ): Promise<void> {
     try {
-      const reviewConfig = this.taskModel.getReviewConfig(currentTask);
       const decisionInput = {
-        hasReviewConfigEnabled: !!reviewConfig?.enabled,
+        hasReviewConfigEnabled: false,
         isTrivialContent: isTrivialAssistantContent(lastAssistantContent),
         reason,
         // We've already returned upstream when reviewTerminated was true; the

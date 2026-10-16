@@ -6,11 +6,9 @@ import { Spinner } from '@/components/ui/spinner';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import { usePermission } from '@/hooks/usePermission';
 import { useKnowledgeBaseStore } from '@/store/library';
 
 import Actions from './Actions';
-import Editing from './Editing';
 import { useDropdownMenu } from './useDropdownMenu';
 
 interface KnowledgeBaseItemProps {
@@ -27,53 +25,15 @@ interface KnowledgeBaseItemProps {
 }
 
 const KnowledgeBaseItem = memo<KnowledgeBaseItemProps>(
-  ({
-    id,
-    name,
-    description,
-    active,
-    style,
-    className,
-    userId,
-    visibility,
-    memberRestricted,
-    permissionManageable,
-  }) => {
+  ({ id, name, active, style, className, visibility, memberRestricted, permissionManageable }) => {
     const setLibraryId = useResourceManagerStore((s) => s.setLibraryId);
     const navigate = useWorkspaceAwareNavigate();
-    const { allowed: canEdit } = usePermission('edit_own_content');
-
-    const [editing, isLoading] = useKnowledgeBaseStore((s) => [
-      s.knowledgeBaseRenamingId === id,
-      s.knowledgeBaseLoadingIds.includes(id),
-    ]);
-
-    const toggleEditing = useCallback(
-      (visible?: boolean) => {
-        useKnowledgeBaseStore.setState(
-          { knowledgeBaseRenamingId: visible ? id : null },
-          false,
-          'toggleEditing',
-        );
-      },
-      [id],
-    );
-
+    const dropdownMenu = useDropdownMenu({ id, permissionManageable });
+    const isLoading = useKnowledgeBaseStore((s) => s.knowledgeBaseLoadingIds.includes(id));
     const handleClick = useCallback(() => {
-      if (!editing) {
-        navigate(`/resource/library/${id}`);
-        setLibraryId(id);
-      }
-    }, [editing, navigate, id, setLibraryId]);
-
-    const handleDoubleClick = useCallback(
-      (e: React.MouseEvent) => {
-        if (e.altKey && canEdit) {
-          toggleEditing(true);
-        }
-      },
-      [canEdit, toggleEditing],
-    );
+      navigate(`/resource/library/${id}`);
+      setLibraryId(id);
+    }, [navigate, id, setLibraryId]);
 
     // Restricted (No-access) KBs are invisible to plain members, so this row
     // only renders for managers — the lock tells them at a glance which shared
@@ -97,31 +57,19 @@ const KnowledgeBaseItem = memo<KnowledgeBaseItemProps>(
       );
     }, [isLoading, visibility, isMemberRestricted]);
 
-    const dropdownMenu = useDropdownMenu({
-      description,
-      id,
-      name,
-      permissionManageable,
-      toggleEditing,
-      userId,
-      visibility,
-    });
-
     return (
       <div style={{ position: 'relative' }}>
         <NavItem
-          actions={<Actions dropdownMenu={dropdownMenu} />}
+          actions={permissionManageable ? <Actions dropdownMenu={dropdownMenu} /> : undefined}
           active={active}
           className={className}
           contextMenuItems={dropdownMenu}
-          disabled={editing}
           icon={icon}
           key={id}
           loading={isLoading}
           style={style}
-          title={editing ? <Editing id={id} name={name} toggleEditing={toggleEditing} /> : name}
+          title={name}
           onClick={handleClick}
-          onDoubleClick={handleDoubleClick}
         />
       </div>
     );

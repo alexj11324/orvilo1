@@ -821,6 +821,24 @@ lossless tool result
     });
   });
 
+  it('rejects managed skill edits through ordinary document APIs before saving history', async () => {
+    mockModel.findById.mockResolvedValue({
+      agentId: 'agent-1',
+      id: 'skill-index',
+      documentId: 'index-doc',
+      templateId: 'agent-skill',
+      content: '# Old skill',
+    });
+    const service = new AgentDocumentsService(db, userId);
+    await expect(
+      service.replaceDocumentContentById('skill-index', '# Changed', 'agent-1'),
+    ).rejects.toThrow('Platform skill production has been retired');
+    await expect(service.modifyDocumentNodesById('skill-index', [], 'agent-1')).rejects.toThrow(
+      'Platform skill production has been retired',
+    );
+    expect(mockModel.update).not.toHaveBeenCalled();
+  });
+
   describe('replaceDocumentContentById', () => {
     it('should save history before editing document content', async () => {
       mockModel.findById

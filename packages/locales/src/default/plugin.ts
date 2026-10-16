@@ -428,6 +428,7 @@ export default {
   'builtins.orvilo-task.apiName.runTask': 'Run issue',
   'builtins.orvilo-task.apiName.runTasks': 'Run issues',
   'builtins.orvilo-task.apiName.setTaskSchedule': 'Set schedule',
+  'builtins.orvilo-task.apiName.submitTaskReview': 'Submit Issue review',
   'builtins.orvilo-task.apiName.setTaskVerify': 'Set verify',
   'builtins.orvilo-task.apiName.updateTaskComment': 'Update comment',
   'builtins.orvilo-task.apiName.updateTaskStatus': 'Update status',

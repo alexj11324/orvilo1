@@ -9,11 +9,18 @@ const api = vi.hoisted(() => ({
   updateOnboarding: vi.fn().mockResolvedValue(undefined),
   resolveWorkspace: vi.fn().mockResolvedValue({ id: 'new-workspace', slug: 'my-workspace' }),
   navigate: vi.fn(),
-  finish: vi.fn(),
+  finish: vi.fn().mockImplementation(async (_finish, _navigate, prepare) => {
+    await prepare?.();
+  }),
+  verify: vi.fn().mockResolvedValue(undefined),
+  scope: vi.fn(),
   ensure: vi.fn().mockResolvedValue(undefined),
   savedAgent: vi.fn().mockResolvedValue({
     agencyConfig: { executionTarget: 'local', heterogeneousProvider: { type: 'opencode' } },
   }),
+}));
+vi.mock('@/business/client/workspaceContextStore', () => ({
+  getWorkspaceContextState: () => ({ setActiveWorkspace: api.scope }),
 }));
 vi.mock('@/app/globals.css', () => ({}));
 vi.mock('react-router', () => ({
@@ -51,14 +58,28 @@ vi.mock('@/utils/onboardingRedirect', () => ({
   stashOnboardingCallbackUrl: vi.fn(),
 }));
 vi.mock('@/features/CreateAgent/CreateAgentPanel', () => ({
-  default: ({ onCreated }: { onCreated: (id: string) => void }) => (
-    <button onClick={() => onCreated('first-saved-agent')}>Configure Agent</button>
+  default: ({
+    onCreated,
+    visibility,
+    lockVisibility,
+  }: {
+    onCreated: (id: string) => void;
+    visibility?: string;
+    lockVisibility?: boolean;
+  }) => (
+    <button
+      data-locked={lockVisibility}
+      data-visibility={visibility ?? 'private'}
+      onClick={() => onCreated(visibility === 'public' ? 'new-public-agent' : 'first-saved-agent')}
+    >
+      {visibility === 'public' ? 'Create public Agent' : 'Configure Agent'}
+    </button>
   ),
 }));
 vi.mock('@/services/orchestrator', () => ({
   getOnboardingAgentConfig: api.savedAgent,
   resolveOnboardingAgentHost: () => ({ executionTarget: 'device' }),
-  verifyOnboardingOrchestrator: vi.fn(),
+  verifyOnboardingOrchestrator: api.verify,
 }));
 vi.mock('@/services/agentOnboarding', () => ({ ensureFirstAgentInWorkspace: api.ensure }));
 vi.mock('@/components/blocks/onboarding-2/components/onboarding-header', () => ({
@@ -87,10 +108,23 @@ it('lets an authenticated user with no profile name set up a workspace without c
 });
 
 vi.mock('@/features/Orchestrator/ConfiguredOrchestratorSelector', () => ({
-  default: ({ value }: { value?: string }) => <div>Orchestrator choice: {value}</div>,
+  default: ({
+    value,
+    visibility,
+    onSelect,
+  }: {
+    value?: string;
+    visibility?: string;
+    onSelect: (id: string) => void;
+  }) => (
+    <div data-testid="orchestrator-selector" data-visibility={visibility}>
+      <span>Orchestrator choice: {value ?? 'none'}</span>
+      <button onClick={() => onSelect('existing-public-agent')}>Select public Agent</button>
+    </div>
+  ),
 }));
 
-it('keeps the first saved Agent as the Orchestrator choice and does not finish after Agent setup', async () => {
+it('keeps the first saved Agent private and requires a separate public Orchestrator choice', async () => {
   render(<OnboardingPage />);
   fireEvent.change(document.querySelector('#onboarding-workspace')!, {
     target: { value: 'My workspace' },
@@ -101,9 +135,58 @@ it('keeps the first saved Agent as the Orchestrator choice and does not finish a
   fireEvent.click(document.querySelector<HTMLButtonElement>('button[type="submit"]')!);
   await waitFor(() => expect(screen.getByText('Configure Agent')).toBeTruthy());
   fireEvent.click(screen.getByText('Configure Agent'));
+  await waitFor(() => expect(screen.getByText('Orchestrator choice: none')).toBeTruthy());
+  expect(api.ensure).toHaveBeenCalledTimes(1);
+  expect(api.scope).toHaveBeenCalledWith({ id: 'new-workspace', slug: 'my-workspace' });
+  expect(screen.getByTestId('orchestrator-selector')).toHaveAttribute('data-visibility', 'public');
+  expect(screen.getByText('setup.orchestrator.finish')).toBeDisabled();
+  expect(api.finish).not.toHaveBeenCalled();
+});
+
+const reachOrchestratorStep = async () => {
+  render(<OnboardingPage />);
+  fireEvent.change(document.querySelector('#onboarding-workspace')!, {
+    target: { value: 'My workspace' },
+  });
+  fireEvent.change(document.querySelector('#onboarding-url')!, {
+    target: { value: 'my-workspace' },
+  });
+  fireEvent.click(document.querySelector<HTMLButtonElement>('button[type="submit"]')!);
+  await waitFor(() => expect(screen.getByText('Configure Agent')).toBeTruthy());
+  fireEvent.click(screen.getByText('Configure Agent'));
+  await waitFor(() => expect(screen.getByText('Orchestrator choice: none')).toBeTruthy());
+};
+
+it('finishes private-first setup with an existing public source without changing the first Agent', async () => {
+  await reachOrchestratorStep();
+  fireEvent.click(screen.getByText('Select public Agent'));
+  await waitFor(() => expect(screen.getByText('setup.orchestrator.finish')).not.toBeDisabled());
+  fireEvent.click(screen.getByText('setup.orchestrator.finish'));
   await waitFor(() =>
-    expect(screen.getByText('Orchestrator choice: first-saved-agent')).toBeTruthy(),
+    expect(api.verify).toHaveBeenCalledWith('existing-public-agent', 'new-workspace', {
+      alsoDefault: true,
+    }),
   );
   expect(api.ensure).toHaveBeenCalledTimes(1);
-  expect(api.finish).not.toHaveBeenCalled();
+  expect(api.ensure.mock.calls[0][0]).toBe('first-saved-agent');
+});
+
+it('explicitly creates a new public workspace source and retains the private first Agent', async () => {
+  await reachOrchestratorStep();
+  fireEvent.click(screen.getByText('setup.orchestrator.create'));
+  const create = screen.getByText('Create public Agent');
+  expect(create).toHaveAttribute('data-visibility', 'public');
+  expect(create).toHaveAttribute('data-locked', 'true');
+  fireEvent.click(create);
+  await waitFor(() =>
+    expect(screen.getByText('Orchestrator choice: new-public-agent')).toBeTruthy(),
+  );
+  fireEvent.click(screen.getByText('setup.orchestrator.finish'));
+  await waitFor(() =>
+    expect(api.verify).toHaveBeenCalledWith('new-public-agent', 'new-workspace', {
+      alsoDefault: true,
+    }),
+  );
+  expect(api.ensure).toHaveBeenCalledTimes(1);
+  expect(api.ensure.mock.calls[0][0]).toBe('first-saved-agent');
 });

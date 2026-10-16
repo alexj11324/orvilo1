@@ -6,6 +6,7 @@ import type { AddressInfo } from 'node:net';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
+import { isRecord } from '@orvilo/utils/object';
 import { z } from 'zod';
 
 import type { InterventionAnswer } from '../askUser/AskUserBridge';
@@ -124,6 +125,8 @@ export interface OrviloBuiltinMcpServerOptions {
    * runtimes (amp / codex / opencode / …) that never got the AskUser bridge.
    */
   includeAskUserTool?: boolean;
+  /** Safe metadata only; the caller gates persistence on its existing trace opt-in. */
+  onMcpMetadata?: (metadata: Record<string, unknown>) => void;
   /**
    * Per-call timeout passed to `bridge.pending()`. Default 5 minutes —
    * matches the issue's UX requirement and the tested CC keepalive ceiling.
@@ -187,7 +190,10 @@ export class OrviloBuiltinMcpServer {
    */
   private readonly sessionIdToOpId = new Map<string, string>();
   /** Per-request op id, populated for the duration of `handleRequest`. */
-  private readonly opIdContext = new AsyncLocalStorage<string | undefined>();
+  private readonly opIdContext = new AsyncLocalStorage<{
+    onResponse?: (message: unknown) => void;
+    operationId?: string;
+  }>();
   private startedUrl?: string;
   private readonly pendingTimeoutMs: number;
   private readonly progressIntervalMs: number;
@@ -234,31 +240,71 @@ export class OrviloBuiltinMcpServer {
         body = await readJsonBody(req).catch(() => undefined);
       }
 
-      await this.opIdContext.run(opId, async () => {
-        try {
-          const transport = await this.resolveTransport(req, body);
-          if (!transport) {
-            res.writeHead(400, { 'content-type': 'application/json' });
-            res.end(
-              JSON.stringify({
-                error: {
-                  code: -32_000,
-                  message: 'Bad Request: no session and no initialize request',
-                },
-                id: null,
-                jsonrpc: '2.0',
-              }),
-            );
-            return;
+      const method = isRecord(body) ? body.method : undefined;
+      const observed =
+        this.options.onMcpMetadata &&
+        (method === 'initialize' ||
+          method === 'notifications/initialized' ||
+          method === 'tools/list');
+      let toolNames: string[] | undefined;
+      let success = method === 'notifications/initialized';
+      if (observed)
+        res.once('finish', () => {
+          this.options.onMcpMetadata?.({
+            httpStatus: res.statusCode,
+            method,
+            operationId: opId && this.operations.has(opId) ? opId : undefined,
+            success: success && res.statusCode >= 200 && res.statusCode < 300,
+            ...(toolNames ? { toolCount: toolNames.length, toolNames } : {}),
+            type: 'mcp_http_response',
+          });
+        });
+      await this.opIdContext.run(
+        {
+          operationId: opId,
+          onResponse: observed
+            ? (message) => {
+                if (!isRecord(message) || !isRecord(body) || message.id !== body.id) return;
+                success = 'result' in message && !('error' in message);
+                if (
+                  method === 'tools/list' &&
+                  success &&
+                  isRecord(message.result) &&
+                  Array.isArray(message.result.tools)
+                ) {
+                  toolNames = message.result.tools.flatMap((tool) =>
+                    isRecord(tool) && typeof tool.name === 'string' ? [tool.name] : [],
+                  );
+                }
+              }
+            : undefined,
+        },
+        async () => {
+          try {
+            const transport = await this.resolveTransport(req, body);
+            if (!transport) {
+              res.writeHead(400, { 'content-type': 'application/json' });
+              res.end(
+                JSON.stringify({
+                  error: {
+                    code: -32_000,
+                    message: 'Bad Request: no session and no initialize request',
+                  },
+                  id: null,
+                  jsonrpc: '2.0',
+                }),
+              );
+              return;
+            }
+            await transport.handleRequest(req, res, body);
+          } catch (err) {
+            if (!res.headersSent) {
+              res.writeHead(500, { 'content-type': 'text/plain' });
+              res.end(String((err as Error)?.message ?? err));
+            }
           }
-          await transport.handleRequest(req, res, body);
-        } catch (err) {
-          if (!res.headersSent) {
-            res.writeHead(500, { 'content-type': 'text/plain' });
-            res.end(String((err as Error)?.message ?? err));
-          }
-        }
-      });
+        },
+      );
     });
 
     this.httpServer = httpServer;
@@ -306,6 +352,11 @@ export class OrviloBuiltinMcpServer {
     }
     const created = bridge ?? new AskUserBridge(operationId);
     this.operations.set(operationId, { bridge: created });
+    this.options.onMcpMetadata?.({
+      operationId,
+      toolNames: (this.options.extraTools ?? []).map(({ name }) => name),
+      type: 'mcp_host_extra_tools',
+    });
     return created;
   }
 
@@ -391,11 +442,19 @@ export class OrviloBuiltinMcpServer {
       },
       onsessioninitialized: (sessionId: string) => {
         this.sessionTransports.set(sessionId, { mcp, transport });
-        const opId = this.opIdContext.getStore();
+        const opId = this.opIdContext.getStore()?.operationId;
         if (opId) this.sessionIdToOpId.set(sessionId, opId);
       },
       sessionIdGenerator: () => randomUUID(),
     });
+
+    if (this.options.onMcpMetadata) {
+      const send = transport.send.bind(transport);
+      transport.send = async (message, options) => {
+        this.opIdContext.getStore()?.onResponse?.(message);
+        await send(message, options);
+      };
+    }
 
     // Connect synchronously so the first request's body can be processed
     // by the same transport we just built. `mcp.connect(transport)` is

@@ -47,7 +47,7 @@ The pool of credits available to spend, checked before each AI request. Personal
 
 ### Channels
 
-Per-agent connections that link an agent to an external messaging platform (Discord, Slack, Telegram, LINE, iMessage, QQ, WeChat, Feishu, and Lark) using your own bot, so anyone in that chat can talk to the agent. See also [Messenger](#messenger).
+Slack connections that let authorized workspace members interact with Agents. See the [current product contract](/docs/development/product-scope).
 
 ### Chat Mode
 
@@ -135,7 +135,7 @@ Connections from an agent to external services, including MCP servers and OAuth-
 
 ### Knowledge Base
 
-A collection of uploaded files, stored as searchable vector chunks, that an agent can reference so it answers from your data rather than general training alone. Shown in the app as a Library.
+An archived platform Library. Existing resources remain readable; new project context uses repositories, local directories, files, and explicit session references.
 
 ## L
 
@@ -159,11 +159,11 @@ An open standard for connecting agents to external tools, data, and services. Or
 
 ### Memory
 
-Personal context (preferences, role, work habits, and experiences) that agents extract from conversations and recall later. Orvilo keeps memory white-box: you can view, edit, delete, and add entries, and agents remember only what you approve.
+Native memory belongs to the configured CLI or Harness. Platform automatic extraction and prompt injection are retired; historical platform memory remains readable.
 
 ### Messenger
 
-A no-setup way to chat with your own Orvilo agents through the official `@Orvilo` bot on Telegram, Slack, and Discord. Unlike Channels, only you talk to the bot.
+A retired messaging surface. Historical sessions and sender attribution remain available; current messaging integration uses Slack.
 
 ### Model
 
@@ -245,11 +245,11 @@ Running open-source Orvilo on your own infrastructure (Docker, Vercel, or other 
 
 ### Skill
 
-An installable capability that gives an agent new tools, such as web search, code execution, or a third-party connector. Skills are the product's user-facing name for plugins and are managed in the Skill Store.
+A native CLI or Harness capability. Platform skill creation, installation, and ZIP distribution are retired; necessary MCP tools and connectors remain available.
 
 ### Skill Store
 
-The in-product browser for finding, installing, and configuring skills, including built-in tools, community MCP servers, and custom servers you add yourself.
+The platform skill installation and distribution surface is retired. Existing connector pickers and OAuth connections remain available.
 
 ### Spend
 

@@ -2640,14 +2640,6 @@ describe('AgentModel', () => {
         expect(result?.slug).toBe('page-agent');
         expect(result?.virtual).toBe(true);
       });
-
-      it('should create task-agent builtin agent', async () => {
-        const result = await agentModel.getBuiltinAgent('task-agent');
-
-        expect(result).toBeDefined();
-        expect(result?.slug).toBe('task-agent');
-        expect(result?.virtual).toBe(true);
-      });
     });
 
     describe('workspace mode', () => {
@@ -3963,7 +3955,8 @@ describe('AgentModel', () => {
     it('should still upsert a workingDirByDevice entry when value is a path', async () => {
       await serverDB
         .insert(devices)
-        .values({ userId, deviceId: 'device-b', identitySource: 'installation' });
+        .values({ deviceId: 'device-b', identitySource: 'installation', userId })
+        .onConflictDoNothing();
       const [agent] = await serverDB
         .insert(agents)
         .values({

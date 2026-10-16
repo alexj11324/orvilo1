@@ -19,7 +19,6 @@ const log = debug('orvilo-image:lambda-client');
 
 // 401 error debouncing: prevent showing multiple login notifications in short time
 let last401Time = 0;
-let lastMarket401Time = 0;
 const MIN_401_INTERVAL = 5000; // 5 seconds
 
 // `@trpc/client` throws `TransformResultError` when a response body parses as
@@ -61,51 +60,25 @@ const errorHandlingLink: TRPCLink<LambdaRouter> = () => {
           const showError = (op.context?.showNotification as boolean) ?? true;
           const status = err.data?.httpStatus as number;
 
-          // Check if this is a market API call
-          const isMarketApi = op.path.startsWith('market.');
-
           // Don't show notifications for abort errors
           if (showError && !isAbortError) {
             switch (status) {
               case 401: {
-                if (isMarketApi) {
-                  // Market API 401: emit event for MarketAuthProvider to handle
-                  // Don't trigger Orvilo logout for market auth issues
-                  const { getUserStoreState } = await import('@/store/user/store');
-                  // Without a Orvilo session a market.* 401 is not a Market auth
-                  // issue — let it bubble instead of triggering the auth modal
-                  if (!getUserStoreState().isSignedIn) break;
-                  const now = Date.now();
-                  if (now - lastMarket401Time > MIN_401_INTERVAL) {
-                    lastMarket401Time = now;
-                    // Dynamically import to avoid circular dependencies
-                    const { marketAuthEvents } =
-                      await import('@/layout/AuthProvider/MarketAuth/events');
-                    const { pathToMarketAuthScene } =
-                      await import('@/layout/AuthProvider/MarketAuth/scenes');
-                    marketAuthEvents.emit('market-unauthorized', {
-                      path: op.path,
-                      scene: pathToMarketAuthScene(op.path),
-                      timestamp: now,
-                    });
-                  }
-                } else {
-                  // Non-market 401: the Orvilo session expired. Emit the shared
-                  // event — each platform's session-auth adapter owns the
-                  // recovery (web redirects to /signin, the desktop modal
-                  // restarts the system-browser OIDC round trip).
-                  const now = Date.now();
-                  if (now - last401Time > MIN_401_INTERVAL) {
-                    last401Time = now;
-                    const { sessionAuthEvents } =
-                      await import('@/layout/AuthProvider/SessionAuth/events');
-                    sessionAuthEvents.emit('session-auth-expired', {
-                      path: op.path,
-                      reason: `trpc ${op.path} -> 401`,
-                      source: 'trpc',
-                      timestamp: now,
-                    });
-                  }
+                // The Orvilo session expired. Emit the shared
+                // event — each platform's session-auth adapter owns the
+                // recovery (web redirects to /signin, the desktop modal
+                // restarts the system-browser OIDC round trip).
+                const now = Date.now();
+                if (now - last401Time > MIN_401_INTERVAL) {
+                  last401Time = now;
+                  const { sessionAuthEvents } =
+                    await import('@/layout/AuthProvider/SessionAuth/events');
+                  sessionAuthEvents.emit('session-auth-expired', {
+                    path: op.path,
+                    reason: `trpc ${op.path} -> 401`,
+                    source: 'trpc',
+                    timestamp: now,
+                  });
                 }
                 // Mark error as non-retryable to prevent SWR infinite retry loop
                 err.meta = { ...err.meta, shouldRetry: false };
@@ -148,7 +121,7 @@ const notifyRemoteServerNetworkError = async (response: Response) => {
 // 2. Shared link options
 const linkOptions = {
   fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-    // Ensure credentials are included to send cookies (like mp_token)
+    // Send the existing application session cookies.
     const response = await fetch(input, { ...init, credentials: 'include' });
     if (isDesktop && isProxyNetworkFailure(response)) void notifyRemoteServerNetworkError(response);
     return response;
@@ -180,7 +153,7 @@ const initialLoadProcedures = new Set(['user.getUserState', 'config.getGlobalCon
 // so every sibling procedure in the batch (e.g. `agent.getAgentConfigById`) fails
 // its `JSON.parse` with `Unexpected token '<'`. Split it out so a slow message
 // read only slows itself.
-const slowProcedures = new Set(['market.getAssistantList', 'message.getMessages']);
+const slowProcedures = new Set(['message.getMessages']);
 const SKIP_BATCH_PROCEDURES = new Set([...initialLoadProcedures, ...slowProcedures]);
 
 // Queries whose input can exceed the GET URL budget (`maxURLLength` 2083):

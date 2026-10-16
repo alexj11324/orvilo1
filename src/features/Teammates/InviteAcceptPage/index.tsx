@@ -59,9 +59,7 @@ const InviteAcceptPage = memo(() => {
   /** Land an already-joined invitee inside the workspace. */
   const goToWorkspace = useCallback(
     async (workspaceId: string) => {
-      const path = await resolveWorkspacePath(workspaceId, () =>
-        teammatesService.workspace.list(),
-      );
+      const path = await resolveWorkspacePath(workspaceId, () => teammatesService.workspace.list());
       navigate(path, { replace: true });
     },
     [navigate],

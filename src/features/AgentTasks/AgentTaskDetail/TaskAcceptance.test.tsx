@@ -47,6 +47,8 @@ const mocks = vi.hoisted(() => ({
 
 // Real ActionIcon only surfaces its title via a hover Tooltip; the
 // assertions click the title text directly.
+vi.mock('./TaskReviewerProperty', () => ({ default: () => <div>Reviewer Agent</div> }));
+
 vi.mock('@/components/ActionIcon', () => ({
   default: ({ onClick, title }: { onClick?: () => void; title?: string }) => (
     <button type="button" onClick={onClick}>
@@ -68,7 +70,8 @@ vi.mock('antd', async (importOriginal) => ({
   App: { useApp: () => ({ message: { error: vi.fn() } }) },
 }));
 
-vi.mock('@/components/NeuralNetworkLoading', () => ({ default: () => <div>loading</div> }));
+vi.mock('@/hooks/usePermission', () => ({ usePermission: () => ({ allowed: true }) }));
+vi.mock('@/features/Acceptance/hooks', () => ({ useRubrics: () => ({ data: [] }) }));
 
 vi.mock('@/features/Acceptance', async () => ({
   // The real row/list primitives: the assertions cover the shared grammar.
@@ -86,18 +89,22 @@ vi.mock('@/features/Acceptance', async () => ({
       label: category,
     })),
   useAcceptanceBundle: () => ({
-    data: mocks.bundle,
+    data: fixture.active ? undefined : mocks.bundle,
     error: undefined,
-    isLoading: false,
-    mutate: mocks.mutateBundle,
+    isLoading: fixture.active && fixture.busyPath === 'bundle',
+    mutate: fixture.active ? fixture.mutateBundle : mocks.mutateBundle,
   }),
   useAcceptanceBySubject: (...args: unknown[]) => {
     mocks.subjectArgs = args;
     return {
-      data: mocks.acceptanceSubject,
+      data: fixture.active
+        ? fixture.busyPath === 'bundle'
+          ? { id: 'motion-acceptance' }
+          : undefined
+        : mocks.acceptanceSubject,
       error: undefined,
-      isLoading: false,
-      mutate: mocks.mutateSubject,
+      isLoading: fixture.active && fixture.busyPath === 'subject',
+      mutate: fixture.active ? fixture.mutateSubject : mocks.mutateSubject,
     };
   },
 }));
@@ -139,6 +146,7 @@ vi.mock('@/services/verify', () => ({
   verifyService: {
     deleteAcceptance: (id: string, purge?: boolean) => mocks.deleteAcceptance(id, purge),
     reviewChecks: vi.fn(),
+    generateCriteria: (...args: unknown[]) => fixture.generateCriteria(...args),
   },
 }));
 
@@ -169,6 +177,11 @@ vi.mock('@/store/task', () => {
       activeTaskId: 'T-231',
       taskDetailMap: {
         'T-231': { id: 'task-database-231', identifier: 'T-231', ...mocks.taskDetailOverrides },
+        'T-motion': {
+          id: 'motion-db',
+          name: 'A motion regression goal',
+          reviewerAgentId: 'reviewer-1',
+        },
       },
     });
   useTaskStore.getState = () => ({
@@ -204,10 +217,10 @@ describe('TaskAcceptance', () => {
     expect(mocks.subjectArgs).toEqual(['task', null]);
   });
 
-  it('renders the configured criteria in the same slot before an acceptance aggregate exists', () => {
+  it('does not offer a legacy config editor before an archive exists', () => {
     render(<TaskAcceptance />);
 
-    expect(screen.getByTestId('task-acceptance-criteria')).toBeInTheDocument();
+    expect(screen.queryByTestId('task-acceptance-criteria')).not.toBeInTheDocument();
     expect(mocks.subjectArgs).toEqual(['task', 'task-database-231']);
   });
 
@@ -289,7 +302,7 @@ describe('TaskAcceptance', () => {
     expect(mocks.openAcceptance).toHaveBeenCalledWith('acceptance-1');
   });
 
-  it('mounts the live Acceptance checklist and decision bar in the task result panel', () => {
+  it('mounts the archive checklist without a decision bar in the task result panel', () => {
     mocks.acceptanceSubject = { id: 'acceptance-1' };
     mocks.bundle = {
       acceptance: { id: 'acceptance-1', requirement: 'Everything is verifiable.' },
@@ -303,7 +316,7 @@ describe('TaskAcceptance', () => {
     expect(scope).toHaveAttribute('data-acceptance-id', 'acceptance-1');
     expect(scope).toHaveAttribute('data-embedded');
     expect(screen.getByTestId('acceptance-check-inventory')).toBeInTheDocument();
-    expect(screen.getByTestId('acceptance-decision')).toBeInTheDocument();
+    expect(screen.queryByTestId('acceptance-decision')).not.toBeInTheDocument();
     // No collapsible 交付验收 section header — the inventory brings its own.
     expect(screen.queryByText('taskDetail.acceptance.title')).not.toBeInTheDocument();
   });
@@ -326,7 +339,7 @@ describe('TaskAcceptance', () => {
   it('falls back to the configured criteria in the result panel before an acceptance exists', () => {
     render(<TaskAcceptance variant={'result'} />);
 
-    expect(screen.getByTestId('task-acceptance-criteria')).toBeInTheDocument();
+    expect(screen.queryByTestId('task-acceptance-criteria')).not.toBeInTheDocument();
     expect(screen.queryByTestId('acceptance-scope')).not.toBeInTheDocument();
   });
 
@@ -351,7 +364,7 @@ describe('TaskAcceptance', () => {
     expect(screen.getByText('Check 11')).toBeInTheDocument();
   });
 
-  it('removes the acceptance and clears the task verify config from the header delete button', async () => {
+  it('keeps owner archive rows readable without deletion or config controls', async () => {
     mocks.acceptanceSubject = { id: 'acceptance-1' };
     mocks.bundle = {
       acceptance: { id: 'acceptance-1', requirement: 'Everything is verifiable.' },
@@ -361,54 +374,11 @@ describe('TaskAcceptance', () => {
 
     render(<TaskAcceptance />);
 
-    fireEvent.click(screen.getByText('taskDetail.acceptance.remove'));
-    expect(mocks.openDeleteConfirm).toHaveBeenCalledTimes(1);
-    expect(mocks.openDeleteConfirm).toHaveBeenCalledWith(
-      expect.objectContaining({
-        description: 'taskDetail.acceptance.removeConfirm.content',
-        ids: ['acceptance-1'],
-      }),
-    );
+    expect(screen.queryByText('taskDetail.acceptance.remove')).not.toBeInTheDocument();
+    expect(screen.getByText('Create task')).toBeInTheDocument();
+    expect(mocks.openDeleteConfirm).not.toHaveBeenCalled();
+    expect(mocks.updateVerifyConfig).not.toHaveBeenCalled();
     expect(mocks.deleteAcceptance).not.toHaveBeenCalled();
-
-    const opts = mocks.openDeleteConfirm.mock.calls[0][0] as {
-      onDelete: (purge: boolean) => Promise<void>;
-    };
-    await opts.onDelete(true);
-
-    expect(mocks.deleteAcceptance).toHaveBeenCalledWith('acceptance-1', true);
-    expect(mocks.updateVerifyConfig).toHaveBeenCalledWith('T-231', {
-      enabled: false,
-      requirement: null,
-      verifyCriteriaIds: null,
-    });
-    // Config clears BEFORE the aggregate is deleted: the inverse order could
-    // destroy the record and then fail, leaving a stale config to recreate it.
-    expect(mocks.updateVerifyConfig.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.deleteAcceptance.mock.invocationCallOrder[0],
-    );
-    expect(mocks.mutateSubject).toHaveBeenCalled();
-  });
-
-  it('aborts removal without deleting the aggregate when the config clear fails', async () => {
-    mocks.acceptanceSubject = { id: 'acceptance-1' };
-    mocks.bundle = {
-      acceptance: { id: 'acceptance-1', requirement: 'Everything is verifiable.' },
-      checks: [{ category: 'Setup', id: 'c1', seq: 1, title: 'Create task' }],
-      isOwner: true,
-    };
-    mocks.updateVerifyConfig.mockRejectedValueOnce(new Error('config write failed'));
-
-    render(<TaskAcceptance />);
-
-    fireEvent.click(screen.getByText('taskDetail.acceptance.remove'));
-    const opts = mocks.openDeleteConfirm.mock.calls[0][0] as {
-      onDelete: (purge: boolean) => Promise<void>;
-    };
-    await expect(opts.onDelete(false)).rejects.toThrow('config write failed');
-
-    expect(mocks.deleteAcceptance).not.toHaveBeenCalled();
-    expect(mocks.mutateSubject).not.toHaveBeenCalled();
   });
 
   it('hides the remove button when the viewer does not own the acceptance', () => {
@@ -465,11 +435,12 @@ describe('TaskAcceptance', () => {
 });
 
 // Existing TaskAcceptance tests above keep their original fixtures and cases.
-// The following describe mounts real loading owners in an isolated module graph.
+// The motion cases use the same module graph and switch only the data fixtures.
 let MotionTaskAcceptance: typeof TaskAcceptance;
 let MotionTaskVerifyConfig: typeof TaskVerifyConfig;
 let MotionTaskDetailScope: typeof TaskDetailScope;
 let useMotionUserStore: typeof UserStoreHook;
+let originalUserSettings: ReturnType<typeof UserStoreHook.getState>['settings'];
 
 const fixture = vi.hoisted(() => {
   const originalMatchMedia = Object.getOwnPropertyDescriptor(window, 'matchMedia');
@@ -506,8 +477,8 @@ const fixture = vi.hoisted(() => {
   // Install the public native boundary before any component import evaluates.
   Object.defineProperty(window, 'matchMedia', { configurable: true, value: matchMedia });
   return {
+    active: false,
     originalMatchMedia,
-    matchMedia,
     busyPath: 'subject' as 'subject' | 'bundle',
     generateCriteria: vi.fn(),
     mutateBundle: vi.fn(),
@@ -571,107 +542,17 @@ const expectLoading = (container: HTMLElement, animated: boolean, path: BusyPath
 
 describe('Task loading motion respects both live preferences', () => {
   beforeAll(async () => {
-    // The existing suite already completed using its original module graph.
-    // Rebuild only this describe's real owners after installing the public
-    // browser media function and bounded data fixtures; no control is mocked.
-    vi.resetModules();
-    vi.doUnmock('@/components/NeuralNetworkLoading');
-    vi.doUnmock('@/components/ActionIcon');
-    vi.doUnmock('./TaskVerifyConfig');
-    // Fixtures stop network/device side effects at data boundaries, preserving
-    // public selectors and actual Zustand subscriptions for preference changes.
-    vi.doMock('@/store/user', async () => {
-      const { create } = await import('zustand');
-      return {
-        useUserStore: create(() => ({
-          defaultSettings: { general: { animationMode: 'agile' } },
-          settings: { general: { animationMode: 'agile' } },
-        })),
-      };
-    });
-    vi.doMock('@/store/task', async () => {
-      const { create } = await import('zustand');
-      return {
-        useTaskStore: create(() => ({
-          activeTaskId: 'T-motion',
-          taskDetailMap: {
-            'T-motion': { id: 'motion-db', name: 'A motion regression goal', verify: undefined },
-          },
-          updateVerifyConfig: vi.fn(),
-        })),
-      };
-    });
-    vi.doMock('@/store/chat', () => {
-      const readChatState = (selector: (state: object) => unknown) =>
-        selector({ openAcceptance: vi.fn(), openAcceptanceCheck: vi.fn() });
-      return { useChatStore: readChatState };
-    });
-    vi.doMock('@/store/global', () => {
-      const readGlobalState = (selector: (state: object) => unknown) =>
-        selector({ toggleTaskAgentPanel: vi.fn() });
-      return { useGlobalStore: readGlobalState };
-    });
-    vi.doMock('@/hooks/usePermission', () => {
-      const readPermission = () => ({ allowed: true });
-      return { usePermission: readPermission };
-    });
-    vi.doMock('@/features/Acceptance', async () => {
-      const readAcceptanceBySubject = () => ({
-        data: fixture.busyPath === 'bundle' ? { id: 'motion-acceptance' } : undefined,
-        error: undefined,
-        isLoading: fixture.busyPath === 'subject',
-        mutate: fixture.mutateSubject,
-      });
-      const readAcceptanceBundle = () => ({
-        data: undefined,
-        error: undefined,
-        isLoading: fixture.busyPath === 'bundle',
-        mutate: fixture.mutateBundle,
-      });
-      return {
-        ...(await vi.importActual('@/features/Acceptance/CriterionList')),
-        checkDisplayTitle: (title: string) => title,
-        checkHeadMeta: () => ({ color: 'green', icon: () => null }),
-        groupChecks: () => [],
-        shouldGroupChecks: () => false,
-        useAcceptanceBySubject: readAcceptanceBySubject,
-        useAcceptanceBundle: readAcceptanceBundle,
-      };
-    });
-    vi.doMock('@/features/Acceptance/hooks', () => {
-      const readRubrics = () => ({ data: [] });
-      return { useRubrics: readRubrics };
-    });
-    vi.doMock('./useTaskVerifyModel', () => {
-      const readTaskVerifyModel = () => ({
-        isLoading: false,
-        isReady: true,
-        model: 'test-model',
-        provider: 'test-provider',
-      });
-      return { useTaskVerifyModel: readTaskVerifyModel };
-    });
-    vi.doMock('@/services/verify', () => ({
-      verifyService: {
-        generateCriteria: (...args: unknown[]) => fixture.generateCriteria(...args),
-      },
-    }));
-
-    // Resolve the queued data fixtures before mounting the actual owners.
-    // importActual bypasses this file's hoisted Verifier mock explicitly;
-    // importing the real scope normally preserves the owners' context identity.
-    const userStore = await import('@/store/user');
-    const scope = await import('./TaskDetailScope');
-    const acceptance = await vi.importActual<{ default: typeof TaskAcceptance }>(
-      './TaskAcceptance',
-    );
-    const verification = await vi.importActual<{ default: typeof TaskVerifyConfig }>(
-      './TaskVerifyConfig',
-    );
-    MotionTaskAcceptance = acceptance.default;
+    fixture.active = true;
+    const [userStore, scope, verification] = await Promise.all([
+      import('@/store/user'),
+      import('./TaskDetailScope'),
+      vi.importActual<{ default: typeof TaskVerifyConfig }>('./TaskVerifyConfig'),
+    ]);
+    MotionTaskAcceptance = TaskAcceptance;
     MotionTaskVerifyConfig = verification.default;
     MotionTaskDetailScope = scope.TaskDetailScope;
     useMotionUserStore = userStore.useUserStore;
+    originalUserSettings = useMotionUserStore.getState().settings;
   });
 
   afterAll(() => {
@@ -681,20 +562,8 @@ describe('Task loading motion respects both live preferences', () => {
     } else {
       Reflect.deleteProperty(window, 'matchMedia');
     }
-    for (const moduleName of [
-      '@/store/user',
-      '@/store/task',
-      '@/store/chat',
-      '@/store/global',
-      '@/hooks/usePermission',
-      '@/features/Acceptance',
-      '@/features/Acceptance/hooks',
-      './useTaskVerifyModel',
-      '@/services/verify',
-    ]) {
-      vi.doUnmock(moduleName);
-    }
-    vi.resetModules();
+    fixture.active = false;
+    useMotionUserStore.setState({ settings: originalUserSettings });
   });
 
   beforeEach(() => {

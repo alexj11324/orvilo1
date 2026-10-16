@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
-import { requestAgentRuntime } from '@/features/CreateAgent';
 import { useSingleton } from '@/hooks/useSingleton';
 import { useUserStore } from '@/store/user';
 import { toolInterventionSelectors } from '@/store/user/selectors';
@@ -15,11 +14,9 @@ import { dataSelectors, useConversationStore } from '../../../../../store';
 import Arguments from '../Arguments';
 import ApprovalActions from './ApprovalActions';
 import {
-  isAgentMarketplaceCall,
   isCustomInteractionIdentifier,
   isHeteroInteractionIdentifier,
   prepareCustomInteractionSubmit,
-  recordCustomInteractionResolution,
 } from './customInteractionHandlers';
 import Fallback from './Fallback';
 import KeyValueEditor from './KeyValueEditor';
@@ -154,32 +151,6 @@ const Intervention = memo<InterventionProps>(
         }
         switch (action.type) {
           case 'submit': {
-            if (usesDurableServerClaim && isAgentMarketplaceCall(identifier, apiName)) {
-              const selectedTemplateIds = action.payload.selectedTemplateIds;
-              if (
-                Array.isArray(selectedTemplateIds) &&
-                selectedTemplateIds.length > 0 &&
-                selectedTemplateIds.every((templateId) => typeof templateId === 'string')
-              ) {
-                const runtimeConfig = await requestAgentRuntime();
-                if (!runtimeConfig) break;
-                await submitToolInteraction(id, action.payload, {
-                  agentInterventionAction: {
-                    result: { kind: 'agent_marketplace', selectedTemplateIds, runtimeConfig },
-                    type: 'submit_custom',
-                  },
-                  prepareLegacyFallback: async () => {
-                    const prepared = await prepareCustomInteractionSubmit(
-                      identifier,
-                      action.payload,
-                      { apiName, requestArgs: parsedArgs, topicId, runtimeConfig },
-                    );
-                    return { response: prepared.payload, ...prepared.options };
-                  },
-                });
-                break;
-              }
-            }
             const { payload, options } = await prepareCustomInteractionSubmit(
               identifier,
               action.payload,
@@ -193,34 +164,11 @@ const Intervention = memo<InterventionProps>(
             break;
           }
           case 'skip': {
-            const recordSkipped = () =>
-              recordCustomInteractionResolution(
-                identifier,
-                'skipped',
-                action.payload,
-                { apiName, requestArgs: parsedArgs, topicId },
-                action.reason,
-              );
-            if (!usesDurableServerClaim) await recordSkipped();
-            await skipToolInteraction(
-              id,
-              action.reason,
-              usesDurableServerClaim ? { onLegacyFallback: recordSkipped } : undefined,
-            );
+            await skipToolInteraction(id, action.reason);
             break;
           }
           case 'cancel': {
-            const recordCancelled = () =>
-              recordCustomInteractionResolution(identifier, 'cancelled', action.payload, {
-                apiName,
-                requestArgs: parsedArgs,
-                topicId,
-              });
-            if (!usesDurableServerClaim) await recordCancelled();
-            await cancelToolInteraction(
-              id,
-              usesDurableServerClaim ? { onLegacyFallback: recordCancelled } : undefined,
-            );
+            await cancelToolInteraction(id);
             break;
           }
         }
@@ -238,7 +186,6 @@ const Intervention = memo<InterventionProps>(
         t,
         submitToolInteraction,
         topicId,
-        usesDurableServerClaim,
       ],
     );
 

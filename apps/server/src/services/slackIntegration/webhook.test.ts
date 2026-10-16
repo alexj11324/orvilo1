@@ -50,7 +50,7 @@ describe('Slack webhook trust boundary', () => {
   });
 });
 
-it('keeps edited and deleted messages in their SDK-normalized thread lane', () => {
+it('keeps edited and deleted messages in their logical message thread lane', () => {
   const original = {
     event: { type: 'app_mention', channel: 'C1', ts: '100.001', user: 'U1', text: '<@B1> hello' },
   };
@@ -89,14 +89,55 @@ it('keeps edited and deleted messages in their SDK-normalized thread lane', () =
   ).not.toBe(slackConversationLane('T1', original));
 });
 
-it('serializes unthreaded direct messages by SDK DM conversation rather than envelope timestamp', () => {
+it('serializes unthreaded direct messages by channel rather than envelope timestamp', () => {
   const direct = (ts: string) => ({
     event: { type: 'message', channel_type: 'im', channel: 'D1', ts, user: 'U1', text: 'hello' },
   });
   expect(slackConversationLane('T1', direct('1.0'))).toBe(
     slackConversationLane('T1', direct('2.0')),
   );
+  expect(slackConversationLane('T1', direct('1.0'))).toBe('["T1","D1",null]');
+  expect(slackConversationLane('T1', { channel: { id: 'D1' }, message: { ts: '2.0' } })).toBe(
+    slackConversationLane('T1', direct('1.0')),
+  );
   expect(
     slackConversationLane('T1', { event: { ...direct('2.0').event, thread_ts: '1.0' } }),
   ).not.toBe(slackConversationLane('T1', direct('1.0')));
 });
+
+it('uses deleted_ts for deleted channel roots without a previous message', () => {
+  expect(
+    slackConversationLane('T1', {
+      event: {
+        channel: 'C1',
+        deleted_ts: '1.0',
+        subtype: 'message_deleted',
+        ts: '2.0',
+        type: 'message',
+      },
+    }),
+  ).toBe('["T1","C1","1.0"]');
+});
+
+it.each(['message_changed', 'message_deleted'])(
+  'keeps %s DMs in their original lanes',
+  (subtype) => {
+    const nestedKey = subtype === 'message_changed' ? 'message' : 'previous_message';
+    const event = {
+      channel: 'D1',
+      channel_type: 'im',
+      deleted_ts: '1.0',
+      subtype,
+      ts: '3.0',
+      type: 'message',
+    };
+    expect(slackConversationLane('T1', { event: { ...event, [nestedKey]: { ts: '1.0' } } })).toBe(
+      '["T1","D1",null]',
+    );
+    expect(
+      slackConversationLane('T1', {
+        event: { ...event, [nestedKey]: { thread_ts: '1.0', ts: '2.0' } },
+      }),
+    ).toBe('["T1","D1","1.0"]');
+  },
+);

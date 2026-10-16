@@ -2741,10 +2741,13 @@ const buildHourlyChildWorkflowRunId = (entryWorkflowRunId: string) =>
   `memory-user-memory-hourly-${entryWorkflowRunId.replaceAll(/[^\w-]/g, '_')}`;
 
 export class MemoryExtractionWorkflowService {
-  static triggerProcessUsers(
+  static async triggerProcessUsers(
     payload: MemoryExtractionPayloadInput,
     options?: { extraHeaders?: Record<string, string> },
   ) {
+    if (!(await isUserMemoryExtractionEnabled())) {
+      throw new Error('Platform automatic memory extraction is unavailable.');
+    }
     if (!payload.baseUrl) {
       throw new Error('Missing baseUrl for workflow trigger');
     }
@@ -2755,10 +2758,13 @@ export class MemoryExtractionWorkflowService {
     });
   }
 
-  static triggerHourly(
+  static async triggerHourly(
     payload: MemoryExtractionHourlyWorkflowPayload,
     options?: { extraHeaders?: Record<string, string>; workflowRunId?: string },
   ) {
+    if (!(await isUserMemoryExtractionEnabled())) {
+      throw new Error('Platform automatic memory extraction is unavailable.');
+    }
     if (!payload.baseUrl) {
       throw new Error('Missing baseUrl for workflow trigger');
     }
@@ -2788,6 +2794,9 @@ export class MemoryExtractionWorkflowService {
     payload: MemoryExtractionHourlyWorkflowPayload,
     options?: { entryWorkflowRunId?: string; extraHeaders?: Record<string, string> },
   ) {
+    if (!(await isUserMemoryExtractionEnabled())) {
+      throw new Error('Platform automatic memory extraction is unavailable.');
+    }
     if (!payload.baseUrl) {
       throw new Error('Missing baseUrl for workflow trigger');
     }

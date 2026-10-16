@@ -17,7 +17,8 @@ export type HeteroOperationCapability =
   | 'hetero:ingest'
   | 'hetero:intervention:read'
   | 'hetero:tool:exec'
-  | 'prime:infer';
+  | 'prime:infer'
+  | 'topic:reference:read';
 
 export interface HeteroOperationJwtClaims {
   aud: typeof HETERO_OPERATION_JWT_AUDIENCE;
@@ -221,6 +222,7 @@ export const validateHeteroOperationClaims = (
         'hetero:intervention:read',
         'hetero:tool:exec',
         'prime:infer',
+        'topic:reference:read',
       ].includes(capability as string),
     ) ||
     (payload.device_id !== undefined && typeof payload.device_id !== 'string') ||

@@ -6,8 +6,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import { toast } from '@/components/toast';
-import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -15,12 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { type AcceptanceBundle, verifyService } from '@/services/verify';
+import { type AcceptanceBundle } from '@/services/verify';
 
 import { AttachmentThumbs } from '../Evidence/attachments';
 import { EvidenceList } from '../Evidence/EvidenceList';
-import { openCheckRejectModal } from '../Review/CheckRejectModal';
 import { flowStateColor } from './FlowNode';
 
 type FlowVersion = AcceptanceBundle['flows'][number]['versions'][number];
@@ -35,19 +31,8 @@ const styles = {
   review: 'pt-4 border-t border-sidebar-border',
 };
 
-function AttemptReview({
-  acceptanceId,
-  attempt,
-  onSaved,
-}: {
-  acceptanceId: string;
-  attempt: FlowAttempt;
-  onSaved: () => Promise<unknown>;
-}) {
+function AttemptHistory({ attempt }: { attempt: FlowAttempt }) {
   const { t } = useTranslation('verify');
-  const [editing, setEditing] = useState(false);
-  const [comment, setComment] = useState(attempt.reviewComment ?? '');
-  const [saving, setSaving] = useState(false);
   return (
     <div className={`flex flex-col gap-2.5 ${styles.review}`}>
       {attempt.review && (
@@ -62,97 +47,16 @@ function AttemptReview({
         </div>
       ))}
       <AttachmentThumbs attachments={attempt.reviewAttachments} />
-      <Button
-        size="lg"
-        onClick={() =>
-          openCheckRejectModal({
-            checkTitle: t('flow.annotate'),
-            draftKey: attempt.id,
-            evidence: attempt.evidence
-              .filter((e) => e.type === 'screenshot' && e.fileUrl)
-              .map((e) => ({ id: e.id, fileUrl: e.fileUrl! })),
-            initialAnnotations: attempt.reviewDetail?.annotations,
-            initialComment: comment,
-            onConfirm: async (feedback) => {
-              try {
-                await verifyService.reviewFlowStep({
-                  id: acceptanceId,
-                  attemptId: attempt.id,
-                  review: 'rejected',
-                  ...feedback,
-                });
-                await onSaved();
-                setComment(feedback.comment);
-                setEditing(false);
-                return true;
-              } catch (error) {
-                console.error(error);
-                toast.error(t('flow.saveError'));
-                return false;
-              }
-            },
-          })
-        }
-      >
-        {t('flow.annotate')}
-      </Button>
-      {!editing ? (
-        <Button size="lg" onClick={() => setEditing(true)}>
-          {t(attempt.review ? 'flow.editReview' : 'flow.reviewResult')}
-        </Button>
-      ) : (
-        <>
-          <Textarea
-            placeholder={t('flow.comment')}
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
-          <div className="flex gap-2">
-            {(['accepted', 'rejected'] as const).map((review) => (
-              <Button
-                disabled={saving}
-                key={review}
-                size="lg"
-                onClick={async () => {
-                  setSaving(true);
-                  try {
-                    await verifyService.reviewFlowStep({
-                      id: acceptanceId,
-                      attemptId: attempt.id,
-                      review,
-                      comment,
-                      annotations: attempt.reviewDetail?.annotations,
-                      fileIds: attempt.reviewDetail?.fileIds,
-                    });
-                    await onSaved();
-                    setEditing(false);
-                  } catch (error) {
-                    console.error(error);
-                    toast.error(t('flow.saveError'));
-                  } finally {
-                    setSaving(false);
-                  }
-                }}
-              >
-                {t(`flow.review.${review}`)}
-              </Button>
-            ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }
 
 /** Selecting history and drafting a review only update the reading panel, never the map. */
 export function FlowResults({
-  acceptanceId,
   attempts,
-  canReview,
   edges,
   node,
   onClose,
-  onSaved,
   selectedEdge,
 }: {
   acceptanceId: string;
@@ -262,20 +166,7 @@ export function FlowResults({
             )}
           </div>
         )}
-        {attempt && canReview && (
-          <AttemptReview
-            acceptanceId={acceptanceId}
-            attempt={attempt}
-            key={attempt.id}
-            onSaved={onSaved}
-          />
-        )}
-        {attempt?.review && !canReview && (
-          <div>
-            {t(`flow.review.${attempt.review}`)}
-            {attempt.reviewComment ? ` · ${attempt.reviewComment}` : ''}
-          </div>
-        )}
+        {attempt && <AttemptHistory attempt={attempt} />}
       </div>
     </div>
   );

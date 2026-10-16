@@ -12,6 +12,7 @@ import {
   topics,
 } from '../../../schemas';
 import { sanitizeBm25Query } from '../../../utils/bm25';
+import { buildFileTopicCeiling } from '../../../utils/fileTopicCeiling';
 import { normalizeInboxAgentMeta, normalizeInboxAgentTitle } from '../../../utils/inboxAgent';
 import { searchableMessageText } from '../../../utils/searchableMessage';
 import { notShareVisitorMessage, notShareVisitorTopic } from '../../../utils/shareVisitor';
@@ -385,6 +386,11 @@ export async function searchFiles(
     .where(
       and(
         context.liftedScopeWhere(hits.workspaceId),
+        buildFileTopicCeiling(
+          db,
+          { userId: context.userId, workspaceId: context.scope.workspaceId },
+          hits.id,
+        ),
         // A file linked to any restricted KB is fully hidden. The subquery
         // avoids leaking it through a different joined membership row.
         excludeKbIds && excludeKbIds.length > 0

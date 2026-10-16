@@ -33,7 +33,6 @@ vi.mock('@/services/agentManagerRuntime', () => ({
 }));
 
 vi.mock('@/services/agent', () => ({ agentService: {} }));
-vi.mock('@/services/discover', () => ({ discoverService: {} }));
 
 vi.mock('@orvilo/agent-manager-runtime', () => ({
   AgentManagerRuntime: vi.fn(function () {

@@ -4,8 +4,6 @@
   "private": true,
   "exports": {
     ".": "./src/index.ts",
-    "./agentMarketplace": "./src/agentMarketplace/index.ts",
-    "./agentMarketplace/client": "./src/agentMarketplace/client/index.ts",
     "./client": "./src/client/index.ts",
     "./executionRuntime": "./src/ExecutionRuntime/index.ts",
     "./utils": "./src/ExecutionRuntime/utils.ts"

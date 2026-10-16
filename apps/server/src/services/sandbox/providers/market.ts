@@ -52,6 +52,13 @@ export class MarketSandboxProvider implements SandboxProvider {
     toolName: string,
     params: Record<string, unknown>,
   ): Promise<SandboxCallToolResult> {
+    if (toolName === 'execScript' && (params.skillZipUrls || params.zipUrl)) {
+      return {
+        error: { message: 'Platform skill distribution has been retired' },
+        result: null,
+        success: false,
+      };
+    }
     const { marketService, topicId, userId } = this.options;
 
     log(

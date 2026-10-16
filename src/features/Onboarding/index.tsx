@@ -7,6 +7,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
 
+import { getWorkspaceContextState } from '@/business/client/workspaceContextStore';
 import AsyncError from '@/components/AsyncError';
 import { OnboardingHeader } from '@/components/blocks/onboarding-2/components/onboarding-header';
 import { useWorkspaceSlug } from '@/components/blocks/onboarding-2/components/useWorkspaceSlug';
@@ -75,6 +76,7 @@ function OnboardingSetup() {
   const [orchestratorAgentId, setOrchestratorAgentId] = useState(setup?.orchestratorAgentId);
   const [orchestratorReady, setOrchestratorReady] = useState(false);
   const [alsoDefaultAgent, setAlsoDefaultAgent] = useState(true);
+  const [creatingOrchestrator, setCreatingOrchestrator] = useState(false);
 
   const saveWorkspace = async (candidate: { id: string; slug: string }) => {
     const state = useUserStore.getState();
@@ -142,6 +144,7 @@ function OnboardingSetup() {
       createdWorkspaceRef.current = resolved;
       await saveWorkspace(resolved);
       setSavedWorkspace({ ...resolved, name: workspaceName.trim() });
+      getWorkspaceContextState().setActiveWorkspace(resolved);
       setWorkspace(resolved);
     });
   };
@@ -149,7 +152,8 @@ function OnboardingSetup() {
   const goBack = () => {
     if (busy) return;
     setFailure(undefined);
-    if (agentVerified) setAgentVerified(false);
+    if (creatingOrchestrator) setCreatingOrchestrator(false);
+    else if (agentVerified) setAgentVerified(false);
     else setWorkspace(undefined);
   };
 
@@ -175,10 +179,7 @@ function OnboardingSetup() {
         },
       });
       await ensureFirstAgentInWorkspace(agentId, workspace.id, { executionTarget, boundDeviceId });
-      const selectedId = useUserStore.getState().onboarding?.setup?.orchestratorAgentId ?? agentId;
-      await state.updateOnboarding({
-        setup: { ...useUserStore.getState().onboarding?.setup, orchestratorAgentId: selectedId },
-      });
+      const selectedId = useUserStore.getState().onboarding?.setup?.orchestratorAgentId;
       setOrchestratorAgentId(selectedId);
       setAgentVerified(true);
     });
@@ -299,6 +300,7 @@ function OnboardingSetup() {
               size="lg"
               onClick={() => {
                 createdWorkspaceRef.current = savedWorkspace;
+                getWorkspaceContextState().setActiveWorkspace(savedWorkspace);
                 setWorkspace(savedWorkspace);
               }}
             >
@@ -358,27 +360,31 @@ function OnboardingSetup() {
               {t('reui.action.continue')}
             </Button>
           </form>
+        ) : agentVerified && creatingOrchestrator ? (
+          <CreateAgentPanel
+            lockVisibility
+            visibility="public"
+            onCancel={() => setCreatingOrchestrator(false)}
+            onCreated={async (id) => {
+              await selectOrchestrator(id);
+              setCreatingOrchestrator(false);
+            }}
+          />
         ) : agentVerified ? (
           <>
             <ConfiguredOrchestratorSelector
               alsoDefault={alsoDefaultAgent}
               disabled={busy}
               value={orchestratorAgentId}
+              visibility="public"
               workspaceId={workspace.id}
               onAlsoDefaultChange={setAlsoDefaultAgent}
               onSelect={(id) => void selectOrchestrator(id)}
               onUnavailable={() => setOrchestratorReady(false)}
-              onCreated={async (id) => {
-                const saved = await getOnboardingAgentConfig(id, workspace.id);
-                const { executionTarget, boundDeviceId } = resolveOnboardingAgentHost(
-                  saved?.agencyConfig,
-                );
-                await ensureFirstAgentInWorkspace(id, workspace.id, {
-                  executionTarget,
-                  boundDeviceId,
-                });
-              }}
             />
+            <Button disabled={busy} variant="outline" onClick={() => setCreatingOrchestrator(true)}>
+              {t('setup.orchestrator.create')}
+            </Button>
             <Button
               disabled={busy || !orchestratorReady}
               loading={busy}

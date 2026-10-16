@@ -1,181 +1,29 @@
-import type { VerifyCheckItem } from '@orvilo/types';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+// @vitest-environment node
+import { expect, it, vi } from 'vitest';
 
 import { VerifyPlanGeneratorService } from '../planGenerator';
 
-// Mock the model modules the generator constructs (holistic fallback).
-const {
-  confirmPlanMock,
-  createCriterionMock,
-  createRubricMock,
-  ensureForOperationMock,
-  findByIdsMock,
-  generateObjectMock,
-  getCriteriaMock,
-  setCriteriaMock,
-  setPlanMock,
-} = vi.hoisted(() => ({
-  confirmPlanMock: vi.fn(),
-  createCriterionMock: vi.fn(async (input: any) => ({ id: 'created-criterion', ...input })),
-  createRubricMock: vi.fn(async () => ({ id: 'rub-created' })),
-  ensureForOperationMock: vi.fn(async () => ({ id: 'run-1' })),
-  findByIdsMock: vi.fn(async () => [] as any[]),
-  generateObjectMock: vi.fn(),
-  getCriteriaMock: vi.fn(async () => [] as any[]),
-  setCriteriaMock: vi.fn(),
-  setPlanMock: vi.fn(async (_runId: string, _items: any[]) => {}),
+vi.mock('@/database/core/db-adaptor', () => ({ getServerDB: vi.fn() }));
+vi.mock('@/server/services/aiAgent', () => ({ AiAgentService: class {} }));
+vi.mock('@/server/services/aiAgent/deviceQueue', () => ({
+  cancelQueuedDeviceOperation: vi.fn(),
+  finishQueuedDeviceOperation: vi.fn(),
+  readDeviceQueue: vi.fn(),
 }));
 
-vi.mock('@/database/models/verifyRun', () => ({
-  VerifyRunModel: vi.fn(function () {
-    return {
-      ensureForOperation: ensureForOperationMock,
-      confirmPlan: confirmPlanMock,
-      setPlan: setPlanMock,
-    };
-  }),
-}));
-vi.mock('@/database/models/verifyRubric', () => ({
-  VerifyRubricModel: vi.fn(function () {
-    return {
-      create: createRubricMock,
-      getCriteria: getCriteriaMock,
-      setCriteria: setCriteriaMock,
-    };
-  }),
-}));
-vi.mock('@/database/models/verifyCriterion', () => ({
-  VerifyCriterionModel: vi.fn(function () {
-    return {
-      create: createCriterionMock,
-      findByIds: findByIdsMock,
-    };
-  }),
-}));
-vi.mock('@/database/models/document', () => ({
-  DocumentModel: vi.fn(function () {
-    return {};
-  }),
-}));
-vi.mock('@/server/services/aiGeneration', () => ({
-  AiGenerationService: vi.fn(function () {
-    return { generateObject: generateObjectMock };
-  }),
-}));
-
-const db = {} as any;
-const lastPlan = (): VerifyCheckItem[] => setPlanMock.mock.calls.at(-1)![1] as VerifyCheckItem[];
-
-describe('generateDraftPlan — holistic fallback', () => {
-  beforeEach(() => {
-    setPlanMock.mockClear();
-    getCriteriaMock.mockResolvedValue([]);
-    findByIdsMock.mockResolvedValue([]);
-  });
-
-  it('synthesizes one agent-type holistic check from the requirement when no criteria', async () => {
-    const svc = new VerifyPlanGeneratorService(db, 'user-1');
-    await svc.generateDraftPlan({
-      goal: 'do the thing',
-      holisticFallback: true,
-      operationId: 'op-1',
-      requirement: 'The UI shows the new badge',
-    });
-
-    const plan = lastPlan();
-    expect(plan).toHaveLength(1);
-    expect(plan[0]).toMatchObject({
-      description: 'The UI shows the new badge',
-      onFail: 'manual',
-      required: true,
-      verifierType: 'agent',
-    });
-  });
-
-  it('falls back to the goal when no requirement', async () => {
-    const svc = new VerifyPlanGeneratorService(db, 'user-1');
-    await svc.generateDraftPlan({
-      goal: 'fix the bug',
-      holisticFallback: true,
-      operationId: 'op-1',
-    });
-    expect(lastPlan()[0].description).toBe('fix the bug');
-  });
-
-  it('does NOT synthesize when holisticFallback is off — empty plan stays empty', async () => {
-    const svc = new VerifyPlanGeneratorService(db, 'user-1');
-    await svc.generateDraftPlan({ goal: 'x', holisticFallback: false, operationId: 'op-1' });
-    expect(lastPlan()).toHaveLength(0);
-  });
-
-  it('does NOT add a holistic item when criteria already produced items', async () => {
-    getCriteriaMock.mockResolvedValue([
-      {
-        description: null,
-        documentId: null,
-        id: 'c1',
-        onFail: 'manual',
-        required: true,
-        title: 'Crit 1',
-        verifierConfig: {},
-        verifierType: 'llm',
+it('rejects the retired planGenerator producer before reading or writing the ledger', async () => {
+  const touched = vi.fn();
+  const db = new Proxy(
+    {},
+    {
+      get() {
+        touched();
+        throw new Error('Archive ledger must stay untouched');
       },
-    ]);
-    const svc = new VerifyPlanGeneratorService(db, 'user-1');
-    await svc.generateDraftPlan({
-      goal: 'x',
-      holisticFallback: true,
-      operationId: 'op-1',
-      verifyRubricId: 'rub-1',
-    });
-
-    const plan = lastPlan();
-    expect(plan).toHaveLength(1);
-    expect(plan[0].id).toBe('c1');
-    expect(plan[0].title).toBe('Crit 1');
-    expect(plan[0].verifierType).toBe('llm');
-  });
-
-  it('preserves verifierConfig from mounted criteria in the frozen plan', async () => {
-    getCriteriaMock.mockResolvedValue([
-      {
-        id: 'c-evidence',
-        onFail: 'auto_repair',
-        required: true,
-        title: 'Visual proof',
-        verifierConfig: {
-          requiredEvidence: [{ modality: 'image', scope: 'run_evidence', type: 'screenshot' }],
-        },
-        verifierType: 'llm',
-      },
-    ]);
-
-    await new VerifyPlanGeneratorService(db, 'user-1').generateDraftPlan({
-      goal: 'x',
-      operationId: 'op-1',
-      verifyRubricId: 'rub-1',
-    });
-
-    expect(lastPlan()[0].verifierConfig).toEqual({
-      requiredEvidence: [{ modality: 'image', scope: 'run_evidence', type: 'screenshot' }],
-    });
-  });
-});
-
-describe('generateCriteria tracing', () => {
-  it('keeps generic task criteria generation on the verify-plan scenario', async () => {
-    generateObjectMock.mockResolvedValue({ criteria: [] });
-
-    await new VerifyPlanGeneratorService(db, 'user-1').generateCriteria({
-      goal: 'Ship the feature',
-      modelConfig: { model: 'test-model', provider: 'test-provider' },
-    });
-
-    expect(generateObjectMock).toHaveBeenCalledWith(
-      expect.any(Object),
-      expect.objectContaining({
-        tracing: expect.objectContaining({ scenario: 'verify_plan_gen' }),
-      }),
-    );
-  });
+    },
+  ) as never;
+  await expect(
+    new VerifyPlanGeneratorService(db, 'user').generateDraftPlan({} as never),
+  ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+  expect(touched).not.toHaveBeenCalled();
 });

@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getTestDB } from '../../core/getTestDB';
 import {
   agents,
+  projectMembers,
+  projects,
   taskDispatches,
   tasks,
   taskTopics,
@@ -511,6 +513,7 @@ describe('TaskTopicModel', () => {
     const completedDispatchFixture = async (
       suffix: string,
       phase: 'canceled' | 'failed' | 'succeeded' = 'succeeded',
+      occurrence?: 'root' | 'child',
     ) => {
       const topicId = `tpc_completed_${suffix}`;
       const operationId = `op_completed_${suffix}`;
@@ -519,6 +522,7 @@ describe('TaskTopicModel', () => {
       const topicModel = new TaskTopicModel(serverDB, userId);
       const task = await taskModel.create({
         instruction: 'Recover succeeded dispatch',
+        automationMode: occurrence ? 'schedule' : undefined,
         executionGeneration: 1,
         workflowCategory: 'in_progress',
       });
@@ -527,6 +531,21 @@ describe('TaskTopicModel', () => {
       const current = (await taskModel.findById(task.id))!;
       const dispatch = {
         id: dispatchId,
+        automationOccurrence: occurrence
+          ? {
+              occurrenceId: `${suffix}-occurrence`,
+              ...(occurrence === 'child' ? { parentDispatchId: 'parent-dispatch' } : {}),
+              definition: {
+                assigneeAgentId: current.assigneeAgentId,
+                automationMode: 'schedule' as const,
+                config: current.config,
+                definitionVersionId: `${suffix}-definition`,
+                instruction: current.instruction,
+                policyRevision: current.policyRevision,
+                requirementRevision: current.requirementRevision,
+              },
+            }
+          : undefined,
         planRevision: null,
         taskId: task.id,
         generation: 1,
@@ -585,6 +604,107 @@ describe('TaskTopicModel', () => {
         }),
       ).rejects.toThrow('already being processed');
     });
+
+    it('claims a successful root automation callback while its delivery and next occurrence wait', async () => {
+      const { taskModel, topicModel, task, dispatch, topicId, operationId } =
+        await completedDispatchFixture('automation-root', 'succeeded', 'root');
+      const dispatchModel = new TaskDispatchModel(serverDB);
+      expect(await dispatchModel.findById(dispatch.id)).toMatchObject({
+        phase: 'waiting',
+        waitingReason: 'automation_delivery_pending',
+      });
+      const queued = await dispatchModel.request({
+        taskId: task.id,
+        trigger: 'schedule',
+        requestedBy: userId,
+        idempotencyKey: 'automation-second-occurrence',
+      });
+      if (queued.state === 'busy') throw new Error('Second occurrence was not retained');
+      expect(queued.dispatch.phase).toBe('queued');
+
+      const claim = await topicModel.settleIfRunning(
+        task.id,
+        topicId,
+        operationId,
+        'completed',
+        'done',
+        { dispatchId: dispatch.id, fence: 1, generation: 1 },
+      );
+      expect(claim).toMatch(/^completion:/);
+      expect(await topicModel.findByTopicId(topicId)).toMatchObject({
+        status: 'completed',
+        runState: 'succeeded',
+      });
+      expect(await dispatchModel.findById(dispatch.id)).toMatchObject({
+        phase: 'waiting',
+        waitingReason: 'automation_delivery_pending',
+      });
+      expect(await dispatchModel.findById(queued.dispatch.id)).toMatchObject({ phase: 'queued' });
+      expect(await taskModel.findById(task.id)).toMatchObject({
+        executionGeneration: 1,
+        workflowCategory: 'in_progress',
+        currentTopicId: topicId,
+      });
+    });
+
+    it.each([
+      'generic-wait',
+      'no-occurrence',
+      'child',
+      'failed',
+      'canceled',
+      'fence',
+      'generation',
+      'operation',
+      'assignee',
+    ] as const)(
+      'rejects a completed callback for an automation dispatch in %s',
+      async (invalid) => {
+        const { topicModel, task, dispatch, topicId, operationId } = await completedDispatchFixture(
+          `automation-${invalid}`,
+          invalid === 'failed' || invalid === 'canceled' ? invalid : 'succeeded',
+          invalid === 'child' ? 'child' : 'root',
+        );
+        if (invalid === 'generic-wait' || invalid === 'child') {
+          await serverDB
+            .update(taskDispatches)
+            .set({
+              phase: 'waiting',
+              waitingReason:
+                invalid === 'generic-wait' ? 'no_eligible_agent' : 'automation_delivery_pending',
+            })
+            .where(eq(taskDispatches.id, dispatch.id));
+        }
+        if (invalid === 'no-occurrence') {
+          await serverDB
+            .update(taskDispatches)
+            .set({ automationOccurrence: null })
+            .where(eq(taskDispatches.id, dispatch.id));
+        }
+        if (invalid === 'assignee') {
+          await serverDB.insert(agents).values({ id: 'automation-new-assignee', userId });
+          await serverDB
+            .update(tasks)
+            .set({ assigneeAgentId: 'automation-new-assignee' })
+            .where(eq(tasks.id, task.id));
+        }
+        expect(
+          await topicModel.settleIfRunning(
+            task.id,
+            topicId,
+            invalid === 'operation' ? 'wrong-operation' : operationId,
+            'completed',
+            'done',
+            {
+              dispatchId: dispatch.id,
+              fence: invalid === 'fence' ? 99 : 1,
+              generation: invalid === 'generation' ? 99 : 1,
+            },
+          ),
+        ).toBeNull();
+        expect((await topicModel.findByTopicId(topicId))?.status).toBe('running');
+      },
+    );
 
     it.each(['failed', 'canceled'] as const)(
       'accepts the matching %s dispatch without mistaking it for a user park',
@@ -1033,6 +1153,86 @@ describe('TaskTopicModel', () => {
         sourceTaskName: 'Child Task',
         topicId: 'tpc_child',
       });
+    });
+
+    it('hides a private Project handoff and its spend from a member without a grant', async () => {
+      const workspaceId = 'ws_private_project_handoff';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Private handoff',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: userId2, workspaceId },
+      ]);
+      await serverDB.insert(projects).values([
+        {
+          id: 'proj_private_handoff',
+          identifier: 'PHND',
+          name: 'Private handoff',
+          userId,
+          visibility: 'private',
+          workspaceId,
+        },
+        {
+          id: 'proj_public_handoff',
+          identifier: 'PHNP',
+          name: 'Public handoff',
+          userId,
+          visibility: 'public',
+          workspaceId,
+        },
+      ]);
+      const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
+      const ownerTopics = new TaskTopicModel(serverDB, userId, workspaceId);
+      const memberTopics = new TaskTopicModel(serverDB, userId2, workspaceId);
+      const hidden = await ownerTasks.create({
+        instruction: 'Private delivery',
+        name: 'Hidden delivery',
+        projectId: 'proj_private_handoff',
+      });
+      const visible = await ownerTasks.create({
+        instruction: 'Public delivery',
+        name: 'Visible delivery',
+        projectId: 'proj_public_handoff',
+      });
+      await createTopic('tpc_hidden_handoff');
+      await createTopic('tpc_visible_handoff');
+      await ownerTopics.add(hidden.id, 'tpc_hidden_handoff', { seq: 1 });
+      await ownerTopics.add(visible.id, 'tpc_visible_handoff', { seq: 1 });
+      await ownerTopics.updateHandoff(hidden.id, 'tpc_hidden_handoff', {
+        summary: 'private run notes',
+      });
+      await serverDB
+        .update(topics)
+        .set({ totalCost: 4 })
+        .where(eq(topics.id, 'tpc_hidden_handoff'));
+      await serverDB
+        .update(topics)
+        .set({ totalCost: 1 })
+        .where(eq(topics.id, 'tpc_visible_handoff'));
+
+      const hiddenRows = await memberTopics.findWithHandoffByTaskIds([hidden.id, visible.id], 10);
+      expect(hiddenRows.map((row) => row.topicId)).toEqual(['tpc_visible_handoff']);
+      expect((await memberTopics.sumRunCostByTaskIds([hidden.id, visible.id])).totalCost).toBe(1);
+
+      await serverDB.insert(projectMembers).values({
+        projectId: 'proj_private_handoff',
+        role: 'contributor',
+        userId: userId2,
+        workspaceId,
+      });
+      const granted = await memberTopics.findWithHandoffByTaskIds([hidden.id, visible.id], 10);
+      expect(granted.map((row) => row.topicId).sort()).toEqual([
+        'tpc_hidden_handoff',
+        'tpc_visible_handoff',
+      ]);
+      expect(granted.find((row) => row.topicId === 'tpc_hidden_handoff')?.handoff).toMatchObject({
+        summary: 'private run notes',
+      });
+      expect((await memberTopics.sumRunCostByTaskIds([hidden.id, visible.id])).totalCost).toBe(5);
     });
   });
 
@@ -1511,6 +1711,10 @@ describe('TaskTopicModel', () => {
         primaryOwnerId: userId,
         slug: workspaceId,
       });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: userId2, workspaceId },
+      ]);
       const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
       const memberTasks = new TaskModel(serverDB, userId2, workspaceId);
       const topicModel = new TaskTopicModel(serverDB, userId, workspaceId);
@@ -1542,6 +1746,75 @@ describe('TaskTopicModel', () => {
       });
       expect(onlyMine.total).toBe(1);
       expect(onlyMine.rows[0].topicId).toBe('tpc_mine');
+    });
+
+    it('hides a private Project run from a member without a grant', async () => {
+      const workspaceId = 'ws_private_project_runs';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Private runs',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: userId2, workspaceId },
+      ]);
+      await serverDB.insert(projects).values([
+        {
+          id: 'proj_private_runs',
+          identifier: 'PRIV',
+          name: 'Private',
+          userId,
+          visibility: 'private',
+          workspaceId,
+        },
+        {
+          id: 'proj_public_runs',
+          identifier: 'PUBR',
+          name: 'Public',
+          userId,
+          visibility: 'public',
+          workspaceId,
+        },
+      ]);
+      const ownerTasks = new TaskModel(serverDB, userId, workspaceId);
+      const ownerTopics = new TaskTopicModel(serverDB, userId, workspaceId);
+      const memberTopics = new TaskTopicModel(serverDB, userId2, workspaceId);
+      const hidden = await ownerTasks.create({
+        automationMode: 'schedule',
+        instruction: 'Private schedule',
+        name: 'Hidden sweep',
+        projectId: 'proj_private_runs',
+      });
+      const visible = await ownerTasks.create({
+        automationMode: 'schedule',
+        instruction: 'Public schedule',
+        name: 'Visible sweep',
+        projectId: 'proj_public_runs',
+      });
+      await createTopic('tpc_hidden_run');
+      await createTopic('tpc_visible_run');
+      await ownerTopics.add(hidden.id, 'tpc_hidden_run', { seq: 1, trigger: 'schedule' });
+      await ownerTopics.add(visible.id, 'tpc_visible_run', { seq: 1, trigger: 'schedule' });
+      await ownerTopics.updateStatus(hidden.id, 'tpc_hidden_run', 'completed');
+
+      const memberRuns = await memberTopics.findAutomationRuns({ limit: 25, offset: 0 });
+      expect(memberRuns.rows.map((row) => row.topicId)).toEqual(['tpc_visible_run']);
+      expect((await memberTopics.automationRunStats()).completed7d).toBe(0);
+
+      await serverDB.insert(projectMembers).values({
+        projectId: 'proj_private_runs',
+        role: 'contributor',
+        userId: userId2,
+        workspaceId,
+      });
+      const granted = await memberTopics.findAutomationRuns({ limit: 25, offset: 0 });
+      expect(granted.rows.map((row) => row.topicId).sort()).toEqual([
+        'tpc_hidden_run',
+        'tpc_visible_run',
+      ]);
+      expect((await memberTopics.automationRunStats()).completed7d).toBe(1);
     });
   });
 

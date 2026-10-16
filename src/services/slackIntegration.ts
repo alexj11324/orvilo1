@@ -38,11 +38,17 @@ export const slackIntegrationService = {
     const response = await lambdaClient.slackIntegration.channels.query({ workspaceId, cursor });
     return response.data;
   },
-  async saveBinding(workspaceId: string, slackChannelId: string, agentId: string) {
+  async saveBinding(
+    workspaceId: string,
+    slackChannelId: string,
+    agentId: string,
+    defaults?: { projectId?: string | null; repositoryId?: string | null },
+  ) {
     return lambdaClient.slackIntegration.saveBinding.mutate({
       workspaceId,
       slackChannelId,
       agentId,
+      ...defaults,
     });
   },
   async deleteBinding(workspaceId: string, id: string) {

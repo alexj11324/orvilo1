@@ -10,7 +10,6 @@ import BrandTextLoading from '@/components/Loading/BrandTextLoading';
 import ConversationLayoutSkeleton from '@/components/Skeleton/Conversation/Layout';
 import ConversationSegmentSkeleton from '@/components/Skeleton/Conversation/Segment';
 import DelayedFallback from '@/components/Skeleton/Delayed';
-import GoalSkeleton from '@/components/Skeleton/Goal';
 import GoalDetailSkeleton from '@/components/Skeleton/GoalDetail';
 import MemorySkeleton from '@/components/Skeleton/Memory';
 import ProfileSkeleton, { GroupProfileRouteSkeleton } from '@/components/Skeleton/Profile';
@@ -610,7 +609,6 @@ describe('desktop router shared definition', () => {
     for (const [pathname, expectedSkeleton] of [
       ['/agent/agent-1/tasks', TasksSkeleton],
       ['/agent/agent-1/task/task-1', TaskDetailSkeleton],
-      ['/agent/agent-1/goals', GoalSkeleton],
       ['/agent/agent-1/goal/goal-1', GoalDetailSkeleton],
       ['/agent/agent-1/profile', ProfileSkeleton],
       ['/agent/agent-1/topic-1', ConversationLayoutSkeleton],
@@ -634,6 +632,34 @@ describe('desktop router shared definition', () => {
         resolveRouteSkeleton(matches?.map(({ route }) => ({ handle: route.handle })) ?? []),
         pathname,
       ).toBe(expectedSkeleton);
+    }
+  });
+
+  it.each([
+    ['Web', (_pathname: string) => webDesktopRoutes],
+    ['Electron', (pathname: string) => createTabRouter(pathname).routes],
+  ])('%s redirects retired Goal lists while preserving historical detail links', (_, getRoutes) => {
+    for (const [pathname, target] of [
+      ['/agent/agent-1/goals', '..'],
+      ['/acme/agent/agent-1/goals', '..'],
+      ['/project/project-1/goals', '../tasks'],
+      ['/acme/project/project-1/goals', '../tasks'],
+    ]) {
+      const match = matchRoutes(getRoutes(pathname), pathname)?.at(-1);
+      const element = match?.route.element as ReactElement<{ replace?: boolean; to?: string }>;
+
+      expect(match?.route.path, pathname).toBe('goals');
+      expect(element?.type, pathname).toBe(Navigate);
+      expect(element?.props, pathname).toMatchObject({ replace: true, to: target });
+    }
+
+    for (const pathname of ['/agent/agent-1/goal/goal-1', '/goal/goal-1']) {
+      const matches = matchRoutes(getRoutes(pathname), pathname);
+      expect(matches?.at(-1)?.params.goalId, pathname).toBe('goal-1');
+      expect(
+        resolveRouteSkeleton(matches?.map(({ route }) => ({ handle: route.handle })) ?? []),
+        pathname,
+      ).toBe(GoalDetailSkeleton);
     }
   });
 

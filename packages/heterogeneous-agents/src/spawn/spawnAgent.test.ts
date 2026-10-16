@@ -1597,33 +1597,64 @@ describe('spawnAgent', () => {
     }
   });
 
-  it('supplies required ACP HTTP headers when mounting standard-ACP tools', async () => {
-    const fake = createStandardAcpProc();
-    nextFakeProc = fake.proc;
-    const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+  it.each([undefined, 'NATIVE_SESSION_SECRET'])(
+    'records safe outgoing ACP mount metadata on resume %s',
+    async (resumeSessionId) => {
+      const records: Record<string, unknown>[] = [];
+      const fake = createStandardAcpProc();
+      nextFakeProc = fake.proc;
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
 
-    try {
-      const { spawnAgent } = await import('./spawnAgent');
-      const handle = await spawnAgent({
-        agentType: 'opencode',
-        mcpServers: [{ name: 'orvilo_cc', type: 'http', url: 'http://127.0.0.1:9999/op' }],
-        operationId: 'op-mcp',
-        prompt: 'hi',
-      });
-      for await (const _event of handle.events) {
-        // drain
+      try {
+        const { spawnAgent } = await import('./spawnAgent');
+        const handle = await spawnAgent({
+          agentType: 'opencode',
+          mcpServers: [
+            {
+              name: 'orvilo_cc',
+              type: 'http',
+              url: 'http://127.0.0.1:9999/URL_SECRET',
+              env: { key: 'ENV_SECRET' },
+            },
+          ],
+          onMcpMetadata: (record) => records.push(record),
+          resumeSessionId,
+          operationId: 'op-mcp',
+          prompt: 'PROMPT_SECRET',
+        });
+        for await (const _event of handle.events) {
+          // drain
+        }
+        await handle.exit;
+
+        expect(
+          fake.requests.find(
+            ({ method }) => method === (resumeSessionId ? 'session/load' : 'session/new'),
+          )?.params?.mcpServers,
+        ).toEqual([
+          {
+            name: 'orvilo_cc',
+            type: 'http',
+            url: 'http://127.0.0.1:9999/URL_SECRET',
+            env: { key: 'ENV_SECRET' },
+            headers: [],
+          },
+        ]);
+        expect(records).toEqual([
+          {
+            method: resumeSessionId ? 'session/load' : 'session/new',
+            operationId: 'op-mcp',
+            resume: !!resumeSessionId,
+            servers: [{ name: 'orvilo_cc', type: 'http' }],
+            type: 'acp_session_request_attempt',
+          },
+        ]);
+        expect(JSON.stringify(records)).not.toContain('SECRET');
+      } finally {
+        killSpy.mockRestore();
       }
-      await handle.exit;
-
-      expect(
-        fake.requests.find(({ method }) => method === 'session/new')?.params?.mcpServers,
-      ).toEqual([
-        { name: 'orvilo_cc', type: 'http', url: 'http://127.0.0.1:9999/op', headers: [] },
-      ]);
-    } finally {
-      killSpy.mockRestore();
-    }
-  });
+    },
+  );
 
   it('rejects with an error on unknown agent type', async () => {
     nextFakeProc = createStandardAcpProc().proc;

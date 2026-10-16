@@ -157,10 +157,9 @@ describe('SetTaskVerifyRender', () => {
       enabled: true,
       maxIterations: 3,
       requirement: '## Acceptance',
-      verifierAgentId: 'agt_verifier',
     });
 
-    // Body is just the requirement markdown — verifier / iterations are not shown.
+    // Body shows the requirement markdown; iterations are not shown.
     expect(screen.getByRole('heading', { name: 'Acceptance' })).toBeTruthy();
     expect(screen.queryByTestId('assignee-avatar')).toBeNull();
     expect(screen.queryByText('3')).toBeNull();

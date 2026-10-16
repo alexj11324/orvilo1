@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { skillsRuntime } from '../skills';
+
 const mocks = vi.hoisted(() => {
   const sandboxService = {
     callTool: vi.fn(),
@@ -42,6 +44,8 @@ const mocks = vi.hoisted(() => {
     sandboxService,
   };
 });
+
+vi.mock('@orvilo/edge-config', () => ({ EdgeConfig: vi.fn() }));
 
 vi.mock('@orvilo/builtin-skills', () => ({
   builtinSkills: [],
@@ -154,10 +158,8 @@ describe('skillsRuntime', () => {
         .map((mode) => ({ api, mode })),
     ),
   )(
-    'preserves sandbox $mode errors through the $api execution pipeline',
+    'preserves sandbox $mode errors through the $api runtime',
     async ({ api, mode }) => {
-      const { skillsRuntime } = await import('../skills');
-      const { ToolExecutionService } = await import('../../index');
       const error = { name: 'MarketAPIError', message: 'Forbidden' };
       mocks.sandboxService.callTool.mockResolvedValue({ error, result: null, success: false });
       mocks.sandboxService.exportAndUploadFile.mockResolvedValue({
@@ -185,20 +187,7 @@ describe('skillsRuntime', () => {
         api === 'exportFile'
           ? runtime.exportFile({ path: '/page.html', filename: 'page.html' })
           : runtime[api]({ command: 'echo example', description: 'Example' });
-      const service = new ToolExecutionService({
-        builtinToolsExecutor: { execute } as never,
-        mcpService: {} as never,
-      });
-      const result = await service.executeTool(
-        {
-          apiName: api,
-          arguments: '{}',
-          id: 'refusal',
-          identifier: 'orvilo-skills',
-          type: 'builtin',
-        },
-        { toolManifestMap: {} },
-      );
+      const result = await execute();
       expect(result.success).toBe(false);
       if (mode === 'stderr') {
         expect(result.content).toContain('Forbidden');
@@ -206,13 +195,16 @@ describe('skillsRuntime', () => {
         expect(result.error?.code).not.toBe('FORBIDDEN');
         return;
       }
-      expect(JSON.parse(result.content).error).toMatchObject({
-        code: 'FORBIDDEN',
-        kind: 'stop',
-        message: 'Forbidden',
-        hint: expect.stringContaining('Do not retry'),
-      });
-      expect(result.error).toMatchObject({ code: 'FORBIDDEN', kind: 'stop' });
+      expect(result.error).toMatchObject(
+        mode === 'thrown'
+          ? {
+              code: 'FORBIDDEN',
+              hint: expect.stringContaining('Do not retry'),
+              kind: 'stop',
+              message: 'Forbidden',
+            }
+          : error,
+      );
     },
     30_000,
   );
@@ -264,7 +256,7 @@ describe('skillsRuntime', () => {
   // First dynamic `import('../skills')` in the file pays the real transform
   // cost for this (now larger) module — default 5s timeout is marginal for
   // that cold cost alone, independent of test logic.
-  it('executes scripts through the sandbox service and only attaches persisted skill zips', async () => {
+  it('executes sandbox scripts without distributing persisted skill zips', async () => {
     const { skillsRuntime } = await import('../skills');
     const runtime = await skillsRuntime.factory({
       serverDB: {} as never,
@@ -283,19 +275,8 @@ describe('skillsRuntime', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(mocks.findByName).toHaveBeenCalledWith('user-skill');
-    expect(mocks.findByName).toHaveBeenCalledWith('builtin-skill');
-    expect(mocks.checkHash).toHaveBeenCalledWith('zip-hash-1');
-    expect(mocks.sandboxService.callTool).toHaveBeenCalledWith(
-      'execScript',
-      expect.objectContaining({
-        command: 'python scripts/run.py',
-        description: 'Run skill script',
-        skillZipUrls: {
-          'user-skill': 'https://files.example.com/user-skill.zip',
-        },
-      }),
-    );
+    expect(mocks.checkHash).not.toHaveBeenCalled();
+    expect(mocks.sandboxService.callTool.mock.calls[0][1]).not.toHaveProperty('skillZipUrls');
   }, 20_000);
 
   it('tags sandbox exec results with executionEnv for plugin-state observability', async () => {
@@ -531,17 +512,12 @@ describe('skillsRuntime', () => {
   // — prepare the skill archives via the prepareSkillDirectory RPC and execute
   // through local-system over the gateway — never in the cloud sandbox.
   describe('device execution branch', () => {
-    it('prepares archives on the device and runs the command with cwd = extracted dir', async () => {
-      mocks.prepareSkillDirectory.mockResolvedValue({
-        extractedDir: '/home/user/.orvilo/skills/extracted/zip-hash-1',
-        success: true,
-      });
+    it('ignores platform archives while keeping routed local command execution', async () => {
       mocks.executeToolCall.mockResolvedValue({
         content: 'ok',
         state: { exitCode: 0, stdout: 'ok', success: true },
         success: true,
       });
-
       const { skillsRuntime } = await import('../skills');
       const runtime = await skillsRuntime.factory({
         activeDeviceId: 'device-1',
@@ -550,97 +526,15 @@ describe('skillsRuntime', () => {
         topicId: 'topic-1',
         userId: 'user-1',
       });
-
       const result = await runtime.execScript({
         activatedSkills: [{ id: 'user-skill-id', name: 'user-skill' }],
-        command: 'python scripts/run.py',
-        description: 'Run skill script',
+        command: 'echo ok',
+        description: 'Run script',
       });
-
       expect(result.success).toBe(true);
-      expect(result.state).toMatchObject({ executionEnv: 'device' });
-      expect(mocks.prepareSkillDirectory).toHaveBeenCalledWith(
-        expect.objectContaining({
-          deviceId: 'device-1',
-          url: 'https://files.example.com/user-skill.zip',
-          userId: 'user-1',
-          zipHash: 'zip-hash-1',
-        }),
-      );
-      expect(mocks.executeToolCall).toHaveBeenCalledWith(
-        expect.objectContaining({ deviceId: 'device-1', userId: 'user-1' }),
-        expect.objectContaining({
-          apiName: 'runCommand',
-          arguments: JSON.stringify({
-            command: 'python scripts/run.py',
-            cwd: '/home/user/.orvilo/skills/extracted/zip-hash-1',
-          }),
-          identifier: 'orvilo-local-system',
-        }),
-        undefined,
-      );
+      expect(mocks.prepareSkillDirectory).not.toHaveBeenCalled();
+      expect(mocks.checkHash).not.toHaveBeenCalled();
       expect(mocks.sandboxService.callTool).not.toHaveBeenCalled();
-    });
-
-    it('fails explicitly (no sandbox fallback) when the device cannot prepare a skill', async () => {
-      mocks.prepareSkillDirectory.mockResolvedValue({
-        error: 'Failed to download skill archive: 404 Not Found',
-        success: false,
-      });
-
-      const { skillsRuntime } = await import('../skills');
-      const runtime = await skillsRuntime.factory({
-        activeDeviceId: 'device-1',
-        serverDB: {} as never,
-        toolManifestMap: {},
-        topicId: 'topic-1',
-        userId: 'user-1',
-      });
-
-      const result = await runtime.execScript({
-        activatedSkills: [{ id: 'user-skill-id', name: 'user-skill' }],
-        command: 'python scripts/run.py',
-        description: 'Run skill script',
-      });
-
-      expect(result.success).toBe(false);
-      expect(result.content).toContain('404 Not Found');
-      expect(mocks.executeToolCall).not.toHaveBeenCalled();
-      expect(mocks.sandboxService.callTool).not.toHaveBeenCalled();
-    });
-
-    // Version-skew window: an old client build replies with the dispatcher's
-    // deterministic unknown-method error — the ONE prepare failure that falls
-    // back to the sandbox, with an explicit disclosure note for the model.
-    it('falls back to the sandbox (with a disclosure note) when the client predates the RPC', async () => {
-      mocks.prepareSkillDirectory.mockResolvedValue({
-        error: 'Unknown device RPC method: prepareSkillDirectory',
-        success: false,
-      });
-
-      const { skillsRuntime } = await import('../skills');
-      const runtime = await skillsRuntime.factory({
-        activeDeviceId: 'device-1',
-        serverDB: {} as never,
-        toolManifestMap: {},
-        topicId: 'topic-1',
-        userId: 'user-1',
-      });
-
-      const result = await runtime.execScript({
-        activatedSkills: [{ id: 'user-skill-id', name: 'user-skill' }],
-        command: 'python scripts/run.py',
-        description: 'Run skill script',
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.state).toMatchObject({ executionEnv: 'sandbox' });
-      expect(result.content).toContain('update their Orvilo app');
-      expect(mocks.executeToolCall).not.toHaveBeenCalled();
-      expect(mocks.sandboxService.callTool).toHaveBeenCalledWith(
-        'execScript',
-        expect.objectContaining({ command: 'python scripts/run.py' }),
-      );
     });
 
     it('runs without a skill dir (workingDirectory cwd) when no archive exists', async () => {
@@ -715,7 +609,7 @@ describe('skillsRuntime', () => {
 
       expect(result.success).toBe(true);
       // The archive-backed skill is still prepared (activated earlier)...
-      expect(mocks.prepareSkillDirectory).toHaveBeenCalledTimes(1);
+      expect(mocks.prepareSkillDirectory).not.toHaveBeenCalled();
       // ...but the project skill activated last wins the cwd.
       expect(mocks.executeToolCall).toHaveBeenCalledWith(
         expect.anything(),
@@ -729,122 +623,6 @@ describe('skillsRuntime', () => {
       );
     });
 
-    // Archive prepares are full device-gateway round-trips and activatedSkills
-    // accumulates over the conversation — they must fire concurrently, while
-    // the activation-order semantics (last resolvable wins the cwd) stay
-    // intact.
-    it('fires archive prepares concurrently and the last resolvable skill wins the cwd', async () => {
-      mocks.findByName.mockImplementation(async (name: string) => {
-        if (name === 'skill-a') return { id: 'a-id', name: 'skill-a', zipFileHash: 'hash-a' };
-        if (name === 'skill-b') return { id: 'b-id', name: 'skill-b', zipFileHash: 'hash-b' };
-        return undefined;
-      });
-      mocks.checkHash.mockImplementation(async (hash: string) => ({
-        isExist: true,
-        url: `skills/${hash}.zip`,
-      }));
-      mocks.fileService.getFullFileUrl.mockImplementation(
-        async (url: string) => `https://files.example.com/${url}`,
-      );
-
-      // Hold both prepares pending to prove the second RPC fires before the
-      // first resolves (a sequential await chain would deadlock this test).
-      const resolvers: ((value: { extractedDir: string; success: boolean }) => void)[] = [];
-      mocks.prepareSkillDirectory.mockImplementation(function () {
-        return new Promise((resolve) => resolvers.push(resolve));
-      });
-      mocks.executeToolCall.mockResolvedValue({
-        content: 'ok',
-        state: { exitCode: 0, stdout: 'ok', success: true },
-        success: true,
-      });
-
-      const { skillsRuntime } = await import('../skills');
-      const runtime = await skillsRuntime.factory({
-        activeDeviceId: 'device-1',
-        serverDB: {} as never,
-        toolManifestMap: {},
-        topicId: 'topic-1',
-        userId: 'user-1',
-      });
-
-      const pending = runtime.execScript({
-        activatedSkills: [
-          { id: 'a-id', name: 'skill-a' },
-          { id: 'b-id', name: 'skill-b' },
-        ],
-        command: 'python scripts/run.py',
-        description: 'multi skill',
-      });
-
-      await vi.waitFor(() => expect(mocks.prepareSkillDirectory).toHaveBeenCalledTimes(2));
-      resolvers[0]({ extractedDir: '/dev/extracted/hash-a', success: true });
-      resolvers[1]({ extractedDir: '/dev/extracted/hash-b', success: true });
-
-      const result = await pending;
-      expect(result.success).toBe(true);
-      expect(mocks.executeToolCall).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          arguments: JSON.stringify({
-            command: 'python scripts/run.py',
-            cwd: '/dev/extracted/hash-b',
-          }),
-        }),
-        undefined,
-      );
-    });
-
-    // With concurrent prepares, error reporting must still follow activation
-    // order: the FIRST failing skill is the one surfaced, regardless of which
-    // RPC settles first.
-    it('reports the first failing skill in activation order despite concurrent prepares', async () => {
-      mocks.findByName.mockImplementation(async (name: string) => {
-        if (name === 'skill-a') return { id: 'a-id', name: 'skill-a', zipFileHash: 'hash-a' };
-        if (name === 'skill-b') return { id: 'b-id', name: 'skill-b', zipFileHash: 'hash-b' };
-        return undefined;
-      });
-      mocks.checkHash.mockImplementation(async (hash: string) => ({
-        isExist: true,
-        url: `skills/${hash}.zip`,
-      }));
-      mocks.fileService.getFullFileUrl.mockImplementation(
-        async (url: string) => `https://files.example.com/${url}`,
-      );
-      mocks.prepareSkillDirectory.mockImplementation(async ({ zipHash }: { zipHash: string }) =>
-        zipHash === 'hash-a'
-          ? { error: 'Failed to download skill archive: 404 Not Found', success: false }
-          : { extractedDir: '/dev/extracted/hash-b', success: true },
-      );
-
-      const { skillsRuntime } = await import('../skills');
-      const runtime = await skillsRuntime.factory({
-        activeDeviceId: 'device-1',
-        serverDB: {} as never,
-        toolManifestMap: {},
-        topicId: 'topic-1',
-        userId: 'user-1',
-      });
-
-      const result = await runtime.execScript({
-        activatedSkills: [
-          { id: 'a-id', name: 'skill-a' },
-          { id: 'b-id', name: 'skill-b' },
-        ],
-        command: 'python scripts/run.py',
-        description: 'multi skill',
-      });
-
-      expect(result.success).toBe(false);
-      expect(result.content).toContain('skill-a');
-      expect(result.content).toContain('404 Not Found');
-      expect(mocks.executeToolCall).not.toHaveBeenCalled();
-      expect(mocks.sandboxService.callTool).not.toHaveBeenCalled();
-    });
-
-    // A command that outlives the shell observation window comes back with no
-    // exitCode — it must surface as still running (with a pollable shell_id),
-    // not as a successful completion.
     it('reports a still-running command instead of pretending completion', async () => {
       mocks.executeToolCall.mockResolvedValue({
         content: 'Command is still running after the wait window.',

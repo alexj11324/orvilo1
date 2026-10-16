@@ -6,7 +6,6 @@ import type {} from '@orvilo/device-control';
 import type {
   AgentRunRequestMessage,
   GatewayClient,
-  GatewayMcpParams,
   RpcRequestMessage,
   SystemInfoRequestMessage,
   ToolCallRequestMessage,
@@ -43,21 +42,6 @@ interface ToolCallResult {
 
 interface ToolCallHandler {
   (identifier: string | undefined, apiName: string, args: unknown): Promise<ToolCallResult>;
-}
-
-/**
- * Handler for tunneled stdio MCP calls. Unlike {@link ToolCallHandler} (which
- * keys on `apiName` for builtin local-system tools), this carries the MCP
- * server identity + connection params so the device can spawn the local stdio
- * server and invoke the tool on it.
- */
-interface McpCallHandler {
-  (mcpCall: {
-    apiName: string;
-    arguments: string;
-    identifier: string;
-    params: GatewayMcpParams;
-  }): Promise<ToolCallResult>;
 }
 
 /**
@@ -121,7 +105,6 @@ export default class GatewayConnectionService extends ServiceModule {
   private tokenProvider: (() => Promise<string | null>) | null = null;
   private tokenRefresher: (() => Promise<{ error?: string; success: boolean }>) | null = null;
   private toolCallHandler: ToolCallHandler | null = null;
-  private mcpCallHandler: McpCallHandler | null = null;
   private agentRunHandler: AgentRunHandler | null = null;
   private rpcHandler: RpcHandler | null = null;
   private deviceRegistrar: DeviceRegistrar | null = null;
@@ -146,14 +129,6 @@ export default class GatewayConnectionService extends ServiceModule {
    */
   setToolCallHandler(handler: ToolCallHandler) {
     this.toolCallHandler = handler;
-  }
-
-  /**
-   * Set the MCP call handler (routes tunneled stdio MCP calls to McpCtr, which
-   * spawns the local stdio server). Distinct from the builtin tool-call handler.
-   */
-  setMcpCallHandler(handler: McpCallHandler) {
-    this.mcpCallHandler = handler;
   }
 
   /**
@@ -538,7 +513,7 @@ export default class GatewayConnectionService extends ServiceModule {
     client: GatewayClient,
   ) => {
     const { requestId, toolCall } = request;
-    const { apiName, arguments: argsStr, identifier, params, type } = toolCall;
+    const { apiName, arguments: argsStr, identifier, type } = toolCall;
 
     logger.info(
       `Received tool call: apiName=${apiName}, requestId=${requestId}, type=${type ?? 'tool'}`,
@@ -552,27 +527,13 @@ export default class GatewayConnectionService extends ServiceModule {
     const startedAt = performance.now();
 
     try {
-      let result: ToolCallResult;
-
-      if (type === 'mcp') {
-        // Tunneled stdio MCP call: route to the local MCP client (spawns the
-        // stdio server). Routing is driven by the explicit `type` discriminator,
-        // not by sniffing the payload — the builtin local-system tool switch
-        // keys on `apiName` and has no MCP server context.
-        if (!this.mcpCallHandler) {
-          throw new Error('No MCP call handler configured');
-        }
-        if (!params) {
-          throw new Error('MCP tool call missing connection params');
-        }
-        result = await this.mcpCallHandler({ apiName, arguments: argsStr, identifier, params });
-      } else {
-        if (!this.toolCallHandler) {
-          throw new Error('No tool call handler configured');
-        }
-        const args = JSON.parse(argsStr);
-        result = await this.toolCallHandler(identifier, apiName, args);
+      if (type && type !== 'tool') {
+        throw new Error(
+          'Platform MCP execution is retired. Configure MCP in the Agent’s native harness.',
+        );
       }
+      if (!this.toolCallHandler) throw new Error('No tool call handler configured');
+      const result = await this.toolCallHandler(identifier, apiName, JSON.parse(argsStr));
 
       // Forward the typed envelope unchanged. Critically, do NOT stringify the
       // whole result into `content` — that would bury the structured payload

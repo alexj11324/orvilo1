@@ -10,7 +10,7 @@ const appRoot = fileURLToPath(new URL('..', import.meta.url));
 const { DEFAULT_PRERENDER_LOCALE, PRERENDER_LOCALES, PRERENDER_ROUTES, prerenderOutputDir } =
   await import(new URL('../app/lib/prerender.ts', import.meta.url).href);
 
-const AUTH_NAMESPACES = ['auth', 'authError', 'common', 'error', 'marketAuth', 'oauth'];
+const AUTH_NAMESPACES = ['auth', 'authError', 'common', 'error', 'oauth'];
 
 // The matrix is a hand-written list because `react-router.config.ts` is loaded
 // by plain Node, which cannot resolve the repo's aliases. Check it against the

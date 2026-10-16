@@ -2,9 +2,6 @@ import { type OrviloTool } from '@orvilo/types';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { pluginService } from '@/services/plugin';
-import { merge } from '@/utils/merge';
-
 import { useToolStore } from '../../store';
 
 vi.mock('@/services/plugin', () => ({
@@ -30,47 +27,6 @@ describe('useToolStore:plugin', () => {
       });
 
       // Should not call any methods since old plugin system is deprecated
-    });
-  });
-
-  describe('updatePluginSettings', () => {
-    it('should update settings for a given plugin', async () => {
-      const pluginId = 'test-plugin';
-      const newSettings = { setting1: 'new-value' };
-
-      const { result } = renderHook(() => useToolStore());
-
-      await act(async () => {
-        await result.current.updatePluginSettings(pluginId, newSettings);
-      });
-
-      expect(pluginService.updatePluginSettings).toBeCalledWith(
-        pluginId,
-        newSettings,
-        expect.any(AbortSignal),
-      );
-    });
-
-    it('should merge settings for a plugin with existing settings', async () => {
-      const pluginId = 'test-plugin';
-      const existingSettings = { setting1: 'old-value', setting2: 'old-value' };
-      const newSettings = { setting1: 'new-value' };
-      const mergedSettings = merge(existingSettings, newSettings);
-      useToolStore.setState({
-        installedPlugins: [{ identifier: pluginId, settings: existingSettings }] as OrviloTool[],
-      });
-
-      const { result } = renderHook(() => useToolStore());
-
-      await act(async () => {
-        await result.current.updatePluginSettings(pluginId, newSettings);
-      });
-
-      expect(pluginService.updatePluginSettings).toBeCalledWith(
-        pluginId,
-        mergedSettings,
-        expect.any(AbortSignal),
-      );
     });
   });
 

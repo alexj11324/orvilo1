@@ -98,7 +98,7 @@ const isRetryableDispatchFailure = (error: string) =>
 export const recoveryEligibility = (
   graph: GoalGraphSnapshot,
   task: TaskItem,
-  operation?: AgentOperationItem,
+  operation?: AgentOperationItem | null,
   /** Whether the Task's current status was written by a person or an agent tool. */
   actorAuthoredStatus = false,
 ): { eligible: boolean; reason: string } => {

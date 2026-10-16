@@ -1,12 +1,14 @@
 import { z } from 'zod';
 
+import { ProjectModel } from '@/database/models/project';
+import { RepositoryModel } from '@/database/models/repository';
 import { SlackIntegrationModel } from '@/database/models/slackIntegration';
 import { hasWorkspaceAdminAccess } from '@/database/models/workspace';
 import { getSlackConfig } from '@/envs/slack';
 import { authedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { createSlackIntegrationService } from '@/server/services/slackIntegration';
-import { stopSlackChannelsRuntime } from '@/server/services/slackIntegration/channelsRuntime';
+import { stopSlackChatRuntime } from '@/server/services/slackIntegration/chatRuntime';
 import { readOAuthResult } from '@/server/services/slackIntegration/oauthState';
 
 const inputSchema = z.object({ workspaceId: z.string().min(1) });
@@ -44,7 +46,7 @@ export const slackIntegrationRouter = router({
   disconnect: adminProcedure.mutation(async ({ ctx }) => {
     const installation = await ctx.slackModel.installation();
     await ctx.slackModel.disconnect();
-    if (installation) await stopSlackChannelsRuntime(installation.slackTeamId);
+    if (installation) await stopSlackChatRuntime(installation.slackTeamId);
     return { success: true };
   }),
   disconnectPersonal: procedure.mutation(async ({ ctx }) => {
@@ -63,7 +65,12 @@ export const slackIntegrationRouter = router({
     })),
   saveBinding: adminProcedure
     .input(
-      z.object({ slackChannelId: z.string().regex(/^[CG][A-Z0-9]+$/), agentId: z.string().min(1) }),
+      z.object({
+        slackChannelId: z.string().regex(/^[CGD][A-Z0-9]+$/),
+        agentId: z.string().min(1),
+        projectId: z.string().min(1).nullable().optional(),
+        repositoryId: z.string().min(1).nullable().optional(),
+      }),
     )
     .mutation(async ({ ctx, input }) => ({
       data: await ctx.slackService.saveBinding({ ...input, userId: ctx.userId }),
@@ -109,6 +116,17 @@ export const slackIntegrationRouter = router({
           .filter((binding) => availableNames.has(binding.agentId))
           .map((binding) => ({ ...binding, agentName: availableNames.get(binding.agentId)! })),
         availableAgents,
+        availableProjects: (
+          await new ProjectModel(ctx.serverDB, ctx.userId, input.workspaceId).list()
+        ).map(({ id, name }) => ({ id, name })),
+        availableRepositories: (
+          await new RepositoryModel(ctx.serverDB, ctx.userId, input.workspaceId).listByWorkspace()
+        )
+          .filter((repo) => repo.status === 'active')
+          .map((repo) => ({
+            id: repo.id,
+            name: `${repo.coordinate.owner}/${repo.coordinate.name}`,
+          })),
       },
       success: true,
     };

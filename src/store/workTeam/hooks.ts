@@ -54,7 +54,10 @@ export function useFetchTeamDocumentCandidates(teamId: string) {
     (index, previous) => {
       if (!workspaceId || !teamId) return null;
       if (index > 0 && (!previous || index * 100 >= previous.total)) return null;
-      return augmentKey(workTeamKeys.documentCandidates(teamId, index), workspaceId) as TeamDocumentCandidatesKey;
+      return augmentKey(
+        workTeamKeys.documentCandidates(teamId, index),
+        workspaceId,
+      ) as TeamDocumentCandidatesKey;
     },
     (key) =>
       workTeamService.queryDocuments({

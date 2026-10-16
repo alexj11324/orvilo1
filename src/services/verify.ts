@@ -150,7 +150,6 @@ export interface GenerateDraftPlanInput {
   enableAiGeneration?: boolean;
   goal: string;
   maxAiCriteria?: number;
-  modelConfig?: { model: string; provider: string };
   operationId: string;
   verifyCriteriaIds?: string[];
   verifyRubricId?: string | null;
@@ -158,8 +157,12 @@ export interface GenerateDraftPlanInput {
 
 /** Client wrapper around the `verify` lambda router. */
 export class VerifyService {
-  reviewFlowStep = (input: Parameters<typeof lambdaClient.acceptance.reviewFlowStep.mutate>[0]) =>
-    lambdaClient.acceptance.reviewFlowStep.mutate(input);
+  reviewFlowStep = (
+    _input: Parameters<typeof lambdaClient.acceptance.reviewFlowStep.mutate>[0],
+  ): ReturnType<typeof lambdaClient.acceptance.reviewFlowStep.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   // ---- subject-level acceptance ----
   getAcceptanceBundle = (id: string): Promise<AcceptanceBundle> =>
@@ -171,30 +174,46 @@ export class VerifyService {
 
   /** Persist a subject's standing acceptance checklist (topic tray). */
   saveAcceptanceChecklist = (
-    subjectType: AcceptanceSubjectType,
-    subjectId: string,
-    checklist: AcceptanceChecklistItem[],
-  ) => lambdaClient.acceptance.saveChecklist.mutate({ checklist, subjectId, subjectType });
+    _subjectType: AcceptanceSubjectType,
+    _subjectId: string,
+    _checklist: AcceptanceChecklistItem[],
+  ): ReturnType<typeof lambdaClient.acceptance.saveChecklist.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   /** Set/update a subject's acceptance goal (the one-sentence outcome). */
   saveAcceptanceGoal = (
-    subjectType: AcceptanceSubjectType,
-    subjectId: string,
-    requirement: string,
-  ) => lambdaClient.acceptance.saveGoal.mutate({ requirement, subjectId, subjectType });
+    _subjectType: AcceptanceSubjectType,
+    _subjectId: string,
+    _requirement: string,
+  ): ReturnType<typeof lambdaClient.acceptance.saveGoal.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
-  acceptDelivery = (id: string, comment?: string) =>
-    lambdaClient.acceptance.accept.mutate({ comment, id });
+  acceptDelivery = (
+    _id: string,
+    _comment?: string,
+  ): ReturnType<typeof lambdaClient.acceptance.accept.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
-  rejectDelivery = (id: string, comment: string) =>
-    lambdaClient.acceptance.reject.mutate({ comment, id });
+  rejectDelivery = (
+    _id: string,
+    _comment: string,
+  ): ReturnType<typeof lambdaClient.acceptance.reject.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   /**
    * The user's verdict on individual union checks — accept settles a check for
    * good; reject records feedback the next round reads. A group "accept all"
    * is the same call with many ids.
    */
-  reviewChecks = (input: {
+  reviewChecks = (_input: {
     action: AcceptanceCheckReviewAction;
     annotations?: AcceptanceReviewAnnotation[];
     checkItemIds: string[];
@@ -209,7 +228,10 @@ export class VerifyService {
     };
     /** Which of the three jobs a reject is doing. */
     rejectIntent?: AcceptanceRejectIntent;
-  }) => lambdaClient.acceptance.reviewChecks.mutate(input);
+  }): ReturnType<typeof lambdaClient.acceptance.reviewChecks.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   /**
    * Queue proposals for the checks still awaiting a verdict. Explicit rather
@@ -217,53 +239,75 @@ export class VerifyService {
    * budget. Returns as soon as the batch is dispatched (`queued`), NOT when it
    * finishes — the caller polls the bundle for the cards to appear.
    */
-  predictReviews = (id: string) => lambdaClient.acceptance.predictReviews.mutate({ id });
+  predictReviews = (
+    _id: string,
+  ): ReturnType<typeof lambdaClient.acceptance.predictReviews.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   /**
    * Answer a proposal without ruling on the check. The `confirmed` case does
    * NOT come here — it rides along with the reject in `reviewChecks`, where the
    * edit diff is known.
    */
-  adjudicateProposal = (input: {
+  adjudicateProposal = (_input: {
     adjudication: 'misidentified' | 'not-an-issue';
     id: string;
     predictionId: string;
-  }) => lambdaClient.acceptance.adjudicateProposal.mutate(input);
+  }): ReturnType<typeof lambdaClient.acceptance.adjudicateProposal.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   /**
    * Feedback addressed to a check group (business category) — for concerns
    * that belong to no single check yet must reach the next round.
    */
-  addGroupFeedback = (input: {
+  addGroupFeedback = (_input: {
     category: string;
     comment: string;
     fileIds?: string[];
     id: string;
-  }) => lambdaClient.acceptance.addGroupFeedback.mutate(input);
+  }): ReturnType<typeof lambdaClient.acceptance.addGroupFeedback.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   /**
    * Dispatch the repair prompt straight into the acceptance's origin
    * conversation — a user message that triggers the agent, the same callback
    * channel remote hetero runs (`orvilo notify`) use.
    */
-  dispatchAcceptanceRepair = (input: { agentId?: string; content: string; topicId: string }) =>
-    lambdaClient.agentNotify.notify.mutate({
-      agentId: input.agentId,
-      content: input.content,
-      role: 'user',
-      topicId: input.topicId,
-    });
+  dispatchAcceptanceRepair = (_input: {
+    agentId?: string;
+    content: string;
+    topicId: string;
+  }): ReturnType<typeof lambdaClient.agentNotify.notify.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   /** Owner override of the acceptance's decision state from the list. */
-  updateAcceptanceStatus = (id: string, status: AcceptanceStatusOverride) =>
-    lambdaClient.acceptance.updateStatus.mutate({ id, status });
+  updateAcceptanceStatus = (
+    _id: string,
+    _status: AcceptanceStatusOverride,
+  ): ReturnType<typeof lambdaClient.acceptance.updateStatus.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   getAcceptancePurgePreview = (ids: string[]) =>
     lambdaClient.acceptance.purgePreview.query({ ids });
 
   /** Delete the acceptance aggregate; its round reports detach unless `purge` removes them too. */
-  deleteAcceptance = (id: string, purge?: boolean) =>
-    lambdaClient.acceptance.remove.mutate({ id, purge });
+  deleteAcceptance = (
+    _id: string,
+    _purge?: boolean,
+  ): ReturnType<typeof lambdaClient.acceptance.remove.mutate> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   // ---- per-run plan ----
   getVerifyState = (operationId: string): Promise<VerifyStateResponse | null> =>
@@ -288,17 +332,25 @@ export class VerifyService {
     provider: string | null;
   } | null> => lambdaClient.verify.getVerifierTracing.query({ tracingId });
 
-  generateDraftPlan = (input: GenerateDraftPlanInput): Promise<VerifyCheckItem[]> =>
-    lambdaClient.verify.generateDraftPlan.mutate(input) as Promise<VerifyCheckItem[]>;
+  generateDraftPlan = (_input: GenerateDraftPlanInput): Promise<VerifyCheckItem[]> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
-  updateDraftItems = (operationId: string, items: VerifyCheckItem[]): Promise<unknown> =>
-    lambdaClient.verify.updateDraftItems.mutate({ items, operationId });
+  updateDraftItems = (_operationId: string, _items: VerifyCheckItem[]): Promise<unknown> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
-  confirmPlan = (operationId: string): Promise<unknown> =>
-    lambdaClient.verify.confirmPlan.mutate({ operationId });
+  confirmPlan = (_operationId: string): Promise<unknown> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
-  skipPlan = (operationId: string): Promise<unknown> =>
-    lambdaClient.verify.skipPlan.mutate({ operationId });
+  skipPlan = (_operationId: string): Promise<unknown> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   // ---- results / execution ----
   listResults = (operationId: string): Promise<VerifyCheckResultItem[]> =>
@@ -322,46 +374,56 @@ export class VerifyService {
   }): Promise<VerifyReportSummaryPage> =>
     lambdaClient.verify.listReportSummaries.query(params) as Promise<VerifyReportSummaryPage>;
 
-  deleteRun = (verifyRunId: string): Promise<unknown> =>
-    lambdaClient.verify.deleteRun.mutate({ verifyRunId });
+  deleteRun = (_verifyRunId: string): Promise<unknown> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
-  updateRunTitle = (verifyRunId: string, title: string): Promise<unknown> =>
-    lambdaClient.verify.updateRun.mutate({ value: { title }, verifyRunId });
+  updateRunTitle = (_verifyRunId: string, _title: string): Promise<unknown> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
-  executeVerify = (input: {
-    batchLlm?: boolean;
+  executeVerify = (_input: {
     deliverable: string;
     goal: string;
-    modelConfig: { model: string; provider: string };
     operationId: string;
   }): Promise<VerifyCheckResultItem[]> =>
-    lambdaClient.verify.executeVerify.mutate(input) as Promise<VerifyCheckResultItem[]>;
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
-  submitDecision = (resultId: string, decision: VerifyUserDecision): Promise<unknown> =>
-    lambdaClient.verify.submitDecision.mutate({ decision, resultId });
+  submitDecision = (_resultId: string, _decision: VerifyUserDecision): Promise<unknown> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   // ---- config-time AI generation (one-sentence → criteria) ----
   /** Turn a one-sentence requirement into proposed criteria (traced; not persisted). */
-  generateCriteria = (input: {
+  generateCriteria = (_input: {
     context?: string;
     goal: string;
     maxCriteria?: number;
-    modelConfig: { model: string; provider: string };
+    taskId: string;
   }): Promise<VerifyCriterionDraft[]> =>
-    lambdaClient.verify.generateCriteria.mutate(input) as Promise<VerifyCriterionDraft[]>;
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   /** Draft the standing acceptance criteria used by the create-goal review step. */
-  generateGoalCriteria = (input: {
+  generateGoalCriteria = (_input: {
     /** The agent chosen for the goal; ACP users get no draft without it. */
     agentId?: string;
     context?: string;
     goal: string;
     maxCriteria?: number;
   }): Promise<VerifyCriterionDraft[]> =>
-    lambdaClient.verify.generateGoalCriteria.mutate(input) as Promise<VerifyCriterionDraft[]>;
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   /** Draft the title, instruction, and criteria used by the create-goal review step. */
-  generateGoalPlan = (input: {
+  generateGoalPlan = (_input: {
     /** The agent chosen for the goal; ACP users get no draft without it. */
     agentId?: string;
     context?: string;
@@ -370,13 +432,15 @@ export class VerifyService {
   }): Promise<
     { criteria: VerifyCriterionDraft[]; instruction: string; title: string } | undefined
   > =>
-    lambdaClient.verify.generateGoalPlan.mutate(input) as Promise<
-      { criteria: VerifyCriterionDraft[]; instruction: string; title: string } | undefined
-    >;
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   /** Persist (user-edited) drafts as standalone criteria; returns ids in order. */
-  createCriteria = (drafts: VerifyCriterionDraft[]): Promise<string[]> =>
-    lambdaClient.verify.createCriteria.mutate({ drafts }) as Promise<string[]>;
+  createCriteria = (_drafts: VerifyCriterionDraft[]): Promise<string[]> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   // ---- criteria / rubric management ----
   /** Resolve a specific criteria id list (e.g. a goal's acceptance standard), in order. */
@@ -386,24 +450,34 @@ export class VerifyService {
   listCriteria = (): Promise<VerifyCriterionItem[]> =>
     lambdaClient.verify.listCriteria.query() as Promise<VerifyCriterionItem[]>;
 
-  createCriterion = (input: CreateCriterionInput): Promise<VerifyCriterionItem> =>
-    lambdaClient.verify.createCriterion.mutate(input) as Promise<VerifyCriterionItem>;
+  createCriterion = (_input: CreateCriterionInput): Promise<VerifyCriterionItem> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   /** Copy legacy rubric-backed criteria before a task edits them. */
-  forkRubricCriteria = (ids: string[]): Promise<string[]> =>
-    lambdaClient.verify.forkRubricCriteria.mutate({ ids }) as Promise<string[]>;
+  forkRubricCriteria = (_ids: string[]): Promise<string[]> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
-  updateCriterion = (id: string, value: UpdateCriterionValue): Promise<unknown> =>
-    lambdaClient.verify.updateCriterion.mutate({ id, value });
+  updateCriterion = (_id: string, _value: UpdateCriterionValue): Promise<unknown> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
-  deleteCriterion = (id: string): Promise<unknown> =>
-    lambdaClient.verify.deleteCriterion.mutate({ id });
+  deleteCriterion = (_id: string): Promise<unknown> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   listRubrics = (): Promise<VerifyRubricItem[]> =>
     lambdaClient.verify.listRubrics.query() as Promise<VerifyRubricItem[]>;
 
-  createRubric = (input: CreateRubricInput): Promise<VerifyRubricItem> =>
-    lambdaClient.verify.createRubric.mutate(input) as Promise<VerifyRubricItem>;
+  createRubric = (_input: CreateRubricInput): Promise<VerifyRubricItem> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   /** Get the criteria mounted on a rubric (in rubric order). */
   getRubricCriteria = (rubricId: string): Promise<VerifyCriterionItem[]> =>
@@ -411,20 +485,27 @@ export class VerifyService {
 
   /** Replace the set of criteria a rubric groups (with optional ordering). */
   setRubricCriteria = (
-    rubricId: string,
-    criteria: { criterionId: string; sortOrder?: number }[],
-  ): Promise<unknown> => lambdaClient.verify.setRubricCriteria.mutate({ criteria, rubricId });
+    _rubricId: string,
+    _criteria: { criterionId: string; sortOrder?: number }[],
+  ): Promise<unknown> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   getRubric = (id: string): Promise<VerifyRubricItem | undefined> =>
     lambdaClient.verify.getRubric.query({ id }) as Promise<VerifyRubricItem | undefined>;
 
   /** Update a rubric's run-policy config (e.g. maxRepairRounds). */
-  updateRubricConfig = (id: string, config: VerifyRubricConfig): Promise<unknown> =>
-    lambdaClient.verify.updateRubric.mutate({ id, value: { config } });
+  updateRubricConfig = (_id: string, _config: VerifyRubricConfig): Promise<unknown> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 
   /** Rename a rubric (the delivery-standard title). */
-  updateRubricTitle = (id: string, title: string): Promise<unknown> =>
-    lambdaClient.verify.updateRubric.mutate({ id, value: { title } });
+  updateRubricTitle = (_id: string, _title: string): Promise<unknown> =>
+    Promise.reject(
+      new Error('Standalone Acceptance/Verify is read-only. Use the Issue Checklist.'),
+    );
 }
 
 export const verifyService = new VerifyService();

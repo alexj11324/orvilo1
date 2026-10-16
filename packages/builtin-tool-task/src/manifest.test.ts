@@ -61,3 +61,33 @@ describe('Task edit concurrency contract', () => {
     });
   });
 });
+
+describe('automatic reviewer assignment contract', () => {
+  it('requires a reviewer runtime that can record an Issue review', () => {
+    const view = TaskManifest.api.find((api) => api.name === TaskApiName.viewTask);
+    const edit = TaskManifest.api.find((api) => api.name === TaskApiName.editTask);
+    expect(view?.description).toContain('canReviewIssues=true');
+    expect(edit?.parameters).toMatchObject({
+      properties: {
+        reviewerAgentId: {
+          description: expect.stringContaining('canReviewIssues=true'),
+        },
+      },
+    });
+    expect(view?.description).toContain('cannot be assigned as reviewer');
+  });
+});
+
+describe('Issue intake', () => {
+  it('registers a bounded planning API with Issue Work identity', () => {
+    const intake = TaskManifest.api.find((api) => api.name === TaskApiName.intakeIssue);
+    expect(intake).toMatchObject({
+      work: { action: 'create', resourceType: 'task' },
+      parameters: {
+        additionalProperties: false,
+        required: ['name', 'instruction'],
+        properties: { issueId: { type: 'string' } },
+      },
+    });
+  });
+});

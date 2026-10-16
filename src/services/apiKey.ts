@@ -12,7 +12,6 @@ class ApiKeyService {
 
   deleteApiKey = (...args: Parameters<typeof lambdaClient.apiKey.deleteApiKey.mutate>) =>
     lambdaClient.apiKey.deleteApiKey.mutate(...args);
-
 }
 
 export const apiKeyService = new ApiKeyService();

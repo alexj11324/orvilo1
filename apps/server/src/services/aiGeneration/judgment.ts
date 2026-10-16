@@ -6,6 +6,7 @@ import type { AgentOperationStatus, ExecAgentAppContext, OpenAIChatMessage } fro
 import { getWorkingDirEffectivePath, isTerminalAgentOperationStatus } from '@orvilo/types';
 import Ajv from 'ajv';
 import debug from 'debug';
+import type { z } from 'zod';
 
 import { AgentModel } from '@/database/models/agent';
 import { AgentOperationModel } from '@/database/models/agentOperation';
@@ -16,6 +17,10 @@ import type { OrviloDatabase } from '@/database/type';
 import { assertCanViewTopicTargets } from '@/server/routers/lambda/_helpers/conversationResourceGuard';
 import { resolveDeviceWorkingDirectoryConfig } from '@/server/services/aiAgent/resolveDeviceWorkingDirectory';
 import { getLLMGenerationTracingService } from '@/server/services/llmGenerationTracing';
+
+type AcpJudgmentSchema = Omit<GenerateObjectSchema, 'schema'> & {
+  schema: z.core.JSONSchema.JSONSchema;
+};
 
 const log = debug('orvilo-server:ai-generation:judgment');
 
@@ -233,12 +238,8 @@ const OUTPUT_CONTRACT = [
   'Return JSON only — no prose, no markdown fences, no tool calls.',
 ].join('\n');
 
-const buildJudgmentPrompt = (transcript: string, schema?: GenerateObjectSchema): string =>
-  [
-    transcript,
-    OUTPUT_CONTRACT,
-    schema ? JSON.stringify({ name: schema.name, schema: schema.schema }) : '{}',
-  ]
+const buildJudgmentPrompt = (transcript: string, schema?: AcpJudgmentSchema): string =>
+  [transcript, OUTPUT_CONTRACT, schema ? JSON.stringify(schema.schema) : '{}']
     .filter(Boolean)
     .join('\n\n');
 
@@ -364,7 +365,7 @@ const getAjv = () => (ajvInstance ??= new Ajv({ allErrors: true, strict: false }
  * Returns the list of validation issues (empty = valid). An uncompilable
  * schema is reported as an issue — the run cannot be treated as conformant.
  */
-const validateJudgmentData = (schema: GenerateObjectSchema['schema'], data: unknown): string[] => {
+const validateJudgmentData = (schema: AcpJudgmentSchema['schema'], data: unknown): string[] => {
   let validate: ReturnType<Ajv['compile']>;
   try {
     validate = getAjv().compile(schema);
@@ -414,7 +415,7 @@ const recordJudgmentTracing = async (params: {
   operation: AgentOperationItem;
   output: unknown;
   purpose: string;
-  schema?: GenerateObjectSchema;
+  schema?: AcpJudgmentSchema;
   /** Failure status for runs cut short by abort/timeout (op row still runs). */
   statusOverride?: string;
   /** False when the reply failed schema validation — success needs both halves. */
@@ -510,7 +511,7 @@ export const runAcpJudgment = async <T = unknown>(
   params: {
     input: {
       messages: OpenAIChatMessage[] | GenerateObjectPayload['messages'];
-      schema?: GenerateObjectSchema;
+      schema?: AcpJudgmentSchema;
     };
     judgment: AcpJudgmentRunParams;
     workspaceId?: string;
@@ -995,6 +996,7 @@ export const runAcpJudgment = async <T = unknown>(
           taskId: judgment.taskId ?? null,
         },
         autoStart: true,
+        skipTaskVerification: true,
         disableTools: judgment.outputMode !== 'tool',
         fileIds: judgment.fileIds,
         instructions,

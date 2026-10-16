@@ -239,7 +239,14 @@ describe('Project Router Integration', () => {
       .values({ name: 'Mission data', userId })
       .returning();
     await caller.addAgent({ agentId: agent.id, id: created.data.id, role: 'lead' });
-    await caller.addKnowledgeBase({ id: created.data.id, knowledgeBaseId: knowledgeBase.id });
+    await expect(
+      caller.addKnowledgeBase({ id: created.data.id, knowledgeBaseId: knowledgeBase.id }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    // Historical project resources remain readable after their producer retires.
+    await new (await import('@/database/models/project')).ProjectModel(
+      serverDB,
+      userId,
+    ).addKnowledgeBase(created.data.id, { knowledgeBaseId: knowledgeBase.id });
 
     const taskCaller = taskRouter.createCaller(createTestContext(userId));
     const task = await taskCaller.create({

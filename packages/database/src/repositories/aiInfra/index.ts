@@ -23,6 +23,7 @@ import { merge, mergeArrayById } from '@/utils/merge';
 import { AiModelModel } from '../../models/aiModel';
 import { AiProviderModel } from '../../models/aiProvider';
 import type { OrviloDatabase } from '../../type';
+import type { SecretCipherFactory } from '../../utils/secretCipher';
 import { ProviderBindingPlane } from './providerBindings';
 
 type DecryptUserKeyVaults = (encryptKeyVaultsStr: string | null) => Promise<any>;
@@ -101,6 +102,7 @@ export class AiInfraRepos {
 
   constructor(
     db: OrviloDatabase,
+    createCipher: SecretCipherFactory,
     userId: string,
     providerConfigs: Record<string, ProviderConfig>,
     workspaceId?: string,
@@ -110,7 +112,7 @@ export class AiInfraRepos {
     this.aiProviderModel = new AiProviderModel(db, userId, workspaceId);
     this.aiModelModel = new AiModelModel(db, userId, workspaceId);
     this.providerConfigs = providerConfigs;
-    this.bindingPlane = new ProviderBindingPlane(db, userId, { workspaceId });
+    this.bindingPlane = new ProviderBindingPlane(db, createCipher, userId, { workspaceId });
   }
 
   /**

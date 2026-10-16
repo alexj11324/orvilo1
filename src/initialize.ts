@@ -1,3 +1,6 @@
+// Must stay first: layers and scopes vendor antd-style rules before any vendor module loads.
+import '@/components/LobeThemeScope/installStyleLayer';
+
 import dayjs from 'dayjs';
 import isToday from 'dayjs/plugin/isToday';
 import isYesterday from 'dayjs/plugin/isYesterday';

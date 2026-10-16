@@ -1,7 +1,6 @@
 import { fileURLToPath } from 'node:url';
 
 import { eslint } from '@lobehub/lint';
-import { restrictedImports } from '@lobehub/ui/eslint';
 import { flat as mdxFlat } from 'eslint-plugin-mdx';
 
 // lucide's circle family — the shapes task/issue status marks are made of.
@@ -21,7 +20,46 @@ const STATUS_CIRCLE_GLYPHS = [
 
 const tsconfigRootDir = fileURLToPath(new URL('.', import.meta.url));
 
-const baseRestrictedImportOptions = restrictedImports.rules['no-restricted-imports'][1];
+// antd, its style engines and @lobehub/ui are retired from first-party code
+// (docs/development/antd-retirement-plan.md). @lobehub/editor and
+// @lobehub/charts still need them at runtime; src/components/LobeThemeScope is
+// the one host allowed to import them (see the override at the end).
+const RETIRED_UI_ENGINE_MESSAGE =
+  'antd, antd-style, @ant-design/cssinjs and @lobehub/ui are retired. Use the local components in "@/components/ui", "@/components/reui" and "@/components"; wrap @lobehub/editor or @lobehub/charts output in "@/components/LobeThemeScope", the only module allowed to import these packages.';
+const RETIRED_UI_ENGINES = ['antd', 'antd-style', '@ant-design/cssinjs', '@lobehub/ui'];
+
+const legacyRestrictedImportPaths = [
+  {
+    importNames: ['LoadingOutlined'],
+    message: 'Use Spinner from "@/components/ui/spinner" instead of a hand-rolled spinner.',
+    name: '@ant-design/icons',
+  },
+  {
+    message: 'Use the local loaders listed in the react skill (Loader selection).',
+    name: 'thinking-orbs',
+  },
+  {
+    message: 'ProComponents are retired. Use the local table components.',
+    name: '@ant-design/pro-components',
+  },
+];
+
+const baseRestrictedImportOptions = {
+  paths: [
+    ...legacyRestrictedImportPaths,
+    ...RETIRED_UI_ENGINES.map((name) => ({ message: RETIRED_UI_ENGINE_MESSAGE, name })),
+  ],
+  patterns: [
+    {
+      group: RETIRED_UI_ENGINES.map((name) => `${name}/*`),
+      message: RETIRED_UI_ENGINE_MESSAGE,
+    },
+  ],
+};
+
+const restrictedImports = {
+  rules: { 'no-restricted-imports': ['error', baseRestrictedImportOptions] },
+};
 
 // Shared by every src/** no-restricted-imports block: flat config replaces a
 // rule per file instead of merging it, so a scoped override would otherwise
@@ -39,13 +77,6 @@ const performanceRestrictedImportPaths = [
     message:
       'Import ProviderIcon / ProviderCombine from "@/components/OrviloIcons", which mounts them through lazy().',
     name: '@/libs/providerIcon',
-  },
-  {
-    allowTypeImports: true,
-    importNames: ['EmojiPicker'],
-    message:
-      'EmojiPicker carries the emoji-mart dataset. Use "@/components/EmojiPicker", which mounts it through lazy().',
-    name: '@lobehub/ui',
   },
   {
     message:
@@ -221,9 +252,8 @@ export default eslint(
   },
   {
     // Boot-path trees are statically reachable from the SPA entry. A heavy
-    // @lobehub/ui member imported here lands in the first-screen chunk together
-    // with shiki / katex / elkjs / emoji data; the CI entry-graph gate catches
-    // the regression, this rule explains it at the import site.
+    // module imported here lands in the first-screen chunk; the CI entry-graph
+    // gate catches the regression, this rule explains it at the import site.
     files: [
       'src/layout/**/*.{ts,tsx}',
       'src/spa/**/*.{ts,tsx}',
@@ -240,25 +270,6 @@ export default eslint(
     rules: {
       'no-restricted-imports': createRestrictedImportRule({
         paths: [
-          {
-            importNames: [
-              'CodeDiff',
-              'CodeEditor',
-              'EmojiPicker',
-              'Highlighter',
-              'HtmlPreview',
-              'Markdown',
-              'Mermaid',
-              'PatchDiff',
-              'Snippet',
-              'SortableList',
-              'SyntaxHighlighter',
-              'SyntaxMermaid',
-            ],
-            message:
-              'Boot-path modules must not statically import heavy @lobehub/ui members. Load them with lazy(() => import("@lobehub/ui/es/<Member>/index")) or move the consumer into a route tree.',
-            name: '@lobehub/ui',
-          },
           {
             message:
               'Boot-path modules must load EmojiPicker with lazy(); it carries the emoji-mart dataset.',
@@ -660,6 +671,22 @@ export default eslint(
             },
           ],
         },
+      ],
+    },
+  },
+  // The single vendor host, the precompiler runtime that inserts vendor static
+  // styles, and the test that runs the layer patch against a real antd-style
+  // instance. They still carry every other import restriction.
+  {
+    files: [
+      'src/components/LobeThemeScope/**/*.{ts,tsx}',
+      'plugins/vite/staticStylesRuntime.js',
+      'src/styles/layerEmotionCache.test.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { paths: [...legacyRestrictedImportPaths, ...performanceRestrictedImportPaths] },
       ],
     },
   },

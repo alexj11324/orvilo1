@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 
 import { styles } from './style';
 
-const Markdown = lazy(() => import('@lobehub/ui/es/Markdown/index'));
+const Markdown = lazy(() => import('@/components/Markdown'));
 
 export const COLLAPSED_MAX_HEIGHT = 180;
 

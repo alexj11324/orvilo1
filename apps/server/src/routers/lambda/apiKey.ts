@@ -13,6 +13,7 @@ import { WorkspaceModel } from '@/database/models/workspace';
 import { WorkspaceAuditLogModel } from '@/database/models/workspaceAuditLog';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 
 const apiKeyScopesSchema = z
   .array(z.string().refine(isValidApiKeyScope, { message: 'Unknown API key scope' }))
@@ -36,9 +37,15 @@ const apiKeyProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =
 
   return opts.next({
     ctx: {
-      apiKeyModel: new ApiKeyModel(ctx.serverDB, ctx.userId, wsId, {
-        canManageAll: isWorkspaceAdmin(ctx),
-      }),
+      apiKeyModel: new ApiKeyModel(
+        ctx.serverDB,
+        KeyVaultsGateKeeper.initWithEnvKey,
+        ctx.userId,
+        wsId,
+        {
+          canManageAll: isWorkspaceAdmin(ctx),
+        },
+      ),
       workspaceModel: new WorkspaceModel(ctx.serverDB, ctx.userId),
     },
   });

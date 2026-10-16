@@ -209,6 +209,16 @@ export function useGeneratedTheme(): GeneratedTheme {
   return values.theme;
 }
 
+/** Like `useGeneratedTheme`, but `undefined` outside a ThemeRoles host. */
+export function useOptionalGeneratedTheme(): GeneratedTheme | undefined {
+  return use(ResolvedThemeRolesContext)?.theme;
+}
+
+/** Whether the nearest ThemeRoles host allows motion; `true` outside one. */
+export function useOptionalMotionEnabled(): boolean {
+  return use(ResolvedThemeRolesContext)?.motionEnabled ?? true;
+}
+
 export function useResolvedFillTertiary(): string {
   const values = use(ResolvedThemeRolesContext);
   if (values === undefined) {

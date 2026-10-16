@@ -23,7 +23,7 @@ const buttonVariants = cva(
         ghost:
           'hover:bg-accent [&:is(a):hover]:bg-accent! hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground',
         destructive:
-          'bg-destructive-subtle text-destructive-text hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40',
+          'bg-destructive-subtle text-destructive-text hover:bg-(--destructive-wash-hover) focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40',
         link: 'text-primary-text hover:text-primary-text/80',
       },
       size: {

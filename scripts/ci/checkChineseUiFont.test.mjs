@@ -66,46 +66,54 @@ test('rejects numeric-weight CSS font shorthand', () => {
   assert.match(checkFixture('const ui = css`font: 400 16px/1.5 SimSun;`'), /400 16px\/1.5 SimSun/);
 });
 
-test('accepts the canonical font generator at the theme-provider token boundary', () => {
+test('accepts the canonical font generator at the ThemeRoles publisher boundary', () => {
   assert.match(
     checkFixture(`
-      import { ThemeProvider as RootTheme } from '@lobehub/ui';
+      import { useMemo } from 'react';
       import { genFontFamily as getUiFont } from '@/const/font';
-      const app = <RootTheme theme={{ token: {
-        fontFamily: getUiFont({ locale: 'zh-CN' }),
-      } }} />;
+      import { ThemeRoles as Roles } from '@/styles/themeRoles';
+      const direct = getUiFont({ locale: 'zh-CN' });
+      const memo = useMemo(() => getUiFont({ locale: 'zh-CN' }), []);
+      const a = <Roles fontFamily={direct} />;
+      const b = <Roles fontFamily={memo}><span /></Roles>;
     `),
     /Chinese UI font guard passed/,
   );
 });
 
-test('still rejects generated local styles, literal theme fonts and unowned generators', () => {
+test('still rejects generated local styles, literal publisher fonts and unowned generators', () => {
   assert.match(
     checkFixture(`
-      import { ThemeProvider } from '@lobehub/ui';
       import { genFontFamily } from '@/const/font';
+      import { ThemeRoles } from '@/styles/themeRoles';
       const local = { fontFamily: genFontFamily({ locale: 'zh-CN' }) };
-      const app = <ThemeProvider theme={{ token: { fontFamily: 'SimSun' } }} />;
     `),
     /local font-family override: genFontFamily/,
   );
   assert.match(
     checkFixture(`
-      import { ThemeProvider } from '@lobehub/ui';
-      import { genFontFamily } from '@/const/font';
-      const app = <ThemeProvider theme={{ token: { fontFamily: 'SimSun' } }} />;
+      import { ThemeRoles } from '@/styles/themeRoles';
+      const app = <ThemeRoles fontFamily="SimSun" />;
     `),
     /local font-family override: SimSun/,
   );
   assert.match(
     checkFixture(`
-      import { ThemeProvider } from '@lobehub/ui';
       import { genFontFamily } from './local-font';
-      const app = <ThemeProvider theme={{ token: {
-        fontFamily: genFontFamily({ locale: 'zh-CN' }),
-      } }} />;
+      import { ThemeRoles } from '@/styles/themeRoles';
+      const fontFamily = genFontFamily({ locale: 'zh-CN' });
+      const app = <ThemeRoles fontFamily={fontFamily} />;
     `),
-    /local font-family override: genFontFamily/,
+    /local font-family override: \{fontFamily\}/,
+  );
+  assert.match(
+    checkFixture(`
+      import { genFontFamily } from '@/const/font';
+      import { ThemeRoles } from './local-roles';
+      const fontFamily = genFontFamily({ locale: 'zh-CN' });
+      const app = <ThemeRoles fontFamily={fontFamily} />;
+    `),
+    /local font-family override: \{fontFamily\}/,
   );
 });
 
@@ -175,12 +183,18 @@ test('rejects local canonical-role redefinition in CSS, arbitrary properties and
 // Exercise the actual unchanged owner declarations, with only their file-read
 // boundary supplied in memory. No parser logic is copied into this test.
 function checkActualNativeProducer(
-  providerImport,
-  { mono = 'theme.fontFamilyCode', badGenerator = false } = {},
+  publisherImport,
+  { mono = 'fontFamilyCode', badGenerator = false, publisherProps } = {},
 ) {
   const source = readFileSync(guard, 'utf8');
   const owner = ts.createSourceFile(guard, source, ts.ScriptTarget.Latest, true);
-  const names = ['importedNames', 'verifyNativeFontProducer'];
+  const names = [
+    'importedNames',
+    'THEME_ROLES_MODULE',
+    'NATIVE_ROLE_PROPS',
+    'generatorCall',
+    'verifyNativeFontProducer',
+  ];
   const declarations = names.map((name) => {
     const node = owner.statements.find(
       (statement) =>
@@ -193,9 +207,17 @@ function checkActualNativeProducer(
     assert(node, `Actual guard function ${name} must exist`);
     return node.getText(owner);
   });
-  const roleSource = `const createThemeRoleStyles = (theme) => { return \`--font-sans: \${theme.fontFamily}; --font-mono: \${${mono}};\`; };`;
+  const roleSource = `
+    const createThemeRoleStyles = ({ animationMode, fontFamily, fontFamilyCode, theme }) => {
+      const fonts = [
+        fontFamily ? \`--font-sans: \${fontFamily};\` : '',
+        fontFamilyCode ? \`--font-mono: \${${mono}};\` : '',
+      ];
+      return fonts.join('');
+    };
+  `;
   const appSource = `
-    ${providerImport}
+    ${publisherImport}
     import { useMemo } from 'react';
     import { genFontFamily, genFontFamilyCode } from '${badGenerator ? './unowned-font' : '@/const/font'}';
     function AppTheme({ customFontFamily, language, userFontFamily, userFontFamilyCode }) {
@@ -205,7 +227,7 @@ function checkActualNativeProducer(
       const fontFamilyCode = useMemo(() => genFontFamilyCode({
         locale: resolveUILocale(language).normalizedLocale, userFontFamily: userFontFamilyCode,
       }), [language, userFontFamilyCode]);
-      return <RootTheme theme={{ token: { fontFamily, fontFamilyCode } }}><span /></RootTheme>;
+      return <Roles ${publisherProps ?? 'fontFamily={fontFamily} fontFamilyCode={fontFamilyCode}'}><span /></Roles>;
     }
   `;
   const root = path.resolve(import.meta.dirname, '../..');
@@ -221,36 +243,31 @@ function checkActualNativeProducer(
   });
 }
 
-test('native publisher recognizes the official public named ThemeProvider and alias', () => {
-  assert.equal(
-    checkActualNativeProducer("import { ThemeProvider as RootTheme } from '@lobehub/ui';"),
-    true,
-  );
+const actualPublisher = "import { ThemeRoles as Roles } from '@/styles/themeRoles';";
+
+test('native publisher recognizes the ThemeRoles publisher and its alias', () => {
+  assert.equal(checkActualNativeProducer(actualPublisher), true);
   assert.equal(
     checkActualNativeProducer(
-      "import { ThemeProvider as RootTheme, ConfigProvider } from '@lobehub/ui';",
+      "import { ThemeRoles as Roles, useGeneratedTheme } from '@/styles/themeRoles';",
     ),
     true,
   );
 });
 
-test('native publisher keeps its original deep-default provider identity', () => {
-  assert.equal(
-    checkActualNativeProducer(
-      "import RootTheme from '@lobehub/ui/es/ThemeProvider/ThemeProvider';",
-    ),
-    true,
-  );
-});
-
-test('native publisher rejects unrelated providers and altered generator or code-font mapping', () => {
+test('native publisher rejects unrelated publishers and altered generator or code-font mapping', () => {
   for (const imported of [
-    "import { ThemeProvider as RootTheme } from './local-provider';",
-    "import { ConfigProvider as RootTheme } from '@lobehub/ui';",
-    "import RootTheme from '@lobehub/ui';",
+    "import { ThemeRoles as Roles } from './local-roles';",
+    "import { useGeneratedTheme as Roles } from '@/styles/themeRoles';",
+    "import Roles from '@/styles/themeRoles';",
   ])
     assert.equal(checkActualNativeProducer(imported), false);
-  const actual = "import { ThemeProvider as RootTheme } from '@lobehub/ui';";
-  assert.equal(checkActualNativeProducer(actual, { badGenerator: true }), false);
-  assert.equal(checkActualNativeProducer(actual, { mono: 'theme.fontFamily' }), false);
+  assert.equal(checkActualNativeProducer(actualPublisher, { badGenerator: true }), false);
+  assert.equal(checkActualNativeProducer(actualPublisher, { mono: 'fontFamily' }), false);
+  assert.equal(
+    checkActualNativeProducer(actualPublisher, {
+      publisherProps: 'fontFamily="SimSun" fontFamilyCode={fontFamilyCode}',
+    }),
+    false,
+  );
 });

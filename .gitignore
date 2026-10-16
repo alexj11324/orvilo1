@@ -158,8 +158,6 @@ i18n-unused-keys-report.json
 .vitest-reports
 .vitest/
 
-pnpm-lock.yaml
-!apps/desktop/pnpm-lock.yaml
 .turbo
 spaHtmlTemplates.ts
 
@@ -207,3 +205,34 @@ ds-bundle/
 .design-sync/node_modules
 packages/ui/dist/
 packages/ui/.build/
+
+# Local design skills (installed per machine, not shared through the repo)
+/.agents/skills/brandkit
+/.agents/skills/design-taste-frontend
+/.agents/skills/design-taste-frontend-v1
+/.agents/skills/design-taste-frontend-v2-experimental
+/.agents/skills/full-output-enforcement
+/.agents/skills/gpt-taste
+/.agents/skills/high-end-visual-design
+/.agents/skills/image-to-code
+/.agents/skills/imagegen-frontend-mobile
+/.agents/skills/imagegen-frontend-web
+/.agents/skills/industrial-brutalist-ui
+/.agents/skills/minimalist-ui
+/.agents/skills/redesign-existing-projects
+/.agents/skills/stitch-design-taste
+/.devin/skills/brandkit
+/.devin/skills/design-taste-frontend
+/.devin/skills/design-taste-frontend-v1
+/.devin/skills/design-taste-frontend-v2-experimental
+/.devin/skills/full-output-enforcement
+/.devin/skills/gpt-taste
+/.devin/skills/high-end-visual-design
+/.devin/skills/image-to-code
+/.devin/skills/imagegen-frontend-mobile
+/.devin/skills/imagegen-frontend-web
+/.devin/skills/industrial-brutalist-ui
+/.devin/skills/minimalist-ui
+/.devin/skills/redesign-existing-projects
+/.devin/skills/stitch-design-taste
+/.devin/skills/web-design-guidelines

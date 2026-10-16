@@ -12,20 +12,6 @@ const permissionMock = vi.hoisted(() => ({
 }));
 const versionMock = vi.hoisted(() => ({ isDesktop: false }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: {
-    useApp: () => ({
-      message: {
-        success: vi.fn(),
-      },
-      modal: {
-        confirm: vi.fn(),
-      },
-    }),
-  },
-}));
-
 vi.mock('@/components/RenameModal', () => ({
   openRenameModal: vi.fn(),
 }));

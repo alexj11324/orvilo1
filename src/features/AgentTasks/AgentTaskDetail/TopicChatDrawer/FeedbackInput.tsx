@@ -4,6 +4,7 @@ import { ChevronDownIcon, MessageCirclePlus } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { Button } from '@/components/ui/button';
 import { AttachmentUploadButton } from '@/features/AttachmentInput';
 import OpStatusTray from '@/features/Conversation/ChatInput/OpStatusTray';
@@ -116,53 +117,55 @@ const FeedbackInput = memo<FeedbackInputProps>(
     }
 
     return (
-      <div className="flex flex-col gap-2">
-        <OpStatusTray seamless />
-        <ChatInput
-          maxHeight={240}
-          minHeight={64}
-          footer={
-            <ChatInputActionBar
-              style={{ paddingInline: 8 }}
-              left={
-                <div className="flex items-center gap-0.5">
-                  {!disableCollapse && (
-                    <Button size="sm" variant="ghost" onClick={() => setExpanded(false)}>
-                      <ChevronDownIcon data-icon="inline-start" />
-                      {t('taskDetail.collapseReply')}
-                    </Button>
-                  )}
-                  <AttachmentUploadButton onFiles={handleAttach} />
-                </div>
-              }
-              right={
-                <SendButton
-                  disabled={!canSubmit && !submitting}
-                  loading={submitting}
-                  shape={'round'}
-                  title={t('taskDetail.replyInThread')}
-                  type={'primary'}
-                  onClick={handleSubmit}
-                />
-              }
+      <LobeThemeScope>
+        <div className="flex flex-col gap-2">
+          <OpStatusTray seamless />
+          <ChatInput
+            maxHeight={240}
+            minHeight={64}
+            footer={
+              <ChatInputActionBar
+                style={{ paddingInline: 8 }}
+                left={
+                  <div className="flex items-center gap-0.5">
+                    {!disableCollapse && (
+                      <Button size="sm" variant="ghost" onClick={() => setExpanded(false)}>
+                        <ChevronDownIcon data-icon="inline-start" />
+                        {t('taskDetail.collapseReply')}
+                      </Button>
+                    )}
+                    <AttachmentUploadButton onFiles={handleAttach} />
+                  </div>
+                }
+                right={
+                  <SendButton
+                    disabled={!canSubmit && !submitting}
+                    loading={submitting}
+                    shape={'round'}
+                    title={t('taskDetail.replyInThread')}
+                    type={'primary'}
+                    onClick={handleSubmit}
+                  />
+                }
+              />
+            }
+          >
+            <EditorCanvas
+              editor={editor}
+              floatingToolbar={false}
+              placeholder={t('taskDetail.replyPlaceholder')}
+              style={{ paddingBlock: 0 }}
+              onContentChange={handleContentChange}
+              onPressEnter={({ event }) => {
+                if (shouldSendOnEnter(event)) {
+                  handleSubmit();
+                  return true;
+                }
+              }}
             />
-          }
-        >
-          <EditorCanvas
-            editor={editor}
-            floatingToolbar={false}
-            placeholder={t('taskDetail.replyPlaceholder')}
-            style={{ paddingBlock: 0 }}
-            onContentChange={handleContentChange}
-            onPressEnter={({ event }) => {
-              if (shouldSendOnEnter(event)) {
-                handleSubmit();
-                return true;
-              }
-            }}
-          />
-        </ChatInput>
-      </div>
+          </ChatInput>
+        </div>
+      </LobeThemeScope>
     );
   },
 );

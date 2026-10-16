@@ -2,7 +2,6 @@
  * @vitest-environment happy-dom
  */
 import { cleanup, render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { EditTaskParams, RunTaskParams, SetTaskVerifyParams } from '../../types';
@@ -26,14 +25,6 @@ vi.mock('react-i18next', () => ({
 
 // base-ui Button requires the app-level motion provider (this package has no
 // shared vitest setup, unlike src tests which stub it globally).
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Button: ({ children, ...props }: { children?: ReactNode }) => (
-    <button type="button" {...props}>
-      {children}
-    </button>
-  ),
-}));
 
 vi.mock('@/features/AgentTasks/features/AssigneeAvatar', () => ({
   default: ({ agentId }: { agentId?: string | null }) => (

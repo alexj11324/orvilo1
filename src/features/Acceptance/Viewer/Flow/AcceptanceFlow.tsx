@@ -48,7 +48,7 @@ export function AcceptanceFlow() {
   const { t } = useTranslation('verify');
   const [appElement, setAppElement] = useState<HTMLElement | null>(null);
   useEffect(() => {
-    setAppElement(document.querySelector('[data-lobe-portal-host]'));
+    setAppElement(document.body);
   }, []);
   const panelHost = use(FlowPanelHostContext);
   const md = !useIsMobile();

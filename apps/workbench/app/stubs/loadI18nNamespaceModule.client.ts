@@ -9,6 +9,7 @@ type NamespaceLoaderMap = Record<string, () => Promise<NamespaceModule>>;
 const defaultLoaders = import.meta.glob([
   '../../../../packages/locales/src/default/chat.ts',
   '../../../../packages/locales/src/default/common.ts',
+  '../../../../packages/locales/src/default/components.ts',
   '../../../../packages/locales/src/default/error.ts',
   '../../../../packages/locales/src/default/modelRuntime.ts',
   '../../../../packages/locales/src/default/plugin.ts',
@@ -18,6 +19,7 @@ const defaultLoaders = import.meta.glob([
 const localeLoaders = import.meta.glob([
   '../../../../locales/*/chat.json',
   '../../../../locales/*/common.json',
+  '../../../../locales/*/components.json',
   '../../../../locales/*/error.json',
   '../../../../locales/*/modelRuntime.json',
   '../../../../locales/*/plugin.json',

@@ -2,6 +2,8 @@ import { RadarChart } from '@lobehub/charts';
 import type { FC } from 'react';
 import { memo } from 'react';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
+
 import { radarStyles } from '../ModelRatingRadar';
 
 /**
@@ -49,30 +51,32 @@ const CompareRadar: FC<CompareRadarProps> = memo(({ dimensions, series }) => {
     .filter((row) => series.some((s) => row[s.id] !== undefined));
 
   return (
-    <RadarChart
-      categories={series.map((s) => s.id)}
-      className={radarStyles.radar}
-      colors={series.map((s) => s.color)}
-      customCategories={Object.fromEntries(series.map((s) => [s.id, s.name]))}
-      data={data}
-      height={300}
-      index={'subject'}
-      maxValue={100}
-      minValue={0}
-      showLegend={false}
-      angleAxisLabelFormatter={
-        single
-          ? (label, row) => (
-              <>
-                {label}{' '}
-                <tspan fill={'var(--foreground)'} fontWeight={600}>
-                  {row?.[series[0].id]}
-                </tspan>
-              </>
-            )
-          : undefined
-      }
-    />
+    <LobeThemeScope>
+      <RadarChart
+        categories={series.map((s) => s.id)}
+        className={radarStyles.radar}
+        colors={series.map((s) => s.color)}
+        customCategories={Object.fromEntries(series.map((s) => [s.id, s.name]))}
+        data={data}
+        height={300}
+        index={'subject'}
+        maxValue={100}
+        minValue={0}
+        showLegend={false}
+        angleAxisLabelFormatter={
+          single
+            ? (label, row) => (
+                <>
+                  {label}{' '}
+                  <tspan fill={'var(--foreground)'} fontWeight={600}>
+                    {row?.[series[0].id]}
+                  </tspan>
+                </>
+              )
+            : undefined
+        }
+      />
+    </LobeThemeScope>
   );
 });
 

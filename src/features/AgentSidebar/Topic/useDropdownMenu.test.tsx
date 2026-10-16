@@ -58,19 +58,6 @@ vi.mock('@/components/toast', async (importOriginal) => ({
   toast: messageMock,
 }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: {
-    useApp: () => ({
-      message: messageMock,
-      modal: {
-        confirm: vi.fn(),
-        error: vi.fn(),
-      },
-    }),
-  },
-}));
-
 vi.mock('@/hooks/usePermission', () => ({
   usePermission: (action: 'create_content' | 'edit_own_content') => ({
     allowed: permissionMock[action],

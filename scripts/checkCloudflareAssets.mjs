@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const workerRoot = path.resolve(process.argv[2]);
@@ -12,18 +12,6 @@ for (const entry of Object.values(manifest)) {
   }
 }
 
-const assetNames = readdirSync(path.join(assetsRoot, 'assets'));
-for (const prefix of ['antd-', 'theme-vars-']) {
-  assert(
-    assetNames.some(
-      (name) =>
-        name.startsWith(prefix) &&
-        name.endsWith('.css') &&
-        statSync(path.join(assetsRoot, 'assets', name)).size > 0,
-    ),
-    `Missing static CSS: ${prefix}`,
-  );
-}
 const bundleRoot = path.join(workerRoot, 'bundle');
 const workerSource = readdirSync(bundleRoot, { recursive: true })
   .filter((file) => file.endsWith('.js'))

@@ -1,15 +1,48 @@
-/* Layer order. `antd` (the cssinjs layer from AntdStyleLayer) and the reserved
-   `antd-style` experiment layer must be declared before runtime style tags.
-   Emotion rules currently stay unlayered; see src/styles/layerEmotionCache.ts.
-   Keep this statement before every @import. */
-@layer theme, base, antd, components, antd-style, utilities;
+/* Layer order. Vendor CSS that @lobehub/editor and @lobehub/charts still inject
+   at runtime sits below Tailwind: `antd` is antd cssinjs (StyleProvider layer in
+   LobeThemeScope) and `antd-style` is every emotion rule, class rules scoped to
+   `.orvilo-editor-scope` (src/styles/layerEmotionCache.ts). Runtime layers must
+   be declared here, before every @import, or they would be created after
+   `utilities` and beat it. */
+@layer theme, base, antd, antd-style, components, utilities;
 
 @import 'tailwindcss' source('../..');
-@import 'antd/dist/reset.css' layer(base);
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
 @source "../../node_modules/streamdown/dist/*.js";
+
+/* `@lobehub/icons` lays out its avatars and combined marks with the lobehub
+   Flexbox (`.lobe-flex` plus inline custom properties) outside any
+   LobeThemeScope, so its layout defaults live here instead of in the vendor
+   EssentialStyle sheet. */
+@layer antd-style {
+    :where(.lobe-flex) {
+        --lobe-flex: 0 1 auto;
+        --lobe-flex-direction: column;
+        --lobe-flex-wrap: nowrap;
+        --lobe-flex-justify: flex-start;
+        --lobe-flex-align: stretch;
+        --lobe-flex-width: auto;
+        --lobe-flex-height: auto;
+        --lobe-flex-padding: 0;
+        --lobe-flex-padding-inline: var(--lobe-flex-padding);
+        --lobe-flex-padding-block: var(--lobe-flex-padding);
+        --lobe-flex-gap: 0;
+
+        display: flex;
+        flex: var(--lobe-flex);
+        flex-flow: var(--lobe-flex-direction) var(--lobe-flex-wrap);
+        gap: var(--lobe-flex-gap);
+        align-items: var(--lobe-flex-align);
+        justify-content: var(--lobe-flex-justify);
+        width: var(--lobe-flex-width);
+        height: var(--lobe-flex-height);
+        padding: var(--lobe-flex-padding);
+        padding-block: var(--lobe-flex-padding-block);
+        padding-inline: var(--lobe-flex-padding-inline);
+    }
+}
 
 @custom-variant dark (&:is(.dark *, [data-theme='dark'] *));
 
@@ -318,7 +351,7 @@
     --info-text: #4ea7fc;
     --info-wash: #19222c;
     --info-wash-hover: #1e2d3d;
-    --input: #63676c;
+    --input: #80848a;
     --invert: #f7f8f8;
     --invert-foreground: #0f1011;
     --link: #f7f8f8;

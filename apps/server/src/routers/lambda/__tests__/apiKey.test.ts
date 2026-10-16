@@ -104,6 +104,7 @@ describe('apiKeyRouter workspace member access', () => {
     await createCaller('member').getApiKeys();
     expect(mockApiKeyModelConstructor).toHaveBeenLastCalledWith(
       expect.anything(),
+      expect.any(Function),
       'member-user',
       'workspace-1',
       { canManageAll: false },
@@ -112,6 +113,7 @@ describe('apiKeyRouter workspace member access', () => {
     await createCaller('admin').getApiKeys();
     expect(mockApiKeyModelConstructor).toHaveBeenLastCalledWith(
       expect.anything(),
+      expect.any(Function),
       'admin-user',
       'workspace-1',
       { canManageAll: true },

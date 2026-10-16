@@ -153,19 +153,6 @@ function OnboardingSetup() {
     else setWorkspace(undefined);
   };
 
-  // Optional steps never block: leaving them finishes onboarding with what is already saved.
-  const skip = async () => {
-    await runAction('skip', async () => {
-      const state = useUserStore.getState();
-      await finishOnboardingAndNavigate(
-        state.finishOnboarding,
-        navigate,
-        undefined,
-        agentVerified ? firstAgentId : undefined,
-      );
-    });
-  };
-
   const completeAgent = async (agentId: string) => {
     if (!workspace) return;
     setFirstAgentId(agentId);
@@ -239,7 +226,6 @@ function OnboardingSetup() {
     ? {
         agent: firstAgentId ? () => void completeAgent(firstAgentId) : undefined,
         finish: () => void finish(),
-        skip: () => void skip(),
         selection: orchestratorAgentId
           ? () => void selectOrchestrator(orchestratorAgentId)
           : undefined,
@@ -423,11 +409,6 @@ function OnboardingSetup() {
               {t('setup.devices')}
             </Button>
           </div>
-        )}
-        {workspace && (
-          <Button disabled={busy} variant="ghost" onClick={() => void skip()}>
-            {t('setup.skip')}
-          </Button>
         )}
         {workspace && (
           <Button disabled={busy} variant="ghost" onClick={() => navigate('/settings/profile')}>

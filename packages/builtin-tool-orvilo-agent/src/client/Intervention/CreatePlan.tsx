@@ -15,6 +15,7 @@ import isEqual from 'fast-deep-equal';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { Textarea } from '@/components/ui/textarea';
 
 import type { CreatePlanParams } from '../../types';
@@ -125,58 +126,60 @@ const CreatePlanIntervention = memo<BuiltinInterventionProps<CreatePlanParams>>(
     }, []);
 
     return (
-      <div
-        className="flex flex-col gap-2 py-4"
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-        }}
-      >
-        {/* Goal - Main Title */}
-        <Textarea
-          className={styles.title}
-          placeholder={t('orvilo-agent.createPlan.goal.placeholder')}
-          style={{ padding: 0, resize: 'none' }}
-          value={goal}
-          onChange={(e) => handleGoalChange(e.target.value)}
-          onKeyDown={handleGoalKeyDown}
-        />
-
-        {/* Description - Subtitle */}
-        <Textarea
-          className={styles.description}
-          data-testid="plan-description"
-          placeholder={t('orvilo-agent.createPlan.description.placeholder')}
-          style={{ padding: 0, resize: 'none' }}
-          value={description}
-          onChange={(e) => handleDescriptionChange(e.target.value)}
-          onKeyDown={handleDescriptionKeyDown}
-        />
-
-        {/* Context - Rich Text Editor */}
-        <div style={{ marginTop: 8, minHeight: 200 }}>
-          <Editor
-            content={args.context}
-            editor={editor}
-            lineEmptyPlaceholder={t('orvilo-agent.createPlan.context.placeholder')}
-            placeholder={t('orvilo-agent.createPlan.context.placeholder')}
-            type={'text'}
-            plugins={[
-              ReactListPlugin,
-              ReactCodePlugin,
-              ReactCodeblockPlugin,
-              ReactHRPlugin,
-              ReactLinkPlugin,
-              ReactTablePlugin,
-              ReactMathPlugin,
-            ]}
-            style={{
-              minHeight: 200,
-            }}
-            onTextChange={handleContentChange}
+      <LobeThemeScope>
+        <div
+          className="flex flex-col gap-2 py-4"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+        >
+          {/* Goal - Main Title */}
+          <Textarea
+            className={styles.title}
+            placeholder={t('orvilo-agent.createPlan.goal.placeholder')}
+            style={{ padding: 0, resize: 'none' }}
+            value={goal}
+            onChange={(e) => handleGoalChange(e.target.value)}
+            onKeyDown={handleGoalKeyDown}
           />
+
+          {/* Description - Subtitle */}
+          <Textarea
+            className={styles.description}
+            data-testid="plan-description"
+            placeholder={t('orvilo-agent.createPlan.description.placeholder')}
+            style={{ padding: 0, resize: 'none' }}
+            value={description}
+            onChange={(e) => handleDescriptionChange(e.target.value)}
+            onKeyDown={handleDescriptionKeyDown}
+          />
+
+          {/* Context - Rich Text Editor */}
+          <div style={{ marginTop: 8, minHeight: 200 }}>
+            <Editor
+              content={args.context}
+              editor={editor}
+              lineEmptyPlaceholder={t('orvilo-agent.createPlan.context.placeholder')}
+              placeholder={t('orvilo-agent.createPlan.context.placeholder')}
+              type={'text'}
+              plugins={[
+                ReactListPlugin,
+                ReactCodePlugin,
+                ReactCodeblockPlugin,
+                ReactHRPlugin,
+                ReactLinkPlugin,
+                ReactTablePlugin,
+                ReactMathPlugin,
+              ]}
+              style={{
+                minHeight: 200,
+              }}
+              onTextChange={handleContentChange}
+            />
+          </div>
         </div>
-      </div>
+      </LobeThemeScope>
     );
   },
   isEqual,

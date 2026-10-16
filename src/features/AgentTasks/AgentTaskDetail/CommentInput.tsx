@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import Avatar from '@/components/Avatar';
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { toast } from '@/components/toast';
 import { AttachmentUploadButton } from '@/features/AttachmentInput';
 import { mentionFilledClassName } from '@/features/ChatInput/InputEditor/mentionStyle';
@@ -99,50 +100,55 @@ const CommentInput = memo<{ taskId: string }>(({ taskId }) => {
   }, [canEditTask, taskId, editor, addComment, clearAfterSend, submitting, t]);
 
   return (
-    <div className={`flex flex-col gap-1.5 ${styles.commentInputCard}`} id="task-comment-composer">
-      <div className="flex items-center gap-2" style={{ minWidth: 0, width: '100%' }}>
-        <Avatar avatar={userAvatar} size={24} style={{ flexShrink: 0 }} />
-        <div
-          className={mentionFilledClassName}
-          style={{ flex: '1 1 0', minWidth: 0, overflow: 'hidden' }}
-        >
-          <EditorCanvas
-            tabMovesFocus
-            editor={editor}
-            floatingToolbar={false}
-            mentionOption={mentionOption}
-            placeholder={t('taskDetail.commentPlaceholder')}
-            style={{
-              fontSize: 14,
-              maxWidth: '100%',
-              minHeight: 24,
-              overflow: 'hidden',
-              paddingBlock: 0,
-              whiteSpace: 'normal',
-            }}
-            onContentChange={handleContentChange}
-            onPressEnter={({ event }) => {
-              if (!canEditTask) return true;
-              if (shouldSendOnEnter(event)) {
-                handleSubmit();
-                return true;
-              }
-            }}
-          />
-        </div>
-        <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
-          <AttachmentUploadButton onFiles={handleAttach} />
-          <SendButton
-            aria-label={t('taskDetail.sendComment')}
-            disabled={!canEditTask || (!canSubmit && !submitting)}
-            loading={submitting}
-            shape={'round'}
-            type={'text'}
-            onClick={handleSubmit}
-          />
+    <LobeThemeScope>
+      <div
+        className={`flex flex-col gap-1.5 ${styles.commentInputCard}`}
+        id="task-comment-composer"
+      >
+        <div className="flex items-center gap-2" style={{ minWidth: 0, width: '100%' }}>
+          <Avatar avatar={userAvatar} size={24} style={{ flexShrink: 0 }} />
+          <div
+            className={mentionFilledClassName}
+            style={{ flex: '1 1 0', minWidth: 0, overflow: 'hidden' }}
+          >
+            <EditorCanvas
+              tabMovesFocus
+              editor={editor}
+              floatingToolbar={false}
+              mentionOption={mentionOption}
+              placeholder={t('taskDetail.commentPlaceholder')}
+              style={{
+                fontSize: 14,
+                maxWidth: '100%',
+                minHeight: 24,
+                overflow: 'hidden',
+                paddingBlock: 0,
+                whiteSpace: 'normal',
+              }}
+              onContentChange={handleContentChange}
+              onPressEnter={({ event }) => {
+                if (!canEditTask) return true;
+                if (shouldSendOnEnter(event)) {
+                  handleSubmit();
+                  return true;
+                }
+              }}
+            />
+          </div>
+          <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
+            <AttachmentUploadButton onFiles={handleAttach} />
+            <SendButton
+              aria-label={t('taskDetail.sendComment')}
+              disabled={!canEditTask || (!canSubmit && !submitting)}
+              loading={submitting}
+              shape={'round'}
+              type={'text'}
+              onClick={handleSubmit}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </LobeThemeScope>
   );
 });
 

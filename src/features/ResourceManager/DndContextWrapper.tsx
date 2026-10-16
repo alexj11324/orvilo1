@@ -202,7 +202,7 @@ export const DndContextWrapper = memo<PropsWithChildren>(({ children }) => {
   const [appElement, setAppElement] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    setAppElement(document.querySelector('[data-lobe-portal-host]'));
+    setAppElement(document.body);
   }, []);
 
   // Change cursor to grabbing during drag

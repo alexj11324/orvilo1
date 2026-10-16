@@ -14,8 +14,6 @@
     "@orvilo/types": "workspace:*"
   },
   "peerDependencies": {
-    "@lobehub/ui": "^5",
-    "antd-style": "*",
     "lucide-react": "*",
     "react": "*",
     "react-i18next": "*"

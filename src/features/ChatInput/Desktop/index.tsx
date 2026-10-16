@@ -14,6 +14,7 @@ import {
   PromptInputHeader,
   PromptInputTools,
 } from '@/components/ai-elements/prompt-input';
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { Skeleton } from '@/components/ui/skeleton';
 import ChatInputNotice from '@/features/ChatInput/ChatInputNotice';
 import ComposerExpandButton from '@/features/ChatInput/components/ComposerExpandButton';
@@ -205,106 +206,111 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
     const controlBarNode = controlBarSlot ?? (showControlBar && <ControlBar />);
     const controlBarInsideCard = controlBarInCard && !compact;
 
+    // One vendor scope for the editor, toolbars and actions inside the composer.
     const content = (
-      <div
-        ref={slashMenuRef}
-        className={cn(
-          'flex flex-col gap-2',
-          styles.container,
-          expand && styles.fullscreen,
-          hidden && 'hidden',
-          !expand && (showFootnote ? 'pb-3' : 'pb-2'),
-        )}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
-        <ComposerBeam active={beamActive} fullscreen={expand}>
-          <PromptInput
-            className={cn(expand && 'flex h-full min-h-0 flex-1 flex-col')}
-            data-testid="chat-input"
-            style={inputContainerProps?.style}
-            externalEditor={{
-              onSubmit: (event) => {
-                event.preventDefault();
-                if (canUseResource && !isAccessLoading) handleSendButton();
-              },
-            }}
-            // An empty draft disables Send, not the entire editable surface.
-            // Override InputGroup's descendant-disabled wash for this composite control.
-            groupClassName={cx(
-              'h-auto flex-col overflow-visible rounded-(--radius-card) border-border bg-card text-card-foreground shadow-sm has-disabled:bg-card has-disabled:opacity-100 dark:bg-card dark:has-disabled:bg-card',
-              expand && 'min-h-0 flex-1 rounded-none',
-              inputContainerProps?.className,
-            )}
-          >
-            {(extentHeaderContent || showTypoBar || shouldShowContextContainer) && (
-              <PromptInputHeader>
-                <div className="flex w-full flex-col gap-0">
-                  {extentHeaderContent}
-                  {showTypoBar && <TypoBar />}
-                  {contextContainerNode}
-                </div>
-              </PromptInputHeader>
-            )}
-            <PromptInputBody
-              className={cn(
-                'block w-full overflow-y-auto px-3 py-2 [&_[contenteditable]]:text-sm [&_[contenteditable]]:leading-5.5 [&_[contenteditable]]:[--lobe-markdown-font-size:var(--text-sm)] [&_[contenteditable]]:[--lobe-markdown-line-height:calc(22/14)] [&_[contenteditable]+div>span]:text-sm [&_[contenteditable]+div>span]:leading-5.5',
-                expand ? 'min-h-0 flex-1' : 'min-h-9 max-h-80',
-                !expand && inputContainerProps?.resize !== false && 'resize-y',
-              )}
-              style={
-                expand
-                  ? undefined
-                  : {
-                      height: chatInputHeight || undefined,
-                      maxHeight: inputContainerProps?.maxHeight,
-                      minHeight: inputContainerProps?.minHeight,
-                    }
-              }
-              onPointerUp={(event) => {
-                if (!expand && inputContainerProps?.resize !== false) {
-                  updateSystemStatus({
-                    chatInputHeight: Math.round(event.currentTarget.getBoundingClientRect().height),
-                  });
-                }
+      <LobeThemeScope>
+        <div
+          ref={slashMenuRef}
+          className={cn(
+            'flex flex-col gap-2',
+            styles.container,
+            expand && styles.fullscreen,
+            hidden && 'hidden',
+            !expand && (showFootnote ? 'pb-3' : 'pb-2'),
+          )}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
+          <ComposerBeam active={beamActive} fullscreen={expand}>
+            <PromptInput
+              className={cn(expand && 'flex h-full min-h-0 flex-1 flex-col')}
+              data-testid="chat-input"
+              style={inputContainerProps?.style}
+              externalEditor={{
+                onSubmit: (event) => {
+                  event.preventDefault();
+                  if (canUseResource && !isAccessLoading) handleSendButton();
+                },
               }}
+              // An empty draft disables Send, not the entire editable surface.
+              // Override InputGroup's descendant-disabled wash for this composite control.
+              groupClassName={cx(
+                'h-auto flex-col overflow-visible rounded-(--radius-card) border-border bg-card text-card-foreground shadow-sm has-disabled:bg-card has-disabled:opacity-100 dark:bg-card dark:has-disabled:bg-card',
+                expand && 'min-h-0 flex-1 rounded-none',
+                inputContainerProps?.className,
+              )}
             >
-              <InputEditor
-                defaultRows={editorDefaultRows}
-                initialContent={initialContent}
-                placeholder={placeholder}
-                placeholderVariant={placeholderVariant}
-              />
-            </PromptInputBody>
-            {!compact && (
-              <PromptInputFooter style={actionBarStyle}>
-                <PromptInputTools className="flex-1">
-                  {loadingLeftSlot ?? leftSlot}
-                </PromptInputTools>
-                <PromptInputTools className="shrink-0">
-                  {loadingRightSlot ?? rightContent ?? (
-                    <>
-                      {sendAreaPrefix}
-                      <SendArea hideContextWindow={hasControlBar} />
-                    </>
-                  )}
-                </PromptInputTools>
-              </PromptInputFooter>
-            )}
-            {controlBarInsideCard && controlBarNode ? (
-              <PromptInputFooter className="pt-0">{controlBarNode}</PromptInputFooter>
-            ) : null}
-          </PromptInput>
-        </ComposerBeam>
-        {controlBarInsideCard ? null : controlBarNode}
-        {showFootnote && !expand && (
-          <div className="pointer-events-none z-100 flex flex-col items-center justify-center">
-            <div className={cn('text-muted-foreground', styles.footnote)}>
-              {t('input.disclaimer')}
+              {(extentHeaderContent || showTypoBar || shouldShowContextContainer) && (
+                <PromptInputHeader>
+                  <div className="flex w-full flex-col gap-0">
+                    {extentHeaderContent}
+                    {showTypoBar && <TypoBar />}
+                    {contextContainerNode}
+                  </div>
+                </PromptInputHeader>
+              )}
+              <PromptInputBody
+                className={cn(
+                  'block w-full overflow-y-auto px-3 py-2 [&_[contenteditable]]:text-sm [&_[contenteditable]]:leading-5.5 [&_[contenteditable]]:[--lobe-markdown-font-size:var(--text-sm)] [&_[contenteditable]]:[--lobe-markdown-line-height:calc(22/14)] [&_[contenteditable]+div>span]:text-sm [&_[contenteditable]+div>span]:leading-5.5',
+                  expand ? 'min-h-0 flex-1' : 'min-h-9 max-h-80',
+                  !expand && inputContainerProps?.resize !== false && 'resize-y',
+                )}
+                style={
+                  expand
+                    ? undefined
+                    : {
+                        height: chatInputHeight || undefined,
+                        maxHeight: inputContainerProps?.maxHeight,
+                        minHeight: inputContainerProps?.minHeight,
+                      }
+                }
+                onPointerUp={(event) => {
+                  if (!expand && inputContainerProps?.resize !== false) {
+                    updateSystemStatus({
+                      chatInputHeight: Math.round(
+                        event.currentTarget.getBoundingClientRect().height,
+                      ),
+                    });
+                  }
+                }}
+              >
+                <InputEditor
+                  defaultRows={editorDefaultRows}
+                  initialContent={initialContent}
+                  placeholder={placeholder}
+                  placeholderVariant={placeholderVariant}
+                />
+              </PromptInputBody>
+              {!compact && (
+                <PromptInputFooter style={actionBarStyle}>
+                  <PromptInputTools className="flex-1">
+                    {loadingLeftSlot ?? leftSlot}
+                  </PromptInputTools>
+                  <PromptInputTools className="shrink-0">
+                    {loadingRightSlot ?? rightContent ?? (
+                      <>
+                        {sendAreaPrefix}
+                        <SendArea hideContextWindow={hasControlBar} />
+                      </>
+                    )}
+                  </PromptInputTools>
+                </PromptInputFooter>
+              )}
+              {controlBarInsideCard && controlBarNode ? (
+                <PromptInputFooter className="pt-0">{controlBarNode}</PromptInputFooter>
+              ) : null}
+            </PromptInput>
+          </ComposerBeam>
+          {controlBarInsideCard ? null : controlBarNode}
+          {showFootnote && !expand && (
+            <div className="pointer-events-none z-100 flex flex-col items-center justify-center">
+              <div className={cn('text-muted-foreground', styles.footnote)}>
+                {t('input.disclaimer')}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </LobeThemeScope>
     );
 
     if (expand && layoutContainerRef.current)

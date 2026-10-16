@@ -58,6 +58,13 @@ describe('isRetiredProductUrl', () => {
     expect(isRetiredProductUrl('/tasks', { type: 'personal' })).toBe(false);
   });
 
+  it('keeps live Reviews routes', () => {
+    expect(isRetiredProductUrl('/reviews', { type: 'personal' })).toBe(false);
+    expect(isRetiredProductUrl('/acme/reviews/review-1', { slug: 'acme', type: 'workspace' })).toBe(
+      false,
+    );
+  });
+
   it('reads the path out of an absolute URL', () => {
     expect(isRetiredProductUrl('https://app.example.com/image/123', { type: 'personal' })).toBe(
       true,

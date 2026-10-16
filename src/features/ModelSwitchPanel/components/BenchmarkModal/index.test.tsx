@@ -9,13 +9,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { COMPARE_SERIES_COLORS } from './CompareRadar';
 import BenchmarkModalContent from './index';
 
-vi.mock('antd-style', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  createStaticStyles: () =>
-    new Proxy({}, { get: (_target, prop: string) => prop }) as Record<string, string>,
-  cssVar: new Proxy({}, { get: (_target, token) => `var(--${String(token)})` }),
-}));
-
 // recharts needs a measured container — stub the chart with its data flattened to text nodes
 vi.mock('@lobehub/charts', () => ({
   RadarChart: ({ data }: { data: Record<string, unknown>[] }) => (

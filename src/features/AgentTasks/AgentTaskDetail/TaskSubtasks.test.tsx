@@ -90,24 +90,6 @@ vi.mock('@/components/Tree', () => ({
   ),
 }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: {
-    useApp: () => ({
-      message: { error: vi.fn(), info: vi.fn(), success: vi.fn(), warning: vi.fn() },
-      modal: { confirm: vi.fn() },
-    }),
-  },
-}));
-
-vi.mock('antd-style', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  cssVar: {
-    colorTextDescription: '#999',
-    colorTextSecondary: '#666',
-  },
-}));
-
 vi.mock('react-router', () => ({
   useNavigate: () => mocks.navigate,
 }));

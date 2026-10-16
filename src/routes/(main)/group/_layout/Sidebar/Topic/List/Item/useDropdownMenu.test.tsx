@@ -11,20 +11,6 @@ const permissionMock = vi.hoisted(() => ({
   edit_own_content: true,
 }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: {
-    useApp: () => ({
-      message: {
-        success: vi.fn(),
-      },
-      modal: {
-        confirm: vi.fn(),
-      },
-    }),
-  },
-}));
-
 vi.mock('@/const/version', () => ({
   isDesktop: false,
 }));

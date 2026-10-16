@@ -16,28 +16,6 @@ const sheetHandlers = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  ActionIcon: ({
-    onClick,
-    title,
-    ...rest
-  }: {
-    onClick?: () => void;
-    title?: string;
-    [key: string]: unknown;
-  }) => (
-    <button
-      data-testid={(rest as any)['data-testid']}
-      title={title}
-      type="button"
-      onClick={onClick}
-    >
-      {title}
-    </button>
-  ),
-}));
-
 vi.mock('@/components/FloatingSheet', () => ({
   default: ({
     children,

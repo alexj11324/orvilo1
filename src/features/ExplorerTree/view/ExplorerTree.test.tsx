@@ -18,16 +18,6 @@ vi.mock('@/libs/contextMenu', () => ({
   showContextMenu,
 }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: {
-    useApp: () => ({
-      message: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
-      modal: { confirm: vi.fn() },
-    }),
-  },
-}));
-
 vi.mock('@/services/agentDocument', () => ({
   agentDocumentService: {
     removeDocument: vi.fn(),

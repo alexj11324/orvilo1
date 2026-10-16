@@ -5,6 +5,7 @@ import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { createElement, useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -85,72 +86,74 @@ const ProjectDescription = ({
   };
 
   return (
-    <div className="flex flex-col gap-1">
-      <button
-        aria-controls={bodyId}
-        aria-expanded={open}
-        className={styles.header}
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-      >
-        {createElement(open ? ChevronDownIcon : ChevronRightIcon, { size: 14 })}
-        <span className="text-muted-foreground text-xs leading-5 font-medium">
-          {t('overview.descriptionLabel')}
-        </span>
-      </button>
-      <div hidden={!open} id={bodyId}>
-        <Editor
-          className={styles.editor}
-          content={description || ''}
-          debounceWait={0}
-          editable={canEdit && !saving}
-          editor={editor}
-          plugins={plugins}
-          type={description ? 'markdown' : 'text'}
-          placeholder={
-            <span className="block pt-1 pr-0 pb-1 pl-0 text-sm leading-5.5">
-              {t('overview.descriptionEmpty')}
-            </span>
-          }
-          onChange={(current) => {
-            if (baseline.current !== undefined && !pending.current)
-              setDirty(String(current.getDocument('markdown') ?? '') !== baseline.current);
-          }}
-          onFocus={() => {
-            baseline.current ??= String(editor.getDocument('markdown') ?? '');
-          }}
-        />
-        {dirty && (
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-row gap-2">
-              <Button
-                aria-busy={saving}
-                disabled={saving || !canEdit}
-                size="lg"
-                variant="default"
-                onClick={() => void save()}
-              >
-                {saving && <Spinner />}
-                {t('overview.descriptionSave', { defaultValue: 'Save' })}
-              </Button>
-              <Button
-                disabled={saving}
-                size="lg"
-                variant="outline"
-                onClick={() => {
-                  if (pending.current) return;
-                  baseline.current = undefined;
-                  editor.setDocument(source.current ? 'markdown' : 'text', source.current);
-                  setDirty(false);
-                }}
-              >
-                {t('overview.descriptionCancel', { defaultValue: 'Cancel' })}
-              </Button>
+    <LobeThemeScope>
+      <div className="flex flex-col gap-1">
+        <button
+          aria-controls={bodyId}
+          aria-expanded={open}
+          className={styles.header}
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+        >
+          {createElement(open ? ChevronDownIcon : ChevronRightIcon, { size: 14 })}
+          <span className="text-muted-foreground text-xs leading-5 font-medium">
+            {t('overview.descriptionLabel')}
+          </span>
+        </button>
+        <div hidden={!open} id={bodyId}>
+          <Editor
+            className={styles.editor}
+            content={description || ''}
+            debounceWait={0}
+            editable={canEdit && !saving}
+            editor={editor}
+            plugins={plugins}
+            type={description ? 'markdown' : 'text'}
+            placeholder={
+              <span className="block pt-1 pr-0 pb-1 pl-0 text-sm leading-5.5">
+                {t('overview.descriptionEmpty')}
+              </span>
+            }
+            onChange={(current) => {
+              if (baseline.current !== undefined && !pending.current)
+                setDirty(String(current.getDocument('markdown') ?? '') !== baseline.current);
+            }}
+            onFocus={() => {
+              baseline.current ??= String(editor.getDocument('markdown') ?? '');
+            }}
+          />
+          {dirty && (
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-row gap-2">
+                <Button
+                  aria-busy={saving}
+                  disabled={saving || !canEdit}
+                  size="lg"
+                  variant="default"
+                  onClick={() => void save()}
+                >
+                  {saving && <Spinner />}
+                  {t('overview.descriptionSave', { defaultValue: 'Save' })}
+                </Button>
+                <Button
+                  disabled={saving}
+                  size="lg"
+                  variant="outline"
+                  onClick={() => {
+                    if (pending.current) return;
+                    baseline.current = undefined;
+                    editor.setDocument(source.current ? 'markdown' : 'text', source.current);
+                    setDirty(false);
+                  }}
+                >
+                  {t('overview.descriptionCancel', { defaultValue: 'Cancel' })}
+                </Button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </LobeThemeScope>
   );
 };
 

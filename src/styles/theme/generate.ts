@@ -85,6 +85,8 @@ export const MIN_TEXT_CONTRAST = 4.5;
 export const MIN_NON_TEXT_CONTRAST = 3;
 // Hex rounding can shave a few hundredths off a solved ratio; aim slightly above.
 const MARGIN = 0.08;
+/** Dark control primitives fill with their own edge colour at this alpha (`dark:bg-input/30`). */
+export const CONTROL_FILL_ALPHA = 0.3;
 
 /** Translucent neutral wash strengths: fill, fill-secondary, fill-tertiary, fill-quaternary. */
 const FILL_ALPHA = {
@@ -269,13 +271,34 @@ export const generateTheme = (input: ThemeInput): GeneratedTheme => {
   // Borders: hairlines are decorative; the control edge (`input`) must reach 3:1.
   const border = formatColor(surface(ladder.border, 0.5));
   const divider = formatColor(surface(ladder.divider, 0.5));
+  // Dark controls paint their own edge colour as the fill (`dark:bg-input/30`),
+  // so the edge must also clear that fill on every surface. The fill follows the
+  // edge, so re-solve until both backdrops pass.
+  const controlBackdrops = (edge: Oklch) =>
+    dark
+      ? [
+          ...surfaces,
+          ...surfaces.map((backdrop) =>
+            compositeHex(formatColor(withAlpha(edge, CONTROL_FILL_ALPHA)), backdrop),
+          ),
+        ]
+      : surfaces;
+  const solveControlEdge = (seed: Oklch) => {
+    let edge = seed;
+    for (let i = 0; i < 20; i += 1) {
+      const next = ensureContrast(
+        edge,
+        controlBackdrops(edge),
+        MIN_NON_TEXT_CONTRAST + MARGIN,
+        textDirection,
+      );
+      if (next.l === edge.l) break;
+      edge = next;
+    }
+    return edge;
+  };
   const controlEdge = formatColor(
-    ensureContrast(
-      { c: base.c * 0.8, h: base.h, l: ladder.border },
-      surfaces,
-      MIN_NON_TEXT_CONTRAST + MARGIN,
-      textDirection,
-    ),
+    solveControlEdge({ c: base.c * 0.8, h: base.h, l: ladder.border }),
   );
 
   // Darkest neutral used as the dark foreground on bright fills.

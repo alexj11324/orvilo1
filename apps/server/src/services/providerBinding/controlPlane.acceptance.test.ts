@@ -19,6 +19,7 @@ import { ProviderBindingModel } from '@/database/models/providerBinding';
 import { credentials, providerBindings, users } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { router } from '@/libs/trpc/lambda';
+import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { providerBindingRouter } from '@/server/routers/lambda/providerBinding';
 
 import {
@@ -128,7 +129,7 @@ const createCredential = (
   type: 'kv-env' | 'kv-header',
   values: Record<string, string>,
 ) =>
-  new CredentialModel(db, userId).create({
+  new CredentialModel(db, KeyVaultsGateKeeper.initWithEnvKey, userId).create({
     key: `key_${randomBytes(4).toString('hex')}`,
     name: 'Fixture credential',
     payload: { values },

@@ -3,6 +3,7 @@ import { ChevronLeft } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { Button } from '@/components/ui/button';
 import { useEnterToSend } from '@/hooks/useEnterToSend';
 
@@ -35,49 +36,51 @@ const RunReplyEditor = memo<RunReplyEditorProps>(({ onSubmit, onCancel, placehol
   }, [editor, onSubmit, submitting]);
 
   return (
-    <ChatInput
-      gap={8}
-      maxHeight={120}
-      minHeight={30}
-      resize={false}
-      footer={
-        <div className="flex items-center justify-between gap-2 p-2">
-          <Button
-            disabled={submitting}
-            size="sm"
-            style={{ color: 'var(--foreground-description)' }}
-            variant="ghost"
-            onClick={onCancel}
-          >
-            {<ChevronLeft size={14} />}
-            {t('cancel', { ns: 'common' })}
-          </Button>
-          <SendButton
-            loading={submitting}
-            shape={'round'}
-            title={t('taskDetail.runFollowUp')}
-            type={'primary'}
-            onClick={handleSubmit}
-          />
-        </div>
-      }
-    >
-      <Editor
-        content={''}
-        editor={editor}
-        enablePasteMarkdown={false}
-        markdownOption={false}
-        placeholder={placeholder ?? t('taskDetail.runFollowUpPlaceholder')}
-        type={'text'}
-        variant={'chat'}
-        onPressEnter={({ event }) => {
-          if (shouldSendOnEnter(event)) {
-            handleSubmit();
-            return true;
-          }
-        }}
-      />
-    </ChatInput>
+    <LobeThemeScope>
+      <ChatInput
+        gap={8}
+        maxHeight={120}
+        minHeight={30}
+        resize={false}
+        footer={
+          <div className="flex items-center justify-between gap-2 p-2">
+            <Button
+              disabled={submitting}
+              size="sm"
+              style={{ color: 'var(--foreground-description)' }}
+              variant="ghost"
+              onClick={onCancel}
+            >
+              {<ChevronLeft size={14} />}
+              {t('cancel', { ns: 'common' })}
+            </Button>
+            <SendButton
+              loading={submitting}
+              shape={'round'}
+              title={t('taskDetail.runFollowUp')}
+              type={'primary'}
+              onClick={handleSubmit}
+            />
+          </div>
+        }
+      >
+        <Editor
+          content={''}
+          editor={editor}
+          enablePasteMarkdown={false}
+          markdownOption={false}
+          placeholder={placeholder ?? t('taskDetail.runFollowUpPlaceholder')}
+          type={'text'}
+          variant={'chat'}
+          onPressEnter={({ event }) => {
+            if (shouldSendOnEnter(event)) {
+              handleSubmit();
+              return true;
+            }
+          }}
+        />
+      </ChatInput>
+    </LobeThemeScope>
   );
 });
 

@@ -11,6 +11,7 @@ import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef } from 'r
 import { useTranslation } from 'react-i18next';
 
 import { usePasteFile, useUploadFiles } from '@/components/DragUploadZone';
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { useEnterToSend } from '@/hooks/useEnterToSend';
 import { useIMECompositionEvent } from '@/hooks/useIMECompositionEvent';
 import { usePermission } from '@/hooks/usePermission';
@@ -319,98 +320,100 @@ const InputEditor = memo<{
   const ghostMarkdown = inputHistory.ghostMarkdown;
 
   return (
-    <>
-      <InputHistoryPopup
-        activeIndex={inputHistory.popup.activeIndex}
-        container={(slashMenuRef as any)?.current ?? null}
-        entries={inputHistory.popup.entries}
-        open={inputHistory.popup.open}
-        onClose={inputHistory.close}
-        onHover={inputHistory.setActiveIndex}
-        onSelect={inputHistory.confirm}
-      />
-      <Editor
-        autoFocus
-        pasteAsPlainText
-        className={className}
-        content={initialContent}
-        editable={canCreateContent && canUseResource}
-        editor={editor}
-        getPopupContainer={() => (slashMenuRef as any)?.current ?? null}
-        {...{ slashPlacement }}
-        {...richRenderProps}
-        mentionOption={mentionOption}
-        slashOption={slashOption}
-        type={'text'}
-        variant={'chat'}
-        placeholder={
-          ghostMarkdown === undefined ? (
-            (placeholder ?? (
-              <Placeholder
-                heterogeneousName={heterogeneousName}
-                showAgentAssignmentHint={showAgentAssignmentHint}
-                variant={placeholderVariant}
-              />
-            ))
-          ) : (
-            <span className={ghostClassName}>{getHistoryPreviewText(ghostMarkdown)}</span>
-          )
-        }
-        style={{
-          fontSize: mobile ? 16 : undefined,
-          minHeight: defaultRows > 1 ? defaultRows * 23 : undefined,
-        }}
-        onCompositionEnd={({ event }) => compositionProps.onCompositionEnd(event)}
-        onInit={handleEditorInit}
-        onBlur={() => {
-          saveDraftDebounced.flush();
-        }}
-        onChange={() => {
-          updateMarkdownContent();
-          inputHistory.handleEditorChange();
-          saveDraftDebounced();
-        }}
-        onCompositionStart={({ event }) => {
-          compositionProps.onCompositionStart(event);
-        }}
-        onContextMenu={async ({ event: e, editor }) => {
-          if (isDesktop) {
-            e.preventDefault();
-
-            const selectionText = editor.getSelectionDocument('markdown') as unknown as string;
-
-            await getHostPort().menu.showContextMenu('editor', {
-              selectionText: selectionText || undefined,
-            });
+    <LobeThemeScope>
+      <>
+        <InputHistoryPopup
+          activeIndex={inputHistory.popup.activeIndex}
+          container={(slashMenuRef as any)?.current ?? null}
+          entries={inputHistory.popup.entries}
+          open={inputHistory.popup.open}
+          onClose={inputHistory.close}
+          onHover={inputHistory.setActiveIndex}
+          onSelect={inputHistory.confirm}
+        />
+        <Editor
+          autoFocus
+          pasteAsPlainText
+          className={className}
+          content={initialContent}
+          editable={canCreateContent && canUseResource}
+          editor={editor}
+          getPopupContainer={() => (slashMenuRef as any)?.current ?? null}
+          {...{ slashPlacement }}
+          {...richRenderProps}
+          mentionOption={mentionOption}
+          slashOption={slashOption}
+          type={'text'}
+          variant={'chat'}
+          placeholder={
+            ghostMarkdown === undefined ? (
+              (placeholder ?? (
+                <Placeholder
+                  heterogeneousName={heterogeneousName}
+                  showAgentAssignmentHint={showAgentAssignmentHint}
+                  variant={placeholderVariant}
+                />
+              ))
+            ) : (
+              <span className={ghostClassName}>{getHistoryPreviewText(ghostMarkdown)}</span>
+            )
           }
-        }}
-        onKeyDown={({ event }) => {
-          if (inputHistory.handleKeyDown(event)) return true;
-        }}
-        onPressEnter={({ event: e }) => {
-          // While the history popup is open, Enter confirms the highlighted entry
-          // instead of sending. onPressEnter runs before onKeyDown for Enter, so
-          // returning true here also prevents a newline / send.
-          if (inputHistory.popup.open) {
-            inputHistory.confirm();
-            return true;
-          }
-          if (e.shiftKey || isComposingRef.current) return;
-          // In fullscreen mode, Enter inserts newline; only Cmd/Ctrl+Enter sends
-          if (expand) {
-            if (isCommandPressed(e)) {
+          style={{
+            fontSize: mobile ? 16 : undefined,
+            minHeight: defaultRows > 1 ? defaultRows * 23 : undefined,
+          }}
+          onCompositionEnd={({ event }) => compositionProps.onCompositionEnd(event)}
+          onInit={handleEditorInit}
+          onBlur={() => {
+            saveDraftDebounced.flush();
+          }}
+          onChange={() => {
+            updateMarkdownContent();
+            inputHistory.handleEditorChange();
+            saveDraftDebounced();
+          }}
+          onCompositionStart={({ event }) => {
+            compositionProps.onCompositionStart(event);
+          }}
+          onContextMenu={async ({ event: e, editor }) => {
+            if (isDesktop) {
+              e.preventDefault();
+
+              const selectionText = editor.getSelectionDocument('markdown') as unknown as string;
+
+              await getHostPort().menu.showContextMenu('editor', {
+                selectionText: selectionText || undefined,
+              });
+            }
+          }}
+          onKeyDown={({ event }) => {
+            if (inputHistory.handleKeyDown(event)) return true;
+          }}
+          onPressEnter={({ event: e }) => {
+            // While the history popup is open, Enter confirms the highlighted entry
+            // instead of sending. onPressEnter runs before onKeyDown for Enter, so
+            // returning true here also prevents a newline / send.
+            if (inputHistory.popup.open) {
+              inputHistory.confirm();
+              return true;
+            }
+            if (e.shiftKey || isComposingRef.current) return;
+            // In fullscreen mode, Enter inserts newline; only Cmd/Ctrl+Enter sends
+            if (expand) {
+              if (isCommandPressed(e)) {
+                send();
+                return true;
+              }
+              return;
+            }
+            if (shouldSendOnEnter(e)) {
               send();
               return true;
             }
-            return;
-          }
-          if (shouldSendOnEnter(e)) {
-            send();
-            return true;
-          }
-        }}
-      />
-    </>
+          }}
+        />
+      </>
+    </LobeThemeScope>
   );
 });
 

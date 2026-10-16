@@ -11,6 +11,18 @@ import type {
 import { lambdaClient } from '@/libs/trpc/client';
 
 class TaskService {
+  acquireTaskLock = (...args: Parameters<typeof lambdaClient.task.acquireTaskLock.mutate>) =>
+    lambdaClient.task.acquireTaskLock.mutate(...args);
+
+  getTaskLock = (...args: Parameters<typeof lambdaClient.task.getTaskLock.query>) =>
+    lambdaClient.task.getTaskLock.query(...args);
+
+  releaseTaskLock = (...args: Parameters<typeof lambdaClient.task.releaseTaskLock.mutate>) =>
+    lambdaClient.task.releaseTaskLock.mutate(...args);
+
+  contractContext = (...args: Parameters<typeof lambdaClient.task.contractContext.query>) =>
+    lambdaClient.task.contractContext.query(...args);
+
   // ── Queries ──
 
   find = async (id: string) => lambdaClient.task.find.query({ id });

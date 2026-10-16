@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 
-import { lambdaQuery } from '@/libs/trpc/client';
+import { chunkQueries } from '@/services/reactQueryBindings';
 
 import SkeletonLoading from '../Loading';
 import ChunkItem from './ChunkItem';
@@ -10,7 +10,7 @@ interface ChunkListProps {
   fileId: string;
 }
 const ChunkList = memo<ChunkListProps>(({ fileId }) => {
-  const { data, isLoading, fetchNextPage } = lambdaQuery.chunk.getChunksByFileId.useInfiniteQuery(
+  const { data, isLoading, fetchNextPage } = chunkQueries.getChunksByFileId.useInfiniteQuery(
     { id: fileId },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,

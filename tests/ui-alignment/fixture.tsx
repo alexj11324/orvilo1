@@ -1,6 +1,5 @@
 import '@/app/globals.css';
 
-import { ThemeProvider } from '@lobehub/ui';
 import { PlusIcon } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
 
@@ -14,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import ActionIconWithChevron from '@/features/ResourceManager/components/Explorer/ToolBar/ActionIconWithChevron';
+import { ThemeRoles } from '@/styles/themeRoles';
 
 const parameters = new URLSearchParams(location.search);
 const language = parameters.get('language') === 'zh' ? 'zh' : 'en';
@@ -33,12 +33,7 @@ const sizes: { id: string; size: ActionIconSize }[] = [
 ];
 
 createRoot(document.getElementById('root')!).render(
-  <ThemeProvider
-    appearance={appearance}
-    defaultThemeMode={appearance}
-    enableCustomFonts={false}
-    theme={{ cssVar: { key: 'orvilo-vars' } }}
-  >
+  <ThemeRoles appearance={appearance}>
     <TooltipProvider>
       <main style={{ display: 'grid', gap: 24, margin: '0 auto', maxWidth: 760, padding: 24 }}>
         <h1 style={{ fontSize: 18 }}>UI alignment regression fixture</h1>
@@ -148,5 +143,5 @@ createRoot(document.getElementById('root')!).render(
         </Accordion>
       </main>
     </TooltipProvider>
-  </ThemeProvider>,
+  </ThemeRoles>,
 );

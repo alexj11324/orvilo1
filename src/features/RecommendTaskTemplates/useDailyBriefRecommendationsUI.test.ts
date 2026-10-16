@@ -36,13 +36,6 @@ vi.mock('ahooks', () => ({
   useSessionStorageState: () => ['', mockSetRefreshSeed],
 }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: {
-    useApp: () => ({ message: { error: vi.fn() } }),
-  },
-}));
-
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     i18n: { language: 'en-US', resolvedLanguage: 'en-US' },

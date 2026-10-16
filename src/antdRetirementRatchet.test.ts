@@ -9,8 +9,9 @@ import { describe, expect, it } from 'vitest';
  * Counts may only go down. When a migration PR lowers one, lower its baseline
  * here in the same PR so the next PR cannot add the usage back.
  *
- * `@lobehub/editor` and `@lobehub/icons` stay in the product and import these
- * packages at runtime; only first-party sources are counted.
+ * `@lobehub/editor`, `@lobehub/charts` and `@lobehub/icons` stay in the product
+ * and import these packages at runtime; only first-party sources are counted.
+ * The one first-party host for them is `src/components/LobeThemeScope`.
  */
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
@@ -30,14 +31,17 @@ const SKIPPED_DIRS = new Set([
 ]);
 
 const BASELINE = {
-  antVarReferences: 59,
+  antVarReferences: 0,
   importingFiles: {
-    '@ant-design/cssinjs': 4,
-    '@lobehub/ui': 280,
-    'antd': 6,
-    'antd-style': 3,
+    '@ant-design/cssinjs': 1,
+    '@lobehub/ui': 2,
+    'antd': 0,
+    'antd-style': 1,
   },
 } as const;
+
+/** The only directory allowed to import the retired packages. */
+const VENDOR_HOST_DIR = path.join('src', 'components', 'LobeThemeScope');
 
 type RetiredModule = keyof typeof BASELINE.importingFiles;
 
@@ -78,9 +82,8 @@ export const measureRetiredUsage = (texts: string[]) => {
   return { antVarReferences, importingFiles };
 };
 
-const sources = SCANNED_ROOTS.flatMap((root) => collectSources(path.join(REPO_ROOT, root))).map(
-  (filePath) => readFileSync(filePath, 'utf8'),
-);
+const sourceFiles = SCANNED_ROOTS.flatMap((root) => collectSources(path.join(REPO_ROOT, root)));
+const sources = sourceFiles.map((filePath) => readFileSync(filePath, 'utf8'));
 const current = measureRetiredUsage(sources);
 
 describe('antd retirement ratchet', () => {
@@ -94,6 +97,18 @@ describe('antd retirement ratchet', () => {
       expect(current.importingFiles[name]).toBeLessThanOrEqual(BASELINE.importingFiles[name]);
     },
   );
+
+  it('keeps every remaining import inside the vendor host', () => {
+    const importers = sourceFiles
+      .filter((_, index) =>
+        Object.values(measureRetiredUsage([sources[index]]).importingFiles).some(Boolean),
+      )
+      .map((filePath) => path.relative(REPO_ROOT, filePath));
+
+    expect(importers.length).toBeGreaterThan(0);
+
+    for (const importer of importers) expect(importer.startsWith(VENDOR_HOST_DIR)).toBe(true);
+  });
 
   it('counts every import form and subpath once per file', () => {
     const measured = measureRetiredUsage([

@@ -22,7 +22,7 @@ const { cancelScheduled, scheduleNextTopic } = vi.hoisted(() => ({
   scheduleNextTopic: vi.fn(),
 }));
 
-vi.mock('@/server/routers/lambda/_helpers/workspaceAgentGuard', () => ({
+vi.mock('@/server/services/resourcePermission/workspaceAgentGuard', () => ({
   assertCanUseWorkspaceAgent: vi.fn(),
 }));
 

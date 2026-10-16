@@ -40,21 +40,6 @@ vi.mock('@/components/Modal', () => ({
   confirmModal: vi.fn(),
 }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: {
-    useApp: () => ({
-      message: {
-        error: vi.fn(),
-        success: vi.fn(),
-      },
-      modal: {
-        confirm: vi.fn(),
-      },
-    }),
-  },
-}));
-
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
   useActiveWorkspaceId: () => resourcePermissionMock.workspaceId,
 }));

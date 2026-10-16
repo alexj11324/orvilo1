@@ -147,7 +147,8 @@
     "workflow:reset-onboarding": "tsx ./scripts/resetOnboarding/index.ts",
     "workflow:seed-linear-parity": "tsx ./scripts/seedLinearParity/index.ts",
     "workflow:seed-user-info": "tsx ./scripts/seedUserInfo/index.ts",
-    "workflow:set-desktop-version": "tsx ./scripts/electronWorkflow/setDesktopVersion.ts"
+    "workflow:set-desktop-version": "tsx ./scripts/electronWorkflow/setDesktopVersion.ts",
+    "type-check:affected": "node scripts/type-check-affected.mjs"
   },
   "lint-staged": {
     "*.md": "node scripts/lint-staged-skip-packet.mjs md",
@@ -398,6 +399,7 @@
     "js-sha256": "^0.11.1",
     "jsondiffpatch": "^0.7.6",
     "jsonl-parse-stringify": "^1.0.3",
+    "katex": "^0.16.27",
     "keygrip": "^1.1.0",
     "langfuse": "^3.38.20",
     "langfuse-core": "^3.38.20",
@@ -488,7 +490,8 @@
     "yaml": "^2.9.0",
     "zod": "^4.4.3",
     "zustand": "5.0.4",
-    "zustand-utils": "^2.1.1"
+    "zustand-utils": "^2.1.1",
+    "@orvilo/agent-manager-runtime": "workspace:*"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",

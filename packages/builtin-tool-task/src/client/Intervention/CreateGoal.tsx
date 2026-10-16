@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import InputNumber from '@/components/InputNumber';
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -130,174 +131,178 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
     );
 
     return (
-      <div className={cn('flex', 'flex-col', styles.root)}>
-        <div className={cn('flex', 'flex-col', styles.header)}>
-          <Input
-            className={styles.titleInput}
-            value={args.name}
-            visualSize="normal"
-            onChange={(event) => patch({ name: event.target.value })}
-          />
-        </div>
-
-        <Section
-          label={t('builtins.orvilo-task.goal.sectionInstruction')}
-          open={openSections.instruction}
-          onToggle={() => toggleSection('instruction')}
-        >
-          <div
-            className={cn(
-              'flex',
-              'flex-col',
-              styles.instructionEditor,
-              editorStyles.instructionEditor,
-            )}
-          >
-            <Editor
-              content={initialInstruction}
-              editor={editor}
-              type={'markdown'}
-              plugins={[
-                ReactCodePlugin,
-                ReactCodeblockPlugin,
-                ReactHRPlugin,
-                ReactLinkPlugin,
-                ReactListPlugin,
-                ReactTablePlugin,
-              ]}
-              onTextChange={handleInstructionChange}
+      <LobeThemeScope>
+        <div className={cn('flex', 'flex-col', styles.root)}>
+          <div className={cn('flex', 'flex-col', styles.header)}>
+            <Input
+              className={styles.titleInput}
+              value={args.name}
+              visualSize="normal"
+              onChange={(event) => patch({ name: event.target.value })}
             />
           </div>
-        </Section>
 
-        <Section
-          extra={<span className={styles.seq}>{args.criteria.length}</span>}
-          label={t('builtins.orvilo-task.goal.criteria')}
-          open={openSections.criteria}
-          onToggle={() => toggleSection('criteria')}
-        >
-          <div className="flex flex-col gap-1.75">
-            <CriterionList className={styles.list}>
-              {/* Rows are read-only on purpose. A focusable input sitting in a
+          <Section
+            label={t('builtins.orvilo-task.goal.sectionInstruction')}
+            open={openSections.instruction}
+            onToggle={() => toggleSection('instruction')}
+          >
+            <div
+              className={cn(
+                'flex',
+                'flex-col',
+                styles.instructionEditor,
+                editorStyles.instructionEditor,
+              )}
+            >
+              <Editor
+                content={initialInstruction}
+                editor={editor}
+                type={'markdown'}
+                plugins={[
+                  ReactCodePlugin,
+                  ReactCodeblockPlugin,
+                  ReactHRPlugin,
+                  ReactLinkPlugin,
+                  ReactListPlugin,
+                  ReactTablePlugin,
+                ]}
+                onTextChange={handleInstructionChange}
+              />
+            </div>
+          </Section>
+
+          <Section
+            extra={<span className={styles.seq}>{args.criteria.length}</span>}
+            label={t('builtins.orvilo-task.goal.criteria')}
+            open={openSections.criteria}
+            onToggle={() => toggleSection('criteria')}
+          >
+            <div className="flex flex-col gap-1.75">
+              <CriterionList className={styles.list}>
+                {/* Rows are read-only on purpose. A focusable input sitting in a
                 dense list is one stray click away from silently rewriting a
                 criterion; edits belong in the modal, where they are deliberate
                 and cancellable. */}
-              {args.criteria.map((criterion, index) => (
-                <CriterionRow
-                  key={index}
-                  seq={index + 1}
-                  title={criterion.title}
-                  actions={
-                    <>
-                      <span className="inline-flex flex-none pointer-coarse:p-1.5">
-                        <ActionIcon
-                          className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
-                          icon={Pencil}
-                          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                          title={t('builtins.orvilo-task.goal.editCriterion')}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            openEditModal(index);
-                          }}
-                        />
-                      </span>
-                      <span className="inline-flex flex-none pointer-coarse:p-1.5">
-                        <ActionIcon
-                          className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
-                          icon={Trash2}
-                          size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            patch({
-                              criteria: args.criteria.filter((_, itemIndex) => itemIndex !== index),
-                            });
-                          }}
-                        />
-                      </span>
-                    </>
-                  }
-                  onOpen={() => openEditModal(index)}
-                >
-                  <CriterionRequiredChip
-                    required={criterion.required ?? true}
-                    onToggle={() =>
-                      updateCriterion(index, { required: !(criterion.required ?? true) })
+                {args.criteria.map((criterion, index) => (
+                  <CriterionRow
+                    key={index}
+                    seq={index + 1}
+                    title={criterion.title}
+                    actions={
+                      <>
+                        <span className="inline-flex flex-none pointer-coarse:p-1.5">
+                          <ActionIcon
+                            className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                            icon={Pencil}
+                            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                            title={t('builtins.orvilo-task.goal.editCriterion')}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openEditModal(index);
+                            }}
+                          />
+                        </span>
+                        <span className="inline-flex flex-none pointer-coarse:p-1.5">
+                          <ActionIcon
+                            className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[calc(var(--spacing)*1.75)] pointer-coarse:after:content-['']"
+                            icon={Trash2}
+                            size={{ blockSize: 32, borderRadius: 'var(--radius-button)', size: 16 }}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              patch({
+                                criteria: args.criteria.filter(
+                                  (_, itemIndex) => itemIndex !== index,
+                                ),
+                              });
+                            }}
+                          />
+                        </span>
+                      </>
                     }
-                  />
-                </CriterionRow>
-              ))}
-            </CriterionList>
-            <div className="flex">
-              <Button
-                size="compact"
-                variant="ghost"
-                onClick={() =>
-                  openCriterionEditModal({
-                    criterion: {
-                      onFail: 'auto_repair',
-                      required: true,
-                      title: '',
-                      verifierType: 'agent',
-                    },
-                    isNew: true,
-                    onSubmit: (value) => patch({ criteria: [...args.criteria, value] }),
-                  })
-                }
-              >
-                <Plus /> {t('builtins.orvilo-task.goal.addCriterion')}
-              </Button>
-            </div>
-          </div>
-        </Section>
-
-        <Section
-          label={t('builtins.orvilo-task.goal.sectionBudget')}
-          open={openSections.budget}
-          onToggle={() => toggleSection('budget')}
-        >
-          <div className="flex flex-wrap gap-6">
-            <div className="flex flex-col gap-1">
-              <div className={styles.seq}>{t('builtins.orvilo-task.goal.roundBudget')}</div>
-              <div className="flex items-center gap-2">
-                <InputNumber
-                  className="w-30"
-                  min={2}
-                  size="normal"
-                  value={args.maxIterations ?? undefined}
-                  onChange={(value) => patch({ maxIterations: value })}
-                />
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {t('builtins.orvilo-task.goal.roundsUnit')}
-                </span>
+                    onOpen={() => openEditModal(index)}
+                  >
+                    <CriterionRequiredChip
+                      required={criterion.required ?? true}
+                      onToggle={() =>
+                        updateCriterion(index, { required: !(criterion.required ?? true) })
+                      }
+                    />
+                  </CriterionRow>
+                ))}
+              </CriterionList>
+              <div className="flex">
+                <Button
+                  size="compact"
+                  variant="ghost"
+                  onClick={() =>
+                    openCriterionEditModal({
+                      criterion: {
+                        onFail: 'auto_repair',
+                        required: true,
+                        title: '',
+                        verifierType: 'agent',
+                      },
+                      isNew: true,
+                      onSubmit: (value) => patch({ criteria: [...args.criteria, value] }),
+                    })
+                  }
+                >
+                  <Plus /> {t('builtins.orvilo-task.goal.addCriterion')}
+                </Button>
               </div>
             </div>
-            <div className="flex flex-col gap-1">
-              <div className={styles.seq}>{t('builtins.orvilo-task.goal.costBudget')}</div>
-              <InputNumber
-                className="w-30"
-                min={0}
-                placeholder={t('builtins.orvilo-task.goal.uncapped')}
-                prefix={'$'}
-                size="normal"
-                value={args.maxTotalCost ?? undefined}
-                onChange={(value) => patch({ maxTotalCost: value })}
-              />
+          </Section>
+
+          <Section
+            label={t('builtins.orvilo-task.goal.sectionBudget')}
+            open={openSections.budget}
+            onToggle={() => toggleSection('budget')}
+          >
+            <div className="flex flex-wrap gap-6">
+              <div className="flex flex-col gap-1">
+                <div className={styles.seq}>{t('builtins.orvilo-task.goal.roundBudget')}</div>
+                <div className="flex items-center gap-2">
+                  <InputNumber
+                    className="w-30"
+                    min={2}
+                    size="normal"
+                    value={args.maxIterations ?? undefined}
+                    onChange={(value) => patch({ maxIterations: value })}
+                  />
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {t('builtins.orvilo-task.goal.roundsUnit')}
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <div className={styles.seq}>{t('builtins.orvilo-task.goal.costBudget')}</div>
+                <InputNumber
+                  className="w-30"
+                  min={0}
+                  placeholder={t('builtins.orvilo-task.goal.uncapped')}
+                  prefix={'$'}
+                  size="normal"
+                  value={args.maxTotalCost ?? undefined}
+                  onChange={(value) => patch({ maxTotalCost: value })}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <div className={styles.seq}>{t('builtins.orvilo-task.goal.parallelism')}</div>
+                <InputNumber
+                  className="w-30"
+                  max={10}
+                  min={1}
+                  placeholder={t('builtins.orvilo-task.goal.parallelismAuto')}
+                  size="normal"
+                  value={args.maxConcurrentTasks ?? undefined}
+                  onChange={(value) => patch({ maxConcurrentTasks: value })}
+                />
+              </div>
             </div>
-            <div className="flex flex-col gap-1">
-              <div className={styles.seq}>{t('builtins.orvilo-task.goal.parallelism')}</div>
-              <InputNumber
-                className="w-30"
-                max={10}
-                min={1}
-                placeholder={t('builtins.orvilo-task.goal.parallelismAuto')}
-                size="normal"
-                value={args.maxConcurrentTasks ?? undefined}
-                onChange={(value) => patch({ maxConcurrentTasks: value })}
-              />
-            </div>
-          </div>
-        </Section>
-      </div>
+          </Section>
+        </div>
+      </LobeThemeScope>
     );
   },
 );

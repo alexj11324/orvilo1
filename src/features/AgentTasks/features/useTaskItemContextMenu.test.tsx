@@ -90,16 +90,6 @@ vi.mock('@/components/ui/calendar', () => ({
   Calendar: () => <div data-testid="calendar" />,
 }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: {
-    useApp: () => ({
-      message: { success: mocks.messageSuccess },
-      modal: { confirm: mocks.modalConfirm },
-    }),
-  },
-}));
-
 vi.mock('@/business/client/hooks/useTaskTransferMenuItem', () => ({
   useTaskTransferMenuItem: () => mocks.transferItems,
 }));

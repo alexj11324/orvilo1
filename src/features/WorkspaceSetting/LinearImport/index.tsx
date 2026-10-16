@@ -3,7 +3,7 @@
 import { isDesktop } from '@orvilo/const';
 import { cn } from 'cn';
 import { ArrowLeft, ArrowRight, Check, RefreshCw } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 
@@ -30,8 +30,15 @@ import { newOAuthAttempt, waitForOAuthSession } from '@/features/Connectors/oaut
 import { settingWidthClassNames } from '@/features/Setting/settingWidth';
 import LinearIcon from '@/features/Work/icons/LinearIcon';
 import { usePermission } from '@/hooks/usePermission';
-import { lambdaClient } from '@/libs/trpc/client';
 import { getHostPort } from '@/platform';
+import { linearImportService } from '@/services/linearImport';
+import {
+  useFetchLinearCatalog,
+  useFetchLinearDestinations,
+  useFetchLinearInstallations,
+  useFetchLinearJob,
+  useFetchLinearPreview,
+} from '@/store/linearImport/hooks';
 
 type Installation = { id: string; name?: string; status: string };
 type LocalProject = { id: string; identifier: string; name: string };
@@ -183,202 +190,77 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
   const { t } = useTranslation('setting');
   const { allowed, reason } = usePermission('manage_settings');
   const [step, setStep] = useState(0);
-  const [installations, setInstallations] = useState<Installation[]>([]);
-  const [projects, setProjects] = useState<LocalProject[]>([]);
   const [selectedProject, setSelectedProject] = useState<LocalProject | null>(null);
   const [projectSearch, setProjectSearch] = useState('');
-  const [projectNextOffset, setProjectNextOffset] = useState<number | null>(null);
-  const [projectLoading, setProjectLoading] = useState(false);
-  const [moreProjectsLoading, setMoreProjectsLoading] = useState(false);
-  const projectRequestRef = useRef(0);
-  const refreshRequestRef = useRef(0);
-  const jobRequestRef = useRef(0);
-  const activeWorkspaceRef = useRef(true);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [installationId, setInstallationId] = useState('');
+  const [selectedInstallationId, setInstallationId] = useState('');
   const [projectId, setProjectId] = useState('');
   const [teamId, setTeamId] = useState('');
-  const [preview, setPreview] = useState<Preview | null>(null);
   const [mappings, setMappings] = useState<Record<string, Category>>({});
-  const [job, setJob] = useState<ImportJob | null>(null);
-  const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const jobStorageKey = `orvilo-linear-import:${workspaceSlug}`;
-
+  const [jobId, setJobId] = useState(() => window.localStorage.getItem(jobStorageKey) ?? '');
+  const activeWorkspaceRef = useRef(true);
   useEffect(() => {
     activeWorkspaceRef.current = true;
     return () => {
       activeWorkspaceRef.current = false;
     };
   }, []);
-
-  const refresh = useCallback(
-    async (preferredInstallationId?: string) => {
-      if (!allowed) return;
-      const request = ++refreshRequestRef.current;
-      setLoading(true);
-      setError('');
-      try {
-        const installationResponse = await lambdaClient.linearSync.installations.query();
-        if (!activeWorkspaceRef.current || request !== refreshRequestRef.current) return;
-        const nextInstallations = (installationResponse?.data ?? []) as Installation[];
-        setInstallations(nextInstallations);
-        const active =
-          nextInstallations.find(
-            (item) => item.id === preferredInstallationId && item.status === 'active',
-          ) ?? nextInstallations.find((item) => item.status === 'active');
-        setInstallationId(active?.id ?? '');
-        if (active) {
-          const catalogResponse = await lambdaClient.linearSync.catalog.query({
-            installationId: active.id,
-          });
-          if (!activeWorkspaceRef.current || request !== refreshRequestRef.current) return;
-          setTeams((catalogResponse?.data?.teams ?? []) as Team[]);
-        } else {
-          setTeams([]);
-        }
-      } catch (cause) {
-        if (activeWorkspaceRef.current && request === refreshRequestRef.current)
-          setError(
-            cause instanceof Error ? cause.message : t('workspaceSetting.import.loadFailed'),
-          );
-      } finally {
-        if (activeWorkspaceRef.current && request === refreshRequestRef.current) setLoading(false);
-      }
-    },
-    [allowed, t],
-  );
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  useEffect(() => {
-    if (!allowed) return;
-    const request = ++projectRequestRef.current;
-    let live = true;
-    setProjectLoading(true);
-    setMoreProjectsLoading(false);
-    const timer = window.setTimeout(() => {
-      void lambdaClient.linearImport.destinations
-        .query({ search: projectSearch, offset: 0, limit: 50 })
-        .then((response) => {
-          if (!live || request !== projectRequestRef.current) return;
-          setProjects((response?.data?.items ?? []) as LocalProject[]);
-          setProjectNextOffset(response?.data?.nextOffset ?? null);
-        })
-        .catch((cause) => {
-          if (live && request === projectRequestRef.current)
-            setError(
-              cause instanceof Error ? cause.message : t('workspaceSetting.import.loadFailed'),
-            );
-        })
-        .finally(() => {
-          if (live && request === projectRequestRef.current) setProjectLoading(false);
-        });
-    }, 200);
-    return () => {
-      live = false;
-      window.clearTimeout(timer);
-    };
-  }, [allowed, projectSearch, t]);
-
-  const loadMoreProjects = async () => {
-    if (projectNextOffset === null || moreProjectsLoading) return;
-    const request = projectRequestRef.current;
-    setMoreProjectsLoading(true);
-    try {
-      const response = await lambdaClient.linearImport.destinations.query({
-        search: projectSearch,
-        offset: projectNextOffset,
-        limit: 50,
-      });
-      if (!activeWorkspaceRef.current || request !== projectRequestRef.current) return;
-      setProjects((current) => {
-        const seen = new Set(current.map((project) => project.id));
-        return [
-          ...current,
-          ...((response?.data?.items ?? []) as LocalProject[]).filter(
-            (project) => !seen.has(project.id),
-          ),
-        ];
-      });
-      setProjectNextOffset(response?.data?.nextOffset ?? null);
-    } catch (cause) {
-      if (activeWorkspaceRef.current && request === projectRequestRef.current)
-        setError(cause instanceof Error ? cause.message : t('workspaceSetting.import.loadFailed'));
-    } finally {
-      if (activeWorkspaceRef.current && request === projectRequestRef.current)
-        setMoreProjectsLoading(false);
-    }
+  const installationsRequest = useFetchLinearInstallations(workspaceSlug, allowed);
+  const installations = (installationsRequest.data?.data ?? []) as Installation[];
+  const installationId =
+    installations.find((item) => item.id === selectedInstallationId && item.status === 'active')
+      ?.id ||
+    installations.find((item) => item.status === 'active')?.id ||
+    '';
+  const catalogRequest = useFetchLinearCatalog(workspaceSlug, installationId, allowed);
+  const teams = (catalogRequest.data?.data?.teams ?? []) as Team[];
+  const previewRequest = useFetchLinearPreview(workspaceSlug, installationId, teamId, allowed);
+  const preview = previewRequest.data?.data as Preview | undefined;
+  const jobRequest = useFetchLinearJob(workspaceSlug, jobId, allowed);
+  const job = jobRequest.data?.data as ImportJob | undefined;
+  const projectsRequest = useFetchLinearDestinations(workspaceSlug, projectSearch, allowed);
+  const {
+    projects,
+    nextOffset: projectNextOffset,
+    isLoading: projectLoading,
+    loadingMore: moreProjectsLoading,
+    loadMore: loadMoreProjects,
+  } = projectsRequest;
+  const loading =
+    installationsRequest.isLoading ||
+    catalogRequest.isLoading ||
+    previewRequest.isLoading ||
+    jobRequest.isLoading;
+  const requests = [
+    installationsRequest,
+    catalogRequest,
+    previewRequest,
+    jobRequest,
+    projectsRequest,
+  ];
+  const requestError = requests.find((request) => request.error)?.error;
+  const retry = () =>
+    Promise.allSettled(
+      requests.filter((request) => request.error).map((request) => request.mutate()),
+    );
+  const refresh = async (preferredInstallationId?: string) => {
+    if (preferredInstallationId) setInstallationId(preferredInstallationId);
+    await Promise.allSettled([installationsRequest.mutate(), catalogRequest.mutate()]);
   };
-
+  const pollJob = async (_id: string) => {
+    await jobRequest.mutate().catch(() => undefined);
+  };
+  // Only form drafts live in React state; fetched snapshots stay in the SWR cache.
   useEffect(() => {
-    if (!allowed || !installationId || !teamId) {
-      setPreview(null);
-      return;
-    }
-    let live = true;
-    setLoading(true);
-    setError('');
-    void lambdaClient.linearImport.preview
-      .query({ installationId, teamId })
-      .then((response) => {
-        if (!live) return;
-        const next = response?.data as Preview | undefined;
-        if (!next) throw new Error(t('workspaceSetting.import.loadFailed'));
-        setPreview(next);
-        setMappings(
-          Object.fromEntries(next.states.map((state) => [state.id, state.suggestedCategory])),
-        );
-      })
-      .catch((cause) => {
-        if (live) {
-          setPreview(null);
-          setError(
-            cause instanceof Error ? cause.message : t('workspaceSetting.import.loadFailed'),
-          );
-        }
-      })
-      .finally(() => {
-        if (live) setLoading(false);
-      });
-    return () => {
-      live = false;
-    };
-  }, [allowed, installationId, teamId, t]);
-
-  const pollJob = useCallback(
-    async (id: string) => {
-      const request = ++jobRequestRef.current;
-      try {
-        const response = await lambdaClient.linearImport.status.query({ jobId: id });
-        const next = response?.data as ImportJob | undefined;
-        if (next && activeWorkspaceRef.current && request === jobRequestRef.current) setJob(next);
-      } catch (cause) {
-        if (activeWorkspaceRef.current && request === jobRequestRef.current)
-          setError(
-            cause instanceof Error ? cause.message : t('workspaceSetting.import.loadFailed'),
-          );
-      }
-    },
-    [t],
-  );
-
-  useEffect(() => {
-    if (!allowed) return;
-    const savedId = window.localStorage.getItem(jobStorageKey);
-    if (savedId) void pollJob(savedId);
-  }, [allowed, jobStorageKey, pollJob]);
-
-  useEffect(() => {
-    if (!job?.id || ['completed', 'failed'].includes(job.status)) return;
-    const timer = window.setInterval(() => {
-      void pollJob(job.id);
-    }, 3000);
-    return () => window.clearInterval(timer);
-  }, [job?.id, job?.status, pollJob]);
+    if (!preview) return;
+    setMappings((current) =>
+      Object.fromEntries(
+        preview.states.map((state) => [state.id, current[state.id] ?? state.suggestedCategory]),
+      ),
+    );
+  }, [preview]);
 
   const connect = async () => {
     const popup = isDesktop
@@ -392,7 +274,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
     setError('');
     try {
       const attempt = newOAuthAttempt();
-      const response = await lambdaClient.linearSync.startOAuth.mutate({
+      const response = await linearImportService.startOAuth({
         attempt,
         returnTo: window.location.pathname,
       });
@@ -410,6 +292,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
       });
       if (result.status !== 'success' || !result.installationId)
         throw new Error(result.error || t('workspaceSetting.linear.connectFailed'));
+      if (!activeWorkspaceRef.current) return;
       setTeamId('');
       setMappings({});
       await refresh(result.installationId);
@@ -422,11 +305,11 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
   };
 
   const start = async () => {
-    if (!preview || !installationId || !teamId || !projectId) return;
+    if (jobId || !preview || !installationId || !teamId || !projectId) return;
     setBusy(true);
     setError('');
     try {
-      const response = await lambdaClient.linearImport.start.mutate({
+      const response = await linearImportService.start({
         installationId,
         projectId,
         stateMappings: preview.states.map((state) => ({
@@ -437,8 +320,9 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
       });
       const next = response?.data as ImportJob | undefined;
       if (!next?.id) throw new Error(t('workspaceSetting.import.startFailed'));
+      if (!activeWorkspaceRef.current) return;
       window.localStorage.setItem(jobStorageKey, next.id);
-      setJob(next);
+      setJobId(next.id);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('workspaceSetting.import.startFailed'));
     } finally {
@@ -451,7 +335,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
     setBusy(true);
     setError('');
     try {
-      await lambdaClient.linearImport.resume.mutate({ jobId: job.id });
+      await linearImportService.resume({ jobId: job.id });
       await pollJob(job.id);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('workspaceSetting.import.resumeFailed'));
@@ -461,15 +345,13 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
   };
 
   const newImport = () => {
-    jobRequestRef.current++;
     window.localStorage.removeItem(jobStorageKey);
-    setJob(null);
+    setJobId('');
     setStep(0);
     setProjectId('');
     setSelectedProject(null);
     setProjectSearch('');
     setTeamId('');
-    setPreview(null);
     setMappings({});
     setError('');
   };
@@ -554,6 +436,21 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                     {t('workspaceSetting.import.loading')}
                   </p>
                 )}
+                {requestError && (
+                  <div role="alert">
+                    <p className={styles.error}>
+                      {requestError instanceof Error
+                        ? requestError.message
+                        : t('workspaceSetting.import.loadFailed')}
+                    </p>
+                    <Button
+                      disabled={requests.some((request) => request.isValidating)}
+                      onClick={() => void retry()}
+                    >
+                      {t('workspaceSetting.import.refresh')}
+                    </Button>
+                  </div>
+                )}
                 {error && (
                   <p className={styles.error} role="alert">
                     {error}
@@ -620,8 +517,6 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                       }}
                       onSearch={(query) => {
                         setProjectSearch(query);
-                        setProjectNextOffset(null);
-                        setProjects([]);
                       }}
                     />
                   </div>
@@ -642,9 +537,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                         setInstallationId(value);
                         setTeamId('');
                         setMappings({});
-                        setPreview(null);
                         if (value) void refresh(value);
-                        else setTeams([]);
                       }}
                     />
                     <Button disabled={busy} size="lg" variant="outline" onClick={connect}>
@@ -684,7 +577,6 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                           onChange={(value) => {
                             setTeamId(value);
                             setMappings({});
-                            setPreview(null);
                           }}
                         />
                       </>
@@ -769,7 +661,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
                 )}
                 {!job && (
                   <Button
-                    disabled={!canNext || loading || busy}
+                    disabled={!!jobId || !canNext || loading || busy}
                     size="lg"
                     variant="default"
 

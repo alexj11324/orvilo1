@@ -19,6 +19,7 @@ packages:
   - '../../packages/context-engine'
   - '../../packages/conversation-flow'
   - '../../packages/database'
+  - '../../packages/secret-cipher'
   - '../../packages/heterogeneous-agents'
   - '../../packages/html-artifact'
   - '../../packages/const'

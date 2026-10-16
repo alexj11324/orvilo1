@@ -1,7 +1,7 @@
 import type { TaskIssueTemplateDefinition, TaskItem } from '@orvilo/types';
-import { TRPCError } from '@trpc/server';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 
+import { TaskDomainError } from '@/database/errors/task';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel, TaskRevisionConflictError } from '@/database/models/task';
 import { TaskLabelModel } from '@/database/models/taskLabel';
@@ -38,7 +38,7 @@ export class TaskIssueDefinitionService {
   private async source(id: string) {
     const task = await new TaskModel(this.db, this.userId, this.workspaceId).resolve(id);
     if (!task || task.isDeleted || task.workspaceId !== (this.workspaceId ?? null))
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+      throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Task not found' });
     return task;
   }
 
@@ -70,7 +70,10 @@ export class TaskIssueDefinitionService {
       .from(tasks)
       .where(and(inArray(tasks.parentTaskId, ids), sql`${tasks.isDeleted} IS NOT TRUE`));
     if (children.some((child) => !visibleIds.has(child.id)))
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'One or more sub-issues are unavailable' });
+      throw new TaskDomainError({
+        code: 'NOT_FOUND',
+        message: 'One or more sub-issues are unavailable',
+      });
     return tree;
   }
 
@@ -88,7 +91,7 @@ export class TaskIssueDefinitionService {
         .from(taskLabelBindings)
         .where(eq(taskLabelBindings.taskId, task.id));
       if (bindings.length !== labels.length)
-        throw new TRPCError({
+        throw new TaskDomainError({
           code: 'PRECONDITION_FAILED',
           message: 'One or more issue labels are unavailable',
         });
@@ -126,7 +129,7 @@ export class TaskIssueDefinitionService {
         definition.teamId,
       ))
     ) {
-      throw new TRPCError({ code: 'FORBIDDEN', message: 'Team write access required' });
+      throw new TaskDomainError({ code: 'FORBIDDEN', message: 'Team write access required' });
     }
     const task = await new TaskService(this.db, this.userId, this.workspaceId).createTask(
       {
@@ -236,7 +239,7 @@ export class TaskIssueDefinitionService {
     const source = await this.source(input.id);
     const target = await this.source(input.targetId);
     if (source.id === target.id || target.duplicateOfTaskId)
-      throw new TRPCError({
+      throw new TaskDomainError({
         code: 'BAD_REQUEST',
         message: 'Choose a different issue that is not already a duplicate',
       });
@@ -269,12 +272,12 @@ export class TaskIssueDefinitionService {
             .for('update');
           const canonical = locked.find((task) => task.id === target.id);
           if (!canonical || canonical.duplicateOfTaskId)
-            throw new TRPCError({
+            throw new TaskDomainError({
               code: 'BAD_REQUEST',
               message: 'Canonical issue is already a duplicate',
             });
           if (!(await new TaskModel(db, this.userId, this.workspaceId).findById(target.id)))
-            throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
+            throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Task not found' });
           return Boolean(
             await new TaskModel(db, this.userId, this.workspaceId).updateWithLog(
               source.id,
@@ -324,7 +327,7 @@ export class TaskIssueDefinitionService {
         this.workspaceId &&
         !(await new TeamModel(db, this.userId, this.workspaceId).hasWriteAccess(source.teamId))
       ) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'Team write access required' });
+        throw new TaskDomainError({ code: 'FORBIDDEN', message: 'Team write access required' });
       }
       const project = await new ProjectModel(db, this.userId, this.workspaceId).create({
         description: source.instruction,
@@ -416,7 +419,7 @@ export class TaskIssueDefinitionService {
             ))
           : template.userId !== this.userId)
       )
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Issue template not found' });
+        throw new TaskDomainError({ code: 'NOT_FOUND', message: 'Issue template not found' });
       return service.createFromDefinition(template.definition, {
         name: input.name,
         visibility: template.visibility,

@@ -10,7 +10,7 @@ vi.mock('ahooks', () => ({
 
 // The real Markdown takes several seconds to import cold, which is longer than
 // the test timeout; these tests are about the summary wrapper around it.
-vi.mock('@lobehub/ui/es/Markdown/index', () => ({
+vi.mock('@/components/Markdown', () => ({
   default: ({ children }: { children: string }) => <div>{children}</div>,
 }));
 

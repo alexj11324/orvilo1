@@ -9,6 +9,7 @@ import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import CircleLoading from '@/components/Loading/CircleLoading';
+import LobeThemeScope from '@/components/LobeThemeScope';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { useClientDataSWR } from '@/libs/swr';
 import type { CompareHistoryItemsOutput } from '@/server/routers/lambda/_schema/documentHistory';
@@ -74,34 +75,36 @@ const DocumentHistoryDiff = memo<DocumentHistoryDiffProps>(({ documentId, histor
   }, [data?.from.editorData, data?.to.editorData]);
 
   return (
-    <div className={cn('flex flex-col flex-1 gap-0', styles.container)}>
-      {isLoading && !data ? (
-        <div className={cn('flex flex-col items-center justify-center', styles.empty)}>
-          <CircleLoading />
-        </div>
-      ) : error || !data || !normalizedValues.oldValue || !normalizedValues.newValue ? (
-        <div className={cn('flex flex-col items-center justify-center', styles.empty)}>
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <GitCompareArrowsIcon />
-              </EmptyMedia>
-              <EmptyDescription>{t('pageEditor.history.compareError')}</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        </div>
-      ) : (
-        <div className={styles.content}>
-          <LexicalDiff
-            appearance={'borderless'}
-            labels={labels}
-            newValue={normalizedValues.newValue}
-            oldValue={normalizedValues.oldValue}
-            variant="chat"
-          />
-        </div>
-      )}
-    </div>
+    <LobeThemeScope>
+      <div className={cn('flex flex-col flex-1 gap-0', styles.container)}>
+        {isLoading && !data ? (
+          <div className={cn('flex flex-col items-center justify-center', styles.empty)}>
+            <CircleLoading />
+          </div>
+        ) : error || !data || !normalizedValues.oldValue || !normalizedValues.newValue ? (
+          <div className={cn('flex flex-col items-center justify-center', styles.empty)}>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <GitCompareArrowsIcon />
+                </EmptyMedia>
+                <EmptyDescription>{t('pageEditor.history.compareError')}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </div>
+        ) : (
+          <div className={styles.content}>
+            <LexicalDiff
+              appearance={'borderless'}
+              labels={labels}
+              newValue={normalizedValues.newValue}
+              oldValue={normalizedValues.oldValue}
+              variant="chat"
+            />
+          </div>
+        )}
+      </div>
+    </LobeThemeScope>
   );
 });
 

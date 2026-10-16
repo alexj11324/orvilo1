@@ -1,10 +1,10 @@
-import { Typography } from '@lobehub/ui';
 import { Fragment, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type Components } from 'react-markdown';
 import useSWR from 'swr';
 import urlJoin from 'url-join';
 
+import { markdownElements, MarkdownTypography } from '@/components/Markdown';
 import { CustomMDX } from '@/components/mdx';
 import CollapsibleSection from '@/components/mdx/CollapsibleSection';
 import Image from '@/components/mdx/Image.vite';
@@ -27,6 +27,8 @@ interface PostItemProps extends ChangelogIndexItem {
   showDivider?: boolean;
 }
 
+const Heading = markdownElements.h2;
+
 const PostItem = ({ id, versionRange, locale, showDivider = true }: PostItemProps) => {
   const { data } = useSWR(changelogKeys.post(id, locale), async () => {
     return await lambdaClient.changelog.getPostById.query({ id, locale });
@@ -37,14 +39,14 @@ const PostItem = ({ id, versionRange, locale, showDivider = true }: PostItemProp
   return (
     <>
       {showDivider && <Separator />}
-      <Typography headerMultiple={0.2}>
+      <MarkdownTypography headerMultiple={0.2}>
         <a
           href={urlJoin(OFFICIAL_SITE, '/changelog', id)}
           rel="noopener noreferrer"
           style={{ color: 'inherit' }}
           target="_blank"
         >
-          <h2 id={id}>{data.rawTitle || data.title}</h2>
+          <Heading id={id}>{data.rawTitle || data.title}</Heading>
         </a>
         {data.image && (
           <Image
@@ -64,7 +66,7 @@ const PostItem = ({ id, versionRange, locale, showDivider = true }: PostItemProp
           />
         </Suspense>
         <VersionTag range={versionRange} />
-      </Typography>
+      </MarkdownTypography>
     </>
   );
 };

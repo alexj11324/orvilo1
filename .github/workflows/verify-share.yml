@@ -72,7 +72,7 @@ jobs:
 
       - name: Install deps
         if: steps.detect.outputs.should_build == 'true'
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build share
         if: steps.detect.outputs.should_build == 'true'
@@ -87,7 +87,6 @@ jobs:
             || '' }}
         run: |
           node_modules/.bin/cf build
-          node scripts/emit-static-css.mjs .cloudflare/output/v0/workers/default/assets/assets
           node ../../scripts/checkCloudflareAssets.mjs .cloudflare/output/v0/workers/default
           printf '/*\n  Access-Control-Allow-Origin: *\n' > .cloudflare/output/v0/workers/default/assets/_headers
         working-directory: apps/share

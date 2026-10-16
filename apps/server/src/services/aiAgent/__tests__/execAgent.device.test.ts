@@ -144,6 +144,9 @@ vi.mock('@/server/services/agent', () => ({
 vi.mock('@/database/models/device', () => ({
   DeviceModel: vi.fn().mockImplementation(function () {
     return {
+      findAgentHostSummary: vi
+        .fn()
+        .mockResolvedValue({ deviceId: 'device-001', friendlyName: 'Build box', hostname: 'vm-1' }),
       findByDeviceId: mockDeviceFindByDeviceId,
       findWorkspaceDeviceById: mockDeviceFindWorkspaceDeviceById,
       // Unified admission's authorized candidate set — the devices this suite
@@ -716,6 +719,22 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
         deviceId: 'device-001',
         retryable: true,
         scope: 'personal',
+      });
+    });
+
+    it('names the device in the unreachable-device error', async () => {
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      mockDispatchAgentRun.mockResolvedValue({
+        error: 'DEVICE_CHANNEL_UNAVAILABLE',
+        errorCode: DeviceTransportErrorCode.DeviceChannelUnavailable,
+        success: false,
+      });
+
+      const result = await service.execAgent({ agentId: 'agent-1', prompt: 'Run a command' });
+
+      expect(result.errorData).toMatchObject({
+        code: 'DEVICE_NOT_CONNECTED',
+        deviceName: 'Build box',
       });
     });
 

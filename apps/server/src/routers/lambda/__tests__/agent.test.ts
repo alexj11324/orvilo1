@@ -16,6 +16,7 @@ import type * as WorkspaceModule from '@/database/models/workspace';
 import { WorkspaceUserSettingsModel } from '@/database/models/workspaceUserSettings';
 import { DEFAULT_RESOURCE_ACCESS_LEVELS } from '@/database/schemas';
 import { AgentService } from '@/server/services/agent';
+import { resolveAgentHostSummary } from '@/server/services/deviceGateway/agentHostSummary';
 import { EditLockService } from '@/server/services/editLock';
 import { publishResourceEvent } from '@/server/services/resourceEvents';
 import {
@@ -114,6 +115,10 @@ vi.mock('@/database/core/db-adaptor', () => ({
       }),
     };
   }),
+}));
+
+vi.mock('@/server/services/deviceGateway/agentHostSummary', () => ({
+  resolveAgentHostSummary: vi.fn(),
 }));
 
 vi.mock('@/server/services/resourcePermission', () => ({
@@ -376,6 +381,91 @@ describe('agentRouter', () => {
       const caller = agentRouter.createCaller({ ...mockCtx, workspaceId: 'ws-1' });
 
       await expect(caller.getAgentConfigById({ agentId: 'agent-1' })).resolves.toEqual(profile);
+    });
+
+    describe('boundDevice projection', () => {
+      const deviceConfig = {
+        ...fullConfig,
+        agencyConfig: {
+          boundDeviceId: 'device-1',
+          executionTarget: 'device',
+          topicSharePolicy: 'restricted',
+        },
+      };
+      const meta = { userId: 'creator-1', visibility: 'public', workspaceId: 'ws-1' };
+      const callerFor = () =>
+        agentRouter.createCaller({ ...mockCtx, serverDB: {}, workspaceId: 'ws-1' });
+
+      it('gives a use-level member exactly { id, name, online } and no raw device id', async () => {
+        agentServiceMock.getAgentConfigById = vi.fn().mockResolvedValue(deviceConfig);
+        vi.mocked(getResourceMeta).mockResolvedValue(meta as any);
+        // edit: no, view: yes, use: yes
+        vi.mocked(canPerformResourceAction)
+          .mockResolvedValueOnce(false)
+          .mockResolvedValueOnce(true)
+          .mockResolvedValueOnce(true);
+        vi.mocked(resolveAgentHostSummary).mockResolvedValueOnce({
+          id: 'device-1',
+          name: 'Build box',
+          online: false,
+        });
+
+        const result: any = await callerFor().getAgentConfigById({ agentId: 'agent-1' });
+
+        expect(result.boundDevice).toEqual({ id: 'device-1', name: 'Build box', online: false });
+        expect(Object.keys(result.boundDevice).sort()).toEqual(['id', 'name', 'online']);
+        expect(result.agencyConfig).not.toHaveProperty('boundDeviceId');
+        expect(JSON.stringify(result)).not.toContain('"boundDeviceId"');
+        expect(result).not.toHaveProperty('systemRole');
+        expect(resolveAgentHostSummary).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.any(String),
+          'device-1',
+          'ws-1',
+        );
+      });
+
+      it('emits nothing to a view-only member without the Use permission', async () => {
+        agentServiceMock.getAgentConfigById = vi.fn().mockResolvedValue(deviceConfig);
+        vi.mocked(getResourceMeta).mockResolvedValue(meta as any);
+        vi.mocked(canPerformResourceAction)
+          .mockResolvedValueOnce(false)
+          .mockResolvedValueOnce(true)
+          .mockResolvedValueOnce(false);
+
+        const result: any = await callerFor().getAgentConfigById({ agentId: 'agent-1' });
+
+        expect(result).not.toHaveProperty('boundDevice');
+        expect(resolveAgentHostSummary).not.toHaveBeenCalled();
+      });
+
+      it('emits nothing when the Agent does not target a device', async () => {
+        agentServiceMock.getAgentConfigById = vi.fn().mockResolvedValue({
+          ...fullConfig,
+          agencyConfig: { boundDeviceId: 'device-1', executionTarget: 'cloud' },
+        });
+        vi.mocked(getResourceMeta).mockResolvedValue(meta as any);
+        vi.mocked(canPerformResourceAction)
+          .mockResolvedValueOnce(false)
+          .mockResolvedValueOnce(true)
+          .mockResolvedValueOnce(true);
+
+        const result: any = await callerFor().getAgentConfigById({ agentId: 'agent-1' });
+
+        expect(result).not.toHaveProperty('boundDevice');
+        expect(resolveAgentHostSummary).not.toHaveBeenCalled();
+      });
+
+      it('leaves the full config of an edit-level caller unchanged', async () => {
+        agentServiceMock.getAgentConfigById = vi.fn().mockResolvedValue(deviceConfig);
+        vi.mocked(getResourceMeta).mockResolvedValue(meta as any);
+        vi.mocked(canPerformResourceAction).mockResolvedValueOnce(true);
+
+        await expect(callerFor().getAgentConfigById({ agentId: 'agent-1' })).resolves.toEqual(
+          deviceConfig,
+        );
+        expect(resolveAgentHostSummary).not.toHaveBeenCalled();
+      });
     });
 
     it('returns the full config to a member who can edit', async () => {

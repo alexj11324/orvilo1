@@ -1,7 +1,12 @@
 import { ChatErrorType } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
-import { humanizeHeteroDispatchError, resolveHeteroDispatchErrorType } from './heteroErrors';
+import {
+  HETERO_DISPATCH_ERROR_HEADLINES,
+  humanizeHeteroDispatchError,
+  matchesHeteroDispatchHeadline,
+  resolveHeteroDispatchErrorType,
+} from './heteroErrors';
 
 describe('humanizeHeteroDispatchError', () => {
   it('replaces a bare gateway code with a sentence the user can act on', () => {
@@ -30,6 +35,39 @@ describe('humanizeHeteroDispatchError', () => {
   it('passes unknown text through and falls back when there is none', () => {
     expect(humanizeHeteroDispatchError('spawn failed')).toBe('spawn failed');
     expect(humanizeHeteroDispatchError()).toBe('Device dispatch failed');
+  });
+});
+
+describe('device name in unreachable-device headlines', () => {
+  it.each(['DEVICE_OFFLINE', 'DEVICE_NOT_CONNECTED', 'DEVICE_CHANNEL_UNAVAILABLE'])(
+    'names the device for %s',
+    (code) => {
+      const message = humanizeHeteroDispatchError(code, 'Alex MacBook');
+
+      expect(message).toContain('The device "Alex MacBook" this agent runs on');
+    },
+  );
+
+  it('keeps the nameless copy when no name is known and for unrelated codes', () => {
+    expect(humanizeHeteroDispatchError('DEVICE_OFFLINE')).toBe(
+      HETERO_DISPATCH_ERROR_HEADLINES.DEVICE_OFFLINE,
+    );
+    expect(humanizeHeteroDispatchError('DEVICE_GATEWAY_ERROR', 'Alex MacBook')).toBe(
+      HETERO_DISPATCH_ERROR_HEADLINES.DEVICE_GATEWAY_ERROR,
+    );
+  });
+
+  it('still recognises a named headline as the same failure', () => {
+    const named = humanizeHeteroDispatchError('DEVICE_OFFLINE', 'Alex MacBook');
+
+    expect(matchesHeteroDispatchHeadline(named, 'DEVICE_OFFLINE')).toBe(true);
+    expect(
+      matchesHeteroDispatchHeadline(
+        HETERO_DISPATCH_ERROR_HEADLINES.DEVICE_OFFLINE,
+        'DEVICE_OFFLINE',
+      ),
+    ).toBe(true);
+    expect(matchesHeteroDispatchHeadline('something else', 'DEVICE_OFFLINE')).toBe(false);
   });
 });
 

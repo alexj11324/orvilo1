@@ -62,6 +62,7 @@ import {
   resolveEmbeddedDispatchRoute,
 } from '@/server/services/controlPlane/embeddedDispatch';
 import { deviceGateway } from '@/server/services/deviceGateway';
+import { resolveDeviceName } from '@/server/services/deviceGateway/agentHostSummary';
 import { resolveDeviceDispatchAuthorizationFailure } from '@/server/services/deviceGateway/dispatchAuthorization';
 import { resolveHeteroExecutionPlan } from '@/server/services/deviceGateway/executionAdmission';
 import { resolveGithubAccessToken } from '@/server/services/githubRepo';
@@ -460,7 +461,7 @@ const ensureDispatchAdmission = async (
  * means the gateway simply lost reachability (`DEVICE_NOT_CONNECTED`).
  * Anything else passes through untouched.
  */
-const classifyUnreachableDeviceError = async (
+const classifyUnreachableDeviceErrorCode = async (
   deps: { db: OrviloDatabase | undefined; userId: string },
   params: {
     deviceId?: string;
@@ -502,6 +503,42 @@ const classifyUnreachableDeviceError = async (
     return { error: authorizationFailure.code, errorData: authorizationFailure };
   }
   return notConnected();
+};
+
+const NAMED_UNREACHABLE_CODES = new Set([
+  'DEVICE_CHANNEL_UNAVAILABLE',
+  'DEVICE_NOT_CONNECTED',
+  'DEVICE_OFFLINE',
+]);
+
+/**
+ * {@link classifyUnreachableDeviceErrorCode} plus the device's display name
+ * (friendlyName, else hostname, else the id) on `errorData.deviceName`, so the
+ * user-facing offline message says which machine to wake. A failed lookup leaves
+ * the nameless message rather than failing the run path.
+ */
+const classifyUnreachableDeviceError = async (
+  deps: { db: OrviloDatabase | undefined; userId: string },
+  params: Parameters<typeof classifyUnreachableDeviceErrorCode>[1],
+): Promise<
+  Awaited<ReturnType<typeof classifyUnreachableDeviceErrorCode>> & { deviceName?: string }
+> => {
+  const result = await classifyUnreachableDeviceErrorCode(deps, params);
+  const code = result.error?.match(/^([A-Z][\dA-Z_]*)/)?.[1];
+  if (!deps.db || !params.deviceId || !code || !NAMED_UNREACHABLE_CODES.has(code)) return result;
+
+  const deviceName = await resolveDeviceName(
+    deps.db,
+    deps.userId,
+    params.deviceId,
+    params.workspaceId,
+  );
+  const name = deviceName ?? params.deviceId;
+  return {
+    deviceName: name,
+    error: result.error,
+    errorData: result.errorData ? { ...result.errorData, deviceName: name } : result.errorData,
+  };
 };
 
 /**
@@ -1398,7 +1435,7 @@ export const dispatchHeteroAgent = async (
         detail: terminalError.error ?? 'Device dispatch failed',
         errorData: terminalError.errorData,
         errorType: resolveHeteroDispatchErrorType(terminalError.error),
-        message: humanizeHeteroDispatchError(terminalError.error),
+        message: humanizeHeteroDispatchError(terminalError.error, terminalError.deviceName),
         operationId,
         topicId,
       });
@@ -1762,7 +1799,7 @@ export const dispatchHeteroAgent = async (
           detail: terminalError.error ?? 'Device dispatch failed',
           errorData: terminalError.errorData,
           errorType: resolveHeteroDispatchErrorType(terminalError.error),
-          message: humanizeHeteroDispatchError(terminalError.error),
+          message: humanizeHeteroDispatchError(terminalError.error, terminalError.deviceName),
           operationId,
           topicId,
         });

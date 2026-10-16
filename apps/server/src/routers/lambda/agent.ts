@@ -58,6 +58,7 @@ import { after } from '@/server/utils/scheduleAfterResponse';
 import { TransferErrorCode } from '@/types/transferError';
 
 import { isWorkspaceNonOwner } from './_helpers/assertWorkspaceRowManageable';
+import { resolveBoundDeviceForUseMember } from './_helpers/boundDeviceProjection';
 import {
   getRestrictedKnowledgeBaseIds,
   getUseLevelKnowledgeBaseIds,
@@ -90,7 +91,22 @@ const protectAgentConfig = async <T extends Record<string, any>>(
   );
 
   if (access === 'none') return null;
-  return access === 'profile' ? redactAgentConfig(config) : config;
+  if (access !== 'profile') return config;
+
+  const redacted = redactAgentConfig(config);
+  // Use-level members cannot read agencyConfig.boundDeviceId; give them the
+  // server-computed { id, name, online } projection instead.
+  const boundDevice = await resolveBoundDeviceForUseMember(
+    {
+      db: ctx.serverDB,
+      grantedPermissions: ctx.workspacePermissionCodes,
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+    },
+    agentId,
+    config.agencyConfig,
+  );
+  return boundDevice ? { ...redacted, boundDevice } : redacted;
 };
 
 /** What a `/agent/:slugOrId` param resolves to — see `resolveAgentRoute`. */

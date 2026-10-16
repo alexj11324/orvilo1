@@ -30,6 +30,7 @@ const ChatHistoryTitleMenu = memo<ChatHistoryTitleMenuProps>(({ title }) => {
       placement={'bottomLeft'}
       triggerProps={{
         'aria-label': t('chatHistory.switchAgentChat'),
+        'data-testid': 'chat-history-trigger',
         'type': 'button',
       }}
     >

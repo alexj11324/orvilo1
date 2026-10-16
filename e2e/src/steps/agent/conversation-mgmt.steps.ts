@@ -40,10 +40,36 @@ async function createConversationFromCommandMenu(world: CustomWorld) {
   await expect(agentSelector).toBeVisible();
 }
 
+const TOPIC_ITEM = '[data-testid="topic-item"]';
+
+// Topic history only lives in the conversation header's title menu: its rows
+// exist in the DOM only while the popover is open.
+async function openHistoryMenu(world: CustomWorld) {
+  const trigger = world.page.locator('[data-testid="chat-history-trigger"]:visible').first();
+  await expect(trigger).toBeVisible({ timeout: 30_000 });
+  if ((await trigger.getAttribute('aria-expanded')) !== 'true') await trigger.click();
+  await expect(world.page.locator('[data-slot="popover-content"] input').first()).toBeVisible({
+    timeout: 10_000,
+  });
+}
+
+async function closeHistoryMenu(world: CustomWorld) {
+  await world.page.keyboard.press('Escape');
+  await expect(world.page.locator('[data-slot="popover-content"] input')).toHaveCount(0);
+}
+
+/** Open the menu, read the topic row count, close it again. */
+async function countTopicsInMenu(world: CustomWorld) {
+  await openHistoryMenu(world);
+  const count = await world.page.locator(TOPIC_ITEM).count();
+  await closeHistoryMenu(world);
+  return count;
+}
+
 // A send fired while another turn's agent_operation is live gets held
 // client-side until that op goes terminal — under a CI Postgres stall the
 // first turn can run for minutes, and the second conversation's topic row is
-// only created by ITS run, so the sidebar never shows a second topic. Poll pg
+// only created by ITS run, so the history menu never shows a second topic. Poll pg
 // for the first turn to settle before opening the next topic.
 const LIVE_OP_STATUSES = ['idle', 'running', 'waiting_for_async_tool', 'waiting_for_human'];
 
@@ -123,12 +149,6 @@ Given('用户已有一个对话', async function (this: CustomWorld) {
 
   // Wait for response
   await this.page.waitForTimeout(2000);
-
-  // Store the current conversation title for later reference
-  // Topic rows render as NavItem anchors inside [data-testid="topic-item"] wrappers
-  const topicItems = this.page.locator('[data-testid="topic-item"]');
-  const topicCount = await topicItems.count();
-  console.log(`   📍 Found ${topicCount} topic items after creating conversation`);
 
   console.log('   ✅ 已创建一个对话');
 });
@@ -217,19 +237,19 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
     console.log('   📍 Second-topic route at failure:', {
       firstTopicPath,
       currentPath: new URL(this.page.url()).pathname,
-      topicCount: await this.page.locator('[data-testid="topic-item"]').count(),
+      topicCount: await countTopicsInMenu(this).catch(() => -1),
     });
     throw error;
   }
 
-  // Confirm the second topic actually registered in the sidebar before the
-  // scenario proceeds to click it. The sidebar is SWR-driven and only refetches
+  // Confirm the second topic actually registered in the history menu before the
+  // scenario proceeds to click it. The menu list is SWR-driven and only refetches
   // after the send mutation's getMessagesAndTopics tail resolves — that tail
   // can sit behind a CI Postgres stall, so a one-shot count reads a slow
   // refetch as "topic never created".
   try {
     await expect
-      .poll(async () => this.page.locator('[data-testid="topic-item"]').count(), {
+      .poll(async () => countTopicsInMenu(this), {
         timeout: 120_000,
       })
       .toBeGreaterThanOrEqual(2);
@@ -272,187 +292,53 @@ When('用户通过命令菜单新建对话', { timeout: 90_000 }, async function
 });
 
 When('用户点击另一个对话', { timeout: 90_000 }, async function (this: CustomWorld) {
-  console.log('   📍 Step: 点击另一个对话...');
+  console.log('   📍 Step: 通过标题菜单点击另一个对话...');
 
-  // Check if we're on the home page (has Recent Topics section)
-  const recentTopicsSection = this.page.locator('text=Recent Topics');
-  const isOnHomePage = (await recentTopicsSection.count()) > 0;
-  console.log(`   📍 Is on home page: ${isOnHomePage}`);
-
-  if (isOnHomePage) {
-    // Click the second topic card in Recent Topics section
-    // Cards are wrapped in Link components and contain "Hello! I am a mock AI" text from the mock
-    const recentTopicCards = this.page.locator('a[href*="topic="]');
-    const cardCount = await recentTopicCards.count();
-    console.log(`   📍 Found ${cardCount} recent topic cards (by href)`);
-
-    if (cardCount >= 2) {
-      // Click the second card (different from current topic)
-      await recentTopicCards.nth(1).click();
-      console.log('   ✅ 已点击首页 Recent Topics 中的另一个对话');
-      await this.page.waitForTimeout(2000);
-      return;
-    }
-
-    // Fallback: try to find by text content
-    const topicTextCards = this.page.locator('text=Hello! I am a mock AI');
-    const textCardCount = await topicTextCards.count();
-    console.log(`   📍 Found ${textCardCount} topic cards by text`);
-
-    if (textCardCount >= 2) {
-      await topicTextCards.nth(1).click();
-      console.log('   ✅ 已点击首页 Recent Topics 中的另一个对话 (by text)');
-      await this.page.waitForTimeout(2000);
-      return;
-    }
-  }
-
-  // Fallback: try to find topic items in the sidebar. The list is SWR-driven
-  // and lags the send that created the conversation — poll rather than read a
-  // one-shot count so a slow refetch isn't read as "only one topic exists".
-  const sidebarTopics = this.page.locator('[data-testid="topic-item"]');
-  let topicCount = 0;
+  // The list is SWR-driven and lags the send that created the conversation —
+  // poll with the menu open rather than read a one-shot count.
+  await openHistoryMenu(this);
+  const rows = this.page.locator(TOPIC_ITEM);
   await expect
-    .poll(
-      async () => {
-        topicCount = await sidebarTopics.count();
-        console.log(`   📍 Found ${topicCount} topic items`);
-        return topicCount;
-      },
-      { message: 'sidebar never listed a second topic', timeout: 30_000 },
-    )
+    .poll(async () => rows.count(), {
+      message: 'history menu never listed a second topic',
+      timeout: 30_000,
+    })
     .toBeGreaterThanOrEqual(2);
 
-  // Click the second topic (first one is current/active)
-  await sidebarTopics.nth(1).click();
+  // Pick a row that is not the current topic (aria-current="true").
+  const target = this.page.locator(`${TOPIC_ITEM}:not([aria-current="true"])`).first();
+  const targetId = await target.getAttribute('data-topic-id');
+  expect(targetId).toBeTruthy();
+  await target.click();
+
+  await this.page.waitForURL((url) => url.pathname.endsWith(`/${targetId}`), { timeout: 30_000 });
   console.log('   ✅ 已点击另一个对话');
-
-  await this.page.waitForTimeout(500);
 });
 
-When('用户右键点击对话', async function (this: CustomWorld) {
-  console.log('   📍 Step: 右键点击对话...');
+When('用户打开当前对话的更多菜单', async function (this: CustomWorld) {
+  console.log('   📍 Step: 打开头部更多菜单...');
 
-  const sidebarTopics = this.page.locator('[data-testid="topic-item"]');
-  let topicCount = 0;
-  await expect
-    .poll(
-      async () => {
-        topicCount = await sidebarTopics.count();
-        console.log(`   📍 Found ${topicCount} topic items`);
-        return topicCount;
-      },
-      { message: 'sidebar never listed a topic', timeout: 30_000 },
-    )
-    .toBeGreaterThanOrEqual(1);
-
-  await sidebarTopics.first().click({ button: 'right' });
-  console.log('   ✅ 已右键点击对话');
-
-  await this.page.waitForTimeout(500);
-});
-
-When('用户右键点击一个对话', async function (this: CustomWorld) {
-  console.log('   📍 Step: 右键点击一个对话...');
-
-  const sidebarTopics = this.page.locator('[data-testid="topic-item"]');
-  let topicCount = 0;
-  await expect
-    .poll(
-      async () => {
-        topicCount = await sidebarTopics.count();
-        console.log(`   📍 Found ${topicCount} topic items`);
-        return topicCount;
-      },
-      { message: 'sidebar never listed a topic', timeout: 30_000 },
-    )
-    .toBeGreaterThanOrEqual(1);
-
-  // Titles can repeat or change while streaming; keep the identity of the row
-  // whose context menu we open for the deletion assertions.
-  const topicId = await sidebarTopics.first().getAttribute('data-topic-id');
+  await this.page.waitForURL((url) => /\/chat\/tpc_[^/]+$/.test(url.pathname), {
+    timeout: 30_000,
+  });
+  const topicId = new URL(this.page.url()).pathname.split('/').pop();
   expect(topicId).toBeTruthy();
   this.testContext.deletedTopicId = topicId;
-  const topic = this.page.locator(`[data-testid="topic-item"][data-topic-id="${topicId}"]`);
-  const topicText = await topic.textContent();
-  await topic.click({ button: 'right' });
-  console.log(`   ✅ 已右键点击对话: "${topicText?.slice(0, 30)}..."`);
 
-  await this.page.waitForTimeout(500);
+  const more = this.page
+    .getByRole('button', { exact: true, name: /^(More|更多)$/ })
+    .locator('visible=true');
+  await expect(more.first()).toBeVisible({ timeout: 10_000 });
+  await more.first().click();
+  console.log(`   ✅ 已打开当前对话 ${topicId} 的更多菜单`);
 });
 
 When('用户选择重命名选项', async function (this: CustomWorld) {
   console.log('   📍 Step: 选择重命名选项...');
 
-  // First, close any open context menu by clicking elsewhere
-  await this.page.click('body', { position: { x: 500, y: 300 } });
-  await this.page.waitForTimeout(300);
-
-  // Instead of using right-click context menu, use the "..." dropdown menu
-  // which appears when hovering over a topic item
-  const topicItems = this.page.locator('[data-testid="topic-item"]');
-  const topicCount = await topicItems.count();
-  console.log(`   📍 Found ${topicCount} topic items`);
-
-  if (topicCount > 0) {
-    // Hover on the first topic to reveal the "..." action button
-    const firstTopic = topicItems.first();
-    await firstTopic.hover();
-    console.log('   📍 Hovering on topic item...');
-    await this.page.waitForTimeout(500);
-
-    // The "..." button should now be visible INSIDE the topic item
-    // Important: we must find the icon WITHIN the hovered topic, not the global one
-    // The topic item has a specific structure with nav-item-actions
-    const moreButtonInTopic = firstTopic.locator('svg.lucide-ellipsis, svg.lucide-more-horizontal');
-    const moreButtonCount = await moreButtonInTopic.count();
-    console.log(`   📍 Found ${moreButtonCount} more buttons inside topic`);
-
-    if (moreButtonCount > 0) {
-      // Click the "..." button to open dropdown menu
-      await moreButtonInTopic.first().click();
-      console.log('   📍 Clicked ... button inside topic');
-      await this.page.waitForTimeout(500);
-    } else {
-      // Fallback: try to find it by looking at the actions container
-      console.log('   📍 Trying alternative: looking for actions container...');
-
-      // Debug: print the topic item HTML structure
-      const topicHTML = await firstTopic.evaluate((el) => el.outerHTML.slice(0, 500));
-      console.log(`   📍 Topic HTML: ${topicHTML}`);
-
-      // The actions might be in a sibling or parent element
-      // Try finding any ellipsis icon that's near the topic
-      const allEllipsis = this.page.locator('svg.lucide-ellipsis');
-      const ellipsisCount = await allEllipsis.count();
-      console.log(`   📍 Total ellipsis icons on page: ${ellipsisCount}`);
-
-      // Skip the first one (which is the global topic list menu)
-      // and click the second one (which should be in the topic item)
-      if (ellipsisCount > 1) {
-        await allEllipsis.nth(1).click();
-        console.log('   📍 Clicked second ellipsis icon');
-        await this.page.waitForTimeout(500);
-      }
-    }
-  }
-
-  // Now find the rename option in the dropdown menu
   const renameOption = this.page.getByRole('menuitem', { exact: true, name: /^(Rename|重命名)$/ });
-
   await expect(renameOption).toBeVisible({ timeout: 5000 });
-  console.log('   📍 Found rename menu item');
-
-  // Click the rename option
   await renameOption.click();
-  console.log('   📍 Clicked rename menu item');
-
-  // Wait for the popover/input to appear
-  await this.page.waitForTimeout(500);
-
-  // Check if input appeared
-  const inputCount = await this.page.locator('input').count();
-  console.log(`   📍 After click: ${inputCount} inputs on page`);
 
   console.log('   ✅ 已选择重命名选项');
 });
@@ -609,35 +495,13 @@ When('用户确认删除', async function (this: CustomWorld) {
 });
 
 When('用户在搜索框中输入 {string}', async function (this: CustomWorld, searchText: string) {
-  console.log(`   📍 Step: 在搜索框中输入 "${searchText}"...`);
+  console.log(`   📍 Step: 在历史菜单搜索框中输入 "${searchText}"...`);
 
-  // Find the search input in the sidebar
-  // Support both English and Chinese placeholders
-  const searchInput = this.page
-    .locator(
-      'input[placeholder*="Search"], input[placeholder*="搜索"], [data-testid="search-input"]',
-    )
-    .locator('visible=true');
-  const searchIcon = this.page.locator('svg.lucide-search').locator('..').locator('visible=true');
-
-  await searchInput.or(searchIcon).first().waitFor({ state: 'visible', timeout: 10_000 });
-
-  if ((await searchInput.count()) > 0) {
-    await searchInput.first().click();
-    await searchInput.first().fill(searchText);
-  } else {
-    // Fallback: click on search icon to reveal search input
-    if ((await searchIcon.count()) > 0) {
-      await searchIcon.first().click();
-      await this.page.waitForTimeout(300);
-      // Now find the input
-      const input = this.page.locator('input[type="text"]').last();
-      await input.fill(searchText);
-    }
-  }
+  await openHistoryMenu(this);
+  const searchInput = this.page.locator('[data-slot="popover-content"] input').first();
+  await searchInput.fill(searchText);
 
   console.log(`   ✅ 已输入搜索内容 "${searchText}"`);
-  await this.page.waitForTimeout(500);
 });
 
 // ============================================
@@ -741,8 +605,7 @@ Then('对话名称应该更新为 {string}', async function (this: CustomWorld, 
   await this.page.waitForTimeout(1000);
 
   // Find the topic with the new name by text content
-  // Topics are in the sidebar, look for text directly
-  // Use .first() since the name might appear in multiple places (sidebar + favorites section)
+  // The current topic's title is rendered in the header's title-menu trigger
   const renamedTopic = this.page.getByText(expectedName, { exact: true }).first();
 
   await expect(renamedTopic).toBeVisible({ timeout: 5000 });
@@ -760,38 +623,25 @@ Then('该对话应该被删除', async function (this: CustomWorld) {
 });
 
 Then('对话列表中不再显示该对话', async function (this: CustomWorld) {
-  console.log('   📍 Step: 验证对话列表中不再显示该对话...');
+  console.log('   📍 Step: 验证历史菜单中不再显示该对话...');
 
   const topicId = this.testContext.deletedTopicId;
   expect(topicId).toBeTruthy();
-  const deletedTopic = this.page.locator(`[data-testid="topic-item"][data-topic-id="${topicId}"]`);
+  await openHistoryMenu(this);
+  const deletedTopic = this.page.locator(`${TOPIC_ITEM}[data-topic-id="${topicId}"]`);
   await expect(deletedTopic).toHaveCount(0, { timeout: 10_000 });
-  console.log(`   ✅ 对话 ${topicId} 已从列表中移除`);
+  await closeHistoryMenu(this);
+  console.log(`   ✅ 对话 ${topicId} 已从历史菜单中移除`);
 });
 
 Then('应该显示包含 {string} 的对话', async function (this: CustomWorld, searchText: string) {
   console.log(`   📍 Step: 验证搜索结果包含 "${searchText}"...`);
 
-  // Wait for search results to load (search opens a modal dialog)
-  await this.page.waitForTimeout(2000);
-
-  // Search results appear in the cmdk command palette, not in sidebar
-  // Look for the palette ([cmdk-root]) and check for matching results
-  const searchModal = this.page.locator('[cmdk-root]');
-  const hasModal = (await searchModal.count()) > 0;
-  console.log(`   📍 搜索模态框: ${hasModal}`);
-
-  // Find matching items in the search results (either in modal or in sidebar if filtered)
-  const matchingInModal = searchModal.getByText(searchText);
-  const matchingInPage = this.page.getByText(searchText);
-
-  const modalMatchCount = await matchingInModal.count();
-  const pageMatchCount = await matchingInPage.count();
-
-  console.log(`   📍 模态框中找到 ${modalMatchCount} 个匹配, 页面中找到 ${pageMatchCount} 个匹配`);
-
-  // At least one match should be found (either in search input or results)
-  expect(modalMatchCount + pageMatchCount).toBeGreaterThan(0);
+  const rows = this.page.locator(TOPIC_ITEM);
+  await expect(rows.first()).toBeVisible({ timeout: 15_000 });
+  const titles = await rows.allTextContents();
+  console.log(`   📍 搜索结果: ${JSON.stringify(titles)}`);
+  expect(titles.some((title) => title.includes(searchText))).toBe(true);
 
   console.log(`   ✅ 搜索结果显示包含 "${searchText}" 的对话`);
 });
@@ -799,9 +649,14 @@ Then('应该显示包含 {string} 的对话', async function (this: CustomWorld,
 Then('不相关的对话应该被过滤', async function (this: CustomWorld) {
   console.log('   📍 Step: 验证不相关对话已被过滤...');
 
-  // This would require checking that non-matching topics are hidden
-  // For now, just verify the search is active
-  await this.page.waitForTimeout(300);
+  const rows = this.page.locator(TOPIC_ITEM);
+  await expect
+    .poll(async () => (await rows.allTextContents()).every((title) => title.includes('测试')), {
+      message: 'search results still contain unrelated topics',
+      timeout: 10_000,
+    })
+    .toBe(true);
 
+  await closeHistoryMenu(this);
   console.log('   ✅ 不相关对话已被过滤');
 });

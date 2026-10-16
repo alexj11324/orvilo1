@@ -27,6 +27,34 @@ describe('HeterogeneousPromptEngine', () => {
     ]);
   });
 
+  describe('skill chips', () => {
+    const promptText = (prompt: string) => {
+      const blocks = buildHeterogeneousPrompt({ prompt });
+      const last = blocks.at(-1);
+      return last?.type === 'text' ? last.text : undefined;
+    };
+
+    it('turns a picked skill into the slash command the CLI invokes', () => {
+      expect(
+        promptText('<skill name="academic-paper" label="academic-paper" /> draft the intro'),
+      ).toBe('/academic-paper draft the intro');
+    });
+
+    it('rewrites every chip and leaves the rest of the message alone', () => {
+      expect(
+        promptText('Use <skill name="a-b" label="A B" /> then <skill name="c:d" label="x" />.'),
+      ).toBe('Use /a-b then /c:d.');
+    });
+
+    it('keeps agent-document skills and odd names as they are', () => {
+      const documentSkill = '<skill name="agent-skills:notes.md" label="Notes" /> go';
+      const oddName = '<skill name="rm -rf /" label="x" /> go';
+
+      expect(promptText(documentSkill)).toBe(documentSkill);
+      expect(promptText(oddName)).toBe(oddName);
+    });
+  });
+
   it('does not add topic guidance to unrelated prompts', () => {
     expect(new HeterogeneousPromptEngine({ prompt: 'Hello' }).process()).toEqual([
       { text: 'Hello', type: 'text' },
